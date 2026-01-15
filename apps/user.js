@@ -7,7 +7,7 @@ import {
     recallMsg,
     makeForwardMsg,
     api,
-    config,
+    config
 } from '#xhh';
 import YAML from 'yaml';
 import fs from 'fs';
@@ -356,7 +356,7 @@ export class user extends plugin {
     }
 
     async mysReqErrHandler(e, args, reject) {
-        if (!config().bdsb) return false
+        if (!config().bdsb) return reject();
         let {
             data,
             mysApi,
@@ -390,10 +390,7 @@ export class user extends plugin {
             if (!config().Verification_API_KEY) return reject()
             let create = await mysApi.getData('createVerification')
             if (!create || create.retcode !== 0) return reject();
-            let verify = await this.ManualVerify(e, {
-                uid: mysApi.uid,
-                ...create.data
-            })
+            let verify = await this.ManualVerify(e, create.data)
             if (!verify) {
                 e.reply('自动解码失败！🥀')
                 return reject();
@@ -401,6 +398,7 @@ export class user extends plugin {
             let submit = await mysApi.getData('verifyVerification', verify)
             if (!submit || submit.retcode !== 0) return reject();
             e.mysReq = true
+           await sleep(3000)
         } else return reject();
 
         let res = await mysApi.getData(type, data);
@@ -546,7 +544,7 @@ export class user extends plugin {
 
         // 处理成功结果
         if (result?.data && result.status === 1) {
-            const msg = `自动解码成功☘️,用时：${result.time / 1000}秒`
+            const msg = `自动解码成功☘️,用时：${result.time / 1000}秒\n将在3秒后重试！`
             if (e.isGroup) {
                 Bot.pickGroup(e.group_id).sendMsg(msg)
             } else {
