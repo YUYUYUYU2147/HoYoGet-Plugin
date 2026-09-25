@@ -15,7 +15,9 @@ const GAME_ALIAS = {
 
 const GAME_NAME = monsterWiki.MONSTER_GAMES;
 
-const CMD_REG = /^(原神|genshin|ys|sr|星穹铁道|崩坏星穹铁道|铁道|穹铁|星铁|绝区零|绝区|zzz|崩坏3|崩坏三|崩三|bh3)?\s*(怪物|魔物|敌人|boss|首领)(图鉴|列表|大全)?\s*([\s\S]*)$/i;
+// 触发词（怪物/敌人/boss/首领/图鉴/列表/大全）必须存在才接管，否则会吃掉「#崩三深渊」这类指令；
+// 用前瞻保证这一点，同时允许「#崩三虚数猪图鉴」这种不写「怪物」、只带「图鉴」后缀的写法命中敌人图鉴。
+const CMD_REG = /^(?=[\s\S]*(?:怪物|魔物|敌人|BOSS|boss|首领|图鉴|列表|大全))[#%*]*(原神|genshin|ys|sr|星穹铁道|崩坏星穹铁道|铁道|穹铁|星铁|绝区零|绝区|zzz|崩坏3|崩坏三|崩三|bh3)?\s*(怪物|魔物|敌人|BOSS|boss|首领)?(图鉴|列表|大全)?\s*([\s\S]*)$/i;
 
 export class monster extends plugin {
     constructor(e) {
@@ -28,6 +30,16 @@ export class monster extends plugin {
             rule: [
                 {
                     reg: '^[#%*]*(原神|genshin|ys|sr|星穹铁道|崩坏星穹铁道|铁道|穹铁|星铁|绝区零|绝区|zzz|zzZ|ZZZ|崩坏3|崩坏三|崩三|bh3|Bh3|BH3)?\\s*(怪物|魔物|敌人|BOSS|boss|Boss|首领)(图鉴|列表|大全)?\\s*([\\s\\S]*)$',
+                    fnc: 'monster',
+                },
+                {
+                    // 只带「图鉴」后缀、不写「怪物」的写法（#崩三虚数猪图鉴 / #原神雷音权现图鉴）：
+                    // 先交给怪物库试一次，命中出怪物卡；未命中 renderDetail 会 return false，
+                    // 让路给通用图鉴按角色/武器处理。
+                    // 两个约束缺一不可：
+                    //   1) 负向前瞻排除「怪物/敌人/boss/首领」——这些交给上面的规则，避免重复触发；
+                    //   2) 游戏前缀必须存在且名字非空——否则会把「#原神图鉴」这类通用列表也截走。
+                    reg: '^(?![\\s\\S]*(?:怪物|魔物|敌人|BOSS|boss|Boss|首领))[#%*]*\\s*(原神|genshin|ys|sr|星穹铁道|崩坏星穹铁道|铁道|穹铁|星铁|绝区零|绝区|zzz|zzZ|ZZZ|崩坏3|崩坏三|崩三|bh3|Bh3|BH3)\\s*(.+?)图鉴\\s*$',
                     fnc: 'monster',
                 },
             ],
@@ -45,13 +57,20 @@ export class monster extends plugin {
         if (!m) return false;
 
         const game = GAME_ALIAS[String(m[1] || '').toLowerCase()] || '';
-        const isList = !!m[3];
-        const rest = String(m[4] || '').trim();
+        // 「图鉴」是命令词（带名称时出详情卡），只有「列表/大全」才走列表模式；
+        // 带名称的「#崩三虚数猪图鉴」应出详情而非列一张只含自己的清单。
+        const mode = m[3] || '';
+        const isList = mode === '列表' || mode === '大全';
+        // 显式写了 怪物/敌人/boss/首领 才算「明确要查怪物」：未命中时直接报错；
+        // 只带「图鉴」后缀的（如 #崩三虚数猪图鉴）未命中则让路给通用图鉴插件按角色/武器处理。
+        const explicit = !!m[2];
+        let rest = String(m[4] || '').trim();
+        if (!isList) rest = rest.replace(/(图鉴|列表|大全)$/, '').trim();
 
-        this.dbg('指令解析:', `game=${game || '(未指定)'}`, `mode=${isList ? '列表' : '详情'}`, `参数=${rest || '(空)'}`);
+        this.dbg('指令解析:', `game=${game || '(未指定)'}`, `mode=${isList ? '列表' : '详情'}`, `explicit=${explicit}`, `参数=${rest || '(空)'}`);
 
         if (isList) return await this.renderList(e, game || 'gs', rest);
-        return await this.renderDetail(e, game, rest);
+        return await this.renderDetail(e, game, rest, explicit);
     }
 
     async renderList(e, game, rest) {
@@ -123,7 +142,7 @@ export class monster extends plugin {
         return true;
     }
 
-    async renderDetail(e, game, keyword) {
+    async renderDetail(e, game, keyword, explicit = true) {
         if (!keyword) {
             return e.reply('用法：\n#原神怪物 名称 / #星铁怪物 名称 / #绝区零怪物 名称 / #崩三怪物 名称\n也可以不写游戏名直接 #怪物 名称（自动跨游戏搜索）\n列表：#原神怪物图鉴', true, { recallMsg: 60 });
         }
@@ -139,7 +158,9 @@ export class monster extends plugin {
         this.dbg('搜索结果:', `keyword=${keyword}`, `候选=${candidates.length}`, candidates.slice(0, 3).map(v => `${v.game}:${v.name}`).join(' / '));
 
         if (!candidates.length) {
-            return e.reply(`没有找到「${keyword}」相关的怪物。`, true, { recallMsg: 60 });
+            // 显式写了「怪物/敌人」但图鉴没收录：直接提示；否则让给通用图鉴插件（角色/武器）。
+            if (explicit) return e.reply(`没有找到「${keyword}」相关的怪物。`, true, { recallMsg: 60 });
+            return false;
         }
 
         // 多个候选时先列出来让用户选，避免猜错游戏；名称完全一致则直接用它
