@@ -86,25 +86,25 @@ git fetch origin && git checkout -B v2 origin/v2 && git pull && pnpm i
 本地史料库 + 米游社官方公告双向同步，每天 05:30 自动更新，能问「某角色多久没复刻」「当前 UP 是谁」。
 `#原神卡池` `#崩三补给` `#绝区零卡池` `#官方当前卡池` `#星铁复刻统计` `#可莉多久没复刻`
 
-<p align="center"><a href="resources/readme/pool.jpg"><img src="resources/readme/pool.jpg" width="400" alt="星铁当前卡池真实渲染（点击查看大图）"></a></p>
+<div align="center">
 
-<p align="center"><a href="resources/readme/official_pool.jpg"><img src="resources/readme/official_pool.jpg" width="320" alt="米游社官方当前卡池（点击查看大图）"></a></p>
+| 星铁当前卡池 | 米游社官方卡池 |
+| :---: | :---: |
+| <a href="resources/readme/pool.jpg"><img src="resources/readme/pool.jpg" width="300" alt="星铁当前卡池（点击查看大图）"></a> | <a href="resources/readme/official_pool.jpg"><img src="resources/readme/official_pool.jpg" width="300" alt="米游社官方当前卡池（点击查看大图）"></a> |
+
+</div>
 
 ### 崩坏3 全功能
 当期深渊（超弦空间 / 量子流形）、记忆战场、往世乐土、抽卡记录、充值流水、水晶手账、角色主页、日历、活动到期提醒。
 `#崩三深渊` `#崩三战场` `#崩三乐土` `#崩三抽卡记录` `#崩三水晶` `#崩三提醒`
 
-<p align="center"><a href="resources/readme/bh3_abyss.jpg"><img src="resources/readme/bh3_abyss.jpg" width="300" alt="崩坏3当期深渊战报（点击查看大图）"></a></p>
+<div align="center">
 
-<p align="center"><a href="resources/readme/bh3_letu.jpg"><img src="resources/readme/bh3_letu.jpg" width="300" alt="崩坏3往世乐土战绩（点击查看大图）"></a></p>
+| 当期深渊战报 | 往世乐土战绩 | 抽卡记录 |
+| :---: | :---: | :---: |
+| <a href="resources/readme/bh3_abyss.jpg"><img src="resources/readme/bh3_abyss.jpg" width="230" alt="崩坏3当期深渊战报（点击查看大图）"></a> | <a href="resources/readme/bh3_letu.jpg"><img src="resources/readme/bh3_letu.jpg" width="230" alt="崩坏3往世乐土战绩（点击查看大图）"></a> | <a href="resources/readme/bh3_record.jpg"><img src="resources/readme/bh3_record.jpg" width="230" alt="崩坏3抽卡记录（点击查看大图）"></a> |
 
-<p align="center"><a href="resources/readme/bh3_record.jpg"><img src="resources/readme/bh3_record.jpg" width="360" alt="崩坏3抽卡记录真实渲染（点击查看大图）"></a></p>
-
-<p align="center"><a href="resources/readme/settle_bh3.jpg"><img src="resources/readme/settle_bh3.jpg" width="420" alt="深渊/战场/乐土到期速报提醒（点击查看大图）"></a></p>
-
-<p align="center"><a href="resources/readme/abyss_strategy.jpg"><img src="resources/readme/abyss_strategy.jpg" width="330" alt="当期深渊速报附带群聊攻略（点击查看大图）"></a></p>
-
-<p align="center"><a href="resources/readme/settle_alert.jpg"><img src="resources/readme/settle_alert.jpg" width="460" alt="记忆战场与往世乐土结算速报提醒（点击查看大图）"></a></p>
+</div>
 
 
 ### 米游社签到与推送
@@ -116,9 +116,13 @@ git fetch origin && git checkout -B v2 origin/v2 && git pull && pnpm i
 崩三角色、武器、圣痕、人偶图鉴；绝区零代理人、音擎、驱动盘、邦布图鉴；深渊 / 记忆战场 / 往世乐土 / 幻想真境剧诗 攻略作业；原神、星铁、崩三角色语音（回复图片发数字即发语音）。
 `#崩三xxx图鉴` `#绝区零xxx图鉴` `#xx攻略` `#崩三角色名语音`
 
-<p align="center"><a href="resources/readme/bh3_wiki.jpg"><img src="resources/readme/bh3_wiki.jpg" width="300" alt="崩坏3角色图鉴全览（点击查看大图）"></a></p>
+<div align="center">
 
-<p align="center"><a href="resources/readme/bh3_wiki_weapon.jpg"><img src="resources/readme/bh3_wiki_weapon.jpg" width="300" alt="崩坏3武器图鉴（点击查看大图）"></a></p>
+| 角色图鉴 | 武器图鉴 |
+| :---: | :---: |
+| <a href="resources/readme/bh3_wiki.jpg"><img src="resources/readme/bh3_wiki.jpg" width="300" alt="崩坏3角色图鉴（点击查看大图）"></a> | <a href="resources/readme/bh3_wiki_weapon.jpg"><img src="resources/readme/bh3_wiki_weapon.jpg" width="300" alt="崩坏3武器图鉴（点击查看大图）"></a> |
+
+</div>
 
 ### 其它
 表情包、塔罗牌、B 站视频/直播解析与推送、九连图、未知藏品识别、货币战争、余额估算。
