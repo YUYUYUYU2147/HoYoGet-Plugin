@@ -152,6 +152,12 @@ manual_gt_public_url: ''
 manual_gt_auto_tunnel: true
 manual_gt_path: /xhh-gt
 manual_gt_timeout: 120
+# 自动签到/社区签到是定时任务，无法用指令回复，所以过码链接主动发到这个群
+# 留空(0)则不推送（此时只能手动发 #小花火过码测试 过码）
+manual_gt_notify_group: 0
+# 额外要 @ 的 QQ（可多个）。主 @ 对象是「本次签到失败的那个成员」，
+# 由他自己去网页过滑块；这里只在还想额外提醒别人时才填，留空为列表即可
+manual_gt_notify_at: []
 
 #卡池立绘来源：兼容旧配置；新配置见下面两个字段
 gacha_art_source: custom
