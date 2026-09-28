@@ -14,6 +14,8 @@
 
 <p><img src="resources/help/xhh.gif" width="320" alt="小花火插件出图效果"></p>
 
+<p><a href="resources/readme/help.jpg"><img src="resources/readme/help.jpg" width="400" alt="小花火插件完整命令一览（点击查看大图）"></a></p>
+
 </div>
 
 > **原神 / 崩坏：星穹铁道 / 绝区零 / 崩坏3** 的体力、卡池、签到、图鉴、攻略、角色语音，一条指令出图。
