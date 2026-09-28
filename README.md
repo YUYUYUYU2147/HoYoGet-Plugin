@@ -114,6 +114,8 @@ git fetch origin && git checkout -B v2 origin/v2 && git pull && pnpm i
 崩三角色、武器、圣痕、人偶图鉴；绝区零代理人、音擎、驱动盘、邦布图鉴；深渊 / 记忆战场 / 往世乐土 / 幻想真境剧诗 攻略作业；原神、星铁、崩三角色语音（回复图片发数字即发语音）。
 `#崩三xxx图鉴` `#绝区零xxx图鉴` `#xx攻略` `#崩三角色名语音`
 
+<p align="center"><a href="resources/readme/bh3_wiki.jpg"><img src="resources/readme/bh3_wiki.jpg" width="300" alt="崩坏3角色图鉴全览（点击查看大图）"></a></p>
+
 ### 其它
 表情包、塔罗牌、B 站视频/直播解析与推送、九连图、未知藏品识别、货币战争、余额估算。
 
