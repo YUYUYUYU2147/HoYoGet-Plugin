@@ -94,6 +94,8 @@ git fetch origin && git checkout -B v2 origin/v2 && git pull && pnpm i
 当期深渊（超弦空间 / 量子流形）、记忆战场、往世乐土、抽卡记录、充值流水、水晶手账、角色主页、日历、活动到期提醒。
 `#崩三深渊` `#崩三战场` `#崩三乐土` `#崩三抽卡记录` `#崩三水晶` `#崩三提醒`
 
+<p align="center"><a href="resources/readme/bh3_abyss.jpg"><img src="resources/readme/bh3_abyss.jpg" width="300" alt="崩坏3当期深渊战报（点击查看大图）"></a></p>
+
 <p align="center"><a href="resources/readme/bh3_record.jpg"><img src="resources/readme/bh3_record.jpg" width="360" alt="崩坏3抽卡记录真实渲染（点击查看大图）"></a></p>
 
 <p align="center"><a href="resources/readme/settle_bh3.jpg"><img src="resources/readme/settle_bh3.jpg" width="420" alt="深渊/战场/乐土到期速报提醒（点击查看大图）"></a></p>
