@@ -408,8 +408,12 @@ async function notifyCaptcha(e, cfg, text) {
     if (/^\d{5,12}$/.test(s) && !ats.includes(s)) ats.push(s);
   }
   try {
-    const body = ats.length ? `${ats.map(q => `[CQ:at,qq=${q}]`).join(' ')}\n${text}` : text;
-    await Bot.pickGroup(gid).sendMsg(body);
+    // 必须用 segment.at()，直接拼 [CQ:at,qq=xxx] 字符串在 TRSSYz/OneBotv11 下不会被渲染成 @，
+    // 会原样显示成字面量
+    const msg = ats.length
+      ? [...ats.map(q => segment.at(q)), '\n', text]
+      : text;
+    await Bot.pickGroup(gid).sendMsg(msg);
     logger.mark(`[xhh][manual_gt] 验证码通知已发送（群 ${gid}${ats.length ? '，已 @' + ats.join(',') : ''}）`);
     return true;
   } catch (err) {
