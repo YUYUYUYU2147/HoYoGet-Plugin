@@ -14,8 +14,6 @@
 
 <p><img src="resources/help/xhh.gif" width="320" alt="小花火插件出图效果"></p>
 
-<p><a href="resources/readme/help.jpg"><img src="resources/readme/help.jpg" width="400" alt="小花火插件完整命令一览（点击查看大图）"></a></p>
-
 </div>
 
 > **原神 / 崩坏：星穹铁道 / 绝区零 / 崩坏3** 的体力、卡池、签到、图鉴、攻略、角色语音，一条指令出图。
@@ -135,6 +133,8 @@ git fetch origin && git checkout -B v2 origin/v2 && git pull && pnpm i
 
 > 绝大多数命令都支持 `#` 开头；`小花火` / `xhh` 作为可选前缀（如 `#小花火帮助`）。
 > 指令被其他插件抢走时，可加 `小花火` 前缀点名本插件，并调小对应 `*_priority`（数字越小越先执行）。
+
+<p align="center"><a href="resources/readme/help.jpg"><img src="resources/readme/help.jpg" width="380" alt="小花火插件完整命令一览（点击查看大图）"></a></p>
 
 ### 崩坏3
 
