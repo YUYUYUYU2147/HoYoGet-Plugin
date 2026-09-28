@@ -742,6 +742,8 @@ async function sendBbsAutoResult(group, result) {
             msgs: result?.msgs || [],
             qq: String(group),
             name: target?.info?.group_name || target?.group_name || '小花火',
+            // 社区签到用小花火立绘头像（sender 是群名占位，QQ 头像与签到者无关）；游戏签到不传此字段
+            xhhAvatar: true,
             saveId: `bbs_auto_${group}`,
         }, { e: renderEvent, ret: false });
         if (image) return target.sendMsg(image);
@@ -803,6 +805,8 @@ async function replyBbsResultImage(e, msgs, lines) {
             msgs,
             qq: e.user_id,
             name: e.sender?.card || e.sender?.nickname || String(e.user_id),
+            // 社区签到用小花火立绘头像；游戏签到不传此字段，模板回退到 QQ 头像
+            xhhAvatar: true,
             // 与游戏签到共用 sign/sign.html，这里单独给个 saveId，免得命中它的渲染缓存
             saveId: 'bbs_sign',
         }, { e, ret: true });
