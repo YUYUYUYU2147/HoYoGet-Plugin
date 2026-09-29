@@ -82,15 +82,15 @@ git fetch origin && git checkout -B v2 origin/v2 && git pull && pnpm i
 
 <p align="center"><a href="resources/readme/note.jpg"><img src="resources/readme/note.jpg" width="400" alt="四游戏体力聚合真实渲染（点击查看大图）"></a></p>
 
-### 卡池 / 复刻 / 多久没 UP
-本地史料库 + 米游社官方公告双向同步，每天 05:30 自动更新，能问「某角色多久没复刻」「当前 UP 是谁」。
-`#原神卡池` `#崩三补给` `#绝区零卡池` `#官方当前卡池` `#星铁复刻统计` `#可莉多久没复刻`
+### 卡池 / 复刻 / 抽卡记录 / 多久没 UP
+本地史料库 + 米游社官方公告双向同步，每天 05:30 自动更新，能问「某角色多久没复刻」「当前 UP 是谁」「我抽了多少」。
+`#原神卡池` `#崩三补给` `#绝区零卡池` `#官方当前卡池` `#星铁复刻统计` `#星铁抽卡记录` `#可莉多久没复刻`
 
 <div align="center">
 
-| 星铁当前卡池 | 米游社官方卡池 |
-| :---: | :---: |
-| <a href="resources/readme/pool.jpg"><img src="resources/readme/pool.jpg" width="300" alt="星铁当前卡池（点击查看大图）"></a> | <a href="resources/readme/official_pool.jpg"><img src="resources/readme/official_pool.jpg" width="300" alt="米游社官方当前卡池（点击查看大图）"></a> |
+| 星铁当前卡池 | 米游社官方卡池 | 星铁抽卡记录 |
+| :---: | :---: | :---: |
+| <a href="resources/readme/pool.jpg"><img src="resources/readme/pool.jpg" width="230" alt="星铁当前卡池（点击查看大图）"></a> | <a href="resources/readme/official_pool.jpg"><img src="resources/readme/official_pool.jpg" width="230" alt="米游社官方当前卡池（点击查看大图）"></a> | <a href="resources/readme/sr_gacha.jpg"><img src="resources/readme/sr_gacha.jpg" width="230" alt="星铁抽卡记录（点击查看大图）"></a> |
 
 </div>
 
