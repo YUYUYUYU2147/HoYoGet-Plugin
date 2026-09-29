@@ -626,12 +626,26 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
         }
         let text;
         if (name) {
-            let id; 
+            // 官方 Wiki 标题可能带装饰符（实测「星神★阿哈」含 ★、「开拓者·毁灭」含 ·），
+            // 原来的严格相等（只去空格）会让「阿哈」「星神阿哈」都匹配不上。
+            // 改为「精确 -> 包含」两级匹配，与绝区零图鉴的匹配策略保持一致。
+            const cleanKey = v => String(v || '').replace(/[^\u4e00-\u9fa5a-z0-9]/gi, '').toLowerCase();
+            const target = cleanKey(name);
+            let id;
             for (let va of list) {
                 id = va.content_id;
-                if (va.title.replace(/ /g, '') == name) return {
+                if (cleanKey(va.title) == target) return {
                     id
                 };
+            }
+            // 包含匹配要求至少 2 个字，避免单字查询命中一堆无关条目
+            if (target.length >= 2) {
+                for (let va of list) {
+                    id = va.content_id;
+                    if (cleanKey(va.title).includes(target)) return {
+                        id
+                    };
+                }
             }
             return false;
         } else {
