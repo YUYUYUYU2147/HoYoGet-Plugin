@@ -129,12 +129,45 @@ const nanokaSrIcon = id => (id ? `${NANOKA_ASSET}/hsr/avatardrawcard/${id}.webp`
 
 // nanoka 的 zh 字段偶尔带内部标记，星铁「银狼」就是
 // "银狼LV.<unbreak>999</unbreak>"（实测唯一一条，原神 152 条全干净）。
-// 只去掉这一类标记，不能无脑剥所有标签 —— 日文名里的 {RUBY_B#…} 是注音结构，剥了会散。
+// 只去掉这一类标记，不能无脑剥所有标签 —— 日文名里 {RUBY_B#…} 是注音结构，剥了会散。
 const cleanNanokaName = v => String(v || '')
     .replace(/LV\.<unbreak>.*?<\/unbreak>/gi, '')
     .replace(/<[^>]+>/g, '')
     .replace(/\s+/g, ' ')
     .trim();
+
+/** nanoka 的 id 可能是 10000005-2 这种多形态拼接，取数字前缀 */
+const numId = id => {
+    const m = String(id ?? '').match(/^\d+/);
+    return m ? Number(m[0]) : 0;
+};
+
+/**
+ * 上线时间排序权重（越大越新）。
+ *
+ * nanoka 的 release 两种形态都要认：
+ *   原神  '2021-07-21 00:00:00'  字符串
+ *   星铁  1713344400            秒级时间戳数字
+ *
+ * 没有有效时间的（1970-01-01 占位或 undefined）= 尚未实装，按「最新」算，
+ * 因为一个还没上线的新角色本来就比所有已上线的都新。
+ * 唯一的例外是旅行者 —— 它也是 1970，但它是游戏最初的角色，要沉到最后。
+ */
+const releaseRank = (c, id) => {
+    // 旅行者（多形态 id 形如 10000005-2，以及本体 10000134/10000135）按最早处理
+    if (/旅行者/.test(String(c?.zh || ''))) return 0;
+    const v = c?.release;
+    let t = NaN;
+    if (typeof v === 'number') {
+        // 星铁是秒；万一是毫秒就除以 1000
+        t = v > 1e11 ? v / 1000 : v;
+    } else if (typeof v === 'string') {
+        // 原神 'YYYY-MM-DD HH:mm:SS' —— 按 UTC 解析，避免本地时区把顺序搞乱
+        t = Date.parse(v.replace(' ', 'T') + 'Z');
+    }
+    // 2000-01-01 之前的（1970 占位）以及解析失败的一律当作「未上线」
+    return Number.isFinite(t) && t >= 946684800 ? t : Number.POSITIVE_INFINITY;
+};
 
 // 星铁方形头像：avataricon/avatar/{角色id}.webp（160×188，头部+肩部特写）。
 // 和原神一样用方形的 —— 列表头像框是 90×90 + border-radius:10px，不是圆形，
@@ -553,10 +586,24 @@ class mys {
                 seenName.add(key);
                 return true;
             })
-            // 按 release 降序 = 上线时间新的排前面。
-            // 不能用 content_id 排：实测原神 薇斯纳 id=10000143 比 奥黛塔 id=10000150 小，
-            // 但 薇斯纳 2026-09-22 上线、奥黛塔 2026-08-11 上线，按 id 排会把新角色压下去。
-            .sort((a, b) => String(b[1]?.release || '').localeCompare(String(a[1]?.release || '')));
+            // 按上线时间降序 = 新的排前面。
+            //
+            // 两个坑：
+            // 1) release 的形态两个游戏不一样：原神是 'YYYY-MM-DD HH:mm:SS' 字符串
+            //    （实测 152 条全是这种），星铁是秒级时间戳数字（97 条）。
+            //    原来直接 String().localeCompare 混着比，跨游戏毫无意义。
+            // 2) nanoka 用 1970-01-01 / undefined 表示「没有上线时间」。
+            //    实测这类条目是：原神 米提亚(10000136)、瓦列里(10000137)、
+            //    旅行者的一堆形态(10000005-2 等)；星铁 真珠(1503)、星神★阿哈(1511)。
+            //    之前这些会被当成「时间最早」直接沉到列表最底 —— 用户要的是
+            //    「米提亚是新角色应该排最前」，实际排在了五星组最后一名。
+            //    没有上线时间 = 尚未实装 = 比所有已上线的新 → 当作最新。
+            //    例外是旅行者：它同样是 1970，但它是最初的角色，必须沉到最后，
+            //    所以单独按主角处理。
+            // 3) 时间相同时（同一批上线的角色）再按 id 降序兜底，
+            //    否则顺序取决于 JSON 的键序，每次刷新可能不一样。
+            .sort((a, b) => (releaseRank(b[1], b[0]) - releaseRank(a[1], a[0]))
+                || (numId(b[0]) - numId(a[0])));
 
         const js_list = charEntries.map(([id, c]) => {
             // 两个游戏都用方形头像：原神 UI_AvatarIcon_XXX，星铁 avataricon/avatar/{id}。
