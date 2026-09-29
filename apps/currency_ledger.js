@@ -133,11 +133,15 @@ function parseMonth(msg = '') {
 /** 把三个游戏各自不同的响应，统一成同一套字段 */
 function normalize(game, res) {
     const d = res?.data || {};
+    // 月份键必须是 YYYYMM。原神接口的 month 字段有可能是 "9" 这种只带月份的写法，
+    // 直接拿去 slice(0,4)/slice(4) 会得到 "9" 和空串，柱状图的月份标签就渲染不出来。
+    // 这里只认 6 位数字，其余交给调用方用「请求的月份」补。
+    const ym = v => (/^\d{6}$/.test(String(v || '')) ? String(v) : '');
     if (game === 'gs') {
         const md = d.month_data || {};
         const dd = d.day_data || {};
         return {
-            ym: String(d.month || ''),
+            ym: ym(d.month),
             uid: String(d.uid || ''),
             nickname: d.nickname || '',
             avatar: d.avatar || '',
@@ -155,7 +159,7 @@ function normalize(game, res) {
         const md = d.month_data || {};
         const dd = d.day_data || {};
         return {
-            ym: String(d.data_month || d.month || ''),
+            ym: ym(d.data_month || d.month),
             uid: String(d.uid || ''),
             nickname: d.role_info?.nickname || '',
             avatar: d.role_info?.avatar || '',
@@ -174,7 +178,7 @@ function normalize(game, res) {
     const list = md.list || [];
     const pick = t => Number(list.find(i => i.data_type === t)?.count || 0);
     return {
-        ym: String(d.data_month || ''),
+        ym: ym(d.data_month),
         uid: String(d.uid || ''),
         nickname: d.role_info?.nickname || '',
         avatar: d.role_info?.avatar || '',
@@ -294,6 +298,9 @@ export class CurrencyLedger extends plugin {
         }
         const { snap, error } = await this.fetch(e, game, mInfo);
         if (error) return e.reply(error, true, { recallMsg: 60 });
+        // 接口没回合法 YYYYMM 时用「请求的月份」兜底，否则存盘的键不完整，
+        // 统计页的月份标签会渲染成空的「月」
+        if (!/^\d{6}$/.test(String(snap.ym || ''))) snap.ym = mInfo.ym;
 
         // 无论月报还是统计都先把当月存进去，保证统计里始终包含最新月份
         const qq = String(e.user_id || e.user?.qq || '');

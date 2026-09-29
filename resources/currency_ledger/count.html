@@ -36,7 +36,6 @@
     <div class="panel-title">来源占比</div>
     <div class="breakdown">
       <div class="breakdown-left">
-        {{each sourceB64}}{{/each}}
         <div id="legend" class="legend" data-source="{{sourceB64}}"></div>
       </div>
       <div class="breakdown-right">
@@ -50,15 +49,30 @@
 
 <script>
 (function () {
+  // base64 里含中文，必须按 UTF-8 还原，直接 atob 会得到乱码
   function decode(el) {
-    try { return JSON.parse(decodeURIComponent(escape(atob(el.dataset.source || el.dataset.items || '')))); }
-    catch (e) { return []; }
+    var raw = el && (el.dataset.source || el.dataset.items);
+    if (!raw) return [];
+    try { return JSON.parse(decodeURIComponent(escape(atob(raw)))); }
+    catch (e) {
+      try { return JSON.parse(atob(raw)); } catch (e2) { return []; }
+    }
+  }
+  // 画不出来时给个可见提示，别留一片空白让人以为没数据
+  function fail(canvas, msg) {
+    var c = canvas.getContext('2d');
+    c.clearRect(0, 0, canvas.width, canvas.height);
+    c.fillStyle = 'rgba(26,26,46,.45)';
+    c.font = '15px "Noto Sans CJK SC",sans-serif';
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(msg, canvas.width / 2, canvas.height / 2);
   }
 
   // ---- 柱状图：每月总量 ----
   var barEl = document.getElementById('barChart');
   var items = decode(barEl);
-  if (items.length) {
+  if (!items.length) fail(barEl, '暂无月度数据');
+  else {
     var c = barEl.getContext('2d');
     var W = barEl.width, H = barEl.height, padL = 78, padR = 18, padT = 18, padB = 40;
     var iw = W - padL - padR, ih = H - padT - padB;
@@ -101,7 +115,8 @@
   var pieEl = document.getElementById('pieChart');
   var src = decode(pieEl);
   var lg = document.getElementById('legend');
-  if (src.length) {
+  if (!src.length) { fail(pieEl, '暂无来源明细'); lg.innerHTML = ''; }
+  else {
     var p = pieEl.getContext('2d');
     var S = pieEl.width, cx = S / 2, cy = S / 2, R = S / 2 - 8, r = R * 0.58;
     var total = src.reduce(function (s, i) { return s + i.num; }, 0) || 1;
