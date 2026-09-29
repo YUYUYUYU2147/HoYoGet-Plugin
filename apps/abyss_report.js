@@ -603,8 +603,8 @@ function srSide(stages = [], weakness = [], monsterMap, monsterChildMap, bossIds
       info.count = info.count || 1;
       if (info.stats) {
         info.pollution = pollution;
-        // xN 是「本半场贪饕怪只数」，与污染等级无关
-        info.count = Math.max(info.count || 0, (inv.monster_list || []).length);
+        // 注意：xN（血条数）是【每只怪各自的属性】，不是本场有几只怪。
+        // nanoka 的 monster.json 没有这个字段，无法计算，故此处不臆造。
         if (healPct > 0) {
           info.stats.greedPct = Math.round(healPct * 100);
           const base = Number(String(info.stats.hp).replace(/,/g, '')) || 0;
