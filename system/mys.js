@@ -65,6 +65,98 @@ const ZZZ_WIKI_CHANNEL_MAP = {
     syw: 46   // 驱动盘
 };
 
+/* ---------------------------------------------------------------------------
+ * 原神 / 星铁 改用 nanoka.cc（与绝区零同一套模式：每个游戏一个站，
+ * 数据 static.nanoka.cc/{gi|hsr}/{版本}/，资源 static.nanoka.cc/assets/{gi|hsr}/）
+ *
+ * 为什么不直接用米游社官方 blackboard：那份列表是 5.8MB(原神) / 1.9MB(星铁)，
+ * 渲染几百个格子时会把 Chromium 拖到超时重启；nanoka 对应文件只有 64KB / 53KB。
+ *
+ * ⚠ 两边的 id 体系完全不同，而且会撞号（nanoka 1214=雪衣，米游社 1214=刃；
+ * 星铁 99 个角色 id 交集只有 1 个，172 个光锥 id 交集为 0），
+ * 所以列表与详情必须同源，不能拿 nanoka 的 id 去请求米游社。
+ * -------------------------------------------------------------------------- */
+const NANOKA_ASSET = 'https://static.nanoka.cc/assets';
+// 版本号从 manifest 动态取，nanoka 与米游社用的是同一份 manifest
+let NANOKA_VER_CACHE = {};
+const getNanokaVer = async game => {
+    if (NANOKA_VER_CACHE[game]) return NANOKA_VER_CACHE[game];
+    let v = '';
+    try {
+        const m = await (await fetch('https://static.nanoka.cc/manifest.json')).json();
+        v = String(m?.[game]?.latest || m?.[game]?.live || '');
+    } catch (_) { v = ''; }
+    NANOKA_VER_CACHE[game] = v;
+    return v;
+};
+const nanokaBase = async game => {
+    const v = await getNanokaVer(game);
+    return v ? `https://static.nanoka.cc/${game}/${v}` : '';
+};
+
+// 原神立绘：nanoka 的 icon 形如 UI_AvatarIcon_Ayaka，立绘文件是 UI_Gacha_AvatarImg_Ayaka
+const nanokaGsIcon = icon => {
+    const key = String(icon || '');
+    if (!key) return '';
+    return `${NANOKA_ASSET}/gi/UI_Gacha_AvatarImg_${key.replace(/^UI_AvatarIcon_/, '')}.webp`;
+};
+// 原神武器/遗器等小图标
+const nanokaGsItemIcon = icon => {
+    const key = String(icon || '');
+    if (!key) return '';
+    return `${NANOKA_ASSET}/gi/${key.replace(/^UI_EquipIcon_/, '')}.webp`;
+};
+// 星铁立绘：avatardrawcard/{角色id}.webp（实测 99/99 全部 200）
+const nanokaSrIcon = id => (id ? `${NANOKA_ASSET}/hsr/avatardrawcard/${id}.webp` : '');
+const nanokaSrLcIcon = id => (id ? `${NANOKA_ASSET}/hsr/lightconemaxfigures/${id}.webp` : '');
+const nanokaSrSkillIcon = (id, kind) => (id && kind ? `${NANOKA_ASSET}/hsr/skillicons/SkillIcon_${id}_${kind}.webp` : '');
+
+const GS_ELEMENT_CN = {
+    Pyro: '火', Cryo: '冰', Electro: '雷', Hydro: '水', Anemo: '风',
+    Geo: '岩', Dendro: '草', None: '无'
+};
+const GS_WEAPON_CN = {
+    WEAPON_SWORD_ONE_HAND: '单手剑', WEAPON_CATALYST: '法器', WEAPON_CLAYMORE: '双手剑',
+    WEAPON_BOW: '弓', WEAPON_POLE: '长枪', WEAPON_CROSSBOW: '特弓', ITEM_TPS_WEAPON: '特殊武器'
+};
+const SR_PATH_CN = {
+    Knight: '存护', Rogue: '巡猎', Mage: '智识', Warlock: '毁灭', Warrior: '纷争',
+    Shaman: '欢愉', Priest: '同谐', Memory: '记忆', Elation: '虚无'
+};
+const SR_DAMAGE_CN = {
+    Physical: '物理', Fire: '火', Ice: '冰', Thunder: '雷',
+    Wind: '风', Imaginary: '虚数', Quantum: '量子'
+};
+// 星级：原神用 QUALITY_*，星铁用 CombatPower*，原神武器是 1~5 的数字
+const gsRarityCn = r => (String(r).includes('ORANGE') ? '五星' : String(r).includes('PURPLE') ? '四星' : '');
+const gsWeaponRarityCn = r => {
+    const n = Number(r);
+    return n === 5 ? '五星' : n === 4 ? '四星' : n === 3 ? '三星' : n === 2 ? '二星' : n === 1 ? '一星' : '';
+};
+const srRarityCn = r => {
+    // 星铁的 rank 有两种写法：角色是 CombatPowerAvatarRarityType5，
+    // 光锥是 CombatPowerLightconeRarity3（没有 Type），所以统一取末尾数字。
+    const m = /(\d+)\s*$/.exec(String(r || ''));
+    const n = m ? Number(m[1]) : 0;
+    return n === 5 ? '五星' : n === 4 ? '四星' : n === 3 ? '三星' : n === 2 ? '二星' : n === 1 ? '一星' : '';
+};
+
+/**
+ * 合成米游社格式的 ext。
+ * mys.data() 里是 `text.c_25 || text.c_5 || text.c_19 || text.c_18` 然后取
+ * `filter.text`，也就是 filter 必须放在 c_* 盒子「里面」而不是顶层——
+ * 放顶层的话 data() 取到 undefined，列表的星级徽章和筛选全会失效。
+ * 真实米游社样例：{"c_18":{"filter":{"text":"[\"星级/五星\",...]"},"picture":{...}}}
+ */
+const makeExt = (strings, icon) => {
+    const box = {
+        filter: { text: JSON.stringify(strings.filter(Boolean)) },
+        picture: { list: icon ? [icon] : [] }
+    };
+    return JSON.stringify({ c_25: box, c_5: box, c_18: box, c_19: box, fallbackIcon: '' });
+};
+
+
 const BH3_WIKI_BASE = 'https://api-takumi-static.mihoyo.com/common/blackboard/bh3_wiki';
 const BH3_APP_SN = 'bh3_wiki';
 
@@ -338,14 +430,8 @@ class mys {
         return localBangbooIcon(name);
     }
 
-    //图鉴
-    async tujian(isSr = false, isZZZ = false, isBH3 = false) {
-        if (isZZZ) {
-            return await this.zzz_tujian();
-        }
-        if (isBH3) {
-            return await this.bh3_tujian();
-        }
+    // 原神/星铁官方 Wiki 列表（nanoka 失效时的兜底）
+    async official_tujian(isSr = false) {
         let url =
             'https://api-takumi-static.mihoyo.com/common/blackboard/ys_obc/v1/home/content/list?app_sn=ys_obc&channel_id=189';
         if (isSr)
@@ -369,6 +455,99 @@ class mys {
         });
         return data;
     }
+
+    //原神/星铁图鉴：nanoka 优先（体积小一个数量级），米游社官方 Wiki 兜底
+    async tujian(isSr = false, isZZZ = false, isBH3 = false) {
+        if (isZZZ) {
+            return await this.zzz_tujian();
+        }
+        if (isBH3) {
+            return await this.bh3_tujian();
+        }
+        if (!nanokaDown()) {
+            try {
+                const data = await this.nanoka_tujian(isSr);
+                if (data && (data.js_list?.length || data.gz_list?.length || data.wq_list?.length)) return data;
+                logger.warn?.('[xhh][图鉴] nanoka 返回空，回退米游社官方 Wiki');
+            } catch (error) {
+                markNanokaDown();
+                logger.error('原神/星铁 nanoka 图鉴访问失败，切换米游社官方 Wiki:', error);
+            }
+        }
+        return await this.official_tujian(isSr);
+    }
+
+    /**
+     * nanoka 版原神/星铁图鉴列表。
+     * 产出与米游社一致的 {js_list, wq_list, syw_list, gz_list, yq_list}，
+     * 其中 ext 里的 filter.text 决定列表的星级徽章与筛选，必须自己合成。
+     */
+    async nanoka_tujian(isSr = false) {
+        const game = isSr ? 'hsr' : 'gi';
+        const base = await nanokaBase(game);
+        if (!base) throw new Error('nanoka 版本号获取失败');
+        const isGs = !isSr;
+        const wqFile = isGs ? 'weapon.json' : 'lightcone.json';
+        const [chars, equips, weapons] = await Promise.all([
+            this.fetchJson(`${base}/character.json`, `${game} nanoka角色`),
+            this.fetchJson(`${base}/zh/item.json`, `${game} nanoka物品`),
+            this.fetchJson(`${base}/${wqFile}`, `${game} nanoka武器/光锥`)
+        ]);
+        if (!chars) throw new Error('nanoka 角色数据为空');
+
+        // 物品（圣遗物/遗器）按 nanoka 的数字 id 分组
+        const itemList = Object.values(equips || {}).filter(v => v && (v.name || v.icon));
+
+        const js_list = Object.entries(chars).map(([id, c]) => {
+            const icon = isGs ? nanokaGsIcon(c.icon) : nanokaSrIcon(id);
+            const strings = isGs
+                ? [`星级/${gsRarityCn(c.rank)}`, `元素/${GS_ELEMENT_CN[c.element] || ''}`, `武器/${GS_WEAPON_CN[c.weapon] || ''}`]
+                : [`星级/${srRarityCn(c.rank)}`, `命途/${SR_PATH_CN[c.baseType] || ''}`, `属性/${SR_DAMAGE_CN[c.damageType] || ''}`];
+            return {
+                content_id: id,
+                title: c.zh || c.en || id,
+                icon,
+                aliases: [c.code, c.en, c.codename].filter(v => v && v !== c.zh),
+                ext: makeExt(strings, icon)
+            };
+        });
+
+        const equipList = itemList.map(it => ({
+            content_id: String(it.id ?? it.ID ?? ''),
+            title: it.name || '',
+            icon: isGs ? nanokaGsItemIcon(it.icon) : `${NANOKA_ASSET}/hsr/itemfigures/${it.id ?? it.ID}.webp`,
+            ext: makeExt([], '')
+        }));
+
+        let gz_list = [], wq_list = [];
+        if (isGs) {
+            wq_list = Object.entries(weapons || {}).map(([id, w]) => {
+                const icon = nanokaGsItemIcon(w.icon);
+                return {
+                    content_id: id,
+                    title: w.zh || w.en || id,
+                    icon,
+                    ext: makeExt([`武器星级/${gsWeaponRarityCn(w.rank)}`, `武器类型/${GS_WEAPON_CN[w.type] || ''}`], icon)
+                };
+            });
+        } else {
+            gz_list = Object.entries(weapons || {}).map(([id, l]) => {
+                const icon = nanokaSrLcIcon(id);
+                return {
+                    content_id: id,
+                    title: l.zh || l.en || id,
+                    icon,
+                    ext: makeExt([`星级/${srRarityCn(l.rank)}`, `命途/${SR_PATH_CN[l.baseType] || ''}`], icon)
+                };
+            });
+        }
+
+        return {
+            js_list,
+            ...(isGs ? { wq_list, syw_list: equipList, yq_list: equipList } : { gz_list, yq_list: equipList })
+        };
+    }
+
     // 绝区零图鉴（nanoka.cc 优先，米游社官方 Wiki 回退）
     async zzz_tujian() {
         // 冷却期内直接走官方 Wiki，不再请求已失效的 nanoka
@@ -1009,6 +1188,19 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
         if (isBH3) {
             return await this.bh3_detail(id);
         }
+        // nanoka 优先。米游社的 entry_page 免鉴权会返回空 content（实测 retcode=0 但
+        // content 是空串、ext 是 {}），也就是说这条链本来就得依赖用户 Cookie；
+        // 换到 nanoka 后连 Cookie 都不需要了。
+        if (!nanokaDown()) {
+            try {
+                const data = await this.nanoka_detail(id, isSr);
+                if (data) return data;
+                logger.warn?.('[xhh][图鉴] nanoka 详情为空，回退米游社官方 Wiki');
+            } catch (error) {
+                markNanokaDown();
+                logger.error('原神/星铁 nanoka 详情访问失败，切换米游社官方 Wiki:', error);
+            }
+        }
         let url = `https://api-takumi-static.mihoyo.com/hoyowiki/genshin/wapi/entry_page?app_sn=ys_obc&entry_page_id=${id}`;
         if (isSr)
             url = `https://api-static.mihoyo.com/common/blackboard/sr_wiki/v1/content/info?app_sn=sr_wiki&content_id=${id}`;
@@ -1020,6 +1212,24 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
             return false;
         }
         return res.data;
+    }
+
+    /**
+     * nanoka 版原神/星铁角色详情。
+     * 返回 { content: <nanoka 原始对象> }，调用方用 isSr 判断渲染哪套模板。
+     *
+     * 星铁：ranks(星魂) / skills(技能, 含逐级数值) / unique.stats(1~80级属性成长)
+     *       / skill_trees(行迹) / relics / chara_info(语音剧情)
+     * 原神：skills(4个, 含等级缩放) / constellations(命座) / passives(天赋)
+     *       / materials(突破材料) / attack / energy / chara_info
+     */
+    async nanoka_detail(id, isSr = false) {
+        const game = isSr ? 'hsr' : 'gi';
+        const base = await nanokaBase(game);
+        if (!base) return false;
+        const data = await this.fetchJson(`${base}/zh/character/${id}.json`, `${game} nanoka详情 ${id}`);
+        if (!data || !data.name) return false;
+        return { content: data, nanoka: true };
     }
 
     // 绝区零详细信息（nanoka.cc 优先，米游社官方 Wiki 回退）
