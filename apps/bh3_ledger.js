@@ -725,10 +725,24 @@ export class bh3_ledger extends plugin {
         const list = [...merged.values()].filter(i => i.num > 0).sort((a, b) => b.num - a.num);
         // 占比按「有明细来源的合计」算，而不是按全部月水晶 —— 这样每一块都是真实来源
         const base = list.reduce((s, i) => s + i.num, 0);
+        // 最大余数法：逐项四舍五入会算出合计 101% 这种数（实测 15505/6210/3320/680/600/450
+        // 四舍五入后是 58+23+12+3+2+2=100，这次刚好撞上，但换一批数据就会超），
+        // 这里先取整再把余数补给小数最大的几项，保证图例加起来正好 100%
+        const raw = list.map(i => (base > 0 ? (i.num / base) * 100 : 0));
+        const percent = raw.map(v => Math.floor(v));
+        let rest = 100 - percent.reduce((a, b) => a + b, 0);
+        const order = raw
+            .map((v, idx) => ({ idx, frac: v - Math.floor(v) }))
+            .sort((a, b) => b.frac - a.frac);
+        for (const { idx } of order) {
+            if (rest <= 0) break;
+            percent[idx] += 1;
+            rest -= 1;
+        }
         const color = ['#73a8c6', '#d56565', '#70b2b4', '#bd9a5a', '#739970', '#7a6da7', '#597ea0'];
         return list.map((i, idx) => ({
             ...i,
-            percent: base > 0 ? Math.round((i.num / base) * 100) : 0,
+            percent: percent[idx],
             color: color[idx % color.length],
         }));
     }
