@@ -460,6 +460,11 @@ function srMonsterStats(pid, level, stageEliteGroup, stageHardLevelGroup, valueB
     hp: Math.round(hp).toLocaleString('en-US'),
     speed: Math.round(spd),
     toughness: (Math.round(tough * 10) / 10).toFixed(1),
+    // 通关需要打 N 个阶段，即页面显示的 ×N
+    phase: cv.maxPhase || 1,
+    // 效果抗性 = base + hlg.StatusResistance × 阶段数
+    // 实测：8003010(0.2,1,组3) = 30.0%；5014010(0.3,2,组3) = 50.0%
+    statusRes: (Number(cv.statusResBase || 0) + Number(hl.StatusResistance || 0) * (cv.maxPhase || 1)) * 100,
   };
 }
 
@@ -604,14 +609,13 @@ function srSide(stages = [], weakness = [], monsterMap, monsterChildMap, bossIds
       info.count = info.count || 1;
       if (info.stats) {
         info.pollution = pollution;
-        // xN（血条数）/ 污染加血 / 效果抗性 nanoka 都没有，
-        // 按 stage_id 从 alioth 补（两源 stage_id 同号，已实测对齐）。
+        // xN 与效果抗性用 nanoka 自己的数据算（MaxMonsterPhase / StatusResistance），
+        // alioth 只补它独有的污染加血 VoracityHP。
+        info.hpMult = info.stats.phase > 1 ? info.stats.phase : 0;
         const ex = pickEnrich(enrichMap, stage?.stage_id, pid);
-        if (ex) {
-          info.hpMult = ex.hpCount || 0;
+        if (ex?.voracityHp) {
           info.stats = info.stats || {};
-          if (ex.voracityHp) info.stats.voracityHp = ex.voracityHp.toLocaleString('en-US');
-          if (ex.iar != null) info.iar = ex.iar;
+          info.stats.voracityHp = ex.voracityHp.toLocaleString('en-US');
         }
         if (healPct > 0) {
           info.stats.greedPct = Math.round(healPct * 100);

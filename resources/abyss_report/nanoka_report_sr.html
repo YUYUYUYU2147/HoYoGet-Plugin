@@ -116,7 +116,7 @@
                       <div class="m-stat"><span class="m-stat-label">Tough</span><span class="m-stat-val">{{m.stats.toughness}}</span></div>
                       {{if m.stats.greedPct}}<div class="m-stat-greed">贪饕生命值：+{{m.stats.greedHp}}（{{m.stats.greedPct}}%）</div>{{/if}}
                       {{if m.stats.voracityHp}}<div class="m-stat-greed">污染加血：+{{m.stats.voracityHp}}</div>{{/if}}
-                      {{if m.iar != null}}<div class="m-stat-greed">效果抗性：{{m.iar}}.0%</div>{{/if}}
+                      {{if m.stats.statusRes != null}}<div class="m-stat-greed">效果抗性：{{m.stats.statusRes}}%</div>{{/if}}
                     {{if m.pollution}}<div class="m-stat-greed">污染{{m.pollution}}级 · 额外 +{{m.pollution}}0% 血量</div>{{/if}}
                     </div>
                     {{/if}}
