@@ -652,58 +652,47 @@ export class bh3_ledger extends plugin {
     // 在 5 月是「剩余途径」、在 8 月是「记忆战场积分奖励」），只能按 name 合并，
     // 否则会出现两个同名「剩余途径」被拆成两项、当月来源未结算的月份不参与聚合。
     /**
-     * 按月补抓水晶来源明细（group_by）。
-     * 只有 api/index 带上 month 参数时才会返回 group_by，
-     * 不带 month 的请求只有月度汇总。
-     * 上个版本从未调用这个接口，所以 group_by 永远不会被写入，
-     * 历史上能看到的那几个月是旧版本遗留的。
+     * 抓取「上一个自然月」的水晶数据（含 group_by 来源明细）并回写磁盘。
+     *
+     * 关键：group_by 只存在于 getLastMonthInfo（上个���）接口，
+     * api/index（当月）永远不返回它，且传 month 参数无效（实测返回的仍是当月数据）。
+     * 因此**只有相邻的一个月能被抓到**，跨月就永久丢失——
+     * 所以每月只要有人发一次 #上月水晶 或 #崩三水晶统计，就不会再漏。
      */
-    async fetchMonthGroupBy(e, auth, monthKey) {
+    async captureLastMonthGroupBy(e, auth) {
         const { uid, headers, region } = auth;
-        const months = [moment(monthKey, 'YYYYMM').format('YYYY-MM'), String(monthKey)];
-        for (const month of months) {
-            try {
-                const res = await api(e, { type: 'bh3_ledger', uid, server: region, headers, month, game: 'bh3' });
-                const gb = res?.data?.group_by;
-                debugLog('[水晶] group_by 尝试:', monthKey, 'month=' + month,
-                    'retcode=' + res?.retcode, 'msg=' + (res?.message || ''),
-                    'data字段=' + (res?.data ? Object.keys(res.data).join(',') : '无'),
-                    'group_by=' + (Array.isArray(gb) ? gb.length + '项' : gb === null ? 'null' : typeof gb));
-                if (res?.retcode === 0 && Array.isArray(gb) && gb.length) {
-                    debugLog('[水晶] group_by 补抓成功:', monthKey, month, gb.length, '项');
-                    return gb;
-                }
-            } catch (err) {
-                logger.warn?.(`[水晶] group_by 补抓失败 ${monthKey}: ${err?.message || err}`);
+        const queryStr = `game_biz=bh3_cn&bind_uid=${uid}&bind_region=${region}`;
+        try {
+            const res = await fetch(`https://api.mihoyo.com/bh3-weekly_finance/api/getLastMonthInfo?${queryStr}`, {
+                method: 'GET',
+                headers: {
+                    Cookie: headers.Cookie,
+                    DS: mhy.getDs2(queryStr, '', '4'),
+                    'x-rpc-client_type': '5',
+                    'x-rpc-app_version': '2.73.1',
+                    'User-Agent': 'Mozilla/5.0 (Linux; Android 12; XQ-AT52 Build/58.2.A.7.93; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/100.0.4896.88 Mobile Safari/537.36 miHoYoBBS/2.73.1',
+                    Referer: 'https://webstatic.mihoyo.com/',
+                },
+            }).then(r => r.json());
+            if (res?.retcode !== 0 || !res?.data) {
+                logger.warn?.(`[水晶] 上月数据抓取失败: retcode=${res?.retcode} ${res?.message || ''}`);
+                return false;
             }
+            const data = res.data;
+            const monthKey = this.getLedgerMonthKey(data);
+            debugLog('[水晶] 上月数据:', monthKey, 'group_by=',
+                Array.isArray(data.group_by) ? data.group_by.length + '项' : typeof data.group_by);
+            if (!Array.isArray(data.group_by) || !data.group_by.length) return false;
+            const existing = this.getHistoryMonth(uid, monthKey);
+            // 已有完整数据就别覆盖，避免把已存的 month_hcoin 换成接口的另一套口径
+            if (existing && Array.isArray(existing.group_by) && existing.group_by.length) return false;
+            await this.saveLedger(uid, data);
+            debugLog('[水晶] 上月 group_by 已入库:', monthKey);
+            return true;
+        } catch (err) {
+            logger.warn?.(`[水晶] 上月数据抓取异常: ${err?.message || err}`);
+            return false;
         }
-        return null;
-    }
-
-    /**
-     * 把缺 group_by 的历史月份补齐并回写磁盘。
-     * 只补已过期的月（当月源未结算拿不到），
-     * 避免每次请求都去试一遍。
-     */
-    async backfillGroupBy(e, auth, monthList) {
-        const currentKey = moment().format('YYYYMM');
-        const missing = monthList.filter(m => {
-            const key = String(m?._key || '');
-            if (!key || key >= currentKey) return false;
-            return !(Array.isArray(m?.group_by) && m.group_by.length);
-        });
-        if (!missing.length) return 0;
-        debugLog('[水晶] 待补齐 group_by 的月份:', missing.map(m => m._key).join(','));
-        let filled = 0;
-        for (const m of missing) {
-            const list = await this.fetchMonthGroupBy(e, auth, m._key);
-            if (!list) { logger.warn?.('[水晶] ' + m._key + ' group_by 补抓失败（接口未返回来源明细）'); continue; }
-            m.group_by = list;
-            filled++;
-            await this.saveLedger(auth.uid, { ...m, _key: undefined, data_month: m._key });
-        }
-        if (filled) debugLog('[水晶] group_by 补齐完成:', filled, '个月');
-        return filled;
     }
 
     buildCumulativeSource(monthList) {
@@ -774,8 +763,9 @@ export class bh3_ledger extends plugin {
                 if (h > maxHcoin) { maxHcoin = h; maxMonth = String(m._key); maxMonthLabel = label; }
             }
 
-            // 先把缺 group_by 的历史月份补齐再聚合，否则来源占比会永远少掉那几个月
-            await this.backfillGroupBy(e, auth, monthList);
+            // 顺带把上个自然月抓一遍（只有相邻月能拿到 group_by），避免再漏
+            await this.captureLastMonthGroupBy(e, auth);
+            monthList = Object.entries(this.loadLedgerData(uid)).map(([k, v]) => ({ ...v, _key: k })).sort((a, b) => a._key.localeCompare(b._key));
             const hcoinList = this.buildCumulativeSource(monthList);
             const firstKey = monthList[0]._key;
             const lastKey = monthList[monthList.length - 1]._key;
