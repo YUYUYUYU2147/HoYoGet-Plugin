@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="{{ppath}}currency_ledger/count.css" />
+</head>
+<body {{sys.scale}}>
+<div class="page">
+  <div class="accent-bar" style="background:{{accent}}"></div>
+
+  <header class="head">
+    <div class="head-text">
+      <h1>{{title}}</h1>
+      <div class="sub">UID {{uid}} · 共 {{monthCount}} 个月 · {{rangeText}}</div>
+    </div>
+  </header>
+
+  <div class="summary">
+    <div class="sum-box">
+      <div class="sum-label">累计{{unit}}</div>
+      <div class="sum-num" style="color:{{accent}}">{{total}}</div>
+    </div>
+    <div class="sum-box">
+      <div class="sum-label">最高月</div>
+      <div class="sum-num2">{{bestMonth}}</div>
+      <div class="sum-sub">{{bestValue}}</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">每月{{unit}}</div>
+    <canvas id="barChart" width="880" height="280" data-items="{{itemsB64}}"></canvas>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">来源占比</div>
+    <div class="breakdown">
+      <div class="breakdown-left">
+        {{each sourceB64}}{{/each}}
+        <div id="legend" class="legend" data-source="{{sourceB64}}"></div>
+      </div>
+      <div class="breakdown-right">
+        <canvas id="pieChart" width="300" height="300" data-source="{{sourceB64}}"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <footer>数据来自米游社账本接口 · {{dateStr}}</footer>
+</div>
+
+<script>
+(function () {
+  function decode(el) {
+    try { return JSON.parse(decodeURIComponent(escape(atob(el.dataset.source || el.dataset.items || '')))); }
+    catch (e) { return []; }
+  }
+
+  // ---- 柱状图：每月总量 ----
+  var barEl = document.getElementById('barChart');
+  var items = decode(barEl);
+  if (items.length) {
+    var c = barEl.getContext('2d');
+    var W = barEl.width, H = barEl.height, padL = 78, padR = 18, padT = 18, padB = 40;
+    var iw = W - padL - padR, ih = H - padT - padB;
+    var max = Math.max.apply(null, items.map(i => i.value)) || 1;
+    // 纵轴刻度取整到好看的数
+    var step = Math.pow(10, Math.floor(Math.log10(max)));
+    var top = Math.ceil(max / step) * step;
+    c.clearRect(0, 0, W, H);
+    c.strokeStyle = '#e9edf3'; c.fillStyle = 'rgba(26,26,46,.5)';
+    c.font = '12px "Noto Sans CJK SC",sans-serif'; c.textAlign = 'right'; c.textBaseline = 'middle';
+    for (var g = 0; g <= 4; g++) {
+      var y = padT + ih - ih * g / 4;
+      c.beginPath(); c.moveTo(padL, y); c.lineTo(W - padR, y); c.stroke();
+      c.fillText(Math.round(top * g / 4).toLocaleString('en-US'), padL - 8, y);
+    }
+    var bw = Math.min(64, iw / items.length * 0.6);
+    items.forEach(function (it, i) {
+      var cx = padL + iw * (i + 0.5) / items.length;
+      var h = Math.max(2, ih * (it.value / top));
+      var y = padT + ih - h;
+      var g = c.createLinearGradient(0, y, 0, padT + ih);
+      g.addColorStop(0, '#7ea6d8'); g.addColorStop(1, '#4f7cb8');
+      c.fillStyle = g;
+      c.beginPath();
+      if (c.roundRect) c.roundRect(cx - bw / 2, y, bw, h, [6, 6, 0, 0]);
+      else c.rect(cx - bw / 2, y, bw, h);
+      c.fill();
+      c.fillStyle = '#1f2937'; c.font = '600 12px "Noto Sans CJK SC",sans-serif';
+      c.textAlign = 'center'; c.textBaseline = 'bottom';
+      c.fillText(it.value.toLocaleString('en-US'), cx, y - 5);
+      c.fillStyle = 'rgba(26,26,46,.55)'; c.font = '12px "Noto Sans CJK SC",sans-serif';
+      c.textBaseline = 'top';
+      c.fillText(it.month, cx, padT + ih + 9);
+      c.font = '10px "Noto Sans CJK SC",sans-serif';
+      c.fillText(it.year, cx, padT + ih + 24);
+    });
+  }
+
+  // ---- 环形图：来源占比 ----
+  var pieEl = document.getElementById('pieChart');
+  var src = decode(pieEl);
+  var lg = document.getElementById('legend');
+  if (src.length) {
+    var p = pieEl.getContext('2d');
+    var S = pieEl.width, cx = S / 2, cy = S / 2, R = S / 2 - 8, r = R * 0.58;
+    var total = src.reduce(function (s, i) { return s + i.num; }, 0) || 1;
+    var a0 = -Math.PI / 2;
+    src.forEach(function (it) {
+      var a1 = a0 + Math.PI * 2 * (it.num / total);
+      p.beginPath();
+      p.moveTo(cx + Math.cos(a0) * r, cy + Math.sin(a0) * r);
+      p.arc(cx, cy, r, a0, a1);
+      p.arc(cx, cy, R, a1, a0, true);
+      p.closePath();
+      p.fillStyle = it.color; p.fill();
+      p.strokeStyle = '#fff'; p.lineWidth = 2; p.stroke();
+      a0 = a1;
+    });
+    p.fillStyle = '#1f2937'; p.textAlign = 'center'; p.textBaseline = 'middle';
+    p.font = '800 20px "Noto Sans CJK SC",sans-serif';
+    p.fillText(Math.round(src.length) + ' 项', cx, cy - 8);
+    p.fillStyle = 'rgba(26,26,46,.5)'; p.font = '12px "Noto Sans CJK SC",sans-serif';
+    p.fillText(total.toLocaleString('en-US'), cx, cy + 12);
+
+    lg.innerHTML = src.map(function (it) {
+      return '<div class="legend-item"><span class="legend-dot" style="background:' + it.color + '"></span>' +
+        '<span class="legend-name">' + it.name + '</span>' +
+        '<span class="legend-pct">' + it.percent + '%</span>' +
+        '<span class="legend-num">' + it.num.toLocaleString('en-US') + '</span></div>';
+    }).join('');
+  }
+})();
+</script>
+</body>
+</html>
