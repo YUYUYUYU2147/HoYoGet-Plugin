@@ -74,14 +74,45 @@ function dataPath(game, qq) {
     return path.join(DATA_DIR, game, `${qq}.json`);
 }
 
+/**
+ * 读存档。
+ * 键必须是 YYYYMM —— 早期版本没做校验，原神接口回的 month 可能是 "9"，
+ * 于是存档里出现了 '9' 和 '202609' 两个键都代表九月，柱状图就画出两根 9 月的柱子。
+ * 这里直接把非法键丢掉，并把它的数据并进同月的那条（数值取较大的那个，避免把已有数据清零）。
+ */
 function readAll(game, qq) {
     const file = dataPath(game, qq);
     if (!fs.existsSync(file)) return {};
+    let raw = {};
     try {
-        return JSON.parse(fs.readFileSync(file, 'utf8'));
+        raw = JSON.parse(fs.readFileSync(file, 'utf8'));
     } catch {
         return {};
     }
+    const out = {};
+    let dropped = [];
+    for (const [k, v] of Object.entries(raw || {})) {
+        if (/^\d{6}$/.test(String(k))) {
+            out[k] = v;
+            continue;
+        }
+        dropped.push(k);
+    }
+    if (!dropped.length) return out;
+    // 非法键只保留月份数（"9" → 202609 的月份 9），并到当年同月那条上
+    const nowYm = moment().format('YYYYMM');
+    for (const k of dropped) {
+        const mo = String(k).replace(/\D/g, '').slice(-2);
+        if (!/^\d{2}$/.test(mo)) continue;
+        const guess = `${nowYm.slice(0, 4)}${mo}`;
+        if (out[guess]) {
+            if (Number(v?.monthTotal || 0) > Number(out[guess].monthTotal || 0)) {
+                out[guess] = { ...out[guess], ...v, ym: guess };
+            }
+        }
+    }
+    logger.warn?.(`[xhh][账本] ${game} 存档里有非法月份键 ${dropped.join(',')}，已忽略（统计里原本会多出重复月份）`);
+    return out;
 }
 
 function writeAll(game, qq, data) {
@@ -130,6 +161,20 @@ function parseMonth(msg = '') {
     return { month, ym: `${year}${String(month).padStart(2, '0')}` };
 }
 
+// 三个游戏的来源明细条目字段名并不一致，而且原神这套从没被验证过
+// （genshin 那边只读了 item.action_id 去取颜色，从没读过名字和数值）。
+// 这里对每个字段都接受多种别名，避免猜错一个就把整份明细过滤成空。
+const pickSrcName = i => String(
+    i?.name ?? i?.title ?? i?.action_name ?? i?.type_name ?? i?.action ?? i?.action_name_cn ?? ''
+).trim();
+const pickSrcNum = i => Number(i?.num ?? i?.count ?? i?.value ?? i?.amount ?? 0);
+const pickSrcList = md => {
+    const raw = md?.group_by || md?.income_components || md?.list || [];
+    return (Array.isArray(raw) ? raw : [])
+        .map(i => ({ name: pickSrcName(i), num: pickSrcNum(i), icon: i?.icon || '' }))
+        .filter(i => i.name && i.num > 0);
+};
+
 /** 把三个游戏各自不同的响应，统一成同一套字段 */
 function normalize(game, res) {
     const d = res?.data || {};
@@ -150,9 +195,7 @@ function normalize(game, res) {
             today: Number(dd.current_primogems || 0),
             extra: Number(dd.current_mora || 0),
             gacha: Number(md.gacha || 0),
-            list: (md.group_by || [])
-                .map(i => ({ name: String(i.name || ''), num: Number(i.num || 0), icon: i.icon || '' }))
-                .filter(i => i.name && i.num > 0),
+            list: pickSrcList(md),
         };
     }
     if (game === 'sr') {
@@ -168,9 +211,7 @@ function normalize(game, res) {
             today: Number(dd.current_hcoin || 0),
             extra: Number(dd.current_rails_pass || 0),
             gacha: Math.floor(Number(md.current_hcoin || 0) / 160),
-            list: (md.group_by || [])
-                .map(i => ({ name: String(i.action_name || i.action || ''), num: Number(i.num || 0), icon: i.icon || '' }))
-                .filter(i => i.name && i.num > 0),
+            list: pickSrcList(md),
         };
     }
     // 绝区零
@@ -188,9 +229,8 @@ function normalize(game, res) {
         extra: pick('MatserTapeData'),
         boopons: pick('BooponsData'),
         gacha: 0,
-        list: (md.income_components || [])
-            .map(i => ({ name: ZZZ_ACTION_NAME[i.action] || String(i.action || ''), num: Number(i.num || 0), icon: '' }))
-            .filter(i => i.name && i.num > 0),
+        // 绝区零用 action 枚举，先把枚举翻成中文再走统一提取
+        list: pickSrcList({ group_by: (md.income_components || []).map(i => ({ ...i, name: ZZZ_ACTION_NAME[i.action] || i.action })) }),
     };
 }
 
@@ -277,7 +317,20 @@ export class CurrencyLedger extends plugin {
             if (!res || res.retcode !== 0) {
                 return { error: res?.message || '月报接口返回异常，请确认已扫码绑定 Cookie 且在米游社 App 内开启「账本」权限。' };
             }
-            return { snap: normalize(game, res) };
+            const snap = normalize(game, res);
+            // 来源明细抓空时把接口真实返回的字段名打出来。
+            // 原神这套的 group_by 字段名从来没被验证过（genshin 那边只读了 action_id 取颜色），
+            // 一旦猜错就会整份被过滤成空，饼图直接没有，这里留个能定位的日志。
+            if (!snap.list.length) {
+                const raw = res?.data?.month_data?.group_by;
+                logger.warn?.(
+                    `[xhh][账本] ${game} 本月来源明细为空。` +
+                    `group_by 类型=${Array.isArray(raw) ? `array[${raw.length}]` : typeof raw}` +
+                    (Array.isArray(raw) && raw[0] ? ` 首条字段=${Object.keys(raw[0]).join(',')}` : '') +
+                    ` data 顶层字段=${Object.keys(res?.data || {}).join(',')}`
+                );
+            }
+            return { snap };
         } catch (err) {
             return { error: err?.message || String(err) };
         } finally {
