@@ -5,6 +5,7 @@ import _ from 'lodash';
 import moment from 'moment';
 import { render, config, pluginPriority, makeForwardMsg } from '#xhh';
 import sharp from '../node_modules/sharp/lib/index.js';
+import { enrichFromAlioth, pickEnrich } from '../system/sr_enrich.js';
 
 const MANIFEST_URL = 'https://static.nanoka.cc/manifest.json';
 const DEFAULT_REPOS = [
@@ -545,7 +546,7 @@ function srSide(stages = [], weakness = [], monsterMap, monsterChildMap, bossIds
   const stageEliteGroup = stage?.elite_group;
     // 等级成长表要按关卡自己的 hard_level_group 查，不能用怪物表里的（两者系统性不同）
     const stageHardLevelGroup = stage?.hard_level_group;
-  const { valueByChild, eliteMap, hlgMap } = refs || {};
+  const { valueByChild, eliteMap, hlgMap, enrichMap } = refs || {};
   const addInfo = (pid) => {
     const k = String(pid);
     const info = srMonsterInfo(k, monsterMap, monsterChildMap);
@@ -603,8 +604,15 @@ function srSide(stages = [], weakness = [], monsterMap, monsterChildMap, bossIds
       info.count = info.count || 1;
       if (info.stats) {
         info.pollution = pollution;
-        // 注意：xN（血条数）是【每只怪各自的属性】，不是本场有几只怪。
-        // nanoka 的 monster.json 没有这个字段，无法计算，故此处不臆造。
+        // xN（血条数）/ 污染加血 / 效果抗性 nanoka 都没有，
+        // 按 stage_id 从 alioth 补（两源 stage_id 同号，已实测对齐）。
+        const ex = pickEnrich(enrichMap, stage?.stage_id, pid);
+        if (ex) {
+          info.hpMult = ex.hpCount || 0;
+          info.stats = info.stats || {};
+          if (ex.voracityHp) info.stats.voracityHp = ex.voracityHp.toLocaleString('en-US');
+          if (ex.iar != null) info.iar = ex.iar;
+        }
         if (healPct > 0) {
           info.stats.greedPct = Math.round(healPct * 100);
           const base = Number(String(info.stats.hp).replace(/,/g, '')) || 0;
@@ -694,7 +702,7 @@ async function loadSrNanoka(reqType, opts = {}) {
   } catch (err) {
     logger.warn(`[xhh][abyss_report] 加载星铁等级成长数据失败: ${err.message}`);
   }
-  const srRefs = { valueByChild: hsrMonsterValueByChild, eliteMap: hsrEliteMap, hlgMap: hsrHardLevelMap };
+    const srRefs = { valueByChild: hsrMonsterValueByChild, eliteMap: hsrEliteMap, hlgMap: hsrHardLevelMap, enrichMap: {} };
   const routeMap = {
     '混沌回忆': { versionMap: `https://static.nanoka.cc/hsr/${nv}/zh/maze/version.json`, detail: `https://static.nanoka.cc/hsr/${nv}/zh/maze`, mode: 'maze' },
     '虚构叙事': { list: `https://static.nanoka.cc/hsr/${nv}/maze_extra.json`, detail: `https://static.nanoka.cc/hsr/${nv}/zh/story`, mode: 'story' },
@@ -733,7 +741,18 @@ async function loadSrNanoka(reqType, opts = {}) {
     }
   }
   if (!id) return null;
-  const detail = await fetchJson(`${cfg.detail}/${id}.json`, 8000);
+  const detail = await fetchJson(`${cfg.detail}/${id}.json`, 8000);  // 当期存在污染（贪饕）机制时，向 alioth 补一次该期的 HPCount / VoracityHP / IAR。
+  // 两源期 id 与 stage_id 同号（实测 nanoka 迷宫集 1035 <-> alioth chaos/1035），可直接按 id 查。
+  if (Array.isArray(detail) && detail.some(r => JSON.stringify(r).includes('"invasion"'))) {
+    try {
+      const alFile = cfg.mode === 'doom' ? 'boss' : cfg.mode === 'story' ? 'fiction' : cfg.mode === 'peak' ? 'arbitration' : 'chaos';
+      srRefs.enrichMap = await enrichFromAlioth(id, alFile);
+      if (config().debug) logger.mark('[xhh][abyss] alioth 补充数据:', Object.keys(srRefs.enrichMap).length, '个 stage');
+    } catch (err) {
+      logger.warn?.('[xhh][abyss] alioth 补充数据失败:', err?.message || err);
+    }
+  }
+
   const base = { version: nv, id, title: reqType, period: label || `当前版本 ${live}`, tip, gameKey: 'sr', mode: cfg.mode };
 
   if (reqType === '混沌回忆') {
