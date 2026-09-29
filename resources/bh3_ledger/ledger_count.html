@@ -12,7 +12,9 @@
                 <div class="bg-mid"></div>
             </div>
 
-            <div class="titltle">
+            <img class="corner-logo" src="{{ppath}}img/ledger/logo.png" alt="" draggable="false">
+
+          <div class="titltle">
                 <div class="titltle-top">
                     <span class="top-month">{{rangeText}}</span> 水晶统计
                 </div>
@@ -80,7 +82,9 @@
                         </div>
                         <div class="pie-total">
                             总计 <span class="pie-total-num">{{hcoinTotal}}</span>
-                        </div>
+                        
+                          <div class="pie-note">仅统计已结算月份</div>
+                      </div>
                     </div>
                     <div class="breakdown-right">
                         <canvas id="pieChart" width="360" height="360" data-piedata="{{hcoinListB64}}"></canvas>
