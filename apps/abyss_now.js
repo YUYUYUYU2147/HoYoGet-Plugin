@@ -404,6 +404,12 @@ function srMonster(detail, m = {}) {
     name: info.Name || `怪物 ${m.ID}`,
     icon: monsterIcon('sr', info.Icon),
     hp: fmt(m.HP),
+      // HPCount = 血条数，即页面上的 xN（如「9,645,484 x2」），与污染等级无关
+      hpMult: Number(info.HPCount) > 1 ? Number(info.HPCount) : 0,
+      // VoracityHP = 污染（贪饕）额外加的血量，独立字段，不是百分比推导
+      voracityHp: m.VoracityHP ? fmt(m.VoracityHP) : '',
+      spd: m.SPD ? fmt(m.SPD) : '',
+      stance: m.Stance ? (Math.round(Number(m.Stance) * 10) / 10).toFixed(1) : '',
     count: '',
     weak: elemView('sr', info.Weak),
     res,
