@@ -203,6 +203,45 @@ const pickSrcList = md => {
         .filter(i => i.name && i.num > 0);
 };
 
+/**
+ * 从 UserGame 接口补昵称和头像。
+ *
+ * 为什么账本接口自己不够用（实测响应字段）：
+ *   原神  ys_ledger/monthInfo  data 顶层有 nickname，但**完全没有头像字段**
+ *   星铁  srledger/month_info  data 顶层**既没有 nickname 也没有头像**
+ *   绝区零 nap_ledger/month_info  data.role_info.{nickname,avatar} 都有
+ * 所以原神只能拿到昵称、拿不到头像，星铁两个都拿不到 —— 统计页右上角
+ * 那个位置就一直是空的。
+ *
+ * 复用 genshin 插件已有的 User（genshin/model/user.js）：
+ *   getMysRoleInfo()      → UserGame 接口，一次返回所有游戏的 nickname/avatar_url
+ *   getMysGameFaceUrl()   → 多源兜底取头像，带 redis 缓存 12 小时
+ * 拿不到就返回空串，不影响账本本身出图。
+ */
+async function fetchRoleProfile(e, uid, game) {
+    const out = { nickname: '', avatar: '' };
+    if (!uid) return out;
+    try {
+        const User = (await import(`file://${process.cwd()}/plugins/genshin/model/user.js`)).default;
+        const user = new User(e);
+        // getMysRoleInfo 内部按传入的 game 选对应 uid，这里要传当前游戏那个 uid
+        const uidDs = { uid: String(uid) };
+        const role = await user.getMysRoleInfo(user, uidDs, game);
+        if (role) {
+            out.nickname = String(role.nickname || '').trim();
+            out.avatar = String(
+                role.avatar_url || role.avatar || role.game_head_icon || role.icon || role.head_icon || role.game_head || ''
+            ).trim();
+        }
+        if (!out.avatar) {
+            out.avatar = String(await user.getMysGameFaceUrl(user, uidDs, game, role) || '').trim();
+        }
+    } catch (err) {
+        logger.debug?.('[xhh][账本] 获取昵称头像失败:', err?.message || err);
+    }
+    return out;
+}
+
 /** 把三个游戏各自不同的响应，统一成同一套字段 */
 function normalize(game, res) {
     const d = res?.data || {};
@@ -354,9 +393,16 @@ export class CurrencyLedger extends plugin {
             //   1) 原神 group_by 的字段名（猜错整份被过滤成空 → 饼图直接没有）
             //   2) 原神/星铁的 nickname+avatar 位置（zzz 走 role_info 能取到，
             //      gs/sr 存回来是空串，字段名多半也不在 role_info 下）
-            if (!snap.list.length || !snap.nickname || !snap.avatar) {
+            if (!snap.list.length || !snap.nickname || !snap.avatar || config().debug) {
                 const d = res?.data || {};
                 const raw = d.month_data?.group_by;
+                // 打印 group_by 每条的实际取值：原神这套只有 action（数字代码）、
+                // 没有 action_name，pickSrcName 会把代码当名字用，饼图上就是一堆数字。
+                // 星铁有 action_name，但要确认它到底是不是中文。
+                const sample = (Array.isArray(raw) ? raw : [])
+                    .slice(0, 10)
+                    .map(i => `${i?.action ?? '?'}${i?.action_name !== undefined ? `=>${i.action_name}` : ''}:${i?.num ?? '?'}`)
+                    .join(' ');
                 // 找出所有形如 xxx.nickname / xxx.avatar 的路径，值非空才打印
                 const found = [];
                 const walk = (obj, path, depth) => {
@@ -374,8 +420,16 @@ export class CurrencyLedger extends plugin {
                     `group_by=${Array.isArray(raw) ? `array[${raw.length}]` : typeof raw}` +
                     (Array.isArray(raw) && raw[0] ? ` 首条字段=${Object.keys(raw[0]).join(',')}` : '') +
                     ` | 昵称头像命中: ${found.join(' ; ') || '无'}` +
-                    ` | data顶层=${Object.keys(d).join(',')}`
+                    ` | data顶层=${Object.keys(d).join(',')}` +
+                    (sample ? ` | group_by取值=${sample}` : '')
                 );
+            }
+            // 原神只有昵称没有头像、星铁两个都没有，用 UserGame 接口补齐。
+            // 放在诊断日志之后：补不上时日志已经把接口情况记下来了，便于排查。
+            if (!snap.nickname || !snap.avatar) {
+                const profile = await fetchRoleProfile(e, snap.uid || d.uid, game);
+                if (profile.nickname) snap.nickname = profile.nickname;
+                if (profile.avatar) snap.avatar = profile.avatar;
             }
             return { snap };
         } catch (err) {
@@ -392,7 +446,19 @@ export class CurrencyLedger extends plugin {
         const meta = GAMES[game];
         const mInfo = parseMonth(msg);
         const isCount = /统计/.test(msg);
-        const auth = await MysInfo.init(e, 'ledger');
+        // 必须在 MysInfo.init 之前设好 e.game：
+        // getUid 里是 `const game = e?.game || (e?.isSr ? "sr" : "gs")`，
+        // 之前这里没设，init 拿到的 e.game 是空的 → 一律回落到 "gs"，
+        // 于是原石/星琼/菲林三个指令都在用**原神 UID** 去查另外两个游戏。
+        // fetch() 内部虽然也会设 e.game，但那时候 init 早就跑完了。
+        const oldGame = e.game;
+        e.game = game;
+        let auth;
+        try {
+            auth = await MysInfo.init(e, 'ledger');
+        } finally {
+            e.game = oldGame;
+        }
         if (!auth?.uid || !auth?.ckInfo?.ck) {
             return e.reply('未检测到米游社 Cookie，请先发送 #扫码登录 完成绑定。', true, { recallMsg: 60 });
         }
