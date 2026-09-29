@@ -151,7 +151,10 @@
                 grad.addColorStop(1, '#5b7fc4');
                 ctx.fillStyle = grad;
                 ctx.fillRect(x, y, barW, h);
+                // 数值与月份各用各的字号。ctx.font 会跨迭代保留，
+                // 若不在每次绘制前显式指定，第一个数值会用 16px、其余用 20px 粗体。
                 ctx.fillStyle = 'rgba(26,26,46,0.85)';
+                ctx.font = '16px sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'bottom';
                 ctx.fillText(String(r.value), x + barW / 2, y - 6);
