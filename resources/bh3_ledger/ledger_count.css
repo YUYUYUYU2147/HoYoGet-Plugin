@@ -308,3 +308,8 @@ body {
     color: rgba(26, 26, 46, 0.5);
     text-align: right;
 }
+
+/* 「来源未记录」项：没有 group_by 的月份合并而来，用灰色与真实来源区分 */
+.legend-item .legend-name.gap {
+    color: rgba(26, 26, 46, 0.55);
+}
