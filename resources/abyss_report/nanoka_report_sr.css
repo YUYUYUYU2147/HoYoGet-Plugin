@@ -46,7 +46,7 @@ body{margin:0;min-width:1240px;font-family:"Noto Sans CJK SC","Microsoft YaHei",
 .m-ico{width:54px;height:54px;border-radius:10px;object-fit:cover;background:#f1f5f9;flex:none}
 .m-name{font-size:12.5px;font-weight:700;color:#1f2937;margin:6px 0 4px;line-height:1.25;max-height:2.6em;overflow:hidden}
 .m-count{font-size:11.5px;color:#ea580c;font-weight:800}
-.m-weak{display:flex;gap:2px;flex-wrap:nowrap;justify-content:flex-start;align-items:center;margin-bottom:4px;width:100%}
+.m-weak{display:flex;gap:2px;flex-wrap:nowrap;justify-content:center;align-items:center;margin-bottom:4px;width:100%}
 .weak-dot{padding:0 2px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;gap:1px;font-size:9px;font-weight:700;color:#475569;background:transparent;white-space:nowrap;flex:none}
 .weak-dot .weak-icon{width:10px;height:10px;display:block;margin:0;border-radius:50%;object-fit:contain;flex:none}
 .weak-text{line-height:1;font-weight:900}
