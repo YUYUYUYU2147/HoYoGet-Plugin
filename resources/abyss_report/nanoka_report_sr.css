@@ -79,7 +79,9 @@ footer{text-align:center;margin-top:22px;color:#a3adbd;font-size:16px}
 
 /* 贪饕怪被击倒后回复的生命值 */
 .m-stat-greed {
-    color: rgba(255, 255, 255, 0.7);
+    /* 污染卡片是浅紫底(#faf5ff)，用白字会完全看不见；改用与卡片一致的深紫 */
+    color: #6d28d9;
+
     font-size: 12px;
     margin-top: 3px;
 }
