@@ -13,6 +13,23 @@ class yaml {
     return YAML.parse(read);
   }
 
+  /**
+   * 整份写回。
+   * 只用于配置同步这种「已经拿到完整对象、只增不删」的场景 ——
+   * 逐键 yaml.set() 会在补很多键时反复读写同一个文件，而且键名带 '.' 会被
+   * setIn 当成嵌套路径。调用方必须保证 obj 是「在原对象上补完」的结果，
+   * 不能拿它做「用默认值覆盖用户配置」这种事。
+   */
+  setAll(path, obj) {
+    try {
+      fs.writeFileSync(path, YAML.stringify(obj), 'utf-8');
+      return true;
+    } catch (err) {
+      logger.error(err);
+      return false;
+    }
+  }
+
   set(path, keyname, value) {
     let read;
     try {
