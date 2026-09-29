@@ -1191,7 +1191,14 @@ export class Wiki extends plugin {
       const miao = await miaoResolve(name, 'char', isSr ? 'sr' : 'gs');
       if (miao) rname = miao;
     }
-    if (!rname) dbg(`${isSr ? '星铁' : isBH3 ? '崩三' : '原神'} 本地别名/喵喵别名均未命中:`, name);
+    // 本地别名表是人工维护的，会漏新角色（官方 94 个角色本地只有 89 条），
+    // 具体就是带装饰符的：「星神★阿哈」「砂金•戏浪」「银狼LV.999」等。
+    // 别名表没命中时，直接拿原名去官方 Wiki 做模糊匹配（mys.data() 已支持「精确 -> 包含」两级匹配），
+    // 这样下个新角色上线不再需要手动补别名。
+    if (!rname) {
+      dbg('本地/喵喵别名未命中，回退官方 Wiki 模糊匹配:', name);
+      rname = name;
+    }
     if (rname) {
       const { id } = await mys.data(rname, 'js', isSr, isZZZ, isBH3);
       if (!id) { dbg('wiki 无此角色条目:', rname); return false; }
