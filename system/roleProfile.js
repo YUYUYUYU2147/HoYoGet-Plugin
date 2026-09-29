@@ -2,31 +2,31 @@
  * 统一取玩家资料（头像 + 昵称 + 服务器名）
  *
  * 为什么要有这个模块：
- * 崩三水晶统计（apps/bh3_ledger.js）一直靠 bh3_index 接口拿头像，
+ * 崩三水晶统计（apps/bh3_ledger.js）一直靠 index 接口拿头像，
  * 但原石/星琼/菲林账本（apps/currency_ledger.js）没走这套 —— 账本接口
  * （ys_ledger / srledger / nap_ledger）自己根本不返回头像：
  *   原神  data 顶层有 nickname，没有头像字段
  *   星铁  既没有 nickname 也没有头像
  *   绝区零 data.role_info.{nickname,avatar} 都有
  * 所以同一个插件里两套取头像的逻辑，用户看到的就是「水晶统计有头像、
- * 账本没有」。这里把四个游戏统一到同一套：都走各自的 index 接口。
+ * 账本没有」。这里把四个游戏统一到同一套。
  *
- * 为什么不直接用 NoteUser：
- * NoteUser 那套要建 model、读 redis、写缓存，依赖比较重；
- * 账本这里只需要一张头像一个昵称，直接打 index 接口更轻，
- * 也和水晶统计的写法保持一致（都是 api(e, {type: *_index})）。
+ * 为什么走 MysInfo.get 而不是自己 fetch：
+ * index 接口对 device_fp 敏感，缺了会返回 -10001 invalid request。
+ * genshin 插件的 getData() 会自动补 getFp，而且 URL / DS / 各游戏的 hostRecord
+ * 都在它自己的 apiTool 里维护好了 —— 自己拼很容易漏头（第一版就是这么翻车的，
+ * 星铁报「米游社接口异常」）。MysInfo.get 不校验 auth 名单，
+ * 'index' 虽然不在 auth 数组里但能正常调用。
+ *
+ * 四个游戏的 index 路径（取自 genshin/model/mys/apiTool.js）：
+ *   崩三    game_record/appv2/honkai3rd/api/index
+ *   原神    game_record/app/genshin/api/index
+ *   星铁    game_record/app/hkrpg/api/index
+ *   绝区零  event/game_record_zzz/api/zzz/index
  */
 
-import api from './api.js';
+import MysInfo from '../../genshin/model/mys/mysInfo.js';
 import { mhy } from '#xhh';
-
-// index 接口类型：四个游戏各一个，路径规律一致
-const INDEX_TYPE = {
-    gs: 'gs_index',
-    sr: 'sr_index',
-    zzz: 'zzz_index',
-    bh3: 'bh3_index',
-};
 
 // 服务器代码 → 中文名
 const SERVER_CN = {
@@ -93,25 +93,21 @@ function findNickname(d) {
 /**
  * 取玩家资料
  *
- * @param {object} e 事件对象
+ * @param {object} e 事件对象（会被临时改写 e.game，取完还原）
  * @param {string|number} uid 该游戏的 uid（必须是当前游戏自己的，不能混用）
  * @param {string} game gs | sr | zzz | bh3
- * @param {string} ck Cookie；也可以传现成的 headers（含 Cookie 字段），
- *                        这样能复用调用方已经算好的 DS，不用重算
  * @returns {Promise<{nickname:string, avatar:string, serverName:string, userLevel:number}>}
  */
-export async function getRoleProfile(e, uid, game, ck) {
+export async function getRoleProfile(e, uid, game) {
     const out = { nickname: '', avatar: '', serverName: '', userLevel: 0 };
-    if (!uid || !ck) return out;
-    const type = INDEX_TYPE[game];
-    if (!type) return out;
-    const server = mhy.getServer(String(uid), game);
-    out.serverName = serverName(server);
+    if (!uid) return out;
+    out.serverName = serverName(mhy.getServer(String(uid), game));
+    // e.game 必须先设好：MysInfo.get 内部靠它选游戏和对应的 hostRecord
+    const oldGame = e.game;
+    e.game = game;
     try {
-        // ck 可以是 Cookie 字符串，也可以是已经带好 Cookie 的 headers 对象
-        const headers = (typeof ck === 'object' && ck?.Cookie !== undefined) ? ck : mhy.getHeaders(e, ck);
-        const res = await api(e, { type, uid: String(uid), headers, game, server });
-        if (res?.retcode !== 0 || !res?.data) return out;
+        const res = await MysInfo.get(e, 'index', {}, { log: false, game });
+        if (!res || res.retcode !== 0 || !res.data) return out;
         const d = res.data;
         out.nickname = findNickname(d);
         out.avatar = findFaceUrl(d);
@@ -121,6 +117,8 @@ export async function getRoleProfile(e, uid, game, ck) {
         if (region) out.serverName = serverName(region);
     } catch (err) {
         logger.debug?.('[xhh][资料] 获取玩家资料失败:', err?.message || err);
+    } finally {
+        e.game = oldGame;
     }
     return out;
 }

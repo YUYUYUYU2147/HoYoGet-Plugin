@@ -591,7 +591,7 @@ export class bh3_ledger extends plugin {
      * （崩三 index 的 role.AvatarUrl 偶尔是空的，实测遇到过）。
      */
     async getUserInfo(e, headers, uid, server) {
-        const info = await getRoleProfile(e, uid, 'bh3', headers);
+        const info = await getRoleProfile(e, uid, 'bh3');
         let avatarUrl = info.avatar || "";
         const nickname = info.nickname || "";
         const userLevel = info.userLevel || 0;

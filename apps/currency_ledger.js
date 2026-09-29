@@ -1,7 +1,7 @@
 import moment from 'moment';
 import fs from 'fs';
 import path from 'path';
-import { render, pluginPriority, mhy } from '#xhh';
+import { render, pluginPriority, mhy, config } from '#xhh';
 import MysInfo from '../../genshin/model/mys/mysInfo.js';
 import { xhh_gacha_pool } from './gacha_pool.js';
 import { getRoleProfile, serverName as toServerName } from '../system/roleProfile.js';
@@ -429,7 +429,7 @@ export class CurrencyLedger extends plugin {
         // 和崩三水晶统计同一套逻辑，见 system/roleProfile.js。
         // uid 必须用当前游戏自己的那个（e.game 已在 init 时按游戏设过）。
         if (!snap.nickname || !snap.avatar) {
-            const profile = await getRoleProfile(e, snap.uid || auth.uid, game, auth.ckInfo.ck);
+            const profile = await getRoleProfile(e, snap.uid || auth.uid, game);
             if (profile.nickname) snap.nickname = profile.nickname;
             if (profile.avatar) snap.avatar = profile.avatar;
             if (profile.serverName) snap.serverName = profile.serverName;
