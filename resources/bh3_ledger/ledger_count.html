@@ -95,11 +95,22 @@
     </div>
 
     <script>
+        // atob() 返回的是「逐字节」二进制字符串，直接 JSON.parse 会把中文 UTF-8
+        // 按 Latin-1 拆成乱码（"月"=E6 9C 88 会变成 "æ"+U+009C+U+0088），
+        // 其中两个控制字符没有字形，浏览器会画成缺失字形框。
+        // 这里显式按 UTF-8 解码。
+        function decodeB64Utf8(b64) {
+            const bin = atob(b64);
+            const bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            return new TextDecoder('utf-8').decode(bytes);
+        }
+
         // 月份柱状图
         (function () {
             const canvas = document.getElementById('barChart');
             if (!canvas) return;
-            const rows = JSON.parse(atob(canvas.dataset.bardata));
+            const rows = JSON.parse(decodeB64Utf8(canvas.dataset.bardata));
             if (!rows.length) return;
             const ctx = canvas.getContext('2d');
             const W = canvas.width, H = canvas.height;
@@ -140,7 +151,8 @@
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'bottom';
                 ctx.fillText(String(r.value), x + barW / 2, y - 6);
-                ctx.fillStyle = 'rgba(26,26,46,0.7)';
+                ctx.fillStyle = 'rgba(26,26,46,0.85)';
+                ctx.font = 'bold 20px sans-serif';
                 ctx.textBaseline = 'top';
                 ctx.fillText(r.month, x + barW / 2, padT + plotH + 10);
             });
@@ -150,7 +162,7 @@
         (function () {
             const canvas = document.getElementById('pieChart');
             if (!canvas) return;
-            const data = JSON.parse(atob(canvas.dataset.piedata));
+            const data = JSON.parse(decodeB64Utf8(canvas.dataset.piedata));
             if (!data.length) return;
             const ctx = canvas.getContext('2d');
             const cx = canvas.width / 2, cy = canvas.height / 2;

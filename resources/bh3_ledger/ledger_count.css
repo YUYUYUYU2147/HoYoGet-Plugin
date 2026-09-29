@@ -165,7 +165,8 @@ body {
 
 /* 柱状图 */
 .chart-wrap {
-    background: rgba(255, 255, 255, 0.9);
+    /* 不透明：背景图底部有 HONKAI IMPACT 3RD 字样，半透明卡片会把它透上来压住坐标轴标签 */
+    background: #ffffff;
     border-radius: 10px;
     padding: 14px 10px 6px 10px;
 }
