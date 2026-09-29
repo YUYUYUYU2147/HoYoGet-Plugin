@@ -15,7 +15,7 @@
             <!-- 右上角装饰图：取该游戏「当前卡池」第一个 UP 的立绘（与卡池卡片右上角同一套图）。
                  取不到时退回文字徽章，不留空位。 -->
             {{if cornerSplash}}
-            <img class="corner-splash" src="{{if cornerSplash.indexOf('http') === 0}}{{cornerSplash}}{{else}}{{ppath}}{{cornerSplash}}{{/if}}" alt="" draggable="false">
+            <img class="corner-splash" src="{{if cornerSplash.startsWith('http') || cornerSplash.startsWith('/')}}{{cornerSplash}}{{else}}{{ppath}}{{cornerSplash}}{{/if}}" alt="" draggable="false">
             {{else}}
             <div class="corner-badge">{{gameName}}</div>
             {{/if}}

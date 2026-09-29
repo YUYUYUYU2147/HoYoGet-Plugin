@@ -350,16 +350,31 @@ export class CurrencyLedger extends plugin {
                 return { error: res?.message || '月报接口返回异常，请确认已扫码绑定 Cookie 且在米游社 App 内开启「账本」权限。' };
             }
             const snap = normalize(game, res);
-            // 来源明细抓空时把接口真实返回的字段名打出来。
-            // 原神这套的 group_by 字段名从来没被验证过（genshin 那边只读了 action_id 取颜色），
-            // 一旦猜错就会整份被过滤成空，饼图直接没有，这里留个能定位的日志。
-            if (!snap.list.length) {
-                const raw = res?.data?.month_data?.group_by;
+            // 接口真实字段名有几处从来没被验证过，一次性都打出来，省得反复重启：
+            //   1) 原神 group_by 的字段名（猜错整份被过滤成空 → 饼图直接没有）
+            //   2) 原神/星铁的 nickname+avatar 位置（zzz 走 role_info 能取到，
+            //      gs/sr 存回来是空串，字段名多半也不在 role_info 下）
+            if (!snap.list.length || !snap.nickname || !snap.avatar) {
+                const d = res?.data || {};
+                const raw = d.month_data?.group_by;
+                // 找出所有形如 xxx.nickname / xxx.avatar 的路径，值非空才打印
+                const found = [];
+                const walk = (obj, path, depth) => {
+                    if (!obj || typeof obj !== 'object' || depth > 3) return;
+                    for (const [k, v] of Object.entries(obj)) {
+                        const p = path ? `${path}.${k}` : k;
+                        if (/nickname|avatar|head/i.test(k) && (typeof v === 'string' || typeof v === 'number')) {
+                            if (String(v || '').trim()) found.push(`${p}=${String(v).slice(0, 45)}`);
+                        } else if (v && typeof v === 'object') walk(v, p, depth + 1);
+                    }
+                };
+                walk(d, '', 0);
                 logger.warn?.(
-                    `[xhh][账本] ${game} 本月来源明细为空。` +
-                    `group_by 类型=${Array.isArray(raw) ? `array[${raw.length}]` : typeof raw}` +
+                    `[xhh][账本] ${game} 字段探测: ` +
+                    `group_by=${Array.isArray(raw) ? `array[${raw.length}]` : typeof raw}` +
                     (Array.isArray(raw) && raw[0] ? ` 首条字段=${Object.keys(raw[0]).join(',')}` : '') +
-                    ` data 顶层字段=${Object.keys(res?.data || {}).join(',')}`
+                    ` | 昵称头像命中: ${found.join(' ; ') || '无'}` +
+                    ` | data顶层=${Object.keys(d).join(',')}`
                 );
             }
             return { snap };
