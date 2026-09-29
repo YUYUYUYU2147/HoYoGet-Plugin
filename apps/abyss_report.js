@@ -588,8 +588,10 @@ function srSide(stages = [], weakness = [], monsterMap, monsterChildMap, bossIds
     const inv = stage.invasion;
     // invasion.level 就是贪饕怪的 HP 倍率（多管血量），如 4.6 十一层为 2 -> 显示 x2
     const mult = Number(inv.level) > 1 ? Number(inv.level) : 1;
-    // maze_buff_param[0] 是贪饕的「回复生命值比例」
-    const healPct = Number(inv.maze_buff_param?.[0]) || 0;
+    // maze_buff_param[1] 是贪饕的「回复生命值比例」。
+    // 已实测核对：4.5.51「来生泅渡其十二」HP 9,645,484 ×0.3 = 2,893,645，正是页面显示的 30%。
+    // 注意 [0] 是另一个参数（实测为 0.65/0.4），用它会显示成 65%/40%，是错的。
+    const healPct = Number(inv.maze_buff_param?.[1]) || 0;
     const monsters = [];
     for (const m of inv.monster_list || []) {
       // 字段名是 monster_id，旧代码写成 unk_0 导致永远取不到，贪饕怪从没被列出来
