@@ -113,6 +113,15 @@ const nanokaGsItemIcon = icon => {
 // 列表头像不用它 —— 那是 2048×2048 的卡面，裁成 90×90 只能看到头发。
 const nanokaSrIcon = id => (id ? `${NANOKA_ASSET}/hsr/avatardrawcard/${id}.webp` : '');
 
+// nanoka 的 zh 字段偶尔带内部标记，星铁「银狼」就是
+// "银狼LV.<unbreak>999</unbreak>"（实测唯一一条，原神 152 条全干净）。
+// 只去掉这一类标记，不能无脑剥所有标签 —— 日文名里的 {RUBY_B#…} 是注音结构，剥了会散。
+const cleanNanokaName = v => String(v || '')
+    .replace(/LV\.<unbreak>.*?<\/unbreak>/gi, '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
 // 星铁圆形头像：avatarroundicon/{角色id}.webp，实测 99/99 全部 200。
 // 另两个同类目录都不全：avatarshopicon 缺 1224，avataricon/avatar 缺 1507/1511/1512/1513，
 // 所以列表一律用 roundicon。
@@ -538,7 +547,7 @@ class mys {
                 : [`星级/${srRarityCn(c.rank)}`, `命途/${SR_PATH_CN[c.baseType] || ''}`, `属性/${SR_DAMAGE_CN[c.damageType] || ''}`];
             return {
                 content_id: id,
-                title: c.zh || c.en || id,
+                title: cleanNanokaName(c.zh) || c.en || id,
                 icon,
                 // 头像取不到时详情页仍可用立绘兜底，列表会走首字占位
                 iconFallback: !icon && !isGs ? nanokaSrIcon(id) : '',
