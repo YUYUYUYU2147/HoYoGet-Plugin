@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { render, pluginPriority, mhy } from '#xhh';
 import MysInfo from '../../genshin/model/mys/mysInfo.js';
+import gachaPool from './gacha_pool.js';
 /**
  * 原神原石 / 星铁星琼 / 绝区零菲林的月报与统计
  *
@@ -71,6 +72,30 @@ const GAMES = {
         monthArg: m => m.ym,
     },
 };
+// 卡池那边 gameName 用的是中文全称，这里做一次映射
+const POOL_GAME_NAME = { gs: '原神', sr: '星穹铁道', zzz: '绝区零' };
+
+/**
+ * 统计页右上角装饰图。
+ *
+ * 用户要的是「当前卡池那张图右上角」的那张 —— 也就是卡池渲染器里的 markIcon。
+ * 直接调 gacha_pool 的 fixedCornerFallback()，和 srCurrentPool / gsCurrentPool 等
+ * 走的是同一个函数、同一套优先级（fixed_splash 目录 → getMarkIcon → gameMarkIcon），
+ * 所以两个地方的图必然一致，不会出现「账本这边换了图、卡池那边没换」。
+ *
+ * 返回值可能是插件内相对路径（如 gs_mark/paimon.png），也可能是别人机器上的
+ * 绝对路径（星铁角标取的是 miao-plugin 的三月七立绘），两种都要能显示，
+ * 所以下面按是否含 protocol 决定怎么拼。
+ */
+function poolCornerIcon(game) {
+    try {
+        return gachaPool.fixedCornerFallback(POOL_GAME_NAME[game] || '') || '';
+    } catch (err) {
+        logger.warn?.('[xhh][账本] 取当前卡池角标失败:', err?.message || err);
+        return '';
+    }
+}
+
 const CN_NUM = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二'];
 
 function dataPath(game, qq) {
@@ -426,6 +451,8 @@ export class CurrencyLedger extends plugin {
         const last = months[months.length - 1];
         // 头像/昵称从最近一次抓到的快照里取（快照在每次查询时都会覆盖保存）
         const latest = all[last] || {};
+        // 右上角装饰图 = 当前卡池那张图的 markIcon（同一个函数，保证两边一致）
+        const cornerSplash = poolCornerIcon(game);
         const sourceTotal = rows.reduce((s, r) => s + r.num, 0);
         const data = {
             game,
@@ -444,6 +471,7 @@ export class CurrencyLedger extends plugin {
             })(),
             nickname: latest.nickname || '',
             avatarUrl: latest.avatar || '',
+            cornerSplash,
             total: total.toLocaleString('en-US'),
             sourceTotal: sourceTotal.toLocaleString('en-US'),
             monthCount: months.length,

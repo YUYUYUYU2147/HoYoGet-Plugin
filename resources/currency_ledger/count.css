@@ -60,7 +60,21 @@ body {
     background: rgba(26, 26, 46, 0.35);
 }
 
-/* 角标：三个游戏没有现成 logo 资源，用文字徽章代替 */
+/* 右上角装饰图：当前卡池 UP 的立绘，取不到时用 .corner-badge 文字徽章 */
+.corner-splash {
+    position: absolute;
+    z-index: 5;
+    top: -6px;
+    right: 6px;
+    width: 190px;
+    max-height: 260px;
+    object-fit: contain;
+    object-position: top right;
+    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.5));
+    pointer-events: none;
+}
+
+/* 角标：三个游戏没有现成 logo 资源时的文字兜底 */
 .corner-badge {
     position: absolute;
     z-index: 5;
