@@ -684,6 +684,10 @@ async function loadSrNanoka(reqType, opts = {}) {
           eliteGroup: c?.EliteGroup,
           hardLevelGroup: c?.HardLevelGroup,
           level: c?.Level,
+          // MaxMonsterPhase = 血条数，即页面显示的 ×N
+          maxPhase: entry?.MaxMonsterPhase ?? 1,
+          // 效果抗性基础值
+          statusResBase: entry?.StatusResistanceBase ?? 0,
         });
       });
     });
