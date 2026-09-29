@@ -44,24 +44,30 @@ for (const _path of paths_) {
   // 只比顶层的话，默认配置以后给 groups 加新游戏（如 nte: []）就补不进来。
   // 数组一律整个保留用户的（顺序和内容都是用户自己定的，不该插手）。
   const isPlainObject = v => v !== null && typeof v === 'object' && !Array.isArray(v);
+  // 只收集「缺失的键路径」，不修改内存里的对象，最后交给 yaml.setMissing 增量写盘。
+  // 千万别把补完的 cfg 整个 stringify 回去 —— 那样会抹掉用户配置文件里
+  // 全部注释和排版（实测 84 行注释会变成 0 行）。
+  // 键路径用 \0 分隔各层，避免键名本身带 '.' 时被 setIn 拆错层级。
   const missing = [];
-  const fill = (userObj, defObj, prefix) => {
+  const find = (userObj, defObj, prefix) => {
     for (const key in defObj) {
       if (!Object.prototype.hasOwnProperty.call(defObj, key)) continue;
+      const path = prefix ? `${prefix}\0${key}` : key;
       if (!Object.prototype.hasOwnProperty.call(userObj, key)) {
-        userObj[key] = defObj[key];
-        missing.push(prefix + key);
+        missing.push({ path, key });
         continue;
       }
       if (isPlainObject(userObj[key]) && isPlainObject(defObj[key])) {
-        fill(userObj[key], defObj[key], `${prefix}${key}.`);
+        find(userObj[key], defObj[key], path);
       }
     }
   };
-  fill(cfg, def_cfg, '');
-  if (missing.length) {
-    yaml.setAll(cfg_path, cfg);
-    logger.info(`[xhh] 配置 ${_path} 补充新增键：${missing.join(', ')}`);
+  find(cfg, def_cfg, '');
+  // 取值要按整条路径在 def_cfg 里逐层走，不能只取最后一段 ——
+  // 否则嵌套键（如 groups.nte）会取到 undefined，把 undefined 写进配置文件。
+  const pickDefault = p => p.split('\0').reduce((o, k) => (o === null || o === undefined ? undefined : o[k]), def_cfg);
+  if (missing.length && yaml.setMissing(cfg_path, missing.map(m => m.path), pickDefault)) {
+    logger.info(`[xhh] 配置 ${_path} 补充新增键：${missing.map(m => m.path.replace(/\0/g, '.')).join(', ')}`);
   }
 }
 

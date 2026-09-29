@@ -212,6 +212,21 @@ abyss_report_repos: |-
 abyss_report_gs_version: ''
 abyss_report_sr_version: ''
 
+#星铁虚构叙事关卡筛选：填要显示的关卡，逗号分隔（如 3,4 表示只显示第3、4关）
+abyss_report_sr_fiction_levels: '3,4'
+#星铁混沌回忆难度筛选：填要显示的难度编号，逗号分隔（如 11,12）
+abyss_report_sr_maze_levels: '11,12'
+#星铁末日幻影难度筛选：填要显示的难度编号，逗号分隔（如 3,4）
+abyss_report_sr_doom_levels: '3,4'
+#绝区零式舆防卫战关卡筛选：填要显示的关卡，逗号分隔（如 4,5）
+abyss_report_zzz_shiyu_stages: '4,5'
+#式舆防卫战返回期数：last=只返回末期（默认），all=返回全部期
+abyss_report_zzz_shiyu_periods: last
+#危局强袭战返回期数：last=只返回末期（默认），all=返回全部期
+abyss_report_zzz_deadly_periods: last
+#星铁深渊星启模式：true开，false关
+abyss_report_sr_invasion: true
+
 #Meme表情包设置
 #meme表情包总开关：true开，false关
 meme: true
@@ -246,6 +261,7 @@ bh3_ledger_priority: 100
 abyss_report_priority: 100
 bilibili_priority: -120
 bilibili_push_priority: -119
+bili_live_priority: -115
 gacha_pool_priority: -1000000000
 gs_logs_priority: -99
 sr_logs_priority: -88

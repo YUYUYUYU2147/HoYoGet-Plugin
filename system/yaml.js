@@ -14,15 +14,39 @@ class yaml {
   }
 
   /**
-   * 整份写回。
-   * 只用于配置同步这种「已经拿到完整对象、只增不删」的场景 ——
-   * 逐键 yaml.set() 会在补很多键时反复读写同一个文件，而且键名带 '.' 会被
-   * setIn 当成嵌套路径。调用方必须保证 obj 是「在原对象上补完」的结果，
-   * 不能拿它做「用默认值覆盖用户配置」这种事。
+   * 在原文件上补键（只增不删），保留注释和排版。
+   *
+   * ⚠ 千万别用 YAML.parse + YAML.stringify 整份重写：那样会把用户配置文件里
+   * 所有的注释、缩进风格、行尾注释全部抹掉（实测 config.yaml 84 行注释、
+   * 266 行会变成 148 行纯数据）。这里必须用 parseDocument —— 它保留 comment
+   * 和 format，toString() 出来只比原文多出新增的那几个键。
+   *
+   * @param {string} path 配置文件路径
+   * @param {string[]} keyPaths 要补的键路径数组，如 ['bbb'] / ['groups','nte']
+   * @param {Function} getValue 由 keyPath 取出要写入的值
+   * @returns {boolean} 是否真的写了东西
    */
-  setAll(path, obj) {
+  setMissing(path, keyPaths, getValue) {
+    if (!Array.isArray(keyPaths) || !keyPaths.length) return false;
+    let read;
     try {
-      fs.writeFileSync(path, YAML.stringify(obj), 'utf-8');
+      read = fs.readFileSync(path, 'utf-8');
+    } catch (err) {
+      logger.error(err);
+      return false;
+    }
+    try {
+      const doc = YAML.parseDocument(read);
+      for (const keyPath of keyPaths) {
+        // keyPath 用 \0 分隔，避免键名本身带 '.' 时被 setIn 拆成嵌套路径
+        const parts = keyPath.split('\0');
+        if (doc.hasIn(parts)) continue;
+        doc.setIn(parts, getValue(keyPath));
+      }
+      const out = doc.toString();
+      // 内容没变就不写盘，避免无谓的 mtime 变动
+      if (out === read) return false;
+      fs.writeFileSync(path, out, 'utf-8');
       return true;
     } catch (err) {
       logger.error(err);
