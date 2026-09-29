@@ -664,9 +664,14 @@ export class bh3_ledger extends plugin {
         for (const month of months) {
             try {
                 const res = await api(e, { type: 'bh3_ledger', uid, server: region, headers, month, game: 'bh3' });
-                if (res?.retcode === 0 && Array.isArray(res?.data?.group_by) && res.data.group_by.length) {
-                    debugLog('[水晶] group_by 补抓成功:', monthKey, month, res.data.group_by.length, '项');
-                    return res.data.group_by;
+                const gb = res?.data?.group_by;
+                debugLog('[水晶] group_by 尝试:', monthKey, 'month=' + month,
+                    'retcode=' + res?.retcode, 'msg=' + (res?.message || ''),
+                    'data字段=' + (res?.data ? Object.keys(res.data).join(',') : '无'),
+                    'group_by=' + (Array.isArray(gb) ? gb.length + '项' : gb === null ? 'null' : typeof gb));
+                if (res?.retcode === 0 && Array.isArray(gb) && gb.length) {
+                    debugLog('[水晶] group_by 补抓成功:', monthKey, month, gb.length, '项');
+                    return gb;
                 }
             } catch (err) {
                 logger.warn?.(`[水晶] group_by 补抓失败 ${monthKey}: ${err?.message || err}`);
@@ -692,7 +697,7 @@ export class bh3_ledger extends plugin {
         let filled = 0;
         for (const m of missing) {
             const list = await this.fetchMonthGroupBy(e, auth, m._key);
-            if (!list) continue;
+            if (!list) { logger.warn?.('[水晶] ' + m._key + ' group_by 补抓失败（接口未返回来源明细）'); continue; }
             m.group_by = list;
             filled++;
             await this.saveLedger(auth.uid, { ...m, _key: undefined, data_month: m._key });
