@@ -920,13 +920,13 @@ export const supportGuoba = () => {
       {
         field: 'abyss_report_sr_maze_levels',
         label: '星铁混沌回忆难度筛选',
-        helpMessage: '留空显示全部；用数字1-12指定要显示的难度，如 11,12 只显示第十一、十二层',
+        helpMessage: '留空默认只显示第十一、十二层（深层才有参考价值）；想看其他层用数字指定，如 1,2 只显示第一、二层',
         component: 'Input',
       },
       {
         field: 'abyss_report_sr_doom_levels',
         label: '星铁末日幻影难度筛选',
-        helpMessage: '留空显示全部；用数字1-5指定要显示的难度，如 3,4 只显示难度三、四',
+        helpMessage: '留空默认只显示难度三、四；想看其他难度用数字指定，如 1,2 只显示难度一、二',
         component: 'Input',
       },
       {

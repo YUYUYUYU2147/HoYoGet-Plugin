@@ -719,8 +719,8 @@ async function loadSrNanoka(reqType, opts = {}) {
   const base = { version: nv, id, title: reqType, period: label || `当前版本 ${live}`, tip, gameKey: 'sr', mode: cfg.mode };
 
   if (reqType === '混沌回忆') {
-    // 留空 = 全部难度（与锅点文案一致）；之前写正 '11,12' 导致只画两层
-      const mazeLevels = String(config().abyss_report_sr_maze_levels || '')
+    // 默认只展示第十一、十二层：深层才有参考价值，留空即用默认值
+      const mazeLevels = String(config().abyss_report_sr_maze_levels || '11,12')
       .split(/[,，\s]+/)
       .map(s => Number(s))
       .filter(n => Number.isFinite(n) && n >= 1 && n <= 12);
@@ -816,8 +816,8 @@ async function loadSrNanoka(reqType, opts = {}) {
       }
     }
     const fallback = srCleanText(detail.name || '');
-    // 同上：留空 = 全部难度
-      const doomLevels = String(config().abyss_report_sr_doom_levels || '')
+    // 同理：默认只展示难度三、四
+      const doomLevels = String(config().abyss_report_sr_doom_levels || '3,4')
       .split(/[,，\s]+/)
       .map(s => Number(s))
       .filter(n => Number.isFinite(n) && n >= 1 && n <= 5);
