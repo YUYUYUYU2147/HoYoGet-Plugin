@@ -111,10 +111,11 @@
                   <div class="m-name">{{m.name}}{{if m.count > 1}} <span class="m-count">×{{m.count}}</span>{{/if}}</div>
 {{if m.stats}}
                     <div class="m-stats">
-                      <div class="m-stat"><span class="m-stat-label">HP</span><span class="m-stat-val">{{m.stats.hp}}</span>{{if m.stats.mult > 1}} <span class="m-stat-mult">×{{m.stats.mult}}</span>{{/if}}</div>
+                      <div class="m-stat"><span class="m-stat-label">HP</span><span class="m-stat-val">{{m.stats.hp}}</span></div>
                       <div class="m-stat"><span class="m-stat-label">SPD</span><span class="m-stat-val">{{m.stats.speed}}</span></div>
                       <div class="m-stat"><span class="m-stat-label">Tough</span><span class="m-stat-val">{{m.stats.toughness}}</span></div>
                       {{if m.stats.greedPct}}<div class="m-stat-greed">贪饕生命值：+{{m.stats.greedHp}}（{{m.stats.greedPct}}%）</div>{{/if}}
+                    {{if m.pollution}}<div class="m-stat-greed">污染{{m.pollution}}级 · 额外 +{{m.pollution}}0% 血量</div>{{/if}}
                     </div>
                     {{/if}}
                   {{if m.weak && m.weak.length}}

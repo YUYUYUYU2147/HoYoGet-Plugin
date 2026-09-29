@@ -586,8 +586,9 @@ function srSide(stages = [], weakness = [], monsterMap, monsterChildMap, bossIds
   let invasion = null;
   if (config().abyss_report_sr_invasion !== false && stage?.invasion) {
     const inv = stage.invasion;
-    // invasion.level 就是贪饕怪的 HP 倍率（多管血量），如 4.6 十一层为 2 -> 显示 x2
-    const mult = Number(inv.level) > 1 ? Number(inv.level) : 1;
+    // invasion.level 是【污染等级】不是 HP 倍率：污染 3 级 = 额外 +30% 血量，
+    // 与页面标的 xN 无关（xN 来自本半场贪饕怪的只数）。
+    const pollution = Number(inv.level) || 0;
     // maze_buff_param[1] 是贪饕的「回复生命值比例」。
     // 已实测核对：4.5.51「来生泅渡其十二」HP 9,645,484 ×0.3 = 2,893,645，正是页面显示的 30%。
     // 注意 [0] 是另一个参数（实测为 0.65/0.4），用它会显示成 65%/40%，是错的。
@@ -601,7 +602,9 @@ function srSide(stages = [], weakness = [], monsterMap, monsterChildMap, bossIds
       if (!info) continue;
       info.count = info.count || 1;
       if (info.stats) {
-        if (mult > 1) info.stats.mult = mult;
+        info.pollution = pollution;
+        // xN 是「本半场贪饕怪只数」，与污染等级无关
+        info.count = Math.max(info.count || 0, (inv.monster_list || []).length);
         if (healPct > 0) {
           info.stats.greedPct = Math.round(healPct * 100);
           const base = Number(String(info.stats.hp).replace(/,/g, '')) || 0;

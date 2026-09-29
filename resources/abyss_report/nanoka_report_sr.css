@@ -77,13 +77,6 @@ body{margin:0;min-width:1240px;font-family:"Noto Sans CJK SC","Microsoft YaHei",
 .side:nth-child(3) .side-label{background:#a855f7;color:#fff}
 footer{text-align:center;margin-top:22px;color:#a3adbd;font-size:16px}
 
-/* 贪饕怪（污染入侵）的 HP 倍率标记，如 x2 */
-.m-stat-mult {
-    color: #f0ce6e;
-    font-weight: bold;
-    margin-left: 2px;
-}
-
 /* 贪饕怪被击倒后回复的生命值 */
 .m-stat-greed {
     color: rgba(255, 255, 255, 0.7);
