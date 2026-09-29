@@ -445,13 +445,13 @@ function srMonsterInfo(id, map, childMap) {
 // SPD = SpeedBase* child.SpeedModifyRatio * EliteGroup.SpeedRatio * HardLevelGroup.SpeedRatio + SpeedModifyValue
 // Toughness = StanceBase * child.StanceModifyRatio * EliteGroup.StanceRatio * HardLevelGroup.StanceRatio / 3
 // EliteGroup 优先使用 stage 的 elite_group（混沌/末日），缺失时回退到怪物自身的 EliteGroup（虚构叙事）。
-function srMonsterStats(pid, level, stageEliteGroup, valueByChild, eliteMap, hlgMap) {
+function srMonsterStats(pid, level, stageEliteGroup, stageHardLevelGroup, valueByChild, eliteMap, hlgMap) {
   if (!pid || !valueByChild || !eliteMap || !hlgMap) return null;
   const cv = valueByChild.get(String(pid));
   if (!cv) return null;
   const lv = Number(level) || cv.level || 95;
   const eg = eliteMap.get(stageEliteGroup ?? cv.eliteGroup) || {};
-  const hl = hlgMap.get(`${cv.hardLevelGroup}_${lv}`) || {};
+  const hl = hlgMap.get(`${stageHardLevelGroup ?? cv.hardLevelGroup}_${lv}`) || {};
   const hp = cv.HPBase * (cv.HPModifyRatio || 1) * (eg.HPRatio || 1) * (hl.HPRatio || 1);
   const spd = cv.SpeedBase * (cv.SpeedModifyRatio || 1) * (eg.SpeedRatio || 1) * (hl.SpeedRatio || 1) + (cv.SpeedModifyValue || 0);
   const tough = cv.StanceBase * (cv.StanceModifyRatio || 1) * (eg.StanceRatio || 1) * (hl.StanceRatio || 1) / 3;
@@ -543,12 +543,14 @@ function srSide(stages = [], weakness = [], monsterMap, monsterChildMap, bossIds
   const stage = (stages || [])[0];
   const level = stage?.level;
   const stageEliteGroup = stage?.elite_group;
+    // 等级成长表要按关卡自己的 hard_level_group 查，不能用怪物表里的（两者系统性不同）
+    const stageHardLevelGroup = stage?.hard_level_group;
   const { valueByChild, eliteMap, hlgMap } = refs || {};
   const addInfo = (pid) => {
     const k = String(pid);
     const info = srMonsterInfo(k, monsterMap, monsterChildMap);
     if (!info.name || info.name === k) return null;
-    info.stats = srMonsterStats(k, level, stageEliteGroup, valueByChild, eliteMap, hlgMap);
+    info.stats = srMonsterStats(k, level, stageEliteGroup, stageHardLevelGroup, valueByChild, eliteMap, hlgMap);
     info.pid = k;
     return info;
   };
@@ -717,7 +719,8 @@ async function loadSrNanoka(reqType, opts = {}) {
   const base = { version: nv, id, title: reqType, period: label || `当前版本 ${live}`, tip, gameKey: 'sr', mode: cfg.mode };
 
   if (reqType === '混沌回忆') {
-    const mazeLevels = String(config().abyss_report_sr_maze_levels || '11,12')
+    // 留空 = 全部难度（与锅点文案一致）；之前写正 '11,12' 导致只画两层
+      const mazeLevels = String(config().abyss_report_sr_maze_levels || '')
       .split(/[,，\s]+/)
       .map(s => Number(s))
       .filter(n => Number.isFinite(n) && n >= 1 && n <= 12);
@@ -813,7 +816,8 @@ async function loadSrNanoka(reqType, opts = {}) {
       }
     }
     const fallback = srCleanText(detail.name || '');
-    const doomLevels = String(config().abyss_report_sr_doom_levels || '3,4')
+    // 同上：留空 = 全部难度
+      const doomLevels = String(config().abyss_report_sr_doom_levels || '')
       .split(/[,，\s]+/)
       .map(s => Number(s))
       .filter(n => Number.isFinite(n) && n >= 1 && n <= 5);
