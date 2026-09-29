@@ -702,8 +702,10 @@ export class bh3_ledger extends plugin {
      * 跨月即永久丢失。某些历史月份因此没有来源明细（当年月中只跑了 #崩三水晶，
      * 该接口不返回 group_by；下个月又没发 #上月水晶，就再也补不回来了）。
      *
-     * 为保证环形图「总计」与顶部「总水晶」口径一致，这里把没有来源明细的月份
-     * 合并成一项「来源未记录」，而不是让两者悄悄对不上。
+     * 为保证环形图比例好看，这里只统计【真实记录了来源明细】的部分，
+     * 没有明细的月份（当年月中只跑了 #崩三水晶，该接口不返回 group_by；
+     * 下个月又没发 #上月水晶，就再也补不回来了）直接不参与占比，
+     * 不再并成一项「来源未记录」去撑大饼图。
      *
      * 注意：action_id 跨月不稳定（同一 id 在不同月份对应不同来源名，如 2011
      * 在 5 月是「剩余途径」、在 8 月是「记忆战场积分奖励」），只能按 name 合并。
@@ -721,16 +723,13 @@ export class bh3_ledger extends plugin {
             }
         }
         const list = [...merged.values()].filter(i => i.num > 0).sort((a, b) => b.num - a.num);
-        const covered = list.reduce((s, i) => s + i.num, 0);
-        const gap = Math.max((Number(grandTotal) || 0) - covered, 0);
-        // 缺口并入统计口径，percent 按 grandTotal 计算，总计才等于顶部「总水晶」
-        const base = gap > 0 ? Math.max(Number(grandTotal) || covered, covered) : covered;
-        if (gap > 0) list.push({ name: '来源未记录', num: gap, isGap: true });
+        // 占比按「有明细来源的合计」算，而不是按全部月水晶 —— 这样每一块都是真实来源
+        const base = list.reduce((s, i) => s + i.num, 0);
         const color = ['#73a8c6', '#d56565', '#70b2b4', '#bd9a5a', '#739970', '#7a6da7', '#597ea0'];
         return list.map((i, idx) => ({
             ...i,
             percent: base > 0 ? Math.round((i.num / base) * 100) : 0,
-            color: i.isGap ? '#5a5a68' : color[idx % color.length],
+            color: color[idx % color.length],
         }));
     }
 
@@ -784,8 +783,7 @@ export class bh3_ledger extends plugin {
                 if (h > maxHcoin) { maxHcoin = h; maxMonth = String(m._key); maxMonthLabel = label; }
             }
 
-            // 传入全部月份的月水晶总量，缺口会并成「来源未记录」一项，
-            // 保证环形图总计与顶部「总水晶」口径一致。
+            // 只统计真实记录了来源明细的部分；没有明细的月份不参与占比。
             const hcoinList = this.buildCumulativeSource(monthList, allHcoin);
             const firstKey = monthList[0]._key;
             const lastKey = monthList[monthList.length - 1]._key;

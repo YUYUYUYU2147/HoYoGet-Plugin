@@ -80,11 +80,9 @@
                             </div>
                             {{/each}}
                         </div>
-                        <div class="pie-total">
-                            总计 <span class="pie-total-num">{{hcoinTotal}}</span>
-                        
-                          <div class="pie-note">灰色为来源明细未记录的月份</div>
-                      </div>
+                          <div class="pie-total">
+                              总计 <span class="pie-total-num">{{hcoinTotal}}</span>
+                          </div>
                     </div>
                     <div class="breakdown-right">
                         <canvas id="pieChart" width="360" height="360" data-piedata="{{hcoinListB64}}"></canvas>

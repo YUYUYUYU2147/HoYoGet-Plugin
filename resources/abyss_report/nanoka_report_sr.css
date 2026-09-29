@@ -44,7 +44,9 @@ body{margin:0;min-width:1240px;font-family:"Noto Sans CJK SC","Microsoft YaHei",
 .wave{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
 .monster{display:flex;flex-direction:column;align-items:center;width:140px;padding:8px 6px;border-radius:12px;background:#fff;border:1px solid #e9edf3;color:#3b4252;text-align:center}
 .m-ico{width:54px;height:54px;border-radius:10px;object-fit:cover;background:#f1f5f9;flex:none}
-.m-name{font-size:12.5px;font-weight:700;color:#1f2937;margin:6px 0 4px;line-height:1.25;max-height:2.6em;overflow:hidden}
+/* 名字块固定占两行高：否则长名字换行会把下面的弱点整体顶下去，
+   同一排里短名字的怪和长名字的怪弱点就错开了 */
+.m-name{font-size:12.5px;font-weight:700;color:#1f2937;margin:6px 0 4px;line-height:1.25;height:2.5em;overflow:hidden}
 .m-count{font-size:11.5px;color:#ea580c;font-weight:800}
 .m-weak{display:flex;gap:2px;flex-wrap:nowrap;justify-content:center;align-items:center;margin-bottom:4px;width:100%}
 .weak-dot{padding:0 2px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;gap:1px;font-size:9px;font-weight:700;color:#475569;background:transparent;white-space:nowrap;flex:none}

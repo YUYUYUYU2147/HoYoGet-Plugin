@@ -3,12 +3,15 @@
  *
  * 两个站的数据各有对方没有的字段，单用一边必然残缺：
  *
- *   字段                      nanoka(速报)   alioth(速览)
- *   HPCount    血条数 ×N           ✗             ✓
- *   VoracityHP 污染额外血量        ✗             ✓
- *   IAR        效果抗性            ✗             ✓
- *   Summons    召唤物(含子怪数值)   ✗             ✓
- *   invasion    污染机制说明/等级   ✓             ✗
+ *   字段                          nanoka(速报)   alioth(速览)
+ *   HPCount    血条数 ×N             ✗             ✓
+ *   VoracityHP 污染额外血量          ✗             ✓
+ *   IAR        效果抗性              ✗             ✓
+ *   Summons    召唤物(含子怪数值)     ✗             ✓
+ *   invasion    污染机制说明/等级     ✓             ✗
+ *   MaxMonsterPhase  血条数 ×N       ✓             ✗
+ *   StatusResistanceBase 效果抗性    ✓             ✗
+ *   maze_buff_param[1] 贪饕回血比例  ✓             ✗
  *
  * 两边的 stage_id 与期 id 同号（实测 nanoka 迷宫集 1035 ↔ alioth chaos/1035
  * 的 stage 30125121 完全对应），因此可以直接按 stage_id 交叉查表，无需映射。
@@ -99,5 +102,64 @@ export async function enrichFromNanoka(phaseId, version) {
 
 /** 取某个 stage 下某只怪的补充字段 */
 export function pickEnrich(map, stageId, monsterId) {
-    return map?.[String(stageId)]?.[String(monsterId)] || null;
+  return map?.[String(stageId)]?.[String(monsterId)] || null;
+}
+
+/** 取某个 stage 的污染机制补充字段（贪饕回血比例等） */
+export function pickStageEnrich(map, stageId) {
+  return map?.[String(stageId)] || null;
+}
+
+const NANOKA_MANIFEST = 'https://static.nanoka.cc/manifest.json';
+
+/**
+ * 取 nanoka 当前版本号（形如 4.6.51）。
+ * alioth 那边没有版本号的概念，要按期 id 去 nanoka 取数据就必须先有这个。
+ */
+export async function nanokaVersion() {
+  const key = 'nanoka:version';
+  if (CACHE.has(key)) return CACHE.get(key);
+  let v = '';
+  try {
+    const m = await getJson(NANOKA_MANIFEST);
+    v = String(m?.hsr?.latest || m?.hsr?.live || '');
+  } catch {
+    v = '';
+  }
+  CACHE.set(key, v);
+  return v;
+}
+
+/**
+ * 速览（alioth 源）专用：按 alioth 的期 id 去 nanoka 取同期的污染机制。
+ *
+ * 两边期 id 是同号的（实测 nanoka maze/1035 与 alioth chaos/1035 有 6 个
+ * stage_id 重合，而 maze/1036 与之零重合），但仍然做一次 stage_id 交集校验，
+ * 万一哪天 nanoka 改了期号编排，也只是查不到、不会取到错的那一期的数值。
+ *
+ * @param {string} phaseId alioth 的期 id
+ * @param {object} detail   alioth 的期详情，用来校验 stage_id 是否真的对得上
+ * @param {string} file     alioth 的文件类型（chaos/fiction/boss/arbitration）
+ */
+export async function enrichNanokaForAlioth(phaseId, detail, file = 'chaos') {
+  if (!phaseId || !detail) return {};
+  const version = await nanokaVersion();
+  if (!version) return {};
+  let map = {};
+  try {
+    map = await enrichFromNanoka(phaseId, version);
+  } catch (err) {
+    logger.warn?.('[xhh][sr_enrich] nanoka 污染机制补充失败:', err?.message || err);
+    return {};
+  }
+  // 校验：至少要有一个 stage_id 同时存在于 alioth 与 nanoka，否则视为期号对不上
+  const aliothStages = detail?.Stages || {};
+  const hit = Object.keys(map).some(sid => aliothStages[sid] != null);
+  if (!hit) {
+    if (config().debug) {
+      logger.mark('[xhh][sr_enrich] nanoka 期号与 alioth 对不上，跳过污染机制补充:', phaseId, file);
+    }
+    return {};
+  }
+  return map;
 }

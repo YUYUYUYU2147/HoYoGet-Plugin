@@ -300,16 +300,4 @@ body {
     filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
 }
 
-/* 环形图旁的说明：group_by 只覆盖已结算月份，
-   与「总水晶」对不上是正常的，需要说明以免用户以为算错 */
-.pie-note {
-    margin-top: 6px;
-    font-size: 12px;
-    color: rgba(26, 26, 46, 0.5);
-    text-align: right;
-}
 
-/* 「来源未记录」项：没有 group_by 的月份合并而来，用灰色与真实来源区分 */
-.legend-item .legend-name.gap {
-    color: rgba(26, 26, 46, 0.55);
-}

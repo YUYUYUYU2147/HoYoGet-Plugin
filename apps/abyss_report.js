@@ -559,6 +559,14 @@ function srSide(stages = [], weakness = [], monsterMap, monsterChildMap, bossIds
     const info = srMonsterInfo(k, monsterMap, monsterChildMap);
     if (!info.name || info.name === k) return null;
     info.stats = srMonsterStats(k, level, stageEliteGroup, stageHardLevelGroup, valueByChild, eliteMap, hlgMap);
+    // 血条数 ×N：alioth 的 HPCount 优先，取不到就退回 nanoka 的 MaxMonsterPhase，
+    // 两个源同源同义，不必按「污染怪/普通怪」区别对待。
+    const ex = pickEnrich(enrichMap, stage?.stage_id, pid);
+    if (ex?.hpCount > 1) info.hpMult = ex.hpCount;
+    else if (info.stats.phase > 1) info.hpMult = info.stats.phase;
+    if (ex?.voracityHp && info.stats) {
+      info.stats.voracityHp = ex.voracityHp.toLocaleString('en-US');
+    }
     info.pid = k;
     return info;
   };
@@ -590,17 +598,27 @@ function srSide(stages = [], weakness = [], monsterMap, monsterChildMap, bossIds
     }
   }
   if (bossWave.length) waves.unshift(bossWave);
+  // 贪饕回血比例是【整个关卡】的常量（maze_buff_param[1]），
+  // 不只污染块里的贪饕怪才有，所以提前取出来给本场所有怪统一用，
+  // 免得「只有污染块才显示贪饕生命值」这种区别对待。
+  // 已实测核对：4.5.51「来生泅渡其十二」HP 9,645,484 ×0.3 = 2,893,645，正是页面显示的 30%。
+  // 注意 [0] 是另一个参数（实测为 0.65/0.4），用它会显示成 65%/40%，是错的。
+  const healPct = Number(stage?.invasion?.maze_buff_param?.[1]) || 0;
+  const applyGreed = (info) => {
+    if (!healPct || !info?.stats) return;
+    const base = Number(String(info.stats.hp).replace(/,/g, '')) || 0;
+    if (base <= 0) return;
+    info.stats.greedPct = Math.round(healPct * 100);
+    info.stats.greedHp = Math.round(base * healPct).toLocaleString('en-US');
+  };
+  for (const wave of waves) for (const m of wave) applyGreed(m);
   // 星启模式（污染入侵）模式：提取 stage.invasion，附加到 side 供模板渲染
   let invasion = null;
   if (config().abyss_report_sr_invasion !== false && stage?.invasion) {
     const inv = stage.invasion;
     // invasion.level 是【污染等级】不是 HP 倍率：污染 3 级 = 额外 +30% 血量，
-    // 与页面标的 xN 无关（xN 来自本半场贪饕怪的只数）。
+    // 与页面标的 xN 无关（xN 来自血条数）。
     const pollution = Number(inv.level) || 0;
-    // maze_buff_param[1] 是贪饕的「回复生命值比例」。
-    // 已实测核对：4.5.51「来生泅渡其十二」HP 9,645,484 ×0.3 = 2,893,645，正是页面显示的 30%。
-    // 注意 [0] 是另一个参数（实测为 0.65/0.4），用它会显示成 65%/40%，是错的。
-    const healPct = Number(inv.maze_buff_param?.[1]) || 0;
     const monsters = [];
     for (const m of inv.monster_list || []) {
       // 字段名是 monster_id，旧代码写成 unk_0 导致永远取不到，贪饕怪从没被列出来
@@ -609,21 +627,11 @@ function srSide(stages = [], weakness = [], monsterMap, monsterChildMap, bossIds
       const info = addInfo(pid);
       if (!info) continue;
       info.count = info.count || 1;
+      applyGreed(info);
       if (info.stats) {
         info.pollution = pollution;
-        // xN 与效果抗性用 nanoka 自己的数据算（MaxMonsterPhase / StatusResistance），
-        // alioth 只补它独有的污染加血 VoracityHP。
-        info.hpMult = info.stats.phase > 1 ? info.stats.phase : 0;
-        const ex = pickEnrich(enrichMap, stage?.stage_id, pid);
-        if (ex?.voracityHp) {
-          info.stats = info.stats || {};
-          info.stats.voracityHp = ex.voracityHp.toLocaleString('en-US');
-        }
-        if (healPct > 0) {
-          info.stats.greedPct = Math.round(healPct * 100);
-          const base = Number(String(info.stats.hp).replace(/,/g, '')) || 0;
-          info.stats.greedHp = Math.round(base * healPct).toLocaleString('en-US');
-        }
+        // 效果抗性用 nanoka 的 StatusResistance + HardLevelGroup 算（×血条数），
+        // alioth 只补它独有的污染加血 VoracityHP（在 addInfo 里统一处理）。
       }
       monsters.push(info);
     }
@@ -751,16 +759,16 @@ async function loadSrNanoka(reqType, opts = {}) {
     }
   }
   if (!id) return null;
-  const detail = await fetchJson(`${cfg.detail}/${id}.json`, 8000);  // 当期存在污染（贪饕）机制时，向 alioth 补一次该期的 HPCount / VoracityHP / IAR。
+  const detail = await fetchJson(`${cfg.detail}/${id}.json`, 8000);
+  // 向 alioth 补一次该期的 HPCount / VoracityHP / IAR。
+  // 不再只在「当期有污染」时才补：血条数 ×N 和污染加血现在对所有怪一视同仁地取。
   // 两源期 id 与 stage_id 同号（实测 nanoka 迷宫集 1035 <-> alioth chaos/1035），可直接按 id 查。
-  if (Array.isArray(detail) && detail.some(r => JSON.stringify(r).includes('"invasion"'))) {
-    try {
-      const alFile = cfg.mode === 'doom' ? 'boss' : cfg.mode === 'story' ? 'fiction' : cfg.mode === 'peak' ? 'arbitration' : 'chaos';
-      srRefs.enrichMap = await enrichFromAlioth(id, alFile);
-      if (config().debug) logger.mark('[xhh][abyss] alioth 补充数据:', Object.keys(srRefs.enrichMap).length, '个 stage');
-    } catch (err) {
-      logger.warn?.('[xhh][abyss] alioth 补充数据失败:', err?.message || err);
-    }
+  try {
+    const alFile = cfg.mode === 'doom' ? 'boss' : cfg.mode === 'story' ? 'fiction' : cfg.mode === 'peak' ? 'arbitration' : 'chaos';
+    srRefs.enrichMap = await enrichFromAlioth(id, alFile);
+    if (config().debug) logger.mark('[xhh][abyss] alioth 补充数据:', Object.keys(srRefs.enrichMap).length, '个 stage');
+  } catch (err) {
+    logger.warn?.('[xhh][abyss] alioth 补充数据失败:', err?.message || err);
   }
 
   const base = { version: nv, id, title: reqType, period: label || `当前版本 ${live}`, tip, gameKey: 'sr', mode: cfg.mode };
