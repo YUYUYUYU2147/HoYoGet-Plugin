@@ -608,7 +608,10 @@ export class AbyssNow extends plugin {
       if (!view || !view.sections?.length) {
         return e.reply('未获取到 Alioth 当期数据，请稍后再试。', true, { recallMsg: 60 });
       }
-      const img = await render('abyss_now/overview', view, { e, pct: 1 });
+      // 原来传 pct:1，等于完全不缩放，输出只有 1200px 宽，
+      // 是全插件最小的（速报 1.5 / 日历 1.65 / 角色战力 1.6），字小又糊。
+      // 1.5 与速报对齐，输出 1800px，字体按 1.5 倍重新栅格化而不是拉伸。
+      const img = await render('abyss_now/overview', view, { e, pct: 1.5 });
       if (view.tip) await e.reply(view.tip, true, { recallMsg: 60 });
       return e.reply(img);
     } catch (err) {
