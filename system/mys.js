@@ -118,18 +118,29 @@ const nanokaGsIconCircle = icon => {
     return `${NANOKA_ASSET}/gi/UI_AvatarIcon_${key}_Circle.webp`;
 };
 // 原神武器/遗器等小图标
+//
+// 资源名必须**保留** UI_EquipIcon_ / UI_ItemIcon_ 前缀。
+// 之前这里把 UI_EquipIcon_ 剥掉了，拼成 assets/gi/Sword_Blunt.webp → 404，
+// 原神武器图鉴整页没有图（实测 UI_EquipIcon_Sword_Blunt.webp 是 200）。
+// 遗器一直是 UI_ItemIcon_201 这种，前缀没被剥，所以遗器是好的。
+//
+// 皮肤/变形武器（实测 20 条，weapon.json 里 detail 的 skin:true）：
+//   weapon.json 给的是  UI_EquipIcon_Bow_MorphYayu_{0}
+//   真实资源名是       UI_Gacha_EquipIcon_Bow_MorphYayu_Great.webp
+// 规律是「UI_EquipIcon_ → UI_Gacha_EquipIcon_」并且去掉结尾的 _{0}。
+// 之前误以为这些没托管、直接返回空串走首字占位，其实只是拼错了名字。
 const nanokaGsItemIcon = icon => {
     const key = String(icon || '');
     if (!key) return '';
-    // 资源名必须**保留** UI_EquipIcon_ / UI_ItemIcon_ 前缀。
-    // 之前这里把 UI_EquipIcon_ 剥掉了，拼成 assets/gi/Sword_Blunt.webp → 404，
-    // 原神武器图鉴整页没有图（实测 UI_EquipIcon_Sword_Blunt.webp 是 200）。
-    // 遗器一直是 UI_ItemIcon_201 这种，前缀没被剥，所以遗器是好的。
-    //
-    // 变形武器的 icon 里带 {0} 占位符（UI_EquipIcon_Sword_MorphVinces_{0}），
-    // nanoka 上没有对应文件（各种拼法都 404，实测 22 条），返回空串让列表走首字占位。
-    if (/\{0\}|Template/.test(key)) return '';
+    if (/_\{0\}$/.test(key)) return gsSkinIcon(key);
+    if (/Template/.test(key)) return '';
     return `${NANOKA_ASSET}/gi/${key}.webp`;
+};
+/** 皮肤武器的 Gacha 版图标，用作 onerror 兜底（见 nanokaGsItemIcon 的注释） */
+const gsSkinIcon = key => {
+    const base = String(key || '').replace(/_\{0\}$/, '');
+    if (!base) return '';
+    return `${NANOKA_ASSET}/gi/${base.replace(/^UI_EquipIcon_/, 'UI_Gacha_EquipIcon_')}.webp`;
 };
 // 星铁立绘（详情页大图用）：avatardrawcard/{角色id}.webp，实测 99/99 全部 200。
 // 列表头像不用它 —— 那是 2048×2048 的卡面，裁成 90×90 只能看到头发。
@@ -676,6 +687,11 @@ class mys {
                     content_id: id,
                     title: w.zh || w.en || id,
                     icon,
+                    // 皮肤武器再兜一层 Gacha 版：有一把（380002「超厉害魔法钥匙」）
+                    // weapon.json 给的是 UI_EquipIcon_Claymore_LoliFriend，
+                    // 页面引用的是 UI_Gacha_EquipIcon_Claymore_LoliFriend.webp，
+                    // 但那个文件实测 404 —— 留着兜底链，指不定 nanoka 哪天补上。
+                    iconFallback: /_\{0\}$/.test(String(w.icon || '')) ? '' : gsSkinIcon(w.icon),
                     ext: makeExt([`武器星级/${gsWeaponRarityCn(w.rank)}`, `武器类型/${GS_WEAPON_CN[w.type] || ''}`], icon)
                 };
             });
