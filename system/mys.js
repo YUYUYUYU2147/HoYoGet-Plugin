@@ -95,10 +95,23 @@ const nanokaBase = async game => {
 };
 
 // 原神头像：nanoka 的 icon 字段本身就是 UI_AvatarIcon_Ayaka 这种方形头像名，
-// 对应资源是 assets/gi/UI_AvatarIcon_Ayaka.webp（256×256，实测 143/144 可用）。
+// 对应资源是 assets/gi/UI_AvatarIcon_Ayaka.webp（256×256，实测 152/152 可用）。
 // 注意别用 UI_Gacha_AvatarImg_* —— 那是 2048×1024 的立绘，列表里裁成 90×90
 // 只能裁到头发和背景，角色脸完全露不出来。
+//
+// nanoka 对同一个角色还给圆形版 UI_AvatarIcon_{名字}_Circle 和卡面版 _Card，
+// 列表优先用圆形版，跟星铁的 avatarroundicon 观感一致。三种全量实测（152 个角色）：
+//   无后缀  152/152
+//   _Circle  131/152  缺 Nefer Durin Columbina Zibai Illuga Mitya Valeriy + 14 个 Mannequin 占位
+//   _Card    128/152  比 _Circle 还少 Gaming Jahoda Varka
+// 缺的走 iconFallback 回落无后缀版，由 list.html 的 onerror 自动切换，
+// 不在这里硬编码哪几个角色缺图（名单会随版本变）。
 const nanokaGsIcon = icon => {
+    const key = String(icon || '').replace(/^UI_AvatarIcon_/, '');
+    if (!key) return '';
+    return `${NANOKA_ASSET}/gi/UI_AvatarIcon_${key}_Circle.webp`;
+};
+const nanokaGsIconBase = icon => {
     const key = String(icon || '').replace(/^UI_AvatarIcon_/, '');
     if (!key) return '';
     return `${NANOKA_ASSET}/gi/UI_AvatarIcon_${key}.webp`;
@@ -539,8 +552,8 @@ class mys {
             .sort((a, b) => String(b[1]?.release || '').localeCompare(String(a[1]?.release || '')));
 
         const js_list = charEntries.map(([id, c]) => {
-            // 原神用 nanoka 的方形头像（UI_AvatarIcon_*，256×256），星铁用圆形头像
-            // （avatarroundicon，99/99 全覆盖）。两边都同源，不会再出现两套 id 撞号查错人。
+            // 原神用圆形头像 UI_AvatarIcon_*_Circle，星铁用圆形头像 avatarroundicon，
+            // 两边都是圆形，观感统一，也都同源，不会再出现两套 id 撞号查错人。
             const icon = isGs ? nanokaGsIcon(c.icon) : nanokaSrRoundIcon(id);
             const strings = isGs
                 ? [`星级/${gsRarityCn(c.rank)}`, `元素/${GS_ELEMENT_CN[c.element] || ''}`, `武器/${GS_WEAPON_CN[c.weapon] || ''}`]
@@ -549,8 +562,10 @@ class mys {
                 content_id: id,
                 title: cleanNanokaName(c.zh) || c.en || id,
                 icon,
-                // 头像取不到时详情页仍可用立绘兜底，列表会走首字占位
-                iconFallback: !icon && !isGs ? nanokaSrIcon(id) : '',
+                // 兜底链由 list.html 的 onerror 逐级切换：
+                // 原神圆形版缺图（7 个新角色）→ 回落无后缀方形版；
+                // 星铁万一取不到 → 回落立绘。都取不到才走首字占位。
+                iconFallback: isGs ? nanokaGsIconBase(c.icon) : nanokaSrIcon(id),
                 aliases: [c.code, c.en, c.codename].filter(v => v && v !== c.zh),
                 ext: makeExt(strings, icon)
             };
@@ -930,6 +945,9 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
                     name: v,
                     id: ids[i],
                     icon: thumbIcon(JSON.parse(list[i].ext).c_30?.picture?.list[0] || icons[i]),
+                    // 必须透传，list.html 的 onerror 靠它做兜底换图。
+                    // 之前这里漏了字段，data-alt 恒为空串，整条兜底链从来没生效过。
+                    iconFallback: list[i].iconFallback || '',
                     ji: jis[i],
                     yuanshu: yuanshus[i],
                     wuqi: wuqis[i],
