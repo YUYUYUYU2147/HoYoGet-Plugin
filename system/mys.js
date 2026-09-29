@@ -99,22 +99,23 @@ const nanokaBase = async game => {
 // 注意别用 UI_Gacha_AvatarImg_* —— 那是 2048×1024 的立绘，列表里裁成 90×90
 // 只能裁到头发和背景，角色脸完全露不出来。
 //
-// nanoka 对同一个角色还给圆形版 UI_AvatarIcon_{名字}_Circle 和卡面版 _Card，
-// 列表优先用圆形版，跟星铁的 avatarroundicon 观感一致。三种全量实测（152 个角色）：
-//   无后缀  152/152
+// nanoka 对同一个角色还给圆形版 _Circle 和卡面版 _Card，列表一律用**方形**基础版：
+// 列表的头像框是 90×90 + border-radius:10px（不是圆形），方形图正好填满，
+// 圆形图四角是透明的，会被圆角削掉一圈白边。实测三种（152 个角色）：
+//   无后缀  152/152  ← 用这个
 //   _Circle  131/152  缺 Nefer Durin Columbina Zibai Illuga Mitya Valeriy + 14 个 Mannequin 占位
 //   _Card    128/152  比 _Circle 还少 Gaming Jahoda Varka
-// 缺的走 iconFallback 回落无后缀版，由 list.html 的 onerror 自动切换，
-// 不在这里硬编码哪几个角色缺图（名单会随版本变）。
+// 万一以后基础版缺图，回落到 _Circle（覆盖面次广），由 list.html 的 onerror 自动切换。
+// 不硬编码「哪几个角色缺图」——名单会随版本变。
 const nanokaGsIcon = icon => {
     const key = String(icon || '').replace(/^UI_AvatarIcon_/, '');
     if (!key) return '';
-    return `${NANOKA_ASSET}/gi/UI_AvatarIcon_${key}_Circle.webp`;
+    return `${NANOKA_ASSET}/gi/UI_AvatarIcon_${key}.webp`;
 };
-const nanokaGsIconBase = icon => {
+const nanokaGsIconCircle = icon => {
     const key = String(icon || '').replace(/^UI_AvatarIcon_/, '');
     if (!key) return '';
-    return `${NANOKA_ASSET}/gi/UI_AvatarIcon_${key}.webp`;
+    return `${NANOKA_ASSET}/gi/UI_AvatarIcon_${key}_Circle.webp`;
 };
 // 原神武器/遗器等小图标
 const nanokaGsItemIcon = icon => {
@@ -135,9 +136,15 @@ const cleanNanokaName = v => String(v || '')
     .replace(/\s+/g, ' ')
     .trim();
 
-// 星铁圆形头像：avatarroundicon/{角色id}.webp，实测 99/99 全部 200。
-// 另两个同类目录都不全：avatarshopicon 缺 1224，avataricon/avatar 缺 1507/1511/1512/1513，
-// 所以列表一律用 roundicon。
+// 星铁方形头像：avataricon/avatar/{角色id}.webp（160×188，头部+肩部特写）。
+// 和原神一样用方形的 —— 列表头像框是 90×90 + border-radius:10px，不是圆形，
+// 圆形图（avatarroundicon，128×128 四角透明）会被圆角削掉一圈白边。
+// 全量实测（99 个角色）：
+//   avataricon/avatar   95/99   ← 用这个，缺 1507 1511 1512 1513
+//   avatarroundicon     99/99   ← 兜底，覆盖面最广
+//   avatarshopicon      98/99   缺 1224
+//   gridfight/icon      10/99
+const nanokaSrIconSquare = id => (id ? `${NANOKA_ASSET}/hsr/avataricon/avatar/${id}.webp` : '');
 const nanokaSrRoundIcon = id => (id ? `${NANOKA_ASSET}/hsr/avatarroundicon/${id}.webp` : '');
 const nanokaSrLcIcon = id => (id ? `${NANOKA_ASSET}/hsr/lightconemaxfigures/${id}.webp` : '');
 const nanokaSrSkillIcon = (id, kind) => (id && kind ? `${NANOKA_ASSET}/hsr/skillicons/SkillIcon_${id}_${kind}.webp` : '');
@@ -552,9 +559,10 @@ class mys {
             .sort((a, b) => String(b[1]?.release || '').localeCompare(String(a[1]?.release || '')));
 
         const js_list = charEntries.map(([id, c]) => {
-            // 原神用圆形头像 UI_AvatarIcon_*_Circle，星铁用圆形头像 avatarroundicon，
-            // 两边都是圆形，观感统一，也都同源，不会再出现两套 id 撞号查错人。
-            const icon = isGs ? nanokaGsIcon(c.icon) : nanokaSrRoundIcon(id);
+            // 两个游戏都用方形头像：原神 UI_AvatarIcon_XXX，星铁 avataricon/avatar/{id}。
+            // 方形贴方形框（90×90 + border-radius:10px），圆形图四角透明会被圆角削掉。
+            // 两边都同源 nanoka，不会再出现两套 id 撞号查错人。
+            const icon = isGs ? nanokaGsIcon(c.icon) : nanokaSrIconSquare(id);
             const strings = isGs
                 ? [`星级/${gsRarityCn(c.rank)}`, `元素/${GS_ELEMENT_CN[c.element] || ''}`, `武器/${GS_WEAPON_CN[c.weapon] || ''}`]
                 : [`星级/${srRarityCn(c.rank)}`, `命途/${SR_PATH_CN[c.baseType] || ''}`, `属性/${SR_DAMAGE_CN[c.damageType] || ''}`];
@@ -562,10 +570,13 @@ class mys {
                 content_id: id,
                 title: cleanNanokaName(c.zh) || c.en || id,
                 icon,
-                // 兜底链由 list.html 的 onerror 逐级切换：
-                // 原神圆形版缺图（7 个新角色）→ 回落无后缀方形版；
-                // 星铁万一取不到 → 回落立绘。都取不到才走首字占位。
-                iconFallback: isGs ? nanokaGsIconBase(c.icon) : nanokaSrIcon(id),
+                // 兜底链由 list.html 的 onerror 逐级切换（mys.data() 负责把
+                // iconFallback 透传下来，缺了这条链整段就是死的）：
+                // 原神方形版万一缺图 → 回落 _Circle（131/152）；
+                // 星铁方形版缺 4 个 → 回落 avatarroundicon（99/99），再缺 → 回落立绘。
+                iconFallback: isGs
+                    ? nanokaGsIconCircle(c.icon)
+                    : [nanokaSrRoundIcon(id), nanokaSrIcon(id)].filter(Boolean).join(','),
                 aliases: [c.code, c.en, c.codename].filter(v => v && v !== c.zh),
                 ext: makeExt(strings, icon)
             };
