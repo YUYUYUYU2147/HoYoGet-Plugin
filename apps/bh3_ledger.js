@@ -739,6 +739,10 @@ export class bh3_ledger extends plugin {
                 await this.saveLedger(uid, MonthData);
             }
 
+            // 先补上个月的来源明细：group_by 只存在于 getLastMonthInfo，且只能取相邻的一个月，
+            // 放到读盘之前，后面的 monthList 就自然包含它了。
+            await this.captureLastMonthGroupBy(e, auth);
+
             const data = this.loadLedgerData(uid) || {};
             // 月份键形如 202609；只取合法键并按时间升序
             const monthList = Object.keys(data)
@@ -763,9 +767,6 @@ export class bh3_ledger extends plugin {
                 if (h > maxHcoin) { maxHcoin = h; maxMonth = String(m._key); maxMonthLabel = label; }
             }
 
-            // 顺带把上个自然月抓一遍（只有相邻月能拿到 group_by），避免再漏
-            await this.captureLastMonthGroupBy(e, auth);
-            monthList = Object.entries(this.loadLedgerData(uid)).map(([k, v]) => ({ ...v, _key: k })).sort((a, b) => a._key.localeCompare(b._key));
             const hcoinList = this.buildCumulativeSource(monthList);
             const firstKey = monthList[0]._key;
             const lastKey = monthList[monthList.length - 1]._key;
