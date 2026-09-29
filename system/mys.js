@@ -94,11 +94,14 @@ const nanokaBase = async game => {
     return v ? `https://static.nanoka.cc/${game}/${v}` : '';
 };
 
-// 原神立绘：nanoka 的 icon 形如 UI_AvatarIcon_Ayaka，立绘文件是 UI_Gacha_AvatarImg_Ayaka
+// 原神头像：nanoka 的 icon 字段本身就是 UI_AvatarIcon_Ayaka 这种方形头像名，
+// 对应资源是 assets/gi/UI_AvatarIcon_Ayaka.webp（256×256，实测 143/144 可用）。
+// 注意别用 UI_Gacha_AvatarImg_* —— 那是 2048×1024 的立绘，列表里裁成 90×90
+// 只能裁到头发和背景，角色脸完全露不出来。
 const nanokaGsIcon = icon => {
-    const key = String(icon || '');
+    const key = String(icon || '').replace(/^UI_AvatarIcon_/, '');
     if (!key) return '';
-    return `${NANOKA_ASSET}/gi/UI_Gacha_AvatarImg_${key.replace(/^UI_AvatarIcon_/, '')}.webp`;
+    return `${NANOKA_ASSET}/gi/UI_AvatarIcon_${key}.webp`;
 };
 // 原神武器/遗器等小图标
 const nanokaGsItemIcon = icon => {
@@ -106,8 +109,42 @@ const nanokaGsItemIcon = icon => {
     if (!key) return '';
     return `${NANOKA_ASSET}/gi/${key.replace(/^UI_EquipIcon_/, '')}.webp`;
 };
-// 星铁立绘：avatardrawcard/{角色id}.webp（实测 99/99 全部 200）
+// 星铁立绘（详情页大图用）：avatardrawcard/{角色id}.webp，实测 99/99 全部 200。
+// 列表头像不用它 —— 那是 2048×2048 的卡面，裁成 90×90 只能看到头发。
 const nanokaSrIcon = id => (id ? `${NANOKA_ASSET}/hsr/avatardrawcard/${id}.webp` : '');
+
+// 星铁头像：nanoka 没有托管（assets/hsr 下试过 avataricon/charicon/portrait 等
+// 7 个目录名全部 404，gridfight/icon 只覆盖 10/99），所以和绝区零一样取米游社
+// 官方 Wiki 的半身像，缩略图参数复用 thumbIcon。
+const SR_OFFICIAL_LIST_URL =
+  'https://api-static.mihoyo.com/common/blackboard/sr_wiki/v1/home/content/list?app_sn=sr_wiki&channel_id=17';
+let _srOfficialIconMap = null;
+async function srOfficialIconMap() {
+    if (_srOfficialIconMap) return _srOfficialIconMap;
+    _srOfficialIconMap = new Map();
+    try {
+        const res = await fetch(SR_OFFICIAL_LIST_URL, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(15000) });
+        const json = await res.json();
+        const chars = json?.data?.list?.[0]?.children?.find(v => v.name === '角色')?.list || [];
+        const clean = v => String(v || '').replace(/[^\u4e00-\u9fa5a-z0-9]/gi, '');
+        for (const item of chars) {
+            if (!item?.icon) continue;
+            const full = clean(item.title);
+                // 米游社图床加缩略参数：一次要渲染几十张头像，压成 100w webp 渲染快很多。
+                // 这里直接内联而不再调 thumbIcon，让本函数自包含。
+                const icon = /act-upload\.mihoyo\.com|act-webstatic\.mihoyo\.com/.test(item.icon)
+                    ? `${item.icon}?x-oss-process=image/resize,w_100/format,webp`
+                    : item.icon;
+                // full 是官方标题的精确匹配，单字角色名（如「刃」）也要收，否则会被漏掉
+                if (full.length >= 1) _srOfficialIconMap.set(full, icon);
+            const short = clean(String(item.title || '').split('·')[0]);
+            if (short.length >= 2 && !_srOfficialIconMap.has(short)) _srOfficialIconMap.set(short, icon);
+        }
+    } catch (err) {
+        logger.warn?.('[xhh][图鉴] 星铁官方头像列表获取失败:', err?.message || err);
+    }
+    return _srOfficialIconMap;
+}
 const nanokaSrLcIcon = id => (id ? `${NANOKA_ASSET}/hsr/lightconemaxfigures/${id}.webp` : '');
 const nanokaSrSkillIcon = (id, kind) => (id && kind ? `${NANOKA_ASSET}/hsr/skillicons/SkillIcon_${id}_${kind}.webp` : '');
 
@@ -505,18 +542,33 @@ class mys {
         // 所以按名字去重、每个只留第一条，既不出现 7 个重复条目，也不会拼出
         // UI_Gacha_AvatarImg_XXX-5.webp 这种不存在的地址。
         const seenName = new Set();
+        // nanoka 会用 {NICKNAME} 占位未实装角色，这种条目没有名字也没有图，直接剔掉
         const charEntries = Object.entries(chars)
-            .filter(([, c]) => c?.zh)
+            .filter(([, c]) => c?.zh && !/^\{[A-Z_]+\}$/.test(c.zh))
             .sort((a, b) => String(a[0]).localeCompare(String(b[0]), 'en', { numeric: true }))
             .filter(([, c]) => {
                 const key = `${c.zh}|${c.element || ''}`;
                 if (seenName.has(key)) return false;
                 seenName.add(key);
                 return true;
-            });
+            })
+            // 按 release 降序 = 上线时间新的排前面。
+            // 不能用 content_id 排：实测原神 薇斯纳 id=10000143 比 奥黛塔 id=10000150 小，
+            // 但 薇斯纳 2026-09-22 上线、奥黛塔 2026-08-11 上线，按 id 排会把新角色压下去。
+            .sort((a, b) => String(b[1]?.release || '').localeCompare(String(a[1]?.release || '')));
+
+        // 星铁没有 nanoka 头像，先取米游社官方半身像做名称→头像映射
+        const srIcons = isGs ? null : await srOfficialIconMap();
+        const cleanName = v => String(v || '').replace(/[^\u4e00-\u9fa5a-z0-9]/gi, '');
 
         const js_list = charEntries.map(([id, c]) => {
-            const icon = isGs ? nanokaGsIcon(c.icon) : nanokaSrIcon(id);
+            // 原神用 nanoka 的方形头像；星铁用米游社官方半身像（与绝区零一致）
+            // 星铁命中率实测 87/99，未命中的多是 nanoka 侧带标签的名字（如「银狼LV.<unbreak>999</unbreak>」），
+            // 去掉标签再试一次，仍拿不到就留空走首字占位。
+            const bare = cleanName(String(c.zh || '').replace(/<[^>]+>/g, ''));
+            const icon = isGs
+                ? nanokaGsIcon(c.icon)
+                : (srIcons?.get(cleanName(c.zh)) || srIcons?.get(bare) || '');
             const strings = isGs
                 ? [`星级/${gsRarityCn(c.rank)}`, `元素/${GS_ELEMENT_CN[c.element] || ''}`, `武器/${GS_WEAPON_CN[c.weapon] || ''}`]
                 : [`星级/${srRarityCn(c.rank)}`, `命途/${SR_PATH_CN[c.baseType] || ''}`, `属性/${SR_DAMAGE_CN[c.damageType] || ''}`];
@@ -524,6 +576,8 @@ class mys {
                 content_id: id,
                 title: c.zh || c.en || id,
                 icon,
+                // 头像取不到时详情页仍可用立绘兜底，列表会走首字占位
+                iconFallback: !icon && !isGs ? nanokaSrIcon(id) : '',
                 aliases: [c.code, c.en, c.codename].filter(v => v && v !== c.zh),
                 ext: makeExt(strings, icon)
             };

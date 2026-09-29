@@ -599,7 +599,10 @@ export class Wiki extends plugin {
       const diff = (ratingOrder[a.ji] ?? 99) - (ratingOrder[b.ji] ?? 99);
       if (diff) return diff;
       if (isZZZ) {
-        // 降序：content_id 越大上线越晚，最新的排在前（与原神/星铁一致）
+        // 降序：content_id 越大上线越晚，最新的排在前。
+        // 原神/星铁不用这段 —— 它们的 nanoka 列表已按 release 排好（content_id 与上线
+        // 顺序不对应：原神 薇斯纳 id=10000143 比 奥黛塔 id=10000150 小，却更晚上线），
+        // 这里再按 id 排会把预排的顺序打乱。Array.sort 是稳定的，不改也能保住预排结果。
         const ai = Number(a.id), bi = Number(b.id);
         if (Number.isFinite(ai) && Number.isFinite(bi) && ai !== bi) return bi - ai;
       }
@@ -619,6 +622,8 @@ export class Wiki extends plugin {
       rankClass: rankClassMap[item.ji] || 'r0',
       badges: (isBH3
         ? [item.yuanshu, ...(Array.isArray(item.damage) ? item.damage : [item.damage]), item.starRingField, ...(Array.isArray(item.starRing) ? item.starRing : [item.starRing]), item.wuqi]
+        // 星铁的特性来自命途/属性，不是元素/武器，不接上这两个分支星铁就只剩一个星级徽章
+        : isSr ? [item.ji, item.mingtu, item.shuxing]
         : [item.ji, item.yuanshu, item.wuqi])
         .filter(v => v && v !== '未知' && v !== 'false')
         .map(v => {
