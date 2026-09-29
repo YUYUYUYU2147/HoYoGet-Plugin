@@ -1,6 +1,7 @@
 import { api, mhy, yaml, config, pluginPriority } from '#xhh';
 import puppeteer from '../../../lib/puppeteer/puppeteer.js';
 import NoteUser from '../../genshin/model/mys/NoteUser.js';
+import { getRoleProfile } from '../system/roleProfile.js';
 import moment from "moment";
 import fs from 'fs';
 import YAML from 'yaml';
@@ -582,36 +583,27 @@ export class bh3_ledger extends plugin {
         return "每天都是一个小进步"
     }
 
+    /**
+     * 玩家资料（头像/昵称/等级/服务器）统一走 system/roleProfile.js，
+     * 原石/星琼/菲林账本用的是同一个函数，不再各写一套。
+     *
+     * 保留崩三自己的兜底：index 接口没给头像时，用第一个角色的头像
+     * （崩三 index 的 role.AvatarUrl 偶尔是空的，实测遇到过）。
+     */
     async getUserInfo(e, headers, uid, server) {
-        if (!server) server = mhy.getServer(uid, 'bh3');
-        let res = await api(e, {
-            type: 'bh3_index',
-            uid,
-            headers,
-            game: 'bh3',
-            server,
-        });
-        let avatarUrl = "", nickname = "", userLevel = 0, serverName = "";
-        if (res && res.retcode === 0 && res.data?.role) {
-            avatarUrl = res.data.role.AvatarUrl || "";
-            nickname = res.data.role.nickname || "";
-            userLevel = res.data.role.level || 0;
-            const region = res.data.role.region || "";
-            const serverMap = {
-                "cn_gf01": "官服", "cn_qd01": "B服", "os_usa": "美服", "os_euro": "欧服",
-                "os_asia": "亚服", "os_cht": "港澳台服", "android01": "安卓官服", "ios01": "iOS服",
-                "bb01": "哔哩哔哩", "pc01": "全平台（桌面）服", "yyb01": "应用宝服", "hun01": "渠道1服", "hun02": "渠道2服"
-            };
-            serverName = serverMap[region] || region || "未知";
-        }
+        const info = await getRoleProfile(e, uid, 'bh3', headers);
+        let avatarUrl = info.avatar || "";
+        const nickname = info.nickname || "";
+        const userLevel = info.userLevel || 0;
+        const serverName = info.serverName || "未知";
         if (!avatarUrl) {
             try {
-                let char = await api(e, {
+                const char = await api(e, {
                     type: 'bh3_character',
                     uid,
                     headers,
                     game: 'bh3',
-                    server,
+                    server: server || mhy.getServer(uid, 'bh3'),
                 });
                 if (char && char.retcode === 0 && char.data?.characters?.length > 0) {
                     avatarUrl = char.data.characters[0].character?.avatar?.icon_path || "";

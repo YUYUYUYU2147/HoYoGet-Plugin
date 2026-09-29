@@ -151,6 +151,28 @@ async function api(e, data = {}) {
                 method: 'GET',
             },
         },
+        //三个游戏的用户信息（头像+昵称）
+        //和下面的 bh3_index 同一个用途：崩三水晶统计靠它拿头像，
+        //原石/星琼/菲林账本也统一走这套，不再各搞各的。
+        //index 接口一次返回玩家资料 + 使用的角色，头像就在里面。
+        gs_index: {
+            url: `https://api-takumi-record.mihoyo.com/game_record/app/genshin/api/index?role_id=${uid}&server=${server}`,
+            obj: {
+                method: 'GET',
+            },
+        },
+        sr_index: {
+            url: `https://api-takumi-record.mihoyo.com/game_record/app/hkrpg/api/index?role_id=${uid}&server=${server}`,
+            obj: {
+                method: 'GET',
+            },
+        },
+        zzz_index: {
+            url: `https://api-takumi-record.mihoyo.com/event/game_record_zzz/api/zzz/index?role_id=${uid}&server=${server}`,
+            obj: {
+                method: 'GET',
+            },
+        },
         //崩三用户信息
         bh3_index: {
             url: `https://api-takumi-record.mihoyo.com/game_record/appv2/honkai3rd/api/index?role_id=${uid}&server=${server}`,

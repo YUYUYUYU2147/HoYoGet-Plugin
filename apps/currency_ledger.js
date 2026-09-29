@@ -4,6 +4,7 @@ import path from 'path';
 import { render, pluginPriority, mhy } from '#xhh';
 import MysInfo from '../../genshin/model/mys/mysInfo.js';
 import { xhh_gacha_pool } from './gacha_pool.js';
+import { getRoleProfile, serverName as toServerName } from '../system/roleProfile.js';
 /**
  * 原神原石 / 星铁星琼 / 绝区零菲林的月报与统计
  *
@@ -203,45 +204,6 @@ const pickSrcList = md => {
         .filter(i => i.name && i.num > 0);
 };
 
-/**
- * 从 UserGame 接口补昵称和头像。
- *
- * 为什么账本接口自己不够用（实测响应字段）：
- *   原神  ys_ledger/monthInfo  data 顶层有 nickname，但**完全没有头像字段**
- *   星铁  srledger/month_info  data 顶层**既没有 nickname 也没有头像**
- *   绝区零 nap_ledger/month_info  data.role_info.{nickname,avatar} 都有
- * 所以原神只能拿到昵称、拿不到头像，星铁两个都拿不到 —— 统计页右上角
- * 那个位置就一直是空的。
- *
- * 复用 genshin 插件已有的 User（genshin/model/user.js）：
- *   getMysRoleInfo()      → UserGame 接口，一次返回所有游戏的 nickname/avatar_url
- *   getMysGameFaceUrl()   → 多源兜底取头像，带 redis 缓存 12 小时
- * 拿不到就返回空串，不影响账本本身出图。
- */
-async function fetchRoleProfile(e, uid, game) {
-    const out = { nickname: '', avatar: '' };
-    if (!uid) return out;
-    try {
-        const User = (await import(`file://${process.cwd()}/plugins/genshin/model/user.js`)).default;
-        const user = new User(e);
-        // getMysRoleInfo 内部按传入的 game 选对应 uid，这里要传当前游戏那个 uid
-        const uidDs = { uid: String(uid) };
-        const role = await user.getMysRoleInfo(user, uidDs, game);
-        if (role) {
-            out.nickname = String(role.nickname || '').trim();
-            out.avatar = String(
-                role.avatar_url || role.avatar || role.game_head_icon || role.icon || role.head_icon || role.game_head || ''
-            ).trim();
-        }
-        if (!out.avatar) {
-            out.avatar = String(await user.getMysGameFaceUrl(user, uidDs, game, role) || '').trim();
-        }
-    } catch (err) {
-        logger.debug?.('[xhh][账本] 获取昵称头像失败:', err?.message || err);
-    }
-    return out;
-}
-
 /** 把三个游戏各自不同的响应，统一成同一套字段 */
 function normalize(game, res) {
     const d = res?.data || {};
@@ -313,6 +275,7 @@ function saveSnapshot(qq, game, snap) {
         // 统计页要显示头像和昵称，这两个字段只有账本接口里有
         nickname: snap.nickname || all[snap.ym]?.nickname || '',
         avatar: snap.avatar || all[snap.ym]?.avatar || '',
+        serverName: snap.serverName || all[snap.ym]?.serverName || '',
         uid: snap.uid || all[snap.ym]?.uid || '',
         saveTime: moment().format('YYYY-MM-DD HH:mm:ss'),
     };
@@ -424,13 +387,6 @@ export class CurrencyLedger extends plugin {
                     (sample ? ` | group_by取值=${sample}` : '')
                 );
             }
-            // 原神只有昵称没有头像、星铁两个都没有，用 UserGame 接口补齐。
-            // 放在诊断日志之后：补不上时日志已经把接口情况记下来了，便于排查。
-            if (!snap.nickname || !snap.avatar) {
-                const profile = await fetchRoleProfile(e, snap.uid || d.uid, game);
-                if (profile.nickname) snap.nickname = profile.nickname;
-                if (profile.avatar) snap.avatar = profile.avatar;
-            }
             return { snap };
         } catch (err) {
             return { error: err?.message || String(err) };
@@ -467,6 +423,17 @@ export class CurrencyLedger extends plugin {
         // 接口没回合法 YYYYMM 时用「请求的月份」兜底，否则存盘的键不完整，
         // 统计页的月份标签会渲染成空的「月」
         if (!/^\d{6}$/.test(String(snap.ym || ''))) snap.ym = mInfo.ym;
+
+        // 账本接口不返回头像（实测：原神只有 nickname、绝区零有 role_info、
+        // 星铁两个都没有），统一走 index 接口补昵称头像 ——
+        // 和崩三水晶统计同一套逻辑，见 system/roleProfile.js。
+        // uid 必须用当前游戏自己的那个（e.game 已在 init 时按游戏设过）。
+        if (!snap.nickname || !snap.avatar) {
+            const profile = await getRoleProfile(e, snap.uid || auth.uid, game, auth.ckInfo.ck);
+            if (profile.nickname) snap.nickname = profile.nickname;
+            if (profile.avatar) snap.avatar = profile.avatar;
+            if (profile.serverName) snap.serverName = profile.serverName;
+        }
 
         // 无论月报还是统计都先把当月存进去，保证统计里始终包含最新月份
         const qq = String(e.user_id || e.user?.qq || '');
@@ -543,16 +510,9 @@ export class CurrencyLedger extends plugin {
             unit: meta.unit,
             accent: meta.accent,
             uid: String(auth?.uid || latest.uid || ''),
-            serverName: (() => {
-                try {
-                    // getServer 返回的是接口代码（prod_gf_cn 这种），
-                    // 直接显示的话用户看到的是「服务器：prod_gf_cn」，得转成「国服」
-                    const code = mhy.getServer(String(auth?.uid || latest.uid || ''), game) || '';
-                    return mhy.getServerName?.(code) || code;
-                } catch {
-                    return '';
-                }
-            })(),
+            // 服务器名走统一函数（roleProfile.serverName），
+            // 和头像同一处，不再各写一份映射表
+            serverName: latest.serverName || toServerName(mhy.getServer(String(auth?.uid || latest.uid || ''), game)),
             nickname: latest.nickname || '',
             avatarUrl: latest.avatar || '',
             cornerSplash,
