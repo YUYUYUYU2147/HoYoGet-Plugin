@@ -651,6 +651,56 @@ export class bh3_ledger extends plugin {
     // 注意：action_id 跨月不稳定（同一 id 在不同月份对应不同来源名，如 2011
     // 在 5 月是「剩余途径」、在 8 月是「记忆战场积分奖励」），只能按 name 合并，
     // 否则会出现两个同名「剩余途径」被拆成两项、当月来源未结算的月份不参与聚合。
+    /**
+     * 按月补抓水晶来源明细（group_by）。
+     * 只有 api/index 带上 month 参数时才会返回 group_by，
+     * 不带 month 的请求只有月度汇总。
+     * 上个版本从未调用这个接口，所以 group_by 永远不会被写入，
+     * 历史上能看到的那几个月是旧版本遗留的。
+     */
+    async fetchMonthGroupBy(e, auth, monthKey) {
+        const { uid, headers, region } = auth;
+        const months = [moment(monthKey, 'YYYYMM').format('YYYY-MM'), String(monthKey)];
+        for (const month of months) {
+            try {
+                const res = await api(e, { type: 'bh3_ledger', uid, server: region, headers, month, game: 'bh3' });
+                if (res?.retcode === 0 && Array.isArray(res?.data?.group_by) && res.data.group_by.length) {
+                    debugLog('[水晶] group_by 补抓成功:', monthKey, month, res.data.group_by.length, '项');
+                    return res.data.group_by;
+                }
+            } catch (err) {
+                logger.warn?.(`[水晶] group_by 补抓失败 ${monthKey}: ${err?.message || err}`);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 把缺 group_by 的历史月份补齐并回写磁盘。
+     * 只补已过期的月（当月源未结算拿不到），
+     * 避免每次请求都去试一遍。
+     */
+    async backfillGroupBy(e, auth, monthList) {
+        const currentKey = moment().format('YYYYMM');
+        const missing = monthList.filter(m => {
+            const key = String(m?._key || '');
+            if (!key || key >= currentKey) return false;
+            return !(Array.isArray(m?.group_by) && m.group_by.length);
+        });
+        if (!missing.length) return 0;
+        debugLog('[水晶] 待补齐 group_by 的月份:', missing.map(m => m._key).join(','));
+        let filled = 0;
+        for (const m of missing) {
+            const list = await this.fetchMonthGroupBy(e, auth, m._key);
+            if (!list) continue;
+            m.group_by = list;
+            filled++;
+            await this.saveLedger(auth.uid, { ...m, _key: undefined, data_month: m._key });
+        }
+        if (filled) debugLog('[水晶] group_by 补齐完成:', filled, '个月');
+        return filled;
+    }
+
     buildCumulativeSource(monthList) {
         const merged = new Map();
         for (const m of monthList) {
@@ -719,6 +769,8 @@ export class bh3_ledger extends plugin {
                 if (h > maxHcoin) { maxHcoin = h; maxMonth = String(m._key); maxMonthLabel = label; }
             }
 
+            // 先把缺 group_by 的历史月份补齐再聚合，否则来源占比会永远少掉那几个月
+            await this.backfillGroupBy(e, auth, monthList);
             const hcoinList = this.buildCumulativeSource(monthList);
             const firstKey = monthList[0]._key;
             const lastKey = monthList[monthList.length - 1]._key;
