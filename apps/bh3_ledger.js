@@ -748,8 +748,13 @@ export class bh3_ledger extends plugin {
                 nickname,
                 userLevel,
                 serverName,
+            sys: { scale: 'style=transform:scale(2.4)' },
+            ppath: '../../../../../plugins/xhh/resources/',
+            tplFile: process.cwd() + '/plugins/xhh/resources/bh3_ledger/ledger_count.html',
+            saveId: 'ledger_count',
             });
-            return sendImg(e, buf);
+            if (buf && Buffer.isBuffer(buf)) return e.reply(segment.image(buf));
+            throw new Error('渲染水晶统计图失败');
         } catch (err) {
             logger.error('[水晶统计] 失败:', err);
             sendMsg(e, `水晶统计失败：${err?.message || err}`);

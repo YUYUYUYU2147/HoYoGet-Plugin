@@ -27,7 +27,7 @@ body {
 .container {
     width: 960px;
     background-color: #1a1a2e;
-    background-image: url(../../img/ledger/img.jpg);
+    background-image: url(../img/ledger/img.jpg);
     background-repeat: no-repeat;
     background-size: cover;
     padding: 30px 40px 40px 40px;
