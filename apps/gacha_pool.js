@@ -1659,6 +1659,23 @@ export class xhh_gacha_pool extends plugin {
     const imageSpec = !weapon ? SR_POOL_IMAGE_SPECS[names[0] || ''] : null;
     const key = `${verRaw}|${weapon ? 1 : 0}|${names[0] || ''}|${imageSpec?.imageIndex ?? ''}`;
     if (SR_COVER_CACHE.has(key)) return SR_COVER_CACHE.get(key);
+    // 联动池不走下面的搜索打分，直接用已指定好的公告帖取图。
+    //
+    // 原因（实测）：两篇联动公告的标题里都不含 UP 名
+    //（「联动跃迁」说明 / Fate[UBW] 联动跃迁说明 里都没有 Saber/Archer/吉尔伽美什…），
+    // 所以 UP 名加分拿不到，两篇都只靠「标题含联动」拿 6 分，正好打平；
+    // 而搜索接口 sort_type=2 是新→旧，2026 那篇排前面，判定又用的是
+    // `score > bestScore`（严格大于），平分时先到的赢 ——
+    // 结果联动1.0 会取到 2026 那篇的图，整篇帖子都错位。
+    if (isCollab && !weapon && SR_COLLAB_IMAGE_POSTS[verRaw]) {
+      const collabImage = await this.fetchSrCollabImage(verRaw);
+      if (collabImage) {
+        SR_COVER_CACHE.set(key, collabImage);
+        MYS_COVER_CACHE.set(key, collabImage);
+        return collabImage;
+      }
+      logger.warn(`[xhh][gacha_pool] ${verRaw} 指定的公告帖取图失败，回退搜索打分`);
+    }
     const exactKeywords = upNames.flatMap(name => SR_POOL_IMAGE_KEYWORDS[String(name || '')] || []);
     const keywords = imageSpec?.keyword ? [imageSpec.keyword] : (exactKeywords.length ? exactKeywords : (isCollab
       ? ['联动跃迁']
