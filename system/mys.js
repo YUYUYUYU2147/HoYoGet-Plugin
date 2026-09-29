@@ -228,9 +228,18 @@ const GS_WEAPON_CN = {
     WEAPON_SWORD_ONE_HAND: '单手剑', WEAPON_CATALYST: '法器', WEAPON_CLAYMORE: '双手剑',
     WEAPON_BOW: '弓', WEAPON_POLE: '长枪', WEAPON_CROSSBOW: '特弓', ITEM_TPS_WEAPON: '特殊武器'
 };
+// 命途内部名 → 中文名。
+// 这张表必须和 nanoka 官方一致（从站点代码里挖出来的原文：
+//   path:{knight:"存护",mage:"智识",priest:"丰饶",rogue:"巡猎",shaman:"同谐",
+//         warlock:"虚无",warrior:"毁灭",memory:"记忆",elation:"欢愉"}）
+// 之前凭印象写错了 5 个：Warlock 写成毁灭（应为虚无）、Warrior 写成「纷争」
+// （游戏里根本没这个命途，导致 16 个角色的徽章没图标）、Priest 写成同谐
+// （应为丰饶）、Shaman 写成欢愉（应为同谐）、Elation 写成虚无（应为欢愉）。
+// 内部名和中文名的对应基本不成规律，不能按字面猜。
 const SR_PATH_CN = {
-    Knight: '存护', Rogue: '巡猎', Mage: '智识', Warlock: '毁灭', Warrior: '纷争',
-    Shaman: '欢愉', Priest: '同谐', Memory: '记忆', Elation: '虚无'
+    Knight: '存护', Rogue: '巡猎', Mage: '智识', Warlock: '虚无',
+    Warrior: '毁灭', Priest: '丰饶', Shaman: '同谐',
+    Memory: '记忆', Elation: '欢愉'
 };
 const SR_DAMAGE_CN = {
     Physical: '物理', Fire: '火', Ice: '冰', Thunder: '雷',
