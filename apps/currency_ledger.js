@@ -1,7 +1,7 @@
 import moment from 'moment';
 import fs from 'fs';
 import path from 'path';
-import { render, pluginPriority } from '#xhh';
+import { render, pluginPriority, mhy } from '#xhh';
 import MysInfo from '../../genshin/model/mys/mysInfo.js';
 /**
  * 原神原石 / 星铁星琼 / 绝区零菲林的月报与统计
@@ -40,6 +40,7 @@ const GAMES = {
         key: 'gs',
         name: '原神',
         alias: '原神原石',
+        sub: 'GENSHIN IMPACT',
         title: '原神 · 原石札记',
         unit: '原石',
         extraName: '摩拉',
@@ -51,6 +52,7 @@ const GAMES = {
         key: 'sr',
         name: '星铁',
         alias: '星铁星琼',
+        sub: 'HONKAI: STAR RAIL',
         title: '崩坏：星穹铁道 · 开拓月历',
         unit: '星琼',
         extraName: '开拓力',
@@ -61,6 +63,7 @@ const GAMES = {
         key: 'zzz',
         name: '绝区零',
         alias: '绝区零菲林',
+        sub: 'ZENLESS ZONE ZERO',
         title: '绝区零 · 菲林月报',
         unit: '菲林',
         extraName: '加密母带',
@@ -243,6 +246,10 @@ function saveSnapshot(qq, game, snap) {
         lastMonth: snap.lastMonth,
         gacha: snap.gacha,
         list: snap.list,
+        // 统计页要显示头像和昵称，这两个字段只有账本接口里有
+        nickname: snap.nickname || all[snap.ym]?.nickname || '',
+        avatar: snap.avatar || all[snap.ym]?.avatar || '',
+        uid: snap.uid || all[snap.ym]?.uid || '',
         saveTime: moment().format('YYYY-MM-DD HH:mm:ss'),
     };
     writeAll(game, qq, all);
@@ -417,17 +424,31 @@ export class CurrencyLedger extends plugin {
         const rows = buildSource(months.map(ym => all[ym]));
         const first = months[0];
         const last = months[months.length - 1];
+        // 头像/昵称从最近一次抓到的快照里取（快照在每次查询时都会覆盖保存）
+        const latest = all[last] || {};
+        const sourceTotal = rows.reduce((s, r) => s + r.num, 0);
         const data = {
             game,
             gameName: meta.name,
+            gameSub: meta.sub || '',
             title: `${meta.name} · ${meta.unit}统计`,
             unit: meta.unit,
             accent: meta.accent,
-            uid: String(auth?.uid || ''),
+            uid: String(auth?.uid || latest.uid || ''),
+            serverName: (() => {
+                try {
+                    return mhy.getServer(String(auth?.uid || latest.uid || ''), game) || '';
+                } catch {
+                    return '';
+                }
+            })(),
+            nickname: latest.nickname || '',
+            avatarUrl: latest.avatar || '',
             total: total.toLocaleString('en-US'),
+            sourceTotal: sourceTotal.toLocaleString('en-US'),
             monthCount: months.length,
-            rangeText: `${Number(first.slice(0, 4))}年${Number(first.slice(4))}月 ~ ${Number(last.slice(0, 4))}年${Number(last.slice(4))}月`,
-            bestMonth: best ? `${Number(best.year)}年${best.month}` : '',
+            rangeText: `${Number(first.slice(0, 4))}年${Number(first.slice(4))}月 ~ ${Number(last.slice(0, 4))}月`,
+            bestMonth: best ? best.month : '',
             bestValue: best ? best.value.toLocaleString('en-US') : '',
             itemsB64: toB64(items),
             sourceB64: toB64(rows),
