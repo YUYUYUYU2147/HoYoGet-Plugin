@@ -61,6 +61,10 @@ export class bh3_ledger extends plugin {
                     fnc: 'ledgerLastMonth',
                 },
                 {
+                    reg: '^#*(?:(?:崩三|崩坏3|崩坏三))?水晶统计$',
+                    fnc: 'ledgerCount',
+                },
+                {
                     reg: '^#*删除水晶uid.*',
                     fnc: 'deleteBh3Uid',
                 },
@@ -615,6 +619,142 @@ export class bh3_ledger extends plugin {
             } catch (_) { }
         }
         return { avatarUrl, nickname, userLevel, serverName };
+    }
+
+    async fetchBh3MonthData(e, auth) {
+        const { uid, headers, region } = auth;
+        const queryStr = `game_biz=bh3_cn&bind_uid=${uid}&bind_region=${region}`;
+        debugLog('[水晶] query:', queryStr);
+        const res = await fetch(`https://api.mihoyo.com/bh3-weekly_finance/api/index?${queryStr}`, {
+            method: 'GET',
+            headers: {
+                Cookie: headers.Cookie,
+                DS: mhy.getDs2(queryStr, '', '4'),
+                'x-rpc-client_type': '5',
+                'x-rpc-app_version': '2.73.1',
+                'User-Agent': 'Mozilla/5.0 (Linux; Android 12; XQ-AT52 Build/58.2.A.7.93; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/100.0.4896.88 Mobile Safari/537.36 miHoYoBBS/2.73.1',
+                Referer: 'https://webstatic.mihoyo.com/',
+            },
+        }).then(r => r.json());
+
+        debugLog('[水晶] API response:', JSON.stringify(res));
+        if (!res || res.retcode !== 0 || !res.data) {
+            let msg = '获取水晶数据失败';
+            if (res?.retcode === -110) msg = `UID:${uid} 该账号没有绑定崩坏3角色`;
+            else if (res?.retcode === -120) msg = `UID:${uid} 崩坏3角色等级不足`;
+            return { error: msg };
+        }
+        return { MonthData: res.data };
+    }
+
+    // 把各月已存的 group_by 按来源合并，num 累加、percent 按累计总量重算
+    // 注意：action_id 跨月不稳定（同一 id 在不同月份对应不同来源名，如 2011
+    // 在 5 月是「剩余途径」、在 8 月是「记忆战场积分奖励」），只能按 name 合并，
+    // 否则会出现两个同名「剩余途径」被拆成两项、当月来源未结算的月份不参与聚合。
+    buildCumulativeSource(monthList) {
+        const merged = new Map();
+        for (const m of monthList) {
+            const list = m?.group_by;
+            if (!Array.isArray(list) || !list.length) continue;
+            for (const item of list) {
+                const name = String(item?.name || '').trim();
+                if (!name) continue;
+                if (!merged.has(name)) merged.set(name, { name, num: 0 });
+                merged.get(name).num += Number(item.num) || 0;
+            }
+        }
+        const list = [...merged.values()].filter(i => i.num > 0).sort((a, b) => b.num - a.num);
+        const total = list.reduce((s, i) => s + i.num, 0);
+        const color = ["#73a8c6", "#d56565", "#70b2b4", "#bd9a5a", "#739970", "#7a6da7", "#597ea0"];
+        return list.map((i, idx) => ({
+            ...i,
+            percent: total > 0 ? Math.round((i.num / total) * 100) : 0,
+            color: color[idx % color.length],
+        }));
+    }
+
+    async ledgerCount(e) {
+        try {
+            sendMsg(e, '正在统计水晶数据，请稍后...', { recallMsg: 60 });
+            const auth = await this.getBh3Auth(e);
+            if (!auth) return false;
+            const { uid, headers, qq, region } = auth;
+
+            // 先把当月数据抓下来存盘，保证统计里包含最新月份
+            const fetched = await this.fetchBh3MonthData(e, auth);
+            if (fetched?.MonthData) {
+                let MonthData = fetched.MonthData;
+                const hcoinRes = await api(e, { type: 'bh3_hcoinBalance', uid, headers, game: 'bh3' });
+                if (hcoinRes?.retcode === 0 && hcoinRes.data?.list?.length > 0) {
+                    const cur = hcoinRes.data.list[0].item.find(i => i.label === "当前水晶余量");
+                    if (cur) MonthData.hcoinBalance = parseInt(cur.value);
+                }
+                let cards = await this.getHandbookSupplyCardCount(uid, headers, region, false);
+                if (cards === null) cards = await this.getEquipSupplyCardNum(e, uid, headers);
+                MonthData.equipSupplyCardNum = cards;
+                await this.saveLedger(uid, MonthData);
+            }
+
+            const data = this.loadLedgerData(uid) || {};
+            // 月份键形如 202609；只取合法键并按时间升序
+            const monthList = Object.keys(data)
+                .filter(k => /^\d{6}$/.test(k))
+                .sort()
+                .map(k => ({ ...data[k], _key: k }));
+            if (!monthList.length) {
+                sendMsg(e, `UID:${uid} 暂无水晶历史数据，请先发送 #崩三水晶 生成当月记录后再试`);
+                return true;
+            }
+
+            const hcoinMonth = [], starMonth = [];
+            let allHcoin = 0, allStar = 0, maxHcoin = 0, maxMonth = '', maxMonthLabel = '';
+            for (const m of monthList) {
+                const h = Number(m.month_hcoin) || 0;
+                const s = Number(m.month_star) || 0;
+                allHcoin += h;
+                allStar += s;
+                const label = `${parseInt(String(m._key).slice(4), 10)}月`;
+                hcoinMonth.push({ month: label, value: h, year: String(m._key).slice(0, 4) });
+                starMonth.push({ month: label, value: s, year: String(m._key).slice(0, 4) });
+                if (h > maxHcoin) { maxHcoin = h; maxMonth = String(m._key); maxMonthLabel = label; }
+            }
+
+            const hcoinList = this.buildCumulativeSource(monthList);
+            const firstKey = monthList[0]._key;
+            const lastKey = monthList[monthList.length - 1]._key;
+            const rangeText = `${firstKey.slice(0, 4)}${firstKey.slice(4)}-${lastKey.slice(0, 4)}${lastKey.slice(4)}`;
+
+            const { avatarUrl, nickname, userLevel, serverName } = await this.getUserInfo(e, headers, uid, region);
+            const latest = monthList[monthList.length - 1];
+            const hcoinBalance = Number(latest?.hcoinBalance) || Number(latest?.month_level) || 0;
+
+            let buf = await puppeteer.render('小花火/bh3_ledger/ledger_count', {
+                uid,
+                qq,
+                rangeText,
+                allHcoin,
+                allStar,
+                maxMonthLabel,
+                maxMonthHcoin: maxHcoin,
+                latestMonthLabel: `${parseInt(lastKey.slice(4), 10)}月`,
+                latestMonthHcoin: Number(latest?.month_hcoin) || 0,
+                hcoinMonth,
+                starMonth,
+                hcoinMonthB64: Buffer.from(JSON.stringify(hcoinMonth)).toString('base64'),
+                hcoinList,
+                hcoinListB64: Buffer.from(JSON.stringify(hcoinList)).toString('base64'),
+                hcoinTotal: hcoinList.reduce((s, i) => s + i.num, 0),
+                avatarUrl,
+                nickname,
+                userLevel,
+                serverName,
+            });
+            return sendImg(e, buf);
+        } catch (err) {
+            logger.error('[水晶统计] 失败:', err);
+            sendMsg(e, `水晶统计失败：${err?.message || err}`);
+            return true;
+        }
     }
 
     async ledger(e) {
