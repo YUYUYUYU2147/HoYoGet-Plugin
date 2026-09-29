@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="{{ppath}}wiki/gs_role_nk.css" />
+</head>
+<body {{sys.scale}}>
+<div class="page">
+  <div class="topbar"></div>
+
+  <header class="hero">
+    <img class="avatar" src="{{icon}}" alt="" />
+    <div class="hero-txt">
+      <h1>{{name}} <span class="rarity">{{rarity}}</span></h1>
+      <div class="tags">
+        <span class="tag">{{element}}</span>
+        {{if region}}<span class="tag">{{region}}</span>{{/if}}
+        {{if constellation}}<span class="tag">{{constellation}}</span>{{/if}}
+        {{if birth}}<span class="tag">生日 {{birth}}</span>{{/if}}
+        {{if release}}<span class="tag">实装 {{release}}</span>{{/if}}
+      </div>
+      {{if title}}<div class="subtitle">{{title}}</div>{{/if}}
+    </div>
+  </header>
+
+  <div class="panel">
+    <div class="ptitle">基础属性</div>
+    <div class="cards">
+      <div class="c"><span>生命</span><b>{{baseHp}}</b></div>
+      <div class="c"><span>攻击</span><b>{{baseAtk}}</b></div>
+      <div class="c"><span>防御</span><b>{{baseDef}}</b></div>
+      <div class="c"><span>暴击率</span><b>{{critRate}}</b></div>
+      <div class="c"><span>暴击伤害</span><b>{{critDmg}}</b></div>
+      {{if stamina}}<div class="c"><span>体力回复</span><b>{{stamina}}</b></div>{{/if}}
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ptitle">技能 <span class="hint">数值为满级</span></div>
+    <div class="skills">
+      {{each skills s}}
+      <div class="skill">
+        <div class="skill-head">
+          {{if s.icon}}<img src="{{s.icon}}" alt="" />{{/if}}
+          <b>{{s.name}}</b>
+          {{if s.maxLevel}}<span class="lv">Lv.{{s.maxLevel}}</span>{{/if}}
+        </div>
+        <div class="skill-desc">{{each s.lines l}}{{l}}
+{{/each}}</div>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ptitle">命座</div>
+    <div class="cons">
+      {{each constellations c}}
+      <div class="con">
+        <div class="con-head"><b>{{c.no}}</b><span>{{c.name}}</span></div>
+        <div class="con-desc">{{c.desc}}</div>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ptitle">天赋</div>
+    <div class="passives">
+      {{each passives p}}
+      <div class="passive">
+        <div class="passive-head"><b>{{p.name}}</b></div>
+        <div class="passive-desc">{{p.desc}}</div>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ptitle">突破 / 培养材料</div>
+    <div class="mats">
+      {{each ascensionMats m}}
+      <span class="mat">{{m.name}}<i>×{{m.count}}</i></span>
+      {{/each}}
+    </div>
+    {{if talentMats.length}}
+    <div class="mat-label">天赋材料</div>
+    <div class="mats">
+      {{each talentMats m}}
+      <span class="mat">{{m.name}}<i>×{{m.count}}</i></span>
+      {{/each}}
+    </div>
+    {{/if}}
+  </div>
+
+  {{if desc}}
+  <div class="panel">
+    <div class="ptitle">简介</div>
+    <div class="story">{{desc}}</div>
+  </div>
+  {{/if}}
+
+  <footer>数据来源 nanoka.cc</footer>
+</div>
+</body>
+</html>

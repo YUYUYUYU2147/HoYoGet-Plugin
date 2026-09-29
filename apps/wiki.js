@@ -1,4 +1,5 @@
 import { yaml, render, mys, config, reply_recallMsg } from '#xhh';
+import { gsRoleView, srRoleView } from '../system/role_detail.js';
 import fs from 'fs';
 import { JSDOM } from 'jsdom';
 const { window } = new JSDOM();
@@ -1204,7 +1205,8 @@ export class Wiki extends plugin {
       if (!id) { dbg('wiki 无此角色条目:', rname); return false; }
       let data = await mys.detail(id, isSr, isZZZ, isBH3);
       if (!data) { dbg('角色详情获取失败:', rname, 'id=' + id); return false; }
-      if (isZZZ) this.zzz_role_pictures(e, data);
+        if (data?.nanoka) return this.nanoka_role_pictures(e, data, isSr);
+        else if (isZZZ) this.zzz_role_pictures(e, data);
       else if (isBH3) this.bh3_role_pictures(e, data);
       else if (isSr) this.sr_role_pictures(e, data);
       else this.gs_role_pictures(e, data);
@@ -1214,6 +1216,16 @@ export class Wiki extends plugin {
   }
 
   //星铁角色
+    // nanoka 源的角色详情卡：技能逐级数值 / 命座(星魂) / 天赋 / 属性成长表
+    async nanoka_role_pictures(e, data, isSr = false) {
+        const c = data?.content || {};
+        const tpl = isSr ? 'wiki/sr_role_nk' : 'wiki/gs_role_nk';
+        const view = isSr ? srRoleView(c, c.id || '') : gsRoleView(c, c.id || '');
+        const name = c.name;
+        if (!name) return false;
+        return render(tpl, { ...view, name }, { e, ret: true });
+    }
+
   async sr_role_pictures(e, data) {
     const userinfo = data.content.rpg_new_tmp_content?.base?.userInfo;
     const modules = data.content.rpg_new_tmp_content?.modules;

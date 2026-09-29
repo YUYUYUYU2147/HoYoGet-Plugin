@@ -1229,7 +1229,9 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
         if (!base) return false;
         const data = await this.fetchJson(`${base}/zh/character/${id}.json`, `${game} nanoka详情 ${id}`);
         if (!data || !data.name) return false;
-        return { content: data, nanoka: true };
+        // 详情 JSON 里没有 id 字段，但立绘/技能图标全靠它拼，缺了会拼成
+        // avatardrawcard/.webp 这种空地址
+        return { content: { ...data, id: String(id) }, nanoka: true };
     }
 
     // 绝区零详细信息（nanoka.cc 优先，米游社官方 Wiki 回退）
