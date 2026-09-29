@@ -498,7 +498,24 @@ class mys {
         // 物品（圣遗物/遗器）按 nanoka 的数字 id 分组
         const itemList = Object.values(equips || {}).filter(v => v && (v.name || v.icon));
 
-        const js_list = Object.entries(chars).map(([id, c]) => {
+        // nanoka 把旅行者/奇偶的七个形态平铺成 xxx-2 ~ xxx-8（实测 28 条），
+        // 而且 character.json 里**没有本体条目**（10000005 / 10000117 等都不存在），
+        // 直接全部过滤会让旅行者和奇偶从列表里彻底消失（旧米游社列表里是有这 16 条的）。
+        // 这些形态共用同一份立绘（PlayerBoy / PlayerGirl / MannequinBoy / MannequinGirl，实测均 200），
+        // 所以按名字去重、每个只留第一条，既不出现 7 个重复条目，也不会拼出
+        // UI_Gacha_AvatarImg_XXX-5.webp 这种不存在的地址。
+        const seenName = new Set();
+        const charEntries = Object.entries(chars)
+            .filter(([, c]) => c?.zh)
+            .sort((a, b) => String(a[0]).localeCompare(String(b[0]), 'en', { numeric: true }))
+            .filter(([, c]) => {
+                const key = `${c.zh}|${c.element || ''}`;
+                if (seenName.has(key)) return false;
+                seenName.add(key);
+                return true;
+            });
+
+        const js_list = charEntries.map(([id, c]) => {
             const icon = isGs ? nanokaGsIcon(c.icon) : nanokaSrIcon(id);
             const strings = isGs
                 ? [`星级/${gsRarityCn(c.rank)}`, `元素/${GS_ELEMENT_CN[c.element] || ''}`, `武器/${GS_WEAPON_CN[c.weapon] || ''}`]
@@ -521,7 +538,7 @@ class mys {
 
         let gz_list = [], wq_list = [];
         if (isGs) {
-            wq_list = Object.entries(weapons || {}).map(([id, w]) => {
+            wq_list = Object.entries(weapons || {}).filter(([, w]) => w?.zh).map(([id, w]) => {
                 const icon = nanokaGsItemIcon(w.icon);
                 return {
                     content_id: id,
@@ -531,7 +548,7 @@ class mys {
                 };
             });
         } else {
-            gz_list = Object.entries(weapons || {}).map(([id, l]) => {
+            gz_list = Object.entries(weapons || {}).filter(([, l]) => l?.zh).map(([id, l]) => {
                 const icon = nanokaSrLcIcon(id);
                 return {
                     content_id: id,
