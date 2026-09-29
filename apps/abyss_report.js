@@ -585,19 +585,32 @@ function srSide(stages = [], weakness = [], monsterMap, monsterChildMap, bossIds
   // 星启模式（污染入侵）模式：提取 stage.invasion，附加到 side 供模板渲染
   let invasion = null;
   if (config().abyss_report_sr_invasion !== false && stage?.invasion) {
+    const inv = stage.invasion;
+    // invasion.level 就是贪饕怪的 HP 倍率（多管血量），如 4.6 十一层为 2 -> 显示 x2
+    const mult = Number(inv.level) > 1 ? Number(inv.level) : 1;
+    // maze_buff_param[0] 是贪饕的「回复生命值比例」
+    const healPct = Number(inv.maze_buff_param?.[0]) || 0;
     const monsters = [];
-    for (const m of stage.invasion.monster_list || []) {
-      const pid = m?.unk_0;
+    for (const m of inv.monster_list || []) {
+      // 字段名是 monster_id，旧代码写成 unk_0 导致永远取不到，贪饕怪从没被列出来
+      const pid = m?.monster_id ?? m?.unk_0;
       if (pid == null) continue;
       const info = addInfo(pid);
-      if (info) {
-        info.count = info.count || 1;
-        monsters.push(info);
+      if (!info) continue;
+      info.count = info.count || 1;
+      if (info.stats) {
+        if (mult > 1) info.stats.mult = mult;
+        if (healPct > 0) {
+          info.stats.greedPct = Math.round(healPct * 100);
+          const base = Number(String(info.stats.hp).replace(/,/g, '')) || 0;
+          info.stats.greedHp = Math.round(base * healPct).toLocaleString('en-US');
+        }
       }
+      monsters.push(info);
     }
     invasion = {
-      level: stage.invasion.level,
-      desc: stripHtml(stage.invasion.desc || '').replace(/\\n/g, '\n'),
+      level: inv.level,
+      desc: stripHtml(inv.desc || '').replace(/\\n/g, '\n'),
       monsters,
     };
   }
