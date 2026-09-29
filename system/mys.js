@@ -121,7 +121,15 @@ const nanokaGsIconCircle = icon => {
 const nanokaGsItemIcon = icon => {
     const key = String(icon || '');
     if (!key) return '';
-    return `${NANOKA_ASSET}/gi/${key.replace(/^UI_EquipIcon_/, '')}.webp`;
+    // 资源名必须**保留** UI_EquipIcon_ / UI_ItemIcon_ 前缀。
+    // 之前这里把 UI_EquipIcon_ 剥掉了，拼成 assets/gi/Sword_Blunt.webp → 404，
+    // 原神武器图鉴整页没有图（实测 UI_EquipIcon_Sword_Blunt.webp 是 200）。
+    // 遗器一直是 UI_ItemIcon_201 这种，前缀没被剥，所以遗器是好的。
+    //
+    // 变形武器的 icon 里带 {0} 占位符（UI_EquipIcon_Sword_MorphVinces_{0}），
+    // nanoka 上没有对应文件（各种拼法都 404，实测 22 条），返回空串让列表走首字占位。
+    if (/\{0\}|Template/.test(key)) return '';
+    return `${NANOKA_ASSET}/gi/${key}.webp`;
 };
 // 星铁立绘（详情页大图用）：avatardrawcard/{角色id}.webp，实测 99/99 全部 200。
 // 列表头像不用它 —— 那是 2048×2048 的卡面，裁成 90×90 只能看到头发。
@@ -168,6 +176,25 @@ const releaseRank = (c, id) => {
     // 2000-01-01 之前的（1970 占位）以及解析失败的一律当作「未上线」
     return Number.isFinite(t) && t >= 946684800 ? t : Number.POSITIVE_INFINITY;
 };
+
+/**
+ * 武器/光锥排序：按 id 降序。
+ *
+ * 武器没有 release 字段，只能靠 id —— 实测两个游戏的 id 都严格按上线时间递增：
+ *   原神 11501 风锋剑(最老) → 11505 磐岩结绿 → 31xxx → 39xxx(最新)
+ *   星铁 20xxx(三星) → 21xxx → 22xxx → 23xxx → 24xxx(五星，最新)
+ * 所以 id 降序 = 新的排前面。不排的话同星级内顺序取决于 JSON 键序，
+ * 看起来就是「没排序」。
+ *
+ * 曾经试过把「XX·真化」和本体捆在一起排（以为真化是本体的形态），
+ * 实测是错的：真化是独立的五星武器、本体是四星（350003 猰貐 rank=4、
+ * 350004 猰貐·真化 rank=5），本来就该分开按星级排，不需要特殊处理。
+ */
+function sortWeaponEntries(weapons) {
+    return Object.entries(weapons || {})
+        .filter(([, w]) => w?.zh)
+        .sort((a, b) => numId(b[0]) - numId(a[0]));
+}
 
 // 星铁方形头像：avataricon/avatar/{角色id}.webp（160×188，头部+肩部特写）。
 // 和原神一样用方形的 —— 列表头像框是 90×90 + border-radius:10px，不是圆形，
@@ -636,9 +663,14 @@ class mys {
             ext: makeExt([], '')
         }));
 
+        // 武器/光锥预排序，理由见 sortWeaponEntries 的注释。
+        // 这里只排一次，wiki.js 的 list() 还会按星级排一次；
+        // Array.sort 是稳定的，所以同星级内会保住这里的顺序。
+        const weaponEntries = sortWeaponEntries(weapons);
+
         let gz_list = [], wq_list = [];
         if (isGs) {
-            wq_list = Object.entries(weapons || {}).filter(([, w]) => w?.zh).map(([id, w]) => {
+            wq_list = weaponEntries.map(([id, w]) => {
                 const icon = nanokaGsItemIcon(w.icon);
                 return {
                     content_id: id,
@@ -648,7 +680,7 @@ class mys {
                 };
             });
         } else {
-            gz_list = Object.entries(weapons || {}).filter(([, l]) => l?.zh).map(([id, l]) => {
+            gz_list = weaponEntries.map(([id, l]) => {
                 const icon = nanokaSrLcIcon(id);
                 return {
                     content_id: id,

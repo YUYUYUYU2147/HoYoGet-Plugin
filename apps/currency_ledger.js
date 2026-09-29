@@ -545,7 +545,10 @@ export class CurrencyLedger extends plugin {
             uid: String(auth?.uid || latest.uid || ''),
             serverName: (() => {
                 try {
-                    return mhy.getServer(String(auth?.uid || latest.uid || ''), game) || '';
+                    // getServer 返回的是接口代码（prod_gf_cn 这种），
+                    // 直接显示的话用户看到的是「服务器：prod_gf_cn」，得转成「国服」
+                    const code = mhy.getServer(String(auth?.uid || latest.uid || ''), game) || '';
+                    return mhy.getServerName?.(code) || code;
                 } catch {
                     return '';
                 }
