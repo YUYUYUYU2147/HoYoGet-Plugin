@@ -328,6 +328,10 @@ export class Wiki extends plugin {
     // 只要以怪物类关键词开头（「怪物图鉴」「怪物」「怪物摩录多图鉴」「boss地藏」…）就交给 monster 插件；
     // 旧正则只认「怪物图鉴」「怪物」，「怪物摩录多图鉴」会漏过去被当成角色「怪物摩录多」查然后回「没有找到」
     if (/^(怪物|魔物|敌人|boss|首领|enemy|monster)/i.test(skipName)) return false;
+    // 「#小花火角色图鉴」「#武器图鉴」这类只给了类别、没给名字的写法，
+    // 会被正则当成查询名「角色」「武器」去查，然后回一句「没有找到 角色」。
+    // 这里直接让路，交给帮助页去讲清楚正确写法。
+    if (/^(角色|人物|武器|装备|光锥|遗器|圣遗物|音擎|驱动盘)$/i.test(skipName)) return false;
     const hasBh3ExclusiveWords = /(专武|专属武器|专属圣痕|专属套|毕业圣痕|圣痕套)/.test(name);
     const hasZzzExclusiveWords = /(专武|专属武器|专属音擎|签名音擎|专属驱动盘|推荐驱动盘|驱动盘套|驱动套)/.test(name);
     if (isBH3 && hasBh3ExclusiveWords) {
