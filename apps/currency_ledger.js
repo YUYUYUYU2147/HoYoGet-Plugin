@@ -3,9 +3,6 @@ import fs from 'fs';
 import path from 'path';
 import { render, pluginPriority } from '#xhh';
 import MysInfo from '../../genshin/model/mys/mysInfo.js';
-
-const pr = pluginPriority(90);
-
 /**
  * 原神原石 / 星铁星琼 / 绝区零菲林的月报与统计
  *
@@ -25,9 +22,7 @@ const pr = pluginPriority(90);
  *
  * 鉴权与端点都复用 genshin 插件的 MysInfo，这里只做「取数 + 归一化 + 渲染」。
  */
-
 const DATA_DIR = './plugins/xhh/data/CurrencyLedger';
-
 const ZZZ_ACTION_NAME = {
     event_rewards: '活动奖励',
     daily_activity_rewards: '日常活跃奖励',
@@ -40,7 +35,6 @@ const ZZZ_ACTION_NAME = {
 
 // 统计图配色，与崩三水晶统计保持一致
 const PIE_COLORS = ['#73a8c6', '#d56565', '#70b2b4', '#bd9a5a', '#739970', '#7a6da7', '#597ea0', '#c98fb0'];
-
 const GAMES = {
     gs: {
         key: 'gs',
@@ -74,7 +68,6 @@ const GAMES = {
         monthArg: m => m.ym,
     },
 };
-
 const CN_NUM = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二'];
 
 function dataPath(game, qq) {
@@ -113,7 +106,6 @@ function parseMonth(msg = '') {
     const text = String(msg || '')
         .replace(/[#＃%％]/g, '')
         .replace(/(原神|原石|星铁|星穹|星琼|铁道|绝区零|菲林|札记|月报|统计)/g, '');
-
     const ymMatch = /(\d{4})(\d{2})/.exec(text);
     if (ymMatch) return { month: Number(ymMatch[2]), ym: `${ymMatch[1]}${ymMatch[2]}` };
 
@@ -250,20 +242,23 @@ function toB64(obj) {
     return Buffer.from(JSON.stringify(obj), 'utf8').toString('base64');
 }
 
-class CurrencyLedger {
-    constructor(e) {
-        this.e = e;
-        this.priority = pr;
-        this.Constructor = '插件';
-        this.rule = [
-            {
-                // 前缀沿用插件约定：#小花火xxx / #xhhxxx / #xxx 都行
-                // 游戏名允许叠加（星铁星琼 / 绝区零菲林 都是常见写法），
-                // 月份支持 8 / 八 / 202608 / 20268 这几种写法
-                reg: '^[#%*]*(小花火|xhh)?[#%*]*(原神|原石|星铁|星穹|星琼|铁道|绝区零|菲林)+(札记|月报)?(统计)?\\s*(\\d{1,6}|[一二两三四五六七八九十]+)?月*$',
-                fnc: 'run',
-            },
-        ];
+export class CurrencyLedger extends plugin {
+    constructor() {
+        super({
+            name: '[小花火]原石星琼菲林账本',
+            dsc: '原神原石 / 星铁星琼 / 绝区零菲林的月报与统计',
+            event: 'message',
+            priority: pluginPriority('currency_ledger', 100),
+            rule: [
+                {
+                    // 前缀沿用插件约定：#小花火xxx / #xhhxxx / #xxx 都行
+                    // 游戏名允许叠加（星铁星琼 / 绝区零菲林 都是常见写法），
+                    // 月份支持 8 / 八 / 202608 / 十二月 这几种写法
+                    reg: '^[#%*]*(小花火|xhh)?[#%*]*(原神|原石|星铁|星穹|星琼|铁道|绝区零|菲林)+(札记|月报)?(统计)?\\s*(\\d{1,6}|[一二两三四五六七八九十]+)?月*$',
+                    fnc: 'run',
+                },
+            ],
+        })
     }
 
     /** 统一的取数入口 */
@@ -287,19 +282,16 @@ class CurrencyLedger {
         }
     }
 
-    async run() {
-        const e = this.e;
+    async run(e) {
         const msg = e.msg || '';
         const game = pickGame(msg);
         const meta = GAMES[game];
         const mInfo = parseMonth(msg);
         const isCount = /统计/.test(msg);
-
         const auth = await MysInfo.init(e, 'ledger');
         if (!auth?.uid || !auth?.ckInfo?.ck) {
             return e.reply('未检测到米游社 Cookie，请先发送 #扫码登录 完成绑定。', true, { recallMsg: 60 });
         }
-
         const { snap, error } = await this.fetch(e, game, mInfo);
         if (error) return e.reply(error, true, { recallMsg: 60 });
 
@@ -308,17 +300,15 @@ class CurrencyLedger {
         saveSnapshot(qq, game, snap);
 
         return isCount
-            ? this.renderCount(game, meta, qq, auth)
-            : this.renderMonth(game, meta, snap, mInfo, qq, auth);
+            ? this.renderCount(e, game, meta, qq, auth)
+            : this.renderMonth(e, game, meta, snap, mInfo, qq, auth);
     }
 
-    async renderMonth(game, meta, snap, mInfo, qq, auth) {
-        const e = this.e;
+    async renderMonth(e, game, meta, snap, mInfo, qq, auth) {
         const ym = snap.ym || mInfo.ym;
         const label = ym ? `${Number(ym.slice(0, 4))}年${Number(ym.slice(4))}月` : '本月';
         const rows = snap.list.map((i, idx) => ({ ...i, color: PIE_COLORS[idx % PIE_COLORS.length] }));
         const base = rows.reduce((s, i) => s + i.num, 0);
-
         const cards = [
             { title: `本月${meta.unit}`, num: snap.monthTotal.toLocaleString('en-US'), accent: meta.accent },
             { title: '上月结余', num: snap.lastMonth.toLocaleString('en-US'), accent: '#8a94a6' },
@@ -331,7 +321,6 @@ class CurrencyLedger {
             cards.push({ title: `今日${meta.extraName}`, num: Number(snap.extra || 0).toLocaleString('en-US'), accent: '#a06fc0' });
             cards.push({ title: '本月抽卡', num: `${snap.gacha} 抽`, accent: '#d98a5b' });
         }
-
         const data = {
             game,
             gameName: meta.name,
@@ -348,19 +337,16 @@ class CurrencyLedger {
             base: base.toLocaleString('en-US'),
             dateStr: moment().format('YYYY-MM-DD'),
         };
-
         const img = await render('currency_ledger/ledger', data, { e, pct: 1.5 });
         return e.reply(img);
     }
 
-    async renderCount(game, meta, qq, auth) {
-        const e = this.e;
+    async renderCount(e, game, meta, qq, auth) {
         const all = readAll(game, qq);
         const months = Object.keys(all).sort();
         if (!months.length) {
             return e.reply(`还没有${meta.name}的历史记录，先发一次「#${meta.alias}」建立数据。`, true, { recallMsg: 60 });
         }
-
         const items = months.map(ym => ({
             month: `${Number(ym.slice(4))}月`,
             year: ym.slice(0, 4),
@@ -371,7 +357,6 @@ class CurrencyLedger {
         const rows = buildSource(months.map(ym => all[ym]));
         const first = months[0];
         const last = months[months.length - 1];
-
         const data = {
             game,
             gameName: meta.name,
@@ -388,10 +373,7 @@ class CurrencyLedger {
             sourceB64: toB64(rows),
             dateStr: moment().format('YYYY-MM-DD'),
         };
-
         const img = await render('currency_ledger/count', data, { e, pct: 1.5 });
         return e.reply(img);
     }
 }
-
-export default new CurrencyLedger();
