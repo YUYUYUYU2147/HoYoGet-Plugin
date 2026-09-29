@@ -12,6 +12,7 @@ import {
 } from '#xhh';
 import NoteUser from '../../genshin/model/mys/NoteUser.js';
 import { manualGeetest } from './manual_geetest.js';
+import { scheduleGroupRecall } from './msgRecall.js';
 import Runtime from '../../../lib/plugins/runtime.js';
 
 // 手动验证码服务改由 xhh/index.js 在插件载入完成后统一启动。
@@ -729,9 +730,14 @@ async function BbsAutoSign(qqs = []) {
     return { msgs: allMsgs, lines: allLines };
 }
 
+// 定时任务里没有 e，只能主动 sendMsg，而 e.reply 的 recallMsg 选项在这里用不上，
+// 所以自己拿 message_id 定时撤回（社区自动签到每天每群一条，不撤会一直刷屏）。
+const BBS_AUTO_RECALL_SEC = 60;
+
 async function sendBbsAutoResult(group, result) {
     const text = (result?.lines || []).join('\n') || '米游社社区自动签到完成';
     const target = Bot.pickGroup(Number(group));
+    let sent;
     try {
         const renderEvent = {
             runtime: new Runtime(),
@@ -746,11 +752,17 @@ async function sendBbsAutoResult(group, result) {
             xhhAvatar: true,
             saveId: `bbs_auto_${group}`,
         }, { e: renderEvent, ret: false });
-        if (image) return target.sendMsg(image);
+        if (image) {
+            sent = await target.sendMsg(image);
+            scheduleGroupRecall(group, sent, BBS_AUTO_RECALL_SEC);
+            return sent;
+        }
     } catch (err) {
         logger.error(`[xhh][bbs_auto] 图片发送失败，回退文本: ${err.message}`);
     }
-    return target.sendMsg(text);
+    sent = await target.sendMsg(text);
+    scheduleGroupRecall(group, sent, BBS_AUTO_RECALL_SEC);
+    return sent;
 }
 
 // 结果汇总：全失败时给出可操作的排查提示，不再 60s 就把消息撤掉

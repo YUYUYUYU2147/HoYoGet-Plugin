@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import { spawn } from 'node:child_process';
 import { config, sleep } from '#xhh';
+import { pickSentMsgId, scheduleGroupRecall } from './msgRecall.js';
 
 const tasks = new Map();
 let server = null;
@@ -413,8 +414,14 @@ async function notifyCaptcha(e, cfg, text) {
     const msg = ats.length
       ? [...ats.map(q => segment.at(q)), '\n', text]
       : text;
-    await Bot.pickGroup(gid).sendMsg(msg);
-    logger.mark(`[xhh][manual_gt] 验证码通知已发送（群 ${gid}${ats.length ? '，已 @' + ats.join(',') : ''}）`);
+    const sent = await Bot.pickGroup(gid).sendMsg(msg);
+    // 这条是主动群发，e.reply 的 recallMsg 选项在这里完全不生效（定时任务里 e.reply
+    // 还是空壳 async () => false），所以以前这条验证码通知是永不撤回的。
+    // 板块有 7 个、群和号一多就会刷屏。按验证有效期 cfg.timeout 到点撤回，
+    // 用户该点的时间已经给足了。
+    const msgId = pickSentMsgId(sent);
+    const willRecall = scheduleGroupRecall(gid, sent, Math.max(30, Number(cfg.timeout) || 120));
+    logger.mark(`[xhh][manual_gt] 验证码通知已发送（群 ${gid}${ats.length ? '，已 @' + ats.join(',') : ''}${willRecall ? `，${cfg.timeout}s 后自动撤回` : '，未取到消息ID无法撤回'}）`);
     return true;
   } catch (err) {
     logger.error(`[xhh][manual_gt] 验证码通知发送失败（群 ${gid}）: ${err?.message || err}`);
