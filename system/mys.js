@@ -113,38 +113,10 @@ const nanokaGsItemIcon = icon => {
 // 列表头像不用它 —— 那是 2048×2048 的卡面，裁成 90×90 只能看到头发。
 const nanokaSrIcon = id => (id ? `${NANOKA_ASSET}/hsr/avatardrawcard/${id}.webp` : '');
 
-// 星铁头像：nanoka 没有托管（assets/hsr 下试过 avataricon/charicon/portrait 等
-// 7 个目录名全部 404，gridfight/icon 只覆盖 10/99），所以和绝区零一样取米游社
-// 官方 Wiki 的半身像，缩略图参数复用 thumbIcon。
-const SR_OFFICIAL_LIST_URL =
-  'https://api-static.mihoyo.com/common/blackboard/sr_wiki/v1/home/content/list?app_sn=sr_wiki&channel_id=17';
-let _srOfficialIconMap = null;
-async function srOfficialIconMap() {
-    if (_srOfficialIconMap) return _srOfficialIconMap;
-    _srOfficialIconMap = new Map();
-    try {
-        const res = await fetch(SR_OFFICIAL_LIST_URL, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(15000) });
-        const json = await res.json();
-        const chars = json?.data?.list?.[0]?.children?.find(v => v.name === '角色')?.list || [];
-        const clean = v => String(v || '').replace(/[^\u4e00-\u9fa5a-z0-9]/gi, '');
-        for (const item of chars) {
-            if (!item?.icon) continue;
-            const full = clean(item.title);
-                // 米游社图床加缩略参数：一次要渲染几十张头像，压成 100w webp 渲染快很多。
-                // 这里直接内联而不再调 thumbIcon，让本函数自包含。
-                const icon = /act-upload\.mihoyo\.com|act-webstatic\.mihoyo\.com/.test(item.icon)
-                    ? `${item.icon}?x-oss-process=image/resize,w_100/format,webp`
-                    : item.icon;
-                // full 是官方标题的精确匹配，单字角色名（如「刃」）也要收，否则会被漏掉
-                if (full.length >= 1) _srOfficialIconMap.set(full, icon);
-            const short = clean(String(item.title || '').split('·')[0]);
-            if (short.length >= 2 && !_srOfficialIconMap.has(short)) _srOfficialIconMap.set(short, icon);
-        }
-    } catch (err) {
-        logger.warn?.('[xhh][图鉴] 星铁官方头像列表获取失败:', err?.message || err);
-    }
-    return _srOfficialIconMap;
-}
+// 星铁圆形头像：avatarroundicon/{角色id}.webp，实测 99/99 全部 200。
+// 另两个同类目录都不全：avatarshopicon 缺 1224，avataricon/avatar 缺 1507/1511/1512/1513，
+// 所以列表一律用 roundicon。
+const nanokaSrRoundIcon = id => (id ? `${NANOKA_ASSET}/hsr/avatarroundicon/${id}.webp` : '');
 const nanokaSrLcIcon = id => (id ? `${NANOKA_ASSET}/hsr/lightconemaxfigures/${id}.webp` : '');
 const nanokaSrSkillIcon = (id, kind) => (id && kind ? `${NANOKA_ASSET}/hsr/skillicons/SkillIcon_${id}_${kind}.webp` : '');
 
@@ -557,18 +529,10 @@ class mys {
             // 但 薇斯纳 2026-09-22 上线、奥黛塔 2026-08-11 上线，按 id 排会把新角色压下去。
             .sort((a, b) => String(b[1]?.release || '').localeCompare(String(a[1]?.release || '')));
 
-        // 星铁没有 nanoka 头像，先取米游社官方半身像做名称→头像映射
-        const srIcons = isGs ? null : await srOfficialIconMap();
-        const cleanName = v => String(v || '').replace(/[^\u4e00-\u9fa5a-z0-9]/gi, '');
-
         const js_list = charEntries.map(([id, c]) => {
-            // 原神用 nanoka 的方形头像；星铁用米游社官方半身像（与绝区零一致）
-            // 星铁命中率实测 87/99，未命中的多是 nanoka 侧带标签的名字（如「银狼LV.<unbreak>999</unbreak>」），
-            // 去掉标签再试一次，仍拿不到就留空走首字占位。
-            const bare = cleanName(String(c.zh || '').replace(/<[^>]+>/g, ''));
-            const icon = isGs
-                ? nanokaGsIcon(c.icon)
-                : (srIcons?.get(cleanName(c.zh)) || srIcons?.get(bare) || '');
+            // 原神用 nanoka 的方形头像（UI_AvatarIcon_*，256×256），星铁用圆形头像
+            // （avatarroundicon，99/99 全覆盖）。两边都同源，不会再出现两套 id 撞号查错人。
+            const icon = isGs ? nanokaGsIcon(c.icon) : nanokaSrRoundIcon(id);
             const strings = isGs
                 ? [`星级/${gsRarityCn(c.rank)}`, `元素/${GS_ELEMENT_CN[c.element] || ''}`, `武器/${GS_WEAPON_CN[c.weapon] || ''}`]
                 : [`星级/${srRarityCn(c.rank)}`, `命途/${SR_PATH_CN[c.baseType] || ''}`, `属性/${SR_DAMAGE_CN[c.damageType] || ''}`];

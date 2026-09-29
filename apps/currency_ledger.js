@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { render, pluginPriority, mhy } from '#xhh';
 import MysInfo from '../../genshin/model/mys/mysInfo.js';
-import gachaPool from './gacha_pool.js';
+import { xhh_gacha_pool } from './gacha_pool.js';
 /**
  * 原神原石 / 星铁星琼 / 绝区零菲林的月报与统计
  *
@@ -87,9 +87,9 @@ const POOL_GAME_NAME = { gs: '原神', sr: '星穹铁道', zzz: '绝区零' };
  * 绝对路径（星铁角标取的是 miao-plugin 的三月七立绘），两种都要能显示，
  * 所以下面按是否含 protocol 决定怎么拼。
  */
-function poolCornerIcon(game) {
+function poolCornerIcon(e, game) {
     try {
-        return gachaPool.fixedCornerFallback(POOL_GAME_NAME[game] || '') || '';
+        return new xhh_gacha_pool(e).fixedCornerFallback(POOL_GAME_NAME[game] || '') || '';
     } catch (err) {
         logger.warn?.('[xhh][账本] 取当前卡池角标失败:', err?.message || err);
         return '';
@@ -452,7 +452,7 @@ export class CurrencyLedger extends plugin {
         // 头像/昵称从最近一次抓到的快照里取（快照在每次查询时都会覆盖保存）
         const latest = all[last] || {};
         // 右上角装饰图 = 当前卡池那张图的 markIcon（同一个函数，保证两边一致）
-        const cornerSplash = poolCornerIcon(game);
+        const cornerSplash = poolCornerIcon(e, game);
         const sourceTotal = rows.reduce((s, r) => s + r.num, 0);
         const data = {
             game,
