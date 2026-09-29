@@ -465,6 +465,8 @@ function srMonsterStats(pid, level, stageEliteGroup, stageHardLevelGroup, valueB
     // 效果抗性 = base + hlg.StatusResistance × 阶段数
     // 实测：8003010(0.2,1,组3) = 30.0%；5014010(0.3,2,组3) = 50.0%
     statusRes: (Number(cv.statusResBase || 0) + Number(hl.StatusResistance || 0) * (cv.maxPhase || 1)) * 100,
+    // 浮点会算出 30.000000000000004，这里保留一位小数
+    statusResF: Math.round((Number(cv.statusResBase || 0) + Number(hl.StatusResistance || 0) * (cv.maxPhase || 1)) * 1000) / 10,
   };
 }
 
