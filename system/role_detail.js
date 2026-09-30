@@ -134,6 +134,18 @@ const GS_EXP_MATS = [
 const srItemIcon = id => (id ? `https://static.nanoka.cc/assets/hsr/itemfigures/${id}.webp` : '');
 const srLcIcon = id => (id ? `https://static.nanoka.cc/assets/hsr/lightconemaxfigures/${id}.webp` : '');
 
+// 星铁命途 / 属性。nanoka 给的是内部名（Elation / Quantum），详情页头部直接
+// 渲染就会显示英文。这两张表与 system/mys.js 中的同名表保持一致。
+const SR_PATH_CN = {
+    Knight: '存护', Rogue: '巡猎', Mage: '智识', Warlock: '虚无',
+    Warrior: '毁灭', Priest: '丰饶', Shaman: '同谐',
+    Memory: '记忆', Elation: '欢愉'
+};
+const SR_DAMAGE_CN = {
+    Physical: '物理', Fire: '火', Ice: '冰', Thunder: '雷',
+    Wind: '风', Imaginary: '虚数', Quantum: '量子'
+};
+
 // 星铁遗器部位。键取自 relics.property_list[].relic_type
 const SR_RELIC_SLOT_CN = { HEAD: '头部', NECK: '颈部', BODY: '衣身', FOOT: '鞋履', OBJECT: '位面球', LINK: '连绳' };
 
@@ -303,8 +315,8 @@ function srRoleView(detail, id) {
         id,
         name: d.name || '',
         rarity: RARITY_CN[Number(/(\d+)\s*$/.exec(String(d.rarity || ''))?.[1])] || '',
-        path: d.base_type || '',
-        damage: d.damage_type || '',
+        path: SR_PATH_CN[d.base_type] || d.base_type || '',
+        damage: SR_DAMAGE_CN[d.damage_type] || d.damage_type || '',
         camp: info.camp || '',
         spNeed: d.sp_need,
         desc: stripTags(d.desc),
