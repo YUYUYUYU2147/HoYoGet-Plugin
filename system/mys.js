@@ -201,10 +201,34 @@ const releaseRank = (c, id) => {
  * 实测是错的：真化是独立的五星武器、本体是四星（350003 猰貐 rank=4、
  * 350004 猰貐·真化 rank=5），本来就该分开按星级排，不需要特殊处理。
  */
-function sortWeaponEntries(weapons) {
-    return Object.entries(weapons || {})
-        .filter(([, w]) => w?.zh)
-        .sort((a, b) => numId(b[0]) - numId(a[0]));
+
+// 星铁商店常驻 5★ 光锥，共 14 个（黑塔商店「超过 16 张给星轨通票」，
+// 现有 14 张，与该说法吻合）。
+// nanoka 的 lightcone.json 只有 rank/baseType/en/atk/desc/ko/zh/ja，
+// 没有常驻标记也没有上线时间，所以只能按名字认。
+// 分两批进游戏：早期 7 个在 23xxx，记忆/欢愉命途那批在 24xxx。
+const SR_STANDARD_LC = new Set([
+    // 黑塔商店（较新）
+    '记一位星神的陨落', '星海巡航', '记忆的质料', '孤独的疗愈',
+    '不息的演算', '记忆永不落幕', '欢愉满溢祝福',
+    // 早期常驻（星芒兑换，同属常驻）
+    '无可取代的东西', '如泥酣眠', '银河铁道之夜', '但战斗还未结束',
+    '制胜的瞬间', '以世界之名', '时节不居',
+]);
+function sortWeaponEntries(weapons, isSr = false) {
+    const entries = Object.entries(weapons || {}).filter(([, w]) => w?.zh);
+    return entries.sort((a, b) => {
+        // 星铁的商店常驻 5★ 在游戏数据里是按「加入时间」排的 id，
+        // 24xxx 整段 7 个正好一条命途一个，id 最大 → 纯 id 降序会把
+        // 这 7 个常驻顶到最前面，看着像「常驻被置顶」。
+        // 数据里没有任何常驻标记，只能按名字认（名单见 SR_STANDARD_LC）。
+        if (isSr) {
+            const sa = SR_STANDARD_LC.has(a[1]?.zh) ? 1 : 0;
+            const sb = SR_STANDARD_LC.has(b[1]?.zh) ? 1 : 0;
+            if (sa !== sb) return sa - sb;
+        }
+        return numId(b[0]) - numId(a[0]);
+    });
 }
 
 // 星铁头像：avatarshopicon/{角色id}.webp（376×512 商店立绘，顶部是脸部特写）。
@@ -689,7 +713,7 @@ class mys {
         // 武器/光锥预排序，理由见 sortWeaponEntries 的注释。
         // 这里只排一次，wiki.js 的 list() 还会按星级排一次；
         // Array.sort 是稳定的，所以同星级内会保住这里的顺序。
-        const weaponEntries = sortWeaponEntries(weapons);
+        const weaponEntries = sortWeaponEntries(weapons, !isGs);
 
         let gz_list = [], wq_list = [];
         if (isGs) {
