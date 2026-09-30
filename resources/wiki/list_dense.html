@@ -17,9 +17,9 @@
         {{/if}}
         <span class="n">{{s.name}}</span>
         {{if s.badges && s.badges.length}}
-        <span class="mini-badges">
+        <div class="mini-badges">
           {{each s.badges b}}<span class="mini-badge {{b.kind || ''}}">{{if b.icon}}<img src="{{if b.icon.startsWith('http')}}{{b.icon}}{{else}}{{ppath}}wiki/imgs/{{b.icon}}{{/if}}">{{/if}}{{b.text}}</span>{{/each}}
-        </span>
+        </div>
         {{/if}}
       </div>
       {{/each}}

@@ -43,7 +43,11 @@ body {
   background: #2b2b31;
   border-radius: 6px;
   padding: 4px 5px;
-  display: flex;
+  /* 用 grid 而不是 flex：要让徽章独占第二行且名字不被压扁。
+     flex 里放一个 flex-basis:100% 的兄弟节点时，浏览器会先把同排其它项
+     的假想宽度算成接近 0 才换行，名字被压到 3~8 行（实测 55~129px 高）。 */
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
   align-items: center;
   gap: 4px;
   overflow: hidden;
@@ -71,6 +75,7 @@ body {
    8 列时每格文字只剩 64px，实测 208 条里 157 条被 ellipsis 截断。
    改为 5 列 + 允许折行，208 条零截断，高度 2482px、0.72MB 仍在单图范围内。 */
 .c .n {
+  min-width: 0;
   font-size: 16px;
   color: #e8e8ea;
   line-height: 1.15;
@@ -107,7 +112,22 @@ body {
 
 /* 徽章样式照抄 wiki/list.css。列表模板渲染 badges 时用到，
    圣痕本身没有徽章，但别处若改用紧凑排版不至于丢信息。 */
-.mini-badge { display: inline-flex; width: 100%; min-width: 0; align-items: center; justify-content: center; gap: 1px; max-width: 100%; padding: 1px 0; border-radius: 999px; background: rgba(255,255,255,.68); color: #3f4a42; font-size: 7px; line-height: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mini-badge { display: inline-flex; width: 100%; min-width: 0; align-items: center; justify-content: center; gap: 1px; max-width: 100%; padding: 1px 0; border-radius: 999px; background: rgba(255,255,255,.68); color: #3f4a42; font-size: 9px; line-height: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 徽章容器：紧凑排版之前这里是 span 且没有任何规则，徽章按内容宽度走，
+   实测同一列出现 46 / 54 / 57px 三种宽度因而对不齐。改为 2 列等宽网格，
+   容器宽度锁到卡片内容区，与 list.html 的 .badge-row 同一套思路。
+   5 列时每格内容区约 164px，2 列各约 80px，容得下 5~6 个汉字。 */
+.mini-badges {
+  /* grid-column 1/-1 让徽章横跨两列独占第二行：名字宽度不再影响徽章区，
+     跨卡片必然等宽（之前实测 44 与 41 两种宽度）。 */
+  grid-column: 1 / -1;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: 2px;
+  margin-top: 2px;
+}
 .mini-badge img { width: 12px; height: 12px; object-fit: contain; flex: 0 0 12px; }
 .mini-badge.icon-only,
 .mini-badge:has(img) { width: 100%; max-width: 100%; padding: 1px; font-size: 0; }

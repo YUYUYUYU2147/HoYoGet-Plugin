@@ -320,7 +320,7 @@ export class Wiki extends plugin {
     const starPrefix = /^[＃#%]*\*/.test(e.msg);
     const isSr = starPrefix || e.msg.includes('星铁');
     const isZZZ = e.msg.includes('绝区零') || e.msg.includes('ZZZ');
-    const isBH3 = e.msg.includes('崩坏3') || e.msg.includes('崩坏三') || e.msg.includes('崩三') || e.msg.includes('BH3');
+    let isBH3 = e.msg.includes('崩坏3') || e.msg.includes('崩坏三') || e.msg.includes('崩三') || e.msg.includes('BH3');
     let name = e.msg
       .replace(/^[#%*]*/, '')
       // 插件前缀（xhh菲欧妮图鉴 / 小花火菲欧妮图鉴）不参与查询名
@@ -330,6 +330,10 @@ export class Wiki extends plugin {
     name = name.startsWith('图鉴') ? name.replace(/^图鉴/, '') : name.replace(/图鉴$/, '');
     name = name.replace(/^[:：\s]+|[:：\s]+$/g, '').trim();
     if (!name) return false;
+    // 「圣痕」是崩坏3独有的叫法：原神叫圣遗物、星铁叫遗器、绝区零叫驱动盘。
+    // 不带游戏前缀时按崩三处理 —— 以前 #圣痕图鉴 会落到原神分支，
+    // 列出的是原神圣遗物却标着「圣痕」，和 #崩三圣痕 完全不是一回事。
+    if (!isSr && !isZZZ && !isBH3 && /圣痕/.test(name)) isBH3 = true;
     // 怪物/BOSS 图鉴交给 monster 插件处理，通用图鉴规则直接让路，
     // 避免把「绝区零怪物图鉴」当成角色「怪物」去查然后回「没有找到」
     const skipName = name

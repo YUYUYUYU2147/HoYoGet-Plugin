@@ -1753,7 +1753,10 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
                         } else if (s.includes('星级') || s.includes('武器星级') || s.includes('圣痕星级') || s.includes('人偶星级')) {
                             ji = s.replace(/(武器|圣痕|人偶)?星级\//, '');
                         } else if (s.includes('属性')) {
-                            attribute = s.replace('属性/', '');
+                            // 圣痕的标签是「圣痕属性/防御减伤」，只 replace('属性/', '')
+                            // 会剩下「圣痕」两个字粘在前面，列表徽章显示成「圣痕防御减伤」。
+                            // 前缀一起去掉，并把「/」写法归一成「·」统一排版。
+                            attribute = s.replace(/(圣痕)?属性\//, '').replace(/\//g, '·');
                         } else if (s.includes('装甲特性')) {
                             damage = s.replace('装甲特性/', '');
                         } else if (s.includes('武器类型')) {
