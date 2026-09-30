@@ -90,28 +90,71 @@ const GS_REGION_CN = {
 };
 const gsRegionCn = v => GS_REGION_CN[v] || String(v || '').replace(/^ASSOC_TYPE_/, '');
 
+/**
+ * 原神道具图标：UI_ItemIcon_{道具id}.webp。
+ * item.json 里每个道具的 icon 字段就是 UI_ItemIcon_{它自己的 id}（原石 201→UI_ItemIcon_201、
+ * 涤净青金碎屑 104121→UI_ItemIcon_104121），所以不用拉 item.json 也能拼出来，
+ * 芙宁娜 9 种突破材料实测 9/9 全 200。
+ */
+const gsItemIcon = id => (id ? `https://static.nanoka.cc/assets/gi/UI_ItemIcon_${id}.webp` : '');
+
+// 角色升级材料（角色经验素材）。所有角色通用，id/名字取自 zh/item.json 的
+// type === '角色经验素材'，共 3 档，图标同样实测 200。
+const GS_EXP_MATS = [
+    { id: 104001, name: '流浪者的经验' },
+    { id: 104002, name: '冒险家的经验' },
+    { id: 104003, name: '大英雄的经验' },
+];
+
+// 星铁道具图标。这个 base 是从 nanoka 站点自己的组件里抓出来的
+// （imageBase:"https://static.nanoka.cc/assets/hsr/itemfigures/"），
+// 阿哈 9 种培养材料实测 9/9 全 200。
+const srItemIcon = id => (id ? `https://static.nanoka.cc/assets/hsr/itemfigures/${id}.webp` : '');
+const srLcIcon = id => (id ? `https://static.nanoka.cc/assets/hsr/lightconemaxfigures/${id}.webp` : '');
+
+// 星铁遗器部位。键取自 relics.property_list[].relic_type
+const SR_RELIC_SLOT_CN = { HEAD: '头部', NECK: '颈部', BODY: '衣身', FOOT: '鞋履', OBJECT: '位面球', LINK: '连绳' };
+
+// 星铁词条。17 个键与 nanoka 站点前端用的清单（Xl 数组）完全一致，
+// 别处没有第四个词条类型；中文名按游戏内界面用语。
+const SR_STAT_CN = {
+    HPDelta: '生命值', HPAddedRatio: '生命值%',
+    AttackAddedRatio: '攻击力%', DefenceAddedRatio: '防御力%',
+    SpeedDelta: '速度',
+    CriticalChanceBase: '暴击率', CriticalDamageBase: '暴击伤害',
+    BreakDamageAddedRatioBase: '击破特攻',
+    StatusProbabilityBase: '效果命中', StatusResistanceBase: '效果抵抗',
+    SPRatioBase: '能量恢复效率',
+    PhysicalAddedRatio: '物理伤害加成', FireAddedRatio: '火元素伤害加成',
+    IceAddedRatio: '冰元素伤害加成', ThunderAddedRatio: '雷元素伤害加成',
+    WindAddedRatio: '风元素伤害加成', QuantumAddedRatio: '量子伤害加成',
+    ImaginaryAddedRatio: '虚数伤害加成',
+};
+
 function gsRoleView(detail, id) {
     const d = detail || {};
     const info = d.chara_info || {};
     const mats = d.materials || {};
-    const ascensionMats = [];
-    for (const step of mats.ascensions || []) {
-        for (const m of step.mats || []) {
-            if (!m?.name) continue;
-            if (ascensionMats.some(x => x.name === m.name)) continue;
-            ascensionMats.push({ name: m.name, id: m.id, count: m.count, rank: m.rank });
-        }
-    }
-    const talentMats = [];
-    // talents 是 [[{mats,cost}, ...], [...]]，两层数组（第一层是天赋槽位）
+
+    // 突破：6 段逐段列。之前的写法按名字去重、只留首次出现的数量，
+    // 结果显示成「涤净青金碎屑×1 / 断片×3 / 块×3」—— 那是各档的最小值，
+    // 不是真实用量。真实用量是 碎屑×1 → 断片×3 → 断片×6 → 块×3 → 块×6 → 块本×6，
+    // 必须逐段原样列，不能去重合并。
+    const toMat = m => ({ name: m.name, count: m.count, rank: m.rank, icon: gsItemIcon(m.id) });
+    const ascensionStages = (mats.ascensions || []).map((step, i) => ({
+        no: i + 1,
+        cost: step.cost,
+        mats: (step.mats || []).map(toMat),
+    }));
+    // 天赋：talents 是 [[{mats,cost}, ...], [...]]，外层是天赋槽位，摊平成阶段
+    const talentStages = [];
     for (const group of mats.talents || []) {
         for (const step of (Array.isArray(group) ? group : [group])) {
-            for (const m of step?.mats || []) {
-                if (!m?.name || talentMats.some(x => x.name === m.name)) continue;
-                talentMats.push({ name: m.name, id: m.id, count: m.count });
-            }
+            const list = (step?.mats || []).map(toMat);
+            if (list.length) talentStages.push({ no: talentStages.length + 1, cost: step.cost, mats: list });
         }
     }
+    const expMats = GS_EXP_MATS.map(m => ({ ...m, icon: gsItemIcon(m.id) }));
 
     const skills = (d.skills || []).map((sk, i) => {
         // promote 的键 0/1/2/3 不是「天赋组」而是【等级档】，每档自带一份 param 数组
@@ -156,8 +199,9 @@ function gsRoleView(detail, id) {
         passives: (d.passives || []).map(p => ({
             name: p.name, desc: fillSrDesc(p.desc, p.param_list), unlock: p.unlock,
         })).filter(p => p.name),
-        ascensionMats,
-        talentMats,
+        ascensionStages,
+        talentStages,
+        expMats,
     };
 }
 
@@ -199,6 +243,40 @@ function srRoleView(detail, id) {
         };
     }).filter(s => s.desc);
 
+    // ---- 培养材料 ----
+    // 星铁没有「角色突破」这个独立字段（enhanced 是魂影强化、memosprite 是记忆灵媒），
+    // 培养材料就是 skill_trees 各节点的 material_list。这里按 item_id 合并求和，
+    // 页面上标注「全部点满合计」，不假装是单档用量。
+    const matSum = new Map();
+    for (const group of Object.values(d.skill_trees || {})) {
+        for (const node of Object.values(group || {})) {
+            for (const m of node?.material_list || []) {
+                if (!m?.item_id) continue;
+                matSum.set(m.item_id, (matSum.get(m.item_id) || 0) + (m.item_num || 0));
+            }
+        }
+    }
+    const materials = [...matSum.entries()].map(([itemId, total]) => ({
+        // nanoka 的 item.json 里个别道具的 item_name 就是字面量 "..."
+        // （如 110509），不是查不到 id。这种显示 id，别显示成省略号。
+        name: (d.itemMap?.[itemId]?.item_name || '').trim().replace(/^\.{3}$/, '')
+            || `道具 ${itemId}`,
+        icon: srItemIcon(itemId),
+        total,
+    })).sort((a, b) => b.total - a.total);
+
+    // ---- 推荐光锥 / 遗器 / 词条 ----
+    const recoLightcones = (d.lightcones || []).map(lcId => ({
+        name: d.lightconeMap?.[lcId]?.zh || String(lcId),
+        icon: srLcIcon(lcId),
+    }));
+    const relicSets = list => (list || []).map(id => ({ name: d.relicsetMap?.[id]?.zh || String(id) }));
+    const mainStats = (d.relics?.property_list || []).map(r => ({
+        slot: SR_RELIC_SLOT_CN[r.relic_type] || r.relic_type,
+        stat: SR_STAT_CN[r.property_type] || r.property_type,
+    }));
+    const subStats = (d.relics?.sub_affix_property_list || []).map(k => SR_STAT_CN[k] || k);
+
     return {
         id,
         name: d.name || '',
@@ -210,9 +288,18 @@ function srRoleView(detail, id) {
         desc: stripTags(d.desc),
         growth,
         skills,
+        materials,
+        recoLightcones,
+        relicSets4: relicSets(d.relics?.set4_id_list),
+        relicSets2: relicSets(d.relics?.set2_id_list),
+        mainStats,
+        subStats,
         ranks: Object.entries(d.ranks || {}).map(([k, r]) => ({
             no: Number(k), name: r.name, desc: fillSrDesc(r.desc, r.param_list),
-            icon: r.icon ? `https://static.nanoka.cc/assets/hsr/skillicons/SkillIcon_${id}_Rank${k}.webp` : '',
+            // 图标要按 ranks[k].icon 拼，不能拿键 k 拼 Rank{k}：
+            // 阿哈的 key=3 是 SkillIcon_1511_Ultra.png、key=5 是 SkillIcon_1511_BP.png，
+            // 并不存在 Rank3/Rank5，按键拼出来两个都是 404（实测）。
+            icon: r.icon ? `https://static.nanoka.cc/assets/hsr/skillicons/${r.icon.replace(/\.png$/, '.webp')}` : '',
         })).filter(r => r.name).sort((a, b) => a.no - b.no),
         stories: Object.values(info.stories || {}).map(s => stripTags(s)).filter(Boolean),
     };

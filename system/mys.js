@@ -1488,7 +1488,28 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
         if (!data || !data.name) return false;
         // 详情 JSON 里没有 id 字段，但立绘/技能图标全靠它拼，缺了会拼成
         // avatardrawcard/.webp 这种空地址
-        return { content: { ...data, id: String(id) }, nanoka: true };
+        return { content: { ...data, id: String(id), ...(isSr ? await this.hsr_detail_maps(base) : {}) }, nanoka: true };
+    }
+
+    /**
+     * 星铁详情页要用到名字/图标，但都不在 character/{id}.json 里：
+     *   培养材料  只有 item_id  → zh/item.json      取 item_name
+     *   推荐光锥  只有 id       → lightcone.json    取 zh
+     *   推荐遗器  只有 id       → relicset.json     取 zh
+     * 三个文件都不小，按 base 缓存一次，别每个角色重拉。
+     * （原神不用：突破材料的名字内联在 materials 里，图标又能由
+     *   UI_ItemIcon_{item_id} 直接推出，实测 9/9 全 200。）
+     */
+    async hsr_detail_maps(base) {
+        this._hsrMaps ||= {};
+        if (this._hsrMaps[base]) return this._hsrMaps[base];
+        const [item, lightcone, relicset] = await Promise.all([
+            this.fetchJson(`${base}/zh/item.json`, 'hsr nanoka物品'),
+            this.fetchJson(`${base}/lightcone.json`, 'hsr nanoka光锥'),
+            this.fetchJson(`${base}/relicset.json`, 'hsr nanoka遗器'),
+        ]);
+        this._hsrMaps[base] = { itemMap: item || {}, lightconeMap: lightcone || {}, relicsetMap: relicset || {} };
+        return this._hsrMaps[base];
     }
 
     // 绝区零详细信息（nanoka.cc 优先，米游社官方 Wiki 回退）

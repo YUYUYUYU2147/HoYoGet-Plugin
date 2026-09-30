@@ -73,6 +73,65 @@
     </div>
   </div>
 
+  {{if materials.length}}
+  <div class="panel">
+    <div class="ptitle">培养材料</div>
+    <div class="mat-note">行迹与技能全部点满的合计用量</div>
+    <div class="mats">
+      {{each materials m}}
+      <div class="mat">
+        {{if m.icon}}<img src="{{m.icon}}" alt="" />{{/if}}
+        <span class="mat-name">{{m.name}}</span><i>×{{m.total}}</i>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+  {{/if}}
+
+  {{if recoLightcones.length}}
+  <div class="panel">
+    <div class="ptitle">推荐光锥</div>
+    <div class="mats">
+      {{each recoLightcones lc}}
+      <div class="mat">
+        {{if lc.icon}}<img src="{{lc.icon}}" alt="" />{{/if}}
+        <span class="mat-name">{{lc.name}}</span>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+  {{/if}}
+
+  {{if relicSets4.length}}
+  <div class="panel">
+    <div class="ptitle">推荐遗器</div>
+    {{if relicSets4.length}}
+    <div class="mat-label">四件套</div>
+    <div class="chips">
+      {{each relicSets4 r}}<span class="chip">{{r.name}}</span>{{/each}}
+    </div>
+    {{/if}}
+    {{if relicSets2.length}}
+    <div class="mat-label">二件套</div>
+    <div class="chips">
+      {{each relicSets2 r}}<span class="chip">{{r.name}}</span>{{/each}}
+    </div>
+    {{/if}}
+    {{if mainStats.length}}
+    <div class="mat-label">主词条</div>
+    <div class="chips">
+      {{each mainStats s}}<span class="chip">{{s.slot}} · {{s.stat}}</span>{{/each}}
+    </div>
+    {{/if}}
+    {{if subStats.length}}
+    <div class="mat-label">副词条推荐</div>
+    <div class="chips">
+      {{each subStats s}}<span class="chip">{{s}}</span>{{/each}}
+    </div>
+    {{/if}}
+  </div>
+  {{/if}}
+
   {{if desc}}
   <div class="panel">
     <div class="ptitle">简介</div>

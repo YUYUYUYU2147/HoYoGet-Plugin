@@ -44,3 +44,15 @@ table.stats i{font-style:normal;color:#a3adbd;font-weight:400;margin-left:1px}
 .story{font-size:13.5px;line-height:1.9;color:#4a5468;white-space:pre-line}
 
 footer{text-align:center;margin-top:12px;color:#a3adbd;font-size:12.5px}
+
+.mat-note{margin:-4px 0 10px;font-size:12px;color:#9aa3b2}
+.mats{display:flex;flex-wrap:wrap;gap:8px}
+.mat{display:flex;align-items:center;gap:6px;font-size:12.5px;padding:4px 10px 4px 4px;
+  border-radius:8px;background:#eef2fb;border:1px solid #d8e0f2;color:#3c4a6b}
+.mat img{width:30px;height:30px;border-radius:6px;object-fit:cover;flex:0 0 auto}
+.mat-name{line-height:1.2}
+.mat i{font-style:normal;margin-left:2px;font-weight:800}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-size:12.5px;padding:5px 10px;border-radius:8px;background:#f2f4f8;
+  border:1px solid #e2e7f0;color:#4a5468}

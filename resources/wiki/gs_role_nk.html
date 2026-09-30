@@ -76,22 +76,60 @@
     </div>
   </div>
 
+  {{if ascensionStages.length}}
   <div class="panel">
-    <div class="ptitle">突破 / 培养材料</div>
-    <div class="mats">
-      {{each ascensionMats m}}
-      <span class="mat">{{m.name}}<i>×{{m.count}}</i></span>
-      {{/each}}
+    <div class="ptitle">突破材料</div>
+    <div class="mat-note">逐阶列出真实用量，不合并同名材料</div>
+    {{each ascensionStages st}}
+    <div class="stage">
+      <div class="stage-head"><span class="stage-no">第 {{st.no}} 阶</span><span class="stage-cost">摩拉 {{st.cost}}</span></div>
+      <div class="mats">
+        {{each st.mats m}}
+        <div class="mat">
+          {{if m.icon}}<img src="{{m.icon}}" alt="" />{{/if}}
+          <span class="mat-name">{{m.name}}</span><i>×{{m.count}}</i>
+        </div>
+        {{/each}}
+      </div>
     </div>
-    {{if talentMats.length}}
-    <div class="mat-label">天赋材料</div>
-    <div class="mats">
-      {{each talentMats m}}
-      <span class="mat">{{m.name}}<i>×{{m.count}}</i></span>
-      {{/each}}
-    </div>
-    {{/if}}
+    {{/each}}
   </div>
+  {{/if}}
+
+  {{if expMats.length}}
+  <div class="panel">
+    <div class="ptitle">升级材料</div>
+    <div class="mat-note">角色经验素材，所有角色通用</div>
+    <div class="mats">
+      {{each expMats m}}
+      <div class="mat">
+        {{if m.icon}}<img src="{{m.icon}}" alt="" />{{/if}}
+        <span class="mat-name">{{m.name}}</span>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+  {{/if}}
+
+  {{if talentStages.length}}
+  <div class="panel">
+    <div class="ptitle">天赋材料</div>
+    <div class="mat-note">逐阶列出真实用量</div>
+    {{each talentStages st}}
+    <div class="stage">
+      <div class="stage-head"><span class="stage-no">第 {{st.no}} 阶</span><span class="stage-cost">摩拉 {{st.cost}}</span></div>
+      <div class="mats">
+        {{each st.mats m}}
+        <div class="mat">
+          {{if m.icon}}<img src="{{m.icon}}" alt="" />{{/if}}
+          <span class="mat-name">{{m.name}}</span><i>×{{m.count}}</i>
+        </div>
+        {{/each}}
+      </div>
+    </div>
+    {{/each}}
+  </div>
+  {{/if}}
 
   {{if desc}}
   <div class="panel">
