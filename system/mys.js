@@ -5,8 +5,19 @@ import {
 } from '#xhh';
 import YAML from 'yaml';
 
-const ZZZ_NANOKA_VERSION = '3.3.3+19110104';
-const ZZZ_NANOKA_BASE = `https://static.nanoka.cc/zzz/${ZZZ_NANOKA_VERSION}`;
+// 绝区零 nanoka 目录只保留当前版本，旧版本号过一段时间就会整目录 404
+// （3.3.3+19110104 已下架，四个数据文件全部 404，表现为新出的驱动盘套装查不到，
+//  因为整份数据取不到会降级到米游社官方 Wiki，而官方数据落后一版，里面没有新条目）
+// 因此版本号走 manifest 动态取，与原神、星铁一致；manifest 读不到时才用下面的兜底值。
+const ZZZ_NANOKA_FALLBACK_VERSION = '3.3.4+19304006';
+// 缓存取回的 base，manifest 只在首次使用时请求一次
+let ZZZ_NANOKA_BASE_CACHE = '';
+const zzzNanokaBase = async () => {
+    if (ZZZ_NANOKA_BASE_CACHE) return ZZZ_NANOKA_BASE_CACHE;
+    const v = await getNanokaVer('zzz');
+    ZZZ_NANOKA_BASE_CACHE = `https://static.nanoka.cc/zzz/${v || ZZZ_NANOKA_FALLBACK_VERSION}`;
+    return ZZZ_NANOKA_BASE_CACHE;
+};
 // 新版 nanoka 列表 icon：角色/武器为 key（如 IconRole01 / Weapon_B_Common_01），驱动盘/邦布为资源路径。
 // key 形态拼接 assets webp 得到可访问图片；已有 http 或含 / 的资源路径原样透传。
 const nanokaIcon = key => {
@@ -463,7 +474,7 @@ class mys {
     async zzzItemMap() {
         if (this._zzzItemMap) return this._zzzItemMap;
         try {
-            this._zzzItemMap = await this.fetchJson(`${ZZZ_NANOKA_BASE}/zh/item.json`, 'ZZZ nanoka道具');
+            this._zzzItemMap = await this.fetchJson(`${await zzzNanokaBase()}/zh/item.json`, 'ZZZ nanoka道具');
         } catch (_) {
             return {}; // 失败不缓存，下次重试
         }
@@ -885,11 +896,12 @@ class mys {
         // 冷却期内直接走官方 Wiki，不再请求已失效的 nanoka
         if (nanokaDown()) return await this.zzz_official_tujian();
         try {
+            const zzzBase = await zzzNanokaBase();
             const [chars, weapons, equipments, bangboos] = await Promise.all([
-                this.fetchJson(`${ZZZ_NANOKA_BASE}/character.json`, 'ZZZ nanoka角色'),
-                this.fetchJson(`${ZZZ_NANOKA_BASE}/weapon.json`, 'ZZZ nanoka音擎'),
-                this.fetchJson(`${ZZZ_NANOKA_BASE}/equipment.json`, 'ZZZ nanoka驱动盘'),
-                this.fetchJson(`${ZZZ_NANOKA_BASE}/bangboo.json`, 'ZZZ nanoka邦布')
+                this.fetchJson(`${zzzBase}/character.json`, 'ZZZ nanoka角色'),
+                this.fetchJson(`${zzzBase}/weapon.json`, 'ZZZ nanoka音擎'),
+                this.fetchJson(`${zzzBase}/equipment.json`, 'ZZZ nanoka驱动盘'),
+                this.fetchJson(`${zzzBase}/bangboo.json`, 'ZZZ nanoka邦布')
             ]);
             // 官方 Wiki 代理人半身像（act-upload 图床支持缩略，覆盖新角色，构图同星铁官方图鉴卡片）
             let officialIconMap = {};
@@ -1622,20 +1634,21 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
             }
         }
         try {
+            const zzzBase = await zzzNanokaBase();
             let url;
             if (type === 'js') {
-                url = `${ZZZ_NANOKA_BASE}/zh/character/${id}.json`;
+                url = `${zzzBase}/zh/character/${id}.json`;
             } else if (type === 'wq') {
-                url = `${ZZZ_NANOKA_BASE}/zh/weapon/${id}.json`;
+                url = `${zzzBase}/zh/weapon/${id}.json`;
             } else if (type === 'syw') {
-                url = `${ZZZ_NANOKA_BASE}/zh/equipment/${id}.json`;
+                url = `${zzzBase}/zh/equipment/${id}.json`;
             } else if (type === 'yq') {
-                url = `${ZZZ_NANOKA_BASE}/zh/bangboo/${id}.json`;
+                url = `${zzzBase}/zh/bangboo/${id}.json`;
             }
             const res = await this.fetchJson(url, `ZZZ nanoka详情 ${id}`);
             if (type === 'wq') {
                 try {
-                    const list = await this.fetchJson(`${ZZZ_NANOKA_BASE}/weapon.json`, 'ZZZ nanoka音擎列表');
+                    const list = await this.fetchJson(`${zzzBase}/weapon.json`, 'ZZZ nanoka音擎列表');
                     res.max_attack = list?.[String(id)]?.atk || 0;
                 } catch (_) {}
             }
