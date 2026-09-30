@@ -242,6 +242,13 @@ const numId = id => {
 const releaseRank = (c, id, isUnreleased = false) => {
     if (isUnreleased) return Number.POSITIVE_INFINITY;
     const v = c?.release;
+    // 两种「异常」要分开处理，不能都当最早：
+    //   字段整个不存在 —— 真未上线。星铁 1503 真珠、1511 星神★阿哈 就是这样，
+    //     比所有已上线的都新，应当置顶；同值时再按 id 降序兜底，
+    //     1511 排在 1503 前面，正好是「新角色 → 次新角色」。
+    //   字段存在但是 1970 占位 —— 原神旅行者 18 个形态（10000005-2 ~ -8 等），
+    //     它们是最早的角色，必须沉到末尾，不能跟着未上线的一起置顶。
+    if (v === undefined || v === null) return Number.POSITIVE_INFINITY;
     let t = NaN;
     if (typeof v === 'number') {
         // 星铁是秒；万一是毫秒就除以 1000
@@ -250,24 +257,36 @@ const releaseRank = (c, id, isUnreleased = false) => {
         // 原神 'YYYY-MM-DD HH:mm:SS' —— 按 UTC 解析，避免本地时区把顺序搞乱
         t = Date.parse(v.replace(' ', 'T') + 'Z');
     }
-    // 解析不出日期（1970 占位 / undefined）就当作最早，沉到末尾
+    // 有字段但解析不出可用日期（1970 占位等）→ 当作最早，沉到末尾
     return Number.isFinite(t) && t >= 946684800 ? t : 0;
 };
 
 
-// 星铁商店常驻 5★ 光锥，共 14 个（黑塔商店「超过 16 张给星轨通票」，
-// 现有 14 张，与该说法吻合）。
-// nanoka 的 lightcone.json 只有 rank/baseType/en/atk/desc/ko/zh/ja，
-// 没有常驻标记也没有上线时间，所以只能按名字认。
-// 分两批进游戏：早期 7 个在 23xxx，记忆/欢愉命途那批在 24xxx。
+// 星铁常驻 5★ 光锥，共 14 个，分两批：
+//   黑塔商店（黑塔债券兑换）7 个 —— 4.0 那批整段给了 24xxx，
+//     实测 24xxx 段 7 条全是黑塔商店、无一条活动光锥，所以这段用 id 判，
+//     以后再进新的一批会自动跟上，不用改名单。
+//   星芒兑换的常驻池 7 个 —— 早期那批，id 混在 23xxx 的活动光锥里
+//     （23001 于夜色中就夹在 23000 与 23002 之间），没有字段能分开：
+//     desc 5★ 全为 null，atk 区间与活动光锥重叠，详情文件 zh/lightcone/{id}.json
+//     只有 name/desc/rarity/base_type/refinements/stats，无常驻标记。
+//     这 7 个只能按名字认，已与公开资料逐个核对过。
 const SR_STANDARD_LC = new Set([
-    // 黑塔商店（较新）
-    '记一位星神的陨落', '星海巡航', '记忆的质料', '孤独的疗愈',
-    '不息的演算', '记忆永不落幕', '欢愉满溢祝福',
-    // 早期常驻（星芒兑换，同属常驻）
     '无可取代的东西', '如泥酣眠', '银河铁道之夜', '但战斗还未结束',
     '制胜的瞬间', '以世界之名', '时节不居',
 ]);
+const SR_HERTA_LC_MIN_ID = 24000;
+
+// 星铁常驻 5★ 判定：黑塔商店那批走 id 段（24xxx 整段都是），
+// 星芒常驻池那批走名单。
+// 星铁常驻池那批按名字认。system/default/manual_overrides.yaml 的
+// sr_standard_lc_extra 可以再往里加名字，星芒池新增常驻光锥时用。
+const isSrStandardLc = ([id, lc]) => {
+    if (numId(id) >= SR_HERTA_LC_MIN_ID) return true;
+    if (SR_STANDARD_LC.has(lc?.zh)) return true;
+    const extra = getManual().sr_standard_lc_extra;
+    return Array.isArray(extra) && extra.includes(lc?.zh);
+};
 // 原神武器的上线时间，来源是 system/default/gslogs.yaml 的卡池记录。
 // nanoka 本身没有任何时间字段，这一点已穷尽确认：
 //   weapon.json 只有 icon/rank/type/en/atk/sub/desc/ko/zh/ja/skin/tag；
@@ -290,6 +309,23 @@ const SR_STANDARD_LC = new Set([
 const GS_LOGS_YAML = './plugins/xhh/system/default/gslogs.yaml';
 let gsDebutCache = null;
 
+// 绝区零角色/音擎的上线时间，来源是 system/default/zzz_gacha_pool_history.yaml
+// 的卡池记录，做法与上面原神武器一致：按日期升序取每个名字的首次出现。
+//
+// 为什么不能直接按 nanoka 的 content_id 降序：id 看着是递增序号，实际和上线
+// 顺序对不上。用卡池日期实测出 12 处逆序，例如
+//   希格莉德(2026-08-19) 排在 蕾米埃尔(2026-09-08) 之前；
+//   凯撒(2024-10-16) 排在 伊德海莉(2025-11-05) 之前。
+// 角色 49 个 5★ 里有 40 个能在卡池里查到首发。
+//
+// 两处读数据时的坑：
+//   1. yaml 里的 s 字段把 & 存成了 HTML 实体（奥菲丝&amp;鬼火），
+//      不做 unescape 就匹配不上，角色会被误判成「无记录」。
+//   2. 同一版本上下半的 timer 可能完全相同（克拉蕾与洛克茜都是 2026-09-30），
+//      日期只能定到版本粒度，同一天的角色之间仍靠 id 兜底。
+const ZZZ_GACHA_YAML = './plugins/xhh/system/default/zzz_gacha_pool_history.yaml';
+let zzzDebutCache = null;
+
 // ITEM_TPS_WEAPON 的武器类型是占位值，getWikiIcon 映射表里显示成「特殊武器」，
 // 但那不是真实类型。能确认的按名字覆盖：
 //   索斯卢科的灼炎 = 瓦列里的专武，瓦列里 character.json 的 weapon 字段是
@@ -299,6 +335,102 @@ let gsDebutCache = null;
 const GS_WEAPON_CN_OVERRIDE = {
     '索斯卢科的灼炎': '单手剑',
 };
+
+/**
+ * 原神圣遗物星级判定（65 套：五星 47 / 四星 15 / 三星 3），按 id 段判：
+ *   10001~10009  四星  行者之心 / 勇士之心 / 守护之心 / 奇迹 / 战狂 / 武人 / 教官 / 赌徒 / 流放者
+ *   10010~10011  三星  冒险家 / 幸运儿
+ *   10012        四星  学士
+ *   10013        三星  游医
+ *   15009~15013  四星  祭火 / 祭水 / 祭雷 / 祭风 / 祭冰之人
+ *   其余 47 套    五星
+ *
+ * 判据是米游社官方原神 Wiki（ys_obc 频道 218）每个套装的星级筛选标签：
+ * 一套圣遗物的标签是它可能掉落的星级档位，**取最高那个就是这套本身的星级**。
+ * 实测 63 套的标签只有三种形态，分布 45 / 14 / 3：
+ *   冰风迷途的勇士 → 星级/五星 + 星级/四星     = 五星
+ *   行者之心       → 星级/四星 + 星级/三星     = 四星
+ *   冒险家         → 星级/三星 + 二星 + 一星   = 三星
+ * 按最高档判出来的 63 套，与 nanoka 站点星标逐条比对零冲突。
+ *
+ * ⚠️ 曾把站点标的 3★ 误当成「四星标错」，据此把 10001~10009 判成五星、
+ *    把 冒险家/幸运儿/游医 判成四星，共错 12 套 —— 站点的星标本身是对的。
+ *    也曾把官方的多档标签当成矛盾，其实那正是「可掉落档位」的正常表达。
+ *
+ * 为什么不运行时直接读官方标签：那要给原神列表再加一次官方请求，
+ * 而这里 id 段是闭区间、段外全是五星，新增套装历来都是五星，风险很低。
+ * 以后若出了新的四星/三星套装会开一段新 id，届时补一条区间。
+ */
+const GS_ARTIFACT_3STAR_RANGES = [[10010, 10011], [10013, 10013]];
+const GS_ARTIFACT_4STAR_RANGES = [[10001, 10009], [10012, 10012], [15009, 15013]];
+/** 圣遗物套装星级，返回 3 / 4 / 5。 */
+const gsArtifactStar = id => {
+    const n = numId(id);
+    if (GS_ARTIFACT_3STAR_RANGES.some(([lo, hi]) => n >= lo && n <= hi)) return 3;
+    if (getManual4Ranges().some(([lo, hi]) => n >= lo && n <= hi)) return 4;
+    return 5;
+};
+
+// system/default/manual_overrides.yaml 只做加法：里面不填就纯走上面的自动规则，
+// 读不到文件也只是退回自动规则，不会报错。和 syw.yaml / yiqi.yaml 那些
+// 别名表放一起，要改哪个表一眼能看到。
+const MANUAL_YAML = './plugins/xhh/system/default/manual_overrides.yaml';
+let manualCache = null;
+function getManual() {
+    if (manualCache) return manualCache;
+    const empty = {};
+    try {
+        manualCache = YAML.parse(fs.readFileSync(MANUAL_YAML, 'utf-8')) || empty;
+    } catch (err) {
+        logger.debug?.('[xhh][图鉴] 读 manual_overrides.yaml 失败，全走自动判定:', err?.message || err);
+        manualCache = empty;
+    }
+    return manualCache;
+}
+const getManual4Ranges = () => {
+    const extra = getManual().artifact_4star_ranges_extra;
+    return Array.isArray(extra) && extra.length
+        ? [...GS_ARTIFACT_4STAR_RANGES, ...extra]
+        : GS_ARTIFACT_4STAR_RANGES;
+};
+
+/** 绝区零名字 → 首发时间戳(ms)。type 取 'js' 角色 / 'wq' 音擎。 */
+function getZzzDebut(type = 'js') {
+    const key = type === 'wq' ? 'wq' : 'js';
+    if (!zzzDebutCache) zzzDebutCache = { js: new Map(), wq: new Map(), _loaded: new Set() };
+    // 不能拿 zzzDebutCache[key] 判是否已读：两类的 Map 都预建好了、非空对象恒真，
+    // 第一次读角色之后第一次读音擎会直接拿到空表，音擎首发日期全丢。
+    if (zzzDebutCache._loaded.has(key)) return zzzDebutCache[key];
+    const want = key === 'wq' ? '武器' : '角色';
+    try {
+        const rows = YAML.parse(fs.readFileSync(ZZZ_GACHA_YAML, 'utf-8'));
+        const dated = (Array.isArray(rows) ? rows : [])
+            .filter(r => r && r.type === want)
+            .map(r => {
+                const m = String(r.timer || '').match(/(\d{4})\/(\d{1,2})\/(\d{1,2})/);
+                if (!m) return null;
+                const t = Date.parse(`${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}T00:00:00Z`);
+                return { t, name: zzzSortKey(r.s) };
+            })
+            .filter(v => v && Number.isFinite(v.t) && v.name)
+            // 文件顺序不等于时间顺序（存在上下半同日期的条目），必须按日期显式升序
+            .sort((a, b) => a.t - b.t);
+        for (const v of dated) {
+            if (!zzzDebutCache[key].has(v.name)) zzzDebutCache[key].set(v.name, v.t);
+        }
+    } catch (err) {
+        logger.debug?.('[xhh][图鉴] 读 zzz_gacha_pool_history.yaml 失败，退回 id 降序:', err?.message || err);
+    }
+    zzzDebutCache._loaded.add(key);
+    return zzzDebutCache[key];
+}
+
+// 卡池表与 nanoka 角色名的写法不一致：yaml 里 奥菲丝&amp;鬼火 / 洛克茜·伊芙莉塔·普莱斯，
+// nanoka 里 奥菲丝&「鬼火」 / 洛克茜。统一去掉空白、装饰符并还原 HTML 实体。
+const zzzSortKey = v => String(v || '')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/[\s·・\-—_「」『』《》【】\[\]（）()]/g, '');
 
 /** 武器中文名 → 首发时间戳(ms)。读不到返回空 Map，退化成 id 降序。 */
 function getGsDebut() {
@@ -348,13 +480,11 @@ function sortWeaponEntries(weapons, isSr = false, isGs = false, newIds = null) {
             const ub = newIds.has(String(b[0])) ? 0 : 1;
             if (ua !== ub) return ua - ub;
         }
-        // 星铁的商店常驻 5★ 在游戏数据里是按「加入时间」排的 id，
-        // 24xxx 整段 7 个正好一条命途一个，id 最大 → 纯 id 降序会把
-        // 这 7 个常驻顶到最前面，看着像「常驻被置顶」。
-        // 数据里没有任何常驻标记，只能按名字认（名单见 SR_STANDARD_LC）。
+        // 星铁的常驻 5★（黑塔商店 24xxx 整段 + 星芒常驻池 7 张）不该按
+        // 「id 最大 = 最新」顶在最前，看着像常驻被置顶，所以先沉底。
         if (isSr) {
-            const sa = SR_STANDARD_LC.has(a[1]?.zh) ? 1 : 0;
-            const sb = SR_STANDARD_LC.has(b[1]?.zh) ? 1 : 0;
+            const sa = isSrStandardLc(a) ? 1 : 0;
+            const sb = isSrStandardLc(b) ? 1 : 0;
             if (sa !== sb) return sa - sb;
         }
         if (gsDebut) {
@@ -490,8 +620,8 @@ const hsrRelicText = (text, params = []) => String(text || '')
  *
  * 排序：artifact.json 的键是按 id 升序给的，直接用就是最旧在最前、最新压在最下面。
  * 圣遗物 id 随上线时间递增（实测 10001 行者之心 → 15048 最新），
- * 所以按数值 id 降序重排，让最新的在顶部。wiki.js 的 list() 只按星级排、
- * 且 Array.sort 稳定，这个预排顺序会被保住（同星级的相对顺序不变）。
+ * 所以按数值 id 降序重排，让最新的在顶部。五星整体在前、四星沉到末尾，
+ * 组内同样是 id 降序。
  */
 const gsArtifactList = artifacts => Object.entries(artifacts || {}).map(([id, a]) => {
     const set = a?.set || {};
@@ -506,48 +636,83 @@ const gsArtifactList = artifacts => Object.entries(artifacts || {}).map(([id, a]
     ].filter(v => v.value);
     if (!zh || !rows.length) return null;
     const icon = nanokaGsItemIcon(a.icon);
-    const star = (a.rank || []).includes(5) ? '五星' : '四星';
+    // 星级按 id 段判，见 gsArtifactStar 的注释
+    const star = gsArtifactStar(id);
+    return {
+        _sortId: Number(id),
+        _sortStar: 6 - star,
+        content_id: String(id),
+        title: zh,
+        icon,
+        ext: JSON.stringify({
+            c_218: {
+                filter: { text: JSON.stringify([`星级/${['', '一星', '二星', '三星', '四星', '五星'][star]}`, ...sywEffectTags(`${two} ${four}`)]) },
+                picture: { list: icon ? [icon] : [] },
+                table: { list: rows }
+            }
+        })
+    };
+}).filter(Boolean)
+    // 五星 → 四星 → 三星，组内仍按 id 降序（新→旧）。低星套装的 id 散在
+    // 10001~10013 和 15009~15013 两段，纯 id 降序下第一个四星会落在第 36 位、
+    // 夹在五星套装中间。这里把分组做进 data() 自身，别的调用方拿到就是对的。
+    // apps/wiki.js 的 list() 还有一层 ratingOrder 稳定排序也按星级分组
+    // （五星1 / 四星2 / 三星3），这层是为了不依赖下游一定再排一次。
+    .sort((a, b) => a._sortStar - b._sortStar || b._sortId - a._sortId)
+    .map(({ _sortId, _sortStar, ...rest }) => rest);
+
+/**
+ * 绝区零驱动盘图标：icon 字段是游戏内资源路径
+ * UI/Sprite/A1DynamicLoad/IconSuit/UnPacker/SuitXxx.png，
+ * 整条路径在 assets 下没有发布（实测 assets/zzz 下若干 base 皆 404），
+ * 但 basename 发布过 —— 去掉目录与 .png 后缀拼 assets/zzz/{basename}.webp
+ * 即可访问，实测 30 套全 200。
+ */
+const nanokaZzzSuitIcon = key => {
+    const raw = String(key || '').trim();
+    if (!raw) return '';
+    if (/^https?:/i.test(raw)) return raw;
+    const base = raw.split('/').pop().replace(/\.png$/i, '');
+    return base ? `${NANOKA_ASSET}/zzz/${base}.webp` : '';
+};
+
+/**
+ * 星铁遗器图标：icon 字段是 SpriteOutput/ItemIcon/71000.png，
+ * 同样只把尾部数字发布成了 assets/hsr/itemfigures/{数字}.webp，
+ * 整条路径拼接则是 404，实测 64 套全 200。
+ */
+const nanokaHsrRelicIcon = key => {
+    const raw = String(key || '').trim();
+    if (!raw) return '';
+    if (/^https?:/i.test(raw)) return raw;
+    const num = (raw.match(/(\d+)\.[a-z0-9]+$/i) || [])[1] || '';
+    return num ? `${NANOKA_ASSET}/hsr/itemfigures/${num}.webp` : '';
+};
+
+/**
+ * 星铁遗器套装列表（nanoka hsr/relicset.json）。
+ * 套名在顶层 zh，set 直接按 '2'/'4' 分件套。
+ * ext 按米游社格式给 c_30，wiki.js 的 yiqi_pictures 读 picture.list 与 table.list。
+ */
+const hsrRelicsetList = relicsets => Object.entries(relicsets || {}).map(([id, r]) => {
+    const p2 = r?.set?.['2'] || {}, p4 = r?.set?.['4'] || {};
+    const two = hsrRelicText(p2.zh, p2.ParamList), four = hsrRelicText(p4.zh, p4.ParamList);
+    const zh = String(r?.zh || '').trim();
+    const rows = [
+        { key: '2件套', value: two },
+        { key: '4件套', value: four }
+    ].filter(v => v.value);
+    if (!zh || !rows.length) return null;
+    const icon = nanokaHsrRelicIcon(r.icon);
     return {
         _sortId: Number(id),
         content_id: String(id),
         title: zh,
         icon,
         ext: JSON.stringify({
-            c_218: {
-                filter: { text: JSON.stringify([`星级/${star}`, ...sywEffectTags(`${two} ${four}`)]) },
-                picture: { list: icon ? [icon] : [] },
-                table: { list: rows }
-            }
-        })
-    };
-}).filter(Boolean).sort((a, b) => b._sortId - a._sortId).map(({ _sortId, ...rest }) => rest);
-
-/**
- * 星铁遗器套装列表（nanoka hsr/relicset.json）。
- * 套名在顶层 zh，set 直接按 '2'/'4' 分件套。
- * icon 字段是 SpriteOutput/ItemIcon/71060.png 这种资源路径，
- * 试过 assets/hsr、assets/hsr/relicset、assets/hsr/itemfigures、版本目录四个 base 全 404，
- * 所以留空走文字标签，不拼一个必然裂图的地址。
- * ext 按米游社格式给 c_30，wiki.js 的 yiqi_pictures 读 picture.list 与 table.list。
- */
-const hsrRelicsetList = relicsets => Object.entries(relicsets || {}).map(([id, r]) => {
-    const p2 = r?.set?.['2'] || {}, p4 = r?.set?.['4'] || {};
-    const two = hsrRelicText(p2.zh, p2.ParamList), four = hsrRelicText(p4.zh, p4.ParamList);
-    const zh = r?.zh || '';
-    const rows = [
-        { key: '2件套', value: two },
-        { key: '4件套', value: four }
-    ].filter(v => v.value);
-    if (!zh || !rows.length) return null;
-    return {
-        _sortId: Number(id),
-        content_id: String(id),
-        title: zh,
-        icon: '',
-        ext: JSON.stringify({
             c_30: {
                 filter: { text: JSON.stringify(sywEffectTags(`${two} ${four}`)) },
-                picture: { list: [] },
+                picture: { list: icon ? [icon] : [] },
                 table: { list: rows }
             }
         })
@@ -829,6 +994,11 @@ class mys {
         return localBangbooIcon(name);
     }
 
+    // 驱动盘图标：详情页拿到的 icon 是游戏内资源路径，和列表同一口径转成可访问链接
+    zzzSuitIcon(icon) {
+        return nanokaZzzSuitIcon(icon);
+    }
+
     // 原神/星铁官方 Wiki 列表（nanoka 失效时的兜底）
     async official_tujian(isSr = false) {
         let url =
@@ -943,7 +1113,13 @@ class mys {
             //    所以单独按主角处理。
             // 3) 时间相同时（同一批上线的角色）再按 id 降序兜底，
             //    否则顺序取决于 JSON 的键序，每次刷新可能不一样。
-            .sort((a, b) => (releaseRank(b[1], b[0]) - releaseRank(a[1], a[0]))
+            // isUnreleased 必须传 newChars，否则缺 release 的角色会被当成「最早」沉底。
+            // 实测星铁 99 个角色里只有 1503 真珠、1511 星神★阿哈 没有 release 字段，
+            // 原神则是米提亚(10000136)、瓦列里(10000137) 与旅行者各形态。
+            // 之前 newChars 算出来了却没接进排序，注释里写的「无上线时间视为最新」
+            // 一直没生效，这两个新角色就被压在列表最底下。
+            .sort((a, b) => (releaseRank(b[1], b[0], newChars.has(String(b[0])))
+                - releaseRank(a[1], a[0], newChars.has(String(a[0]))))
                 || (numId(b[0]) - numId(a[0])));
 
         const js_list = charEntries.map(([id, c]) => {
@@ -987,7 +1163,7 @@ class mys {
                     // 页面引用的是 UI_Gacha_EquipIcon_Claymore_LoliFriend.webp，
                     // 但那个文件实测 404 —— 留着兜底链，指不定 nanoka 哪天补上。
                     iconFallback: /_\{0\}$/.test(String(w.icon || '')) ? '' : gsSkinIcon(w.icon),
-                    ext: makeExt([`武器星级/${gsWeaponRarityCn(w.rank)}`, `武器类型/${GS_WEAPON_CN_OVERRIDE[w.zh] || GS_WEAPON_CN[w.type] || ''}`], icon)
+                    ext: makeExt([`武器星级/${gsWeaponRarityCn(w.rank)}`, `武器类型/${getManual().weapon_type_override?.[w.zh] || GS_WEAPON_CN_OVERRIDE[w.zh] || GS_WEAPON_CN[w.type] || ''}`], icon)
                 };
             });
         } else {
@@ -1085,15 +1261,24 @@ class mys {
                         ])}
                     })
                 })),
-                syw_list: Object.entries(equipments).map(([id, e]) => ({
+                // 驱动盘图标的 icon 字段是游戏内资源路径
+                // UI/Sprite/A1DynamicLoad/IconSuit/UnPacker/SuitXxx.png，
+                // nanokaIcon 遇含 / 的会原样透传，拼出来是裸相对路径而非 URL，必然裂图。
+                // 但 basename 是在 assets 下发布过的：去掉目录与 .png 后缀，拼
+                // assets/zzz/{basename}.webp 即可访问（实测 30 套全 200）。
+                syw_list: Object.entries(equipments).map(([id, e]) => {
+                    const name = String(e.zh?.name || id).trim();
+                    const icon = nanokaZzzSuitIcon(e.icon);
+                    return {
                     content_id: id,
-                    title: e.zh?.name || id,
-                    icon: nanokaIcon(e.icon),
+                    title: name,
+                    icon,
                     ext: JSON.stringify({
-                        c_30: { picture: { list: [nanokaIcon(e.icon)] } },
+                        c_30: { picture: { list: icon ? [icon] : [] } },
                         filter: { text: '[]' }
                     })
-                })),
+                    };
+                }),
                 yq_list: Object.entries(bangboos).map(([id, b]) => {
                     // nanoka 的邦布 icon 是游戏内资源路径，拼 assets 前缀也是 404；
                     // 优先用本地补图目录，其次官方 Wiki 图标；都没有就留空走首字占位
@@ -1308,7 +1493,21 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
                 names.push(title);
                 ids.push(list[n].content_id);
                 icons.push(list[n].icon);
-                if (!['syw', 'yq'].includes(type)) {
+                // 圣遗物/遗器/驱动盘上面那段不解析 ext，星级要在这里单独取。
+                // 原神圣遗物靠 ext.c_218.filter 里的「星级/x」区分五星与四星，
+                // 缺了它 ji 恒为 undefined，list() 的 rankClass 落到 r0，
+                // 列表就没有金色/紫色描边，排序也分不出五星与四星两段。
+                if (['syw', 'yq'].includes(type)) {
+                    let star = '';
+                    try {
+                        const box = JSON.parse(list[n].ext || '{}');
+                        const f = JSON.parse((box.c_218 || box.c_30 || box.c_19 || box).filter?.text || '[]');
+                        for (const s of f) if (s.includes('星级/')) { star = s.split('/').pop(); break; }
+                    } catch (_) {}
+                    // jis 是按下标和 names/ids 对齐的，这里必须无条件 push，
+                    // 漏推会让后面每一项的星级都错位。
+                    jis.push(star);
+                } else {
                     text = JSON.parse(list[n].ext);
                     text = text.c_25 || text.c_5 || text.c_19 || text.c_18;
                     text = text.filter.text;
@@ -1447,12 +1646,26 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
                     }
                 }
             }
+            // 绝区零的上线顺序：未上线（测试服）置顶 → 有卡池记录的按首发日期新→旧
+            // → 没记录的排在最后、按 id 降序兜底。
+            // _ord 越小越靠前，所以日期取负号。无记录的用 1e15 - id 压到所有
+            // 日期之后，同时保留「id 大 = 更靠前」的相对次序（佩洛伊斯 1551
+            // 会排在猫又 1021 这类老角色前面，符合实际）。
+            const debutMap = getZzzDebut(type === 'wq' ? 'wq' : 'js');
+            const newIds = (await getNanokaNew('zzz'))?.character || new Set();
             names.map((v, i) => {
                 let extObj = {};
                 try { extObj = JSON.parse(list[i].ext || '{}'); } catch (_) {}
+                const idNum = numId(ids[i]);
+                const t = debutMap.get(zzzSortKey(v));
+                const isNew = newIds.has(String(ids[i]));
+                const ord = isNew ? -1e15 - idNum
+                    : Number.isFinite(t) ? -t
+                    : 1e15 - idNum;
                 data[i] = {
                     name: v,
                     id: ids[i],
+                    _ord: ord,
                     icon: extObj.c_30?.picture?.list[0] || icons[i],
                     iconFallback: extObj.fallbackIcon || '',
                     ji: jis[i],
@@ -1492,11 +1705,19 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
                     return filters.some(s => s.includes('圣痕构成') && s.includes('套装'));
                 } catch (_) { return false; }
             };
+            const cleanTitleOf = va => String(va.title).replace(/[（(](上|中|下)[）)]|·(上|中|下)$|-(上|中|下)$/g, '').replace(/\s+/g, '');
             const matchTitle = va => {
-                const cleanTitle = String(va.title).replace(/[（(](上|中|下)[）)]|·(上|中|下)$|-(上|中|下)$/g, '').replace(/\s+/g, '');
+                const cleanTitle = cleanTitleOf(va);
                 return cleanTitle == cleanName || cleanTitle.startsWith(cleanName) || cleanName.startsWith(cleanTitle);
             };
-            let found = list.find(va => matchTitle(va) && isSetItem(va));
+            // 精确优先、模糊兜底。直接用 find + startsWith 双向匹配会串：
+            // 频道 19 的 260 套里有 15 对互为前缀，模糊匹配先撞到哪条全看列表顺序。
+            // 查全名拿到别的套装最离谱的一次是「梅比乌斯·噬界之蛇」命中「梅」——
+            // 「梅」是 cleanName 的首字，startsWith 直接成立。
+            const exactTitle = va => cleanTitleOf(va) == cleanName;
+            let found = list.find(va => exactTitle(va) && isSetItem(va));
+            if (!found) found = list.find(va => exactTitle(va));
+            if (!found) found = list.find(va => matchTitle(va) && isSetItem(va));
             if (!found) found = list.find(va => matchTitle(va));
             if (found) return { id: found.content_id };
             return false;
