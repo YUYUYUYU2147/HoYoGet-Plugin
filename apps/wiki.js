@@ -398,6 +398,12 @@ export class Wiki extends plugin {
         if (await this[method](...args, false, true)) return true;
       }
       if (await this.bangboo(e, name)) return true;
+      // 崩三的圣痕名常带套装名（如「琪亚娜·乐运天降」是「来日亦然」套装的一件），
+      // 和原神/星铁/绝区零的名字不重样，但不带前缀时前面三个游戏都试过了，
+      // 只有走到这里才拉崩三数据，不会拖慢正常查询。
+      for (const { method, args } of checkTypes) {
+        if (await this[method](...args, false, false, true)) return true;
+      }
       if (await this.bh3_yq(e, name, true)) return true;
     }
     //最后查总列表

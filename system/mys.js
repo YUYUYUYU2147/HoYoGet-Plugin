@@ -324,6 +324,12 @@ let gsDebutCache = null;
 //   2. 同一版本上下半的 timer 可能完全相同（克拉蕾与洛克茜都是 2026-09-30），
 //      日期只能定到版本粒度，同一天的角色之间仍靠 id 兜底。
 const ZZZ_GACHA_YAML = './plugins/xhh/system/default/zzz_gacha_pool_history.yaml';
+// 崩坏3图鉴数据缓存。bh3_tujian() 每次调用都并发拉 5 个频道，
+// 而一次查询里 role / weapon / syw_yiqi 会各调一次，无前缀兜底再加上
+// 人偶、协同者就是 5 次。同一批数据几分钟内不会变，缓存 5 分钟。
+let bh3TujianCache = null;
+let bh3TujianAt = 0;
+const BH3_TUIJAN_TTL = 5 * 60 * 1000;
 let zzzDebutCache = null;
 
 // ITEM_TPS_WEAPON 的武器类型是占位值，getWikiIcon 映射表里显示成「特殊武器」，
@@ -1368,6 +1374,8 @@ class mys {
 
     // 崩坏3图鉴 (使用官方 wiki API)
     async bh3_tujian() {
+        const now = Date.now();
+        if (bh3TujianCache && now - bh3TujianAt < BH3_TUIJAN_TTL) return bh3TujianCache;
         try {
             const [chars, weapons, stigmatas, elves, partners] = await Promise.all([
                 fetch(`${BH3_WIKI_BASE}/v1/home/content/list?app_sn=${BH3_APP_SN}&channel_id=${BH3_CHANNEL_MAP.js}`).then(r => r.json()),
@@ -1385,13 +1393,15 @@ class mys {
                     ext: typeof item.ext === 'string' ? item.ext : JSON.stringify(item.ext || {})
                 }));
             };
-            return {
+            bh3TujianCache = {
                 js_list: parseList(chars, 'c_18'),
                 wq_list: parseList(weapons, 'c_20'),
                 syw_list: parseList(stigmatas, 'c_19'),
                 yq_list: parseList(elves, 'c_21'),      // 人偶
                 hb_list: parseList(partners, 'c_218'),  // 协同者（与人偶分开，避免两个指令出同一份合并列表）
             };
+            bh3TujianAt = now;
+            return bh3TujianCache;
         } catch (error) {
             logger.error('BH3 wiki访问失败:', error);
             return false;
