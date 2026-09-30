@@ -1729,6 +1729,24 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
             if (!found) found = list.find(va => exactTitle(va));
             if (!found) found = list.find(va => matchTitle(va) && isSetItem(va));
             if (!found) found = list.find(va => matchTitle(va));
+            // 最后一档试后缀。崩三的圣痕与武器大量是「角色名·词」的形式
+            // （「琪亚娜·乐运天降」「尤里乌斯·凯撒」），只输后半段是很自然的写法，
+            // 而前半段是角色名、后半段才是词，光靠前缀匹配永远命中不了。
+            // 后缀常常不唯一：按去重后的套装名统计，圣痕 227 个可拆片段里有 31 个
+            // 会撞上多个条目（「购物」同时命中爱愿妖精/八重樱/琪亚娜 等 14 套，
+            // 「德丽莎」同时命中即将迟到/正在工作/下班之后 3 套），所以只在
+            // 全表恰好一条匹配时才认，撞名就当没找到，绝不猜。
+            // 比较单位必须先去重：同一套的上/中/下是 3 条独立条目、清洗后同名，
+            // 不去重会把「托勒密」这种唯一命中误判成三重命中。
+            if (!found) {
+                const firstOfSet = new Map();
+                for (const va of list) {
+                    const t = cleanTitleOf(va);
+                    if (!firstOfSet.has(t)) firstOfSet.set(t, va);
+                }
+                const suffixHits = [...firstOfSet].filter(([t]) => t.endsWith(cleanName));
+                if (suffixHits.length === 1) found = suffixHits[0][1];
+            }
             if (found) return { id: found.content_id };
             return false;
         } else {

@@ -411,7 +411,10 @@ export class Wiki extends plugin {
     // 全部未命中时给出提示，避免静默无响应被当成插件故障
     if (config().debug) logger.mark(`[xhh] 图鉴未命中: name=「${name}」 isSr=${isSr} isZZZ=${isZZZ} isBH3=${isBH3}`);
     if (name.length >= 2) {
-      await e.reply(`没有找到「${name}」的图鉴数据。\n可尝试指定游戏：绝区零${name}图鉴 / *${name}图鉴 / #${name}图鉴，或检查名称是否正确。`);
+      // 以前这里写死建议「绝区零」，崩三的名字（如「乐运天降」）看到这条只会更困惑，
+      // 而且后半句「*X图鉴 / #X图鉴」就是把刚敲过的那条命令再抄一遍，没有信息量。
+      // 改成列出四个游戏真实的前缀写法。
+      await e.reply(`没有找到「${name}」的图鉴数据。\n可尝试在名字前加上游戏前缀：原神 / 星铁 / 绝区零 / 崩三，或检查名称是否正确。`);
       return true;
     }
     return false;
@@ -808,7 +811,19 @@ export class Wiki extends plugin {
       rankClass: rankClassMap[item.ji] || 'r0',
       badges: (isBH3
         // 崩坏3的圣痕属性是多值的（bh3_data 的 attributes 数组），要展开；角色/武器那条走 yuanshu 标量。
-        ? [...(Array.isArray(item.attributes) ? item.attributes : [item.attributes || item.yuanshu]), ...(Array.isArray(item.damage) ? item.damage : [item.damage]), item.starRingField, ...(Array.isArray(item.starRing) ? item.starRing : [item.starRing]), item.wuqi]
+        // 圣痕属性常常有 6~8 个（实测 700 条里 617 条是多属性，最多的 7~8 个），
+        // 全列出来每张卡片要撑出七八个徽章，列表高度从 3423px 涨到 5097px。
+        // 合成单个「多属性」徽章，只有一个属性时仍显示具体名字（那才是有效信息），
+        // 完整属性列表在详情页看。damage / starRing 是另外的类别，不参与合并。
+        ? [
+            ...(Array.isArray(item.attributes)
+                ? (item.attributes.length > 1 ? ['多属性'] : item.attributes)
+                : [item.attributes || item.yuanshu].filter(Boolean)),
+            ...(Array.isArray(item.damage) ? item.damage : [item.damage]),
+            item.starRingField,
+            ...(Array.isArray(item.starRing) ? item.starRing : [item.starRing]),
+            item.wuqi
+        ]
         // 星铁的特性来自命途/属性，不是元素/武器，不接上这两个分支星铁就只剩一个星级徽章
         : isSr ? [item.ji, item.mingtu, item.shuxing]
         : [item.ji, item.yuanshu, item.wuqi])
