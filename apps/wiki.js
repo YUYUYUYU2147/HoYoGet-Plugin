@@ -1215,8 +1215,19 @@ export class Wiki extends plugin {
       rname = name;
     }
     if (rname) {
-      const { id } = await mys.data(rname, 'js', isSr, isZZZ, isBH3);
+      let hitSr = isSr;
+      let { id } = await mys.data(rname, 'js', hitSr, isZZZ, isBH3);
+      if (!id && !isZZZ && !isBH3) {
+        // 命令没带游戏前缀时只查命令暗示的那一个游戏，于是「#阿哈图鉴」会去
+        // 原神列表里找，而阿哈是星铁角色。实测阿哈不在原神列表、芙宁娜不在
+        // 星铁列表，两边都查一遍才能让「#角色名图鉴」不必显式写「星铁」。
+        // 命令带了前缀的第一次就能查到，不会走到这里，不会覆盖显式指定。
+        hitSr = !isSr;
+        ({ id } = await mys.data(rname, 'js', hitSr, isZZZ, isBH3));
+        if (id) dbg('跨游戏回退命中:', rname, '→', hitSr ? '星铁' : '原神');
+      }
       if (!id) { dbg('wiki 无此角色条目:', rname); return false; }
+      isSr = hitSr;
       let data = await mys.detail(id, isSr, isZZZ, isBH3);
       if (!data) { dbg('角色详情获取失败:', rname, 'id=' + id); return false; }
         if (data?.nanoka) return this.nanoka_role_pictures(e, data, isSr);
