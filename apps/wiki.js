@@ -1180,7 +1180,7 @@ export class Wiki extends plugin {
       const ret = await mys.data(name, 'js', false, true);
       if (!ret?.id) { dbg('ZZZ wiki 无此角色:', name); return false; }
       dbg('ZZZ 命中条目:', `id=${ret.id}`, ret.official ? '来源=官方Wiki兜底(详情走官方)' : '来源=nanoka');
-      // ret.official：id 来自官方 Wiki 兜底匹配，详情直接走官方源（nanoka 用自己的编号体系，拿官方 id 查必然 404）
+      // ret.official：id 来自官方 Wiki 兜底匹配，详情直接走官方源（nanoka 使用独立编号体系，拿官方 id 查必然 404）
       const data = await mys.detail(ret.id, false, true, false, !!ret.official);
       if (!data) { dbg('ZZZ 角色详情获取失败:', name, 'id=' + ret.id); return false; }
       this.zzz_role_pictures(e, data);

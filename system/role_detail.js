@@ -92,7 +92,7 @@ const gsRegionCn = v => GS_REGION_CN[v] || String(v || '').replace(/^ASSOC_TYPE_
 
 /**
  * 原神道具图标：UI_ItemIcon_{道具id}.webp。
- * item.json 里每个道具的 icon 字段就是 UI_ItemIcon_{它自己的 id}（原石 201→UI_ItemIcon_201、
+ * item.json 里每个道具的 icon 字段就是 UI_ItemIcon_{该道具的 id}（原石 201→UI_ItemIcon_201、
  * 涤净青金碎屑 104121→UI_ItemIcon_104121），所以不用拉 item.json 也能拼出来，
  * 芙宁娜 9 种突破材料实测 9/9 全 200。
  */
@@ -106,7 +106,7 @@ const GS_EXP_MATS = [
     { id: 104003, name: '大英雄的经验' },
 ];
 
-// 星铁道具图标。这个 base 是从 nanoka 站点自己的组件里抓出来的
+// 星铁道具图标。这个 base 是从 nanoka 站点前端组件中提取的
 // （imageBase:"https://static.nanoka.cc/assets/hsr/itemfigures/"），
 // 阿哈 9 种培养材料实测 9/9 全 200。
 const srItemIcon = id => (id ? `https://static.nanoka.cc/assets/hsr/itemfigures/${id}.webp` : '');

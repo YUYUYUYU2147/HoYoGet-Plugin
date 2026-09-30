@@ -93,6 +93,34 @@ const nanokaBase = async game => {
     const v = await getNanokaVer(game);
     return v ? `https://static.nanoka.cc/${game}/${v}` : '';
 };
+// manifest.json 除了 latest/available/live 还有个 new —— 按实体列出「这一版
+// 新增的 id」。live 落后 latest 的那部分就是测试服，所以 new.* 就是未上线内容
+// 的权威名单，不用再靠 release 是不是 1970 去猜、也不用手维护武器名。
+// 实测（gi live=7.1 / latest=7.1.51）：
+//   new.character [10000136, 10000137] 米提亚、瓦列里
+//   new.weapon    [14525, 224101, 224102]
+// hsr new.character [1511]（阿哈）、new.lightcone [22009, 23065]
+// zzz new.character [1631, 1641]、new.weapon [13022, 14163, 14164]
+let nanokaManifestCache = null;
+const getNanokaNew = async game => {
+    if (!nanokaManifestCache) {
+        try {
+            // .json() 也要 await：写成 (await fetch(..)).json() 的话存进去的是
+            // Promise，取值恒为 undefined，未上线判定会静默全部失效。
+            nanokaManifestCache = (await (await fetch('https://static.nanoka.cc/manifest.json')).json()) || {};
+        } catch (err) {
+            logger.debug?.('[xhh][图鉴] 读 nanoka manifest.json 失败:', err?.message || err);
+            nanokaManifestCache = {};
+        }
+    }
+    const g = nanokaManifestCache?.[game];
+    const out = {};
+    for (const [k, v] of Object.entries(g?.new || {})) {
+        if (Array.isArray(v)) out[k] = new Set(v.map(x => String(x)));
+    }
+    return out;
+};
+
 
 // 原神头像：nanoka 的 icon 字段本身就是 UI_AvatarIcon_Ayaka 这种方形头像名，
 // 对应资源是 assets/gi/UI_AvatarIcon_Ayaka.webp（256×256，实测 152/152 可用）。
@@ -168,13 +196,14 @@ const numId = id => {
  *   原神  '2021-07-21 00:00:00'  字符串
  *   星铁  1713344400            秒级时间戳数字
  *
- * 没有有效时间的（1970-01-01 占位或 undefined）= 尚未实装，按「最新」算，
- * 因为一个还没上线的新角色本来就比所有已上线的都新。
- * 唯一的例外是旅行者 —— 它也是 1970，但它是游戏最初的角色，要沉到最后。
+ * 「是否未上线」由调用方按 manifest.json 的 new.* 传入，不再靠 release 是不是
+ * 1970 去猜 —— 1970 只说明「nanoka 没填日期」。实测旅行者全部形态
+ * （10000005-2 等 16 条）都是 1970，但它们是最早上线的角色，靠猜就还得再开
+ * 一个 /旅行者/ 特例把它按下去。现在未上线置顶、1970 沉底都交给数据说话，
+ * 两个特例一起删掉。
  */
-const releaseRank = (c, id) => {
-    // 旅行者（多形态 id 形如 10000005-2，以及本体 10000134/10000135）按最早处理
-    if (/旅行者/.test(String(c?.zh || ''))) return 0;
+const releaseRank = (c, id, isUnreleased = false) => {
+    if (isUnreleased) return Number.POSITIVE_INFINITY;
     const v = c?.release;
     let t = NaN;
     if (typeof v === 'number') {
@@ -184,37 +213,10 @@ const releaseRank = (c, id) => {
         // 原神 'YYYY-MM-DD HH:mm:SS' —— 按 UTC 解析，避免本地时区把顺序搞乱
         t = Date.parse(v.replace(' ', 'T') + 'Z');
     }
-    // 2000-01-01 之前的（1970 占位）以及解析失败的一律当作「未上线」
-    return Number.isFinite(t) && t >= 946684800 ? t : Number.POSITIVE_INFINITY;
+    // 解析不出日期（1970 占位 / undefined）就当作最早，沉到末尾
+    return Number.isFinite(t) && t >= 946684800 ? t : 0;
 };
 
-/**
- * 武器/光锥排序：按 id 降序。
- *
- * 武器没有 release 字段，只能靠 id —— 实测两个游戏的 id 都严格按上线时间递增：
- *   原神 11501 风锋剑(最老) → 11505 磐岩结绿 → 31xxx → 39xxx(最新)
- *   星铁 20xxx(三星) → 21xxx → 22xxx → 23xxx → 24xxx(五星，最新)
- * 所以 id 降序 = 新的排前面。不排的话同星级内顺序取决于 JSON 键序，
- * 看起来就是「没排序」。
- *
- * 曾经试过把「XX·真化」和本体捆在一起排（以为真化是本体的形态），
- * 实测是错的：真化是独立的五星武器、本体是四星（350003 猰貐 rank=4、
- * 350004 猰貐·真化 rank=5），本来就该分开按星级排，不需要特殊处理。
- */
-
-// 星铁商店常驻 5★ 光锥，共 14 个（黑塔商店「超过 16 张给星轨通票」，
-// 现有 14 张，与该说法吻合）。
-// nanoka 的 lightcone.json 只有 rank/baseType/en/atk/desc/ko/zh/ja，
-// 没有常驻标记也没有上线时间，所以只能按名字认。
-// 分两批进游戏：早期 7 个在 23xxx，记忆/欢愉命途那批在 24xxx。
-const SR_STANDARD_LC = new Set([
-    // 黑塔商店（较新）
-    '记一位星神的陨落', '星海巡航', '记忆的质料', '孤独的疗愈',
-    '不息的演算', '记忆永不落幕', '欢愉满溢祝福',
-    // 早期常驻（星芒兑换，同属常驻）
-    '无可取代的东西', '如泥酣眠', '银河铁道之夜', '但战斗还未结束',
-    '制胜的瞬间', '以世界之名', '时节不居',
-]);
 // 原神武器的上线时间，来源是 system/default/gslogs.yaml 的卡池记录。
 // nanoka 本身没有任何时间字段，这一点已穷尽确认：
 //   weapon.json 只有 icon/rank/type/en/atk/sub/desc/ko/zh/ja/skin/tag；
@@ -236,19 +238,6 @@ const SR_STANDARD_LC = new Set([
 // 不写死顺序，新版本上线不用改代码。
 const GS_LOGS_YAML = './plugins/xhh/system/default/gslogs.yaml';
 let gsDebutCache = null;
-
-// 未上线（测试服）武器：数据里没有任何字段能自动认出来。
-// nanoka 对这类物品用占位写法：type=ITEM_TPS_WEAPON（类型未知）、
-// icon 前缀是 Shotgun / AssaultRifle / GrenadeLauncher / Grenade 这种
-// 占位资源名。所以「type 不是 WEAPON_*」本身就是「未上线或类型未知」的信号，
-// 但它同时也是「类型未知」的信号 —— 224001~224008 那 8 把已经上线，
-// 类型同样标着 ITEM_TPS_WEAPON，分不出上线与否，所以只能维护名单。
-// 键用武器中文名；列表跨星级共用，gsGroup 不区分星级。
-const GS_UNRELEASED_W = new Set([
-    '秘星典谕',       // 米提亚(法器) 的专武，5★
-    '索斯卢科的灼炎',   // 瓦列里(单手剑) 的专武，4★，代号 Vepr ↔ 瓦列里 Valeriy
-    '艾维萨缇的山狩',   // 4★，主人「艾维萨缇」不在角色表里，类型待确认
-]);
 
 // ITEM_TPS_WEAPON 的武器类型是占位值，getWikiIcon 映射表里显示成「特殊武器」，
 // 但那不是真实类型。能确认的按名字覆盖：
@@ -289,20 +278,25 @@ function getGsDebut() {
     return map;
 }
 
-function sortWeaponEntries(weapons, isSr = false, isGs = false) {
+function sortWeaponEntries(weapons, isSr = false, isGs = false, newIds = null) {
     const entries = Object.entries(weapons || {}).filter(([, w]) => w?.zh);
     // 原神分四段，规则和角色那边一致（未上线置顶，其余按上线时间新→旧）：
-    //   -1 已确认的未上线/测试服武器（名单见 GS_UNRELEASED_W）
     //    0 有首发日期的，按首发日期新→旧
     //    1 「真化」皮肤：本体是 4★，gslogs 只记 5★ up，拿不到日期
     //    2 完全没有卡池记录的开服期常驻武器
     const gsDebut = isGs ? getGsDebut() : null;
     const gsGroup = ([, w]) => {
-        if (GS_UNRELEASED_W.has(w.zh)) return -1;
         if (gsDebut.has(w.zh)) return 0;
         return /_\{0\}$/.test(String(w.icon || '')) ? 1 : 2;
     };
     return entries.sort((a, b) => {
+        // 未上线（测试服）置顶：manifest.json 的 new.weapon / new.lightcone。
+        // 原神和星铁同一套规则，在常驻/首发日期/皮肤分组之前先判。
+        if (newIds) {
+            const ua = newIds.has(String(a[0])) ? 0 : 1;
+            const ub = newIds.has(String(b[0])) ? 0 : 1;
+            if (ua !== ub) return ua - ub;
+        }
         // 星铁的商店常驻 5★ 在游戏数据里是按「加入时间」排的 id，
         // 24xxx 整段 7 个正好一条命途一个，id 最大 → 纯 id 降序会把
         // 这 7 个常驻顶到最前面，看着像「常驻被置顶」。
@@ -721,7 +715,7 @@ class mys {
     /**
      * nanoka 版原神/星铁图鉴列表。
      * 产出与米游社一致的 {js_list, wq_list, syw_list, gz_list, yq_list}，
-     * 其中 ext 里的 filter.text 决定列表的星级徽章与筛选，必须自己合成。
+     * 其中 ext 里的 filter.text 决定列表的星级徽章与筛选，必须在此处合成。
      */
     async nanoka_tujian(isSr = false) {
         const game = isSr ? 'hsr' : 'gi';
@@ -747,6 +741,7 @@ class mys {
         // UI_Gacha_AvatarImg_XXX-5.webp 这种不存在的地址。
         const seenName = new Set();
         // nanoka 会用 {NICKNAME} 占位未实装角色，这种条目没有名字也没有图，直接剔掉
+        const newChars = (await getNanokaNew(game))?.character || new Set();
         const charEntries = Object.entries(chars)
             .filter(([, c]) => c?.zh && !/^\{[A-Z_]+\}$/.test(c.zh))
             .sort((a, b) => String(a[0]).localeCompare(String(b[0]), 'en', { numeric: true }))
@@ -807,7 +802,8 @@ class mys {
         // 武器/光锥预排序，理由见 sortWeaponEntries 的注释。
         // 这里只排一次，wiki.js 的 list() 还会按星级排一次；
         // Array.sort 是稳定的，所以同星级内会保住这里的顺序。
-        const weaponEntries = sortWeaponEntries(weapons, !isGs, isGs);
+        const newWeapons = (await getNanokaNew(game))?.[isGs ? 'weapon' : 'lightcone'] || new Set();
+        const weaponEntries = sortWeaponEntries(weapons, !isGs, isGs, newWeapons);
 
         let gz_list = [], wq_list = [];
         if (isGs) {
