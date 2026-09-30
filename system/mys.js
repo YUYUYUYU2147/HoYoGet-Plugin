@@ -1739,7 +1739,14 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
                 const title = item.title.replace(/ /g, '');
                 if (title.includes('预告')) continue;
 
-                let ji = '未知', attribute = '未知', damage = '', wuqi = type == 'syw' ? '未知' : '未知', isSet = 'false';
+                let ji = '未知', damage = '', wuqi = type == 'syw' ? '未知' : '未知', isSet = 'false';
+                // 圣痕的属性是多值的：一套往往同时带 物理伤害 / 全伤害 / 火元素伤害 /
+                // 全元素伤害 / 施加异常状态 等多个标签，实测 700 条里 617 条是多属性。
+                // 原来 attribute 是标量、逐个标签互相覆盖，列表只剩最后一个，
+                // 而且「最后一个」取决于源数据的标签顺序 —— 同一套的 (上)(中)(下)
+                // 三件会显示出不同属性（「寻梦者」上中显示防御减伤、下显示暴击·暴伤）。
+                // 改为数组并去重，顺序按源数据出现顺序，与 starRing 同一套写法。
+                const attributes = [];
                 let starRingField = '';
                 const starRing = [];
                 try {
@@ -1756,7 +1763,8 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
                             // 圣痕的标签是「圣痕属性/防御减伤」，只 replace('属性/', '')
                             // 会剩下「圣痕」两个字粘在前面，列表徽章显示成「圣痕防御减伤」。
                             // 前缀一起去掉，并把「/」写法归一成「·」统一排版。
-                            attribute = s.replace(/(圣痕)?属性\//, '').replace(/\//g, '·');
+                            const attr = s.replace(/(圣痕)?属性\//, '').replace(/\//g, '·');
+                            if (attr && !attributes.includes(attr)) attributes.push(attr);
                         } else if (s.includes('装甲特性')) {
                             damage = s.replace('装甲特性/', '');
                         } else if (s.includes('武器类型')) {
@@ -1784,7 +1792,10 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
                     id: item.content_id,
                     icon: item.icon,
                     ji,
-                    yuanshu: attribute,
+                    // yuanshu 保留：崩三角色的标签是「属性/虚数」，wiki.js 的 #崩三虚数 等筛选靠它。
+                    // 圣痕那边是覆盖赋值留下的最后一个属性，仅为兼容保留，列表徽章不再用它。
+                    yuanshu: attributes[attributes.length - 1] || '未知',
+                    attributes,
                     wuqi,
                     damage: damageTypes,
                     abnormal: [],

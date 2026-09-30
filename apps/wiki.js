@@ -801,7 +801,8 @@ export class Wiki extends plugin {
       ...item,
       rankClass: rankClassMap[item.ji] || 'r0',
       badges: (isBH3
-        ? [item.yuanshu, ...(Array.isArray(item.damage) ? item.damage : [item.damage]), item.starRingField, ...(Array.isArray(item.starRing) ? item.starRing : [item.starRing]), item.wuqi]
+        // 崩坏3的圣痕属性是多值的（bh3_data 的 attributes 数组），要展开；角色/武器那条走 yuanshu 标量。
+        ? [...(Array.isArray(item.attributes) ? item.attributes : [item.attributes || item.yuanshu]), ...(Array.isArray(item.damage) ? item.damage : [item.damage]), item.starRingField, ...(Array.isArray(item.starRing) ? item.starRing : [item.starRing]), item.wuqi]
         // 星铁的特性来自命途/属性，不是元素/武器，不接上这两个分支星铁就只剩一个星级徽章
         : isSr ? [item.ji, item.mingtu, item.shuxing]
         : [item.ji, item.yuanshu, item.wuqi])
