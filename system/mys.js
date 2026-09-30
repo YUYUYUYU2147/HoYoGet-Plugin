@@ -215,8 +215,53 @@ const SR_STANDARD_LC = new Set([
     '无可取代的东西', '如泥酣眠', '银河铁道之夜', '但战斗还未结束',
     '制胜的瞬间', '以世界之名', '时节不居',
 ]);
-function sortWeaponEntries(weapons, isSr = false) {
+// 原神武器没有「最新 up 在最前」这个顺序可用：
+// nanoka 的 weapon.json 里 id 段就是武器类型（11xxx 单手剑 / 12xxx 双手剑 /
+// 13xxx 长枪 / 14xxx 法器 / 15xxx 弓，31xxx–35xxx 是「真化」皮肤），
+// 所以 id 降序排出来是「真化 → 弓 → 法器 → 长枪 → 双手剑 → 单手剑」，
+// 同类型挤成一块，完全看不出哪把是最新 up。
+// weapon.json 的字段只有 icon/rank/en/atk/sub/desc/ko/zh/ja/skin/tag，没有时间。
+//
+// 改用 system/default/gslogs.yaml 里的卡池时间：每个卡池 key 自带起止日期
+// （【7.1上半】2026/09/23 ~ …），value 是 [up角色, 4星角色, "up武器,4星武器"]，
+// 第 3 项逗号分隔的第一个就是当期 5★ up 武器。
+// 这个文件由 apps/gacha_pool.js 每次刷新卡池后自动更新，所以运行时读，
+// 不写死顺序，新版本上线不用改代码。
+// 覆盖 76 把正常五星里的 54 把；剩下 22 把没收录的正好是开服期常驻
+// （风鹰剑/天空之刃/磐岩结绿/天空之傲/阿莫斯之弓…），沉底符合预期。
+const GS_LOGS_YAML = './plugins/xhh/system/default/gslogs.yaml';
+let gsUpRankCache = null;
+
+/** 武器中文名 → 卡池序号（0 = 最新）。读不到返回空 Map，退化成原来的 id 降序。 */
+function getGsUpRank() {
+    if (gsUpRankCache) return gsUpRankCache;
+    const map = new Map();
+    try {
+        const data = YAML.parse(fs.readFileSync(GS_LOGS_YAML, 'utf-8'));
+        const banners = data?.date;
+        if (banners && typeof banners === 'object') {
+            Object.values(banners).forEach((lists, i) => {
+                const up5 = String(lists?.[2] || '').split(',')[0].trim();
+                if (up5 && !map.has(up5)) map.set(up5, i);
+            });
+        }
+    } catch (err) {
+        logger.debug?.('[xhh][图鉴] 读 gslogs.yaml 失败，武器退回 id 降序:', err?.message || err);
+    }
+    gsUpRankCache = map;
+    return map;
+}
+
+function sortWeaponEntries(weapons, isSr = false, isGs = false) {
     const entries = Object.entries(weapons || {}).filter(([, w]) => w?.zh);
+    // 原神：分三段 —— 有卡池时间的按时间新到旧，其次「真化」皮肤，
+    // 最后是没卡池记录的开服期常驻。皮肤单独成段是因为它的本体是 4★，
+    // gslogs 只记 5★ up，拿不到日期。
+    const gsRank = isGs ? getGsUpRank() : null;
+    const gsGroup = ([, w]) => {
+        if (gsRank.has(w.zh)) return 0;
+        return /_\{0\}$/.test(String(w.icon || '')) ? 1 : 2;
+    };
     return entries.sort((a, b) => {
         // 星铁的商店常驻 5★ 在游戏数据里是按「加入时间」排的 id，
         // 24xxx 整段 7 个正好一条命途一个，id 最大 → 纯 id 降序会把
@@ -226,6 +271,14 @@ function sortWeaponEntries(weapons, isSr = false) {
             const sa = SR_STANDARD_LC.has(a[1]?.zh) ? 1 : 0;
             const sb = SR_STANDARD_LC.has(b[1]?.zh) ? 1 : 0;
             if (sa !== sb) return sa - sb;
+        }
+        if (gsRank) {
+            const ga = gsGroup(a), gb = gsGroup(b);
+            if (ga !== gb) return ga - gb;
+            if (ga === 0) {
+                const d = gsRank.get(a[1].zh) - gsRank.get(b[1].zh);
+                if (d) return d;
+            }
         }
         return numId(b[0]) - numId(a[0]);
     });
@@ -713,7 +766,7 @@ class mys {
         // 武器/光锥预排序，理由见 sortWeaponEntries 的注释。
         // 这里只排一次，wiki.js 的 list() 还会按星级排一次；
         // Array.sort 是稳定的，所以同星级内会保住这里的顺序。
-        const weaponEntries = sortWeaponEntries(weapons, !isGs);
+        const weaponEntries = sortWeaponEntries(weapons, !isGs, isGs);
 
         let gz_list = [], wq_list = [];
         if (isGs) {
