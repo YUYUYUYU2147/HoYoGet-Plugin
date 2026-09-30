@@ -19,6 +19,12 @@
 /** 去掉 nanoka/米游社的富文本标签 */
 function stripTags(s) {
     return String(s ?? '')
+        // 字面两字符 "\n"：nanoka 的 JSON 里描述字段存的是转义换行，
+        // parse 后仍残留 \n 两个字符（不是真换行），必须显式还原。
+        // 实测 152 个原神角色里 150 个、99 个星铁角色全部存在。
+        .replace(/\\n/g, '\n')
+        .replace(/\\r/g, '')
+        .replace(/\\t/g, ' ')
         .replace(/<color=[^>]*>/g, '')
         .replace(/<\/color>/g, '')
         .replace(/<unbreak>/g, '')
@@ -48,7 +54,16 @@ function fillSrDesc(desc, params) {
     });
 }
 
-/** 按格式串（F1P / F1 / P）还原原神技能描述 */
+/**
+ * 按格式串还原原神技能描述。
+ *
+ * 格式码实测共 6 种（扫 152 个原神 + 99 个星铁角色的全部详情 json）：
+ *   F1P 23952   F1 11613   P 9423   I 3645   F2P 1170   F2 77
+ * 命名规则为 F{小数位数} + 可选 P（百分比）。此前只认 F1P / P / F1 / F，
+ * F2P 与 F2 落到兜底 num()：F2P 的 0.0035 被 toFixed(1) 成 0，
+ * 页面上出现「气氛值转化提升伤害比例：0」。改为按 F(\d+)P? 解析，
+ * 小数位数不再需要逐个补。
+ */
 function fillGsDesc(lines, params) {
     const arr = Array.isArray(params) ? params : [];
     return (Array.isArray(lines) ? lines : []).map(line => {
@@ -56,15 +71,22 @@ function fillGsDesc(lines, params) {
         if (!tpl) return stripTags(label);
         const text = tpl.replace(/\{param(\d+):([^}]+)\}/g, (m, idx, fmt) => {
             const v = arr[Number(idx) - 1];
-            if (v == null) return '—';
+            if (v == null) return '\u2014';
             const n = Number(v);
-            if (fmt === 'F1P') return `${(n * 100).toFixed(1)}%`;
+            if (!Number.isFinite(n)) return String(v);
+            const f = /^(?:F(\d+)(P)?|P|I|F)$/.exec(fmt);
+            if (!f) return num(n);
+            if (f[3] === 'I') return String(Math.round(n));
             if (fmt === 'P') return `${Math.round(n * 100)}%`;
-            if (fmt === 'F1') return n.toFixed(1);
-            if (fmt === 'F') return String(Math.round(n));
-            return num(n);
+            if (fmt === 'F') return num(n);
+            // 不做 Number() 归一：F1P 表示固定 1 位小数，游戏内确实显示
+            // 「117.0%」而不是「117%」，尾零必须保留。d=1 时的行为与原实现
+            // （F1P → toFixed(1)、F1 → toFixed(1)）完全一致。
+            const digits = Number(f[1] || 1);
+            const val = f[2] === 'P' ? n * 100 : n;
+            return `${val.toFixed(digits)}${f[2] === 'P' ? '%' : ''}`;
         });
-        return `${stripTags(label)}：${text}`;
+        return `${stripTags(label)}\uff1a${text}`;
     }).filter(Boolean);
 }
 
