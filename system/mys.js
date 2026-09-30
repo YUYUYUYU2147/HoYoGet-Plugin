@@ -217,6 +217,20 @@ const releaseRank = (c, id, isUnreleased = false) => {
     return Number.isFinite(t) && t >= 946684800 ? t : 0;
 };
 
+
+// 星铁商店常驻 5★ 光锥，共 14 个（黑塔商店「超过 16 张给星轨通票」，
+// 现有 14 张，与该说法吻合）。
+// nanoka 的 lightcone.json 只有 rank/baseType/en/atk/desc/ko/zh/ja，
+// 没有常驻标记也没有上线时间，所以只能按名字认。
+// 分两批进游戏：早期 7 个在 23xxx，记忆/欢愉命途那批在 24xxx。
+const SR_STANDARD_LC = new Set([
+    // 黑塔商店（较新）
+    '记一位星神的陨落', '星海巡航', '记忆的质料', '孤独的疗愈',
+    '不息的演算', '记忆永不落幕', '欢愉满溢祝福',
+    // 早期常驻（星芒兑换，同属常驻）
+    '无可取代的东西', '如泥酣眠', '银河铁道之夜', '但战斗还未结束',
+    '制胜的瞬间', '以世界之名', '时节不居',
+]);
 // 原神武器的上线时间，来源是 system/default/gslogs.yaml 的卡池记录。
 // nanoka 本身没有任何时间字段，这一点已穷尽确认：
 //   weapon.json 只有 icon/rank/type/en/atk/sub/desc/ko/zh/ja/skin/tag；
