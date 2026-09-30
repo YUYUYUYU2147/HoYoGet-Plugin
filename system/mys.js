@@ -215,132 +215,80 @@ const SR_STANDARD_LC = new Set([
     '无可取代的东西', '如泥酣眠', '银河铁道之夜', '但战斗还未结束',
     '制胜的瞬间', '以世界之名', '时节不居',
 ]);
-// 原神武器没有「上线时间」可用，这点已经穷尽确认过：
-//   weapon.json 无时间字段；zh/weapon/{id}.json 也没有；
-//   gi.nanoka.cc/weapon/{id} 页面只加载 3 个数据源，都没有时间。
-// id 段虽然按武器类型分块（11xxx 单手剑 / 12xxx 双手剑 / 13xxx 长枪 /
-// 14xxx 法器 / 15xxx 弓，31xxx–35xxx 是「真化」皮肤），但实测同类型内
-// id 递增并不等于时间递增，59 个相邻对里 22 个违反。
+// 原神武器的上线时间，来源是 system/default/gslogs.yaml 的卡池记录。
+// nanoka 本身没有任何时间字段，这一点已穷尽确认：
+//   weapon.json 只有 icon/rank/type/en/atk/sub/desc/ko/zh/ja/skin/tag；
+//   zh/weapon/{id}.json 也没有；
+//   gi.nanoka.cc/weapon/{id} 页面只加载 3 个数据源，都没有。
+// 而且 id 段虽按武器类型分块（11xxx 单手剑 / 12xxx 双手剑 / 13xxx 长枪 /
+// 14xxx 法器 / 15xxx 弓，31xxx–35xxx 是「真化」皮肤），同类型内 id 递增
+// 并不等于时间递增 —— 实测 59 个相邻对里 22 个违反。
 //
-// 所以排序分三档（注意：这是「卡池出现顺序」，不是「上线时间」，
-// 因为 gslogs 的日期会被返场污染 —— 62 个 up 角色里 53 个卡池日期
-// 和 release 对不上，钟离 release=2020-12-02 却出现在 4.0下半卡池）：
-//   0 有卡池记录 → 按卡池首次出现，新到旧
-//   1 「真化」皮肤（本体是 4★，gslogs 只记 5★ up，拿不到日期）
-//   2 无卡池记录 → 按 id 降序沉底
-// 卡池时间取自 system/default/gslogs.yaml：每个 key 自带起止日期，
-// value 是 [up角色, 4星角色, "up武器,4星武器"]，第 3 项逗号分隔的第一个
-// 就是当期 5★ up 武器。该文件由 apps/gacha_pool.js 每次刷新卡池后自动
-// 更新，运行时读，不写死顺序，新版本上线不用改代码。
+// 卡池日期本身会被返场污染（62 个 up 角色里 53 个的卡池日期和角色 release
+// 对不上，钟离 release=2020-12-02 却出现在 4.0下半卡池，差 1007 天），
+// 所以不能直接用「卡池日期」。这里的做法是：
+//   把所有卡池按解析出的起止日期【升序】排一遍，取每把武器的【首次出现】
+//   作为它的首发日期。返场晚于首发，只会影响重复项，首次出现即首发。
+// ⚠️ 不能靠反序遍历文件来近似：文件里存在重复日期的条目
+//    （【月之五下半】和【6.4下半】都是 2026/03/17），文件顺序不等于时间顺序。
+// 排序必须按解析出的日期显式做。
+// 该文件由 apps/gacha_pool.js 每次刷新卡池后自动更新，运行时读，
+// 不写死顺序，新版本上线不用改代码。
 const GS_LOGS_YAML = './plugins/xhh/system/default/gslogs.yaml';
-let gsUpRankCache = null;
-let gsCharCache = null;
-let gsUnreleasedCache = null;
+let gsDebutCache = null;
 
-const GS_WEAPON_KIND = /UI_EquipIcon_(Sword|Claymore|Pole|Catalyst|Bow)_/;
-// character.json 的 weapon 字段用的是游戏内枚举名，和 icon 里的简称不是一套：
-//   WEAPON_SWORD_ONE_HAND→Sword  WEAPON_SWORD_TWO_HAND→Claymore
-//   WEAPON_POLE→Pole  WEAPON_CATALYST→Catalyst  WEAPON_BOW→Bow
-const GS_KIND_OF_WEAPON_ENUM = {
-    WEAPON_SWORD_ONE_HAND: 'Sword',
-    WEAPON_SWORD_TWO_HAND: 'Claymore',
-    WEAPON_POLE: 'Pole',
-    WEAPON_CATALYST: 'Catalyst',
-    WEAPON_BOW: 'Bow',
-};
+// 未上线（测试服）武器：数据里没有任何信号能自动认出来 ——
+// 这些武器按定义不会出现在任何卡池记录里，和「开服期常驻武器」
+// 一样都是「无记录」，光看数据分不开。曾试过用未上线角色的 weapon 类型
+// 反查，实测是错的：唯一命中的是「星锋剑」，而它是主角的专武
+// （描述里写 In the voyager's hand，皮肤 390002/390003 标 skin:true
+//  并注明只能装备给旅行者），不是瓦列里的。
+// 所以这里只维护一份已确认的名单，新增测试服武器时手动补一行。
+// 与角色「未上线置顶」保持一致。
+const GS_UNRELEASED_W = new Set([
+    '秘星典谕',   // 米提亚(法器)的专武，7.1.51 数据里角色 release=1970、武器无任何卡池记录
+]);
 
-/** 武器中文名 → 卡池序号（0 = 最新）。读不到返回空 Map，退化成原来的 id 降序。 */
-function getGsUpRank() {
-    if (gsUpRankCache) return gsUpRankCache;
+/** 武器中文名 → 首发时间戳(ms)。读不到返回空 Map，退化成 id 降序。 */
+function getGsDebut() {
+    if (gsDebutCache) return gsDebutCache;
     const map = new Map();
     try {
         const data = YAML.parse(fs.readFileSync(GS_LOGS_YAML, 'utf-8'));
         const banners = data?.date;
         if (banners && typeof banners === 'object') {
-            Object.values(banners).forEach((lists, i) => {
+            const dated = Object.entries(banners)
+                .map(([key, lists]) => {
+                    const m = String(key).match(/(\d{4})\/(\d{1,2})\/(\d{1,2})/);
+                    if (!m) return null;
+                    const t = Date.parse(`${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}T00:00:00Z`);
+                    return Number.isFinite(t) ? [t, lists] : null;
+                })
+                .filter(Boolean)
+                .sort((a, b) => a[0] - b[0]);
+            for (const [t, lists] of dated) {
                 const up5 = String(lists?.[2] || '').split(',')[0].trim();
-                if (up5 && !map.has(up5)) map.set(up5, i);
-            });
+                if (up5 && !map.has(up5)) map.set(up5, t);
+            }
         }
     } catch (err) {
         logger.debug?.('[xhh][图鉴] 读 gslogs.yaml 失败，武器退回 id 降序:', err?.message || err);
     }
-    gsUpRankCache = map;
+    gsDebutCache = map;
     return map;
 }
 
-/**
- * 未上线角色（release 是 1970 占位）的专武 → 武器中文名集合。
- *
- * 为什么需要单独找：这些武器按定义不可能出现在任何已记录卡池里，会掉进
- * 「无卡池记录」那档跟开服期常驻混在一起沉底（实测 14525 秘星典谕排到
- * 86 把五星的第 70 位）。而角色那边是「未上线置顶」，武器这边应该一致。
- *
- * 怎么找：数据里没有 weapon→character 的直接关联 ——
- * 逐武器详情的 story id（294525）和角色详情的 stories（0..7 索引）对不上，
- * 武器 icon 的代号和角色 icon 的代号也不是一套命名
- * （米提亚 Mitya vs 秘星典谕 Chernaya、恰斯卡 Chasca vs 星鹫赤羽 Qoyllorsnova），
- * 靠代号反查有 60 多把五星的假阳性，没有区分力。
- *
- * 用的是可证伪的间接规则：未上线角色的 weapon 字段只给类型
- * （米提亚 WEAPON_CATALYST、瓦列里 WEAPON_SWORD_ONE_HAND），
- * 于是对每个「有未上线角色的武器类型」，取该类型下无卡池记录里 id 最大的那把。
- * 落到实测上区分度很干净：
- *   单手剑 星锋剑 11521 → 下一个无记录的是 11504，断档 17
- *   法器   秘星典谕 14525 → 下一个是 14504，断档 21
- *   其余无记录的都连号（11504/11502/11501、12504/12502/12501…），断档 1~2
- * 双手剑/长枪/弓 没有未上线角色，所以完全不碰。
- */
-async function getGsUnreleasedWeapons(weapons) {
-    if (gsUnreleasedCache) return gsUnreleasedCache;
-    const set = new Set();
-    try {
-        const base = await nanokaBase('gi');
-        if (!base) return (gsUnreleasedCache = set);
-        if (!gsCharCache) {
-            const res = await fetch(`${base}/character.json`).then(r => (r.ok ? r.json() : null)).catch(() => null);
-            gsCharCache = res || {};
-        }
-        // 未上线角色 → 武器类型
-        const kinds = new Set();
-        for (const c of Object.values(gsCharCache)) {
-            if (!c?.zh || !c.weapon) continue;
-            const rel = String(c.release ?? c.chara_info?.release_date ?? '');
-            const t = Date.parse(String(rel).replace(' ', 'T') + 'Z');
-            const unreleased = !Number.isFinite(t) || t < 946684800;
-            if (unreleased) kinds.add(GS_KIND_OF_WEAPON_ENUM[String(c.weapon)] || String(c.weapon));
-        }
-        if (!kinds.size) return (gsUnreleasedCache = set);
-        // 每种类型取「无卡池记录 + id 最大」的那把
-        const logged = getGsUpRank();
-        const best = new Map();
-        for (const [id, w] of Object.entries(weapons || {})) {
-            if (!w?.zh || Number(w.rank) !== 5) continue;
-            if (/_\{0\}$/.test(String(w.icon || ''))) continue;   // 真化皮肤不算
-            if (logged.has(w.zh)) continue;                      // 有卡池记录的不算
-            const m = String(w.icon || '').match(GS_WEAPON_KIND);
-            const kind = m?.[1] || '';
-            if (!kinds.has(kind)) continue;
-            const n = numId(id);
-            if (!best.has(kind) || n > best.get(kind).id) best.set(kind, { id: n, zh: w.zh });
-        }
-        for (const v of best.values()) set.add(v.zh);
-    } catch (err) {
-        logger.debug?.('[xhh][图鉴] 判定未上线角色专武失败:', err?.message || err);
-    }
-    gsUnreleasedCache = set;
-    return set;
-}
-
-function sortWeaponEntries(weapons, isSr = false, isGs = false, gsUnreleased = null) {
+function sortWeaponEntries(weapons, isSr = false, isGs = false) {
     const entries = Object.entries(weapons || {}).filter(([, w]) => w?.zh);
-    // 原神分四段：未上线角色的专武最前（与角色「未上线置顶」一致），
-    // 其次有卡池记录的按卡池首次出现新到旧，再次「真化」皮肤
-    // （本体是 4★，gslogs 只记 5★ up，拿不到日期），最后无记录沉底。
-    const gsRank = isGs ? getGsUpRank() : null;
+    // 原神分四段，规则和角色那边一致（未上线置顶，其余按上线时间新→旧）：
+    //   -1 已确认的未上线/测试服武器（名单见 GS_UNRELEASED_W）
+    //    0 有首发日期的，按首发日期新→旧
+    //    1 「真化」皮肤：本体是 4★，gslogs 只记 5★ up，拿不到日期
+    //    2 完全没有卡池记录的开服期常驻武器
+    const gsDebut = isGs ? getGsDebut() : null;
     const gsGroup = ([, w]) => {
-        if (gsUnreleased?.has(w.zh)) return -1;
-        if (gsRank.has(w.zh)) return 0;
+        if (GS_UNRELEASED_W.has(w.zh)) return -1;
+        if (gsDebut.has(w.zh)) return 0;
         return /_\{0\}$/.test(String(w.icon || '')) ? 1 : 2;
     };
     return entries.sort((a, b) => {
@@ -353,11 +301,12 @@ function sortWeaponEntries(weapons, isSr = false, isGs = false, gsUnreleased = n
             const sb = SR_STANDARD_LC.has(b[1]?.zh) ? 1 : 0;
             if (sa !== sb) return sa - sb;
         }
-        if (gsRank) {
+        if (gsDebut) {
             const ga = gsGroup(a), gb = gsGroup(b);
             if (ga !== gb) return ga - gb;
             if (ga === 0) {
-                const d = gsRank.get(a[1].zh) - gsRank.get(b[1].zh);
+                // 时间戳越大越新，所以要 b - a（升序会变成最旧在前）
+                const d = gsDebut.get(b[1].zh) - gsDebut.get(a[1].zh);
                 if (d) return d;
             }
         }
@@ -847,7 +796,7 @@ class mys {
         // 武器/光锥预排序，理由见 sortWeaponEntries 的注释。
         // 这里只排一次，wiki.js 的 list() 还会按星级排一次；
         // Array.sort 是稳定的，所以同星级内会保住这里的顺序。
-        const weaponEntries = sortWeaponEntries(weapons, !isGs, isGs, isGs ? await getGsUnreleasedWeapons(weapons) : null);
+        const weaponEntries = sortWeaponEntries(weapons, !isGs, isGs);
 
         let gz_list = [], wq_list = [];
         if (isGs) {
