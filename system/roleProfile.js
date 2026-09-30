@@ -115,6 +115,20 @@ export async function getRoleProfile(e, uid, game) {
         // 接口回传的 region 比我们推算的更准（有B服/渠道服时推算不出来）
         const region = d.region || d.role?.region || '';
         if (region) out.serverName = serverName(region);
+
+        // 星铁的 index 确实不带 nickname，但 avatar 藏在 avatar_info/avatars 里
+        // （所以头像有、昵称空）。昵称要另外找 basicInfo。
+        // 注意 basicInfo 这个 key 只对星铁安全：原神同名 key 指的是
+        // game_record/app/genshin/api/gcg/basicInfo（七圣召唤），
+        // 跟角色资料完全不相干，不能通用化。
+        if (!out.nickname && game === 'sr') {
+            const bi = await MysInfo.get(e, 'basicInfo', {}, { log: false, game });
+            if (bi?.retcode === 0 && bi?.data) {
+                out.nickname = findNickname(bi.data) || out.nickname;
+                out.avatar = findFaceUrl(bi.data) || out.avatar;
+                out.userLevel = Number(bi.data?.level || 0) || out.userLevel;
+            }
+        }
     } catch (err) {
         logger.debug?.('[xhh][资料] 获取玩家资料失败:', err?.message || err);
     } finally {
