@@ -207,16 +207,21 @@ function sortWeaponEntries(weapons) {
         .sort((a, b) => numId(b[0]) - numId(a[0]));
 }
 
-// 星铁方形头像：avataricon/avatar/{角色id}.webp（160×188，头部+肩部特写）。
-// 和原神一样用方形的 —— 列表头像框是 90×90 + border-radius:10px，不是圆形，
-// 圆形图（avatarroundicon，128×128 四角透明）会被圆角削掉一圈白边。
-// 全量实测（99 个角色）：
-//   avataricon/avatar   95/99   ← 用这个，缺 1507 1511 1512 1513
-//   avatarroundicon     99/99   ← 兜底，覆盖面最广
-//   avatarshopicon      98/99   缺 1224
-//   gridfight/icon      10/99
-const nanokaSrIconSquare = id => (id ? `${NANOKA_ASSET}/hsr/avataricon/avatar/${id}.webp` : '');
-const nanokaSrRoundIcon = id => (id ? `${NANOKA_ASSET}/hsr/avatarroundicon/${id}.webp` : '');
+// 星铁头像：avatarshopicon/{角色id}.webp（376×512 商店立绘，顶部是脸部特写）。
+// 列表按 90×90 + object-fit:cover + object-position:top center 裁，正好取到脸。
+//
+// 四个候选全量实测（99 个角色，每个都单独发请求确认过）：
+//   avatarshopicon     99/99  ← 用这个，零缺失
+//   avatarroundicon    99/99  但 128×128 四角透明，会被圆角削掉一圈白边
+//   avataricon/avatar  95/99  缺 1507 1511 1512 1513
+//   gridfight/icon     10/99
+//
+// 之前选了 avataricon/avatar（方形脸部）再加 avatarroundicon 兜底，
+// 结果那 4 个角色要走一次 404 才有图，截图时机不对就显示空白。
+// 改成 shopicon 之后 99 个角色同一套源、零 404、不需要兜底链。
+// （上一版注释里写「avatarshopicon 98/99 缺 1224」是测错了 ——
+//   那轮只抽查了部分样本，1224 实测是 200。）
+const nanokaSrAvatar = id => (id ? `${NANOKA_ASSET}/hsr/avatarshopicon/${id}.webp` : '');
 const nanokaSrLcIcon = id => (id ? `${NANOKA_ASSET}/hsr/lightconemaxfigures/${id}.webp` : '');
 const nanokaSrSkillIcon = (id, kind) => (id && kind ? `${NANOKA_ASSET}/hsr/skillicons/SkillIcon_${id}_${kind}.webp` : '');
 
@@ -656,7 +661,7 @@ class mys {
             // 两个游戏都用方形头像：原神 UI_AvatarIcon_XXX，星铁 avataricon/avatar/{id}。
             // 方形贴方形框（90×90 + border-radius:10px），圆形图四角透明会被圆角削掉。
             // 两边都同源 nanoka，不会再出现两套 id 撞号查错人。
-            const icon = isGs ? nanokaGsIcon(c.icon) : nanokaSrIconSquare(id);
+            const icon = isGs ? nanokaGsIcon(c.icon) : nanokaSrAvatar(id);
             const strings = isGs
                 ? [`星级/${gsRarityCn(c.rank)}`, `元素/${GS_ELEMENT_CN[c.element] || ''}`, `武器/${GS_WEAPON_CN[c.weapon] || ''}`]
                 : [`星级/${srRarityCn(c.rank)}`, `命途/${SR_PATH_CN[c.baseType] || ''}`, `属性/${SR_DAMAGE_CN[c.damageType] || ''}`];
@@ -665,12 +670,10 @@ class mys {
                 title: cleanNanokaName(c.zh) || c.en || id,
                 icon,
                 // 兜底链由 list.html 的 onerror 逐级切换（mys.data() 负责把
-                // iconFallback 透传下来，缺了这条链整段就是死的）：
-                // 原神方形版万一缺图 → 回落 _Circle（131/152）；
-                // 星铁方形版缺 4 个 → 回落 avatarroundicon（99/99），再缺 → 回落立绘。
-                iconFallback: isGs
-                    ? nanokaGsIconCircle(c.icon)
-                    : [nanokaSrRoundIcon(id), nanokaSrIcon(id)].filter(Boolean).join(','),
+                // iconFallback 透传下来，缺了这条链整段就是死的）。
+                // 星铁不需要了：avatarshopicon 全量 99/99，零缺失、零 404。
+                // 原神保留一层 _Circle 兜底（实测 131/152，比基础版少 21 个）。
+                iconFallback: isGs ? nanokaGsIconCircle(c.icon) : '',
                 aliases: [c.code, c.en, c.codename].filter(v => v && v !== c.zh),
                 ext: makeExt(strings, icon)
             };
