@@ -36,6 +36,32 @@ const NANOKA_RETRY_MS = 60 * 60 * 1000;
 let nanokaDownUntil = 0;
 const nanokaDown = () => Date.now() < nanokaDownUntil;
 const markNanokaDown = () => { nanokaDownUntil = Date.now() + NANOKA_RETRY_MS; };
+
+/**
+ * 判断错误是否为「网络/接口类」失败。
+ *
+ * markNanokaDown 的冷却是 1 小时且为全局：一旦触发，期间所有原神/星铁图鉴
+ * 都会跳过 nanoka、退回米游社官方 Wiki，渲染成旧模板（只有材料那版）。
+ * 因此只有真正的网络/接口失败才允许触发它。
+ *
+ * 起因：一次 ReferenceError（批量编辑时误删了 SR_STANDARD_LC 的定义）
+ * 走进 catch 后触发 markNanokaDown，把一个语法级 bug 放大成 1 小时全局故障，
+ * 而且被 fallback 伪装成「wiki 无此角色条目」，未上线角色（官方源没有）
+ * 随之整批消失，现场完全看不出是代码问题。
+ *
+ * 代码 bug（ReferenceError / TypeError / SyntaxError / RangeError）不在此列，
+ * 应当直接抛出，让错误暴露在日志里。
+ */
+const isTransientNetError = err => {
+    if (!err) return false;
+    if (err.name === 'AbortError' || err.name === 'TimeoutError') return true;
+    const code = err.code || err.errno || '';
+    if (['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'EAI_AGAIN', 'ENOTFOUND', 'EPIPE', 'UND_ERR_SOCKET',
+        'UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT'].includes(String(code))) return true;
+    const msg = String(err.message || '');
+    return /fetch failed|network|ECONN|ETIMEDOUT|socket hang up|非 JSON|返回非 JSON|HTTP\s*5\d\d|timed?\s*out/i.test(msg);
+};
+
 const ZZZ_ITEM_ICON_CACHE = './plugins/xhh/temp/zzz_item_icons';
 const localFileUrl = file => `file://${process.cwd()}/${String(file).replace(/^\.\//, '')}`;
 // 邦布本地补图目录：resources/xhh/wiki/zzz_bangboo/<邦布名>.png|webp|jpg
@@ -719,7 +745,8 @@ class mys {
                 if (data && (data.js_list?.length || data.gz_list?.length || data.wq_list?.length)) return data;
                 logger.warn?.('[xhh][图鉴] nanoka 返回空，回退米游社官方 Wiki');
             } catch (error) {
-                markNanokaDown();
+                // 仅网络/接口类失败才全局降级，代码 bug 直接抛出（见 isTransientNetError）
+                if (isTransientNetError(error)) markNanokaDown();
                 logger.error('原神/星铁 nanoka 图鉴访问失败，切换米游社官方 Wiki:', error);
             }
         }
@@ -957,7 +984,7 @@ class mys {
                 })
             };
         } catch (error) {
-            markNanokaDown();
+            if (isTransientNetError(error)) markNanokaDown();
             logger.error('ZZZ nanoka访问失败，切换米游社官方 Wiki:', error);
             return await this.zzz_official_tujian();
         }
@@ -1505,7 +1532,8 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
                 if (data) return data;
                 logger.warn?.('[xhh][图鉴] nanoka 详情为空，回退米游社官方 Wiki');
             } catch (error) {
-                markNanokaDown();
+                // 仅网络/接口类失败才全局降级，代码 bug 直接抛出（见 isTransientNetError）
+                if (isTransientNetError(error)) markNanokaDown();
                 logger.error('原神/星铁 nanoka 详情访问失败，切换米游社官方 Wiki:', error);
             }
         }
@@ -1613,7 +1641,7 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
             }
             return { content: res };
         } catch (error) {
-            markNanokaDown();
+            if (isTransientNetError(error)) markNanokaDown();
             logger.error('ZZZ nanoka详情访问失败，切换米游社官方 Wiki:', error);
             try {
                 return await this.zzz_official_detail(id, type);
