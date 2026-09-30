@@ -1103,7 +1103,12 @@ export class Wiki extends plugin {
         break;
       }
     }
-    if (Object.keys(_name).includes(name)) {
+    // 本地 yaml 只做别名归一，不再当准入门槛。
+    // 以前用 Object.keys(_name).includes(name) 卡一道，结果是 yaml 里没有的套装
+    // 一律 return false —— 而 syw.yaml 只有 59 个、yiqi.yaml 只有 54 个，
+    // 都少于 nanoka 的 65 / 64 套，新出的套装就这么被挡在门外。
+    // 名字没在 yaml 里就保持原样，交给下面的列表匹配（mys.data 会按 title 精确匹配）。
+    {
       let data = await mys.data(name, isZZZ ? 'syw' : isBH3 ? 'syw' : isSr ? 'yq' : 'syw', isSr, isZZZ, isBH3);
       if (!data) return false;
       if (Array.isArray(data)) {

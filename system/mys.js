@@ -442,6 +442,111 @@ const makeExt = (strings, icon) => {
     return JSON.stringify({ c_25: box, c_5: box, c_18: box, c_19: box, fallbackIcon: '' });
 };
 
+// 圣遗物/遗器的套装效果关键词，用来合成列表页的筛选标签。
+// 与米游社官方 Wiki 的「套装效果/x」同名，wiki.js 那边不用改。
+const SYW_EFFECT_TAGS = [
+    ['攻击力', /攻击力|攻击伤害/],
+    ['暴击率', /暴击/],
+    ['暴击伤害', /暴击伤害/],
+    ['元素伤害加成', /元素伤害|对应元素的伤害/],
+    ['反应伤害加成', /反应.*伤害|反应系数/],
+    ['生命值', /生命值|最大生命/],
+    ['防御力', /防御力/],
+    ['能量充能效率', /能量充能/],
+    ['治疗量', /治疗/],
+    ['异常精通', /异常精通/],
+    ['护盾强效', /护盾/],
+    ['伤害加成', /造成的伤害提升|伤害提高/]
+];
+const sywEffectTags = text => SYW_EFFECT_TAGS.filter(([, re]) => re.test(String(text || ''))).map(([k]) => `套装效果/${k}`);
+
+/**
+ * 星铁遗器描述带两种占位符，必须先还原再显示，否则详情页会印出 <unbreak>#1[i]%</unbreak>：
+ *   <unbreak></unbreak>  纯装饰标签，剥掉
+ *   #N[i]                 取 ParamList[N-1]。后面紧跟 % 的说明这个值是分数（0.06 → 6%），
+ *                        不跟的说明是整数（2 → 2 回合 / 2 层 / 5 点能量）
+ *   #N[f1]                同样是 ParamList 取值，实测只出现在英文里，中文未见
+ * 用 round(v*1000)/10 而不是 v*100，避开 0.07*100=7.000000000000001 这类浮点尾数。
+ * 顺序不能反：% 写在标签里面（<unbreak>#1[i]%</unbreak>），先剥标签就把 % 丢了，
+ * 0.1 会被当成整数直接输出成「治疗量提高0.1」。
+ */
+const hsrRelicText = (text, params = []) => String(text || '')
+    .replace(/#(\d+)\[[if]\d*\]\s*%?/g, (m, n) => {
+        const v = Number(params[Number(n) - 1]);
+        if (!Number.isFinite(v)) return '';
+        // 百分号紧跟在占位符之后（此时还没剥标签，% 可能被 <unbreak> 包着）就按分数换算，
+        // 换算完要把 % 补回去——正则里的 %? 已经把它吃掉了
+        return /\[\w+\]\s*%/.test(m) ? `${Math.round(v * 1000) / 10}%` : String(v);
+    })
+    .replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+/**
+ * 原神圣遗物套装列表（nanoka gi/artifact.json）。
+ * 套名在 set 各部件的 name.zh；set 的键末位区分件套（…0 是 2 件套、…1 是 4 件套），
+ * 四星套装只有 2 件套一条。rank 是可获取的星级档位，含 5 记五星。
+ * ext 按米游社格式给 c_218.table.list，wiki.js 的 syw_pictures 直接读它。
+ */
+const gsArtifactList = artifacts => Object.entries(artifacts || {}).map(([id, a]) => {
+    const set = a?.set || {};
+    const entries = Object.entries(set);
+    const zh = entries.map(([, p]) => p?.name?.zh).find(Boolean) || '';
+    // 键末位 0 = 2 件套、1 = 4 件套
+    const byTier = n => entries.find(([k]) => String(k).slice(-1) === String(n))?.[1]?.desc?.zh || '';
+    const two = byTier(0), four = byTier(1);
+    const rows = [
+        { key: '2件套', value: two },
+        { key: '4件套', value: four }
+    ].filter(v => v.value);
+    if (!zh || !rows.length) return null;
+    const icon = nanokaGsItemIcon(a.icon);
+    const star = (a.rank || []).includes(5) ? '五星' : '四星';
+    return {
+        content_id: String(id),
+        title: zh,
+        icon,
+        ext: JSON.stringify({
+            c_218: {
+                filter: { text: JSON.stringify([`星级/${star}`, ...sywEffectTags(`${two} ${four}`)]) },
+                picture: { list: icon ? [icon] : [] },
+                table: { list: rows }
+            }
+        })
+    };
+}).filter(Boolean);
+
+/**
+ * 星铁遗器套装列表（nanoka hsr/relicset.json）。
+ * 套名在顶层 zh，set 直接按 '2'/'4' 分件套。
+ * icon 字段是 SpriteOutput/ItemIcon/71060.png 这种资源路径，
+ * 试过 assets/hsr、assets/hsr/relicset、assets/hsr/itemfigures、版本目录四个 base 全 404，
+ * 所以留空走文字标签，不拼一个必然裂图的地址。
+ * ext 按米游社格式给 c_30，wiki.js 的 yiqi_pictures 读 picture.list 与 table.list。
+ */
+const hsrRelicsetList = relicsets => Object.entries(relicsets || {}).map(([id, r]) => {
+    const p2 = r?.set?.['2'] || {}, p4 = r?.set?.['4'] || {};
+    const two = hsrRelicText(p2.zh, p2.ParamList), four = hsrRelicText(p4.zh, p4.ParamList);
+    const zh = r?.zh || '';
+    const rows = [
+        { key: '2件套', value: two },
+        { key: '4件套', value: four }
+    ].filter(v => v.value);
+    if (!zh || !rows.length) return null;
+    return {
+        content_id: String(id),
+        title: zh,
+        icon: '',
+        ext: JSON.stringify({
+            c_30: {
+                filter: { text: JSON.stringify(sywEffectTags(`${two} ${four}`)) },
+                picture: { list: [] },
+                table: { list: rows }
+            }
+        })
+    };
+}).filter(Boolean);
+
 
 const BH3_WIKI_BASE = 'https://api-takumi-static.mihoyo.com/common/blackboard/bh3_wiki';
 const BH3_APP_SN = 'bh3_wiki';
@@ -775,15 +880,26 @@ class mys {
         if (!base) throw new Error('nanoka 版本号获取失败');
         const isGs = !isSr;
         const wqFile = isGs ? 'weapon.json' : 'lightcone.json';
-        const [chars, equips, weapons] = await Promise.all([
+        // 圣遗物/遗器走专用文件 artifact.json / relicset.json，不再要 zh/item.json
+        const relicFile = isGs ? 'artifact.json' : 'relicset.json';
+        const [chars, relics, weapons] = await Promise.all([
             this.fetchJson(`${base}/character.json`, `${game} nanoka角色`),
-            this.fetchJson(`${base}/zh/item.json`, `${game} nanoka物品`),
+            this.fetchJson(`${base}/${relicFile}`, `${game} nanoka${isGs ? '圣遗物' : '遗器'}`),
             this.fetchJson(`${base}/${wqFile}`, `${game} nanoka武器/光锥`)
         ]);
         if (!chars) throw new Error('nanoka 角色数据为空');
 
-        // 物品（圣遗物/遗器）按 nanoka 的数字 id 分组
-        const itemList = Object.values(equips || {}).filter(v => v && (v.name || v.icon));
+        // 圣遗物/遗器要用 nanoka 的专用文件，不能拿 zh/item.json：
+        //   原神 artifact.json   65 套，套名在 set 里各部件的 name.zh，
+        //                       set 的键末位区分件套（…0 是 2 件套、…1 是 4 件套）
+        //   星铁 relicset.json   64 套，套名在顶层 zh，set 直接按 '2'/'4' 分件套
+        // 而 zh/item.json 是道具表：原神 2132 条全是原石摩拉这类物品，一条圣遗物都没有
+        // （过滤条件 name||icon 会把它们全放进来，列表直接被杂物淹没）；
+        // 星铁那 1600 条的字段名是 item_name / item_figure_icon_path，
+        // name||icon 一个都匹配不上，列表会是空的。
+        // 米游社官方 Wiki 反而落后：圣遗物 63 条、遗器 60 条，比 nanoka 少 2 和 4 套，
+        // 缺的正是新出的那几套（实测 nanoka 是官方 Wiki 的严格超集）。
+        const relicList = isGs ? gsArtifactList(relics) : hsrRelicsetList(relics);
 
         // nanoka 把旅行者/奇偶的七个形态平铺成 xxx-2 ~ xxx-8（实测 28 条），
         // 而且 character.json 里**没有本体条目**（10000005 / 10000117 等都不存在），
@@ -844,13 +960,6 @@ class mys {
             };
         });
 
-        const equipList = itemList.map(it => ({
-            content_id: String(it.id ?? it.ID ?? ''),
-            title: it.name || '',
-            icon: isGs ? nanokaGsItemIcon(it.icon) : `${NANOKA_ASSET}/hsr/itemfigures/${it.id ?? it.ID}.webp`,
-            ext: makeExt([], '')
-        }));
-
         // 武器/光锥预排序，理由见 sortWeaponEntries 的注释。
         // 这里只排一次，wiki.js 的 list() 还会按星级排一次；
         // Array.sort 是稳定的，所以同星级内会保住这里的顺序。
@@ -887,7 +996,9 @@ class mys {
 
         return {
             js_list,
-            ...(isGs ? { wq_list, syw_list: equipList, yq_list: equipList } : { gz_list, yq_list: equipList })
+            // 圣遗物走 artifact.json，遗器走 relicset.json；原神侧 yq_list 沿用旧行为，
+            // 与 syw_list 同源（「遗器」命令会强制 isSr，原神这条实际不会被用到）
+            ...(isGs ? { wq_list, syw_list: relicList, yq_list: relicList } : { gz_list, yq_list: relicList })
         };
     }
 
