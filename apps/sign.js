@@ -126,11 +126,13 @@ export class Sign extends plugin {
     }
 
     async sign(e) {
-        if (!config().sign) return false;
+        // 手动签到跟随 zd_sign 开关。关掉时返回 false，把命令让给其他插件（如 ji-plugin）
+        // sign 是群号到QQ列表的白名单映射，不是开关，不能拿它判断
+        const signCfg = yaml.get('./plugins/xhh/config/sign.yaml') || {};
+        if (!Number(signCfg.zd_sign)) return false;
         if (signing) return e.reply('有签到任务进行中, 过会儿再试吧！');
         if (e.isGroup) {
-            const signData = yaml.get('./plugins/xhh/config/sign.yaml');
-            const wl = signData.sign_group || [];
+            const wl = signCfg.sign_group || [];
             if (wl.length > 0 && !wl.includes(String(e.group_id)) && !wl.includes(Number(e.group_id))) {
                 return e.reply(`本群不在游戏签到白名单里，已跳过（白名单：${wl.join('、')}）\n可在锅巴「签到设置 → 游戏签到白名单群」里增删，或清空表示不限制`, true, { recallMsg: 120 });
             }
@@ -218,17 +220,16 @@ export class Sign extends plugin {
     }
 
     async bbsSign(e) {
-        if (!config().sign) {
-            await e.reply('签到功能未开启，请在配置里把 sign 设为 true 后再试', true, { recallMsg: 60 });
-            return false;
-        }
+        // 手动社区签到跟随 bbs_zd_sign 开关。关掉时静默返回 false，把命令让给其他插件
+        // sign 是群号到QQ列表的白名单映射，不是开关，把它设成 true 会让白名单失效
+        const bbsCfg = yaml.get('./plugins/xhh/config/sign.yaml') || {};
+        if (!Number(bbsCfg.bbs_zd_sign)) return false;
         if (signing || bbsSigning) {
             await e.reply('有签到任务进行中, 过会儿再试吧！');
             return false;
         }
         if (e.isGroup) {
-            const signData = yaml.get('./plugins/xhh/config/sign.yaml') || {};
-            const wl = signData.bbs_sign_group || [];
+            const wl = bbsCfg.bbs_sign_group || [];
             if (wl.length > 0 && !wl.includes(String(e.group_id)) && !wl.includes(Number(e.group_id))) {
                 // 之前这里直接静默返回，群里看起来就是「指令没反应」，补一句提示便于排查
                 return e.reply(`本群不在社区签到白名单里，已跳过（白名单：${wl.join('、')}）\n可在锅巴「签到设置 → 社区签到白名单群」里增删，或清空表示不限制`, true, { recallMsg: 120 });
