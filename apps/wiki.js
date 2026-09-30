@@ -256,7 +256,8 @@ export class Wiki extends plugin {
       '物理': 'sr_物理.png', '火': 'sr_火.png', '冰': 'sr_冰.png',
       '雷': 'sr_雷.png', '风': 'sr_风.png', '量子': 'sr_量子.png', '虚数': 'sr_虚数.png',
       '毁灭': '毁灭.png', '巡猎': '巡猎.png', '智识': '智识.png', '同谐': '同谐.png',
-      '虚无': '虚无.png', '存护': '存护.png', '丰饶': '丰饶.png', '记忆': '记忆.png'
+      '虚无': '虚无.png', '存护': '存护.png', '丰饶': '丰饶.png', '记忆': '记忆.png',
+      '欢愉': '欢愉.png'
     };
     const zzzIconMap = {
       '物理': 'zzz_物理.png',
