@@ -664,6 +664,110 @@ export class Wiki extends plugin {
           _name = '星尘角色';
           break;
       }
+    } else if (isSr) {
+      // 星铁此前完全没有分档分支，#光锥五星 / #遗器四星 一律返回全量列表。
+      // 属性按 shuxing 取（nanoka 角色 ext 给的是 属性/{damageType}），命途按 mingtu 取。
+      // 不是 yuanshu —— 星铁角色的 ext 里只有 命途/ 与 属性/、没有 元素/，
+      // 所以原先混在 BH3 分支里按 yuanshu 过滤的量子、虚数那几条是双重死代码：
+      // 分支进不去，字段也永远取不到值。那几条留在原处不动，避免动到既有分支。
+      const srNoun = type === 'gz' ? '光锥' : type === 'yq' ? '遗器' : '角色';
+      // 遗器套装在两个数据源里都没有星级标签：nanoka relicset.json 的 ext 只有套装效果，
+      // 官方 sr_wiki 频道 30 的 60 条也只有套装种类与套装效果，ji 恒为空。
+      // 这种列表不参与分档筛选，否则 #遗器五星 会从 64 条直接变成 0 条。
+      const srTierable = data.some(it => it.ji);
+      switch (condition) {
+        case '五星':
+        case '五星':
+          if (srTierable) data = data.filter(item => item.ji === '五星');
+          _name = `五星${srNoun}`;
+          break;
+        case '四星':
+        case '四星':
+          if (srTierable) data = data.filter(item => item.ji === '四星');
+          _name = `四星${srNoun}`;
+          break;
+        case '三星':
+        case '三星':
+          if (srTierable) data = data.filter(item => item.ji === '三星');
+          _name = `三星${srNoun}`;
+          break;
+        case '物理':
+          data = data.filter(item => item.shuxing === '物理');
+          _name = '物理角色';
+          break;
+        case '物理系':
+          data = data.filter(item => item.shuxing === '物理');
+          _name = '物理角色';
+          break;
+        case '火':
+          data = data.filter(item => item.shuxing === '火');
+          _name = '火角色';
+          break;
+        case '冰':
+          data = data.filter(item => item.shuxing === '冰');
+          _name = '冰角色';
+          break;
+        case '雷':
+          data = data.filter(item => item.shuxing === '雷');
+          _name = '雷角色';
+          break;
+        case '风':
+          data = data.filter(item => item.shuxing === '风');
+          _name = '风角色';
+          break;
+        case '虚数':
+          data = data.filter(item => item.shuxing === '虚数');
+          _name = '虚数角色';
+          break;
+        case '虚数系':
+          data = data.filter(item => item.shuxing === '虚数');
+          _name = '虚数角色';
+          break;
+        case '量子':
+          data = data.filter(item => item.shuxing === '量子');
+          _name = '量子角色';
+          break;
+        case '量子系':
+          data = data.filter(item => item.shuxing === '量子');
+          _name = '量子角色';
+          break;
+        case '存护':
+          data = data.filter(item => item.mingtu === '存护');
+          _name = '存护角色';
+          break;
+        case '巡猎':
+          data = data.filter(item => item.mingtu === '巡猎');
+          _name = '巡猎角色';
+          break;
+        case '智识':
+          data = data.filter(item => item.mingtu === '智识');
+          _name = '智识角色';
+          break;
+        case '虚无':
+          data = data.filter(item => item.mingtu === '虚无');
+          _name = '虚无角色';
+          break;
+        case '毁灭':
+          data = data.filter(item => item.mingtu === '毁灭');
+          _name = '毁灭角色';
+          break;
+        case '丰饶':
+          data = data.filter(item => item.mingtu === '丰饶');
+          _name = '丰饶角色';
+          break;
+        case '同谐':
+          data = data.filter(item => item.mingtu === '同谐');
+          _name = '同谐角色';
+          break;
+        case '记忆':
+          data = data.filter(item => item.mingtu === '记忆');
+          _name = '记忆角色';
+          break;
+        case '欢愉':
+          data = data.filter(item => item.mingtu === '欢愉');
+          _name = '欢愉角色';
+          break;
+      }
     }
     const ratingOrder = { 五星: 1, 'S级': 1, 四星: 2, 'A级': 2, 三星: 3, 'B级': 3, 二星: 4, 一星: 5 };
     // 重新排序：星级高的排顶部；绝区零同星级内按上线先后排列
