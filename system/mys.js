@@ -487,6 +487,11 @@ const hsrRelicText = (text, params = []) => String(text || '')
  * 套名在 set 各部件的 name.zh；set 的键末位区分件套（…0 是 2 件套、…1 是 4 件套），
  * 四星套装只有 2 件套一条。rank 是可获取的星级档位，含 5 记五星。
  * ext 按米游社格式给 c_218.table.list，wiki.js 的 syw_pictures 直接读它。
+ *
+ * 排序：artifact.json 的键是按 id 升序给的，直接用就是最旧在最前、最新压在最下面。
+ * 圣遗物 id 随上线时间递增（实测 10001 行者之心 → 15048 最新），
+ * 所以按数值 id 降序重排，让最新的在顶部。wiki.js 的 list() 只按星级排、
+ * 且 Array.sort 稳定，这个预排顺序会被保住（同星级的相对顺序不变）。
  */
 const gsArtifactList = artifacts => Object.entries(artifacts || {}).map(([id, a]) => {
     const set = a?.set || {};
@@ -503,6 +508,7 @@ const gsArtifactList = artifacts => Object.entries(artifacts || {}).map(([id, a]
     const icon = nanokaGsItemIcon(a.icon);
     const star = (a.rank || []).includes(5) ? '五星' : '四星';
     return {
+        _sortId: Number(id),
         content_id: String(id),
         title: zh,
         icon,
@@ -514,7 +520,7 @@ const gsArtifactList = artifacts => Object.entries(artifacts || {}).map(([id, a]
             }
         })
     };
-}).filter(Boolean);
+}).filter(Boolean).sort((a, b) => b._sortId - a._sortId).map(({ _sortId, ...rest }) => rest);
 
 /**
  * 星铁遗器套装列表（nanoka hsr/relicset.json）。
@@ -534,6 +540,7 @@ const hsrRelicsetList = relicsets => Object.entries(relicsets || {}).map(([id, r
     ].filter(v => v.value);
     if (!zh || !rows.length) return null;
     return {
+        _sortId: Number(id),
         content_id: String(id),
         title: zh,
         icon: '',
@@ -545,7 +552,8 @@ const hsrRelicsetList = relicsets => Object.entries(relicsets || {}).map(([id, r
             }
         })
     };
-}).filter(Boolean);
+// 同原神：relicset.json 的键按 id 升序（实测 101 最老 → 330 最新），降序让最新的在顶部
+}).filter(Boolean).sort((a, b) => b._sortId - a._sortId).map(({ _sortId, ...rest }) => rest);
 
 
 const BH3_WIKI_BASE = 'https://api-takumi-static.mihoyo.com/common/blackboard/bh3_wiki';
