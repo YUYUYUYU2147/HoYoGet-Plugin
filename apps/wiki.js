@@ -454,6 +454,50 @@ export class Wiki extends plugin {
 
     let condition = name.replace(/崩坏3|崩坏三|崩三|角色|武器|光锥|音擎|驱动盘|邦布|圣痕|人偶|协同者/g, '');
 
+    // 崩坏三圣痕有 700 条（五星 475、四星 204、三星 15、二星 6；其中五星套装 449），
+    // 「圣痕 全部 / 四星 / 三星 / 二星 / 单件」可以放开对应范围。
+    // 开关在 config.yaml 的 bh3_syw_full_list，置 true 则恢复全量。
+    //
+    // 套装在列表里是按件拆开的：一套三个部位就是 (上)(中)(下) 三条，
+    // 五星套装 449 条去重后只剩 208 套（120 套三件 + 87 套单件 + 1 套两件）。
+    // 列表只取每套的第一件代表，体积和浏览量都减半。
+    if (isBH3 && type === 'syw') {
+      const STAR_WORDS = { '五星': '五星', '5星': '五星', '四星': '四星', '4星': '四星', '三星': '三星', '3星': '三星', '二星': '二星', '2星': '二星' };
+      const starKey = STAR_WORDS[condition];
+      const onlyPiece = /^(单件|散件|单件圣痕)$/.test(condition);
+      const wantAll = !!config().bh3_syw_full_list || /^(全部|全量|所有)$/.test(condition);
+      if (wantAll) {
+        _name = condition ? `圣痕${condition}` : '圣痕';
+      } else if (starKey) {
+        data = data.filter(item => item.ji === starKey);
+        _name = `圣痕${condition}`;
+      } else if (onlyPiece) {
+        data = data.filter(item => item.isSet !== 'true');
+        _name = '圣痕单件';
+      } else {
+        data = data.filter(item => item.ji === '五星' && item.isSet === 'true');
+        _name = '五星圣痕';
+      }
+      // 套装按部位拆条，列表只留每套一件代表，并把代表身上的部位后缀去掉，
+      // 显示成「赫拉克利特」而不是「赫拉克利点(上)」——一条代表整套。
+      // 部位后缀在 bh3_data 里按列表原样保留，这里按同样的规则剥掉。
+      if (/^(全部|全量|所有)$/.test(condition) || !config().bh3_syw_full_list) {
+        const seen = new Set();
+        data = data
+          .filter(item => {
+            const key = String(item.name || '').replace(/[（(](上|中|下)[）)]|·(上|中|下)$|-(上|中|下)$/g, '');
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          })
+          .map(item => ({
+            ...item,
+            name: String(item.name || '').replace(/[（(](上|中|下)[）)]|·(上|中|下)$|-(上|中|下)$/g, '')
+          }));
+        if (!wantAll) _name = `${_name}（${data.length} 套）`;
+      }
+    }
+
     if (!isSr && !isZZZ && !isBH3) {
       switch (condition) {
         case '五星':
@@ -608,15 +652,18 @@ export class Wiki extends plugin {
       const diff = (ratingOrder[a.ji] ?? 99) - (ratingOrder[b.ji] ?? 99);
       if (diff) return diff;
       if (isZZZ) {
-        // 降序：content_id 越大上线越晚，最新的排在前。
-        // 原神/星铁不用这段 —— 它们的 nanoka 列表已按 release 排好（content_id 与上线
-        // 顺序不对应：原神 薇斯纳 id=10000143 比 奥黛塔 id=10000150 小，却更晚上线），
-        // 这里再按 id 排会把预排的顺序打乱。Array.sort 是稳定的，不改也能保住预排结果。
-        const ai = Number(a.id), bi = Number(b.id);
-        if (Number.isFinite(ai) && Number.isFinite(bi) && ai !== bi) return bi - ai;
+        // 绝区零按 zzz_data 给的 _ord 排：未上线置顶 → 卡池首发日期新→旧 →
+        // 无记录的按 id 降序兜底。不能退回按 content_id 排，nanoka 的 id 与上线
+        // 顺序对不上（实测 12 处逆序，如 希格莉德 排在更晚的 蕾米埃尔 之前），
+        // 而且官方 Wiki 回退时 content_id 是另一套 id 空间，两种源会排出完全
+        // 不同的顺序（前 62 位只有 5 位相同）。原神/星铁不用这段，理由见上。
+        const ao = Number(a._ord), bo = Number(b._ord);
+        if (Number.isFinite(ao) && Number.isFinite(bo) && ao !== bo) return ao - bo;
       }
       return 0;
     });
+    // _ord 只是排序用的临时字段，别带进模板数据
+    if (isZZZ) data = data.map(({ _ord, ...rest }) => rest);
     //根据name去重（主角只需要显示一个）
     data = data.filter(
       (item, index, self) => index === self.findIndex(t => t.name === item.name)
@@ -640,6 +687,36 @@ export class Wiki extends plugin {
           return { text: v, icon, kind: icon ? 'icon-only' : '' };
         })
     }));
+    // 长列表改用紧凑多列排版，一张图出完。
+    // 崩坏三圣痕有 700 条，走 wiki/list 的竖排会直接崩：页面过高超出 Chromium
+    // 截图上限（120 条起报 Page is too large / Unable to capture screenshot）。
+    // 100 条虽能截出但已有 21437px 高、6.1MB，发到 QQ 被拒（rich media transfer
+    // failed，日志里那条 16.7MB 的图就是这么发不出去的）。
+    // 曾试过渲染器的 data.multiPage，但它只切截图，700 张远程图标仍会一次性
+    // 加载进同一页面，内存一样顶不住；分批渲染每批 60 条倒是能跑通，只是要发
+    // 8 到 12 张图，太吵。
+    // 改用 wiki/list_dense：8 列、图标 40px。实测五星圣痕 449 条
+    // 2895px 高、0.73MB（jpeg），全量 700 条同排版也在同一量级，一张图搞定。
+    // 紧凑排版只给崩坏三圣痕用，别的一律走 wiki/list。
+    //
+    // 圣痕需要特殊处理：米游社官方频道有 700 条（五星 475、四星 204、三星 15、
+    // 二星 6），走 wiki/list 的竖排会直接崩 —— 页面过高超出 Chromium 截图上限
+    // （120 条起报 Page is too large / Unable to capture screenshot）；100 条虽能
+    // 截出但已有 21437px 高、6.1MB，发到 QQ 被拒（rich media transfer failed，
+    // 日志里那条 16.7MB 的图就是这么发不出去的）。wiki/list_dense 用 8 列网格，
+    // 实测 700 条也只有 4751px、5.34MB，一张图装得下。
+    //
+    // 曾按「条目数 > 100」全局启用，结果原神角色（144）、崩三角色（111）也被切过去，
+    // 而 list_dense 只渲染图标和名字、不渲染 badges，星级/元素/命途/属性徽章全丢了。
+    // 四个游戏的角色图鉴、武器、遗器等列表保持 wiki/list 同一套 UI，
+    // 只有圣痕这一类条目特别多的用紧凑排版。
+    if (isBH3 && type === 'syw') {
+      return render('wiki/list_dense', {
+        name: _name,
+        total: data.length,
+        data,
+      }, { e, ret: true });
+    }
     data = {
       name: _name,
       data: data,
@@ -1002,21 +1079,24 @@ export class Wiki extends plugin {
 
   async zzz_syw_pictures(e, data) {
     const c = data.content || {};
-    const obcIcon = await this.getZzzObcIcon(c.name, 46);
+    // 单栏版式，和星铁 wiki/yiqi 一致：名称与图标左右两格、左对齐，共用 yq_syw.css。
+    // 之前试过原神 wiki/syw 那种 .pic_ 居中块，图标小、留白多，没采用。
+    // 更早之前这里错用角色卡模板 wiki/zzz_role，那是带 info-grid / stats-grid /
+    // skill-grid 的三栏布局，驱动盘只有两条套装效果，套上去又空又宽。
+    // 单独建 wiki/zzz_syw 而不直接用 wiki/yiqi：yiqi 的 {{t.value}} 会转义，
+    // zzzRichText 产出的 <span style="color:…"> 技能名高亮会变成字面量显示在页面上；
+    // zzz_syw 改用 {{@t.value}} 不转义，排版仍与 yiqi 一致。
+    // 官方 Wiki 回退时只有 name/summary，没有 desc2/desc4，套装效果会留空。
+    const icon = mys.zzzSuitIcon?.(c.icon) || '';
     const view = {
       name: c.name || '未知驱动盘',
-      avatar_img: obcIcon,
-      code_name: 'Drive Disc',
-      avatar_text: '盘',
-      tags: [{ text: '驱动盘', primary: true }, { text: '2件套' }, { text: '4件套' }],
-      profile: this.zzzCleanText(c.story || '', 220),
-      info: [
-        { key: '2件套', value: this.zzzCleanText(c.desc2, 120) },
-        { key: '4件套', value: this.zzzCleanText(c.desc4, 160) }
-      ],
-      stats: [], strategy: [], skills: [], talents: [], recommend: []
+      pic: icon ? [icon] : [],
+      table: [
+        { key: '2件套', value: this.zzzCleanText(c.desc2 || '', 120) },
+        { key: '4件套', value: this.zzzRichText(c.desc4 || '') }
+      ].filter(v => v.value)
     };
-    return render('wiki/zzz_role', view, { e, ret: true });
+    return render('wiki/zzz_syw', view, { e, ret: true });
   }
 
   async zzz_yq_pictures(e, data) {
