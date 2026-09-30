@@ -133,7 +133,11 @@ function gsRoleView(detail, id) {
     return {
         id,
         name: d.name || '',
-        icon: d.icon ? `https://static.nanoka.cc/assets/gi/${String(d.icon).replace(/^UI_AvatarIcon_/, '')}.webp` : '',
+        // 详情页大图走 assets/gi/UI_AvatarIcon_{name}.webp，前缀必须保留。
+        // 之前这里把 UI_AvatarIcon_ 剥掉再拼 .webp，得到的
+        // assets/gi/Furina.webp 实测 404 —— 152 个角色无一例外全是坏的，
+        // 不是个别角色缺图。列表页（nanokaGsIcon）没剥前缀所以一直正常。
+        icon: d.icon ? `https://static.nanoka.cc/assets/gi/${d.icon}.webp` : '',
         rarity: gsRarityCn(d.rarity),
         element: info.vision || '',
         constellation: info.constellation || '',
