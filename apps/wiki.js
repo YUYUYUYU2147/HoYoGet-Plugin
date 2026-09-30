@@ -504,13 +504,22 @@ export class Wiki extends plugin {
         case '5星':
           data = data.filter(item => item.ji === '五星');
           _name = '五星角色';
-          if (type = 'wq') _name = '五星武器';
+          if (type === 'wq') _name = '五星武器';
+          if (type === 'syw') _name = '五星圣遗物';
           break;
         case '四星':
         case '4星':
           data = data.filter(item => item.ji === '四星');
           _name = '四星角色';
-          if (type = 'wq') _name = '四星武器';
+          if (type === 'wq') _name = '四星武器';
+          if (type === 'syw') _name = '四星圣遗物';
+          break;
+        case '三星':
+        case '3星':
+          data = data.filter(item => item.ji === '三星');
+          _name = '三星角色';
+          if (type === 'wq') _name = '三星武器';
+          if (type === 'syw') _name = '三星圣遗物';
           break;
         case '水系':
         case '水':
@@ -578,15 +587,22 @@ export class Wiki extends plugin {
         case '5星':
           data = data.filter(item => item.ji === '五星');
           _name = '五星角色';
-          if (type = 'wq') _name = '五星武器';
-          if (type = 'syw') _name = '五星圣痕';
+          if (type === 'wq') _name = '五星武器';
+          if (type === 'syw') _name = '五星圣痕';
           break;
         case '四星':
         case '4星':
           data = data.filter(item => item.ji === '四星');
           _name = '四星角色';
-          if (type = 'wq') _name = '四星武器';
-          if (type = 'syw') _name = '四星圣痕';
+          if (type === 'wq') _name = '四星武器';
+          if (type === 'syw') _name = '四星圣痕';
+          break;
+        case '三星':
+        case '3星':
+          data = data.filter(item => item.ji === '三星');
+          _name = '三星角色';
+          if (type === 'wq') _name = '三星武器';
+          if (type === 'syw') _name = '三星遗器';
           break;
         case '物理':
         case '物理系':
