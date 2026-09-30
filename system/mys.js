@@ -237,17 +237,28 @@ const SR_STANDARD_LC = new Set([
 const GS_LOGS_YAML = './plugins/xhh/system/default/gslogs.yaml';
 let gsDebutCache = null;
 
-// 未上线（测试服）武器：数据里没有任何信号能自动认出来 ——
-// 这些武器按定义不会出现在任何卡池记录里，和「开服期常驻武器」
-// 一样都是「无记录」，光看数据分不开。曾试过用未上线角色的 weapon 类型
-// 反查，实测是错的：唯一命中的是「星锋剑」，而它是主角的专武
-// （描述里写 In the voyager's hand，皮肤 390002/390003 标 skin:true
-//  并注明只能装备给旅行者），不是瓦列里的。
-// 所以这里只维护一份已确认的名单，新增测试服武器时手动补一行。
-// 与角色「未上线置顶」保持一致。
+// 未上线（测试服）武器：数据里没有任何字段能自动认出来。
+// nanoka 对这类物品用占位写法：type=ITEM_TPS_WEAPON（类型未知）、
+// icon 前缀是 Shotgun / AssaultRifle / GrenadeLauncher / Grenade 这种
+// 占位资源名。所以「type 不是 WEAPON_*」本身就是「未上线或类型未知」的信号，
+// 但它同时也是「类型未知」的信号 —— 224001~224008 那 8 把已经上线，
+// 类型同样标着 ITEM_TPS_WEAPON，分不出上线与否，所以只能维护名单。
+// 键用武器中文名；列表跨星级共用，gsGroup 不区分星级。
 const GS_UNRELEASED_W = new Set([
-    '秘星典谕',   // 米提亚(法器)的专武，7.1.51 数据里角色 release=1970、武器无任何卡池记录
+    '秘星典谕',       // 米提亚(法器) 的专武，5★
+    '索斯卢科的灼炎',   // 瓦列里(单手剑) 的专武，4★，代号 Vepr ↔ 瓦列里 Valeriy
+    '艾维萨缇的山狩',   // 4★，主人「艾维萨缇」不在角色表里，类型待确认
 ]);
+
+// ITEM_TPS_WEAPON 的武器类型是占位值，getWikiIcon 映射表里显示成「特殊武器」，
+// 但那不是真实类型。能确认的按名字覆盖：
+//   索斯卢科的灼炎 = 瓦列里的专武，瓦列里 character.json 的 weapon 字段是
+//   WEAPON_SWORD_ONE_HAND → 单手剑。
+// 其余 ITEM_TPS_WEAPON（224001~224008、艾维萨缇的山狩）没有可靠依据，
+// 暂不硬凑，保留占位显示。
+const GS_WEAPON_CN_OVERRIDE = {
+    '索斯卢科的灼炎': '单手剑',
+};
 
 /** 武器中文名 → 首发时间戳(ms)。读不到返回空 Map，退化成 id 降序。 */
 function getGsDebut() {
@@ -811,7 +822,7 @@ class mys {
                     // 页面引用的是 UI_Gacha_EquipIcon_Claymore_LoliFriend.webp，
                     // 但那个文件实测 404 —— 留着兜底链，指不定 nanoka 哪天补上。
                     iconFallback: /_\{0\}$/.test(String(w.icon || '')) ? '' : gsSkinIcon(w.icon),
-                    ext: makeExt([`武器星级/${gsWeaponRarityCn(w.rank)}`, `武器类型/${GS_WEAPON_CN[w.type] || ''}`], icon)
+                    ext: makeExt([`武器星级/${gsWeaponRarityCn(w.rank)}`, `武器类型/${GS_WEAPON_CN_OVERRIDE[w.zh] || GS_WEAPON_CN[w.type] || ''}`], icon)
                 };
             });
         } else {
