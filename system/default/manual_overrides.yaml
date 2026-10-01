@@ -116,7 +116,10 @@ pending:
 #   289 把里 54 把能取到日期（gslogs 只记 5★ up），其余按 id 降序，
 #   皮肤类单独分组 —— 都是自动的
 #
-# 星铁光锥排序：lightcone.json 只有 rank/baseType/en/atk/desc/ko/zh/ja，
-#   没有任何时间字段，只能按 id 降序
+# 星铁光锥排序：system/default/sr_logs.yaml 的 gz_five 卡池记录算首次出现日期。
+#   该文件由 apps/gacha_pool.js 每次刷新卡池自动更新，不用手改也不用改代码。
+#   172 个光锥里 58 个能取到日期，其余按 id 降序 —— 都是自动的
+#   （此前这里记的是「lightcone.json 没有时间字段，只能按 id 降序」，那是错的：
+#     数据源没有时间不等于上线顺序拿不到，卡池记录里就有）
 #
 # 圣遗物 / 遗器 / 驱动盘排序：全部按 id 降序（id 顺序即上线顺序），零名单
