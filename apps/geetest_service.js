@@ -215,7 +215,7 @@ export class GeetestService extends plugin {
             (s.breakerOpen ? `⚡ 熔断中（连续失败 ${s.breakerFail} 次），期间请求会秒回并走兜底，稍后自动恢复\n` : '') +
             (orphan
                 ? `\n⚠️ 服务在跑，但不在本插件的进程表里（pm2 里没有 ${PM2_NAME}）\n` +
-                  `多半是旧版本部署或手工 nohup 留下的。想让本插件接管：\n` +
+                  `多半是旧版本部署或手工起（nohup / start /b）留下的。想让本插件接管：\n` +
                   `· 执行 pm2 delete ${PM2_NAME} 后重发 #过码部署\n` +
                   '· 或直接重启一次机器（过码服务不会自启）\n'
                 : '') +
