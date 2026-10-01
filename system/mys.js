@@ -517,6 +517,12 @@ function getSrDebut() {
     return map;
 }
 
+// 星铁光锥是否 5★。lightcone.json 的 rank 形如 CombatPowerLightconeRarity5。
+// 之前 5★/4★ 靠 id 段顺带分开（4★ 是 21xxx~22xxx，5★ 是 23xxx~24xxx），
+// 排序里没有显式判过星级；加了未上线置顶后必须显式分，否则未上线的 4★
+// 会插到 5★ 段前面去。
+const isSrFiveStar = ([, w]) => /Rarity5$/.test(String(w?.rank || ''));
+
 function sortWeaponEntries(weapons, isSr = false, isGs = false, newIds = null) {
     const entries = Object.entries(weapons || {}).filter(([, w]) => w?.zh);
     // 原神分四段，规则和角色那边一致（未上线置顶，其余按上线时间新→旧）：
@@ -532,8 +538,17 @@ function sortWeaponEntries(weapons, isSr = false, isGs = false, newIds = null) {
         return /_\{0\}$/.test(String(w.icon || '')) ? 1 : 2;
     };
     return entries.sort((a, b) => {
+        // 星铁先按星级分段，5★ 整段在前、4★ 整段在后，段内各自再排。
+        // 这一层必须在未上线置顶之前：否则未上线的 4★ 会被顶到 5★ 前面
+        // （22009 在世界尽头相会吧！就是这么插到阿哈专武下面的）。
+        // 未上线置顶只在同星级内生效 —— 5★ 置顶 5★，4★ 置顶 4★。
+        if (isSr) {
+            const ga = isSrFiveStar(a) ? 0 : 1;
+            const gb = isSrFiveStar(b) ? 0 : 1;
+            if (ga !== gb) return ga - gb;
+        }
         // 未上线（测试服）置顶：manifest.json 的 new.weapon / new.lightcone。
-        // 原神和星铁同一套规则，在常驻/首发日期/皮肤分组之前先判。
+        // 原神同一套规则，在常驻/首发日期/皮肤分组之前先判。
         if (newIds) {
             const ua = newIds.has(String(a[0])) ? 0 : 1;
             const ub = newIds.has(String(b[0])) ? 0 : 1;
