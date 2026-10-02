@@ -350,11 +350,14 @@ export class user extends plugin {
         for (let k in data_) {
             const [SToken, ck] = data_[k];
             const headers = mhy.getHeaders(e, ck);
+            //ck_stoken 里带 mid，有它 genshin 才能走 v2 分支
+            const mid = String(ck || '').match(/mid=([^;]+)/)?.[1] || '';
             const {
                 sendMsg,
                 ltoken
             } = await mhy.refresh_cookies(e, headers, SToken, k, {
-                bindGenshinCookie: false
+                bindGenshinCookie: true,
+                mid
             });
             if (ltoken && data) {
                 for (let m in data) {
