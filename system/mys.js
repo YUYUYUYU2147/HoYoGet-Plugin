@@ -799,9 +799,18 @@ const hsrRelicsetList = relicsets => Object.entries(relicsets || {}).map(([id, r
                 table: { list: rows }
             }
         })
-    };
-// 同原神：relicset.json 的键按 id 升序（实测 101 最老 → 330 最新），降序让最新的在顶部
-}).filter(Boolean).sort((a, b) => b._sortId - a._sortId).map(({ _sortId, ...rest }) => rest);
+};
+    // relicset.json 里没有隧洞/饰品字段（只有 id/icon/set/zh），分组只能靠 id 段：
+    // 1xx 是隧洞遗器（实测 101 云无留迹的过客、114 不老者的仙舟…），
+    // 3xx 是位面饰品（实测 301 太空封印站、302 不老者的仙舟、303 泛银河商业公司…）。
+    // 与 nanoka 网站一致（/relic/134 → /relic/101 为隧洞，
+    // /relic/330 → /relic/301 为饰品）：先排完隧洞再排饰品，
+    // 每组内部由新到老，即 id 倒序。
+}).filter(Boolean).sort((a, b) => {
+        const bandA = a._sortId < 300 ? 0 : 1;
+        const bandB = b._sortId < 300 ? 0 : 1;
+        return bandA - bandB || b._sortId - a._sortId;
+    }).map(({ _sortId, ...rest }) => rest);
 
 
 const BH3_WIKI_BASE = 'https://api-takumi-static.mihoyo.com/common/blackboard/bh3_wiki';
