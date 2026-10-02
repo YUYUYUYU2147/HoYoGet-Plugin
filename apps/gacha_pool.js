@@ -178,9 +178,13 @@ export class xhh_gacha_pool extends plugin {
         { reg: '^(?!#*(?:xhh)?(?:小花火)?(?:原神|星铁|崩铁|崩三|崩坏3|崩坏三|BH3|绝区零|ZZZ))#*(?:xhh)?(小花火)?([\u4e00-\u9fa5A-Za-z0-9·・•!！「」『』（）()]{1,16})(卡池|复刻)(统计|记录|历史)?$', fnc: 'genericNameHistory' }
       ]
     });
-    // 每 24 小时自动跑一次「#刷新卡池」的等价逻辑（不回复消息，只打日志）
+    // 每 30 分钟跑一次「#刷新卡池」的等价逻辑（不回复消息，只打日志）。
+    // 原来定在每天 05:30 一次，一天里只要那一轮撞上风控冷却
+    // （autoRefreshPools 开头会直接 return 且不同步任何数据），就得再等 24 小时。
+    // 半小时一轮则最多等半小时，且冷却期本来就存 30 分钟、下一轮正好解冻，
+    // 不会因此加重风控。
     this.task = {
-      cron: '0 30 5 * * *', // 每天 05:30（秒 分 时 日 月 周）
+      cron: '0 */30 * * * *', // 每 30 分钟（秒 分 时 日 月 周）
       name: '[小花火]全游戏卡池数据自动刷新',
       fnc: () => this.autoRefreshPools(),
       log: true
@@ -1475,7 +1479,7 @@ export class xhh_gacha_pool extends plugin {
         try {
           await redis.set('xhh:gacha_pool:risk_control', '1', { EX: 30 * 60 });
         } catch (_) {}
-        logger.warn('[xhh][gacha_pool] 自动刷新命中米游社风控(1034)，已跳过本地卡池库同步');
+        logger.warn(`[${new Date().toLocaleString('zh-CN', { hour12: false })}][xhh][gacha_pool] 自动刷新命中米游社风控(1034)，已跳过本地卡池库同步`);
         await this.fillBh3TimesOnRisk(results);
         return;
       }
