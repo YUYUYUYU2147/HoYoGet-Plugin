@@ -1,4 +1,4 @@
-import { makeForwardMsg, render, yaml, pluginPriority } from '#xhh';
+import { makeForwardMsg, render, yaml, pluginPriority, config } from '#xhh';
 import fs from 'fs';
 import YAML from 'yaml';
 import { bh3_gacha } from './bh3_gacha.js';
@@ -178,13 +178,15 @@ export class xhh_gacha_pool extends plugin {
         { reg: '^(?!#*(?:xhh)?(?:小花火)?(?:原神|星铁|崩铁|崩三|崩坏3|崩坏三|BH3|绝区零|ZZZ))#*(?:xhh)?(小花火)?([\u4e00-\u9fa5A-Za-z0-9·・•!！「」『』（）()]{1,16})(卡池|复刻)(统计|记录|历史)?$', fnc: 'genericNameHistory' }
       ]
     });
-    // 每 30 分钟跑一次「#刷新卡池」的等价逻辑（不回复消息，只打日志）。
-    // 原来定在每天 05:30 一次，一天里只要那一轮撞上风控冷却
-    // （autoRefreshPools 开头会直接 return 且不同步任何数据），就得再等 24 小时。
-    // 半小时一轮则最多等半小时，且冷却期本来就存 30 分钟、下一轮正好解冻，
+// 跑「#刷新卡池」的等价逻辑（不回复消息，只打日志）。
+    // 间隔由 config.yaml 的 gacha_pool_cron 决定，锅巴里可改，改完需重启插件。
+    // 默认每 30 分钟：原来写死每天 05:30 一次，那一轮若撞上风控冷却
+    // （autoRefreshPools 开头直接 return 且不同步任何数据）就得再等 24 小时。
+    // 半小时一轮则最多等半小时；冷却期本来就存 30 分钟，下一轮正好解冻，
     // 不会因此加重风控。
+    const cfg = config() || {};
     this.task = {
-      cron: '0 */30 * * * *', // 每 30 分钟（秒 分 时 日 月 周）
+      cron: String(cfg.gacha_pool_cron || '0 */30 * * * *').trim() || '0 */30 * * *',
       name: '[小花火]全游戏卡池数据自动刷新',
       fnc: () => this.autoRefreshPools(),
       log: true

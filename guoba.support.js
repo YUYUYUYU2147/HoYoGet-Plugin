@@ -193,6 +193,13 @@ export const supportGuoba = () => {
         component: 'Switch',
       },
       {
+        field: 'gacha_pool_cron',
+        label: '卡池自动刷新间隔',
+        helpMessage:
+          'cron 表达式，保存后需重启插件生效。默认 0 */30 * * * * 即每 30 分钟一次。间隔太长时，若某一轮撞上米游社风控就要等到下一轮才同步',
+        component: 'Input',
+      },
+      {
         field: 'all_voice',
         label: '角色语音总开关',
         helpMessage: '关闭后四个游戏语音全部停用',
