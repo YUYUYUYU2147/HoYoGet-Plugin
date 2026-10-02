@@ -298,7 +298,7 @@ export const supportGuoba = () => {
       {
         field: 'sbai',
         label: '签到失败@提醒',
-        helpMessage: '自动签到结束后@失败用户',
+        helpMessage: '自动签到结束后@失败用户，游戏签到与社区签到都适用',
         component: 'Switch',
       },
       {
