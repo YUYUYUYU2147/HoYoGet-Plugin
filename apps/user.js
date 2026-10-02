@@ -252,12 +252,9 @@ export class user extends plugin {
                 const {
                     sendMsg,
                     ltoken
-                } = await mhy.refresh_cookies(
-                    e,
-                    headers,
-                    SToken,
-                    stuid
-                );
+                } = await mhy.refresh_cookies(e, headers, SToken, stuid, {
+                    bindGenshinCookie: false
+                });
                 if (SToken && stuid && mid && ltoken) {
                     res = await api(e, {
                         type: 'GameRoles',
@@ -348,12 +345,9 @@ export class user extends plugin {
             const {
                 sendMsg,
                 ltoken
-            } = await mhy.refresh_cookies(
-                e,
-                headers,
-                SToken,
-                k
-            );
+            } = await mhy.refresh_cookies(e, headers, SToken, k, {
+                bindGenshinCookie: false
+            });
             if (ltoken && data) {
                 for (let m in data) {
                     if (data[m].stoken == SToken) {

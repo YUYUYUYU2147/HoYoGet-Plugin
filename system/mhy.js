@@ -167,7 +167,13 @@ class mhy {
   }
 
   //刷新ck
-  async refresh_cookies(e, headers, SToken, id) {
+  //opts.bindGenshinCookie —— 是否额外调用 genshin 的老 CK 绑定器，默认不调用。
+  //由 v2 stoken 换出的 ltoken/ltuid/cookie_token 属于老格式，米游社对它的校验
+  //不一定认。genshin 内部用 reqMysUid() 校验，失败后会把「Cookie错误」推进
+  //sendMsg，显示成「绑定Cookie失败」——但此刻 xhh 的 stoken 数据其实早已存好，
+  //真正失败的只是这步额外的兼容动作。社区签到、角色查询、抽卡记录、水晶都只
+  //依赖 stoken 那一侧，故默认不再强依赖它；确有需要时由调用方显式打开。
+  async refresh_cookies(e, headers, SToken, id, opts = {}) {
     if (config().debug) logger.mark('[refresh_cookies] refreshing for id:', id);
     let urls = [
       `https://api-takumi.mihoyo.com/auth/api/getCookieAccountInfoBySToken?stoken=${SToken}&uid=${id}`,
@@ -192,6 +198,10 @@ class mhy {
       return { sendMsg };
     }
     e.msg = `ltoken=${ltoken};ltuid=${id};cookie_token=${Cookie}`;
+    if (!opts.bindGenshinCookie) {
+      if (config().debug) logger.mark('[refresh_cookies] 已跳过 genshin CK 绑定, id:', id);
+      return { sendMsg, ltoken, ck: e.msg };
+    }
     let userck = (
       await import(`file://${process.cwd()}/plugins/genshin/model/user.js`)
     ).default;
