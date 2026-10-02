@@ -24,6 +24,23 @@ function isBh3Role(entry = {}) {
     return BH3_LEGACY_REGIONS.includes(entry.region || '');
 }
 
+async function fetchJson(url, options = {}, label = '米游社接口') {
+    const resp = await fetch(url, options);
+    const text = await resp.text();
+    try {
+        return JSON.parse(text);
+    } catch (err) {
+        const head = String(text || '').trim().slice(0, 80);
+        logger.mark(`[xhh][sm] ${label} 返回非 JSON，status=${resp.status} body=${head}`);
+        return {
+            retcode: -1,
+            message: head.startsWith('<') ? '米游社返回拦截页，请稍后重试' : '米游社接口返回异常',
+            _html: head.startsWith('<'),
+            _status: resp.status,
+        };
+    }
+}
+
 export class user extends plugin {
     constructor(e) {
         super({
@@ -156,11 +173,15 @@ export class user extends plugin {
             // app_id: app_id,
             // device: headers['x-rpc-device_id'],
         };
-        let res = await fetch(url, {
+        let res = await fetchJson(url, {
             method: 'POST',
             headers,
             body: JSON.stringify(body),
-        }).then(res => res.json());
+        }, '创建扫码二维码');
+
+        if (!res?.data?.url || !res?.data?.ticket) {
+            return e.reply(`创建二维码失败：${res?.message || '接口返回异常，请稍后重试'}`, true);
+        }
 
         const sm_url = res.data.url;
         let ticket = res.data.ticket
@@ -196,14 +217,14 @@ export class user extends plugin {
       
         for (var n = 1; n < 150; n++) {
             await sleep(1000);
-            res = await fetch(url, {
+            res = await fetchJson(url, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(body),
-            }).then(res => res.json());
+            }, '查询扫码状态');
             
                             
-            if (res.retcode != 0) return e.reply('二维码已过期~', true);
+            if (res.retcode != 0) return e.reply(res?._html ? '米游社返回拦截页，扫码绑定失败。请稍后重试或换网络环境。' : '二维码已过期~', true);
             if (res.data.status == 'Init') continue;
             if (res.data.status == 'Scanned' && !zt) {
                 zt = true;

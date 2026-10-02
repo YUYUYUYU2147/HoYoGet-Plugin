@@ -4,6 +4,26 @@ import lodash from 'lodash';
 import fs from 'fs';
 import YAML from 'yaml';
 import { yaml, api, config } from '#xhh';
+import { mhyFetch } from './mhy_fetch.js';
+
+  // 走 mhyFetch 出口：默认直连，被米游社风控拦了才切代理。
+  // 用裸 fetch 的话 IP 一被拦就直接失败，代理兜底等于没接。
+  async function fetchJson(url, options = {}, label = '米游社接口') {
+    const resp = await mhyFetch(url, options);
+    const text = await resp.text();
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    const head = String(text || '').trim().slice(0, 80);
+    logger.mark(`[xhh][mhy] ${label} 返回非 JSON，status=${resp.status} body=${head}`);
+    return {
+      retcode: -1,
+      message: head.startsWith('<') ? '米游社返回拦截页，请稍后重试' : '米游社接口返回异常',
+      _html: head.startsWith('<'),
+      _status: resp.status,
+    };
+  }
+}
 
 class mhy {
   // 服务器代码 → 中文名。getServerName() 用。
@@ -155,9 +175,7 @@ class mhy {
     ];
     let res, Cookie, ltoken;
     for (let url of urls) {
-      res = await fetch(url, { method: 'GET', headers }).then(res =>
-        res.json()
-      );
+      res = await fetchJson(url, { method: 'GET', headers }, '刷新 Cookie');
       if (res.data?.cookie_token) Cookie = res.data?.cookie_token;
       if (res.data?.ltoken) ltoken = res.data?.ltoken;
     }
