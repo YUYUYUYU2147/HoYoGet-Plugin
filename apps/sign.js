@@ -316,7 +316,7 @@ export class Sign extends plugin {
                 } catch (err) {
                     logger.error(`[社区自动签到] 出图失败，退回文字: ${err.message}`);
                 }
-                await sendBbsAutoResult(group, result, img);
+                await sendBbsAutoResult(group, result, img, data);
                 await sleep(1000);
             }
         } catch (error) {
