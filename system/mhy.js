@@ -229,7 +229,10 @@ class mhy {
     const oldReply = e.reply;
     const msgs = [];
     e.reply = msg => {
-      if (Array.isArray(msg)) msgs.push(msg.join(''));
+      // 全是纯文本才拼接：混着 segment（按钮、合并转发）时 join 会把它们
+      // 压成 [object Object]，这种情况保持原样交给框架处理
+      if (Array.isArray(msg) && msg.every(x => typeof x === 'string')) msgs.push(msg.join(''));
+      else if (Array.isArray(msg)) msgs.push(...msg);
       else msgs.push(msg);
     };
     e.msg = ck;
