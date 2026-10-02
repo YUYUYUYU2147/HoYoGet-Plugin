@@ -10,6 +10,34 @@ const ZZZ_RAW_BASE = 'https://raw.githubusercontent.com/iaoongin/GachaClock/main
 const ZZZ_CACHE_KEY = 'xhh:zzz:pool_history:data:v2';
 const ZZZ_CACHE_EXPIRE_KEY = 'xhh:zzz:pool_history:expire:v2';
 const ZZZ_POOL_HISTORY_YAML_PATH = './plugins/xhh/system/default/zzz_gacha_pool_history.yaml';
+// ── 米游社公告刷新限速 ──
+// 背景（实测）：卡池详情接口 getPostFull 的 retcode 1034 是「验证码」，但这条链路
+// 全程不带 Cookie/DS，是纯 IP 级限速，所以借账号过码解不开、加 CK 也没用。
+// 触发因素是刷新密度而非当日总量：17 次刷新挤在 2.5 小时内就撞 120 次，而 cron
+// 每 30 分钟均匀一次则长期为 0。所以这里做两件事——
+//   1. 最小间隔：任何两次刷新（含「强制刷新」和主人）都要隔够时间，避免连点雪球；
+//   2. 指数退避：撞码后冷却逐次翻倍，而不是恒定 30 分钟。
+const POOL_MIN_GAP_MS = 10 * 60 * 1000;
+const POOL_BACKOFF_BASE_S = 30 * 60;
+const POOL_BACKOFF_MAX_S = 4 * 60 * 60;
+const POOL_RISK_KEY = 'xhh:gacha_pool:risk_control';
+const POOL_GAP_KEY = 'xhh:gacha_pool:last_refresh';
+
+/** 撞码次数 → 冷却秒数（30min → 60min → 120min → 240min 封顶） */
+function poolBackoffSeconds(strikes) {
+  const n = Math.max(1, Math.floor(Number(strikes) || 1));
+  return Math.min(POOL_BACKOFF_BASE_S * 2 ** (n - 1), POOL_BACKOFF_MAX_S);
+}
+
+function fmtRemain(ms) {
+  const n = Number(ms);
+  // redis.ttl 在「无 TTL」时返回 -1、「key 不存在」时返回 -2，乘出来是负数，别显示成「-0 分钟」
+  if (!Number.isFinite(n) || n <= 0) return '片刻';
+  const m = Math.ceil(n / 60000);
+  if (m <= 1) return '不到 1 分钟';
+  return m >= 60 ? `${Math.floor(m / 60)} 小时 ${m % 60} 分钟` : `${m} 分钟`;
+}
+
 const ZZZ_BWIKI_URL = 'https://wiki.biligame.com/zzz/%E8%B0%83%E9%A2%91';
 // 星铁只认「历史跃迁」页：当期「跃迁」页只列当前版本的少数几期，且联动池（长期）与常规池共用同一版本标签，
 // 用它同步会把「长期」时间写进常规池条目（4.4上半被改成 07/24 ~ 长期）。
@@ -1462,15 +1490,67 @@ export class xhh_gacha_pool extends plugin {
     });
   }
 
-  // 定时任务：24 小时自动刷新一次，与 #刷新卡池 等价但不回复消息。
-  // 米游社风控冷却期内自动跳过，避免定时任务加重风控；同步结果只写本地库 + 打日志。
+  /** 距上次刷新不足最小间隔时，返回还需等待的毫秒数；够则返回 0 */
+  async poolMinGapRemain() {
+    try {
+      const last = Number(await redis.get(POOL_GAP_KEY));
+      if (!last) return 0;
+      const elapsed = Date.now() - last;
+      return elapsed >= POOL_MIN_GAP_MS ? 0 : POOL_MIN_GAP_MS - elapsed;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  /** 记录本次刷新开始时间（开始就占位，不给连点留缝） */
+  async poolMarkRefreshStart() {
+    try {
+      await redis.set(POOL_GAP_KEY, String(Date.now()), { EX: 60 * 60 });
+    } catch (_) {}
+  }
+
+  /**
+   * 进入风控冷却：撞码次数累加，冷却时长指数退避。
+   * 返回 { strikes, seconds } 供提示文案使用。
+   */
+  async poolEnterCooldown() {
+    let strikes = 1;
+    try {
+      strikes = (Number(await redis.get(POOL_RISK_KEY)) || 0) + 1;
+      const seconds = poolBackoffSeconds(strikes);
+      await redis.set(POOL_RISK_KEY, String(strikes), { EX: seconds });
+      return { strikes, seconds };
+    } catch (_) {
+      try {
+        await redis.set(POOL_RISK_KEY, '1', { EX: POOL_BACKOFF_BASE_S });
+      } catch (_) {}
+      return { strikes: 1, seconds: POOL_BACKOFF_BASE_S };
+    }
+  }
+
+  /** 刷新成功，清掉冷却与撞码计数 */
+  async poolClearCooldown() {
+    try {
+      await redis.del(POOL_RISK_KEY);
+    } catch (_) {}
+  }
+
+  // 定时任务：按配置的周期自动刷新，与 #刷新卡池 等价但不回复消息。
+  // 风控冷却期内自动跳过；距上次刷新不足最小间隔也跳过，避免和手动刷新叠在一起撞风控。
   async autoRefreshPools() {
     try {
-      if (await redis.get('xhh:gacha_pool:risk_control')) {
-        logger.mark(`[${new Date().toLocaleString('zh-CN', { hour12: false })}][xhh][gacha_pool] 米游社风控冷却中（30 分钟），跳过本次自动刷新`);
+      const cooling = Number(await redis.get(POOL_RISK_KEY)) || 0;
+      if (cooling) {
+        logger.mark(`[${new Date().toLocaleString('zh-CN', { hour12: false })}][xhh][gacha_pool] 米游社风控冷却中（累计撞码 ${cooling} 次，剩余 ${fmtRemain((await redis.ttl(POOL_RISK_KEY)) * 1000)}），跳过本次自动刷新`);
         return;
       }
     } catch (_) {}
+    const gapRemain = await this.poolMinGapRemain();
+    if (gapRemain > 0) {
+      logger.mark(`[${new Date().toLocaleString('zh-CN', { hour12: false })}][xhh][gacha_pool] 距上次刷新不足 ${POOL_MIN_GAP_MS / 60000} 分钟（还需 ${fmtRemain(gapRemain)}），跳过本次自动刷新`);
+      return;
+    }
+    await this.poolMarkRefreshStart();
     try {
       await redis.del(ZZZ_CACHE_KEY);
       await redis.del(ZZZ_CACHE_EXPIRE_KEY);
@@ -1478,15 +1558,12 @@ export class xhh_gacha_pool extends plugin {
     try {
       const results = await officialPool.refreshAll();
       if (results.some(r => r.riskControl)) {
-        try {
-          // 冷却 30 分钟：正好等于自动刷新的一个周期，撞上风控的那一轮
-          // 跳过，下一轮解冻后照常执行，不会出现连续多轮都被挡的情况。
-          await redis.set('xhh:gacha_pool:risk_control', '1', { EX: 30 * 60 });
-        } catch (_) {}
-        logger.warn(`[${new Date().toLocaleString('zh-CN', { hour12: false })}][xhh][gacha_pool] 自动刷新命中米游社风控(1034)，已跳过本地卡池库同步`);
+        const { strikes, seconds } = await this.poolEnterCooldown();
+        logger.warn(`[${new Date().toLocaleString('zh-CN', { hour12: false })}][xhh][gacha_pool] 自动刷新命中米游社风控(1034)，已跳过本地卡池库同步；累计撞码 ${strikes} 次，冷却 ${fmtRemain(seconds * 1000)}`);
         await this.fillBh3TimesOnRisk(results);
         return;
       }
+      await this.poolClearCooldown();
       const lines = await this.syncLocalPoolsFromOfficial(results);
       logger.mark(`[xhh][gacha_pool] 卡池自动刷新完成：${results.map(r => `${r.game} ${r.records.length} 条`).join('，')}` +
         (lines.length ? ` | ${lines.join(' | ')}` : ''));
@@ -1497,13 +1574,27 @@ export class xhh_gacha_pool extends plugin {
 
   async refreshOfficialPools(e) {
     logger.mark('[xhh][gacha_pool] 刷新米游社官方卡池数据:', e.msg);
-    // 风控冷却期内默认拒绝刷新（继续请求会加重风控），但主人或「强制刷新」可绕过，方便随时验证是否已解除
+    // 冷却期内默认拒绝刷新，但主人或「强制刷新」可绕过冷却去验证是否已解除。
+    // 最小间隔不绕过：实测 09-01 十七次刷新挤在两小时半内把 IP 推到 1034（当日 120 次），
+    // 而 cron 每 30 分钟均匀一次长期为 0 —— 触发因素是密度，无限绕过就是雪崩的源头。
     const force = /强制|立即|force/i.test(String(e?.msg || ''));
     try {
-      if (!force && !e?.isMaster && await redis.get('xhh:gacha_pool:risk_control')) {
-        return e.reply('米游社接口处于风控冷却期（触发后 30 分钟内不再刷新）；确认要试可用「#强制刷新卡池数据」，卡池查询不受影响。');
+      const cooling = Number(await redis.get(POOL_RISK_KEY)) || 0;
+      if (!force && !e?.isMaster && cooling) {
+        let left = '';
+        try {
+          const ttl = Number(await redis.ttl(POOL_RISK_KEY));
+          if (ttl > 0) left = `（还需 ${fmtRemain(ttl * 1000)}）`;
+        } catch (_) {}
+        return e.reply(`米游社接口处于风控冷却期（累计撞码 ${cooling} 次${left}）；确认要试可用「#强制刷新卡池数据」，卡池查询不受影响。`);
       }
     } catch (_) {}
+    const gapRemain = await this.poolMinGapRemain();
+    if (gapRemain > 0) {
+      return e.reply(`距上次刷新不足 ${POOL_MIN_GAP_MS / 60000} 分钟（还需 ${fmtRemain(gapRemain)}），本次跳过。` +
+        '刷新过密会触发米游社 1034 验证码，卡池查询指令不受影响。');
+    }
+    await this.poolMarkRefreshStart();
     // 刷新官方公告时，同时清理绝区零本地历史缓存，避免旧缓存遮住新版本数据。
     try {
       await redis.del(ZZZ_CACHE_KEY);
@@ -1542,18 +1633,16 @@ export class xhh_gacha_pool extends plugin {
     // 避免用残缺数据覆盖好数据；并进入冷却，防止继续猛刷加重风控。
     const risk = results.some(r => r.riskControl);
     if (risk) {
-      try {
-        await redis.set('xhh:gacha_pool:risk_control', '1', { EX: 30 * 60 });
-      } catch (_) {}
+      const { strikes, seconds } = await this.poolEnterCooldown();
       // 详情接口被风控时同步整体跳过，但崩三的开放时间走「瞬间搜索」接口（不受影响），单独补录一次
       const bh3Note = await this.fillBh3TimesOnRisk(results);
       return e.reply('米游社官方卡池数据已刷新：\n' + lines.join('\n') + bh3Note +
-        '\n\n【注意】米游社详情接口命中风控(1034)，本次已跳过本地卡池库同步（避免写入残缺数据），10 分钟内请不要重复刷新；确认已解除可用「#强制刷新卡池数据」，查询指令不受影响。');
+        `\n\n【注意】米游社详情接口命中风控(1034)，本次已跳过本地卡池库同步（避免写入残缺数据）。` +
+        `该限制按 IP 生效且刷新越密越容易触发，累计撞码 ${strikes} 次，接下来 ${fmtRemain(seconds * 1000)}内请不要重复刷新` +
+        `（每次刷新之间也至少间隔 ${POOL_MIN_GAP_MS / 60000} 分钟）；确认已解除可用「#强制刷新卡池数据」，查询指令不受影响。`);
     }
-    // 未命中风控：清掉冷却标记，后续刷新恢复正常
-    try {
-      await redis.del('xhh:gacha_pool:risk_control');
-    } catch (_) {}
+    // 未命中风控：清掉冷却标记与撞码计数，后续刷新恢复正常
+    await this.poolClearCooldown();
     // 刷新成功后自动同步本地卡池库，避免每个版本都要手动维护 gslogs.yaml / sr_logs.yaml。
     const syncLines = await this.syncLocalPoolsFromOfficial(results);
     const syncText = syncLines.length ? '\n\n【本地卡池库自动同步】\n' + syncLines.join('\n') : '';

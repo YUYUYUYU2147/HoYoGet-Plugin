@@ -278,7 +278,16 @@ export class bh3_gacha extends plugin {
       const res = await fetch(`${GACHA_LOG_URL}?${params.toString()}`, {
         headers: gachaHeaders(),
       }).then(r => r.json());
-      if (res?.retcode !== 0) logger.mark('[xhh][bh3_gacha] GetUserGacha response:', JSON.stringify(res));
+      if (res?.retcode !== 0) {
+        // 失败必须和「这个池没有记录」区分开。原先只打一行日志就 break，返回空数组后
+        // 调用方按「没有新增」处理——1034 验证码、-100 authkey 失效、1103 限流、网络抖动
+        // 全都表现成一句「没有新增抽卡数据」，看不出问题出在哪。
+        // 抛出去交给调用方单独处理这个池，不影响其余池子。
+        const captcha = [1034, 10035, 10041].includes(Number(res?.retcode));
+        const hint = captcha ? '（米游社要求验证码，authkey 未过期也可能要重新过码）' : '';
+        logger.warn(`[xhh][bh3_gacha] GetUserGacha 失败 type=${gachaType} page=${page} retcode=${res?.retcode}${captcha ? ' 验证码' : ''} message=${res?.message || ''}${hint}`);
+        throw new Error(`GetUserGacha retcode=${res?.retcode}${captcha ? '(验证码)' : ''}${res?.message ? ' ' + res.message : ''}`);
+      }
       const list = res?.data?.list || [];
       if (!list.length) break;
       for (const raw of list) {
@@ -408,11 +417,21 @@ export class bh3_gacha extends plugin {
     let totalAdd = 0;
     const deltas = [];
 
+    const failedPools = [];
+
     for (const menu of menus) {
       const gachaType = String(menu.type || '');
       const gachaName = menu.label || `卡池${gachaType}`;
       if (!gachaType) continue;
-      const newRecords = await this.fetchGachaType(uid, authkey, gachaType);
+      let newRecords = [];
+      try {
+        newRecords = await this.fetchGachaType(uid, authkey, gachaType);
+      } catch (err) {
+        // 单个池取失败只跳过这个池，不能让整次同步中断
+        logger.warn(`[xhh][bh3_gacha] 「${gachaName}」取数失败：${err?.message || err}`);
+        failedPools.push(`${gachaName}：${err?.message || err}`);
+        continue;
+      }
       const add = this.mergeInto(history, gachaName, newRecords, force);
       if (add > 0) deltas.push(`${gachaName} 新增 ${add} 条`);
       totalAdd += add;
@@ -428,8 +447,13 @@ export class bh3_gacha extends plugin {
     }
 
     this.saveGacha(uid, { uid, data_time: moment().format('YYYY-MM-DD HH:mm:ss'), data: history });
-    if (!totalAdd) return `🌱UID${uid} 没有新增抽卡数据！`;
-    return [`✅UID${uid} 抽卡记录更新成功，本次新增 ${totalAdd} 条`, ...deltas].join('\n');
+    // 取数失败的池要单独说清楚，不能让「没有新增」把真实原因盖掉
+    const failNote = failedPools.length
+      ? `\n\n⚠️ ${failedPools.length} 个卡池取数失败（已跳过，其余数据已正常入库）：\n` +
+        failedPools.map(f => `· ${f}`).join('\n')
+      : '';
+    if (!totalAdd) return `🌱UID${uid} 没有新增抽卡数据！${failNote}`;
+    return [`✅UID${uid} 抽卡记录更新成功，本次新增 ${totalAdd} 条`, ...deltas].join('\n') + failNote;
   }
 
   // 把接口返回的记录并入本地历史，返回新增条数
