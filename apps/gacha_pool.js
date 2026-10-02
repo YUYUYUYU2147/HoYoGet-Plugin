@@ -1467,7 +1467,7 @@ export class xhh_gacha_pool extends plugin {
   async autoRefreshPools() {
     try {
       if (await redis.get('xhh:gacha_pool:risk_control')) {
-        logger.mark('[xhh][gacha_pool] 米游社风控冷却中，跳过本次自动刷新');
+        logger.mark(`[${new Date().toLocaleString('zh-CN', { hour12: false })}][xhh][gacha_pool] 米游社风控冷却中（30 分钟），跳过本次自动刷新`);
         return;
       }
     } catch (_) {}
@@ -1479,6 +1479,8 @@ export class xhh_gacha_pool extends plugin {
       const results = await officialPool.refreshAll();
       if (results.some(r => r.riskControl)) {
         try {
+          // 冷却 30 分钟：正好等于自动刷新的一个周期，撞上风控的那一轮
+          // 跳过，下一轮解冻后照常执行，不会出现连续多轮都被挡的情况。
           await redis.set('xhh:gacha_pool:risk_control', '1', { EX: 30 * 60 });
         } catch (_) {}
         logger.warn(`[${new Date().toLocaleString('zh-CN', { hour12: false })}][xhh][gacha_pool] 自动刷新命中米游社风控(1034)，已跳过本地卡池库同步`);
@@ -1499,7 +1501,7 @@ export class xhh_gacha_pool extends plugin {
     const force = /强制|立即|force/i.test(String(e?.msg || ''));
     try {
       if (!force && !e?.isMaster && await redis.get('xhh:gacha_pool:risk_control')) {
-        return e.reply('米游社接口处于风控冷却期（触发后 10 分钟内不再刷新）；确认要试可用「#强制刷新卡池数据」，卡池查询不受影响。');
+        return e.reply('米游社接口处于风控冷却期（触发后 30 分钟内不再刷新）；确认要试可用「#强制刷新卡池数据」，卡池查询不受影响。');
       }
     } catch (_) {}
     // 刷新官方公告时，同时清理绝区零本地历史缓存，避免旧缓存遮住新版本数据。
@@ -1541,7 +1543,7 @@ export class xhh_gacha_pool extends plugin {
     const risk = results.some(r => r.riskControl);
     if (risk) {
       try {
-        await redis.set('xhh:gacha_pool:risk_control', '1', { EX: 10 * 60 });
+        await redis.set('xhh:gacha_pool:risk_control', '1', { EX: 30 * 60 });
       } catch (_) {}
       // 详情接口被风控时同步整体跳过，但崩三的开放时间走「瞬间搜索」接口（不受影响），单独补录一次
       const bh3Note = await this.fillBh3TimesOnRisk(results);
