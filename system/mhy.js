@@ -202,13 +202,47 @@ class mhy {
       if (config().debug) logger.mark('[refresh_cookies] 已跳过 genshin CK 绑定, id:', id);
       return { sendMsg, ltoken, ck: e.msg };
     }
-    let userck = (
-      await import(`file://${process.cwd()}/plugins/genshin/model/user.js`)
-    ).default;
-    e.ck = e.msg;
-    await new userck(e).bing();
+    let bound = { ok: false, msgs: [] };
+    if (opts.mid && opts.cookieTokenV2 && opts.ltokenV2) {
+      const v2Ck =
+        `ltuid=${id};account_mid_v2=${opts.mid};` +
+        `cookie_token_v2=${opts.cookieTokenV2};ltoken_v2=${opts.ltokenV2};ltmid_v2=${opts.mid};`;
+      bound = await this.tryBindGenshinCookie(e, v2Ck);
+      if (config().debug) logger.mark('[refresh_cookies] v2 CK 结果:', bound.ok, 'id:', id);
+    }
+    if (!bound.ok) bound = await this.tryBindGenshinCookie(e, e.msg);
+    if (bound.ok) sendMsg.push(...bound.msgs);
+    else if (config().debug)
+      logger.mark('[refresh_cookies] genshin CK 未绑定成功，不影响 xhh 自身数据, id:', id);
     if (config().hbxx) sendMsg = sendMsg.filter(m => typeof m === 'string' && m);
     return { sendMsg, ltoken, ck: e.msg };
+  }
+
+  //试一次 genshin 的 CK 绑定，并把回复收下来自己判断成败。
+  //genshin 内部直接往 e.reply 抛消息，校验不过时是「Cookie错误」之类。
+  //这里临时接管 e.reply 只为收集，不再让它混进 refresh_cookies 的 sendMsg——
+  //此刻 xhh 的 stoken 早已落盘，genshin 绑定失败不该显示成扫码绑定失败。
+  async tryBindGenshinCookie(e, ck) {
+    const oldReply = e.reply;
+    const msgs = [];
+    e.reply = msg => {
+      if (Array.isArray(msg)) msgs.push(...msg);
+      else msgs.push(msg);
+    };
+    e.msg = ck;
+    e.ck = ck;
+    try {
+      const userck = (
+        await import(`file://${process.cwd()}/plugins/genshin/model/user.js`)
+      ).default;
+      await new userck(e).bing();
+    } catch (err) {
+      msgs.push(String(err));
+    } finally {
+      e.reply = oldReply;
+    }
+    const text = msgs.map(m => String(Array.isArray(m) ? m.join('\n') : m)).join('\n');
+    return { ok: !/Cookie错误|绑定Cookie失败|环境触发|数据错误/.test(text), msgs };
   }
 
   //通过uid获取stoken

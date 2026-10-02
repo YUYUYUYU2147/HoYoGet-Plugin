@@ -244,6 +244,11 @@ export class user extends plugin {
                 const stuid = res.data.user_info.aid || res.data.user_info.uid || res.data.user_info.account_id
                 //mid
                 const mid = res.data.user_info.mid;
+                //扫码响应里若直接带了 v2 token，就原样透传给 genshin。
+                //没有就是没有——getCookieAccountInfoBySToken 换来的仍是 v1 字段，
+                //把 cookie_token 改名成 cookie_token_v2 只会让 genshin 走 flagV2
+                //分支拿 v1 的值去校验，比走老格式失败得更快。
+                const tk = n => res.data.tokens.find(i => i.name === n)?.token;
                 
                 //用SToken获取cookie
                 const ck = `stuid=${stuid};stoken=${SToken};mid=${mid};`;
@@ -253,7 +258,10 @@ export class user extends plugin {
                     sendMsg,
                     ltoken
                 } = await mhy.refresh_cookies(e, headers, SToken, stuid, {
-                    bindGenshinCookie: false
+                    bindGenshinCookie: true,
+                    mid,
+                    cookieTokenV2: tk("cookie_token_v2"),
+                    ltokenV2: tk("ltoken_v2")
                 });
                 if (SToken && stuid && mid && ltoken) {
                     res = await api(e, {
