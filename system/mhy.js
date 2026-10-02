@@ -189,7 +189,10 @@ class mhy {
     if (!e.no_reply) e.no_reply = e.reply;
     let sendMsg = [];
     e.reply = msg => {
-      if (Array.isArray(msg)) sendMsg.push(...msg);
+      // genshin 会把「绑定Cookie成功\n」「角色列表」「\n使用命令说明」这样
+      // 一次性传过来，换行符就写在元素里，等的就是被原样拼成一条。
+      // 直接摊平会让 TRSS 按数组发成三条独立消息。
+      if (Array.isArray(msg)) sendMsg.push(msg.join(''));
       else sendMsg.push(msg);
     };
     if (!Cookie || !ltoken) {
@@ -226,7 +229,7 @@ class mhy {
     const oldReply = e.reply;
     const msgs = [];
     e.reply = msg => {
-      if (Array.isArray(msg)) msgs.push(...msg);
+      if (Array.isArray(msg)) msgs.push(msg.join(''));
       else msgs.push(msg);
     };
     e.msg = ck;
