@@ -1,5 +1,6 @@
 import { yaml, render, mys, config, reply_recallMsg } from '#xhh';
 import { gsRoleView, srRoleView } from '../system/role_detail.js';
+import { fetchGsRole, buildGsDetail, fetchGsGuidePage, parseGsGuide, resolveGsGuideIcons, fetchGsRoleList, fetchGsWeaponList, fetchGsArtifactList } from './wiki/bwiki_gs.js';
 import fs from 'fs';
 import { JSDOM } from 'jsdom';
 const { window } = new JSDOM();
@@ -231,6 +232,16 @@ export class Wiki extends plugin {
           reg: '^[#%*]*(星铁|绝区零|ZZZ|崩坏3|崩坏三|崩三|BH3)?\\s*图鉴\\s*(.+)$',
           fnc: 'illustrated_book',
         },
+        // 角色故事单独一条指令：故事正文加起来能占整张图鉴 40% 的高度，
+        // 塞进图鉴里图会变得又长又难发，而故事又不是每次都要看。
+        {
+          reg: '^[#%*]*(星铁|绝区零|ZZZ|崩坏3|崩坏三|崩三|BH3)?\\s*(.+)(?:故事|剧情)$',
+          fnc: 'role_story',
+        },
+        {
+          reg: '^[#%*]*(星铁|绝区零|ZZZ|崩坏3|崩坏三|崩三|BH3)?\\s*(?:故事|剧情)\\s*(.+)$',
+          fnc: 'role_story',
+        },
       ],
     });
   }
@@ -248,8 +259,10 @@ export class Wiki extends plugin {
       // （文章 55479392 里那三张是头像框/成就杂图和壁纸，不是武器类型）。
       // 原图是半透明中灰，在近白底徽章上发灰，已整体转黑剪影并居中裁到 256×256，
       // 和命途图标（毁灭.png 等）风格一致。
-      '单手剑': '单手剑.png', '长枪': '长枪.png', '双手剑': '双手剑.png',
-      '弓': '弓.png', '法器': '法器.png'
+      '单手剑': '单手剑.png', '双手剑': '双手剑.png', '弓': '弓.png', '法器': '法器.png',
+      // 「长枪」是 nanoka/游戏内写法，「长柄武器」是 Bwiki 角色一览的写法，
+      // 两种都指同一类武器，两个 key 都要映射，否则只显示文字。
+      '长枪': '长枪.png', '长柄武器': '长枪.png'
       // 特弓 / 特殊武器官方没给对应图，先不映射，保持纯文字，不硬凑
     };
     const srIconMap = {
@@ -312,6 +325,68 @@ export class Wiki extends plugin {
       if (text.includes(key)) return icon;
     }
     return '';
+  }
+
+  /**
+   * 角色故事：从指令里抽出角色名（与图鉴同一套规则，去掉「故事/剧情」后缀）。
+   */
+  parseStoryQuery(e) {
+    const starPrefix = /^[＃#%]*\*/.test(e.msg);
+    const isSr = starPrefix || e.msg.includes('星铁');
+    const isZZZ = e.msg.includes('绝区零') || e.msg.includes('ZZZ');
+    const isBH3 = /崩坏3|崩坏三|崩三|BH3/i.test(e.msg);
+    let name = e.msg
+      .replace(/^[#%*]*/, '')
+      .replace(/^(?:xhh|小花火)[#%*]*/i, '')
+      .replace(/星铁|绝区零|ZZZ|崩坏3|崩坏三|崩三|BH3/gi, '')
+      .replace(/(?:故事|剧情)/g, '')
+      .trim();
+    name = name.replace(/^[:：\s]+|[:：\s]+$/g, '').trim();
+    return { name, isSr, isZZZ, isBH3 };
+  }
+
+  /**
+   * #角色故事 / #故事角色 / #角色剧情 —— 原神走 Bwiki。
+   * 其他游戏暂不支持，直接回话说明，不静默失败。
+   */
+  async role_story(e) {
+    if (!config().wiki) return false;
+    const { name, isSr, isZZZ, isBH3 } = this.parseStoryQuery(e);
+    if (!name) return false;
+    if (isSr || isZZZ || isBH3) {
+      await e.reply(`「${name}」的角色故事暂未支持，目前只有原神可用。`);
+      return true;
+    }
+    let d = null;
+    try { d = await fetchGsRole(name); }
+    catch (err) {
+      logger.debug?.(`[xhh][bwiki_gs] ${name} 故事抓取异常: ${err?.message}`);
+      return false;
+    }
+    if (!d || !d.stories?.length) {
+      await e.reply(`没有找到「${name}」的角色故事。`);
+      return true;
+    }
+    const { detail, extra } = buildGsDetail(d);
+    const stories = [extra.detailStory, ...(d.stories || [])
+      .filter(x => !/角色详细|角色简介|角色介绍/.test(String(x.title || '')))
+      .map(x => ({
+        title: String(x.title || '').replace(/\s*[（(]解锁条件[：:][^）)]*[）)]\s*$/, '').trim(),
+        unlock: x.unlock || '',
+        body: String(x.body || '').trim(),
+      }))].filter(Boolean);
+    if (!stories.length) {
+      await e.reply(`「${name}」没有可显示的角色故事。`);
+      return true;
+    }
+    const g = k => { const v = d.basic?.[k]; return Array.isArray(v) ? (v[0] ?? '') : (v ?? ''); };
+    return render('wiki/gs_story', {
+      name: detail.name,
+      icon: detail.icon,
+      title: g('称号'),
+      stories,
+      source: extra.source,
+    }, { e, ret: true });
   }
 
   async illustrated_book(e) {
@@ -801,9 +876,17 @@ export class Wiki extends plugin {
     data = data.filter(
       (item, index, self) => index === self.findIndex(t => t.name === item.name)
     );
+    // 原神角色：头像换成 Bwiki 角色一览的图（维基原图，nanoka 只有方块 webp）。
+    // 抓不到 / 被 567 限流时 fetchGsRoleList 返回 null，这里原样保留 nanoka 数据，
+    // 降级链（icon → iconFallback，list.html 的 onerror 逐级切换）完全不动。
+    if (!isSr && !isZZZ && !isBH3 && ['js', 'wq', 'syw'].includes(type)) {
+      data = await this.mergeGsBwikiRoleIcons(data, type);
+    }
 
     if (data.length > 50)
       reply_recallMsg(e, `正在获取${_name}列表中,请等待...`, 30);
+    // 超过这个条数就按「长列表」处理：降 zoom + 降 jpeg 质量，否则 QQ 发不出去
+    const LONG_LIST = n => n > 60;
     // 星级描边配色：五星/S级金色、四星/A级紫色、三星/B级蓝色（绝区零与原神/星铁统一）
     const rankClassMap = { 五星: 'r5', 'S级': 'r5', 四星: 'r4', 'A级': 'r4', 三星: 'r3', 'B级': 'r3', 二星: 'r2', 一星: 'r1' };
     data = data.map(item => ({
@@ -856,6 +939,7 @@ export class Wiki extends plugin {
     // 而 list_dense 只渲染图标和名字、不渲染 badges，星级/元素/命途/属性徽章全丢了。
     // 四个游戏的角色图鉴、武器、遗器等列表保持 wiki/list 同一套 UI，
     // 只有圣痕这一类条目特别多的用紧凑排版。
+    const isLong = LONG_LIST(data.length);
     if (isBH3 && type === 'syw') {
       return render('wiki/list_dense', {
         name: _name,
@@ -866,8 +950,138 @@ export class Wiki extends plugin {
     data = {
       name: _name,
       data: data,
+      // 只压 jpeg 质量，不再动 zoom。
+      // 之前为了压体积把 zoom 从 2.4 降到 1.2，结果列表整张发出去是糊的
+      //（字号本来就只有 10px，再缩一半就没法看了）。
+      // 重新实测同一张列表：zoom 2.4 + q85 = 1.99MB，q75 = 1.54MB，都远
+      // 在 QQ 的限制之内 —— 之前那张 4MB 是 CSS 没加载、页面按裸 HTML 排版
+      // 撑出来的，不是正常体积。ppath 修好之后根本不需要降 zoom。
+      quality: isLong ? 85 : undefined,
     };
     return render('wiki/list', data, { e, ret: true });
+  }
+
+  /**
+   * 原神角色列表：Bwiki 头像覆盖 nanoka 头像。
+   * fetchGsRoleList 内部有缓存，抓不到（567 限流/结构变化）时返回 null → 原样返回 nanoka 数据。
+   * 覆盖时把 nanoka 的基础图顺延成 iconFallback，list.html 的 onerror 逐级切换，
+   * 于是「Bwiki 图 → nanoka 方块 → nanoka 圆形」三级兜底，行为不变。
+   * Bwiki 多出来的角色（测试服新角色 nanoka 还没有）按 nanoka 字段补齐。
+   * 排序：五星组在前、四星组在后，组内最新的在最顶部。
+   * 组内不重排 —— 两个数据源本身都是「上线时间降序」（mys.js 的 releaseRank、
+   * Bwiki 角色一览的默认顺序都是新的在前），稳定排序保持原序即可。
+   */
+  /**
+   * 图鉴背景图：从配置的随机图接口取一张，压到 1100px 宽的 jpeg 存到 temp/bg/。
+   *
+   * 为什么不直接把远程 URL 丢给模板：
+   *   1) 原图是 2560×1440 的 PNG（实测 2MB），页面里铺开后 jpeg 体积会翻几倍，
+   *      QQ 直接拒收（rich media transfer failed）。先在 Node 里压过再给模板。
+   *   2) 远程图偶尔 404 或超时，模板里没有 onerror 兜底就会留一块空白。
+   *      存本地文件后，<img> 加载不了也只是不显示，底色还在。
+   *
+   * 接口不可用 / 返回的不是图片 → 返回空串，模板退回纯色底。
+   */
+  async fetchGsBgFile() {
+    const cfg = config();
+    if (cfg.gs_bg === false) return '';
+    const api = String(cfg.gs_bg_api || 'https://api.yppp.net/api.php').trim();
+    if (!/^https?:\/\//i.test(api)) return '';
+    const dir = `${process.cwd()}/temp/bg`;
+    const key = Buffer.from(api).toString('base64url').slice(0, 40);
+    const out = `${dir}/${key}.jpg`;
+    // 6 小时换一张：同一张图反复用没意义，但也别每次出图都去打接口
+    try {
+      if (fs.existsSync(out) && Date.now() - fs.statSync(out).mtimeMs < 6 * 3600 * 1000) return out;
+    } catch { /* 目录还没有，继续下载 */ }
+    try {
+      const ctrl = AbortSignal.timeout(15000);
+      const r = await fetch(api, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120', Referer: 'https://api.yppp.net/' },
+        redirect: 'follow',
+        signal: ctrl,
+      });
+      const ct = String(r.headers.get('content-type') || '');
+      if (!r.ok || !ct.startsWith('image/')) return '';
+      const buf = Buffer.from(await r.arrayBuffer());
+      if (buf.length < 1024) return '';
+      const sharp = (await import('sharp')).default;
+      await fs.promises.mkdir(dir, { recursive: true });
+      await sharp(buf).resize({ width: 1100 }).jpeg({ quality: 68 }).toFile(out);
+      return out;
+    } catch (err) {
+      logger.debug?.(`[xhh][wiki] 背景图获取失败: ${err?.message}`);
+      return '';
+    }
+  }
+
+  async mergeGsBwikiRoleIcons(data, kind = 'js') {
+    // 角色/武器/圣遗物三个列表都是「Bwiki 图覆盖 nanoka 图，抓不到就整条回落」，
+    // 只有数据源和补条目的字段不一样，所以走同一个函数。
+    const fetchers = { js: fetchGsRoleList, wq: fetchGsWeaponList, syw: fetchGsArtifactList };
+    const label = { js: '角色', wq: '武器', syw: '圣遗物' }[kind] || '条目';
+    const fetcher = fetchers[kind];
+    if (!fetcher) return data;
+    let list = null;
+    try {
+      list = await fetcher();
+    } catch (err) {
+      logger.debug?.(`[xhh][bwiki_gs] ${label}一览抓取异常: ${err?.message}`);
+      return data;
+    }
+    if (!list?.length) return data;
+    const GS_ELEMENT = { 风: '风', 火: '火', 冰: '冰', 雷: '雷', 水: '水', 岩: '岩', 草: '草' };
+    const byName = new Map(list.map(x => [String(x.name || '').trim(), x]));
+    const seen = new Set();
+    const merged = [];
+    for (const item of data) {
+      const nm = String(item.name || '').trim();
+      const hit = byName.get(nm);
+      seen.add(nm);
+      if (!hit?.icon) { merged.push(item); continue; }
+      // 命之座/上线时间那些字段 nanoka 更全，不动。
+      // 武器类型特意改用 Bwiki 的叫法：nanoka 写「长枪」，Bwiki 写「长柄武器」，
+      // 列表和详情卡（详情卡走 Bwiki）用同一套词，不然看着像类型对不上。
+      merged.push({
+        ...item,
+        icon: hit.icon,
+        iconFallback: item.icon || '',
+        rarityIcon: hit.rarityIcon || '',
+        wuqi: (kind === 'wq' && hit.weapon) ? hit.weapon : item.wuqi,
+      });
+    }
+    // Bwiki 有、nanoka 没有的：补成同形状条目追加在后面。
+    // 旅行者各形态跳过：nanoka 那边已经按 name 去重只留一个「旅行者」，
+    // 这里再补三个形态就等于把刚去掉的重复又加回来。
+    // 武器/圣遗物页没有 data-param，拿不到武器类型/元素，这类补出来的条目
+    // 徽章就只有星级那一项 —— 能显示出来比不显示强，完整信息看详情页。
+    const extraNames = [];
+    for (const x of list) {
+      const nm = String(x.name || '').trim();
+      if (!nm || seen.has(nm) || !x.icon) continue;
+      if (kind === 'js' && /^旅行者/.test(nm)) continue;
+      extraNames.push(nm);
+      merged.push({
+        name: nm,
+        ji: String(x.rarity) === '5' ? '五星' : '四星',
+        // Bwiki 里还有「无」「与旅行者相同」这类占位元素值，不是元素名，
+        // 直接透传会让徽章显示成「元素/无」，过滤掉。
+        yuanshu: kind === 'js' ? (GS_ELEMENT[x.element] || '') : '',
+        // 武器一览的响应式页签能给出武器类型，页签标题按顺序对应每个 case
+        wuqi: (kind === 'js' || kind === 'wq') ? (x.weapon || '') : '',
+        icon: x.icon,
+        iconFallback: '',
+        rarityIcon: x.rarityIcon || '',
+        aliases: [nm],
+      });
+    }
+    // 星级分组：五星 → 四星。只按星级分组，组内不动 —— 两个源的原始顺序
+    // 都已经是「上线时间降序」，Array.sort 稳定，不会打乱同分组内的先后。
+    const rankOf = it => (it.ji === '五星' ? 0 : it.ji === '四星' ? 1 : 2);
+    merged.sort((a, b) => rankOf(a) - rankOf(b));
+    const hit = data.filter(i => byName.has(String(i.name || '').trim()) && byName.get(String(i.name || '').trim()).icon).length;
+    logger.debug?.(`[xhh][bwiki_gs] ${label}列表: Bwiki ${list.length} 条, 覆盖 nanoka ${hit}/${data.length}, 补入 ${extraNames.length}`);
+    return merged;
   }
 
 
@@ -1457,12 +1671,25 @@ export class Wiki extends plugin {
         ({ id } = await mys.data(rname, 'js', hitSr, isZZZ, isBH3));
         if (id) dbg('跨游戏回退命中:', rname, '→', hitSr ? '星铁' : '原神');
       }
-      if (!id) { dbg('wiki 无此角色条目:', rname); return false; }
       isSr = hitSr;
+      // 原神：优先 Bwiki。Bwiki 收录更全（有角色档案、徽章图标、逐级数值），
+      // nanoka 只作为兜底 —— 测试服角色 Bwiki 还没有，只能走 nanoka。
+      // 星铁/绝区零/崩三暂时仍走原路径，Bwiki 那套只验证过原神。
+      //
+      // 这一段放在「!id 就 return false」之前：Bwiki 有而官方角色列表没有的角色
+      // （例如刚上线或仅维基收录的）也能出图，否则会被官方列表先挡掉。
+      if (!isSr && !isZZZ && !isBH3) {
+        const done = await this.gs_bwiki_role_pictures(e, rname);
+        // render 返回的是 e.runtime.render 的结果，不保证是布尔值，
+        // 所以用「非 false」判定成功，否则成功时也可能被当成失败再降级一次。
+        if (done !== false && done != null) return true;
+        dbg('Bwiki 无此角色或渲染失败，回退 nanoka:', rname);
+      }
+      if (!id) { dbg('wiki 无此角色条目:', rname); return false; }
       let data = await mys.detail(id, isSr, isZZZ, isBH3);
       if (!data) { dbg('角色详情获取失败:', rname, 'id=' + id); return false; }
-        if (data?.nanoka) return this.nanoka_role_pictures(e, data, isSr);
-        else if (isZZZ) this.zzz_role_pictures(e, data);
+      if (data?.nanoka) return this.nanoka_role_pictures(e, data, isSr);
+      else if (isZZZ) this.zzz_role_pictures(e, data);
       else if (isBH3) this.bh3_role_pictures(e, data);
       else if (isSr) this.sr_role_pictures(e, data);
       else this.gs_role_pictures(e, data);
@@ -1473,7 +1700,54 @@ export class Wiki extends plugin {
 
   //星铁角色
     // nanoka 源的角色详情卡：技能逐级数值 / 命座(星魂) / 天赋 / 属性成长表
-    async nanoka_role_pictures(e, data, isSr = false) {
+    /**
+   * 原神角色图鉴：Bwiki 数据源。
+   * 抓不到就返回 false，让调用方降级到 nanoka —— 测试服角色只有 nanoka 有。
+   */
+  async gs_bwiki_role_pictures(e, name) {
+    const dbg = (...a) => { if (config().debug) logger.mark('[xhh][bwiki_gs]', ...a); };
+    let d = null;
+    try {
+      d = await fetchGsRole(name);
+    } catch (err) {
+      // 绝不能让 Bwiki 的异常把整条图鉴指令带崩
+      logger.debug?.(`[xhh][bwiki_gs] ${name} 抓取异常: ${err?.message}`);
+      return false;
+    }
+    if (!d) return false;
+    // 页面存在但内容明显不完整时也别硬渲染，宁可回退 nanoka
+    if (!d.basic || !Object.keys(d.basic).length || !d.skillBlocks?.length) {
+      dbg(`${name} 解析内容不完整，回退 nanoka`);
+      return false;
+    }
+    const { detail, extra } = buildGsDetail(d);
+    const view = gsRoleView(detail, '');
+    view.source = extra.source;
+    view.topBadges = extra.topBadges;
+    view.gacha = extra.gacha;
+    // 角色详细：图鉴顶部第一块；#角色故事 指令也用 extra.detailStory，同一份数据
+    view.detailStory = extra.detailStory;
+    // 背景图：纯装饰，失败返回空串，不影响图鉴本身
+    view.bgFile = await this.fetchGsBgFile();
+    // 攻略：子页不存在时返回 null，模板的 {{if guide}} 会整块跳过
+    try {
+      // 图标再走一次文件页换成原图，缩略图放大是糊的
+      view.guide = await resolveGsGuideIcons(parseGsGuide(await fetchGsGuidePage(detail.name)));
+    } catch (err) {
+      logger.debug?.(`[xhh][bwiki_gs] ${detail.name} 攻略抓取失败: ${err?.message}`);
+      view.guide = null;
+    }
+    dbg(`${name} → ${detail.name} 技能${detail.skills.length} 命座${detail.constellations.length} ` +
+      `天赋${detail.passives.length} 徽章${extra.topBadges.length} 攻略${view.guide ? '有' : '无'}`);
+    try {
+      return await render('wiki/gs_role_nk', { ...view, name: detail.name }, { e, ret: true });
+    } catch (err) {
+      logger.debug?.(`[xhh][bwiki_gs] ${name} 渲染失败: ${err?.message}`);
+      return false;
+    }
+  }
+
+  async nanoka_role_pictures(e, data, isSr = false) {
         const c = data?.content || {};
         const tpl = isSr ? 'wiki/sr_role_nk' : 'wiki/gs_role_nk';
         const view = isSr ? srRoleView(c, c.id || '') : gsRoleView(c, c.id || '');

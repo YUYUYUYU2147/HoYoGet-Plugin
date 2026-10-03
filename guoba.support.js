@@ -148,6 +148,18 @@ export const supportGuoba = () => {
         component: 'Switch',
       },
       {
+        field: 'gs_bg',
+        label: '角色图鉴随机背景',
+        helpMessage: '用随机图接口给原神角色图鉴加一层底纹背景（接口失败自动退回纯色）',
+        component: 'Switch',
+      },
+      {
+        field: 'gs_bg_api',
+        label: '随机背景图接口',
+        helpMessage: '返回图片的地址，留空用默认 api.yppp.net/api.php',
+        component: 'Input',
+      },
+      {
         field: 'bdsb',
         label: '使用xhh绑定设备',
         helpMessage: '作用于genshin/StarRail/ZZZ-Plugin',
@@ -1247,6 +1259,8 @@ export const supportGuoba = () => {
         update: !!cfg.update,
         img_quality: cfg.img_quality ?? 80,
         wiki: !!cfg.wiki,
+        gs_bg: cfg.gs_bg !== false,
+        gs_bg_api: cfg.gs_bg_api ?? 'https://api.yppp.net/api.php',
         bdsb: !!cfg.bdsb,
         tlp: !!cfg.tlp,
         tlpcs: cfg.tlpcs ?? 3,
@@ -1416,6 +1430,7 @@ export const supportGuoba = () => {
       const boolMap = {
         update: data.update,
         wiki: data.wiki,
+        gs_bg: data.gs_bg,
         bdsb: data.bdsb,
         tlp: data.tlp,
         gs_logs: data.gs_logs,
@@ -1481,6 +1496,9 @@ export const supportGuoba = () => {
         if (v != null) yaml.set(_path + 'config.yaml', k, Number(v))
       }
 
+      // 随机背景接口：留空就回落到默认地址，不要把空串写进配置
+      const gsBgApi = String(data.gs_bg_api || '').trim()
+      if (gsBgApi) yaml.set(_path + 'config.yaml', 'gs_bg_api', gsBgApi)
       if (data.gacha_art_source) yaml.set(_path + 'config.yaml', 'gacha_art_source', data.gacha_art_source === 'official' ? 'official' : 'custom')
       if (data.gacha_header_art_source) yaml.set(_path + 'config.yaml', 'gacha_header_art_source', data.gacha_header_art_source === 'official' ? 'official' : 'custom')
       if (data.gacha_up_icon_source) yaml.set(_path + 'config.yaml', 'gacha_up_icon_source', data.gacha_up_icon_source === 'official' ? 'official' : 'custom')

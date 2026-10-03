@@ -210,3 +210,29 @@ body {
 .mini-badge img { width: 12px; height: 12px; object-fit: contain; flex: 0 0 12px; }
 .mini-badge.icon-only,
 .mini-badge:has(img) { width: 100%; max-width: 100%; padding: 1px; font-size: 0; }
+
+/* 头像容器：为了让稀有度金星条能压在头像顶部，这里必须是 relative。
+   头像本体的 90×90、圆角、描边全部照旧，只是多包了一层。 */
+.box_ .ava {
+  position: relative;
+  width: 90px;
+  height: 90px;
+  margin: 0 auto;
+}
+/* 稀有度金星条（维基原图是 162x25 的五星条，缩到头像宽度即可）：
+   压在头像上沿居中，盖在描边之上，和游戏内角色卡的观感一致。 */
+.box_ img.ava-stars {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 76px;
+  height: auto;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: none;
+  object-fit: contain;
+  object-position: center;
+  pointer-events: none;
+}

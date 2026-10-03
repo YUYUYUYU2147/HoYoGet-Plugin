@@ -120,8 +120,35 @@ const gsRegionCn = v => GS_REGION_CN[v] || String(v || '').replace(/^ASSOC_TYPE_
  */
 const gsItemIcon = id => (id ? `https://static.nanoka.cc/assets/gi/UI_ItemIcon_${id}.webp` : '');
 
+// nanoka 给的图标是文件名（如 Skill_A_03 / 10000120），要拼成静态站路径；
+// Bwiki 给的已经是完整 URL（patchwiki.biligame.com/...），再拼一次就成了
+// https://static.nanoka.cc/assets/gi/https://patchwiki… 这种废串，图片直接加载不出来。
+// 所有可能来自 Bwiki 的图标字段都走这里。
+const gsIconUrl = v => {
+    if (!v) return '';
+    const s = String(v);
+    if (!/^https?:\/\//i.test(s)) return `https://static.nanoka.cc/assets/gi/${s}.webp`;
+    // Bwiki 给的技能/命座/天赋图标是页面渲染时压过的 30px 缩略图
+    // （…/images/ys/thumb/a/b/xxx.png/30px-名称.png），放到 22~26px 的
+    // 图标位上等于二次缩小，糊得看不清。缩略图 URL 里带原图路径，
+    // 直接取出来就是原图，不用再查文件页。
+    // 注意 thumb 段里还带两级哈希目录（/thumb/1/19/xxx.png/30px-…），
+    // 所以中间那段要用「任意多层目录」匹配，不能只写 [^/]+
+    // /thumb/<哈希目录>/<文件名>.png/<宽>px-<编码名>.png → /<哈希目录>/<文件名>.png
+    // 中间那段必须用惰性匹配（*?），否则 [^/]+ 会把 xxx.png/30px- 也吞进去。
+    return s.replace(/\/thumb\/((?:[^/]+\/)*?)([^/]+)\/\d+px-[^/]*$/i, '/$1$2');
+};
+
+// 稀有度金星图。维基有现成的五星/四星星图，Bwiki 数据源会带 rarityIcon；
+// nanoka 没有这个键就退回空串，模板照旧显示文字星级。
+const GS_RARITY_ICON = {
+    5: 'https://patchwiki.biligame.com/images/ys/f/ff/0dlkmof43y8aam8fphgixaejy571iqc.png',
+    4: 'https://patchwiki.biligame.com/images/ys/2/2a/ssqzx9cint7m3yudjwviabu4nkd8s9o.png',
+};
+
 // 角色升级材料（角色经验素材）。所有角色通用，id/名字取自 zh/item.json 的
 // type === '角色经验素材'，共 3 档，图标同样实测 200。
+const GS_MORA_ICON = 'https://patchwiki.biligame.com/images/ys/thumb/3/34/60ggyaeh31ait5jbwj9dqjsypgd0jle.png/30px-%E6%91%A9%E6%8B%89.png';
 const GS_EXP_MATS = [
     { id: 104001, name: '流浪者的经验' },
     { id: 104002, name: '冒险家的经验' },
@@ -210,21 +237,100 @@ function gsRoleView(detail, id) {
     // 结果显示成「涤净青金碎屑×1 / 断片×3 / 块×3」—— 那是各档的最小值，
     // 不是真实用量。真实用量是 碎屑×1 → 断片×3 → 断片×6 → 块×3 → 块×6 → 块本×6，
     // 必须逐段原样列，不能去重合并。
-    const toMat = m => ({ name: m.name, count: m.count, rank: m.rank, icon: gsItemIcon(m.id) });
+    // icon 优先用数据源自带的 URL：nanoka 给的是道具 id，要拼本地路径；
+    // Bwiki 直接给了 patchwiki 图链，拼接反而会拼错。
+    const toMat = m => ({ name: m.name, count: m.count, rank: m.rank, icon: m.icon || gsItemIcon(m.id) });
     const ascensionStages = (mats.ascensions || []).map((step, i) => ({
         no: i + 1,
         cost: step.cost,
         mats: (step.mats || []).map(toMat),
     }));
-    // 天赋：talents 是 [[{mats,cost}, ...], [...]]，外层是天赋槽位，摊平成阶段
-    const talentStages = [];
-    for (const group of mats.talents || []) {
-        for (const step of (Array.isArray(group) ? group : [group])) {
+    // 天赋：talents 是三维的 —— 外层数组是【技能】（实测菲林斯 3 个有倍率的技能），
+    // 每个技能内层才是该技能的 9 个升级等级。
+    // 原写法两层循环全摊平并连续编号，菲林斯就成了 3×9=27 阶。数字本身是错的：
+    // 第 10 阶往后是重复的垃圾（三个技能的升级材料完全一致，摊平后看起来像复制粘贴，
+    // 出现「第10阶=摩拉17500+教导×2」这种明显不成梯度的内容）。
+    // 同一个角色所有技能的升级材料是同一套（共用同一个天赋书体系），所以只取第一组。
+    const talentGroups = Array.isArray(mats.talents) ? mats.talents : [];
+    const firstTalentGroup = Array.isArray(talentGroups[0])
+        ? talentGroups[0]
+        : (talentGroups[0] ? [talentGroups[0]] : []);
+    const talentStages = firstTalentGroup
+        .map((step, i) => {
             const list = (step?.mats || []).map(toMat);
-            if (list.length) talentStages.push({ no: talentStages.length + 1, cost: step.cost, mats: list });
-        }
-    }
+            return { no: i + 1, cost: step?.cost, mats: list };
+        })
+        .filter(x => x.mats.length);
+    // 同角色多技能的升级材料是否真的一致——不一致时宁可保留全部组，也别只显示第一组误导人。
+    const talentGroupsDiffer = talentGroups.length > 1 && talentGroups.some(
+        g => JSON.stringify((Array.isArray(g) ? g : [g]).map(s => (s?.mats || []).map(m => `${m.name}x${m.count}`)))
+            !== JSON.stringify(firstTalentGroup.map(s => (s?.mats || []).map(m => `${m.name}x${m.count}`)))
+    );
     const expMats = GS_EXP_MATS.map(m => ({ ...m, icon: gsItemIcon(m.id) }));
+
+    // 数量在两个数据源里有三种写法：'3'、'120000'、'2.4万'。
+    // 求和前统一换成真值，显示时再按量级还原（避免 24000 和 2.4万 两种写法混在一张表里）。
+    const qtyOf = v => {
+        const s = String(v ?? '').replace(/,/g, '').trim();
+        if (!s) return 0;
+        const wan = s.match(/^([\d.]+)\s*万$/);
+        if (wan) return Math.round(parseFloat(wan[1]) * 10000);
+        const n = parseFloat(s);
+        return Number.isFinite(n) ? n : 0;
+    };
+    // 同一材料跨档合并：'最胜紫晶碎屑' 与 '最胜紫晶断片' 是不同材料，不合并。
+    // 摩拉在 nanoka 里不在 mats 内，而是每档的 cost 字段（20000/40000/…），
+    // 所以这里把 cost 一并累加，否则汇总里摩拉永远是空的。
+    const sumMats = stages => {
+        const bag = new Map();
+        for (const st of stages) {
+            if (st?.cost) {
+                const cur = bag.get('摩拉');
+                if (cur) cur.qty += qtyOf(st.cost);
+                else bag.set('摩拉', { name: '摩拉', qty: qtyOf(st.cost), rank: 0, icon: GS_MORA_ICON });
+            }
+            for (const m of (st?.mats || [])) {
+                if (!m?.name) continue;
+                const prev = bag.get(m.name);
+                if (prev) { prev.qty += qtyOf(m.count); continue; }
+                bag.set(m.name, { name: m.name, qty: qtyOf(m.count), rank: m.rank, icon: m.icon || gsItemIcon(m.id) });
+            }
+        }
+        return [...bag.values()].filter(m => m.qty > 0);
+    };
+    // 1652500 不能四舍五入成 165.3万 —— 那是错的数字，差 500 摩拉。
+    // 万位以下保留两位小数，且只在真的能整除时才用短写法。
+    const fmtQty = n => {
+        if (n < 10000) return String(n);
+        const w = n / 10000;
+        if (Number.isInteger(w)) return `${w}万`;
+        const s2 = w.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+        return `${s2}万`;
+    };
+
+
+    // 等级升级消耗（1→90 分段）。这是可选数据：只有 Bwiki 路径会带 materials.levelUp，
+    // nanoka 的 materials 只有 ascensions / talents 两个键，所以这里拿不到，
+    // 模板会退回只列三本通用经验书的旧行为，不回归。
+    const levelUpMats = (mats.levelUp || [])
+        .map(seg => ({
+            lv: seg.lv || (seg.from != null && seg.to != null ? `${seg.from}~${seg.to}级` : ''),
+            from: seg.from ?? null,
+            to: seg.to ?? null,
+            approx: !!seg.approx,
+            mats: (seg.mats || []).map(toMat).filter(m => m.name),
+        }))
+        .filter(seg => seg.lv && seg.mats.length);
+    // 升级材料：Bwiki 有 levelUp（分 7 段），nanoka 只有三本通用经验书没有分段。
+    // 三类材料各自求和。突破/天赋的逐档明细仍保留在 ascensionStages / talentStages，
+    // 模板默认只画总和，要展开的话换字段即可。
+    const ascendSum = sumMats(ascensionStages);
+    const talentSum = sumMats(talentStages);
+    const levelSum = sumMats(levelUpMats);
+    // 技能书（天赋书）：Bwiki 放在 materials.skillUp 里，形态是 [{level, mats}]，
+    // 与 ascensionStages 同构。nanoka 没有这个键，所以那一侧这组是空的。
+    const skillUpStages = (mats.skillUp || []).map(s => ({ no: s.level, mats: (s.mats || []).map(toMat) }));
+    const skillSum = sumMats(skillUpStages);
 
     const skills = (d.skills || []).map((sk, i) => {
         // promote 的键 0/1/2/3 不是「天赋组」而是【等级档】，每档自带一份 param 数组
@@ -236,7 +342,9 @@ function gsRoleView(detail, id) {
         const firstIcon = Object.values(sk.promote || {})[0]?.icon;
         return {
             name: sk.name || `技能${i + 1}`,
-            icon: firstIcon ? `https://static.nanoka.cc/assets/gi/${firstIcon}.webp` : '',
+            // nanoka 给的是文件名（Skill_A_03），要拼成静态站路径；
+            // Bwiki 给的已经是完整 URL，直接拼会得到 https://static.nanoka.cc/assets/gi/https://… 这种废串。
+            icon: gsIconUrl(firstIcon),
             lines: top.lines,
             maxLevel: top.level,
             brackets: groups.map(g => g.level).filter(Boolean),
@@ -250,8 +358,9 @@ function gsRoleView(detail, id) {
         // 之前这里把 UI_AvatarIcon_ 剥掉再拼 .webp，得到的
         // assets/gi/Furina.webp 实测 404 —— 152 个角色无一例外全是坏的，
         // 不是个别角色缺图。列表页（nanokaGsIcon）没剥前缀所以一直正常。
-        icon: d.icon ? `https://static.nanoka.cc/assets/gi/${d.icon}.webp` : '',
+        icon: gsIconUrl(d.icon),
         rarity: gsRarityCn(d.rarity),
+        rarityIcon: d.rarityIcon || GS_RARITY_ICON[Number(/(\d)/.exec(String(d.rarity || ''))?.[1])] || '',
         element: info.vision || '',
         constellation: info.constellation || '',
         region: gsRegionCn(info.region),
@@ -265,13 +374,34 @@ function gsRoleView(detail, id) {
         skills,
         constellations: (d.constellations || []).map((c, i) => ({
             no: i + 1, name: c.name, desc: fillSrDesc(c.desc, c.param_list),
+            icon: c.icon ? gsIconUrl(c.icon) : '',
         })).filter(c => c.name),
         passives: (d.passives || []).map(p => ({
             name: p.name, desc: fillSrDesc(p.desc, p.param_list), unlock: p.unlock,
+            icon: p.icon ? gsIconUrl(p.icon) : '',
         })).filter(p => p.name),
         ascensionStages,
         talentStages,
+        // 多技能材料不一致时（极少见）告知调用方，别让人以为这就是全部
+        talentSkillCount: talentGroups.length,
+        talentGroupsDiffer,
         expMats,
+        levelUpMats,
+        // 三类材料的合并汇总，模板画「材料总览」用。
+        // 模板不能调函数，数量在这里就格式化成字符串。
+        matSummary: [
+            { key: 'level', label: '升级', mats: levelSum },
+            { key: 'ascend', label: '突破', mats: ascendSum },
+            { key: 'talent', label: '天赋', mats: talentSum },
+            { key: 'skill', label: '技能', mats: skillSum },
+        ]
+            .filter(g => g.mats.length)
+            .map(g => ({
+                key: g.key, label: g.label,
+                // 摩拉在 nanoka 里是每档的 cost 字段，已并进 mats 末尾，展示上与其他材料一致
+                mats: g.mats.map(m => ({ ...m, count: fmtQty(m.qty) })),
+                mats: g.mats.map(m => ({ ...m, count: fmtQty(m.qty) })),
+            })),
     };
 }
 

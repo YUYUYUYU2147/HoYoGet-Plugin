@@ -459,7 +459,6 @@ async function render(path, data_, cfg = {}) {
                     scale: `style=transform:scale(${(config().img_quality / 100) * 2.4 || 2.4 * 0.8})`,
                 },
                 ...data_,
-                ppath: '../../../../../plugins/xhh/resources/',
                 tplFile: tplFile,
                 // sign/sign.html 被游戏签到和社区签到共用，saveId 撞了会命中对方的渲染缓存
                 saveId: cfg.saveId || path.split('/')[path.split('/').length - 1],

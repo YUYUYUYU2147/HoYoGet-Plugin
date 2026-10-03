@@ -10,11 +10,14 @@
       <div class="box">
         {{each data s}}
         <div class="box_">
-          {{if s.icon}}
-          <img class="rank {{s.rankClass}}" src="{{s.icon}}" data-alt="{{s.iconFallback || ''}}" onerror="var a=(this.dataset.alt||'').split(',').filter(Boolean);if(a.length){this.src=a.shift();this.dataset.alt=a.join(',');}else{this.style.visibility='hidden'}" />
-          {{else}}
-          <div class="img-ph rank {{s.rankClass}}">{{s.name[0]}}</div>
-          {{/if}}
+          <div class="ava">
+            {{if s.icon}}
+            <img class="rank {{s.rankClass}}" src="{{s.icon}}" data-alt="{{s.iconFallback || ''}}" onerror="var a=(this.dataset.alt||'').split(',').filter(Boolean);if(a.length){this.src=a.shift();this.dataset.alt=a.join(',');}else{this.style.visibility='hidden'}" />
+            {{else}}
+            <div class="img-ph rank {{s.rankClass}}">{{s.name[0]}}</div>
+            {{/if}}
+            {{if s.rarityIcon}}<img class="ava-stars" src="{{s.rarityIcon}}" alt="" />{{/if}}
+          </div>
           <p class="{{s.rankClass}}">{{s.name}}</p>
           {{if s.badges && s.badges.length}}
           <div class="badge-row">

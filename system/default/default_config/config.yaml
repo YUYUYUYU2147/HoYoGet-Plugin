@@ -41,6 +41,11 @@ ttocr_itemid: 32
 #图片渲染精度：填数字（单位：%）
 img_quality: 80
 
+# 原神角色图鉴的随机图背景：true开（默认），false关
+gs_bg: true
+# 随机图接口地址，留空则用默认的 api.yppp.net
+gs_bg_api: 'https://api.yppp.net/api.php'
+
 #塔罗牌开关：true开，false关
 tlp: false
 
