@@ -1646,7 +1646,33 @@ export class xhh_gacha_pool extends plugin {
     // 刷新成功后自动同步本地卡池库，避免每个版本都要手动维护 gslogs.yaml / sr_logs.yaml。
     const syncLines = await this.syncLocalPoolsFromOfficial(results);
     const syncText = syncLines.length ? '\n\n【本地卡池库自动同步】\n' + syncLines.join('\n') : '';
-    return e.reply('米游社官方卡池数据已刷新：\n' + lines.join('\n') + syncText);
+    // 崩三那条链要 CK（stoken 换 authkey 才能查 GetUserGacha），和上面的公告链不是一回事，
+    // 但对使用者来说是同一个「刷新卡池数据」的动作，所以并到同一条指令里跑。
+    // 失败只提示不阻断：崩三没绑 UID / stoken 过期都不该影响其它游戏刷新成功。
+    const bh3Note = await this.refreshBh3GachaChain(e);
+    return e.reply('米游社官方卡池数据已刷新：\n' + lines.join('\n') + syncText + bh3Note);
+  }
+
+  /**
+   * 崩三抽卡记录刷新 + 观测快照刷新。返回要附加到回复末尾的说明。
+   * 全程 try/catch 包死：崩三这条链依赖 stoken，容易因凭证过期整条挂掉，
+   * 不能让它把已经成功的官方刷新结果一起带崩。
+   */
+  async refreshBh3GachaChain(e) {
+    try {
+      const helper = Object.create(bh3_gacha.prototype);
+      // 先刷观测快照（只用本地已存的抽卡记录 + wiki 稀有度，无需凭证，最不容易失败）
+      const obsNote = await helper.refreshObservation();
+      // 再拉官方增量（最近约 30 天），需要 stoken
+      const gachaNote = await helper.saveGachaLogs(e, false);
+      const parts = [];
+      if (gachaNote) parts.push(`\n\n【崩三抽卡记录（需 stoken）】\n${gachaNote}`);
+      if (obsNote?.length) parts.push(`\n\n【崩三卡池观测】\n${obsNote.join('\n')}`);
+      return parts.join('');
+    } catch (err) {
+      logger.warn('[xhh][gacha_pool] 崩三抽卡记录刷新失败（不影响官方卡池刷新结果）:', err?.message || err);
+      return `\n\n【崩三抽卡记录】刷新失败：${err?.message || err}（官方卡池数据已正常刷新）`;
+    }
   }
 
   // —— 本地卡池库自动同步 ——
