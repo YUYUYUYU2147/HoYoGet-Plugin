@@ -118,11 +118,33 @@ const NANOKA_ASSET = 'https://static.nanoka.cc/assets';
 let NANOKA_VER_CACHE = {};
 const getNanokaVer = async game => {
     if (NANOKA_VER_CACHE[game]) return NANOKA_VER_CACHE[game];
-    let v = '';
-    try {
-        const m = await (await fetch('https://static.nanoka.cc/manifest.json')).json();
-        v = String(m?.[game]?.latest || m?.[game]?.live || '');
-    } catch (_) { v = ''; }
+    let m = null;
+    let lastErr = null;
+    // manifest 只有 19KB，正常 1 秒内拿到；偶发 fetch failed 时重试一次。
+    // 同样必须把原始错误抛出去，不能吞掉换成 v=''。
+    // 以前吞掉之后，nanoka_tujian 抛的是「nanoka 版本号获取失败」这句中文，
+    // isTransientNetError 的正则（fetch failed|ECONN|ETIMEDOUT|…）一个都匹配不上，
+    // 于是 markNanokaDown() 不会被调用，nanokaDown() 仍为 false —— 两秒后紧接着的
+    // 详情请求还会再去撞一次 nanoka，拿米游社的 content_id 去查必然 404。
+    // 保留原始 message（含 fetch failed / ECONNRESET 等）才能被判成网络抖动并降级。
+    for (let attempt = 0; attempt <= 1; attempt++) {
+        if (attempt) await new Promise(r => setTimeout(r, 400));
+        try {
+            m = await (await fetch('https://static.nanoka.cc/manifest.json', {
+                signal: AbortSignal.timeout(8000)
+            })).json();
+            lastErr = null;
+            break;
+        } catch (err) {
+            lastErr = err;
+            logger.debug?.(`[xhh][图鉴] nanoka manifest 第 ${attempt + 1} 次失败（${err?.message || err}）`);
+        }
+    }
+    if (lastErr) {
+        throw new Error(`nanoka manifest.json 获取失败（${game}）：${lastErr?.message || lastErr}`, { cause: lastErr });
+    }
+    const v = String(m?.[game]?.latest || m?.[game]?.live || '');
+    if (!v) throw new Error(`nanoka manifest.json 里没有 ${game} 的版本号（latest/live 均为空）`);
     NANOKA_VER_CACHE[game] = v;
     return v;
 };
@@ -824,20 +846,49 @@ const BH3_CHANNEL_MAP = {
     hb: 218     // 协同者
 };
 
+// nanoka 走 Cloudflare，延迟波动不小：实测 19KB 的 manifest.json 要 1.9 秒，
+// 136KB 的角色详情 0.65 秒。原先所有请求都没有 timeout，一旦某个连接挂住，
+// 整条图鉴渲染链就跟着卡住（fetchJson 在渲染路径上，挂住等于出图卡死）。
+// 这里统一给一个上限并对瞬时失败重试一次；404 不重试（那是 id 体系不匹配，重试也没用）。
+const NANOKA_TIMEOUT_MS = 10000;
+const NANOKA_RETRY_WAIT_MS = 400;
+
+/** 瞬时失败（网络抖动/5xx）才值得重试一次；404 属于确定性结果，重试无意义 */
+const isRetryableNanokaErr = err => {
+    const msg = String(err?.message || '');
+    if (/HTTP\s*404/.test(msg)) return false;
+    return isTransientNetError(err);
+};
+
 class mys {
     // 部分第三方图鉴源异常时会返回 HTML 错误页，不能直接调用 response.json()。
-    async fetchJson(url, label = '') {
-        const response = await fetch(url, {
-            headers: {
-                Referer: 'https://www.miyoushe.com/',
-                'User-Agent': 'Mozilla/5.0'
+    async fetchJson(url, label = '', { timeout = NANOKA_TIMEOUT_MS, retry = 1 } = {}) {
+        let lastErr = null;
+        for (let attempt = 0; attempt <= retry; attempt++) {
+            if (attempt) await new Promise(r => setTimeout(r, NANOKA_RETRY_WAIT_MS * attempt));
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        Referer: 'https://www.miyoushe.com/',
+                        'User-Agent': 'Mozilla/5.0'
+                    },
+                    signal: AbortSignal.timeout(timeout)
+                });
+                const text = await response.text();
+                if (!response.ok || !/^\s*[\[{]/.test(text)) {
+                    const err = new Error(`${label || url} 返回非 JSON（HTTP ${response.status}）`);
+                    err.status = response.status;
+                    throw err;
+                }
+                return JSON.parse(text);
+            } catch (err) {
+                lastErr = err;
+                // 最后一次，或者这种错误重试也没意义（404），就直接抛
+                if (attempt >= retry || !isRetryableNanokaErr(err)) throw err;
+                logger.debug?.(`[xhh][图鉴] ${label || url} 第 ${attempt + 1} 次失败（${err?.message || err}），重试`);
             }
-        });
-        const text = await response.text();
-        if (!response.ok || !/^\s*[\[{]/.test(text)) {
-            throw new Error(`${label || url} 返回非 JSON（HTTP ${response.status}）`);
         }
-        return JSON.parse(text);
+        throw lastErr;
     }
 
     // 绝区零道具映射（zh/item.json），懒加载并缓存
@@ -2043,7 +2094,17 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
         const game = isSr ? 'hsr' : 'gi';
         const base = await nanokaBase(game);
         if (!base) return false;
-        const data = await this.fetchJson(`${base}/zh/character/${id}.json`, `${game} nanoka详情 ${id}`);
+        const data = await this.fetchJson(`${base}/zh/character/${id}.json`, `${game} nanoka详情 ${id}`).catch(err => {
+            // 列表回退到米游社官方 Wiki 时，拿到的 id 是 content_id（505971 这种 6 位），
+            // 而 nanoka 的角色 id 全是 10000xxx 形态，压根不存在这个文件 → 404。
+            // 这是「id 体系不匹配」的预期结果，不是接口故障，静默返回让调用方走米游社即可，
+            // 不该按 ERROR 打一条误导性的「详情访问失败」。
+            if (/HTTP\s*404/.test(String(err?.message || ''))) {
+                logger.debug?.(`[xhh][图鉴] nanoka 无此 id（${id}，应为米游社体系 id），跳过`);
+                return null;
+            }
+            throw err;
+        });
         if (!data || !data.name) return false;
         // 详情 JSON 里没有 id 字段，但立绘/技能图标全靠它拼，缺了会拼成
         // avatardrawcard/.webp 这种空地址
