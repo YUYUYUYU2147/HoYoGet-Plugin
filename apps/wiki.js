@@ -1,6 +1,9 @@
 import { yaml, render, mys, config, reply_recallMsg } from '#xhh';
 import { gsRoleView, srRoleView } from '../system/role_detail.js';
-import { fetchGsRole, buildGsDetail, fetchGsGuidePage, parseGsGuide, resolveGsGuideIcons, fetchGsRoleList, fetchGsWeaponList, fetchGsArtifactList } from './wiki/bwiki_gs.js';
+import { fetchGsRole, buildGsDetail, fetchGsGuidePage, parseGsGuide, resolveGsGuideIcons, fetchGsRoleList, fetchGsWeaponList, fetchGsArtifactList, fetchSrRoleList, fetchSrLcList, fetchSrRelicList } from './wiki/bwiki_gs.js';
+import { fetchSrRole } from './wiki/bwiki_sr.js';
+import { fetchSrGuide } from './wiki/bwiki_sr_guide.js';
+import { readFileSync } from 'node:fs';
 import fs from 'fs';
 import { JSDOM } from 'jsdom';
 const { window } = new JSDOM();
@@ -353,9 +356,28 @@ export class Wiki extends plugin {
     if (!config().wiki) return false;
     const { name, isSr, isZZZ, isBH3 } = this.parseStoryQuery(e);
     if (!name) return false;
-    if (isSr || isZZZ || isBH3) {
-      await e.reply(`「${name}」的角色故事暂未支持，目前只有原神可用。`);
+    if (isZZZ || isBH3) {
+      await e.reply(`「${name}」的角色故事暂未支持，目前只有原神和星铁可用。`);
       return true;
+    }
+    // 星铁走 Bwiki 的角色页（表5 就是角色故事），和原神一样逐条渲染
+    if (isSr) {
+      const sr = await fetchSrRole(name).catch(err => {
+        logger.debug?.(`[xhh][bwiki_sr] ${name} 故事抓取异常: ${err?.message}`);
+        return null;
+      });
+      const stories = sr?.stories || [];
+      if (!stories.length) {
+        await e.reply(`没有找到「${name}」的角色故事。`);
+        return true;
+      }
+      return render('wiki/gs_story', {
+        name: sr.name || name,
+        icon: sr.icon || '',
+        title: sr.badges?.find(b => b.k === '称号')?.v || '',
+        stories,
+        source: '数据来源 wiki.biligame.com',
+      }, { e, ret: true });
     }
     let d = null;
     try { d = await fetchGsRole(name); }
@@ -881,6 +903,8 @@ export class Wiki extends plugin {
     // 降级链（icon → iconFallback，list.html 的 onerror 逐级切换）完全不动。
     if (!isSr && !isZZZ && !isBH3 && ['js', 'wq', 'syw'].includes(type)) {
       data = await this.mergeGsBwikiRoleIcons(data, type);
+    } else if (isSr && !isZZZ && !isBH3 && ['js', 'gz', 'yq'].includes(type)) {
+      data = await this.mergeSrBwikiIcons(data, type);
     }
 
     if (data.length > 50)
@@ -1015,6 +1039,66 @@ export class Wiki extends plugin {
     }
   }
 
+  /**
+   * 星铁列表（角色 / 光锥 / 遗器）用 Bwiki 图覆盖 nanoka 图。
+   * 和原神那套一样：抓不到整条回落 nanoka、nanoka 图顺延成 iconFallback 兜底。
+   * 额外把命途/属性也换成 Bwiki 的叫法，与星铁详情卡保持一致。
+   */
+  async mergeSrBwikiIcons(data, type) {
+    // 星铁同一角色的不同形态在两边写法可能差一个分隔符
+    // （nanoka「三月七•巡猎」/ 维基「三月七・巡猎」之类），
+    // 匹配键统一去掉「•·・」和空格，只按纯名字比。
+    const nmKey = v => String(v || '').replace(/[•·・\s]/g, '');
+    const fetchers = { js: fetchSrRoleList, gz: fetchSrLcList, yq: fetchSrRelicList };
+    const label = { js: '角色', gz: '光锥', yq: '遗器' }[type] || '条目';
+    const fetcher = fetchers[type];
+    if (!fetcher) return data;
+    let list = null;
+    try {
+      list = await fetcher();
+    } catch (err) {
+      logger.debug?.(`[xhh][bwiki_sr] ${label}图鉴抓取异常: ${err?.message}`);
+      return data;
+    }
+    if (!list?.length) return data;
+    const byName = new Map(list.map(x => [nmKey(x.name), x]));
+    const seen = new Set();
+    const merged = [];
+    for (const item of data) {
+      const nm = String(item.name || '').trim();
+      const hit = byName.get(nmKey(nm));
+      seen.add(nmKey(nm));
+      if (!hit?.icon) { merged.push(item); continue; }
+      merged.push({
+        ...item,
+        icon: hit.icon,
+        iconFallback: item.icon || '',
+        // 遗器没有星级/命途字段，保持 nanoka 的
+        ...(type === 'yq' ? {} : {
+          ji: hit.ji || item.ji,
+          mingtu: hit.path || item.mingtu,
+          ...(type === 'js' ? { shuxing: hit.kind || item.shuxing } : {}),
+        }),
+      });
+    }
+    for (const x of list) {
+      const nm = String(x.name || '').trim();
+      if (!nm || seen.has(nmKey(nm)) || !x.icon) continue;
+      merged.push({
+        name: nm,
+        ji: x.ji || '',
+        mingtu: type === 'yq' ? '' : (x.path || ''),
+        shuxing: type === 'js' ? (x.kind || '') : '',
+        icon: x.icon,
+        iconFallback: '',
+        aliases: [nm],
+      });
+    }
+    const hit = data.filter(i => byName.get(String(i.name || '').trim())?.icon).length;
+    logger.debug?.(`[xhh][bwiki_sr] ${label}列表: Bwiki ${list.length} 条, 覆盖 nanoka ${hit}/${data.length}, 补入 ${merged.length - data.length}`);
+    return merged;
+  }
+
   async mergeGsBwikiRoleIcons(data, kind = 'js') {
     // 角色/武器/圣遗物三个列表都是「Bwiki 图覆盖 nanoka 图，抓不到就整条回落」，
     // 只有数据源和补条目的字段不一样，所以走同一个函数。
@@ -1031,13 +1115,13 @@ export class Wiki extends plugin {
     }
     if (!list?.length) return data;
     const GS_ELEMENT = { 风: '风', 火: '火', 冰: '冰', 雷: '雷', 水: '水', 岩: '岩', 草: '草' };
-    const byName = new Map(list.map(x => [String(x.name || '').trim(), x]));
+    const byName = new Map(list.map(x => [nmKey(x.name), x]));
     const seen = new Set();
     const merged = [];
     for (const item of data) {
       const nm = String(item.name || '').trim();
-      const hit = byName.get(nm);
-      seen.add(nm);
+      const hit = byName.get(nmKey(nm));
+      seen.add(nmKey(nm));
       if (!hit?.icon) { merged.push(item); continue; }
       // 命之座/上线时间那些字段 nanoka 更全，不动。
       // 武器类型特意改用 Bwiki 的叫法：nanoka 写「长枪」，Bwiki 写「长柄武器」，
@@ -1753,7 +1837,57 @@ export class Wiki extends plugin {
         const view = isSr ? srRoleView(c, c.id || '') : gsRoleView(c, c.id || '');
         const name = c.name;
         if (!name) return false;
-        return render(tpl, { ...view, name }, { e, ret: true });
+        if (!isSr) return render(tpl, { ...view, name }, { e, ret: true });
+
+        // 星铁：基础信息 / 属性成长 / 技能 / 星魂 改用 Bwiki，
+        // 推荐光锥、遗器、词条这些 nanoka 更全（页面里也没有），保留 nanoka 的。
+        // 抓取或解析失败时 sr 视图保持原样，整张卡退回全 nanoka，不会缺块。
+        const bw = await this.mergeSrBwikiRole(name, view);
+        return render(tpl, { ...bw, name }, { e, ret: true });
+    }
+
+  /**
+     * 星铁角色卡：Bwiki 覆盖 nanoka。
+     * 只覆盖 Bwiki 确实解析到的字段；数组为空就不覆盖，避免把 nanoka 有用的
+     * 推荐光锥/遗器/词条清空（那些数据 Bwiki 角色页里根本没有）。
+     */
+    async mergeSrBwikiRole(name, view) {
+        try {
+            const bw = await fetchSrRole(name);
+            if (!bw) {
+              logger.debug?.(`[xhh][bwiki_sr] ${name} 无 Bwiki 数据，保留 nanoka`);
+              return view;
+            }
+            const merged = { ...view };
+            const take = k => { if (bw[k] !== undefined && bw[k] !== null && bw[k] !== '') merged[k] = bw[k]; };
+            ['icon', 'rarity', 'rarityIcon', 'rarityIconUrl', 'path', 'pathIcon', 'pathIconUrl',
+              'damage', 'damageIcon', 'damageIconUrl', 'camp', 'spNeed', 'desc', 'growth'].forEach(take);
+            if (Array.isArray(bw.skills) && bw.skills.length) merged.skills = bw.skills;
+            if (Array.isArray(bw.ranks) && bw.ranks.length) merged.ranks = bw.ranks;
+            if (Array.isArray(bw.passives) && bw.passives.length) merged.passives = bw.passives;
+            // 角色故事：nanoka 那边本来就有，但维基的版本带解锁条件、分段更整齐，
+            // 一并用 Bwiki 的
+            if (Array.isArray(bw.stories) && bw.stories.length) merged.stories = bw.stories;
+            // 卡面只留角色详情，完整故事走「#角色名故事」
+            if (bw.detailStory) merged.detailStory = bw.detailStory;
+            // 培养材料：Bwiki 带图标且口径明确（角色晋阶总计 + 技能/行迹晋阶），
+            // 比 nanoka 的合计更好用
+            if (Array.isArray(bw.materials) && bw.materials.length) merged.materials = bw.materials;
+            // 卡池信息 + 顶部徽章（稀有度/命途/属性/称号/身份/CV…），和原神卡对齐
+            if (bw.gacha) merged.gacha = bw.gacha;
+            if (Array.isArray(bw.badges) && bw.badges.length) merged.badges = bw.badges;
+            // 光锥/遗器推荐：米游社 sr_wiki 的攻略模块，需要 角色名 → content_id 映射
+            const cid = this.srContentId(name);
+            if (cid) {
+              const g2 = await fetchSrGuide(cid).catch(() => null);
+              if (g2?.lightcones?.length || g2?.relics?.length) merged.srGuide = g2;
+            }
+            logger.debug?.(`[xhh][bwiki_sr] ${name} 技能${merged.skills?.length} 星魂${merged.ranks?.length} 成长${merged.growth?.length}`);
+            return merged;
+        } catch (err) {
+            logger.debug?.(`[xhh][bwiki_sr] ${name} 异常，保留 nanoka: ${err?.message}`);
+            return view;
+        }
     }
 
   async sr_role_pictures(e, data) {

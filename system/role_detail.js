@@ -139,6 +139,9 @@ const gsIconUrl = v => {
     return s.replace(/\/thumb\/((?:[^/]+\/)*?)([^/]+)\/\d+px-[^/]*$/i, '/$1$2');
 };
 
+// 神之眼（元素）图标：本地图标文件名，和 getWikiIcon 里的映射同源。
+const GS_ELEMENT_ICON = { 水: '水.png', 火: '火.png', 冰: '冰.png', 雷: '雷.png', 风: '风.png', 岩: '岩.png', 草: '草.png' };
+
 // 稀有度金星图。维基有现成的五星/四星星图，Bwiki 数据源会带 rarityIcon；
 // nanoka 没有这个键就退回空串，模板照旧显示文字星级。
 const GS_RARITY_ICON = {
@@ -362,6 +365,9 @@ function gsRoleView(detail, id) {
         rarity: gsRarityCn(d.rarity),
         rarityIcon: d.rarityIcon || GS_RARITY_ICON[Number(/(\d)/.exec(String(d.rarity || ''))?.[1])] || '',
         element: info.vision || '',
+        // 神之眼图标（wiki/imgs/{元素}.png），模板用 {{ppath}} 拼。
+        // 之前只给了元素文字，标签前面没有图标，看起来就像「神之眼没获取到」。
+        elementIcon: GS_ELEMENT_ICON[info.vision] || '',
         constellation: info.constellation || '',
         region: gsRegionCn(info.region),
         title: info.title || '',

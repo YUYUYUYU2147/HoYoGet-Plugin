@@ -18,7 +18,7 @@
         {{if !rarityIcon}}<span class="rarity">{{rarity}}</span>{{/if}}
       </h1>
       <div class="tags">
-        <span class="tag">{{element}}</span>
+        <span class="tag tag-ico">{{if elementIcon}}<img src="{{ppath}}wiki/imgs/{{elementIcon}}" alt="" />{{/if}}{{element}}</span>
         {{if region}}<span class="tag">{{region}}</span>{{/if}}
         {{if constellation}}<span class="tag">{{constellation}}</span>{{/if}}
         {{if birth}}<span class="tag">生日 {{birth}}</span>{{/if}}
@@ -95,7 +95,7 @@
       {{each constellations c}}
       <div class="con">
         <div class="con-head">
-          {{if c.icon}}<img class="con-icon" src="{{c.icon}}" alt="" />{{/if}}
+          {{if c.icon}}<span class="passive-box"><img src="{{c.icon}}" alt="" /></span>{{/if}}
           <b>{{c.no}}</b><span>{{c.name}}</span>
         </div>
         <div class="con-desc">{{c.desc}}</div>
@@ -184,6 +184,8 @@
   </div>
   {{/if}}
 
+  </div>
+
   {{if gacha}}
   <div class="panel">
     <div class="ptitle">卡池信息 <span class="hint">UP {{gacha.upCount}} 次</span></div>
@@ -197,8 +199,6 @@
     </div>
   </div>
   {{/if}}
-
-  </div>
 
   <footer>from 小花火</footer>
 </div>

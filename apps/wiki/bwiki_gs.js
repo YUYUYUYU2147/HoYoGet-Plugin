@@ -4,8 +4,12 @@
 const API = 'https://wiki.biligame.com/ys/api.php';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-async function renderHtml(page, tries = 5) {
-  const url = `${API}?action=parse&page=${encodeURIComponent(page)}&prop=text&format=json`;
+// 星铁 wiki 是另一个域名（wiki.biligame.com/sr），api.php 同路径但 host 不同，
+// 所以这里做成参数；不传就是原神。
+const SR_API = 'https://wiki.biligame.com/sr/api.php';
+
+async function renderHtml(page, tries = 5, api = API) {
+  const url = `${api}?action=parse&page=${encodeURIComponent(page)}&prop=text&format=json`;
   let last = '';
   for (let i = 0; i < tries; i++) {
     try {
@@ -482,7 +486,7 @@ export function parseGsPage(page, html) {
   return res;
 }
 
-export { renderHtml, tables, plain };
+export { renderHtml, tables, plain, decode, safeDecodeURI };
 
 // ══════════════════════════════════════════════════════════
 // 结构化数据 → gsRoleView 能吃的 detail + view 附加字段
@@ -546,11 +550,18 @@ function pickPortraitFromPage(html, who) {
   return portrait;
 }
 
-// 顶部徽章要的 17 项（按此顺序）。所属/身份/生日只在 d.other 里，
-// 顶部徽章是唯一展示它们的地方，所以不再放进角色档案，避免重复。
+// 顶部徽章：优先展示这几项，顺序也按这个来。
+// 关键是要「不排斥」—— 元素那一项在不同地区/版本有不同叫法
+// （老角色「月之轮」、挪德卡莱「星之楔」、更早还有「元素属性」…），
+// 写死一个「月之轮」就会让薇斯纳这类角色整项消失。
+// 所以：这份表只决定优先级和排序，d.basic 里剩下的键会按页面原有顺序追加到后面。
 const HERO_BADGE_ORDER = ['称号', '全名/本名', '所属地区', '出身地区', '种族', '性别', '稀有度',
-  '常驻/限定', '月之轮', '武器类型', '羁绊属性', '命之座', '特殊料理', '实装日期',
+  '常驻/限定', '月之轮', '星之楔', '元素属性', '武器类型', '羁绊属性', '始基力', '命之座', '特殊料理', '实装日期',
   '所属', '身份', '生日'];
+// 元素属性的各种叫法（神之眼=元素属性的变种），取第一个存在的
+const ELEMENT_KEYS = ['月之轮', '星之楔', '元素属性', '元素', '神之眼'];
+// 七种元素，用来判断某个字段的值是不是元素（是的话才补图标）
+const GS_ELEMENTS = ['火', '水', '冰', '雷', '风', '岩', '草'];
 // 角色档案：剩下的补充信息，不与顶部徽章重复（也不含「卡池信息」，它单独成栏）
 const ROLE_PROFILE_ORDER = [
   '中文CV', '日文CV', '英文CV', '韩文CV', '体型', '昵称/外号',
@@ -686,10 +697,25 @@ export function buildGsDetail(d) {
     body: String(x.body || '').trim(),
   }));
   const detailIdx = storyList.findIndex(x => /角色详细|角色简介|角色介绍/.test(x.title));
+  // 元素：不同版本叫法不同（月之轮 / 星之楔 / 元素属性），统一成一个值
+  const elementKey = ELEMENT_KEYS.find(k => flatVal(d.basic?.[k])) || '';
+  const elementVal = elementKey ? String(flatVal(d.basic?.[elementKey]) || '').trim() : '';
 
   // 顶部徽章与档案各自取字段，所以要从全部键值里查，不能靠「档案里没要」来推断。
   const all = {};
-  for (const k of [...HERO_BADGE_ORDER, ...ROLE_PROFILE_ORDER]) {
+  // 徽章候选：优先表里的键 + basic/other 里剩下的全部键（排除档案/长文本类）
+  // 卡池信息单独成栏，不进徽章；「介绍 / TAG / 个人任务 / 衣装 / 祈愿名」这类长文本也不进
+  const PROFILE_KEYS = new Set([...ROLE_PROFILE_ORDER, ...ROLE_PROFILE_SKIP,
+    '介绍', 'TAG', '卡池信息', '角色故事', '个人任务', '衣装', '祈愿名', '所在位置']);
+  const badgeKeys = [];
+  for (const k of HERO_BADGE_ORDER) if (d.basic?.[k] || d.other?.[k]) badgeKeys.push(k);
+  for (const src of [d.basic, d.other]) {
+    for (const k of Object.keys(src || {})) {
+      if (PROFILE_KEYS.has(k) || badgeKeys.includes(k)) continue;
+      badgeKeys.push(k);
+    }
+  }
+  for (const k of badgeKeys) {
     let v = flatVal(d.basic?.[k]);
     if (!v || !String(v).trim()) v = flatVal(d.other?.[k]);
     v = String(v).trim();
@@ -706,11 +732,16 @@ export function buildGsDetail(d) {
   }
   const byKey = new Map(Object.values(all).map(x => [x.k, x]));
 
+  if (elementVal && detail?.chara_info && !detail.chara_info.vision) {
+    detail.chara_info.vision = elementVal;   // 星之楔 / 元素属性 的角色也能拿到元素值
+  }
+
   return {
     detail,
     extra: {
+      elementKey,
       profile,
-      topBadges: HERO_BADGE_ORDER.filter(k => byKey.has(k)).map(k => byKey.get(k)),
+      topBadges: badgeKeys.filter(k => byKey.has(k)).map(k => byKey.get(k)),
       // 卡池信息单独成栏，不混进角色档案表
       gacha: parseGsGachaInfo(d.other?.['卡池信息']),
       // 只留「角色详细」那一栏，底部角色故事区块已从模板移除，
@@ -809,6 +840,77 @@ export function parseGsItemList(html) {
   }
   return out;
 }
+
+/**
+ * 纯函数：星铁 wiki 的「角色图鉴 / 光锥图鉴 / 遗器图鉴」页 → 条目数组。
+ * 三个页面都是 divsort + data-param 结构（和原神角色一览同一套模板）：
+ *   <div class="divsort" data-param1="5星" data-param2="欢愉" data-param3="限定跃迁" data-param4="4.6">
+ *     <div class="weapon-box">
+ *       <div class="ping0 ping1"><img alt="角色一览-底版.png" …>   ← 底版，要跳过
+ *       <div class="weapon-image"><img alt="献给明日的色彩-无背景.png" src="…">
+ *       … <a href="/sr/献给明日的色彩" title="献给明日的色彩">
+ * data-param 的含义按页面不同：
+ *   角色图鉴 1=星级 2=命途 3=属性 4=上线版本 5=性别
+ *   光锥图鉴 1=星级 2=命途 3=限定跃迁/常驻 4=上线版本
+ *   遗器图鉴 1=隧洞遗器/位面遗器 2=侵蚀隧洞等 3=上线版本（没有星级字段）
+ */
+const srOrigIcon = src => String(src || '').replace(/\/thumb\/((?:[^/]+\/)*?)([^/]+)\/\d+px-[^/]*$/i, '/$1$2');
+
+export function parseSrItemList(html) {
+  const starts = [...(html || '').matchAll(/<div class="divsort"([^>]*)>/g)];
+  const out = [];
+  for (let i = 0; i < starts.length; i++) {
+    const attrs = starts[i][1] || '';
+    const seg = (html || '').slice(starts[i].index, starts[i + 1] ? starts[i + 1].index : (html || '').length);
+    const name = ((seg.match(/<a href="\/sr\/[^"]*" title="([^"]+)"/) || [])[1] || '').trim();
+    if (!name) continue;
+    // 底版图（角色一览-底版.png / 遗器一览-底版.png）要跳过，
+    // 取剩下那张：光锥/角色是「xxx-无背景.png」，遗器是套装图。
+    const imgs = [...seg.matchAll(/<img[^>]*alt="([^"]*)"[^>]*src="([^"]+)"/g)]
+      .map(m => ({ alt: decode(m[1]), src: m[2] }))
+      .filter(x => x.src && !/底版/.test(x.alt));
+    // 光锥的图标是 120px 缩略图（…/thumb/d/d4/xxx.png/120px-名称.png），
+    // 直接用会糊；缩略图 URL 里带原图路径，取出来就是原图。
+    const icon = srOrigIcon(imgs[0]?.src || '');
+    const param = k => ((attrs.match(new RegExp(`data-param${k}="([^"]*)"`)) || [])[1] || '');
+    const ji = param(1);
+    out.push({
+      name,
+      icon,
+      // 角色/光锥有星级字段（4星/5星），遗器没有 —— 留空，列表星级徽章会自动跳过
+      ji: /^[45]星$/.test(ji) ? ji : '',
+      path: param(2),
+      kind: param(3),
+      version: param(4),
+      rarity: ji === '5星' ? '5' : ji === '4星' ? '4' : '',
+    });
+  }
+  return out;
+}
+
+const srListCache = new Map();
+
+/** 抓星铁的图鉴页（角色图鉴 / 光锥图鉴 / 遗器图鉴）并解析 */
+export async function fetchSrItemList(page) {
+  const hit = srListCache.get(page);
+  if (hit && Date.now() - hit.t < CACHE_TTL) return hit.v;
+  let html = '';
+  try { html = await renderHtml(page, 3, SR_API); } catch (e) {
+    logger.debug?.(`[xhh][bwiki_sr] ${page} 抓取失败: ${e.message}`);
+    return null;
+  }
+  const list = parseSrItemList(html);
+  if (!list.length) {
+    logger.debug?.(`[xhh][bwiki_sr] ${page} 结构异常（未解析到条目）`);
+    return null;
+  }
+  srListCache.set(page, { t: Date.now(), v: list });
+  return list;
+}
+
+export const fetchSrRoleList = () => fetchSrItemList('角色图鉴');
+export const fetchSrLcList = () => fetchSrItemList('光锥图鉴');
+export const fetchSrRelicList = () => fetchSrItemList('遗器图鉴');
 
 const itemListCache = new Map();
 

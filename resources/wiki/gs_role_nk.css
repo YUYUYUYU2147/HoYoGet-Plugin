@@ -151,8 +151,10 @@ footer{text-align:center;margin-top:14px;font-size:18px;color:#ee8e8e;
 .badge .bk{color:#8a94a6;font-size:11.5px}
 .badge .bv{display:flex;align-items:center;gap:4px;color:#3b4557;font-weight:600}
 .badge .bv img{width:16px;height:16px;object-fit:contain;border-radius:3px;flex:0 0 auto}
-/* 命座图标：维基的 40x40 命座星图 */
-.con-icon{width:26px;height:26px;object-fit:contain;border-radius:5px;flex:0 0 auto}
+/* 命座图标：维基的 40x40 命座星图，是浅色线条稿，直接放在白底面板上
+   几乎看不见 —— 套一层深色底板托住（与技能 .skill-ico、天赋 .passive-box 同一套处理），
+   并从 26px 放大到 30px。 */
+.con-icon{width:30px;height:30px;object-fit:contain;border-radius:5px;flex:0 0 auto}
 /* 天赋图标：维基的 45px 技能图标 */
 /* 天赋图标与技能图标同源（灰白半透明），处理方式相同 */
 .passive-box{display:flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;
