@@ -219,6 +219,25 @@ function extractHonkaiStarRailData(html = '') {
 }
 
 const pr = yaml.get('./plugins/xhh/config/other.yaml').wiki;
+/* 名称归一化键：星铁同一角色的不同形态在两边写法可能差一个分隔符
+   （nanoka「三月七•巡猎」/ 维基「三月七・巡猎」），匹配键统一去掉「•·・」和空格。
+   原来是 mergeSrBwikiIcons 里的局部 const，mergeGsBwikiRoleIcons 也在用 →
+   跨函数引用报 `nmKey is not defined`（原神角色/武器列表一查就崩）。提到模块级。 */
+const nmKey = v => String(v || '').replace(/[•·・\s]/g, '');
+/** 当前是不是测试服数据模式（TEST 角标只在这种模式下出现） */
+const isTestDataMode = () => {
+    try {
+        return mys.getDataMode() === 'test';
+    } catch (_) {
+        return false;
+    }
+};
+// 维基现成的五星/四星星图，来源同 system/role_detail.js
+const GS_STAR_ICON = {
+    5: 'https://patchwiki.biligame.com/images/ys/f/ff/0dlkmof43y8aam8fphgixaejy571iqc.png',
+    4: 'https://patchwiki.biligame.com/images/ys/2/2a/ssqzx9cint7m3yudjwviabu4nkd8s9o.png',
+};
+
 export class Wiki extends plugin {
   constructor(e) {
     super({
@@ -227,6 +246,15 @@ export class Wiki extends plugin {
       event: 'message',
       priority: pr || -99,
       rule: [
+        // 图鉴数据模式切换（与锅巴 UI 的 data_mode 同一份配置，改完即时生效）
+        {
+          reg: '^[#＃%]*(?:切换)?(?:正式服|测试服)(?:数据)?(?:模式)?$',
+          fnc: 'data_mode',
+        },
+        {
+          reg: '^[#＃%]*(?:切换)?数据模式$',
+          fnc: 'data_mode',
+        },
         {
           reg: '^[#%*]*(星铁|绝区零|ZZZ|崩坏3|崩坏三|崩三|BH3)?\\s*(.+)图鉴$',
           fnc: 'illustrated_book',
@@ -360,6 +388,18 @@ export class Wiki extends plugin {
       await e.reply(`「${name}」的角色故事暂未支持，目前只有原神和星铁可用。`);
       return true;
     }
+    /* ⚠️ Bwiki 是正式服站，test 模式下整个故事功能跳过。
+       下面两条路都是**裸调** fetchSrRole/fetchGsRole，不经 mys.data()，
+       所以 mys.data() 的 modeOk 闸门管不到它们 —— 不挡的话，
+       test 模式下「#钟离故事」会直接拿到正式服角色的故事。
+       test 模式只出测试服数据，两边不混用。 */
+    if (isTestDataMode()) {
+      logger.debug?.('[xhh][图鉴] 测试服数据模式：跳过 Bwiki 角色故事（Bwiki 只有正式服数据）');
+      await e.reply(`「${name}」的角色故事在测试服模式下暂不可用。\n`
+        + `角色故事目前只有 Bwiki 一个数据源，而 Bwiki 只有正式服数据。\n`
+        + `切换正式服模式可用：#切换正式服模式`);
+      return true;
+    }
     // 星铁走 Bwiki 的角色页（表5 就是角色故事），和原神一样逐条渲染
     if (isSr) {
       const sr = await fetchSrRole(name).catch(err => {
@@ -409,6 +449,29 @@ export class Wiki extends plugin {
       stories,
       source: extra.source,
     }, { e, ret: true });
+  }
+
+  /** 图鉴数据模式：#切换正式服模式 / #切换测试服模式 / #数据模式（查当前） */
+  async data_mode(e) {
+    const raw = String(e?.msg || '').replace(/^[#＃%*\s]+/, '');
+    const now = mys.getDataMode();
+    const target = /正式服/.test(raw) ? 'official' : (/测试服/.test(raw) ? 'test' : '');
+    const mode = target ? mys.setDataMode(target) : now;
+    const label = mode === 'official' ? '正式服' : '测试服';
+    /* 指令不带服别时是纯查询，不写盘。原来无论查询还是切换都打「已切到…」，
+       作者发 #数据模式 查现状，回复却说「已切到正式服模式」，看着像被改了配置。 */
+    const tip = !target
+      ? (mode === 'official'
+        ? '当前是正式服模式：列表与查询都不出测试服条目。'
+        : '当前是测试服模式：列表只显示测试服条目。')
+      : (mode === 'official'
+        ? '已切到正式服模式：列表与查询都不出测试服条目。'
+        : '已切到测试服模式：列表只显示测试服条目。');
+    const msg = `${tip}\n当前数据模式：${label}（配置项：config/config.yaml 的 data_mode，锅巴 UI 里也能改）`;
+    /* 必须传撤回时长：reply_recallMsg 内部是 setTimeout(..., time * 1000)，
+       time 为undefined 时算成 NaN，等于上一句刚发出去就被撤回，消息根本看不到。
+       60 秒与 user.js 的扫码提示一致。 */
+    return reply_recallMsg(e, msg, 60);
   }
 
   async illustrated_book(e) {
@@ -503,7 +566,21 @@ export class Wiki extends plugin {
       }
       if (await this.bh3_yq(e, name, true)) return true;
     }
-    //最后查总列表
+    /* 最后查总列表。
+       ⚠️ test 模式下**只在「纯列表关键词」时才允许走**。
+       上面 #524 已经把纯关键词（角色/武器/光锥/圣遗物…）直接送去 list() 了，
+       所以走到这里的 name 一定还带着具体条目名（如「钟离」）。
+       test 模式下这类名字必然查不到（modeOk 已挡住正式服条目），
+       再掉进 list() 就是拿空列表去套 condition —— 轻则空卡，重则给出误导性的列表。
+       作者要求：test 模式发正式服条目不准触发，只认测试服列表里有的条目。 */
+    const isPureListKeyword = /^(角色|武器|光锥|遗器|音擎|驱动盘|邦布|圣遗物|圣痕|人偶|协同者|大剑|双手剑|单手剑|长枪|长柄武器|弓|弓箭|法器)$/.test(name);
+    if (isTestDataMode() && !isPureListKeyword) {
+      logger.debug?.(`[xhh][图鉴] 测试服数据模式：「${name}」不在测试服列表，拒绝出图`);
+      await e.reply(`测试服模式下没有「${name}」的图鉴数据。\n`
+        + `测试服列表只收录测试服条目（头像右上角带「预告」标记的）。\n`
+        + `切换正式服模式可用：#切换正式服模式`);
+      return true;
+    }
     if (/角色|武器|大剑|双手剑|单手剑|法器|长枪|弓箭|弓|光锥|圣遗物|遗器|音擎|驱动盘|邦布|圣痕|人偶|协同者/.test(name)) return this.list(e, name, isSr, isZZZ, isBH3);
     // 全部未命中时给出提示，避免静默无响应被当成插件故障
     if (config().debug) logger.mark(`[xhh] 图鉴未命中: name=「${name}」 isSr=${isSr} isZZZ=${isZZZ} isBH3=${isBH3}`);
@@ -561,6 +638,22 @@ export class Wiki extends plugin {
     if(!_name) return false;
     
     let data = await mys.data('', type, isSr, isZZZ, isBH3);
+
+    /* test 模式禁用官方兜底后，nanoka 一挂列表就是空的（见 4.1'''）。
+       静默返回空数组的话，用户看到的是一张空图，完全不知道是「没数据」
+       还是「插件坏了」。这里显式说明原因并给出下一步。
+       注意不能用 `!data.length` 一刀切 —— 绝区零邦布/音擎这类
+       test 模式下本来就可能真的为空（该游戏还没进测试服），那种情况
+       要提示「该类别暂无测试服数据」而不是「nanoka 不可用」。 */
+    if (Array.isArray(data) && !data.length) {
+      await e.reply(isTestDataMode()
+        ? `${_name}在测试服模式下暂时没有数据。\n`
+          + `测试服模式只使用 nanoka 数据源（nanoka 暂时不可用时不会降级到官方源）。\n`
+          + `可稍后重试，或切换正式服模式：#切换正式服模式`
+        : `${_name}暂时没有数据，可能是数据源暂时不可用。`);
+      logger.debug?.(`[xhh][图鉴] ${_name} 列表为空（test=${isTestDataMode()}）`);
+      return true;
+    }
 
     let condition = name.replace(/崩坏3|崩坏三|崩三|角色|武器|光锥|音擎|驱动盘|邦布|圣痕|人偶|协同者/g, '');
 
@@ -901,10 +994,24 @@ export class Wiki extends plugin {
     // 原神角色：头像换成 Bwiki 角色一览的图（维基原图，nanoka 只有方块 webp）。
     // 抓不到 / 被 567 限流时 fetchGsRoleList 返回 null，这里原样保留 nanoka 数据，
     // 降级链（icon → iconFallback，list.html 的 onerror 逐级切换）完全不动。
-    if (!isSr && !isZZZ && !isBH3 && ['js', 'wq', 'syw'].includes(type)) {
+    /* Bwiki 是正式服数据源，测试服模式下整个跳过：
+       合并函数会把 Bwiki 一览的条目补进列表，而 Bwiki 那边没有 isUnreleased 标记，
+       一合并就把正式服条目全塞回测试服列表里（实测原神武器从 3 条涨到 439 条）。
+       test 模式只用 nanoka + manifest.new.*，两种数据不混用。 */
+    if (isTestDataMode()) {
+      logger.debug?.('[xhh][图鉴] 测试服数据模式：跳过 Bwiki 合并，列表只用 nanoka 数据');
+    } else if (!isSr && !isZZZ && !isBH3 && ['js', 'wq', 'syw'].includes(type)) {
       data = await this.mergeGsBwikiRoleIcons(data, type);
     } else if (isSr && !isZZZ && !isBH3 && ['js', 'gz', 'yq'].includes(type)) {
       data = await this.mergeSrBwikiIcons(data, type);
+    }
+    /* 合并之后再按星级排一次：合并函数会把 Bwiki 一览里 nanoka 没有的条目追加到末尾
+       （星铁实测追加了银狼LV.999、开拓者•欢愉、三月七•巡猎 等 8 条），
+       这些条目是在上面那次星级排序之后才进来的，不重排就会插进别的档位里
+       （实测出现 2 次五星被四星夹断）。Array.sort 是稳定的，
+       同档位内 nanoka 的新→旧、以及武器的 Bwiki 页面顺序都不会被打乱。 */
+    if (!isZZZ && !isBH3 && (isSr ? ['js', 'gz', 'yq'] : ['js', 'wq', 'syw']).includes(type)) {
+      data = [...data].sort((a, b) => (ratingOrder[a.ji] ?? 99) - (ratingOrder[b.ji] ?? 99));
     }
 
     if (data.length > 50)
@@ -916,6 +1023,13 @@ export class Wiki extends plugin {
     data = data.map(item => ({
       ...item,
       rankClass: rankClassMap[item.ji] || 'r0',
+      /* TEST 角标只在 test 数据模式下出现，且**不再塞进 badges**——
+         它以前混在徽章行里（名字下方），跟星级/属性徽章挤在一列，
+         一眼看不出是「这条是测试服」。现在单独走 isTest，
+         由 list.html 渲染成头像右上角的角标。
+         official 模式列出的都是正式服条目，一条都不带标；
+         test 模式整列都是测试服数据（filterListByMode 已按 manifest.new.* 过滤）。 */
+      isTest: isTestDataMode(),
       badges: (isBH3
         // 崩坏3的圣痕属性是多值的（bh3_data 的 attributes 数组），要展开；角色/武器那条走 yuanshu 标量。
         // 圣痕属性常常有 6~8 个（实测 700 条里 617 条是多属性，最多的 7~8 个），
@@ -1044,11 +1158,37 @@ export class Wiki extends plugin {
    * 和原神那套一样：抓不到整条回落 nanoka、nanoka 图顺延成 iconFallback 兜底。
    * 额外把命途/属性也换成 Bwiki 的叫法，与星铁详情卡保持一致。
    */
+  /**
+   * 星铁角色名 → 米游社 sr_wiki 的 content_id。
+   * `mergeSrBwikiRole()` 里要用它拿「推荐光锥/遗器」攻略模块，但这个方法此前
+   * **根本没定义** → `this.srContentId is not a function`，星铁角色卡一走到就崩。
+   * 数据源：官方 sr_wiki 角色列表（channel_id=17），结果缓存，避免每次都请求。
+   */
+  async srContentId(name = '') {
+    const key = nmKey(name);
+    if (!key) return '';
+    this._srCidCache ||= new Map();
+    if (this._srCidCache.has(key)) return this._srCidCache.get(key);
+    let cid = '';
+    try {
+      const res = await fetch('https://api-static.mihoyo.com/common/blackboard/sr_wiki/v1/home/content/list?app_sn=sr_wiki&channel_id=17')
+        .then(r => r.json());
+      const root = res?.data?.list?.[0];
+      const children = Array.isArray(root?.children) ? root.children : [];
+      const roleBox = children.find(c => c.name === '角色') || root;
+      const list = Array.isArray(roleBox?.list) ? roleBox.list : [];
+      const hit = list.find(x => nmKey(x.title) === key)
+        || (key.length >= 2 ? list.find(x => nmKey(x.title).includes(key)) : null);
+      cid = String(hit?.content_id ?? hit?.id ?? '');
+    } catch { /* 取不到就不带推荐光锥/遗器，不影响出卡 */ }
+    this._srCidCache.set(key, cid);
+    return cid;
+  }
+
   async mergeSrBwikiIcons(data, type) {
     // 星铁同一角色的不同形态在两边写法可能差一个分隔符
     // （nanoka「三月七•巡猎」/ 维基「三月七・巡猎」之类），
     // 匹配键统一去掉「•·・」和空格，只按纯名字比。
-    const nmKey = v => String(v || '').replace(/[•·・\s]/g, '');
     const fetchers = { js: fetchSrRoleList, gz: fetchSrLcList, yq: fetchSrRelicList };
     const label = { js: '角色', gz: '光锥', yq: '遗器' }[type] || '条目';
     const fetcher = fetchers[type];
@@ -1068,14 +1208,19 @@ export class Wiki extends plugin {
       const nm = String(item.name || '').trim();
       const hit = byName.get(nmKey(nm));
       seen.add(nmKey(nm));
-      if (!hit?.icon) { merged.push(item); continue; }
+      if (!hit?.icon) { merged.push({ ...item, nanokaOnly: true }); continue; }
       merged.push({
         ...item,
+        nanokaOnly: false,
         icon: hit.icon,
         iconFallback: item.icon || '',
         // 遗器没有星级/命途字段，保持 nanoka 的
         ...(type === 'yq' ? {} : {
-          ji: hit.ji || item.ji,
+          /* 优先用自己的 ji：Bwiki 那边写的是「5星」「4星」，而 list() 的
+             rankClassMap 与 #五星xx 分档只认「五星」「四星」，用 Bwiki 的写法
+             会让整批条目落成 r0（实测星铁光锥 170 条里 145 条没档位、也没排序）。
+             自己这边没有星级时才用 Bwiki 的。 */
+          ji: item.ji || hit.ji || '',
           mingtu: hit.path || item.mingtu,
           ...(type === 'js' ? { shuxing: hit.kind || item.shuxing } : {}),
         }),
@@ -1086,12 +1231,15 @@ export class Wiki extends plugin {
       if (!nm || seen.has(nmKey(nm)) || !x.icon) continue;
       merged.push({
         name: nm,
-        ji: x.ji || '',
+        /* Bwiki 的星级写法是「5星」「4星」，这里补成中文写法，
+           否则这些 Bwiki 独有条目落成 r0（列表里看着像没有星级）。 */
+        ji: { '5星': '五星', '4星': '四星', '3星': '三星' }[x.ji] || x.ji || '',
         mingtu: type === 'yq' ? '' : (x.path || ''),
         shuxing: type === 'js' ? (x.kind || '') : '',
         icon: x.icon,
         iconFallback: '',
         aliases: [nm],
+        nanokaOnly: false,
       });
     }
     const hit = data.filter(i => byName.get(String(i.name || '').trim())?.icon).length;
@@ -1116,13 +1264,40 @@ export class Wiki extends plugin {
     if (!list?.length) return data;
     const GS_ELEMENT = { 风: '风', 火: '火', 冰: '冰', 雷: '雷', 水: '水', 岩: '岩', 草: '草' };
     const byName = new Map(list.map(x => [nmKey(x.name), x]));
+    /* 再建一张「剥掉括号后缀」的索引：nanoka 与 Bwiki 的同名条目常带不同后缀 ——
+       旅行者 → 旅行者（冰）/（火）/…（Bwiki 按形态分开 8 条），
+       奇偶·男性 / 奇偶·女性 → 奇偶（nanoka 用「·」带性别，Bwiki 只有一条）。
+       头像和星图在各形态之间没有区别，按剥掉后缀的名字匹配即可。 */
+    const bareKey = v => nmKey(String(v || '').replace(/[（(][^（()）]*[）)]\s*$/, ''));
+    const byBare = new Map(list.map(x => [bareKey(x.name), x]));
+    // Bwiki 一览里查不到的（测试服角色米提亚/瓦列里等）按已有星级补星图，
+    // 否则列表里就只有这几条缺稀有度标。
+    const starByJi = { 五星: GS_STAR_ICON[5], 四星: GS_STAR_ICON[4] };
     const seen = new Set();
     const merged = [];
     for (const item of data) {
       const nm = String(item.name || '').trim();
-      const hit = byName.get(nmKey(nm));
+      let hit = byName.get(nmKey(nm));
+      /* 精确匹配落空时按剥后缀的名字再试：nmKey 只去掉「•·・」和空格、不去括号，
+         「旅行者」对上「旅行者（冰）」、「奇偶·男性」对上「奇偶」都靠这一层。
+         之前匹配不上会保留没有 rarityIcon 的 nanoka 原条目，列表头像就缺五星标。 */
+      if (!hit) {
+        const bases = [nm];
+        const head = nm.split(/[•·・]/)[0].trim();
+        if (head && head !== nm) bases.push(head);
+        for (const base of bases) {
+          hit = byBare.get(nmKey(base));
+          if (hit) break;
+        }
+      }
       seen.add(nmKey(nm));
-      if (!hit?.icon) { merged.push(item); continue; }
+      if (!hit?.icon) {
+        /* Bwiki 武器页只收抽卡池武器（实测 218 个去重名），正式服列表有 284 条，
+           剩下的免费 1~3 星武器、活动武器、武器幻化在这里都匹配不到。
+           这些条目保留 nanoka 数据，但星图按已有星级补上，否则头像上没有稀有度标。 */
+        merged.push({ ...item, rarityIcon: item.rarityIcon || starByJi[item.ji] || '', nanokaOnly: true });
+        continue;
+      }
       // 命之座/上线时间那些字段 nanoka 更全，不动。
       // 武器类型特意改用 Bwiki 的叫法：nanoka 写「长枪」，Bwiki 写「长柄武器」，
       // 列表和详情卡（详情卡走 Bwiki）用同一套词，不然看着像类型对不上。
@@ -1130,7 +1305,8 @@ export class Wiki extends plugin {
         ...item,
         icon: hit.icon,
         iconFallback: item.icon || '',
-        rarityIcon: hit.rarityIcon || '',
+        rarityIcon: hit.rarityIcon || starByJi[item.ji] || '',
+        nanokaOnly: false,
         wuqi: (kind === 'wq' && hit.weapon) ? hit.weapon : item.wuqi,
       });
     }
@@ -1157,6 +1333,7 @@ export class Wiki extends plugin {
         iconFallback: '',
         rarityIcon: x.rarityIcon || '',
         aliases: [nm],
+        nanokaOnly: false,
       });
     }
     // 星级分组：五星 → 四星。只按星级分组，组内不动 —— 两个源的原始顺序
@@ -1165,6 +1342,31 @@ export class Wiki extends plugin {
     merged.sort((a, b) => rankOf(a) - rankOf(b));
     const hit = data.filter(i => byName.has(String(i.name || '').trim()) && byName.get(String(i.name || '').trim()).icon).length;
     logger.debug?.(`[xhh][bwiki_gs] ${label}列表: Bwiki ${list.length} 条, 覆盖 nanoka ${hit}/${data.length}, 补入 ${extraNames.length}`);
+    /* 排序按 Bwiki 武器一览页的顺序来 —— **只对武器**（kind === 'wq'）。
+       武器一览页的卡片结构本身就分 g5 / g4 两组，页面顺序即「5★ 组在前、组内新→旧」，
+       直接照搬没问题。
+       角色一览页用的是另一套 divsort 结构，页面上四星五星是交错排的，
+       照搬页面顺序会把四星插进五星堆里（实测 122 条里出现 29 次五星被四星夹断）。
+       所以角色与圣遗物不碰页面顺序，交给星级排序：
+       ratingOrder 先按五星→四星分段，段内保留 nanoka 的新→旧。 */
+    if (kind === 'wq') {
+        const pageOrder = new Map();
+        list.forEach((x, i) => { const k = nmKey(x.name); if (!pageOrder.has(k)) pageOrder.set(k, i); });
+        const ordOf = x => {
+            const k = pageOrder.get(nmKey(x.name));
+            return k === undefined ? Number.MAX_SAFE_INTEGER : k;
+        };
+        const tierRank = { 五星: 1, 四星: 2, 三星: 3, 二星: 4, 一星: 5 };
+        merged.sort((a, b) => {
+            const oa = ordOf(a), ob = ordOf(b);
+            if (oa !== ob) {
+                // 两边都在页面上：按页面顺序；只有一边在页面上：该条排前面
+                if (oa !== Number.MAX_SAFE_INTEGER && ob !== Number.MAX_SAFE_INTEGER) return oa - ob;
+                return oa === Number.MAX_SAFE_INTEGER ? 1 : -1;
+            }
+            return (tierRank[a.ji] ?? 9) - (tierRank[b.ji] ?? 9);
+        });
+    }
     return merged;
   }
 
@@ -1473,7 +1675,7 @@ export class Wiki extends plugin {
       expMaterials,
       passiveMaterials
     };
-    return render('wiki/zzz_role', view, { e, ret: true });
+    return render('wiki/zzz_role_nk', view, { e, ret: true });
   }
 
   async zzz_wq_pictures(e, data) {
@@ -1518,7 +1720,7 @@ export class Wiki extends plugin {
       recommend: [],
       materials
     };
-    return render('wiki/zzz_role', view, { e, ret: true });
+    return render('wiki/zzz_role_nk', view, { e, ret: true });
   }
 
   async zzz_syw_pictures(e, data) {
@@ -1567,7 +1769,7 @@ export class Wiki extends plugin {
       skills: Object.values(c.skill || {}).slice(0, 5).map(v => ({ name: v.name, desc: this.zzzCleanText(v.desc, 100) })).filter(v => v.name || v.desc),
       talents: [], recommend: []
     };
-    return render('wiki/zzz_role', view, { e, ret: true });
+    return render('wiki/zzz_role_nk', view, { e, ret: true });
   }
 
   async bangboo(e, name) {
@@ -1674,9 +1876,9 @@ export class Wiki extends plugin {
       : !isSr
       ? './plugins/xhh/system/default/wqname.yaml'
       : './plugins/xhh/system/default/gz_names.yaml';
-    const wq_name = yaml.get(path);
+    const wq_name = yaml.get(path) || {};
     for (let i in wq_name) {
-      if (wq_name[i].includes(name)) {
+      if (Array.isArray(wq_name[i]) && wq_name[i].includes(name)) {
         name = i;
         break;
       }
@@ -1687,14 +1889,37 @@ export class Wiki extends plugin {
       const miao = await miaoResolve(name, 'weapon', isSr ? 'sr' : 'gs');
       if (miao) wq = miao;
     }
+    /* 别名表只做别名归一，不再当准入门槛 —— 和 syw_yiqi 里那条注释同一个道理。
+       gz_names.yaml 只有 157 条，而星铁光锥实测 172 个，缺 15 个：
+       嗤笑 / 残泪 / 放个短假 / 未来，有我们一起 / 向着地平线的终点 / 在世界尽头相会吧！/
+       献给明日的色彩 / 一场谎言的终幕 / 欢迎来到银河城 / 邂逅于下一个花季 /
+       灼尽炼狱的新骸 / 你将起身歌唱 / 向浪花掷下盛夏 / 当第一声「阿哈」响起 / 欢愉满溢祝福。
+       以前 wq 为空就直接 return false，这 15 个连正式名都查不到。
+       system/default 目录标注了不许改动，所以不往 yaml 里补条目，改为放行给列表匹配。 */
+    if (!wq) wq = name;
     if (wq) {
       const { id } = await mys.data(wq, isZZZ ? 'wq' : isBH3 ? 'wq' : isSr ? 'gz' : 'wq', isSr, isZZZ, isBH3);
       if (!id) return false;
       let data = await mys.detail(id, isSr, isZZZ, isBH3);
-      if (isZZZ) this.zzz_wq_pictures(e, data);
-      else if (isBH3) this.bh3_wq_pictures(e, data, roleName);
-      else if (isSr) this.sr_gz_pictures(e, data);
-      else this.gs_wq_pictures(e, data);
+      // 详情取不到（Bwiki 限流 567、或该条目 Bwiki 没收）就干净返回 false，
+      // 让调用方走「没有找到」的提示，而不是把 null 丢进渲染器。
+      // 这里刻意不校验 data.content 的内部结构：详情源被限流时结构同样为空，
+      // 早先加了结构判断，结果 雾切之回光 这种确实有页面的条目也被判成无详情。
+      if (!data) {
+        logger.debug?.(`[xhh][图鉴] 武器「${wq}」详情获取失败（id=${id}）`);
+        return false;
+      }
+      // 渲染器是按 Bwiki 页面结构写的，条目缺页时解析会抛异常；
+      // 兜住异常并记日志，避免整条消息被吞掉。
+      try {
+        if (isZZZ) this.zzz_wq_pictures(e, data);
+        else if (isBH3) this.bh3_wq_pictures(e, data, roleName);
+        else if (isSr) this.sr_gz_pictures(e, data);
+        else this.gs_wq_pictures(e, data);
+      } catch (err) {
+        logger.error?.(`[xhh][图鉴] 武器「${wq}」详情渲染失败: ${err?.message || err}`);
+        return false;
+      }
       return true;
     }
     return false;
@@ -1762,7 +1987,15 @@ export class Wiki extends plugin {
       //
       // 这一段放在「!id 就 return false」之前：Bwiki 有而官方角色列表没有的角色
       // （例如刚上线或仅维基收录的）也能出图，否则会被官方列表先挡掉。
-      if (!isSr && !isZZZ && !isBH3) {
+      /* ⚠️ 但 test 模式下**必须整段跳过**。Bwiki 是正式服站，里面全是正式服角色；
+         这条分支不走 mys.data()、直接裸调 fetchGsRole，所以 mys.data() 里的
+         modeOk 闸门（mys.js 的单查闸门）根本管不到它 —— 不挡的话，
+         test 模式下发「#钟离图鉴」会直接拿到 Bwiki 的正式服数据，
+         等于测试服模式把正式服内容放了出来。
+         test 模式只用 nanoka + manifest.new.*，两种数据不混用。 */
+      if (isTestDataMode()) {
+        dbg('测试服数据模式：跳过 Bwiki 角色图鉴，只用 nanoka 数据');
+      } else if (!isSr && !isZZZ && !isBH3) {
         const done = await this.gs_bwiki_role_pictures(e, rname);
         // render 返回的是 e.runtime.render 的结果，不保证是布尔值，
         // 所以用「非 false」判定成功，否则成功时也可能被当成失败再降级一次。
@@ -1789,6 +2022,12 @@ export class Wiki extends plugin {
    * 抓不到就返回 false，让调用方降级到 nanoka —— 测试服角色只有 nanoka 有。
    */
   async gs_bwiki_role_pictures(e, name) {
+    /* 纵深防御：调用方（role）已挡过一次，这里再挡一道。
+       Bwiki 是正式服站，本函数不该在 test 模式下被触达。 */
+    if (isTestDataMode()) {
+      logger.debug?.(`[xhh][bwiki_gs] 测试服数据模式：拒绝 Bwiki 角色图鉴（${name}）`);
+      return false;
+    }
     const dbg = (...a) => { if (config().debug) logger.mark('[xhh][bwiki_gs]', ...a); };
     let d = null;
     try {
@@ -1799,9 +2038,18 @@ export class Wiki extends plugin {
       return false;
     }
     if (!d) return false;
-    // 页面存在但内容明显不完整时也别硬渲染，宁可回退 nanoka
-    if (!d.basic || !Object.keys(d.basic).length || !d.skillBlocks?.length) {
-      dbg(`${name} 解析内容不完整，回退 nanoka`);
+    /* 页面存在但内容明显不完整时也别硬渲染，宁可回退 nanoka。
+       ⚠️ 不能只看 skillBlocks.length：测试服新角色（如米提亚）在 Bwiki 上
+       词条已建但技能数据**未录入**，每个技能块里只剩「请上传文件『.gif』」占位符 ——
+       块数照样是 6，但 name 全是「文件:.png」、desc 全空。
+       只数块数会把它当「完整」放行，卡面就是空的。
+       所以这里额外校验：技能名要像真的技能名（不含占位符标记），
+       且至少有带描述的技能。 */
+    const placeholder = /文件[:：]|请上传文件|\.png|\.gif/i;
+    const realSkills = (d.skillBlocks || []).filter(b =>
+      b?.name && !placeholder.test(String(b.name)) && String(b.desc || '').trim().length > 0);
+    if (!d.basic || !Object.keys(d.basic).length || !realSkills.length) {
+      dbg(`${name} 解析内容不完整（技能块${d.skillBlocks?.length ?? 0}个/有效${realSkills.length}个），回退 nanoka`);
       return false;
     }
     const { detail, extra } = buildGsDetail(d);
@@ -1852,6 +2100,13 @@ export class Wiki extends plugin {
      * 推荐光锥/遗器/词条清空（那些数据 Bwiki 角色页里根本没有）。
      */
     async mergeSrBwikiRole(name, view) {
+        /* Bwiki 是正式服站。test 模式下整段跳过，保留 nanoka 的测试服视图 ——
+           否则技能/属性/命途会被 Bwiki 的正式服数据覆盖，正式服内容就漏进来了。
+           这里同样是裸调 fetchSrRole，不经 mys.data()，闸门管不到。 */
+        if (isTestDataMode()) {
+            logger.debug?.(`[xhh][图鉴] 测试服数据模式：跳过 Bwiki 合并（${name}），保留 nanoka 视图`);
+            return view;
+        }
         try {
             const bw = await fetchSrRole(name);
             if (!bw) {
@@ -1960,6 +2215,10 @@ export class Wiki extends plugin {
 
   //原神角色
   async gs_role_pictures(e, data) {
+    if (!data?.page?.modules?.length) {
+        logger.debug?.(`[xhh][图鉴] 角色详情页结构缺失（page=${data?.page === null ? 'null' : '无'}），跳过该渲染`);
+        return false;
+    }
     const modules = data.page.modules;
     const role_attribute = {
       '#378383': '风',
@@ -2068,6 +2327,14 @@ export class Wiki extends plugin {
 
   //原神武器
   async gs_wq_pictures(e, data) {
+    /* 米游社官方兜底在查不到时返回 { page: null }（日志里 13:44 的
+       TypeError: Cannot read properties of null (reading 'page') 就是这里抛的，
+       未捕获异常会把整条消息吞掉，群里表现为「发了图鉴没反应/内容不全）。
+       详情取不到就交回调用方走别的渲染路径，不要在这里崩。 */
+    if (!data?.page?.modules?.length) {
+        logger.debug?.(`[xhh][图鉴] 武器详情页结构缺失（page=${data?.page === null ? 'null' : '无'}），跳过该渲染`);
+        return false;
+    }
     const modules = data.page.modules;
     let wq, description, numeric_value;
     modules.forEach((v, i) => {

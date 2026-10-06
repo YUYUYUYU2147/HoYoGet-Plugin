@@ -77,6 +77,7 @@
     </div>
   </div>
 
+  {{if passives && passives.length}}
   <div class="panel">
     <div class="ptitle">天赋</div>
     <div class="passives">
@@ -88,7 +89,9 @@
       {{/each}}
     </div>
   </div>
+  {{/if}}
 
+  {{if constellations && constellations.length}}
   <div class="panel">
     <div class="ptitle">命座</div>
     <div class="cons">
@@ -103,6 +106,7 @@
       {{/each}}
     </div>
   </div>
+  {{/if}}
 
   {{if matSummary && matSummary.length}}
   <div class="panel">

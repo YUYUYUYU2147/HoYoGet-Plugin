@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="{{ppath}}wiki/zzz_wq_bwiki.css" />
+</head>
+<body {{sys.scale}}>
+<!-- 音擎卡：Bwiki 词条页版式。
+     数据源 Bwiki 角色/音擎词条（音擎名与角色名同名，fetchZzzBwikiWeapon 直接按名字取），
+     结构照抄 Bwiki：基础属性/音擎效果两栏 → 版本+代理人+获取途径 → 详细面板 → 突破材料 → 故事。 -->
+<div class="page" id="container">
+  <!-- 测试服数据标记：右上角 TEST 角标。正式服数据不显示（unreleased 由数据层判定） -->
+  {{if unreleased}}<div class="corner-test">TEST</div>{{/if}}
+  {{if bgFile}}<img class="bg" src="file://{{bgFile}}" alt="" />{{/if}}
+  <div class="topbar"></div>
+
+  <header class="hero">
+    <div class="hero-ic">
+      {{if icon}}<img src="{{icon}}" alt="" />{{else}}<div class="img-ph">{{name[0]}}</div>{{/if}}
+    </div>
+    <div class="hero-txt">
+      <h1>{{name}} {{if rarity}}<span class="rarity">{{rarity}}</span>{{/if}}</h1>
+      <div class="tags">
+        {{if feat}}<span class="tag">特性 · {{feat}}</span>{{/if}}
+        {{if obtain}}<span class="tag">{{obtain}}</span>{{/if}}
+        {{if version}}<span class="tag">版本 {{version}}{{if versionDate}}（{{versionDate}}）{{/if}}</span>{{/if}}
+      </div>
+      {{if brief}}<div class="brief">{{brief}}</div>{{/if}}
+    </div>
+  </header>
+
+  {{if story}}
+  <div class="row">
+    <div class="cell">
+      <div class="cell-t">音擎故事</div>
+      <div class="cell-d">{{story}}</div>
+    </div>
+  </div>
+  {{/if}}
+
+  <div class="row">
+    <div class="cell">
+      <div class="cell-t">基础攻击力</div>
+      <div class="cell-v">{{baseAtk || '-'}}</div>
+    </div>
+    <div class="cell">
+      <div class="cell-t">副属性 · {{randName || '-'}}</div>
+      <div class="cell-v">{{randValue || '-'}}</div>
+    </div>
+  </div>
+
+  {{if talent.name || talent.desc}}
+  <div class="row">
+    <div class="cell">
+      <div class="cell-t">音擎效果</div>
+      {{if talent.name}}<div class="skill-name">{{talent.name}}</div>{{/if}}
+      {{if talent.desc}}<div class="cell-d">{{@talent.desc}}</div>{{/if}}
+    </div>
+  </div>
+  {{/if}}
+
+  {{if agents && agents.length}}
+  <div class="row">
+    <div class="cell">
+      <div class="cell-t">相关代理人</div>
+      <div class="agents">
+        {{each agents a}}<span class="agent"><img src="{{a.icon}}" alt="" />{{a.name}}{{if a.rarity}}<b class="r-{{a.rarity}}">{{a.rarity}}</b>{{/if}}</span>{{/each}}
+      </div>
+    </div>
+  </div>
+  {{/if}}
+
+  {{if panel && panel.length}}
+  <div class="row">
+    <div class="cell">
+      <div class="cell-t">详细面板</div>
+      <!-- 表头必须两行：基础攻击力横跨「突破前/突破后」两列，
+           少一行的话 4 个数值塞进 3 个表头，看着就全错位了。 -->
+      <table class="tb">
+        <thead>
+          <tr><th rowspan="2">等级</th><th colspan="2">基础攻击力</th><th rowspan="2">{{randName || '副属性'}}</th></tr>
+          <tr><th>突破前</th><th>突破后</th></tr>
+        </thead>
+        <tbody>
+          {{each panel p}}<tr><td>{{p.lv}}</td>{{each p.cells c}}<td{{if c.span}} colspan="{{c.span}}"{{/if}}>{{c.v}}</td>{{/each}}</tr>{{/each}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {{/if}}
+
+  {{if materials && materials.length}}
+  <div class="row">
+    <div class="cell">
+      <div class="cell-t">突破材料</div>
+      <table class="tb">
+        <tbody>
+          {{each materials m}}<tr><td class="stage">{{m.stage}}</td><td>{{each m.items it}}<span class="mat">{{if it.img}}<img src="{{it.img}}" alt="" />{{/if}}{{it.name}} × {{it.num}}</span>{{/each}}</td></tr>{{/each}}
+          {{if materialTotal && materialTotal.length}}
+          <tr class="total"><td class="stage">总计</td><td>{{each materialTotal it}}<span class="mat">{{if it.img}}<img src="{{it.img}}" alt="" />{{/if}}{{it.name}} × {{it.num}}</span>{{/each}}</td></tr>
+          {{/if}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {{/if}}
+
+
+  <div class="foot">from 小花火</div>
+</div>
+</body>
+</html>

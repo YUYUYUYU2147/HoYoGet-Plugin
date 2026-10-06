@@ -7,6 +7,12 @@ function getCfg() {
   return yaml.get(_path + 'config.yaml') || {}
 }
 
+/** 图鉴数据模式：official=正式服 / test=测试服（与 config.yaml 的 data_mode 一致） */
+function getDataMode() {
+  const v = String(getCfg().data_mode || 'official').trim()
+  return v === 'test' ? 'test' : 'official'
+}
+
 function getOther() {
   return yaml.get(_path + 'other.yaml') || {}
 }
@@ -128,6 +134,18 @@ export const supportGuoba = () => {
       {
         component: 'SOFT_GROUP_BEGIN',
         label: '基本设置',
+      },
+      {
+        field: 'data_mode',
+        label: '图鉴数据模式',
+        helpMessage: 'official=正式服（列表/查询都不出测试服条目）；test=测试服（只显示测试服条目）。也可用群指令 #切换正式服模式 / #切换测试服模式。改动实时生效',
+        component: 'RadioGroup',
+        componentProps: {
+          options: [
+            { label: '正式服', value: 'official' },
+            { label: '测试服', value: 'test' },
+          ],
+        },
       },
       {
         field: 'update',
@@ -1256,6 +1274,8 @@ export const supportGuoba = () => {
       const activityRemind = getActivityRemind()
       const activityGroups = activityRemind.groups || {}
       return {
+        // 数据模式：面板上要能读到当前值，否则单选框显示不出选中的那一项
+        data_mode: getDataMode(),
         update: !!cfg.update,
         img_quality: cfg.img_quality ?? 80,
         wiki: !!cfg.wiki,
@@ -1268,6 +1288,7 @@ export const supportGuoba = () => {
         sr_logs: !!cfg.sr_logs,
         zzz_logs: !!cfg.zzz_logs,
         bh3_logs: !!cfg.bh3_logs,
+        gacha_pool_cron: String(cfg.gacha_pool_cron || '0 */30 * * * *'),
         all_voice: !!cfg.all_voice,
         gs_voice: cfg.gs_voice !== false,
         sr_voice: cfg.sr_voice !== false,
@@ -1469,6 +1490,12 @@ export const supportGuoba = () => {
         meme_masterProtectDo: data.meme_masterProtectDo,
         abyss_report_sr_invasion: data.abyss_report_sr_invasion,
       }
+      /* 数据模式单独处理：只认 official / test 两个值，其它一律当正式服。
+         之前这个字段只在群指令里写盘，锅巴面板改完存不进去 ——
+         schema 有字段、getter 也能读，唯独保存时没写回去。 */
+      if (data.data_mode != null) {
+        yaml.set(_path + 'config.yaml', 'data_mode', String(data.data_mode).trim() === 'test' ? 'test' : 'official')
+      }
       for (const [k, v] of Object.entries(boolMap)) {
         const target = ['forwardMsg', 'bh3', 'by', 'xbgd', 'cover'].includes(k) ? 'other.yaml' : 'config.yaml'
         yaml.set(_path + target, k, !!v)
@@ -1489,7 +1516,7 @@ export const supportGuoba = () => {
         bili_live_video_time: data.bili_live_video_time,
         bili_live_video_size: data.bili_live_video_size,
         bili_live_qn: data.bili_live_qn,
-        bili_live_dm_perm: data.bili_live_dm_perm,
+        
         bili_live_dm_cd: data.bili_live_dm_cd,
       }
       for (const [k, v] of Object.entries(numMap)) {
@@ -1504,6 +1531,14 @@ export const supportGuoba = () => {
       if (data.gacha_up_icon_source) yaml.set(_path + 'config.yaml', 'gacha_up_icon_source', data.gacha_up_icon_source === 'official' ? 'official' : 'custom')
       const memeBaseUrl = String(data.meme_baseUrl || '').trim()
       if (memeBaseUrl) yaml.set(_path + 'config.yaml', 'meme_baseUrl', memeBaseUrl)
+      // 弹幕权限是字符串选项，之前混在 numMap 里被 Number() 转成了 NaN 写进 yaml
+      if (has(data, 'bili_live_dm_perm')) {
+        yaml.set(_path + 'config.yaml', 'bili_live_dm_perm', ['all', 'admin', 'master'].includes(data.bili_live_dm_perm) ? data.bili_live_dm_perm : 'admin')
+      }
+      // 卡池刷新间隔：schema 里有这个字段，但保存时没写盘 —— 面板改了永远不生效
+      if (has(data, 'gacha_pool_cron')) {
+        yaml.set(_path + 'config.yaml', 'gacha_pool_cron', String(data.gacha_pool_cron || '').trim() || '0 */30 * * * *')
+      }
 
       yaml.set(_path + 'sign.yaml', 'zd_sign', Number(data.zd_sign) ?? 0)
       const signHour = Number.isFinite(Number(data.sign_hour))

@@ -41,7 +41,7 @@
 
   <div class="panel">
     <div class="ptitle">基础属性 · 80级</div>
-    {{if growth.length}}
+    {{if growth && growth.length}}
     <table class="stats">
       <tr><th>等级</th><th>攻击</th><th>生命</th><th>防御</th><th>速度</th><th>暴击率</th><th>暴击伤害</th></tr>
       {{each growth g}}
@@ -59,6 +59,7 @@
     {{/if}}
   </div>
 
+  {{if skills && skills.length}}
   <div class="panel">
     <div class="ptitle">技能</div>
     <div class="skills">
@@ -75,7 +76,9 @@
       {{/each}}
     </div>
   </div>
+  {{/if}}
 
+  {{if ranks && ranks.length}}
   <div class="panel">
     <div class="ptitle">星魂</div>
     <div class="ranks">
@@ -90,6 +93,7 @@
       {{/each}}
     </div>
   </div>
+  {{/if}}
 
   {{if materials.length}}
   <div class="panel">

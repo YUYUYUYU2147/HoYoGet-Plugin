@@ -25,6 +25,14 @@ function stripTags(s) {
         .replace(/\\n/g, '\n')
         .replace(/\\r/g, '')
         .replace(/\\t/g, ' ')
+        /* nanoka 的术语链接：<color=#xxx>{LINK#N11360001}递变信标{/LINK}</color>
+           —— 花括号里是指向词条 id 的引用，屏幕上显示的是「递变信标」这几个字。
+           不剥掉就会满屏 {LINK#N11360001} 乱码（实测测试服新角色米提亚的
+           6 条命座 + 4 条天赋全中，19 处）。
+           顺序要紧：必须在 <[^>]+> 那条**之前**处理，否则 {LINK#...} 里没有尖括号、
+           会被后面的逻辑留着；而 LINK 标签里不含尖括号，单独剥是安全的。 */
+        .replace(/\{LINK#[^}]*\}/g, '')
+        .replace(/\{\/LINK\}/g, '')
         .replace(/<color=[^>]*>/g, '')
         .replace(/<\/color>/g, '')
         .replace(/<unbreak>/g, '')
@@ -363,7 +371,10 @@ function gsRoleView(detail, id) {
         // 不是个别角色缺图。列表页（nanokaGsIcon）没剥前缀所以一直正常。
         icon: gsIconUrl(d.icon),
         rarity: gsRarityCn(d.rarity),
-        rarityIcon: d.rarityIcon || GS_RARITY_ICON[Number(/(\d)/.exec(String(d.rarity || ''))?.[1])] || '',
+        /* 星级图标按**归一化后的中文稀有度**取键。原来用 /(\d)/ 去原值里找数字：
+           Bwiki 路径 rarity 是 '5' 能取到，nanoka 路径是「五星」取不到数字 → 图标为空
+           （旅行者等走 nanoka 的角色头像上没有金星）。 */
+        rarityIcon: d.rarityIcon || GS_RARITY_ICON[gsRarityCn(d.rarity) === '五星' ? 5 : gsRarityCn(d.rarity) === '四星' ? 4 : 0] || '',
         element: info.vision || '',
         // 神之眼图标（wiki/imgs/{元素}.png），模板用 {{ppath}} 拼。
         // 之前只给了元素文字，标签前面没有图标，看起来就像「神之眼没获取到」。

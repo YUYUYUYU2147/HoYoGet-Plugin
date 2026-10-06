@@ -4,6 +4,8 @@ import {
     yaml
 } from '#xhh';
 import YAML from 'yaml';
+// Bwiki 绝区零角色页（列表页头像最高优先级来源）。该文件零 import，不构成循环依赖。
+import { fetchZzzBwikiChar } from '../apps/wiki/bwiki_zzz.js';
 
 // 绝区零 nanoka 目录只保留当前版本，旧版本号过一段时间就会整目录 404
 // （3.3.3+19110104 已下架，四个数据文件全部 404，表现为新出的驱动盘套装查不到，
@@ -161,15 +163,34 @@ const nanokaBase = async game => {
 // hsr new.character [1511]（阿哈）、new.lightcone [22009, 23065]
 // zzz new.character [1631, 1641]、new.weapon [13022, 14163, 14164]
 let nanokaManifestCache = null;
+const NANOKA_MANIFEST_URL = 'https://static.nanoka.cc/manifest.json';
+const NANOKA_MANIFEST_CACHE = './plugins/xhh/config/nanoka_manifest_cache.json';
+const cleanZzzKey = v => String(v || '').replace(/[\s·・\-—_「」『』《》【】\[\]（）(),]/g, '').toLowerCase();
 const getNanokaNew = async game => {
     if (!nanokaManifestCache) {
         try {
             // .json() 也要 await：写成 (await fetch(..)).json() 的话存进去的是
             // Promise，取值恒为 undefined，未上线判定会静默全部失效。
-            nanokaManifestCache = (await (await fetch('https://static.nanoka.cc/manifest.json')).json()) || {};
+            nanokaManifestCache = (await (await fetch(NANOKA_MANIFEST_URL)).json()) || {};
+            try { fs.writeFileSync(NANOKA_MANIFEST_CACHE, JSON.stringify({ t: Date.now(), data: nanokaManifestCache })); } catch (_) {}
         } catch (err) {
-            logger.debug?.('[xhh][图鉴] 读 nanoka manifest.json 失败:', err?.message || err);
-            nanokaManifestCache = {};
+            /* 取不到时退回上一次成功落盘的 manifest。
+               没有这一步的话，一次网络抖动就会让 new.* 整批判空 ——
+               未上线标记全部消失，测试服条目直接混进正式服列表（实测绝区零角色
+               从 60 条变回 62 条，两个预告角色就漏了）。宁可沿用旧数据，
+               也不能在没有判据的情况下把测试服内容放出去。 */
+            let cached = null;
+            try {
+                const raw = JSON.parse(fs.readFileSync(NANOKA_MANIFEST_CACHE, 'utf-8'));
+                if (raw?.data && typeof raw.data === 'object') cached = raw.data;
+            } catch (_) {}
+            if (cached) {
+                nanokaManifestCache = cached;
+                logger.warn?.('[xhh][图鉴] nanoka manifest 获取失败，改用上次缓存的数据');
+            } else {
+                logger.debug?.('[xhh][图鉴] 读 nanoka manifest.json 失败:', err?.message || err);
+                nanokaManifestCache = {};
+            }
         }
     }
     const g = nanokaManifestCache?.[game];
@@ -223,6 +244,68 @@ const nanokaGsItemIcon = icon => {
     if (/Template/.test(key)) return '';
     return `${NANOKA_ASSET}/gi/${key}.webp`;
 };
+/**
+ * 回填 item.ji（星级）。
+ * nanoka 各列表的星级只写进了 ext 的 filter.text（形如「星级/五星」「武器星级/S级」，
+ * 原神/星铁的 ext 是对象、绝区零的是 JSON 字符串，两种形态都要认）。
+ * 而 wiki.js 的星级排序、rankClass 描边（r5/r4）、星级徽章、#五星武器 这类分档筛选
+ * 全部读 item.ji —— 缺了它整条链在 nanoka 数据源上是死的：实测原神/星铁/绝区零
+ * 全部列表「有 ji 的条目 = 0」，排序退化成 nanoka 原始顺序。
+ */
+const STAR_FILTER_RE = /^(武器|圣痕|人偶)?星级\//;
+/* 不同数据源的星级写法不一样：nanoka 是「五星」，米游社兜底与部分星铁条目是「5星」，
+   而 list() 的 rankClassMap / #五星xx 分档只认中文写法，不归一就整批落成 r0、
+   排序也失效（实测星铁光锥走兜底时 170 条里有 145 条没档位）。 */
+const STAR_WORD_CN = { '5星': '五星', '4星': '四星', '3星': '三星', '2星': '二星', '1星': '一星', 'S级': '五星', 'A级': '四星', 'B级': '三星' };
+const starWordCn = v => {
+    const t = String(v || '').trim();
+    return STAR_WORD_CN[t] || t;
+};
+const pickStarIn = obj => {
+    if (!obj || typeof obj !== 'object') return '';
+    for (const [k, v] of Object.entries(obj)) {
+        if (k === 'filter' && typeof v?.text === 'string') {
+            const f = JSON.parse(v.text);
+            if (Array.isArray(f)) {
+                const hit = f.map(s => String(s).replace(STAR_FILTER_RE, '')).find(x => x && /星$|级$/.test(x));
+                if (hit) return starWordCn(hit);
+            }
+        }
+        const deep = pickStarIn(v);
+        if (deep) return deep;
+    }
+    return '';
+};
+/**
+ * 武器幻化与本体对齐星级。
+ * nanoka 里同一把武器的本体条目 rank=4、幻化条目（名字带「·真化」）rank=5，
+ * 实测 11 对里有 7 对是这样（蛇噬、涅墨林塞的金枝、赫烈、贾尔杜莱的银辉、碎月、
+ * 芬里基亚的星芒、圣缚、撒哈律尔的曙星、贯星、猰貐）。游戏里一把武器只有一个星级，
+ * 按本体取值，保证「本体 + 幻化」落在同一档，不会出现本体在四星区、幻化飘到五星区。
+ */
+const alignSkinRarity = list => {
+    const src = list || [];
+    const baseJi = new Map();
+    for (const x of src) {
+        const nm = String(x.title || '');
+        if (!nm.endsWith('·真化')) baseJi.set(nm, x.ji);
+    }
+    return src.map(x => {
+        const nm = String(x.title || '');
+        if (!nm.endsWith('·真化')) return x;
+        const base = baseJi.get(nm.slice(0, -3));
+        return base && base !== x.ji ? { ...x, ji: base } : x;
+    });
+};
+const fillRarity = list => (list || []).map(x => {
+    if (x.ji) return x;
+    let ji = '';
+    try {
+        const raw = typeof x.ext === 'string' ? JSON.parse(x.ext) : x.ext;
+        ji = pickStarIn(raw);
+    } catch (_) {}
+    return ji ? { ...x, ji } : x;
+});
 /** 皮肤武器的 Gacha 版图标，用作 onerror 兜底（见 nanokaGsItemIcon 的注释） */
 const gsSkinIcon = key => {
     const base = String(key || '').replace(/_\{0\}$/, '');
@@ -861,6 +944,56 @@ const isRetryableNanokaErr = err => {
 };
 
 class mys {
+    /* ── 图鉴数据模式：official=正式服 / test=测试服 ────────────────────
+       开关有三个入口，值以 config.yaml 的 data_mode 为准：
+         ① 锅巴 UI（guoba.support.js 里注册了 data_mode 单选）
+         ② 直接改 plugins/xhh/config/config.yaml
+         ③ 群指令 #切换正式服模式 / #切换测试服模式（会写回 config.yaml，即时生效）
+       读取走 yaml.get；取不到就当 official（正式服），宁可少出卡也不混进测试服数据。 */
+    getDataMode() {
+        /* 缓存按 config.yaml 的 mtime 失效。之前是永久缓存，只有群指令那条路
+           （走 setDataMode）才刷新，结果从锅巴面板改模式不写缓存、又绕过了
+           setDataMode，面板改了永远不生效，只能重启插件。 */
+        const p = './plugins/xhh/config/config.yaml';
+        let mtime = 0;
+        try { mtime = fs.statSync(p).mtimeMs; } catch { mtime = 0; }
+        if (this._modeCache && this._modeCacheMtime === mtime) return this._modeCache;
+        let v = '';
+        /* 用第 4 行 import 的项目 yaml 实例（.get 读盘），
+           不是第 6 行的 npm 'yaml' 包 —— 后者只有 parse/stringify，
+           调 YAML.get 会抛 TypeError 被下面 catch 吞掉，v 留空 → 永远回落 official。 */
+        try { v = String(yaml.get(p)?.data_mode || '').trim(); }
+        catch { v = ''; }
+        this._modeCache = (v === 'test') ? 'test' : 'official';
+        this._modeCacheMtime = mtime;
+        return this._modeCache;
+    }
+
+    /** 切换模式：写回 config.yaml，即时生效（下次读配置即命中） */
+    setDataMode(mode) {
+        const v = mode === 'test' ? 'test' : 'official';
+        this._modeCache = v;
+        try {
+            const p = './plugins/xhh/config/config.yaml';
+            try { this._modeCacheMtime = fs.statSync(p).mtimeMs; } catch { this._modeCacheMtime = 0; }
+            const txt = fs.readFileSync(p, 'utf8');
+            const next = /^data_mode\s*:.*$/m.test(txt)
+                ? txt.replace(/^data_mode\s*:.*$/m, `data_mode: ${v}`)
+                : txt.replace(/^(\s*#图鉴数据模式[^\n]*\n)/, `$1data_mode: ${v}\n`);
+            fs.writeFileSync(p, next, 'utf8');
+            logger.mark?.(`[xhh][图鉴] 数据模式 → ${v}（已写回 config/config.yaml，即时生效）`);
+        } catch (err) {
+            logger.warn?.(`[xhh][图鉴] 数据模式写回失败（仅本次生效）：${err?.message}`);
+        }
+        return v;
+    }
+
+    /** 正式服模式下：测试服条目不出卡 */
+    isBlockedInOfficial(item = {}) {
+        return this.getDataMode() === 'official' && !!item.isUnreleased;
+    }
+
+
     // 部分第三方图鉴源异常时会返回 HTML 错误页，不能直接调用 response.json()。
     async fetchJson(url, label = '', { timeout = NANOKA_TIMEOUT_MS, retry = 1 } = {}) {
         let lastErr = null;
@@ -1097,6 +1230,11 @@ class mys {
             icon: item?.icon || '',
             summary: item?.summary || '',
             alias_name: item?.alias_name || '',
+            /* nanoka 冷却时整条列表都走这个兜底源，而兜底源原本不带任何未实装信息 ——
+               结果正式服列表会混进预告内容、测试服列表直接空掉。
+               米游社条目自己带预告角标 corner_mark='Pre'（就是 App 头像右上角那个标签），
+               在这里补上，兜底路径也能按数据模式正确分流。 */
+            isUnreleased: String(item?.corner_mark || '').toLowerCase() === 'pre',
             ext: normalizedExt
         };
     }
@@ -1169,6 +1307,23 @@ class mys {
     }
 
     //原神/星铁图鉴：nanoka 优先（体积小一个数量级），米游社官方 Wiki 兜底
+    /**
+     * 按数据模式过滤列表（两侧都不混）：
+     *   official → 只保留正式服条目（isUnreleased / _src==='nanoka' 的一律剔除）
+     *   test     → **只保留测试服条目**（正式服条目不出现在测试服列表里）
+     * 判据：isUnreleased（manifest.new.* 打标）或 _src==='nanoka'（绝区零 nanoka 独有条目）。
+     */
+    filterListByMode(list) {
+        if (!Array.isArray(list)) return list;
+        const mode = this.getDataMode();
+        const isTest = x => !!(x?.isUnreleased || x?._src === 'nanoka');
+        const kept = mode === 'official' ? list.filter(x => !isTest(x)) : list.filter(isTest);
+        if (kept.length !== list.length) {
+            logger.debug?.(`[xhh][图鉴] ${mode === 'official' ? '正式服' : '测试服'}模式：列表 ${list.length} → ${kept.length} 条`);
+        }
+        return kept;
+    }
+
     async tujian(isSr = false, isZZZ = false, isBH3 = false) {
         if (isZZZ) {
             return await this.zzz_tujian();
@@ -1176,10 +1331,26 @@ class mys {
         if (isBH3) {
             return await this.bh3_tujian();
         }
+        /* ⚠️ test 模式只用 nanoka（作者要求：不许用 Bwiki 和官方数据）。
+           nanoka 挂掉/返回空时整份切到米游社官方 Wiki，那是正式服源 ——
+           等于把正式服列表当测试服列表交出去。test 模式下一律返回空列表。
+           filterListByMode 只看 isUnreleased / _src 标记，官方兜底源的条目
+           这些标记不全，挡不住，所以必须在**切换之前**就断掉。 */
+        const testModeOnly = this.getDataMode() === 'test';
+        if (nanokaDown() && testModeOnly) {
+            logger.debug?.('[xhh][图鉴] 测试服数据模式：nanoka 不可用且禁用官方兜底，原神/星铁列表为空');
+            return isSr
+                ? { js_list: [], gz_list: [], yq_list: [] }
+                : { js_list: [], wq_list: [], syw_list: [] };
+        }
         if (!nanokaDown()) {
             try {
                 const data = await this.nanoka_tujian(isSr);
-                if (data && (data.js_list?.length || data.gz_list?.length || data.wq_list?.length)) return data;
+                if (data && (data.js_list?.length || data.gz_list?.length || data.wq_list?.length)) {
+                    // 按数据模式过滤（official 剔测试服 / test 只留测试服）
+                    for (const k of Object.keys(data)) data[k] = this.filterListByMode(data[k]);
+                    return data;
+                }
                 logger.warn?.('[xhh][图鉴] nanoka 返回空，回退米游社官方 Wiki');
             } catch (error) {
                 // 仅网络/接口类失败才全局降级，代码 bug 直接抛出（见 isTransientNetError）
@@ -1187,7 +1358,21 @@ class mys {
                 logger.error('原神/星铁 nanoka 图鉴访问失败，切换米游社官方 Wiki:', error);
             }
         }
-        return await this.official_tujian(isSr);
+        /* 同上：test 模式下 nanoka 返回空也不能落到官方源（正式服）。
+           nanoka 有内容时前面已 return，走不到这里。 */
+        if (testModeOnly) {
+            logger.debug?.('[xhh][图鉴] 测试服数据模式：nanoka 返回空且禁用官方兜底，原神/星铁列表为空');
+            return isSr
+                ? { js_list: [], gz_list: [], yq_list: [] }
+                : { js_list: [], wq_list: [], syw_list: [] };
+        }
+        const official = await this.official_tujian(isSr);
+        if (!official) return false;
+        /* 兜底源（米游社官方 Wiki）的条目同样只有 ext、没有 ji —— 不回填的话，
+           nanoka 一失败整个列表就退化成「无星级、无排序」，这正是列表看起来
+           又乱又不全的直接原因（实测兜底武器 252 条里 ji 全为 null）。 */
+        for (const k of Object.keys(official)) official[k] = this.filterListByMode(fillRarity(official[k]));
+        return official;
     }
 
     /**
@@ -1282,6 +1467,8 @@ class mys {
                 // 星铁不需要了：avatarshopicon 全量 99/99，零缺失、零 404。
                 // 原神保留一层 _Circle 兜底（实测 131/152，比基础版少 21 个）。
                 iconFallback: isGs ? nanokaGsIconCircle(c.icon) : '',
+                // 未实装角色（manifest.new.character）：数据模式过滤与 TEST 角标都用它
+                isUnreleased: newChars.has(String(id)),
                 aliases: [c.code, c.en, c.codename].filter(v => v && v !== c.zh),
                 ext: makeExt(strings, icon)
             };
@@ -1295,7 +1482,13 @@ class mys {
 
         let gz_list = [], wq_list = [];
         if (isGs) {
-            wq_list = weaponEntries.map(([id, w]) => {
+            wq_list = weaponEntries
+                /* 图鉴只收 4★/5★：星铁光锥最低 3★ 但实际也是 3★/4★/5★ 一档，
+                   绝区零音擎是 3/4/5 星，唯独原神武器有 1★~3★ 的免费武器（实测 34 条：
+                   信使/弹弓/反曲弓/猎弓/学徒笔记/无锋剑…）。这些是合成产物不是卡池内容，
+                   图鉴里没有检索价值，统一不收。 */
+                .filter(([, w]) => Number(w.rank) >= 4)
+                .map(([id, w]) => {
                 const icon = nanokaGsItemIcon(w.icon);
                 return {
                     content_id: id,
@@ -1306,6 +1499,21 @@ class mys {
                     // 页面引用的是 UI_Gacha_EquipIcon_Claymore_LoliFriend.webp，
                     // 但那个文件实测 404 —— 留着兜底链，指不定 nanoka 哪天补上。
                     iconFallback: /_\{0\}$/.test(String(w.icon || '')) ? '' : gsSkinIcon(w.icon),
+                    /* 未实装武器：只看 manifest.new.weapon（实测 3 条：14525 秘星典谕、
+                       224101 索斯卢科的灼炎、224102 艾维萨缇的山狩）。
+                       原来这里还带上 w.skin === true，那是错的：nanoka 里 skin:true 的含义是
+                       「这把武器有幻化」，而且本体与幻化两条**都**标 skin:true
+                       （310001=蛇噬 / 310002=蛇噬·真化 …，实测 26 条覆盖 11 把武器）。
+                       当成未实装判据会把蛇噬、涅墨林塞的金枝、赫烈、贾尔杜莱的银辉、碎月、
+                       芬里基亚的星芒、圣缚、撒哈律尔的曙星、贯星、猰貐这些已实装五星连同幻化
+                       一起从正式服列表里剔掉。 */
+                    isUnreleased: newWeapons.has(String(id)) || /-\d+$/.test(String(id)),
+                    _skin: w.skin === true,
+                    // 幻化武器在 nanoka 侧只有 Gacha 版图标，是 512×1024 的竖图
+                    // （普通武器图标是 256×256 方图，实测 256×256 / 512×1024）。
+                    // 列表头像是 90×90 方框 + object-fit:cover，竖图会被裁掉上下，
+                    // 只剩剑身中段一小条。标出来让模板改用 contain 整幅显示。
+                    tallIcon: /_\{0\}$/.test(String(w.icon || '')),
                     ext: makeExt([`武器星级/${gsWeaponRarityCn(w.rank)}`, `武器类型/${getManual().weapon_type_override?.[w.zh] || GS_WEAPON_CN_OVERRIDE[w.zh] || GS_WEAPON_CN[w.type] || ''}`], icon)
                 };
             });
@@ -1316,24 +1524,63 @@ class mys {
                     content_id: id,
                     title: l.zh || l.en || id,
                     icon,
+                    // 未实装光锥：manifest.new.lightcone 里就是它
+                    isUnreleased: newWeapons.has(String(id)),
                     ext: makeExt([`星级/${srRarityCn(l.rank)}`, `命途/${SR_PATH_CN[l.baseType] || ''}`], icon)
                 };
             });
         }
 
+        /* 同名去重：星锋剑在 nanoka 里有 3 条（11521 本体 + 390002/390003 两条
+           skin:true 重复项）。同名时优先留本体条目 —— 本体的 icon 是实图，幻化条目
+           只能靠 gsSkinIcon 兜底，而那条链路实测有过 404。
+           顺带把排序用的临时字段 _skin 摘掉，别带进模板数据。 */
+        wq_list = (wq_list || []).filter(Boolean)
+            .filter((x, i, self) => {
+                const same = self.filter(y => y.title === x.title);
+                if (same.length < 2) return true;
+                return x === (same.find(y => !y._skin) || same[0]);
+            })
+            .map(({ _skin, ...rest }) => rest);
+        gz_list = (gz_list || []).filter(Boolean);
+        /* 圣遗物/遗器的未实装判据分两边：
+           星铁有权威标记 manifest.hsr.new.relicset（实测 329 神的瞬息欢愉、330 亚空异容所），
+           漏了这个判据会让测试服遗器列表永远是空的；
+           原神没有对应键 —— manifest.gi.new 里 artifact 与 suite 实测都是空数组，
+           只能继续用「无图标」当判据（官方套装都有图，测试服套装 nanoka 还没给图）。 */
+        const newRelics = (await getNanokaNew(game))?.relicset || new Set();
+        const markRelics = list => (list || []).map(x => ({
+            ...x,
+            isUnreleased: !!x.isUnreleased || !x.icon || (!isGs && newRelics.has(String(x.content_id)))
+        }));
+
         return {
-            js_list,
+            js_list: fillRarity(js_list),
             // 圣遗物走 artifact.json，遗器走 relicset.json；原神侧 yq_list 沿用旧行为，
             // 与 syw_list 同源（「遗器」命令会强制 isSr，原神这条实际不会被用到）
-            ...(isGs ? { wq_list, syw_list: relicList, yq_list: relicList } : { gz_list, yq_list: relicList })
+            ...(isGs
+                ? { wq_list: alignSkinRarity(fillRarity(wq_list)), syw_list: fillRarity(markRelics(relicList)), yq_list: fillRarity(markRelics(relicList)) }
+                : { gz_list: fillRarity(gz_list), yq_list: fillRarity(markRelics(relicList)) })
         };
     }
 
     // 绝区零图鉴（nanoka.cc 优先，米游社官方 Wiki 回退）
     async zzz_tujian() {
+        /* ⚠️ test 模式只用 nanoka（作者要求：不许用 Bwiki 和官方数据）。
+           官方 Wiki 是正式服源，nanoka 冷却时整份切到它，
+           等于把正式服列表当成测试服列表交出去 —— 这里直接返回空。 */
+        if (this.getDataMode() === 'test' && nanokaDown()) {
+            logger.debug?.('[xhh][图鉴] 测试服数据模式：nanoka 不可用且禁用官方兜底，列表为空');
+            return { js_list: [], wq_list: [], syw_list: [], yq_list: [] };
+        }
         // 冷却期内直接走官方 Wiki，不再请求已失效的 nanoka
-        if (nanokaDown()) return await this.zzz_official_tujian();
+        if (nanokaDown()) {
+            const off = await this.zzz_official_tujian();
+            if (off) for (const k of Object.keys(off)) off[k] = this.filterListByMode(fillRarity(off[k]));
+            return off;
+        }
         try {
+            const zzzNew = await getNanokaNew('zzz');
             const zzzBase = await zzzNanokaBase();
             const [chars, weapons, equipments, bangboos] = await Promise.all([
                 this.fetchJson(`${zzzBase}/character.json`, 'ZZZ nanoka角色'),
@@ -1341,22 +1588,53 @@ class mys {
                 this.fetchJson(`${zzzBase}/equipment.json`, 'ZZZ nanoka驱动盘'),
                 this.fetchJson(`${zzzBase}/bangboo.json`, 'ZZZ nanoka邦布')
             ]);
-            // 官方 Wiki 代理人半身像（act-upload 图床支持缩略，覆盖新角色，构图同星铁官方图鉴卡片）
+// 官方 Wiki 代理人半身像（act-upload 图床支持缩略，覆盖新角色，构图同星铁官方图鉴卡片）
             let officialIconMap = {};
+            /* ⚠️ test 模式只用 nanoka，官方源一律不碰（作者要求）。
+               官方列表在这里有两个用途，test 模式下**两个都必须切断**：
+                 ① 官方头像图（officialIconMap）—— 会混进正式服图片
+                 ② releasedNames —— 决定「是否已实装」，直接影响 isUnreleased 标记，
+                    也就是**测试服列表里到底有哪些条目**。
+               不切的话测试服判定会拿官方列表校正，等于用正式服数据划测试服边界。
+               nanoka 的 manifest 滞后问题在 test 模式下不再补偿 —— 宁可多列几条，
+               也不能拿正式服数据当判据。 */
+            const testMode = this.getDataMode() === 'test';
+            /* 官方源里已经出现的名字集合。nanoka 的 manifest 可能落后于实际版本
+               （实测 manifest.zzz.live=3.2、数据目录已到 3.3.4，赛维里安/菲欧妮
+               被标成 new.character，实际早已上线），所以 manifest.new.* 只当候选，
+               还要用官方列表再校一次，避免把正式服内容误剔、也避免把已上线内容
+               错留在测试服列表里。test 模式不用官方源，见上。 */
+            const releasedNames = new Set();
             try {
                 const cleanName = v => String(v || '').replace(/[\s·・\-—_「」『』《》【】\[\]（）()]/g, '');
                 // 邦布（yq）的 nanoka icon 是游戏内资源路径（UI/Sprite/...），拼不出可访问链接，
                 // 因此官方邦布图标也一并纳入映射，邦布列表按名字回退使用，避免整列裂图
-                const [officialChars, officialBangboos] = await Promise.all([
-                    this.zzz_official_list('js'),
-                    this.zzz_official_list('yq')
-                ]);
+                /* 三个请求各自兜底：之前放在同一个 Promise.all 里，
+                   任意一个失败就整体 throw，被外层 catch 吃掉 ——
+                   结果不只是图标兜底没了，连 releasedNames（判定「已上线」的名字集合）
+                   一起清空，于是 manifest.new.character 里那两个预告角色
+                   没人校正，又混进正式服列表（实测列表从 60 条变回 62 条）。 */
+                const safeList = async kind => {
+                    try {
+                        return await this.zzz_official_list(kind);
+                    } catch (err) {
+                        logger.debug?.(`[xhh][图鉴] 绝区零官方${kind} 列表获取失败: ${err?.message || err}`);
+                        return [];
+                    }
+                };
+                const [officialChars, officialBangboos, officialWeapons] = testMode
+? [null, null, null]
+                    : await Promise.all([safeList('js'), safeList('yq'), safeList('wq')]);
                 const collect = items => {
                     (items || []).forEach(item => {
                         const raw = String(item.title || '');
                         const full = cleanName(raw);
                         if (!full || full.length < 2 || !item.icon) return;
-                        const thumb = `${item.icon}?x-oss-process=image/resize,w_300/format,webp`;
+                        /* 只缩放、不转格式：米游社 OSS 的 format,webp 会把 alpha 通道丢掉
+                           （实测转出来的 VP8 有损 webp 里没有 ALPH 块，透明背景被压成黑色，
+                           头像方块整块变黑，还把底下 r5/r4 的星级底色挡住了）。
+                           保留 PNG 输出则色彩类型仍是 6=RGBA，透明正常。 */
+                        const thumb = `${item.icon}?x-oss-process=image/resize,w_180`;
                         if (!officialIconMap[full]) officialIconMap[full] = thumb;
                         const short = cleanName(raw.split('·')[0]);
                         if (short && short.length >= 2 && !officialIconMap[short]) officialIconMap[short] = thumb;
@@ -1364,25 +1642,123 @@ class mys {
                 };
                 collect(officialChars);
                 collect(officialBangboos);
+                collect(officialWeapons);
+                // 名字集合用于「已上线」交叉校验，见下方 releasedAlready
+                /* 只把「没有预告角标」的条目算作已上线。
+                   米游社图鉴列表里含预告条目：赛维里安、菲欧妮两条都带 corner_mark='Pre'
+                   （就是 App 里头像右上角那个「预告」标签），它们仍未上线。
+                   之前只判断「官方列表里有没有这个名字」，把这两条误当成已上线，
+                   结果正式服列表里少了两个角色、测试服列表里又混不进它们。 */
+                for (const item of [...(officialChars || []), ...(officialWeapons || []), ...(officialBangboos || [])]) {
+                    if (String(item?.corner_mark || '').toLowerCase() === 'pre') continue;
+                    const raw = String(item.title || '');
+                    const full = cleanName(raw);
+                    if (full) releasedNames.add(full);
+                    const short = cleanName(raw.split('·')[0]);
+                    if (short) releasedNames.add(short);
+                }
             } catch (_) {}
+            /* ── Bwiki 头像（最高优先级）─────────────────────────────────
+               作者要求列表页优先级：Bwiki → 米游社 → nanoka。
+               Bwiki 角色页是「一页装全站角色头像」的导航框，fetchZzzBwikiChar
+               按名字认领（bwiki_zzz.js:424），认不到就返回空串 —— 那是设计如此，
+               绝不能拿别人的头像顶。所以这里认不到就自然落到米游社、nanoka。
+
+               两个约束：
+               ① 必须**并发**抓。角色有 60+，串行会卡住整个图鉴；用限并发 4 慢慢放，
+                  而不是 Promise.all 全开（实测 Bwiki 限流很凶，一次并发 60 必炸）。
+               ② 限流时整批降级为空表，下面两级照常工作，绝不让列表开天窗。 */
+            const bwikiIconMap = {};
+            /* test 模式只用 nanoka，Bwiki 整段跳过（作者要求：不许用 Bwiki 和官方数据）。 */
+            if (!testMode) {
+                const names = Object.values(chars).map(c => c.zh).filter(Boolean);
+                const limit = 4;
+                let cursor = 0;
+                const worker = async () => {
+                    while (cursor < names.length) {
+                        const zh = names[cursor++];
+                        try {
+                            // Bwiki 页名常用简称（「艾莲」），列表给的是全名（「艾莲·乔」）
+                            const cands = [String(zh).split(/[·・]/)[0].trim(), zh]
+                            for (const cand of [...new Set(cands.filter(Boolean))]) {
+                                const d = await fetchZzzBwikiChar(cand).catch(() => null);
+                                const url = d?.avatar || '';
+                                if (url) { bwikiIconMap[zh] = url; break; }
+                            }
+                        } catch (_) { /* 认不到就跳过，落到下一级 */ }
+                    }
+                };
+                await Promise.all(Array.from({ length: Math.min(limit, names.length) }, worker));
+                const hit = Object.keys(bwikiIconMap).length;
+                if (hit < names.length) {
+                    logger.debug?.(`[xhh][图鉴] Bwiki 头像认领 ${hit}/${names.length}，其余回落米游社/nanoka`);
+                }
+            }
+            const matchBwikiIcon = zh => bwikiIconMap[String(zh || '').trim()] || '';
             const matchOfficialIcon = zh => {
+                /* test 模式不下官方图。作者要求：测试服只用 nanoka，
+                   Bwiki 与官方数据都不许混进来。 */
+                if (testMode) return '';
                 const key = String(zh || '').replace(/[\s·・\-—_「」『』《》【】\[\]（）()]/g, '');
                 if (!key) return '';
                 if (officialIconMap[key]) return officialIconMap[key];
                 const hit = Object.keys(officialIconMap).find(k => key.includes(k) || k.includes(key));
                 return hit ? officialIconMap[hit] : '';
             };
-            return {
+            /* 未实装标记：manifest.new.* 里就是它；official 剔测试服、test 只留测试服 */
+            /* getNanokaNew 建的 Set 里存的是字符串（v.map(x => String(x))），
+               这里必须按 String(id) 查。原来传的是 Number(id)，
+               Set{'1631'}.has(1631) 恒为 false —— 测试服标记整批失效，
+               official 模式不剔除、test 模式直接空列表（实测 test 下 ZZZ 四类全 0 条）。
+               原神/星铁那几处用的是 String(id)，本来就是对的。 */
+            const zzzFlag = set => id => !!(set || new Set()).has(String(id));
+            // 官方列表已收录 → 视为已上线，即便 manifest 仍标着 new
+            const releasedAlready = name => {
+                const key = String(name || '').replace(/[\s·・\-—_「」『』《》【】\[\]（）()]/g, '');
+                if (!key || !releasedNames.size) return false;
+                if (releasedNames.has(key)) return true;
+                const head = String(name || '').replace(/[^\u4e00-\u9fa5a-z0-9]/gi, '').toLowerCase();
+                return head ? [...releasedNames].some(n => n.includes(head) || head.includes(n)) : false;
+            };
+            const zzzTest = (id, name) => zzzFlag(zzzNew?.character)(id) && !releasedAlready(name);
+            const zzzTestEq = (id, name) => zzzFlag(zzzNew?.equipment)(id) && !releasedAlready(name);
+            const zzzTestWq = (id, name) => zzzFlag(zzzNew?.weapon)(id) && !releasedAlready(name);
+            const zzzTestBb = (id, name) => zzzFlag(zzzNew?.bangboo)(id) && !releasedAlready(name);
+            const lists = {
                 js_list: Object.entries(chars).map(([id, c]) => {
-                    const squareIcon = matchOfficialIcon(c.zh) || nanokaIcon(c.icon);
+                    /* 图源优先级（作者要求）：Bwiki → 米游社 → nanoka。
+                       Bwiki 头像按名字认领，认不到（S 档新角色不在该页导航框内）
+                       自然落到米游社；米游社也没有才用 nanoka。
+
+                       米游社那条只缩放、不转格式：走 OSS 的 format,webp 会把
+                       alpha 通道丢掉（转出的 VP8 有损 webp 无 ALPH 块），
+                       透明背景被压成黑色、还盖住底下 r5/r4 的星级底色。
+                       保留 PNG 输出则色彩类型仍是 6=RGBA，透明正常。
+
+                       nanoka 的图会间歇性 404（实测两次探测的缺失名单还不一样：
+                       一次是 0012/0052/0042/…，另一次是 0020/0021/0024/…），
+                       所以末级再给一次 fallbackIcon 兜底，由 list.html 的 onerror 切换。 */
+                    const bwikiSquare = matchBwikiIcon(c.zh);
+                    const officialSquare = matchOfficialIcon(c.zh) || '';
+                    const nkSquare = nanokaIcon(c.icon);
+                    /* 按 Bwiki → 米游社 → nanoka 排序，取第一条非空作 icon，
+                       剩下的**全部**按逗号拼进 fallbackIcon。list.html:15 的 onerror
+                       是 split(',') + shift() 的逐级降级，能吃任意条数，
+                       所以三级全给上，Bwiki 图 404 时会自己退到米游社、再退 nanoka。 */
+                    const chain = [bwikiSquare, officialSquare, nkSquare].filter(Boolean);
+                    const first = chain[0] || '';
+                    const second = chain.slice(1).join(',');
                     return {
+                        isUnreleased: zzzTest(id, c.zh),
                     content_id: id,
                     title: c.zh,
-                    icon: squareIcon,
+                    icon: first,
+                    iconFallback: second,
                     aliases: [c.code, c.en].filter(v => v && v !== c.zh),
                     ext: JSON.stringify({
-                        c_30: { picture: { list: [squareIcon] } },
-                        fallbackIcon: `https://static.nanoka.cc/assets/zzz/${c.icon}.webp`,
+                        c_30: { picture: { list: [first] } },
+                        /* chain 已含 nanoka 那条；只有三级全空才用原始资源路径兜底 */
+                        fallbackIcon: second || `https://static.nanoka.cc/assets/zzz/${c.icon}.webp`,
                         filter: { text: JSON.stringify([
                             `星级/${c.rank == 4 ? 'S级' : 'A级'}`,
                             `属性/${this.zzz_element_map[c.element] || '未知'}`,
@@ -1392,6 +1768,7 @@ class mys {
                     };
                 }),
                 wq_list: Object.entries(weapons).map(([id, w]) => ({
+                    isUnreleased: zzzTestWq(id, w.zh),
                     content_id: id,
                     title: w.zh,
                     icon: nanokaIcon(w.icon),
@@ -1413,6 +1790,7 @@ class mys {
                     const name = String(e.zh?.name || id).trim();
                     const icon = nanokaZzzSuitIcon(e.icon);
                     return {
+                    isUnreleased: zzzTestEq(id, name),
                     content_id: id,
                     title: name,
                     icon,
@@ -1427,6 +1805,7 @@ class mys {
                     // 优先用本地补图目录，其次官方 Wiki 图标；都没有就留空走首字占位
                     const icon = localBangbooIcon(b.zh) || matchOfficialIcon(b.zh);
                     return {
+                    isUnreleased: zzzTestBb(id, b.zh),
                     content_id: id,
                     title: b.zh,
                     icon,
@@ -1442,14 +1821,54 @@ class mys {
                 };
                 })
             };
+            /* 按数据模式过滤：official 只留正式服 / test 只留测试服 */
+            for (const k of Object.keys(lists)) lists[k] = this.filterListByMode(fillRarity(lists[k]));
+            return lists;
         } catch (error) {
             if (isTransientNetError(error)) markNanokaDown();
             logger.error('ZZZ nanoka访问失败，切换米游社官方 Wiki:', error);
-            return await this.zzz_official_tujian();
+            /* test 模式禁用官方兜底（作者要求：只用 nanoka）。 */
+            if (this.getDataMode() === 'test') {
+                logger.debug?.('[xhh][图鉴] 测试服数据模式：禁用官方兜底，绝区零列表为空');
+                return { js_list: [], wq_list: [], syw_list: [], yq_list: [] };
+            }
+            const off = await this.zzz_official_tujian();
+            if (off) for (const k of Object.keys(off)) off[k] = this.filterListByMode(fillRarity(off[k]));
+            return off;
         }
     }
 
     // 米游社官方 Wiki 版绝区零图鉴列表（nanoka 失效/冷却时的数据源）
+    /**
+     * 米游社兜底列表的未实装补标。
+     * zzz_official_item 只能看 corner_mark='Pre'，但米游社列表请求本身也会限流失败；
+     * 那一刻所有条目的 isUnreleased 都是 false，于是预告角色会在 official 模式下漏出来
+     * （实测菲欧妮在 official 模式仍能出图）。这里再用 manifest.new.* 按**名字**补一层：
+     * manifest 与列表是两套 id 空间（官方 content_id 2216/2217 vs nanoka 1631/1641），
+     * 只能按名字匹配，匹配时按清洗后的短名双向包含。
+     */
+    async markZzzOfficialByManifest(lists) {
+        const newMap = await getNanokaNew('zzz');
+        const wanted = ['character', 'weapon', 'bangboo', 'equipment'].flatMap(k => [...(newMap?.[k] || [])]);
+        if (!wanted.length) return lists;
+        const charNames = Object.values(await this.fetchJson(`${await zzzNanokaBase()}/character.json`, 'ZZZ nanoka角色').catch(() => ({})) || {}).map(c => String(c?.zh || '').trim());
+        const weaponNames = Object.values(await this.fetchJson(`${await zzzNanokaBase()}/weapon.json`, 'ZZZ nanoka音擎').catch(() => ({})) || {}).map(w => String(w?.zh || '').trim());
+        const pool = [...charNames, ...weaponNames].filter(Boolean).map(cleanZzzKey);
+        if (!pool.length) return lists;
+        for (const [type, list] of Object.entries(lists || {})) {
+            if (!Array.isArray(list)) continue;
+            const key = { js_list: 'js', wq_list: 'wq', syw_list: 'syw', yq_list: 'yq' }[type];
+            if (!key || !newMap[key]?.size) continue;
+            for (const item of list) {
+                if (item?.isUnreleased) continue;
+                const k = cleanZzzKey(item?.title);
+                if (!k) continue;
+                if (pool.some(n => n && (n.includes(k) || k.includes(n)))) item.isUnreleased = true;
+            }
+        }
+        return lists;
+    }
+
     async zzz_official_tujian() {
         try {
             const [chars, weapons, equipments, bangboos] = await Promise.all([
@@ -1458,12 +1877,12 @@ class mys {
                 this.zzz_official_list('syw'),
                 this.zzz_official_list('yq')
             ]);
-            return {
+            return await this.markZzzOfficialByManifest({
                 js_list: chars.map(v => this.zzz_official_item(v, 'js')),
                 wq_list: weapons.map(v => this.zzz_official_item(v, 'wq')),
                 syw_list: equipments.map(v => this.zzz_official_item(v, 'syw')),
                 yq_list: bangboos.map(v => this.zzz_official_item(v, 'yq'))
-            };
+            });
         } catch (fallbackError) {
             logger.error('ZZZ 官方 Wiki 访问失败:', fallbackError);
             return false;
@@ -1605,8 +2024,13 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
             // 改为「精确 -> 包含」两级匹配，与绝区零图鉴的匹配策略保持一致。
             const cleanKey = v => String(v || '').replace(/[^\u4e00-\u9fa5a-z0-9]/gi, '').toLowerCase();
             const target = cleanKey(name);
+            /* 与绝区零同一套闸门：test 模式只响应测试服条目，official 模式只响应正式服条目。
+               列表层有 filterListByMode，单查这条路径原先没有，所以正式服条目在 test 模式下
+               照样能查到。 */
+            const modeOk = item => (this.getDataMode() === 'test') ? !!item?.isUnreleased : !item?.isUnreleased;
             let id;
             for (let va of list) {
+                if (!modeOk(va)) continue;
                 id = va.content_id;
                 if (cleanKey(va.title) == target) return {
                     id
@@ -1615,6 +2039,7 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
             // 包含匹配要求至少 2 个字，避免单字查询命中一堆无关条目
             if (target.length >= 2) {
                 for (let va of list) {
+                    if (!modeOk(va)) continue;
                     id = va.content_id;
                     if (cleanKey(va.title).includes(target)) return {
                         id
@@ -1645,8 +2070,13 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
                 // 缺了它 ji 恒为 undefined，list() 的 rankClass 落到 r0，
                 // 列表就没有金色/紫色描边，排序也分不出五星与四星两段。
                 if (['syw', 'yq'].includes(type)) {
-                    let star = '';
-                    try {
+                    /* 优先用 tujian 阶段算好的 ji：那里已经把 nanoka 缺失的星级
+                       回填好了（fillRarity），武器幻化也跟本体对齐过（alignSkinRarity）。
+                       下面从 ext 重新解析只在没有 ji 时兜底 —— 幻化条目的
+                       ext 写的是「武器星级/五星」而本体是四星，重新解析会把
+                       「猰貐·真化」错分到五星区。 */
+                    let star = list[n].ji || '';
+                    if (!star) try {
                         const box = JSON.parse(list[n].ext || '{}');
                         const f = JSON.parse((box.c_218 || box.c_30 || box.c_19 || box).filter?.text || '[]');
                         for (const s of f) if (s.includes('星级/')) { star = s.split('/').pop(); break; }
@@ -1659,16 +2089,24 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
                     text = text.c_25 || text.c_5 || text.c_19 || text.c_18;
                     text = text.filter.text;
                     text = JSON.parse(text);
+                    /* jis 是靠下标和 names/ids 对齐的：每条必须恰好 push 一次。
+                       下面三个分支都只在 ext 里出现对应标签时才 push，一旦某条没有
+                       「星级/」标签，从那一条起后面全部错位（实测星铁光锥 170 条里
+                       只有 25 条拿到星级，其余 145 条 ji 为空，列表就没档位也没排序）。
+                       所以先记下标记位，分支结束时若一条都没推，就用 tujian 阶段
+                       算好的 list[n].ji 顶上，保证下标不错。 */
+                    const jisMark = jis.length;
                     if (type == 'gz') {
                         for (let s of text) {
-                            if (s.includes('星级')) jis.push(s.replace(/星级\//, ''));
+                            if (s.includes('星级')) jis.push(list[n].ji || s.replace(/星级\//, ''));
                             else if (s.includes('命途')) mingtus.push(s.replace(/命途\//, ''));
                         }
+                        if (jis.length === jisMark) jis.push(list[n].ji || '');
                         continue;
                     }
                     if (type != 'wq') {
                         for (let s of text) {
-                            if (s.includes('星级')) jis.push(s.replace(/星级\//, ''));
+                            if (s.includes('星级')) jis.push(list[n].ji || s.replace(/星级\//, ''));
                             else if (s.includes('元素')) yuanshus.push(s.replace(/元素\//, ''));
                             else if (s.includes('武器')) wuqis.push(s.replace(/武器\//, ''));
                             else if (s.includes('属性')) shuxs.push(s.replace(/属性\//, ''));
@@ -1676,10 +2114,11 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
                         }
                     } else {
                         for (let s of text) {
-                            if (s.includes('武器星级')) jis.push(s.replace(/武器星级\//, ''));
+                            if (s.includes('武器星级')) jis.push(list[n].ji || s.replace(/武器星级\//, ''));
                             else if (s.includes('武器类型')) wuqis.push(s.replace(/武器类型\//, ''));
                         }
                     }
+                    if (jis.length === jisMark) jis.push(list[n].ji || '');
                 }
             }
             // 图鉴别名补缺
@@ -1698,6 +2137,8 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
                     // 必须透传，list.html 的 onerror 靠它做兜底换图。
                     // 之前这里漏了字段，data-alt 恒为空串，整条兜底链从来没生效过。
                     iconFallback: list[i].iconFallback || '',
+                    // 幻化武器是 512×1024 竖图，列表要靠这个标记改用 object-fit:contain
+                    tallIcon: !!list[i].tallIcon,
                     ji: jis[i],
                     yuanshu: yuanshus[i],
                     wuqi: wuqis[i],
@@ -1729,22 +2170,32 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
         if (name) {
             const clean = v => String(v || '').replace(/[\s·・\-—_「」『』《》【】\[\]（）()]/g, '').toLowerCase();
             const target = clean(name);
+            /* 测试服数据模式下只响应测试服条目。
+               列表层已经按数据模式过滤了（filterListByMode），但单查详情这条路径
+               没有闸门：正式服角色（比如艾莲）在 test 模式下照样能查出来，
+               于是两种数据又混上了。这里按条目的 isUnreleased 卡一道，
+               official 模式则要求 !isUnreleased。 */
+            const modeOk = item => (this.getDataMode() === 'test')
+                ? !!item?.isUnreleased
+                : !item?.isUnreleased;
             // 别名（英文名/代号）精确匹配优先，其次标题精确、再次标题包含兜底
-            let found = list.find(va => (va.aliases || []).some(a => clean(a) === target));
-            if (!found) found = list.find(va => clean(va.title) == target);
+            let found = list.find(va => modeOk(va) && (va.aliases || []).some(a => clean(a) === target));
+            if (!found) found = list.find(va => modeOk(va) && clean(va.title) == target);
             // 兼容官方 Wiki 返回全名、nanoka 只用简称的情况，例如「雨果·维拉德」=>「雨果」
             if (!found) found = list.find(va => {
                 const title = clean(va.title);
-                return target && title && (title.includes(target) || target.includes(title));
+                return modeOk(va) && target && title && (title.includes(target) || target.includes(title));
             });
             // nanoka 数据版本滞后未收录新内容时，退回官方 Wiki 列表再匹配一次（如新代理人「菲欧妮·蕾法爱菈」）
             // official: true 标记 id 是官方 content_id，detail 应直接走官方源，避免拿官方 id 请求 nanoka 误触发冷却
-            if (!found) {
+            /* test 模式禁用官方兜底（作者要求：只用 nanoka，不许用官方数据）。
+               modeOk 挡不住 —— 官方源条目不一定带 isUnreleased 标记。 */
+            if (!found && this.getDataMode() !== 'test') {
                 try {
                     const offList = (await this.zzz_official_tujian())?.[`${type}_list`] || [];
                     found = offList.find(va => {
                         const title = clean(va.title);
-                        return target && title && target.length >= 2 && (title === target || title.includes(target) || target.includes(title));
+                        return modeOk(va) && target && title && target.length >= 2 && (title === target || title.includes(target) || target.includes(title));
                     });
                     if (found) {
                         // 官方详情缺星级/属性数值/技能等模板字段，优先回 nanoka 按简称匹配同一角色拿完整数据
@@ -1755,7 +2206,11 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
                                 const cand = (data?.[`${type}_list`] || [])
                                     .filter(va => {
                                         const t = clean(va.title);
-                                        return short && short.length >= 2 && (t === short || t.includes(short));
+                                        /* modeOk 同样要带：官方列表匹配到条目后，
+                                           这里按简称回 nanoka 找完整数据。没这道闸门时，
+                                           official 模式下菲欧妮/赛维里安 这类预告角色
+                                           仍会被回 nanoka 命中并渲染出来。 */
+                                        return modeOk(va) && short && short.length >= 2 && (t === short || t.includes(short));
                                     })
                                     .sort((a, b) => clean(a.title).length - clean(b.title).length)[0];
                                 if (cand) return { id: cand.content_id };
@@ -2141,7 +2596,10 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
             : id >= 53000 && id < 60000 ? 'yq' : '';
         // 米游社官方 Wiki 的 content_id 并不沿用 nanoka 的编号区间，
         // 例如角色 1624、音擎 2162、邦布 2108，因此按分类列表补判一次。
-        if (!type) {
+        /* test 模式只用 nanoka（作者要求），这一步要去查官方列表才能补判 type，
+           直接跳过 —— 查了就是碰官方数据。 */
+        const zzzTestMode = this.getDataMode() === 'test';
+        if (!type && !zzzTestMode) {
             for (const candidate of ['js', 'wq', 'syw', 'yq']) {
                 try {
                     const list = await this.zzz_official_list(candidate);
@@ -2153,8 +2611,9 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
             }
         }
         if (!type) return false;
-        // 冷却期内直接走官方 Wiki，不再请求已失效的 nanoka
-        if (nanokaDown() || forceOfficial) {
+        /* 冷却期内直接走官方 Wiki，不再请求已失效的 nanoka。
+           test 模式禁用官方兜底（作者要求：只用 nanoka）。 */
+        if ((nanokaDown() || forceOfficial) && !zzzTestMode) {
             try {
                 return await this.zzz_official_detail(id, type);
             } catch (fallbackError) {

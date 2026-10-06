@@ -590,6 +590,12 @@ export function parseGsGachaInfo(text) {
 }
 // 「介绍」和「TAG」这类长文本不放进档案块，避免档案被撑得过长
 const ROLE_PROFILE_SKIP = new Set(['介绍', 'TAG', '个人任务', '衣装', '祈愿名']);
+/* Bwiki 的占位符特征。
+   测试服新角色（如米提亚）的词条已建、但**技能数据尚未录入**，每个技能块里
+   标题只有图标占位「文件:.png」、描述区是「请上传文件『.gif』」。
+   这种块数量照样是 6，name 却全是占位串 —— 只数块数会把空卡当完整数据渲染出去。
+   命座同理（「上传文件.jpg」等）。凡命中即视为未录入。 */
+const PLACEHOLDER = /文件[:：]|请上传文件|\.png|\.gif|\.jpg/i;
 
 /**
  * 把 fetchGsRole 的结果转成 gsRoleView 的输入 detail，并补齐 view 侧的附加字段。
@@ -619,9 +625,12 @@ export function buildGsDetail(d) {
   const blocks = d.skillBlocks || [];
   const skillBlocks = blocks.filter(b => b.kind === 'skill');
   const skillObjs = [];
+  /* 用独立游标 blkIdx 配表，不能用 skillObjs.length ——
+     下面遇到占位符名会 continue，skillObjs 不增长，索引就会错位拿错块。 */
+  let blkIdx = 0;
   for (const t of (d.skillTables || [])) {
     if (!t.attrs.length) continue;
-    const blk = skillBlocks[skillObjs.length];
+    const blk = skillBlocks[blkIdx++];
     const desc = [], param = [], brackets = [];
     for (const a of t.attrs) {
       const lvKeys = Object.keys(a.levels);
@@ -640,8 +649,12 @@ export function buildGsDetail(d) {
       }
       brackets.push(`${a.name}：${lvKeys.map(k => a.levels[k]).join(' / ')}`);
     }
+    /* 测试服新角色的技能块名是占位符「文件:.png」，渲染出来是一张空卡。
+       这里直接跳过，交给调用方按「Bwiki 数据不完整」回退 nanoka/米游社。 */
+    const blkName = String(blk?.name || '').trim();
+    if (!blkName || PLACEHOLDER.test(blkName)) continue;
     skillObjs.push({
-      name: blk?.name?.trim() || `技能${skillObjs.length + 1}`,
+      name: blkName,
       promote: { 0: { level: Object.keys(t.attrs[0].levels).length, icon: blk?.icon || '', desc, param, brackets } },
     });
   }
@@ -665,12 +678,17 @@ export function buildGsDetail(d) {
       constellation: g('命之座'),
       region: g('所属地区'),
       title: g('称号'),
-      birth: (() => { const b = (d.other?.['生日'] || '').match(/(\d+)月(\d+)日/); return b ? [b[1], b[2]] : []; })(),
+      /* kvTable 对单值返回字符串、多值返回数组（见 :100），
+         「生日」这类格里既有 img alt 又有文字时会拿到数组，直接 .match 会抛
+         TypeError: ((intermediate value) || "").match is not a function。
+         `|| ''` 挡不住 —— 数组是真值。统一用 flatVal 归一，与 686/720 行一致。 */
+      birth: (() => { const b = flatVal(d.other?.['生日']).match(/(\d+)月(\d+)日/); return b ? [b[1], b[2]] : []; })(),
       release_date: (g('实装日期') || '').replace(/（.*?）/, '').trim(),
     },
     skills: skillObjs,
-    constellations: (d.constellations || []).map(c => ({ name: c.name, desc: c.desc, icon: c.icon || '' })),
-    passives: blocks.filter(b => b.kind === 'passive' && b.desc)
+    constellations: (d.constellations || []).filter(c => c.name && !PLACEHOLDER.test(String(c.name)))
+      .map(c => ({ name: c.name, desc: c.desc, icon: c.icon || '' })),
+    passives: blocks.filter(b => b.kind === 'passive' && b.desc && b.name && !PLACEHOLDER.test(String(b.name)))
       .map(b => ({ name: b.name, desc: b.desc, unlock: b.unlock || '', icon: b.icon || '' })),
     materials: {
       ascensions,
