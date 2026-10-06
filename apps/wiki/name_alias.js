@@ -46,6 +46,7 @@ const YAML_SOURCES = [
   { file: './plugins/xhh/system/default/yiqi.yaml', game: 'sr', type: 'yq' },
   { file: './plugins/xhh/system/default/zzz_wq_names.yaml', game: 'zzz', type: 'wq' },
   { file: './plugins/xhh/system/default/zzz_syw_names.yaml', game: 'zzz', type: 'syw' },
+  { file: './plugins/xhh/system/default/zzz_yq_names.yaml', game: 'zzz', type: 'yq' },
   { file: './plugins/xhh/system/default/bh3_wq_names.yaml', game: 'bh3', type: 'wq' },
   { file: './plugins/xhh/system/default/bh3_syw_names.yaml', game: 'bh3', type: 'syw' },
   { file: './plugins/xhh/system/default/bh3_yq_names.yaml', game: 'bh3', type: 'yq' },

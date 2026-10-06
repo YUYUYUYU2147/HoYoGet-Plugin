@@ -50,10 +50,18 @@ function cell(raw) {
   return { text: plain(raw), alt, icon: src };
 }
 
+/* 567 全局熔断：EdgeOne 的限流按 IP 生效，一次被拦意味着冷却窗口内都会被拦。
+   列表头像认领会并发抓 60+ 个角色页，限流期间每个还要重试 3 次（退避累计 15 秒），
+   整批耗时数分钟且互相加剧限流（实测一条指令因此拖到 1 分半）。触发一次熔断后，
+   冷却期内所有抓取直接返回空串（不重试不等待），调用方自然回落 nanoka/米游社。 */
+let blockUntil = 0;
+const BLOCK_MS = 3 * 60 * 1000;
+
 export async function fetchZzzBwikiPage(name) {
   const key = `page:${zzzKey(name)}`;
   const hit = cache.get(key);
   if (hit && Date.now() - hit.t < CACHE_TTL) return hit.v;
+  if (Date.now() < blockUntil) return '';
   /* 重试 3 次 + 递增退避：Bwiki 对 zzz 站限流很凶（567 EdgeOne）。
      原来只试 2 次、每次 1.5 秒，撞上限流就直接返回空串 → 上层回落旧模板
      （旧模板没有左上角图标、基础属性也缺），用户看到的就是「没有头像/没有数值」。
@@ -65,8 +73,10 @@ export async function fetchZzzBwikiPage(name) {
       const r = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(20000) });
       if (!(r.headers.get('content-type') || '').includes('json')) {
         lastErr = `风控拦截(HTTP ${r.status})`;
-        await sleep(2500 * (i + 1));
-        continue;
+        // 一次风控即触发全局熔断：逐个重试只会互相加剧限流
+        blockUntil = Date.now() + BLOCK_MS;
+        logger.debug?.(`[xhh][bwiki_zzz] ${name} 触发限流熔断，3 分钟内 Bwiki 抓取全部跳过，调用方回落原模板`);
+        return '';
       }
       const html = (await r.json())?.parse?.text?.['*'] || '';
       if (html) { cache.set(key, { t: Date.now(), v: html }); return html; }
@@ -682,13 +692,15 @@ export function parseZzzBwikiDisc(html) {
         for (const tr of t.match(/<tr[^>]*>[\s\S]*?<\/tr>/g) || []) {
             const cs = [...tr.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map(m => strip(m[1]));
             if (!cs.length) continue;
-            const body = cs.join('\n');
-            if (/二件套效果/.test(body)) out.set2 = body.replace(/^二件套效果/, '').trim();
-            else if (/四件套效果/.test(body)) out.set4 = body.replace(/^四件套效果/, '').trim();
-            else if (/驱动盘描述/.test(body)) out.desc = body.replace(/^驱动盘描述/, '').trim();
-            else if (/获取途径/.test(body)) out.obtain = body.replace(/^获取途径/, '').trim();
-            else if (/实装版本/.test(body)) out.version = body.replace(/^实装版本/, '').split(/\n\s*TAG/)[0].trim();
-            else if (/^TAG/.test(body)) out.tags = body.replace(/^TAG/, '').trim();
+            // 实装版本 / TAG 可能在同一 tr 的两个 td 里，要逐个单元格判断
+            for (const body of cs) {
+                if (/二件套效果/.test(body)) out.set2 = body.replace(/^二件套效果/, '').trim();
+                else if (/四件套效果/.test(body)) out.set4 = body.replace(/^四件套效果/, '').trim();
+                else if (/驱动盘描述/.test(body)) out.desc = body.replace(/^驱动盘描述/, '').trim();
+                else if (/获取途径/.test(body)) out.obtain = body.replace(/^获取途径/, '').trim();
+                else if (/实装版本/.test(body)) out.version = body.replace(/^实装版本/, '').trim();
+                else if (/^TAG/.test(body)) out.tags = body.replace(/^TAG/, '').trim();
+            }
         }
         if (out.set2 || out.set4) break;
     }

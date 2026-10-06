@@ -117,11 +117,17 @@ function parseGrowth(rows) {
     const hpF = has(hpPost) ? num(hpPost) : lastPost.hp;
     const atkF = has(atkPost) ? num(atkPost) : lastPost.atk;
     const defF = has(defPost) ? num(defPost) : lastPost.def;
+    const hpAdd = Math.max(0, hpF - num(hpPre));
+    const atkAdd = Math.max(0, atkF - num(atkPre));
+    const defAdd = Math.max(0, defF - num(defPre));
     out.push({
       level,
-      hpBase: num(hpPre), hpAdd: Math.max(0, hpF - num(hpPre)),
-      atkBase: num(atkPre), atkAdd: Math.max(0, atkF - num(atkPre)),
-      defBase: num(defPre), defAdd: Math.max(0, defF - num(defPre)),
+      hp: num(hpPre) + hpAdd,
+      atk: num(atkPre) + atkAdd,
+      def: num(defPre) + defAdd,
+      hpBase: num(hpPre), hpAdd,
+      atkBase: num(atkPre), atkAdd,
+      defBase: num(defPre), defAdd,
       speed: '', crit: '', critDmg: '',
     });
   }
@@ -176,6 +182,22 @@ function parseRanks(rows) {
     out.push({ no: out.length + 1, name, desc, icon: r[0]?.img || '' });
   }
   return out;
+}
+
+/** 行迹属性加成：页面底部「行迹属性加成」汇总表，拼成「效果抵抗提高10%…」一行。 */
+function parseTraceBonus(html) {
+  const m = html.match(/<table[^>]*>[\s\S]*?<th[^>]*colspan=["']?6["']?>\s*行迹属性加成\s*<\/th>[\s\S]*?<\/table>/i);
+  if (!m) return '';
+  const table = m[0];
+  const items = [];
+  const re = /<th[^>]*>([\s\S]*?)<\/th>\s*<td[^>]*>([\s\S]*?)<\/td>/gi;
+  for (const mm of table.matchAll(re)) {
+    const name = plain(mm[1]).replace(/\s+/g, ' ').trim();
+    const val = plain(mm[2]).trim();
+    if (!name || !val) continue;
+    items.push(`${name}${val}`);
+  }
+  return items.join('、');
 }
 
 /**
@@ -333,6 +355,9 @@ export function parseSrRolePage(page, html) {
   const skills = parseSkills(html);
   const ranks = parseRanks(tableRows(T[6]));
   if (!basic['稀有度'] || !growth.length || !ranks.length) return null;
+  // 80 级基础属性提到顶层，模板按「生命值/攻击力/防御力/速度」键值对展示
+  const g80 = growth.find(g => g.level === 80) || growth[growth.length - 1] || {};
+  const traceBonus = parseTraceBonus(html);
 
   const pick = k => basic[k]?.v || '';
   // 稀有度 / 命途 / 战斗属性 三格在维基上是「文字 + 24px 缩略图」，
@@ -385,7 +410,15 @@ export function parseSrRolePage(page, html) {
     damageIcon: cellIcon('战斗属性'),
     damageIconUrl: !!cellIcon('战斗属性'),
     camp: pick('阵营'),
-    spNeed: growthTail.spNeed, speed: growthTail.speed,
+    hp: g80.hp ?? '',
+    atk: g80.atk ?? '',
+    def: g80.def ?? '',
+    // 暴击率/暴击伤害 Bwiki 不提供（成长表无此列），用星铁角色基础值兜底
+    crit: g80.crit || '5%',
+    critDmg: g80.critDmg || '50%',
+    speed: growthTail.speed,
+    spNeed: growthTail.spNeed,
+    traceBonus,
     desc: (tableRows(T[5])[0] || []).map(c => c.t).filter(Boolean).join(' ').slice(0, 400),
     stories: parseStories(T[5]),
     // 卡面只放「角色详情」那一条；角色故事•一~四 太长，挪到「#角色名故事」指令

@@ -1,7 +1,15 @@
 import { yaml, render, mys, config, reply_recallMsg } from '#xhh';
 import { gsRoleView, srRoleView } from '../system/role_detail.js';
+import { buildRelicView, extractRelicArt } from './wiki/relic_view.js';
 import { fetchGsRole, buildGsDetail, fetchGsGuidePage, parseGsGuide, resolveGsGuideIcons, fetchGsRoleList, fetchGsWeaponList, fetchGsArtifactList, fetchSrRoleList, fetchSrLcList, fetchSrRelicList } from './wiki/bwiki_gs.js';
 import { fetchSrRole } from './wiki/bwiki_sr.js';
+import { fetchGsBwikiItem, fetchGsBwikiItemHtml } from './wiki/bwiki_gs_item.js';
+import { mihoyoItemAgents, mihoyoEntryId, mihoyoDiscParts } from './wiki/mihoyo_agents.js';
+import { zzzDiscAgents } from './wiki/zzz_disc_agents.js';
+import { fetchSrBwikiItem } from './wiki/bwiki_sr_item.js';
+import { fetchZzzBwikiWeapon, fetchZzzBwikiDisc, fetchZzzBwikiChar, fetchZzzBwikiBangboo } from './wiki/bwiki_zzz.js';
+import { fetchZzzRoleCard } from './wiki/zzz_role.js';
+import { fetchMihoyoBangboo, buildBangbooView } from './wiki/bangboo_view.js';
 import { fetchSrGuide } from './wiki/bwiki_sr_guide.js';
 import { readFileSync } from 'node:fs';
 import fs from 'fs';
@@ -14,7 +22,9 @@ const DOMParser = window.DOMParser;
 const _zzzAliasCache = {};
 const ZZZ_ALIAS_FILES = {
   43: 'zzz_js_names.yaml',   // 代理人
-  45: 'zzz_wq_names.yaml'    // 音擎
+  44: 'zzz_yq_names.yaml',   // 邦布
+  45: 'zzz_wq_names.yaml',   // 音擎
+  46: 'zzz_syw_names.yaml'   // 驱动盘
 };
 // nanoka 驱动盘推荐副词条（fairy_recommend.part_sub_list）只给属性 ID，
 // ID→名称映射只能从各角色 part4/5/6/part_sub 收集，覆盖不全时会漏（如安比的暴击伤害=21103），
@@ -382,11 +392,23 @@ export class Wiki extends plugin {
    */
   async role_story(e) {
     if (!config().wiki) return false;
-    const { name, isSr, isZZZ, isBH3 } = this.parseStoryQuery(e);
+    let { name, isSr, isZZZ, isBH3 } = this.parseStoryQuery(e);
     if (!name) return false;
     if (isZZZ || isBH3) {
       await e.reply(`「${name}」的角色故事暂未支持，目前只有原神和星铁可用。`);
       return true;
+    }
+    /* Bwiki 的页名为角色正式名，而查询时可能输入称号或别称（「仆人」「散兵」等）。
+       该路径此前未做别名归一，「#仆人故事」会直接用「仆人」查询 Bwiki，
+       被判定为缺页后返回空结果。此处补充与 role() 相同的归一逻辑：
+       遍历 *_js_names.yaml，当某正式名的别名数组包含输入名时替换为正式名。
+       该逻辑对所有角色通用。 */
+    const storyNamePath = isSr
+      ? './plugins/xhh/system/default/sr_js_names.yaml'
+      : './plugins/xhh/system/default/gs_js_names.yaml';
+    const storyNames = yaml.get(storyNamePath);
+    for (const i in storyNames) {
+      if (Array.isArray(storyNames[i]) && storyNames[i].includes(name)) { name = i; break; }
     }
     /* ⚠️ Bwiki 是正式服站，test 模式下整个故事功能跳过。
        下面两条路都是**裸调** fetchSrRole/fetchGsRole，不经 mys.data()，
@@ -458,8 +480,8 @@ export class Wiki extends plugin {
     const target = /正式服/.test(raw) ? 'official' : (/测试服/.test(raw) ? 'test' : '');
     const mode = target ? mys.setDataMode(target) : now;
     const label = mode === 'official' ? '正式服' : '测试服';
-    /* 指令不带服别时是纯查询，不写盘。原来无论查询还是切换都打「已切到…」，
-       作者发 #数据模式 查现状，回复却说「已切到正式服模式」，看着像被改了配置。 */
+    /* 指令不带服别时是纯查询，不写盘。此前无论查询还是切换都回复「已切到…」，
+       查询现状时也回复「已切到正式服模式」，与未做切换的事实不符。 */
     const tip = !target
       ? (mode === 'official'
         ? '当前是正式服模式：列表与查询都不出测试服条目。'
@@ -571,8 +593,8 @@ export class Wiki extends plugin {
        上面 #524 已经把纯关键词（角色/武器/光锥/圣遗物…）直接送去 list() 了，
        所以走到这里的 name 一定还带着具体条目名（如「钟离」）。
        test 模式下这类名字必然查不到（modeOk 已挡住正式服条目），
-       再掉进 list() 就是拿空列表去套 condition —— 轻则空卡，重则给出误导性的列表。
-       作者要求：test 模式发正式服条目不准触发，只认测试服列表里有的条目。 */
+       再掉进 list() 就是拿空列表去套 condition，轻则空卡，重则给出误导性的列表。
+       因此 test 模式对正式服条目不应触发，只认测试服列表里已有的条目。 */
     const isPureListKeyword = /^(角色|武器|光锥|遗器|音擎|驱动盘|邦布|圣遗物|圣痕|人偶|协同者|大剑|双手剑|单手剑|长枪|长柄武器|弓|弓箭|法器)$/.test(name);
     if (isTestDataMode() && !isPureListKeyword) {
       logger.debug?.(`[xhh][图鉴] 测试服数据模式：「${name}」不在测试服列表，拒绝出图`);
@@ -1774,6 +1796,11 @@ export class Wiki extends plugin {
 
   async bangboo(e, name) {
     name = await this.resolveZzzWikiName(name, 44);
+    // 正式服模式：绝区零邦布优先 Bwiki 词条 + 米游社属性，失败回退 nanoka。测试服只用 nanoka。
+    if (!isTestDataMode()) {
+      const done = await this.zzz_bangboo_bwiki_pictures(e, name);
+      if (done !== false && done != null) return true;
+    }
     const ret = await mys.data(name, 'yq', false, true);
     if (!ret?.id) return false;
     const data = await mys.detail(ret.id, false, true);
@@ -1808,6 +1835,11 @@ export class Wiki extends plugin {
   async syw_yiqi(e, name, isSr = false, isZZZ = false, isBH3 = false, roleName = '') {
     if (isZZZ) {
       name = await this.resolveZzzWikiName(name, 46);
+      // 正式服模式：绝区零驱动盘优先 Bwiki 词条页，失败再回退 nanoka。测试服只用 nanoka。
+      if (!isTestDataMode()) {
+        const done = await this.zzz_syw_bwiki_pictures(e, name);
+        if (done !== false && done != null) return true;
+      }
       const ret = await mys.data(name, 'syw', false, true);
       if (!ret?.id) return false;
       const data = await mys.detail(ret.id, false, true);
@@ -1835,6 +1867,16 @@ export class Wiki extends plugin {
     // 都少于 nanoka 的 65 / 64 套，新出的套装就这么被挡在门外。
     // 名字没在 yaml 里就保持原样，交给下面的列表匹配（mys.data 会按 title 精确匹配）。
     {
+      // 星铁遗器：正式服优先 Bwiki 词条页，失败再回退 nanoka。测试服只用 nanoka。
+      if (isSr && !isZZZ && !isBH3 && !isTestDataMode()) {
+        const done = await this.sr_relic_bwiki_pictures(e, name);
+        if (done !== false && done != null) return true;
+      }
+      // 原神圣遗物：正式服优先 Bwiki 词条页，失败再回退米游社/nanoka。测试服只用 nanoka。
+      if (!isSr && !isZZZ && !isBH3 && !isTestDataMode()) {
+        const done = await this.gs_syw_bwiki_pictures(e, name);
+        if (done !== false && done != null) return true;
+      }
       let data = await mys.data(name, isZZZ ? 'syw' : isBH3 ? 'syw' : isSr ? 'yq' : 'syw', isSr, isZZZ, isBH3);
       if (!data) return false;
       if (Array.isArray(data)) {
@@ -1862,6 +1904,11 @@ export class Wiki extends plugin {
   async weapon(e, name, isSr = false, isZZZ = false, isBH3 = false, roleName = '') {
     if (isZZZ) {
       name = await this.resolveZzzWikiName(name, 45);
+      // 正式服模式：绝区零音擎优先 Bwiki 词条页，失败再回退 nanoka。测试服只用 nanoka。
+      if (!isTestDataMode()) {
+        const done = await this.zzz_wq_bwiki_pictures(e, name);
+        if (done !== false && done != null) return true;
+      }
       const ret = await mys.data(name, 'wq', false, true);
       if (!ret?.id) return false;
       const data = await mys.detail(ret.id, false, true);
@@ -1898,9 +1945,22 @@ export class Wiki extends plugin {
        system/default 目录标注了不许改动，所以不往 yaml 里补条目，改为放行给列表匹配。 */
     if (!wq) wq = name;
     if (wq) {
-      const { id } = await mys.data(wq, isZZZ ? 'wq' : isBH3 ? 'wq' : isSr ? 'gz' : 'wq', isSr, isZZZ, isBH3);
+      // 正式服模式：原神武器优先 Bwiki 词条页，失败再回退米游社/nanoka。测试服模式只用 nanoka。
+      if (!isSr && !isZZZ && !isBH3 && !isTestDataMode()) {
+        const done = await this.gs_wq_bwiki_pictures(e, wq);
+        if (done !== false && done != null) return true;
+      }
+      // 星铁光锥同理：正式服优先 Bwiki 词条页。
+      if (isSr && !isZZZ && !isBH3 && !isTestDataMode()) {
+        const done = await this.sr_item_bwiki_pictures(e, wq, 'gz');
+        if (done !== false && done != null) return true;
+      }
+      // 类型要透传给 detail：nanoka 的详情文件按类型分目录（光锥 lightcone / 武器 weapon），
+      // 不传就一律按 character 去取，光锥 id 必然 404（见 mys.js nanoka_detail 注释）。
+      const wtype = isZZZ ? 'wq' : isBH3 ? 'wq' : isSr ? 'gz' : 'wq';
+      const { id } = await mys.data(wq, wtype, isSr, isZZZ, isBH3);
       if (!id) return false;
-      let data = await mys.detail(id, isSr, isZZZ, isBH3);
+      let data = await mys.detail(id, isSr, isZZZ, isBH3, false, wtype);
       // 详情取不到（Bwiki 限流 567、或该条目 Bwiki 没收）就干净返回 false，
       // 让调用方走「没有找到」的提示，而不是把 null 丢进渲染器。
       // 这里刻意不校验 data.content 的内部结构：详情源被限流时结构同样为空，
@@ -1914,7 +1974,12 @@ export class Wiki extends plugin {
       try {
         if (isZZZ) this.zzz_wq_pictures(e, data);
         else if (isBH3) this.bh3_wq_pictures(e, data, roleName);
-        else if (isSr) this.sr_gz_pictures(e, data);
+        else if (isSr) {
+          // nanoka 兜底的数据结构（{ content: {...}, nanoka: true }）和 Bwiki 完全不同，
+          // 直接丢给 sr_gz_pictures 会读 data.content.contents[0].text 崩溃。
+          if (data?.nanoka) this.sr_gz_nanoka_pictures(e, data);
+          else this.sr_gz_pictures(e, data);
+        }
         else this.gs_wq_pictures(e, data);
       } catch (err) {
         logger.error?.(`[xhh][图鉴] 武器「${wq}」详情渲染失败: ${err?.message || err}`);
@@ -1931,6 +1996,11 @@ export class Wiki extends plugin {
     if (isZZZ) {
       name = await this.resolveZzzWikiName(name, 43);
       dbg('ZZZ 角色解析:', name);
+      // 正式服模式：绝区零角色优先米游社百科 + Bwiki 徽章/属性/攻略，失败回退 nanoka。测试服只用 nanoka。
+      if (!isTestDataMode()) {
+        const done = await this.zzz_bwiki_role_pictures(e, name);
+        if (done !== false && done != null) return true;
+      }
       const ret = await mys.data(name, 'js', false, true);
       if (!ret?.id) { dbg('ZZZ wiki 无此角色:', name); return false; }
       dbg('ZZZ 命中条目:', `id=${ret.id}`, ret.official ? '来源=官方Wiki兜底(详情走官方)' : '来源=nanoka');
@@ -2116,7 +2186,8 @@ export class Wiki extends plugin {
             const merged = { ...view };
             const take = k => { if (bw[k] !== undefined && bw[k] !== null && bw[k] !== '') merged[k] = bw[k]; };
             ['icon', 'rarity', 'rarityIcon', 'rarityIconUrl', 'path', 'pathIcon', 'pathIconUrl',
-              'damage', 'damageIcon', 'damageIconUrl', 'camp', 'spNeed', 'desc', 'growth'].forEach(take);
+              'damage', 'damageIcon', 'damageIconUrl', 'camp',
+              'hp', 'atk', 'def', 'speed', 'crit', 'critDmg', 'spNeed', 'traceBonus', 'desc', 'growth'].forEach(take);
             if (Array.isArray(bw.skills) && bw.skills.length) merged.skills = bw.skills;
             if (Array.isArray(bw.ranks) && bw.ranks.length) merged.ranks = bw.ranks;
             if (Array.isArray(bw.passives) && bw.passives.length) merged.passives = bw.passives;
@@ -2325,6 +2396,301 @@ export class Wiki extends plugin {
     render('wiki/gs_role', data, { e, ret: true });
   }
 
+  //原神武器（Bwiki 词条页优先，正式服模式）
+  async gs_wq_bwiki_pictures(e, name) {
+    let item = null;
+    try {
+      item = await fetchGsBwikiItem(name, 'wq');
+    } catch (err) {
+      logger.debug?.(`[xhh][bwiki_gs] ${name} 武器词条抓取异常: ${err?.message}`);
+      return false;
+    }
+    if (!item) return false;
+    // 模板用 starList 渲染星级 ★，解析结果里只有 stars 数字，这里补成数组
+    const view = {
+      ...item,
+      starList: Array.from({ length: Number(item.stars) || 0 }),
+    };
+    return render('wiki/gs_item_bwiki', view, { e, ret: true });
+  }
+
+  // 星铁光锥/遗器（Bwiki 词条页优先，正式服模式）。
+  // 列表层提供名字/命途/星级/图标，词条层提供技能/面板/故事，两者合并后渲染。
+  async sr_item_bwiki_pictures(e, name, type = 'gz') {
+    const fetcher = type === 'gz' ? fetchSrLcList : fetchSrRelicList;
+    const metaList = await fetcher().catch(() => null);
+    const meta = (metaList || []).find(x => nmKey(x.name) === nmKey(name));
+    let detail = null;
+    try {
+      detail = await fetchSrBwikiItem(name, type);
+    } catch (err) {
+      logger.debug?.(`[xhh][bwiki_sr] ${name} 词条抓取异常: ${err?.message}`);
+    }
+    if (!detail && !meta) return false;
+    const view = {
+      ...(detail || {}),
+      name: meta?.name || name,
+      icon: meta?.icon || detail?.pageIcon || detail?.icon || '',
+      path: meta?.path || '',
+      ji: meta?.ji || '',
+      version: meta?.version || detail?.version || '',
+      intro: detail?.desc || '',
+    };
+    return render('wiki/sr_item_bwiki', view, { e, ret: true });
+  }
+
+  // 星铁遗器（Bwiki 词条页优先，正式服模式）。套装/散件/二四件套/推荐角色
+  // 均来自词条层，用 buildRelicView 归一后渲染共用的 relic_bwiki 模板。
+  async sr_relic_bwiki_pictures(e, name) {
+    let detail = null;
+    try {
+      detail = await fetchSrBwikiItem(name, 'yq');
+    } catch (err) {
+      logger.debug?.(`[xhh][bwiki_sr] ${name} 遗器词条抓取异常: ${err?.message}`);
+      return false;
+    }
+    if (!detail) return false;
+    const setIcon = detail.pageIcon || detail.setIcons?.[0] || '';
+    const view = buildRelicView({
+      game: 'sr',
+      name,
+      base: { ...detail, icon: setIcon },
+      art: {
+        setIcon,
+        pieceIcons: detail.pieceIcons || [],
+        agents: detail.agents || [],
+        /* 星铁的推荐理由按注释来自 Bwiki「遗器说明」小节（parseSrBwikiItem 存进 desc）：
+           推荐角色小节只有头像、没有理由，遗器说明就是星铁版的「推荐理由」
+           （见 relic_view.js 顶部注释）。故事区走 origin（遗器来历），不会重复。 */
+        reason: detail.desc || '',
+      },
+      storyTitle: '遗器来历',
+    });
+    return render('wiki/relic_bwiki', view, { e, ret: true });
+  }
+
+  // 绝区零音擎（Bwiki 词条页优先，正式服模式）
+  async zzz_wq_bwiki_pictures(e, name) {
+    let d = null;
+    try {
+      d = await fetchZzzBwikiWeapon(name);
+    } catch (err) {
+      logger.debug?.(`[xhh][bwiki_zzz] ${name} 音擎词条抓取异常: ${err?.message}`);
+      return false;
+    }
+    if (!d) return false;
+    // 卡面方图：音擎页没有「音擎图标-名.png」这类 alt（实测深海访客页只有
+    // 武器立绘/调频立绘），fetchZzzBwikiWeapon 的 icon 提取会落空。改从官方音擎
+    // 列表按名字取方图，与邦布 entryId 同一匹配模式。
+    let icon = d.icon || '';
+    if (!icon) {
+      try {
+        const list = await mys.zzz_official_list('wq');
+        const key = v => String(v || '').replace(/[\s·・]/g, '');
+        const hit = (list || []).find(v => key(v.title) === key(name));
+        if (hit?.icon) icon = hit.icon;
+      } catch (err) {
+        logger.debug?.(`[xhh][bwiki_zzz] ${name} 官方音擎列表匹配失败: ${err?.message}`);
+      }
+    }
+    return render('wiki/zzz_wq_bwiki', { ...d, name, icon }, { e, ret: true });
+  }
+
+  // 绝区零驱动盘的 nanoka 兜底视图：Bwiki 抓不到（限流熔断 / 词条缺失）时用，
+  // 把 nanoka 的字段映射成与 Bwiki 词条同构的视图，仍渲染新版卡 zzz_syw_bwiki
+  // —— 作者要求「只要新卡」，不回落旧模板 wiki/zzz_syw。
+  // nanoka 驱动盘详情只有 id/name/icon/desc2/desc4/story，
+  // 缺稀有度/版本/获取途径/TAG，这些留空，模板按 {{if}} 不渲染。
+  async zzz_syw_nanoka_view(name) {
+    try {
+      const ret = await mys.data(name, 'syw', false, true);
+      if (!ret?.id) return null;
+      const data = await mys.detail(ret.id, false, true);
+      const c = data?.content || {};
+      let set2 = c.desc2 || '', set4 = c.desc4 || '';
+      /* 米游社官方那一级的套装效果在 ext.c_46.table.list（key=2 / 4），
+         和 nanoka 的 desc2/desc4 **字段名不同**，以前没做映射 ——
+         于是 nanoka 冷却、整份切到官方源时，驱动盘只剩名字、套装效果全空
+         （zzz_syw_pictures 的注释也记着这个坑）。这里补上映射，
+         让官方源同样能填满新版卡的二/四件套。 */
+      if (!set2 && !set4) {
+        try {
+          const list = await mys.zzz_official_list('syw');
+          const key = v => String(v || '').replace(/[\s·・]/g, '');
+          const hit = (list || []).find(v => key(v.title) === key(name));
+          const ext = typeof hit?.ext === 'string' ? JSON.parse(hit.ext || '{}') : (hit?.ext || {});
+          for (const r of (((ext.c_46 || ext).table || {}).list || [])) {
+            const k = String(r?.key || '');
+            if (/^2/.test(k) && !set2) set2 = r?.value || '';
+            else if (/^4/.test(k) && !set4) set4 = r?.value || '';
+          }
+        } catch (_) { }
+      }
+      if (!c.name && !set2) return null;
+      return {
+        icon: mys.zzzSuitIcon?.(c.icon) || '',
+        set2: this.zzzRichText(set2),
+        set4: this.zzzRichText(set4),
+        desc: this.zzzCleanText(c.story || '', 200),
+        stories: [],
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // 绝区零驱动盘（Bwiki 词条页优先，正式服模式）
+  async zzz_syw_bwiki_pictures(e, name) {
+    let d = null;
+    try {
+      d = await fetchZzzBwikiDisc(name);
+    } catch (err) {
+      logger.debug?.(`[xhh][bwiki_zzz] ${name} 驱动盘词条抓取异常: ${err?.message}`);
+    }
+    /* Bwiki 抓不到时**不回退旧模板**：换 nanoka 数据源取 2/4 件套与描述，
+       仍出新版卡（作者要求「只要新卡」）。nanoka 也没有才交给外层回落。 */
+    if (!d) d = await this.zzz_syw_nanoka_view(name);
+    if (!d) return false;
+    /* 推荐代理人按注释约定走米游社词条页的「推荐角色 / 推荐理由」（zzz_disc_agents.js，
+       官方原文且带理由）。米游社与 Bwiki 编号体系不同，entryId 只能按名字
+       从官方驱动盘列表匹配 —— 与邦布取 entryId 同一模式。 */
+    try {
+      const list = await mys.zzz_official_list('syw');
+      const key = v => String(v || '').replace(/[\s·・]/g, '');
+      const hit = (list || []).find(v => key(v.title) === key(name));
+      const entryId = hit?.content_id || '';
+      const ag = await zzzDiscAgents(name, entryId);
+      if (ag.length) d.agents = ag;
+      const parts = await mihoyoDiscParts('zzz', entryId);
+      if (parts.length) d.parts = parts;
+    } catch (_) { /* 官方数据取不到不影响出卡 */ }
+    return render('wiki/zzz_syw_bwiki', { ...d, name }, { e, ret: true });
+  }
+
+  // 绝区零角色（正式服模式：米游社百科 + Bwiki 徽章/属性/攻略合并，逻辑在 fetchZzzRoleCard）
+  async zzz_bwiki_role_pictures(e, name) {
+    let card = null;
+    try {
+      card = await fetchZzzRoleCard(name);
+    } catch (err) {
+      logger.debug?.(`[xhh][zzz_role] ${name} 角色卡抓取异常: ${err?.message}`);
+      return false;
+    }
+    if (!card) return false;
+    return render('wiki/zzz_role_nk', card, { e, ret: true });
+  }
+
+  // 绝区零邦布（正式服模式：Bwiki 词条 + 米游社基础属性/搭配组合，buildBangbooView 归一）。
+  // 米游社与 Bwiki 编号体系不同，entryId 只能按名字从官方邦布列表匹配。
+  async zzz_bangboo_bwiki_pictures(e, name) {
+    let bw = null;
+    try {
+      bw = await fetchZzzBwikiBangboo(name);
+    } catch (err) {
+      logger.debug?.(`[xhh][bwiki_zzz] ${name} 邦布词条抓取异常: ${err?.message}`);
+    }
+    let entryId = '';
+    let icon = bw?.icon || '';
+    try {
+      const list = await mys.zzz_official_list('yq');
+      const key = v => String(v || '').replace(/[\s·・]/g, '');
+      const hit = (list || []).find(v => key(v.title) === key(name));
+      if (hit) { entryId = hit.content_id; icon = icon || hit.icon || ''; }
+    } catch (err) {
+      logger.debug?.(`[xhh][bwiki_zzz] ${name} 官方邦布列表匹配失败: ${err?.message}`);
+    }
+    if (!bw && !entryId) return false;
+    let my = { stats: [], talents: [], teams: [] };
+    if (entryId) {
+      try { my = await fetchMihoyoBangboo(entryId); } catch (err) { my = { stats: [], talents: [], teams: [] }; }
+    }
+    const view = buildBangbooView({ bw: bw || {}, my, name, icon, entryId });
+    return render('wiki/zzz_yq_bwiki', view, { e, ret: true });
+  }
+
+  // 原神圣遗物（Bwiki 词条页优先，正式服模式）。二/四件套、故事、推荐角色来自词条层，
+  // 散件图用 extractRelicArt 从词条页 HTML 按「生之花/死之羽…」命名规则抽取。
+  async gs_syw_bwiki_pictures(e, name) {
+    let detail = null;
+    try {
+      detail = await fetchGsBwikiItem(name, 'syw');
+    } catch (err) {
+      logger.debug?.(`[xhh][bwiki_gs] ${name} 圣遗物词条抓取异常: ${err?.message}`);
+      return false;
+    }
+    if (!detail) return this.gs_syw_fallback_pictures(e, name);
+    const art = { setIcon: detail.icon || '', pieceIcons: [], agents: [] };
+    /* 推荐角色按 relic_view.js 里那套约定：原神走米游社词条页的「搭配推荐」
+       （表头 [角色名称, 推荐原因, 词缀搭配]，mihoyoItemAgents 已认），
+       官方写了就用官方的 —— 带推荐原因，且是官方原文。
+       Bwiki 那份是编辑者观点（页面自带「以下内容可能存在主观性」声明），
+       只在官方没写时兜底。 */
+    let official = [];
+    try {
+      const entryId = await mihoyoEntryId('gs', name);
+      if (entryId) official = await mihoyoItemAgents('gs', entryId);
+    } catch (_) { /* 官方推荐取不到不影响出卡 */ }
+    try {
+      const html = await fetchGsBwikiItemHtml(name);
+      if (html) {
+        const extracted = extractRelicArt(html, 'gs', name);
+        art.setIcon = extracted.setIcon || art.setIcon;
+        art.pieceIcons = extracted.pieceIcons || [];
+        if (!official.length) {
+          // 官方没写推荐才用 Bwiki：先带推荐说明的精选，再补块内头像（按名字去重）
+          art.agents = [...(detail.agents || [])];
+          const have = new Set(art.agents.map(a => a.name));
+          for (const a of extracted.agents || []) {
+            if (have.has(a.name)) continue;
+            art.agents.push(a);
+            have.add(a.name);
+          }
+        }
+      }
+    } catch (_) { /* 散件图取不到不影响出卡 */ }
+    if (official.length) art.agents = official;
+    else if (!art.agents.length) art.agents = detail.agents || [];
+    const view = buildRelicView({
+      game: 'gs',
+      name,
+      base: { ...detail, ji: detail.stars ? `${detail.stars}星` : '' },
+      art,
+      storyTitle: '圣遗物故事',
+    });
+    return render('wiki/relic_bwiki', view, { e, ret: true });
+  }
+
+  // 原神圣遗物兜底：Bwiki 未收录的新套装（实测「绝缘之帷」ys/sr 站搜索均为 0 条），
+  // 用 nanoka/米游社列表 ext 里的二/四件套文本出新版卡，不再回落旧版单栏模板。
+  async gs_syw_fallback_pictures(e, name) {
+    let item = null;
+    try {
+      const data = await mys.data(name, 'syw', false, false);
+      if (Array.isArray(data)) item = data.find(v => v.title === name);
+    } catch (err) {
+      logger.debug?.(`[xhh][bwiki_gs] ${name} 圣遗物列表匹配失败: ${err?.message}`);
+      return false;
+    }
+    if (!item) return false;
+    let set2 = '', set4 = '';
+    try {
+      const box = JSON.parse(item.ext || '{}');
+      for (const r of (box.c_218?.table?.list || [])) {
+        if (/^2件套/.test(r.key || '')) set2 = r.value || '';
+        else if (/^4件套/.test(r.key || '')) set4 = r.value || '';
+      }
+    } catch (_) {}
+    if (!set2 && !set4) return false;
+    const view = buildRelicView({
+      game: 'gs',
+      name,
+      base: { set2, set4, icon: item.icon || '' },
+      art: { setIcon: item.icon || '', pieceIcons: [], agents: [] },
+      storyTitle: '圣遗物故事',
+    });
+    return render('wiki/relic_bwiki', view, { e, ret: true });
+  }
+
   //原神武器
   async gs_wq_pictures(e, data) {
     /* 米游社官方兜底在查不到时返回 { page: null }（日志里 13:44 的
@@ -2463,6 +2829,91 @@ export class Wiki extends plugin {
       mat_num,
     };
     render('wiki/gz', data, { e, ret: true });
+  }
+
+  // 星铁光锥 nanoka 兜底渲染（Bwiki 限流/缺页时走 detail() 的 nanoka 回退）
+  // nanoka 数据结构：content = { id, name, rarity, base_type, refinements, stats, desc, itemMap, lightconeMap, relicsetMap }
+  // 与 Bwiki HTML 结构完全不同，单独适配成 wiki/gz 模板字段。
+  async sr_gz_nanoka_pictures(e, data) {
+    const c = data?.content || {};
+    const srRarityCn = r => {
+      const m = /(\d+)\s*$/.exec(String(r || ''));
+      const n = m ? Number(m[1]) : 0;
+      return n === 5 ? '5星' : n === 4 ? '4星' : n === 3 ? '3星' : n === 2 ? '2星' : n === 1 ? '1星' : '';
+    };
+    const srPathCn = {
+      Knight: '存护', Rogue: '巡猎', Mage: '智识', Warlock: '虚无',
+      Warrior: '毁灭', Priest: '丰饶', Shaman: '同谐',
+      Memory: '记忆', Elation: '欢愉'
+    };
+    const itemIconUrl = raw => {
+      const num = (String(raw).match(/(\d+)\.[a-z0-9]+$/i) || [])[1] || '';
+      return num ? `https://static.nanoka.cc/assets/hsr/itemfigures/${num}.webp` : '';
+    };
+    const refinements = c.refinements || {};
+    const levels = refinements.level || {};
+    const maxLv = Math.max(0, ...Object.keys(levels).map(Number));
+    const params = levels[String(maxLv)]?.param_list || [];
+    let skillDesc = String(refinements.desc || '')
+      .replace(/<color=(#[0-9a-fA-F]+)>/g, '<span style="color:$1">')
+      .replace(/<\/color>/g, '</span>')
+      .replace(/<unbreak>/g, '')
+      .replace(/<\/unbreak>/g, '');
+    skillDesc = skillDesc.replace(/#(\d+)\[i\]/g, (m, n) => {
+      const idx = Number(n) - 1;
+      const v = params[idx];
+      if (v === undefined || v === null) return m;
+      if (v < 1 && v > 0) return `${Math.round(v * 100)}%`;
+      return String(v);
+    });
+    // 80 级属性：stats 按 promotion 升序，最后一段即满级
+    const stats = (c.stats || []).slice().sort((a, b) => (a.promotion || 0) - (b.promotion || 0));
+    const maxStat = stats[stats.length - 1] || {};
+    const grow = ['', maxStat.base_hp || 0, maxStat.base_attack || 0, maxStat.base_defence || 0];
+    // 晋阶材料：按 item_id 汇总，最后一格放信用点
+    const materialCounts = {};
+    let totalCredits = 0;
+    for (const s of stats) {
+      for (const cost of s.promotion_cost_list || []) {
+        if (cost.item_id === 2) {
+          totalCredits += cost.item_num || 0;
+        } else {
+          materialCounts[cost.item_id] = Math.max(materialCounts[cost.item_id] || 0, cost.item_num || 0);
+        }
+      }
+    }
+    const itemMap = c.itemMap || {};
+    const matIds = Object.keys(materialCounts).sort((a, b) => Number(a) - Number(b));
+    const mat = [];
+    const mat_num = [];
+    for (const id of matIds) {
+      const item = itemMap[id];
+      const icon = item?.item_figure_icon_path ? itemIconUrl(item.item_figure_icon_path) : '';
+      if (icon) {
+        mat.push(icon);
+        mat_num.push(materialCounts[id]);
+      }
+    }
+    // 固定补到 6 个材料 + 1 个信用点，避免模板 7 格越界
+    while (mat.length < 6) {
+      mat.push('');
+      mat_num.push('');
+    }
+    const creditIcon = itemMap['2']?.item_figure_icon_path ? itemIconUrl(itemMap['2'].item_figure_icon_path) : '';
+    mat.push(creditIcon);
+    mat_num.push(totalCredits > 0 ? `${(totalCredits / 10000).toFixed(totalCredits % 10000 === 0 ? 0 : 1)}w` : '');
+    const view = {
+      name: c.name,
+      mingtu: srPathCn[c.base_type] || c.base_type || '',
+      xiyoudu: srRarityCn(c.rarity),
+      img: c.id ? `https://static.nanoka.cc/assets/hsr/lightconemaxfigures/${c.id}.webp` : '',
+      grow,
+      jineng: ['', skillDesc],
+      miaoshu: c.desc || '',
+      mat,
+      mat_num
+    };
+    render('wiki/gz', view, { e, ret: true });
   }
 
   /*

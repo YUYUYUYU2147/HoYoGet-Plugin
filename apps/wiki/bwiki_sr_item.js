@@ -342,6 +342,14 @@ export function parseSrBwikiItem(html, type = 'gz') {
         }
     }
 
+    /* 页面归属判定：光锥页有「技能名称/技能效果」，遗器页有「二件套效果/四件套效果」，
+       两类页面特征互斥。按光锥查询命中遗器页（或反之）时直接放弃 Bwiki 版式，
+       让调用方回落原渲染路径，避免用残缺数据拼卡。 */
+    out.pageKind = /技能名称|技能效果/.test(text) ? 'gz'
+        : (/二件套效果|四件套效果/.test(text) ? 'yq' : '');
+    if (type === 'gz' && out.pageKind === 'yq') return null;
+    if (type === 'yq' && out.pageKind === 'gz') return null;
+
     const ok = out.set2 || out.set4 || out.talentDesc || out.panel.length || out.origin;
     return ok ? out : null;
 }

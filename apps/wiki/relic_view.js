@@ -205,6 +205,24 @@ export function extractRelicArt(html, game, name = '', pieceNames = []) {
     return out;
   }
   // 2b) 其余游戏：在推荐角色范围内扫头像
+  /* 窗口收窄（gs）：推荐块内每个头像都伴随角色名标签（<div class="L">名</div>），
+     截到最后一个名字标签之后一点即可。agentScope 固定切 40000 字符的窗口
+     会越界扫到页面后段的导航框/其他推荐位 —— 实测绝缘之旗印推荐块在 +14000
+     就结束，「尼可」的头像在 +39776（别的区块）被误收进推荐角色。
+     窗口内没有名字标签（zzz 走 agentBlock 小窗口）则不截。 */
+  if (rule.agentScope) {
+    const nameTags = [...agentScopeHtml.matchAll(/<div class="L">/g)];
+    if (nameTags.length) {
+      const end = nameTags[nameTags.length - 1].index + 2000;
+      if (end < agentScopeHtml.length) agentScopeHtml = agentScopeHtml.slice(0, end);
+    } else {
+      /* 血红之证这类 7.0 新页面的 recommended 块里**没有名字标签、没有推荐说明**，
+         只有 44 个头像的滚动选择器（实测几乎全角色：尼可/杜林/玛薇卡/阿蕾奇诺…）——
+         那是交互组件不是推荐名单。没有名字佐证就无法区分推荐与全量，
+         一律不收，让卡面走「无推荐」而不是一长串错误头像。 */
+      agentScopeHtml = '';
+    }
+  }
   for (const m of agentScopeHtml.matchAll(/<img[^>]*alt="([^"]*)"[^>]*src="([^"]+)"/g)) {
     const alt = decodeTxt(m[1]).trim();
     const src = origIcon(m[2]);

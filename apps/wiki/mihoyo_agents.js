@@ -18,9 +18,9 @@
  * 返回的每个角色带 icon（头像）与 reason（推荐原因），两者都是官方原文。
  */
 const APIS = {
-  gs: { url: 'https://act-api-takumi-static.mihoyo.com/hoyowiki/genshin/wapi/entry_page', app: 'ys_obc', wiki: 'ys' },
-  sr: { url: 'https://act-api-takumi-static.mihoyo.com/hoyowiki/hsr/wapi/entry_page', app: 'sr_wiki', wiki: 'sr' },
-  zzz: { url: 'https://act-api-takumi-static.mihoyo.com/hoyowiki/zzz/wapi/entry_page', app: 'zzz_wiki', wiki: 'zzz' }
+  gs: { url: 'https://act-api-takumi-static.mihoyo.com/hoyowiki/genshin/wapi/entry_page', app: 'ys_obc', wiki: 'ys', search: 'https://api-takumi-static.mihoyo.com/hoyowiki/genshin/wapi/search' },
+  sr: { url: 'https://act-api-takumi-static.mihoyo.com/hoyowiki/hsr/wapi/entry_page', app: 'sr_wiki', wiki: 'sr', search: 'https://api-takumi-static.mihoyo.com/hoyowiki/hsr/wapi/search' },
+  zzz: { url: 'https://act-api-takumi-static.mihoyo.com/hoyowiki/zzz/wapi/entry_page', app: 'zzz_wiki', wiki: 'zzz', search: 'https://api-takumi-static.mihoyo.com/hoyowiki/zzz/wapi/search' }
 };
 
 const decodeTxt = v => String(v || '')
@@ -97,17 +97,64 @@ export async function mihoyoItemAgents(game, entryId) {
   return [];
 }
 
+/* ── 按名字取米游社词条 id ───────────────────────────────────
+   绝区零有 zzz_official_list、崩三有 bh3_tujian 能列全量条目拿 content_id，
+   原神/星铁没有官方列表接口，只能走百科搜索。
+   搜索结果里同名条目可能有好几条（角色/武器/圣遗物混在一起），
+   优先取「去标签后名字完全相等」的那条，取不到才用第一条。
+   按名字缓存，避免同一套装每次查询都搜一遍。 */
+const searchCache = new Map();
+const SEARCH_TTL = 12 * 3600 * 1000;
+
 /**
- * 绝区零驱动盘的 **6 个部位图标**。
+ * @param {'gs'|'sr'|'zzz'} game
+ * @param {string} name 套装/道具名
+ * @returns {Promise<string>} entry_page_id，取不到返回空串
+ */
+export async function mihoyoEntryId(game, name) {
+  const api = APIS[game];
+  const kw = String(name || '').trim();
+  if (!api?.search || !kw) return '';
+  const ck = `${game}:${kw}`;
+  const hit = searchCache.get(ck);
+  if (hit && Date.now() - hit.t < SEARCH_TTL) return hit.v;
+  let id = '';
+  try {
+    const u = `${api.search}?app_sn=${api.app}&keyword=${encodeURIComponent(kw)}&lang=zh-cn`;
+    const r = await fetch(u, {
+      headers: {
+        accept: 'application/json, text/plain, */*',
+        'content-type': 'application/json',
+        referer: 'https://baike.mihoyo.com/',
+        'x-rpc-wiki_app': api.wiki,
+        'x-rpc-language': 'zh-cn'
+      },
+      signal: AbortSignal.timeout(15000)
+    });
+    if (String(r.headers.get('content-type') || '').includes('json')) {
+      const list = ((await r.json())?.data || {}).list || [];
+      const exact = list.find(it => stripTags(it?.name || '') === kw);
+      id = String((exact || list[0])?.entry_page_id || '');
+    }
+  } catch {
+    // 搜不到按「官方没有该词条」处理，调用方回落维基数据
+  }
+  searchCache.set(ck, { t: Date.now(), v: id });
+  return id;
+}
+
+/**
+ * 绝区零驱动盘的 **6 个部位图标 + 主属性**。
  *
  * 米游社词条页有个 `driver_disk` 组件：
- *   disks_icon = 逗号分隔的 6 张部位图 URL
- *   disks_name = 「1号位,2号位,…,6号位」
+ *   disks_icon = 6 张部位图 URL
+ *   disks_name = ["1号位", ..., "6号位"]
+ *   disks_desc = 每个号位的主属性 HTML（含 S/A/B 三档满级数值）
  * Bwiki 驱动盘页只给 `驱动盘-X-A.png` / `-B.png` 两张（合并图 + 分件图），
  * 所以之前卡上「套装与散件」只有 2 个图标，而游戏里驱动盘是 6 个位置 ——
  * 数据在米游社，直接取官方这份。
  *
- * @returns {Promise<Array<{name:string,icon:string}>>} 取不到返回空数组
+ * @returns {Promise<Array<{name:string,icon:string,attrs:Array<{name:string,s:string,a:string,b:string}>}>>} 取不到返回空数组
  */
 export async function mihoyoDiscParts(game, entryId) {
   const api = APIS[game];
@@ -129,9 +176,26 @@ export async function mihoyoDiscParts(game, entryId) {
       for (const comp of mod?.components || []) {
         if (comp?.component_id !== 'driver_disk') continue;
         const d = JSON.parse(comp.data || '{}');
-        const icons = String(d.disks_icon || '').split(',').map(v => v.trim()).filter(Boolean);
-        const names = String(d.disks_name || '').split(',').map(v => v.trim());
-        return icons.map((icon, i) => ({ name: names[i] || `${i + 1}号位`, icon }));
+        const icons = Array.isArray(d.disks_icon)
+          ? d.disks_icon
+          : String(d.disks_icon || '').split(',').map(v => v.trim()).filter(Boolean);
+        const names = Array.isArray(d.disks_name)
+          ? d.disks_name
+          : String(d.disks_name || '').split(',').map(v => v.trim());
+        const descs = Array.isArray(d.disks_desc) ? d.disks_desc : [];
+        const parseDesc = html => {
+          const out = [];
+          const re = /<strong>[\s\S]*?<span[^>]*>([^<]+)<\/span>[\s\S]*?<\/strong>[\s\S]*?<p>S级：([^<]+)<\/p>[\s\S]*?<p>A级：([^<]+)<\/p>[\s\S]*?<p>B级：([^<]+)<\/p>/gi;
+          for (const m of String(html || '').matchAll(re)) {
+            out.push({ name: stripTags(m[1]), s: stripTags(m[2]), a: stripTags(m[3]), b: stripTags(m[4]) });
+          }
+          return out;
+        };
+        return icons.map((icon, i) => ({
+          name: names[i] || `${i + 1}号位`,
+          icon,
+          attrs: parseDesc(descs[i])
+        }));
       }
     }
   } catch {

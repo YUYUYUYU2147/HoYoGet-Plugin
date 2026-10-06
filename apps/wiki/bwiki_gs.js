@@ -366,6 +366,9 @@ const BWIKI_WEAPON_ICON = {
 // 页名映射：用户输入的名字未必是维基页名。
 // 薇斯纶在维基上叫「薇斯纳」，这类差异靠硬编码补不全，
 // 所以运行时先按原名试，missing 再走这里的候选表 + 模糊匹配。
+/* 角色称号与别称（「仆人」→「阿蕾奇诺」、「散兵」→「流浪者」等）不应写入本表。
+   此类名称由调用方通过 *_js_names.yaml 统一归一后再传入（见 wiki.js 的 role()）。
+   若在此逐条登记单角色映射，只能覆盖个别角色，其余同类情况仍然遗漏。 */
 const PAGE_ALIAS = {
   薇斯纶: '薇斯纳',
   温迪: '温迪',
@@ -377,7 +380,7 @@ async function resolvePage(name) {
   const cands = [name, PAGE_ALIAS[name]].filter(Boolean);
   for (const c of cands) {
     try {
-      const html = await renderHtml(c, 2);
+      const html = await renderHtml(c, 5);
       if (html && html.length > 5000) return { page: c, html };
     } catch { /* 试下一个 */ }
   }
@@ -498,7 +501,7 @@ export { renderHtml, tables, plain, decode, safeDecodeURI };
 const FILE_API = 'https://wiki.biligame.com/ys/api.php';
 
 async function pickPortraitFile(who) {
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < 5; i++) {
     try {
       const u = `${FILE_API}?action=query&titles=${encodeURIComponent(`文件:${who}立绘.png`)}`
         + '&prop=imageinfo&iiprop=url&iiurlwidth=400&format=json';
@@ -607,10 +610,27 @@ export function buildGsDetail(d) {
   const g = k => { const v = d.basic?.[k]; return Array.isArray(v) ? (v[0] ?? '') : (v ?? ''); };
   const flatVal = v => (Array.isArray(v) ? v.filter(Boolean).join('、') : (v ?? ''));
 
-  // 90 级满级，不是 1 级。Bwiki 的 90 级行「突破后」列写的是 -，所以取 after ?? before。
-  const lvMax = (d.growth || []).filter(x => Number.isFinite(x.level))
+  // 90 级为满级，非 1 级。Bwiki 的 90 级行「突破后」列为 -，因此取 after，缺省回退 before。
+  // Bwiki 成长表在 90 级之后另有 95 / 100 两个占位空行（突破后无值），
+  // parseGrowth 会将其解析为「仅含 level、不含属性键」的行。
+  // 若直接取 level 最大的行，将命中 100 级空行，导致 base_hp/atk/def 全部为空。
+  // 因此先过滤掉不含属性数据的行，再取 level 最大者。
+  const lvMax = (d.growth || []).filter(x => Number.isFinite(x.level) && (x.hp || x.atk || x.def))
     .reduce((a, b) => (!a || b.level > a.level ? b : a), null) || {};
   const at90 = k => (lvMax[k]?.after && lvMax[k].after !== '-' ? lvMax[k].after : lvMax[k]?.before) || '';
+
+  /* 基础双暴：原神所有角色的基础值固定为暴击率 5%、暴击伤害 50%。
+     Bwiki 成长表中的该列（列名为「暴击伤害」或「暴击率」，取决于角色的突破加成项）
+     记录的是突破加成，并非面板值。直接将其作为 crit_dmg 会得到 38.4%，
+     正确的面板值为 50% + 38.4% = 88.4%，因此在此补齐基础值：
+     加成列为暴击伤害时，暴击伤害 = 50% + 加成；加成列为暴击率时，暴击率 = 5% + 加成；
+     无加成列的一项取基础值。 */
+  const addPct = (base, add) => {
+    const n = parseFloat(String(add || '').replace(/[^\d.]/g, ''));
+    if (!Number.isFinite(n)) return `${base}%`;
+    const v = (base + n).toFixed(1).replace(/\.0$/, '');
+    return `${v}%`;
+  };
 
   // 突破：各档 → gsRoleView 的 ascensions 形状（摩拉走 cost，其余走 mats）
   const ascensions = (d.ascendStages || []).map(s => ({
@@ -669,8 +689,8 @@ export function buildGsDetail(d) {
     // 稀有度金星图：角色一览页有现成的五星/四星星图，比自己拼 URL 稳
     rarityIcon: RARITY_ICON[(g('稀有度') || '').replace(/[^45]/g, '')] || '',
     base_hp: at90('hp'), base_atk: at90('atk'), base_def: at90('def'),
-    crit_rate: at90('critRate') || '0%',
-    crit_dmg: at90('bonus') || '0%',
+    crit_rate: at90('critRate') ? addPct(5, at90('critRate')) : '5%',
+    crit_dmg: at90('bonus') ? addPct(50, at90('bonus')) : '50%',
     elemental_mastery: '', stamina_recovery: '',
     desc: g('介绍'),
     chara_info: {
@@ -794,7 +814,7 @@ export async function fetchGsRoleList() {
   const hit = listCache.get('all');
   if (hit && Date.now() - hit.t < CACHE_TTL) return hit.v;
   let html = null;
-  try { html = await renderHtml('角色', 3); }
+  try { html = await renderHtml('角色', 5); }
   catch (e) { logger.debug?.(`[xhh][bwiki_gs] 角色一览抓取失败: ${e.message}`); return null; }
   if (!html || !html.includes('divsort')) {
     logger.debug?.('[xhh][bwiki_gs] 角色一览结构异常（无 divsort）');
@@ -1002,7 +1022,7 @@ export async function fetchGsGuidePage(who) {
   const hit = guideCache.get(page);
   if (hit && Date.now() - hit.t < CACHE_TTL) return hit.v;
   let html = '';
-  try { html = await renderHtml(page, 2); } catch { html = ''; }
+  try { html = await renderHtml(page, 5); } catch { html = ''; }
   if (!html || html.length < 2000) html = '';
   guideCache.set(page, { t: Date.now(), v: html });
   return html;

@@ -5,7 +5,7 @@ import {
 } from '#xhh';
 import YAML from 'yaml';
 // Bwiki 绝区零角色页（列表页头像最高优先级来源）。该文件零 import，不构成循环依赖。
-import { fetchZzzBwikiChar } from '../apps/wiki/bwiki_zzz.js';
+import { fetchZzzBwikiChar, zzzKey } from '../apps/wiki/bwiki_zzz.js';
 
 // 绝区零 nanoka 目录只保留当前版本，旧版本号过一段时间就会整目录 404
 // （3.3.3+19110104 已下架，四个数据文件全部 404，表现为新出的驱动盘套装查不到，
@@ -1660,38 +1660,40 @@ class mys {
             } catch (_) {}
             /* ── Bwiki 头像（最高优先级）─────────────────────────────────
                作者要求列表页优先级：Bwiki → 米游社 → nanoka。
-               Bwiki 角色页是「一页装全站角色头像」的导航框，fetchZzzBwikiChar
-               按名字认领（bwiki_zzz.js:424），认不到就返回空串 —— 那是设计如此，
-               绝不能拿别人的头像顶。所以这里认不到就自然落到米游社、nanoka。
-
-               两个约束：
-               ① 必须**并发**抓。角色有 60+，串行会卡住整个图鉴；用限并发 4 慢慢放，
-                  而不是 Promise.all 全开（实测 Bwiki 限流很凶，一次并发 60 必炸）。
-               ② 限流时整批降级为空表，下面两级照常工作，绝不让列表开天窗。 */
+               Bwiki 每个角色页都带「一页装全站角色头像」的导航框
+               （bwiki_zzz.js 解析成 avatars 全站表），所以抓**任意一个**角色页
+               就能认领全部名单 —— 以前按名单逐页并发抓 62 次，等于把同一份
+               导航框下载 62 遍；且一次单品图鉴里列表会构建多遍（role/weapon/
+               syw_yiqi 各一遍），实测「极地重金属图鉴」一轮就打了 3×62 个请求，
+               全部撞进 567 → 触发 3 分钟全局熔断，同查询里的驱动盘 Bwiki 详情
+               也跟着被跳过、回落旧模板。现在整段只发 1 个请求。
+               认领不到的（新角色还没进导航框）自然落到米游社、nanoka，
+               绝不拿别人的头像顶。 */
             const bwikiIconMap = {};
             /* test 模式只用 nanoka，Bwiki 整段跳过（作者要求：不许用 Bwiki 和官方数据）。 */
             if (!testMode) {
                 const names = Object.values(chars).map(c => c.zh).filter(Boolean);
-                const limit = 4;
-                let cursor = 0;
-                const worker = async () => {
-                    while (cursor < names.length) {
-                        const zh = names[cursor++];
-                        try {
-                            // Bwiki 页名常用简称（「艾莲」），列表给的是全名（「艾莲·乔」）
-                            const cands = [String(zh).split(/[·・]/)[0].trim(), zh]
-                            for (const cand of [...new Set(cands.filter(Boolean))]) {
-                                const d = await fetchZzzBwikiChar(cand).catch(() => null);
-                                const url = d?.avatar || '';
-                                if (url) { bwikiIconMap[zh] = url; break; }
+                if (names.length) {
+                    try {
+                        // 锚点页取名单第一个角色；Bwiki 页名常用简称，优先用简称请求
+                        const anchor = String(names[0]).split(/[·・]/)[0].trim() || names[0];
+                        const d = await fetchZzzBwikiChar(anchor).catch(() => null);
+                        const avatars = d?.avatars || {};
+                        if (Object.keys(avatars).length) {
+                            for (const zh of names) {
+                                // 导航框头像 alt 可能是简称也可能是全名，两边都认
+                                const cands = [String(zh).split(/[·・]/)[0].trim(), zh];
+                                for (const cand of [...new Set(cands.filter(Boolean))]) {
+                                    const url = avatars[zzzKey(cand)] || '';
+                                    if (url) { bwikiIconMap[zh] = url; break; }
+                                }
                             }
-                        } catch (_) { /* 认不到就跳过，落到下一级 */ }
-                    }
-                };
-                await Promise.all(Array.from({ length: Math.min(limit, names.length) }, worker));
+                        }
+                    } catch (_) { /* 认领失败整批落空，下面两级照常工作 */ }
+                }
                 const hit = Object.keys(bwikiIconMap).length;
                 if (hit < names.length) {
-                    logger.debug?.(`[xhh][图鉴] Bwiki 头像认领 ${hit}/${names.length}，其余回落米游社/nanoka`);
+                    logger.debug?.(`[xhh][图鉴] Bwiki 头像认领 ${hit}/${names.length}（单页认领），其余回落米游社/nanoka`);
                 }
             }
             const matchBwikiIcon = zh => bwikiIconMap[String(zh || '').trim()] || '';
@@ -2502,19 +2504,20 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
     }
 
     //获取详细信息
-    async detail(id, isSr = false, isZZZ = false, isBH3 = false, zzzOfficial = false) {
+    async detail(id, isSr = false, isZZZ = false, isBH3 = false, zzzOfficial = false, type = 'js') {
         if (isZZZ) {
             return await this.zzz_detail(id, zzzOfficial);
         }
         if (isBH3) {
             return await this.bh3_detail(id);
         }
-        // nanoka 优先。米游社的 entry_page 免鉴权会返回空 content（实测 retcode=0 但
-        // content 是空串、ext 是 {}），也就是说这条链本来就得依赖用户 Cookie；
-        // 换到 nanoka 后连 Cookie 都不需要了。
+        // 米游社百科详情接口不需要 Cookie。此前记录的「免鉴权返回空 content、依赖 Cookie」
+        // 结论有误，实际失败原因是 id 体系不一致：entry_page_id 要求米游社体系的 content_id，
+        // 而列表走 nanoka 时这里的 id 是 nanoka 体系（角色 100000xx / 武器 11xxx~15xxx），
+        // 两套编号不同，以 nanoka id 查询 entry_page 必然落空。
         if (!nanokaDown()) {
             try {
-                const data = await this.nanoka_detail(id, isSr);
+                const data = await this.nanoka_detail(id, isSr, type);
                 if (data) return data;
                 logger.warn?.('[xhh][图鉴] nanoka 详情为空，回退米游社官方 Wiki');
             } catch (error) {
@@ -2537,7 +2540,7 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
     }
 
     /**
-     * nanoka 版原神/星铁角色详情。
+     * nanoka 版原神/星铁条目详情（角色/武器/光锥/遗器，按 type 取目录，见下）。
      * 返回 { content: <nanoka 原始对象> }，调用方用 isSr 判断渲染哪套模板。
      *
      * 星铁：ranks(星魂) / skills(技能, 含逐级数值) / unique.stats(1~80级属性成长)
@@ -2545,11 +2548,22 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
      * 原神：skills(4个, 含等级缩放) / constellations(命座) / passives(天赋)
      *       / materials(突破材料) / attack / energy / chara_info
      */
-    async nanoka_detail(id, isSr = false) {
+    /* 详情文件按类型分目录（实测）：
+         hsr: zh/character / zh/lightcone / zh/relicset
+         gi : zh/character / zh/weapon   / zh/artifact
+       以前这里**只拼 character**，于是查光锥/武器时那个 id 被当成角色 id 请求
+       zh/character/{id}.json → 必然 404，又被下面「id 体系不匹配」的分支
+       静默吞掉回退米游社 —— 表现为测试服模式下查光锥直接「不在测试服列表」。
+       现在按 type 选目录，type 由 detail() 透传（默认 js 保持原行为）。 */
+    async nanoka_detail(id, isSr = false, type = 'js') {
         const game = isSr ? 'hsr' : 'gi';
         const base = await nanokaBase(game);
         if (!base) return false;
-        const data = await this.fetchJson(`${base}/zh/character/${id}.json`, `${game} nanoka详情 ${id}`).catch(err => {
+        const DIR = isSr
+            ? { js: 'character', gz: 'lightcone', yq: 'relicset' }
+            : { js: 'character', wq: 'weapon', syw: 'artifact' };
+        const dir = DIR[type] || 'character';
+        const data = await this.fetchJson(`${base}/zh/${dir}/${id}.json`, `${game} nanoka详情 ${id}`).catch(err => {
             // 列表回退到米游社官方 Wiki 时，拿到的 id 是 content_id（505971 这种 6 位），
             // 而 nanoka 的角色 id 全是 10000xxx 形态，压根不存在这个文件 → 404。
             // 这是「id 体系不匹配」的预期结果，不是接口故障，静默返回让调用方走米游社即可，

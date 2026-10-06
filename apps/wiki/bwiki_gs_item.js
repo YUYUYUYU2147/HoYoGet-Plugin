@@ -78,6 +78,21 @@ const flowStory = txt => String(txt || '')
     .replace(/[ \t]{2,}/g, ' ')
     .trim();
 
+/** 武器页卡池信息：UP次数 + 各期祈愿时间段。 */
+function parseGacha(html) {
+    const frame = (html.match(/卡池信息[\s\S]*?<div[^>]*class="ys-collapse-frame"[^>]*>([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>/i) || [])[1] || '';
+    if (!frame) return null;
+    const upCount = Number((frame.match(/UP次数[：:]\s*(\d+)\s*次/) || [])[1]) || 0;
+    const banners = [];
+    const re = /<p>[\s\S]*?<\/a>\s*-\s*([^<]+)<\/p>\s*<ul><li>([^<]+)<\/li>/gi;
+    for (const m of frame.matchAll(re)) {
+        const version = stripHtml(m[1]).trim();
+        const period = stripHtml(m[2]).trim();
+        if (version && period) banners.push({ version, period });
+    }
+    return banners.length ? { upCount, banners } : null;
+}
+
 /**
  * 解析原神武器/圣遗物词条。
  * @param {string} html Bwiki 页面 HTML
@@ -90,7 +105,7 @@ export function parseGsBwikiItem(html, type = 'wq') {
         skillName: '', skillDesc: '', skillNote: '', skillLabel: '武器技能', intro: '',
         version: '', obtain: '', typeName: '', tags: '', refine: '', pool: '',
         panel: [], panelHead: [], materials: [], materialTotal: [], story: '', agents: [], agentsSubjective: false,
-        icon: '',
+        gacha: null, icon: '',
     };
     const text = stripHtml(html);
 
@@ -117,11 +132,14 @@ export function parseGsBwikiItem(html, type = 'wq') {
         out.name = nm.replace(/&#160;|\u00a0/g, '').trim();
     }
     const fieldOf = re => (text.match(re) || [])[1]?.trim() || '';
-    out.atk = fieldOf(/攻击力\s*([\d.]+)\s*-\s*[\d.]+/);
-    out.sub = fieldOf(/暴击伤害\s*([\d.]+%\s*-\s*[\d.]+%)/);
+    // 攻击力取「48-674」区间的满级值（674）；副属性支持暴击率，此前只认暴击伤害，
+    // 赤月之形等副属性为暴击率的武器会被解析成空。
+    out.atk = fieldOf(/攻击力\s*[\d.]+\s*-\s*([\d.]+)/);
+    out.sub = fieldOf(/(?:暴击伤害|暴击率)\s*([\d.]+%\s*-\s*[\d.]+%)/);
     out.subName = /暴击伤害/.test(text) ? '暴击伤害'
-        : /元素充能效率/.test(text) ? '元素充能效率'
-            : /元素精通/.test(text) ? '元素精通' : '';
+        : /暴击率/.test(text) ? '暴击率'
+            : /元素充能效率/.test(text) ? '元素充能效率'
+                : /元素精通/.test(text) ? '元素精通' : '';
     out.version = fieldOf(/实装版本\s*\n?\s*([\d.]+)/);
     out.obtain = fieldOf(/获取途径\s*\n?\s*([^\n]+)/);
     out.typeName = fieldOf(/(?:武器类型|套装类型)\s*\n?\s*([^\n]+)/);
@@ -129,6 +147,7 @@ export function parseGsBwikiItem(html, type = 'wq') {
     out.refine = fieldOf(/精炼材料\s*\n?\s*([^\n]+)/);
     out.intro = fieldOf(/武器介绍\s*\n?\s*([^\n]+)/) || fieldOf(/圣遗物介绍\s*\n?\s*([^\n]+)/);
     out.pool = fieldOf(/卡池信息\s*\n?\s*([^\n]+)/);
+    out.gacha = parseGacha(html);
 
     // 技能 / 套装效果
     if (type === 'wq') {
@@ -229,9 +248,8 @@ export function parseGsBwikiItem(html, type = 'wq') {
         if (head.length) out.panelHead = head;
         if (out.panel.length) break;
     }
-    /* 详细面板只保留最高等级（90 级）那一行 —— 与角色卡/邦布卡同一口径。
-       武器面板是 1~90 级共 16 行，卡面多出十几行没用的数值。
-       取「有数值」的最高等级行；整表都没有可用数值就原样保留（不丢数据）。 */
+    /* 详细面板只保留最高等级（90 级）那一行，并把「突破前/突破后」合并成单一攻击力。
+       武器卡只需要展示满级数值，表头也只保留「等级 | 基础攻击力 | 副属性」。 */
     if (out.panel.length > 1) {
         const lvOf = r => Number(String(r?.lv ?? '').replace(/[^\d.]/g, ''))
         const hasVal = r => (r.cells || []).some(c => c && c.v && c.v !== '-')
@@ -241,27 +259,13 @@ export function parseGsBwikiItem(html, type = 'wq') {
             out.panel = [top]
         }
     }
-    /* 面板列对齐：表头是「等级 | 基础攻击力(突破前/突破后) | 副属性」共 4 列，
-       数据行必须正好 3 个数值格，否则整体错位（实测初始行与 90 级行都只有 3 个值，
-       其中一个是 '-' 表示该等级没有对应数据）。
-       规则：
-         突破前为 '-' → 数值只属于「突破后」，用 colspan=2 横跨两列
-         突破后为 '-' → 突破前正常显示，突破后补一个 '-'
-       这样每行都稳定占满 4 列，不会出现某个数值串到副属性列。 */
     for (const r of out.panel) {
         const vals = r.cells.map(c => c.v);
         const before = vals[0] ?? '-';
         const after = vals[1] ?? '-';
         const sub = vals[2] ?? '-';
-        const cells = [];
-        if (before === '-' && after !== '-') {
-            cells.push({ v: after, span: 2 });          // 只有突破后有值
-        } else {
-            cells.push({ v: before, span: 0 });
-            cells.push({ v: after, span: 0 });           // after 为 '-' 时就是占位 '-'
-        }
-        cells.push({ v: sub, span: 0 });
-        r.cells = cells;
+        const atk = after !== '-' ? after : before;   // 优先取突破后，没有则取突破前
+        r.cells = [{ v: atk, span: 0 }, { v: sub, span: 0 }];
     }
 
     // ── 突破材料 ──
@@ -400,7 +404,11 @@ export function parseGsBwikiItem(html, type = 'wq') {
     }
 
     // ── 推荐角色 + 推荐说明 ──
-    const ri = html.indexOf('id="推荐角色"');
+    // 星铁页的推荐块是 mw-headline 锚点 id="推荐角色"；原神页没有锚点，
+    // 是 <div class="recommended">（见 relic_view.js RULES.gs.agentScope 的注释）。
+    // 之前只认锚点写法，原神的推荐角色与推荐说明整段取不到，agents 恒为空。
+    let ri = html.indexOf('id="推荐角色"');
+    if (ri < 0) ri = html.search(/class="recommended"/);
     if (ri >= 0) {
         const seg = html.slice(ri, ri + 40000);
         // alt 形如「无背景-角色-神里绫华.png」（不是「角色头像-xxx」）
@@ -439,6 +447,10 @@ export function parseGsBwikiItem(html, type = 'wq') {
     // 典型case：苍古自由之誓是枫火的五星弓，Bwiki 圣遗物一览 63 套里并没有这套，
     // 所以它根本没有圣遗物页；硬拼一张卡只会缺面板/材料/套装效果，不如用原卡。
     if (type === 'syw' && out.pageKind === 'wq') return null;
+    // 反向同理：按武器查询、却命中圣遗物页（血红之证这类只有圣遗物页的套装）时返回 null，
+    // 让 weapon() 落空，查询继续交给 syw_yiqi 出圣遗物卡。
+    // 缺这道闸时，weapon() 会以仅有故事的残缺数据截胡圣遗物单查，表现为套装属性消失。
+    if (type === 'wq' && out.pageKind === 'artifact') return null;
 
     /* 圣遗物页只要抓到内容就算成功。四星套装（磐岩结绿这类）页面上
        **没有** 2/4 件套、没有故事，只有单件属性表/突破材料表 ——

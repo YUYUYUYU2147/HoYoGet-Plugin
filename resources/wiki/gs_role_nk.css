@@ -17,7 +17,11 @@ body{margin:0;min-width:1000px;background:#eef1f6;color:#3b4252;
 .hero-txt h1{margin:0;font-size:28px;font-weight:900;color:#1f2937;letter-spacing:.5px}
 .rarity{font-size:15px;font-weight:800;color:#d4a017;margin-left:8px}
 .tags{margin-top:8px;display:flex;gap:7px;flex-wrap:wrap}
-.tag{font-size:12.5px;padding:3px 10px;border-radius:8px;background:#fff;
+/* 需显式设置 display:flex。.tag-ico 中的 gap 与 flex:0 0 auto 均为 flex 专属属性，
+   缺少本声明即全部失效，img 退化为 inline 基线对齐：16px 元素图标的底部落在 12.5px
+   文字基线上，顶部高出字形约 6px（Edge 实测：带图标签的文字被压低 1px、图标顶到框顶），
+   表现为图标与文字不对齐。 */
+.tag{display:flex;align-items:center;font-size:12.5px;padding:3px 10px;border-radius:8px;background:#fff;
   border:1px solid #e2e7ef;color:#5a6478}
 
 /* 两列排版：整张卡在 zoom 2.4 下单列能有 8000+px，QQ 里按宽度缩放后

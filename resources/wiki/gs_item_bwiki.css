@@ -72,3 +72,11 @@
 .corner-test{position:absolute;top:10px;right:10px;z-index:5;padding:2px 8px;border-radius:6px;
   background:linear-gradient(180deg,#ffd76a,#e8a33a);color:#5a3d00;font-size:12px;font-weight:800;
   letter-spacing:1px;box-shadow:0 1px 4px rgba(0,0,0,.18)}
+
+/* 卡池信息 */
+.banners{display:flex;flex-direction:column;gap:5px}
+.banner{display:flex;align-items:center;gap:10px;padding:6px 10px;background:#f6f8fc;
+  border:1px solid #e3e8f2;border-radius:9px}
+.banner .bv{flex:0 0 auto;min-width:96px;font-size:12.5px;font-weight:700;color:#3a4a63}
+.banner .bp{font-size:12px;color:#6b7688;font-variant-numeric:tabular-nums}
+.hint{font-size:12px;font-weight:400;color:#9aa3b2;margin-left:6px}
