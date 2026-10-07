@@ -534,13 +534,20 @@ function getZzzDebut(type = 'js') {
         const dated = (Array.isArray(rows) ? rows : [])
             .filter(r => r && r.type === want)
             .map(r => {
-                const m = String(r.timer || '').match(/(\d{4})\/(\d{1,2})\/(\d{1,2})/);
+                /* 带上时分秒，不能只留日期：卡池表里同一版本的上下半两个 S 档
+                   往往在同一天切换（timer 形如「3.2版本更新后 ~ 2026/09/30 11:59:59」
+                   与「2026/09/30 12:00:00 ~ …」，只差一分钟）。只取 YYYY/M/D 会把两条
+                   压成同一时间戳，_ord 相同 → 顺序退化成 nanoka id 升序，而 id 并不等于
+                   上线顺序（返厂补录会插队），实测 19 组同日并列里有 10 组上下半颠倒。
+                   带时分后按真实切换时刻排序，与游戏内上线顺序一致。 */
+                const m = String(r.timer || '').match(/(\d{4})\/(\d{1,2})\/(\d{1,2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
                 if (!m) return null;
-                const t = Date.parse(`${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}T00:00:00Z`);
+                const hms = `${(m[4] || '00').padStart(2, '0')}:${m[5] || '00'}:${m[6] || '00'}`;
+                const t = Date.parse(`${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}T${hms}Z`);
                 return { t, name: zzzSortKey(r.s) };
             })
             .filter(v => v && Number.isFinite(v.t) && v.name)
-            // 文件顺序不等于时间顺序（存在上下半同日期的条目），必须按日期显式升序
+            // 文件顺序不等于时间顺序（存在上下半同一天的条目），必须按时间戳显式升序
             .sort((a, b) => a.t - b.t);
         for (const v of dated) {
             if (!zzzDebutCache[key].has(v.name)) zzzDebutCache[key].set(v.name, v.t);

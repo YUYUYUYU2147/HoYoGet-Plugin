@@ -7,7 +7,7 @@ import { fetchGsBwikiItem, fetchGsBwikiItemHtml } from './wiki/bwiki_gs_item.js'
 import { mihoyoItemAgents, mihoyoEntryId, mihoyoDiscParts } from './wiki/mihoyo_agents.js';
 import { zzzDiscAgents } from './wiki/zzz_disc_agents.js';
 import { fetchSrBwikiItem } from './wiki/bwiki_sr_item.js';
-import { fetchZzzBwikiWeapon, fetchZzzBwikiDisc, fetchZzzBwikiChar, fetchZzzBwikiBangboo } from './wiki/bwiki_zzz.js';
+import { fetchZzzBwikiWeapon, fetchZzzBwikiDisc, fetchZzzBwikiChar, fetchZzzBwikiBangboo, fetchZzzBwikiRoleCamps, zzzKey } from './wiki/bwiki_zzz.js';
 import { fetchZzzRoleCard } from './wiki/zzz_role.js';
 import { fetchMihoyoBangboo, buildBangbooView } from './wiki/bangboo_view.js';
 import { fetchSrGuide } from './wiki/bwiki_sr_guide.js';
@@ -993,6 +993,28 @@ export class Wiki extends plugin {
           data = data.filter(item => item.mingtu === '欢愉');
           _name = '欢愉角色';
           break;
+      }
+    }
+    /* 绝区零角色列表：给头像右上角补阵营角标（Bwiki「角色图鉴」页的 Logo-阵营图标-*.png）。
+       与排序、筛选、徽章都无关，只多挂 camp / campIcon 两个展示字段。
+       测试服数据模式整段跳过 —— Bwiki 是正式服站，角标也不该混进测试服列表。
+       两种数据源的写法不一致（Bwiki「艾莲·乔」/ nanoka「艾莲」），
+       故先精确匹配、再退到包含匹配；整批抓不到就一条都不挂，列表照旧渲染。 */
+    if (isZZZ && type === 'js' && !isTestDataMode()) {
+      const camps = await fetchZzzBwikiRoleCamps().catch(() => null);
+      if (camps?.size) {
+        const entries = [...camps];
+        data = data.map(item => {
+          const key = zzzKey(item.name);
+          if (!key) return item;
+          const exact = camps.get(key);
+          /* 包含匹配限定在长度差 3 以内：只够覆盖「艾莲」↔「艾莲·乔」这类
+             全名/简称差异，又不至于让单字名（「照」「简」）到处乱撞。 */
+          const loose = entries.find(([k, v]) => v.icon && Math.abs(k.length - key.length) <= 3
+            && (k.includes(key) || key.includes(k)))?.[1];
+          const hit = exact?.icon ? exact : loose;
+          return hit?.icon ? { ...item, camp: hit.camp, campIcon: hit.icon } : item;
+        });
       }
     }
     const ratingOrder = { 五星: 1, 'S级': 1, 四星: 2, 'A级': 2, 三星: 3, 'B级': 3, 二星: 4, 一星: 5 };

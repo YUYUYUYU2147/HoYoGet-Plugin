@@ -90,6 +90,44 @@ export async function fetchZzzBwikiPage(name) {
   return '';
 }
 
+/* ══════════════ 角色图鉴页 → 阵营（列表头像角标用）═══════════════
+   Bwiki「角色图鉴」的卡片与星铁图鉴同一套模板，阵营直接写在卡片的筛选属性里：
+
+     <div class="role-box divsort" data-param1="S" data-param2="风"
+          data-param3="罗斯凯利法·弗林特工坊" data-param4="击破">
+       <a href="/zzz/洛克茜" title="洛克茜"><img alt="Logo-阵营图标-罗斯凯利法·弗林特工坊.png" src="…"></a>
+       <a href="/zzz/洛克茜" title="洛克茜"><img alt="角色头像-洛克茜.png" src="…"></a>
+
+   即 data-param3 是阵营名，块内第一张图就是该阵营的 Logo（原图 254×251，
+   体积不大且 URL 不含中文，无需再拼缩略图）。
+   阵营图标本仓库没有本地资源，与单角色卡的徽章走同一份 Bwiki 图。
+
+   角色名两种数据源写法不一致（Bwiki「艾莲·乔」/ nanoka「艾莲」），
+   因此按 zzzKey 归一化后建表，取用时精确匹配优先、包含匹配兜底。
+   抓取失败（含 567 限流熔断）返回空 Map，调用方不渲染角标即可，列表不受影响。 */
+let roleCampCache = null;
+
+/** @returns {Promise<Map<string, {camp: string, icon: string}>>} 归一化角色名 → 阵营 */
+export async function fetchZzzBwikiRoleCamps() {
+  if (roleCampCache && Date.now() - roleCampCache.t < CACHE_TTL) return roleCampCache.v;
+  const map = new Map();
+  const html = await fetchZzzBwikiPage('角色图鉴');
+  if (html) {
+    // 每张卡片截到下一张卡片为止，避免跨卡片取到别人的 Logo
+    const blocks = String(html).split(/(?=<div[^>]*class="[^"]*role-box)/).slice(1);
+    for (const b of blocks) {
+      const name = decodeTxt((b.match(/title="([^"]+)"/) || [])[1] || '').trim();
+      const camp = decodeTxt((b.match(/data-param3="([^"]*)"/) || [])[1] || '').trim();
+      const icon = origIcon((b.match(/<img[^>]*alt="Logo-阵营图标-[^"]*"[^>]*src="([^"]+)"/) || [])[1] || '');
+      const key = zzzKey(name);
+      if (key && camp && !map.has(key)) map.set(key, { camp, icon });
+    }
+  }
+  if (!map.size) return map;
+  roleCampCache = { t: Date.now(), v: map };
+  return map;
+}
+
 /**
  * 解析 Bwiki 角色页。
  * @returns 徽章数组（顺序即展示顺序）、生日身高、以及攻略三块
