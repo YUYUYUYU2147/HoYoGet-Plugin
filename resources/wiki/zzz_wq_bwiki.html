@@ -38,16 +38,25 @@
   </div>
   {{/if}}
 
+  {{if panel && panel.length}}
   <div class="row">
     <div class="cell">
-      <div class="cell-t">基础攻击力</div>
-      <div class="cell-v">{{baseAtk || '-'}}</div>
-    </div>
-    <div class="cell">
-      <div class="cell-t">副属性 · {{randName || '-'}}</div>
-      <div class="cell-v">{{randValue || '-'}}</div>
+      <div class="cell-t">详细面板</div>
+      <!-- 仅输出最高等级一行，且不再区分「突破前 / 突破后」两列。
+           数据层已将该行裁成 { lv, atk, sub } 三个值，模板按三列直出；
+           ⚠ 此处不可再带 colspan —— 表头只有三列，合并格会把副属性挤到第四列。
+           原独立的「基础攻击力 / 副属性」栏与本表数值重复，已删除，本栏即占用该位置。 -->
+      <table class="tb">
+        <thead>
+          <tr><th>等级</th><th>基础攻击力</th><th>{{randName || '副属性'}}</th></tr>
+        </thead>
+        <tbody>
+          {{each panel p}}<tr><td>{{p.lv}}</td><td>{{p.atk}}</td><td>{{p.sub}}</td></tr>{{/each}}
+        </tbody>
+      </table>
     </div>
   </div>
+  {{/if}}
 
   {{if talent.name || talent.desc}}
   <div class="row">
@@ -70,35 +79,15 @@
   </div>
   {{/if}}
 
-  {{if panel && panel.length}}
-  <div class="row">
-    <div class="cell">
-      <div class="cell-t">详细面板</div>
-      <!-- 表头必须两行：基础攻击力横跨「突破前/突破后」两列，
-           少一行的话 4 个数值塞进 3 个表头，看着就全错位了。 -->
-      <table class="tb">
-        <thead>
-          <tr><th rowspan="2">等级</th><th colspan="2">基础攻击力</th><th rowspan="2">{{randName || '副属性'}}</th></tr>
-          <tr><th>突破前</th><th>突破后</th></tr>
-        </thead>
-        <tbody>
-          {{each panel p}}<tr><td>{{p.lv}}</td>{{each p.cells c}}<td{{if c.span}} colspan="{{c.span}}"{{/if}}>{{c.v}}</td>{{/each}}</tr>{{/each}}
-        </tbody>
-      </table>
-    </div>
-  </div>
-  {{/if}}
-
-  {{if materials && materials.length}}
+  {{if materialTotal && materialTotal.length}}
   <div class="row">
     <div class="cell">
       <div class="cell-t">突破材料</div>
+      <!-- 仅显示「总计」一行：逐级各档材料与合计重复，合计已足够表达。
+           逐级数据仍由 parseZzzBwikiWeapon 解析，仅不再渲染。 -->
       <table class="tb">
         <tbody>
-          {{each materials m}}<tr><td class="stage">{{m.stage}}</td><td>{{each m.items it}}<span class="mat">{{if it.img}}<img src="{{it.img}}" alt="" />{{/if}}{{it.name}} × {{it.num}}</span>{{/each}}</td></tr>{{/each}}
-          {{if materialTotal && materialTotal.length}}
           <tr class="total"><td class="stage">总计</td><td>{{each materialTotal it}}<span class="mat">{{if it.img}}<img src="{{it.img}}" alt="" />{{/if}}{{it.name}} × {{it.num}}</span>{{/each}}</td></tr>
-          {{/if}}
         </tbody>
       </table>
     </div>

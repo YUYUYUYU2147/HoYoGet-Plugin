@@ -43,7 +43,7 @@ const ZZZ_PROP_NAMES = {
 };
 
 // 兼容 ZZZ-Plugin（ZZZure/ZZZ-Plugin）的代理人别名表：
-// 它的别名同样是「正式名: [别名列表]」，但存在 config/alias.yaml（用户自定义）与 defSet/alias.yaml（默认）两处，
+// 它的别名同样是「正式名: [别名列表]」，但存在 config/alias.yaml（本地自定义）与 defSet/alias.yaml（默认）两处，
 // 且会随版本更新补充新角色/英文别名。这里读它做补充，本地表优先。
 const ZZZ_PLUGIN_ALIAS_FILES = [
   './plugins/ZZZ-Plugin/config/alias.yaml',
@@ -65,7 +65,7 @@ function zzzPluginAliasMap() {
         // 数组是默认写法；对象形态（{name, full_name, alias}）也兼容一下
         const list = Array.isArray(val) ? val : [val?.name, val?.full_name, val?.alias, ...(val?.aliases || [])];
         for (const key of [fk, ...list.map(norm)].filter(Boolean)) {
-          if (!map[key]) map[key] = formal; // 先读 config，用户自定义优先
+          if (!map[key]) map[key] = formal; // 先读 config，本地自定义优先
         }
       }
     } catch (_) { /* 插件不存在或格式异常时忽略 */ }
@@ -246,6 +246,11 @@ const isTestDataMode = () => {
 const GS_STAR_ICON = {
     5: 'https://patchwiki.biligame.com/images/ys/f/ff/0dlkmof43y8aam8fphgixaejy571iqc.png',
     4: 'https://patchwiki.biligame.com/images/ys/2/2a/ssqzx9cint7m3yudjwviabu4nkd8s9o.png',
+};
+// 星铁版星条（维基缩略图，实测 五星 77×21、四星 66×21，均返回 200）
+const SR_STAR_ICON = {
+    5: 'https://patchwiki.biligame.com/images/sr/thumb/c/c7/g380fo4o5accoa1rmlckz3e24vpx23e.png/77px-5%E6%98%9F.png',
+    4: 'https://patchwiki.biligame.com/images/sr/thumb/9/9c/m5jb29e4h1q35a5etj8t7ehaemzr3kk.png/66px-4%E6%98%9F.png',
 };
 
 export class Wiki extends plugin {
@@ -661,9 +666,9 @@ export class Wiki extends plugin {
     
     let data = await mys.data('', type, isSr, isZZZ, isBH3);
 
-    /* test 模式禁用官方兜底后，nanoka 一挂列表就是空的（见 4.1'''）。
-       静默返回空数组的话，用户看到的是一张空图，完全不知道是「没数据」
-       还是「插件坏了」。这里显式说明原因并给出下一步。
+    /* test 模式禁用官方兜底后，nanoka 一旦不可用，列表即为空白（见 4.1'''）。
+       若静默返回空数组，呈现出来的只是一张空图，无从判断是「无数据」
+       还是「插件异常」。此处显式说明原因并给出后续操作建议。
        注意不能用 `!data.length` 一刀切 —— 绝区零邦布/音擎这类
        test 模式下本来就可能真的为空（该游戏还没进测试服），那种情况
        要提示「该类别暂无测试服数据」而不是「nanoka 不可用」。 */
@@ -1045,6 +1050,12 @@ export class Wiki extends plugin {
     data = data.map(item => ({
       ...item,
       rankClass: rankClassMap[item.ji] || 'r0',
+      /* 星铁角色列表补星级图标：星铁条目走 nanoka，本身没有 rarityIcon 这个键，
+         以前整列只有描边和「五星」文字，头像上方是空的。
+         按归一化后的中文星级取星条，list.html 的 .ava-stars 会压在头像上沿居中
+         （即名字上方）。只给星铁角色：光锥的星级含义不同、遗器没有星级，都不加。 */
+      rarityIcon: item.rarityIcon ||
+        (isSr && type === 'js' ? (SR_STAR_ICON[item.ji === '五星' ? 5 : item.ji === '四星' ? 4 : 0] || '') : ''),
       /* TEST 角标只在 test 数据模式下出现，且**不再塞进 badges**——
          它以前混在徽章行里（名字下方），跟星级/属性徽章挤在一列，
          一眼看不出是「这条是测试服」。现在单独走 isTest，
@@ -1081,12 +1092,12 @@ export class Wiki extends plugin {
     // 截图上限（120 条起报 Page is too large / Unable to capture screenshot）。
     // 100 条虽能截出但已有 21437px 高、6.1MB，发到 QQ 被拒（rich media transfer
     // failed，日志里那条 16.7MB 的图就是这么发不出去的）。
-    // 曾试过渲染器的 data.multiPage，但它只切截图，700 张远程图标仍会一次性
-    // 加载进同一页面，内存一样顶不住；分批渲染每批 60 条倒是能跑通，只是要发
-    // 8 到 12 张图，太吵。
-    // 改用 wiki/list_dense：8 列、图标 40px。实测五星圣痕 449 条
-    // 2895px 高、0.73MB（jpeg），全量 700 条同排版也在同一量级，一张图搞定。
-    // 紧凑排版只给崩坏三圣痕用，别的一律走 wiki/list。
+    // 曾尝试渲染器的 data.multiPage，但其仅切分截图，700 张远程图标仍会一次性
+    // 加载进同一页面，内存同样无法承受；分批渲染每批 60 条虽可跑通，却需发送
+    // 8 至 12 张图片，消息过于冗杂。
+    // 改用 wiki/list_dense：8 列、图标 40px。实测五星圣痕 449 条为
+    // 2895px 高、0.73MB（jpeg），全量 700 条沿用同一排版亦在同一量级，单张图即可承载。
+    // 紧凑排版仅用于崩坏三圣痕，其余一律走 wiki/list。
     //
     // 圣痕需要特殊处理：米游社官方频道有 700 条（五星 475、四星 204、三星 15、
     // 二星 6），走 wiki/list 的竖排会直接崩 —— 页面过高超出 Chromium 截图上限
@@ -2493,12 +2504,32 @@ export class Wiki extends plugin {
         logger.debug?.(`[xhh][bwiki_zzz] ${name} 官方音擎列表匹配失败: ${err?.message}`);
       }
     }
-    return render('wiki/zzz_wq_bwiki', { ...d, name, icon }, { e, ret: true });
+    /* 详细面板仅保留最高等级那一行：Bwiki 原表为「初始 / 10 / 20 / … / 60」全量，
+       逐级列出与顶部「基础攻击力 / 副属性」两栏重复。
+       等级列中存在「初始」这类非数字值，须先按数值取最大者；全为非数字时退回最后一行。
+       同时不再输出「突破前 / 突破后」两列，此处直接将最高等级那行拆成
+       { lv, atk, sub } 三个平值：副属性恒为最后一格，基础攻击力取其前一格
+       （满级行原本是 colspan=2 的合并格，拆平后必须丢弃 colspan，
+       否则模板三列的表头会被撑出第四列，副属性整体错位）。 */
+    const panelRows = Array.isArray(d.panel) ? d.panel : [];
+    const maxLvRow =
+      panelRows.filter(r => Number.isFinite(Number(r?.lv))).sort((a, b) => Number(b.lv) - Number(a.lv))[0] ||
+      panelRows[panelRows.length - 1] ||
+      null;
+    const cells = Array.isArray(maxLvRow?.cells) ? maxLvRow.cells : [];
+    const panel = maxLvRow
+      ? [{
+        lv: maxLvRow.lv,
+        atk: (cells.length > 1 ? cells[cells.length - 2] : cells[0])?.v || '',
+        sub: (cells.length > 1 ? cells[cells.length - 1] : null)?.v || '',
+      }]
+      : [];
+    return render('wiki/zzz_wq_bwiki', { ...d, name, icon, panel }, { e, ret: true });
   }
 
   // 绝区零驱动盘的 nanoka 兜底视图：Bwiki 抓不到（限流熔断 / 词条缺失）时用，
   // 把 nanoka 的字段映射成与 Bwiki 词条同构的视图，仍渲染新版卡 zzz_syw_bwiki
-  // —— 作者要求「只要新卡」，不回落旧模板 wiki/zzz_syw。
+  // —— 统一渲染新版卡，不回落旧模板 wiki/zzz_syw。
   // nanoka 驱动盘详情只有 id/name/icon/desc2/desc4/story，
   // 缺稀有度/版本/获取途径/TAG，这些留空，模板按 {{if}} 不渲染。
   async zzz_syw_nanoka_view(name) {
@@ -2547,8 +2578,8 @@ export class Wiki extends plugin {
     } catch (err) {
       logger.debug?.(`[xhh][bwiki_zzz] ${name} 驱动盘词条抓取异常: ${err?.message}`);
     }
-    /* Bwiki 抓不到时**不回退旧模板**：换 nanoka 数据源取 2/4 件套与描述，
-       仍出新版卡（作者要求「只要新卡」）。nanoka 也没有才交给外层回落。 */
+    /* Bwiki 抓取失败时**不回退旧模板**：改用 nanoka 数据源取 2/4 件套与描述，
+       仍渲染新版卡。nanoka 亦无该数据时，方交由外层回落。 */
     if (!d) d = await this.zzz_syw_nanoka_view(name);
     if (!d) return false;
     /* 推荐代理人按注释约定走米游社词条页的「推荐角色 / 推荐理由」（zzz_disc_agents.js，

@@ -900,7 +900,11 @@ export function parseSrItemList(html) {
   for (let i = 0; i < starts.length; i++) {
     const attrs = starts[i][1] || '';
     const seg = (html || '').slice(starts[i].index, starts[i + 1] ? starts[i + 1].index : (html || '').length);
-    const name = ((seg.match(/<a href="\/sr\/[^"]*" title="([^"]+)"/) || [])[1] || '').trim();
+    /* 名称取自锚点 title 属性，其中的 & 在 HTML 源码里写作 &amp;，必须解码。
+       不解码时「托帕&amp;账账」与 nanoka 的「托帕&账账」经 nmKey 归一后仍不相等，
+       mergeSrBwikiIcons 会判定 Bwiki 独有条目并追加一条，列表里于是出现两个托帕，
+       且追加的那条把 &amp; 原样显示出来。此处与下方 alt 的处理保持一致。 */
+    const name = decode(((seg.match(/<a href="\/sr\/[^"]*" title="([^"]+)"/) || [])[1] || '').trim());
     if (!name) continue;
     // 底版图（角色一览-底版.png / 遗器一览-底版.png）要跳过，
     // 取剩下那张：光锥/角色是「xxx-无背景.png」，遗器是套装图。
@@ -983,8 +987,11 @@ export function parseGsRoleList(html) {
     const body = m[3] || '';
     const g = k => ((attrs.match(new RegExp(`data-param${k}="([^"]*)"`)) || [])[1] || '');
     const img = (body.match(/<img[^>]*src="([^"]+)"/) || [])[1] || '';
-    const name = ((body.match(/<div class="L">([^<]*)<\/div>/) || [])[1] || '').trim()
-      || ((body.match(/<a[^>]*title="([^"]+)"/) || [])[1] || '').trim();
+    /* 与星铁一览同理：名称里的 & 在 HTML 源码中写作 &amp;，不解码就与 nanoka 的
+       正式名对不上，mergeGsBwikiRoleIcons 会把它当成独有条目再追加一条
+       （如奥菲丝&「鬼火」），列表内出现重复条目且名称显示成实体原文。 */
+    const name = decode(((body.match(/<div class="L">([^<]*)<\/div>/) || [])[1] || '').trim())
+      || decode(((body.match(/<a[^>]*title="([^"]+)"/) || [])[1] || '').trim());
     if (!name) continue;
     out.push({
       name,

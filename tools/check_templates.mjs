@@ -10,7 +10,7 @@ import fs from 'fs'
 import art from 'art-template'
 import path from 'path'
 
-// tools/ 在 plugins/xhh/tools/，插件根就是它的上两级…其实是上一级
+// tools/ 位于 plugins/xhh/tools/，插件根目录即其上一级
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const wikiDir = path.join(root, 'resources/wiki')
 
@@ -33,7 +33,8 @@ const cases = [
   ['遗器类', 'relic_bwiki', { name: '测试遗器', sys: {}, agents: [], set2: '', set4: '', story: '', storyTitle: '故事', setIcons: [], pieceIcons: [], cornerIcons: [], badges: [], tables: [] }],
   ['绝区零角色', 'zzz_role_nk', { name: '测试代理人', sys: {}, info: [], stats: [], skillGroups: [], avatars: {}, badges: [], materials: [] }],
   ['绝区零邦布', 'zzz_yq_bwiki', { name: '测试邦布', sys: {}, stats: [], talents: [], teams: [], teamReasons: [], panel: [], panelSub: [], panelSubHead: [], materials: [], materialTotal: [] }],
-  ['绝区零音擎', 'zzz_wq_bwiki', { name: '测试音擎', sys: {}, baseAtk: '112', randName: '暴击率', randValue: '5%', talent: { name: 'x', desc: 'y' }, agents: [], panel: [], materials: [], materialTotal: [] }],
+  // 音擎面板改为仅输出最高等级一行，且不再区分突破前 / 突破后，视图字段相应调整为 { lv, atk, sub }
+  ['绝区零音擎', 'zzz_wq_bwiki', { name: '测试音擎', sys: {}, baseAtk: '112', randName: '暴击率', randValue: '5%', talent: { name: 'x', desc: 'y' }, agents: [], panel: [{ lv: '60', atk: '713', sub: '24%' }], materials: [], materialTotal: [{ name: '丁尼', num: '40万' }] }],
 ]
 for (const [label, tpl, view] of cases) {
   const src = fs.readFileSync(path.join(wikiDir, tpl + '.html'), 'utf8').replace('{{ppath}}', 'file://' + wikiDir + '/')

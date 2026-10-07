@@ -849,6 +849,56 @@ const gsArtifactList = artifacts => Object.entries(artifacts || {}).map(([id, a]
     .sort((a, b) => a._sortStar - b._sortStar || b._sortId - a._sortId)
     .map(({ _sortId, _sortStar, ...rest }) => rest);
 
+/* ---------------------------------------------------------------------------
+ * 官方原神圣遗物名单（ys_obc 频道 218），作为「已实装」的权威名单。
+ *
+ * 用途：nanoka 的 artifact.json 收录了游戏内**已移除**的套装（实测 2 条：
+ *   15004 冰之川与雪之砂、15012 祭风之人）。判据三条互相印证：
+ *     ① 官方 63 条名单里没有（双向差集：只在 nanoka 的正好这 2 条，只在官方的 0 条）
+ *     ② nanoka 自己的图标素材 UI_RelicIcon_15004_* / _15012_* 后缀 _1~_5 全部 404
+ *     ③ Bwiki 页面明写「该圣遗物已移除出游戏」、获取方式「已移除」
+ *   其中 15012 更明显：只有 1 个件套（祭风礼冠），同系列祭火/祭水/祭雷/祭冰都在游戏里。
+ * 这些条目有套装文本、没图标，混进正式服列表就是两个空图格子。
+ *
+ * ⚠ 只在正式服模式使用。测试服模式不得使用官方源划边界（4.1'''），
+ *   而且真正的测试服新套装同样不在官方名单里 —— 照此剔除会把它们一并挡掉。
+ *
+ * 代价：实测 40.3KB / 0.2s，10 分钟缓存；取不到时**不剔除**（宁可多列两条，不误删）。
+ * -------------------------------------------------------------------------- */
+const GS_ARTIFACT_OFFICIAL_URL =
+    'https://api-takumi-static.mihoyo.com/common/blackboard/ys_obc/v1/home/content/list?app_sn=ys_obc&channel_id=218';
+const GS_ARTIFACT_OFFICIAL_TTL = 10 * 60 * 1000;
+let gsArtifactOfficialCache = null;
+const normSywName = v => String(v || '').replace(/[\s「」·・\-—_]/g, '');
+/** 返回官方圣遗物名集合；取不到时返回 null（调用方据此跳过剔除）。 */
+const fetchOfficialGsArtifactNames = async () => {
+    const now = Date.now();
+    if (gsArtifactOfficialCache && now - gsArtifactOfficialCache.at < GS_ARTIFACT_OFFICIAL_TTL) {
+        return gsArtifactOfficialCache.set;
+    }
+    /* 取两次：单次失败会让剔除整体跳过（那两条空图又混回列表），所以给一次重试。
+       ⚠ 失败日志走 warn 而不是 debug —— 剔除为什么不生效，必须能在默认日志级别看到。 */
+    for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+            if (attempt) await new Promise(r => setTimeout(r, 800));
+            const res = await (await fetch(GS_ARTIFACT_OFFICIAL_URL, { signal: AbortSignal.timeout(15000) })).json();
+            const list = res?.data?.list?.[0]?.list || [];
+            const set = new Set(list.map(x => normSywName(x.title)).filter(Boolean));
+            if (!set.size) throw new Error('官方圣遗物名单为空');
+            gsArtifactOfficialCache = { at: now, set };
+            return set;
+        } catch (err) {
+            if (attempt) {
+                logger.warn?.(`[xhh][图鉴] 官方圣遗物名单获取失败，本次不剔除（保留 nanoka 全量）: ${err?.message || err}`);
+            } else {
+                logger.debug?.(`[xhh][图鉴] 官方圣遗物名单第 1 次失败，重试: ${err?.message || err}`);
+            }
+        }
+    }
+    // 两次都失败就用上一次的（哪怕过期）—— 有名单好过没有，但绝不据此删空列表
+    return gsArtifactOfficialCache?.set || null;
+};
+
 /**
  * 绝区零驱动盘图标：icon 字段是游戏内资源路径
  * UI/Sprite/A1DynamicLoad/IconSuit/UnPacker/SuitXxx.png，
@@ -1403,9 +1453,32 @@ class mys {
         // （过滤条件 name||icon 会把它们全放进来，列表直接被杂物淹没）；
         // 星铁那 1600 条的字段名是 item_name / item_figure_icon_path，
         // name||icon 一个都匹配不上，列表会是空的。
-        // 米游社官方 Wiki 反而落后：圣遗物 63 条、遗器 60 条，比 nanoka 少 2 和 4 套，
-        // 缺的正是新出的那几套（实测 nanoka 是官方 Wiki 的严格超集）。
-        const relicList = isGs ? gsArtifactList(relics) : hsrRelicsetList(relics);
+        // 米游社官方 Wiki 反而落后：圣遗物 63 条、遗器 60 条，比 nanoka 少 2 和 4 套。
+        // ⚠ 实测更正（2026-10-07）：原神少的那 2 套**不是**新套装 ——
+        //   双向差集结果是「只在 nanoka：2 条；只在官方：0 条」，
+        //   少的正是已移除的 15004 冰之川与雪之砂、15012 祭风之人。
+        //   星铁那 4 套才是新出的（nanoka 对遗器仍是官方 Wiki 的超集）。
+        const rawRelics = isGs ? gsArtifactList(relics) : hsrRelicsetList(relics);
+        /* 正式服模式：按官方圣遗物名单剔除 nanoka 收录、但游戏内已移除的套装
+           （实测 2 条，判据见 fetchOfficialGsArtifactNames 的注释）。
+           测试服模式不使用 —— 官方源不得用于划分测试服边界（4.1'''），
+           而且真正的测试服套装同样不在官方名单里，照此剔除会把它们一并挡掉。 */
+        let relicList = rawRelics;
+        if (isGs && this.getDataMode() === 'official') {
+            const official = await fetchOfficialGsArtifactNames();
+            if (official && official.size) {
+                const kept = rawRelics.filter(x => official.has(normSywName(x.title)));
+                if (kept.length) {
+                    if (kept.length !== rawRelics.length) {
+                        logger.info?.(`[xhh][图鉴] 官方名单剔除已移除套装：圣遗物 ${rawRelics.length} → ${kept.length} 条`);
+                    }
+                    relicList = kept;
+                } else {
+                    // 名单取到却一条都匹配不上 = 数据结构有变，保留原列表，绝不删空
+                    logger.debug?.('[xhh][图鉴] 官方圣遗物名单无一命中，保留 nanoka 全量列表');
+                }
+            }
+        }
 
         // nanoka 把旅行者/奇偶的七个形态平铺成 xxx-2 ~ xxx-8（实测 28 条），
         // 而且 character.json 里**没有本体条目**（10000005 / 10000117 等都不存在），
@@ -1483,11 +1556,17 @@ class mys {
         let gz_list = [], wq_list = [];
         if (isGs) {
             wq_list = weaponEntries
-                /* 图鉴只收 4★/5★：星铁光锥最低 3★ 但实际也是 3★/4★/5★ 一档，
-                   绝区零音擎是 3/4/5 星，唯独原神武器有 1★~3★ 的免费武器（实测 34 条：
-                   信使/弹弓/反曲弓/猎弓/学徒笔记/无锋剑…）。这些是合成产物不是卡池内容，
-                   图鉴里没有检索价值，统一不收。 */
-                .filter(([, w]) => Number(w.rank) >= 4)
+                /* 图鉴收录 3★ 及以上。原神另有 1★/2★ 的免费武器（实测各 5 条，
+                   训练用单手剑、新手长枪一类，属系统赠送的合成产物，无检索价值），仍不收录。
+                   3★ 实测 24 把：冷刃 / 黎明神剑 / 旅行剑 / 暗铁剑 / 吃虎鱼刀 / 飞天御剑 /
+                   铁影阔剑 / 沐浴龙血的剑 / 白铁大剑 / 以理服人 / 飞天大御剑 / 白缨枪 / 钺矛 /
+                   黑缨枪 / 魔导绪论 / 讨龙英杰谭 / 异世界行记 / 翡玉法球 / 甲级宝珏 /
+                   鸦羽弓 / 神射手之誓 / 反曲弓 / 弹弓 / 信使，图标 24 张实测全部返回 200。
+                   #三星武器 分档、ratingOrder 排序与 list.css 的 r3 描边均已支持三星，
+                   放开过滤即可直接呈现。
+                   此判定只对原神武器生效：星铁光锥的 rank 是 CombatPowerLightconeRarityN，
+                   走下面的 else 分支，不受影响。 */
+                .filter(([, w]) => Number(w.rank) >= 3)
                 .map(([id, w]) => {
                 const icon = nanokaGsItemIcon(w.icon);
                 return {

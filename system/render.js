@@ -1,4 +1,11 @@
 import { config } from '#xhh';
+import fs from 'node:fs';
+// 临时自测：验证 system/ 下的模块是否随热重载重新求值。
+// 置于模块顶层 —— 只要本模块被重新加载就会输出一行，无需触发任何指令。
+// 日志之外再落盘一份标记，避免日志被过滤或 console 未被捕获导致误判。
+// 验证通过后删除本段。
+logger.info?.('[xhh][热重载自测] system/render.js 模块已加载');
+try { fs.appendFileSync('./plugins/xhh/temp/hot_reload.log', `${new Date().toISOString()} render.js 模块加载\n`) } catch (_) { }
 async function render(path, data_, cfg) {
   let tplFile =
     data_.tplFile || process.cwd() + '/plugins/xhh/resources/' + path + '.html';

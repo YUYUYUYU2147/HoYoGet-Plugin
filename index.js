@@ -1,5 +1,24 @@
 import fs from 'node:fs';
-import yaml from './system/yaml.js';
+import NodeModule from 'node:module';
+
+/* 全模块热重载：框架热重载只给插件入口加 cache bust，插件内部的 import 都是
+   裸相对路径，会命中 ESM 缓存 —— system/ 与 apps 子目录改完仍跑旧代码。
+   这里在任何插件模块被导入之前注册 resolve 钩子，让整条依赖链一起失效
+   （实现见 system/hot/hooks.mjs）。
+   用默认导入而非具名导入：Node < 20.6 没有 register，具名导入会在链接期直接报错，
+   那样低版本连启动都起不来；这里走 typeof 判断，缺失就跳过，不影响正常加载。 */
+if (!globalThis.__xhhHotHooked) {
+  try {
+    if (typeof NodeModule.register !== 'function') throw new Error('node:module 未提供 register（需 Node ≥ 20.6）');
+    NodeModule.register('./system/hot/hooks.mjs', import.meta.url);
+    globalThis.__xhhHotHooked = true;
+    // 成功也要留痕：排查「热重载为什么没生效」时，先确认这一行在不在日志里
+    logger.info?.('[xhh] 热重载钩子已注册：插件内所有模块随热重载一起失效');
+  } catch (err) {
+    logger.warn?.(`[xhh] 热重载钩子注册失败，仅入口可热重载：${err?.message || err}`);
+  }
+}
+const { default: yaml } = await import('./system/yaml.js');
 
 logger.info('\x1B[31m---------៷>ᴗ<៷---------\x1B[0m');
 logger.info('\x1B[31m小花火插件正在载入...\x1B[0m');
