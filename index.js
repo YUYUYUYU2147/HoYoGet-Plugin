@@ -114,7 +114,20 @@ for (let i in files) {
     logger.error(ret[i].reason);
     continue;
   }
-  apps[name] = ret[i].value[Object.keys(ret[i].value)[0]];
+  // 只认真正的插件类（原型继承自全局 plugin）。曾因某模块把工具函数导出在前，
+  // 盲取第一个导出会把函数当类注册：new fn() 得到无 task 的对象，
+  // 框架 collectTask 读 .cron 直接抛错、整个插件加载失败。
+  const exportsObj = ret[i].value
+  const base = globalThis.plugin
+  // 不做「有 prototype 就算」的兜底：那样等于退回旧行为，工具函数仍会被当类注册
+  const cls = typeof base === 'function'
+    ? Object.values(exportsObj).find(v => typeof v === 'function' && v.prototype instanceof base)
+    : null
+  if (!cls) {
+    logger.error(`[xhh] ${logger.red(name)} 未导出插件类，已跳过注册`)
+    continue
+  }
+  apps[name] = cls
 }
 
 // 启动手动验证码服务（必须在所有模块就绪后调用，config 才可读）
