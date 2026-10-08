@@ -15,7 +15,7 @@ import {
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { render, pluginPriority } from '#xhh'
+import { mhy, render, pluginPriority } from '#xhh'
 import MysInfo from '../../genshin/model/mys/mysInfo.js'
 
 // ESM 作用域没有 __dirname，按仓库既有写法（apps/custom_guide.js）从 import.meta 取
@@ -62,6 +62,24 @@ const GACHA_ID = '2c1f5692fdfbb733a08733f9eb69d32aed1d37'
 const WORKSHOP_API = 'https://api.zzzmap.com/api/v2/game_user/get_sr_draw_v3'
 // 云端只校验 union_id 非空、不校验内容，未绑定时用占位值兜底
 const WORKSHOP_FALLBACK_UNION_ID = '1'
+
+// 官方「调频记录」Cookie 接口：绝区零在 api-takumi-record 下另有逐条记录查询，
+// 与 authkey 接口同源同数据，但只需已绑定的 Cookie 即可拉取，玩家不必再提供链接。
+// 注意 gacha_type 用的是官方枚举名，与 authkey 接口的数字编号不是同一套。
+const ZZZ_RECORD_API = 'https://api-takumi-record.mihoyo.com/event/game_record_zzz/api/zzz/gacha_record'
+const ZZZ_REGION_CN = 'prod_gf_cn'
+const ZZZ_CK_POOL_TYPE = {
+  GachaType_CharacterUp: 'GACHA_TYPE_CHARACTER_UP',
+  GachaType_RerunCharacter: 'GACHA_TYPE_CHARACTER_RETURN',
+  GachaType_WeaponUp: 'GACHA_TYPE_WEAPON_UP',
+  GachaType_RerunWeapon: 'GACHA_TYPE_WEAPON_RETURN',
+  GachaType_Permanent: 'GACHA_TYPE_PERMANENT',
+  GachaType_Bangboo: 'GACHA_TYPE_BANGBOO',
+}
+// 官方返回英文枚举，需转成本插件内部口径：
+// 星级按 rank_type 判定（5=五星、4=四星，与 authkey 接口一致），物品类型沿用 zzzItemType 认的中文
+const ZZZ_CK_ITEM_TYPE = { ITEM_TYPE_AVATAR: '代理人', ITEM_TYPE_WEAPON: '音擎', ITEM_TYPE_BANGBOO: '邦布' }
+const ZZZ_CK_RANK_TYPE = { S: '5', A: '4', B: '3' }
 
 function getDataFile(uid, qq) {
   return `${PLUGIN_ROOT}/data/zzz_gacha/${qq}/${uid}/summary.json`
@@ -250,6 +268,110 @@ function buildZzzPool(type, pool, rows) {
     fiveNum,
     avgPity: fiveNum ? (rows.length / fiveNum).toFixed(1) : '0.0',
   }
+}
+
+/**
+ * 官方 Cookie 接口：绝区零的调频记录可直接用已绑定的 Cookie 查询，
+ * 不必玩家从游戏内复制链接（authkey 有时效，过期就得重新抓）。
+ */
+function zzzServerOf(uid) {
+  const s = String(uid || '')
+  if (s.length < 10) return ZZZ_REGION_CN
+  switch (s.slice(0, -8)) {
+    case '10': return 'prod_gf_us'
+    case '15': return 'prod_gf_eu'
+    case '13': return 'prod_gf_jp'
+    case '17': return 'prod_gf_sg'
+    default: return ZZZ_REGION_CN
+  }
+}
+
+/** 官方该接口把时间拆成字段返回，需拼回与 authkey 接口一致的 "YYYY-MM-DD HH:mm:ss" */
+function zzzCkRowTime(date = {}) {
+  if (!date || date.year === undefined) return ''
+  const p = n => String(n ?? '').padStart(2, '0')
+  return `${date.year}-${p(date.month)}-${p(date.day)} ${p(date.hour)}:${p(date.minute)}:${p(date.second)}`
+}
+
+/** 单个频段翻一页：end_id 取本页最后一条的 id，返回空即到底 */
+async function fetchZzzRecordPage(e, ck, uid, pool, region, endId) {
+  const query = new URLSearchParams({
+    lang: 'zh-cn',
+    uid: String(uid),
+    region,
+    gacha_type: pool.ckType,
+    end_id: String(endId || '0'),
+  }).toString()
+  const headers = mhy.getHeaders(e, ck)
+  // 该接口按「4x 盐 + query」校验 DS，与米游社其它记录接口同款；getHeaders 给的是默认 DS，需覆盖
+  headers.DS = mhy.getDs2(query, '', 4)
+  const { res, data } = await requestJson(`${ZZZ_RECORD_API}?${query}`, { method: 'GET', headers }, 2)
+  if (!res.ok) throw new Error(`接口 HTTP ${res.status}`)
+  if (Number(data?.retcode) !== 0) {
+    const msg = String(data?.message || '')
+    if ([1034, 10035, 10041].includes(Number(data.retcode))) throw new Error('触发米游社验证码，请稍后再试')
+    if ([-100, -101, -111].includes(Number(data.retcode)) || /login|expire/i.test(msg)) {
+      throw new Error('Cookie 已失效，请重新扫码绑定后再试')
+    }
+    throw new Error(msg || '官方调频记录接口返回异常')
+  }
+  const list = data?.data?.gacha_item_list || []
+  return list.map(item => ({
+    id: String(item?.id || ''),
+    item_id: String(item?.item_id || ''),
+    name: item?.item_name || '未知',
+    item_type: ZZZ_CK_ITEM_TYPE[item?.item_type] || '',
+    rank_type: ZZZ_CK_RANK_TYPE[item?.rarity] || '3',
+    time: zzzCkRowTime(item?.date),
+    icon: '',
+  }))
+}
+
+/** 用已绑定的 Cookie 逐个频段拉官方记录；全部 Cookie 都失败才抛错 */
+async function fetchAllByCookieZzz(e, cookies, uid) {
+  const region = zzzServerOf(uid)
+  if (region !== ZZZ_REGION_CN) throw new Error('官方 Cookie 接口当前只支持国服，请用抽卡链接或工坊记录')
+  let lastErr = null
+  for (const ck of cookies) {
+    const pools = {}
+    let total = 0
+    try {
+      for (const pool of ZZZ_POOLS) {
+        const ckType = ZZZ_CK_POOL_TYPE[pool.key]
+        if (!ckType) continue
+        const rows = []
+        const seenIds = new Set()
+        let endId = '0'
+        // 官方单页返回条数较小，翻页上限给足（半年约三千抽）
+        for (let page = 0; page < 800; page++) {
+          const list = await fetchZzzRecordPage(e, ck, uid, { ...pool, ckType }, region, endId)
+          if (!list.length) break
+          const before = rows.length
+          for (const row of list) {
+            const id = String(row?.id || '')
+            if (id && seenIds.has(id)) continue
+            if (id) seenIds.add(id)
+            rows.push(row)
+          }
+          // 整页都是已见过的记录：end_id 无法再前进，避免死循环
+          if (rows.length === before) break
+          endId = rows[rows.length - 1]?.id || ''
+          if (!endId) break
+          await sleep(400)
+        }
+        pools[pool.key] = buildZzzPool(pool.type, pool, rows)
+        total += rows.length
+        await sleep(800)
+      }
+    } catch (err) {
+      lastErr = err
+      continue
+    }
+    // 单个 Cookie 一个池都没取到：换下一个 Cookie 再试，别直接判定失败
+    if (!total) { lastErr = new Error('官方接口未返回任何调频记录'); continue }
+    return { pools, region, total }
+  }
+  throw lastErr || new Error('没有可用的 Cookie')
 }
 
 /**
@@ -712,10 +834,10 @@ export class zzz_gacha extends plugin {
       '【#xhh绝区零抽卡帮助】',
       '',
       '更新数据（建议按顺序跑前两条）',
-      '#xhh绝区零更新工坊记录 —— 从工坊云端拉长期历史（主力来源）',
-      '#xhh绝区零导入四星 —— 从 ZZZ-Plugin 已存数据补四星明细（不发请求）',
-      '#xhh绝区零抽卡链接 <链接> —— 官方链接拉最近几天的逐抽记录',
-      '#xhh绝区零更新抽卡记录 —— 用已缓存链接刷新',
+      '#xhh绝区零更新抽卡记录 —— 直连官方接口拉逐抽明细（含四星/常驻/邦布），无需链接',
+      '#xhh绝区零更新工坊记录 —— 从工坊云端补更早的历史（五星与统计）',
+      '#xhh绝区零导入四星 —— 从 ZZZ-Plugin 已存数据补四星明细（不发请求，可选）',
+      '#xhh绝区零抽卡链接 <链接> —— 官方接口取不到时的手动备选（需复制调频记录页网址）',
       '#xhh绝区零绑定工坊 <id> —— 一般用不到，union_id 可选',
       '#xhh绝区零重建图标索引 —— 绝区零出新角色后重建图标',
       '',
@@ -724,7 +846,8 @@ export class zzz_gacha extends plugin {
       '#xhh绝区零角色记录 / #xhh绝区零音擎记录 / #xhh绝区零邦布记录 —— 各卡池进度',
       '#xhh绝区零角色统计 / #xhh绝区零音擎统计 / #xhh绝区零邦布统计 / #xhh绝区零全部统计 —— 工坊风格统计卡（汇总+网格+进度）',
       '',
-      '提示：xhh 可写作 小花火，绝区零可写作 zzz，音擎可写作 武器。',
+      '提示：xhh 可写作 小花火，绝区零可写作 zzz，音擎可写作 武器；',
+      '更新前需先在 genshin 侧绑定绝区零账号（官方接口用的是该账号的 Cookie）。',
     ].join('\n'))
   }
 
@@ -769,10 +892,32 @@ export class zzz_gacha extends plugin {
     const auth = await getUserAuth(e)
     if (auth.error) return e.reply(auth.error)
     const link = readData(getDataFile(auth.uid, auth.qq) + '.link.json')
-    if (!link?.authkey) return e.reply('尚未缓存调频记录链接，请先发送【#xhh绝区零抽卡链接 + 链接】')
-    await e.reply('正在按已缓存的调频记录链接刷新，请稍候……')
+    await e.reply('正在通过官方调频记录接口获取，请稍候……')
+    let result = null
+    let officialErr = ''
     try {
-      const result = await fetchAllByAuthkeyZzz({ ...link, region: link.region })
+      result = await fetchAllByCookieZzz(e, auth.cookies, auth.uid)
+    } catch (err) {
+      officialErr = err?.message || String(err)
+      logger.warn(`[xhh][zzz_gacha] 官方 Cookie 接口拉取失败: ${officialErr}`)
+    }
+    if (!result) {
+      if (!link?.authkey) {
+        return e.reply([
+          `官方接口未取到记录：${officialErr || '无返回'}`,
+          '也可以先发送【#xhh绝区零抽卡链接 + 链接】手动缓存一份；',
+          '若只需更新五星与统计数据，直接发送【#xhh绝区零更新工坊记录】即可，无需链接。',
+        ].join('\n'))
+      }
+      await e.reply(`官方接口未取到记录（${officialErr}），改用已缓存链接刷新……`)
+      try {
+        result = await fetchAllByAuthkeyZzz({ ...link, region: link.region })
+      } catch (err) {
+        logger.error('[xhh][zzz_gacha] refresh failed:', err)
+        return e.reply(`刷新失败：${err?.message || err}`)
+      }
+    }
+    try {
       const old = readData(getDataFile(auth.uid, auth.qq))
       const pools = old?.pools ? mergeWorkshopPools(old.pools, result.pools) : result.pools
       saveData(getDataFile(auth.uid, auth.qq), { ...(old || {}), uid: String(auth.uid), pools: fillZzzIcons(pools), update_time: formatNow(), source: 'authkey' })

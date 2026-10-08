@@ -157,22 +157,25 @@ const GAME_VIEW_CONF = {
     },
   },
 }
-const DEFAULT_POOL_CONF = {
-  key: 'GachaType_Permanent',
-  type: '5',
-  labelClass: 'common',
-  name: '常驻频段',
+// 空占位池按游戏取各自的常驻池。此前写死成绝区零的「常驻频段」：
+// 星铁数据里永远不会有 GachaType_Permanent 这个 key，「是否已有该池」的判定恒不成立，
+// 于是每张星铁总览图末尾都会被补上一张空的「常驻频段」卡（--抽 / 暂无记录）
+const DEFAULT_POOL_BY_GAME = {
+  sr: { key: 'common', name: '常驻跃迁' },
+  zzz: { key: 'GachaType_Permanent', name: '常驻频段' },
 }
 
 export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr') {
   const conf = GAME_VIEW_CONF[game] || GAME_VIEW_CONF.sr
-  const pools = Object.entries(data?.pools || {}).map(([key, pool]) => {
+  const defPool = DEFAULT_POOL_BY_GAME[game] || DEFAULT_POOL_BY_GAME.sr
+  // 星铁视图兜底：即使调用方漏了清洗，也不把混入的绝区零频段池画进星铁卡
+  const viewPools = game === 'sr' ? cleanSrPools(data?.pools) : data?.pools
+  const pools = Object.entries(viewPools || {}).map(([key, pool]) => {
     const recent = Array.isArray(pool.records) ? pool.records : (Array.isArray(pool.recent) ? pool.recent : [])
     const fiveNum = Number(pool?.fiveNum) || recent.length
-    // 联动跃迁（联动角色/联动光锥）限定不歪，5 星恒为 UP；
-    // 星穹工坊云端无联动池字段、authkey 与小助手均不返回 is_up，故按池类型统一视为 UP
-    const collabPool = key === 'GachaType_CollabAvatarUp' || key === 'GachaType_CollabEquipmentUp'
-    const isUpRec = v => collabPool || v.is_up === true
+    // 联动跃迁（'21'/'22'）与普通跃迁一样存在小保底歪，is_up 一律按数据真实值；
+    // authkey/小助手不返回 is_up，拉取时先置 false，由 ck 校准（mergeIsUp）与工坊同步补齐
+    const isUpRec = v => v.is_up === true
     const upNum = recent.filter(isUpRec).length
     const pity = Number(typeof pool.pity === 'object' ? pool.pity?.gacha_count : pool.pity || 0) || 0
     const totalPulls = Number(pool?.totalPulls) || (sum(recent, 'gacha_count') + pity) || 0
@@ -271,8 +274,8 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr') {
     return {
       ...pool,
       key,
-      type: conf.typeMap[key] || pool.type || conf.typeMap[DEFAULT_POOL_CONF.key],
-      labelClass: conf.labelClassMap[key] || DEFAULT_POOL_CONF.labelClass,
+      type: conf.typeMap[key] || pool.type || conf.typeMap[defPool.key] || '',
+      labelClass: conf.labelClassMap[key] || conf.labelClassMap[defPool.key] || 'common',
       name: pool.name || '未知',
       allNum: totalPulls,
       fiveNum,
@@ -348,12 +351,12 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr') {
       sections,
     }
   }
-  if (!pools.some(pool => pool.key === DEFAULT_POOL_CONF.key)) {
+  if (!pools.some(pool => pool.key === defPool.key)) {
     pools.push({
-      key: DEFAULT_POOL_CONF.key,
-      type: conf.typeMap[DEFAULT_POOL_CONF.key] || DEFAULT_POOL_CONF.type,
-      labelClass: DEFAULT_POOL_CONF.labelClass,
-      name: DEFAULT_POOL_CONF.name,
+      key: defPool.key,
+      type: conf.typeMap[defPool.key] || '',
+      labelClass: conf.labelClassMap[defPool.key] || 'common',
+      name: defPool.name,
       allNum: 0,
       fiveNum: 0,
       upNum: 0,
@@ -393,20 +396,31 @@ export function filterPools(data, keys = []) {
  * 与「记录」（buildSummaryView progress 布局）模板区分。
  * 常驻跃迁是角色+光锥混合池，按 commonType（角色/光锥）拆分；网格与分池只含所选池。
  */
-export function buildSrStatView(data, uid, e, keys = [], commonType = null) {
-  const srcPools = data?.pools || {}
-  const pickByType = t => (t === '光锥' ? '光锥' : '角色')
-  // 星铁合法池白名单：剔除混入星铁数据里的绝区零池
-  // （如 GachaType_Permanent「常驻频段」、GachaType_Bangboo「邦布频段」）
-  const SR_POOL_KEYS = new Set([
-    'GachaType_AvatarUp', 'GachaType_CollabAvatarUp',
-    'GachaType_EquipmentUp', 'GachaType_CollabEquipmentUp',
-    'GachaType_Newbie', 'common',
-  ])
-  const cleanPools = {}
-  for (const [key, pool] of Object.entries(srcPools)) {
-    if (SR_POOL_KEYS.has(key)) cleanPools[key] = pool
+// 星铁合法池 key 白名单：剔除混入星铁数据里的绝区零池
+// （如 GachaType_Permanent「常驻频段」、GachaType_Bangboo「邦布频段」）
+const SR_POOL_KEYS = new Set([
+  'GachaType_AvatarUp', 'GachaType_CollabAvatarUp',
+  'GachaType_EquipmentUp', 'GachaType_CollabEquipmentUp',
+  'GachaType_Newbie', 'common',
+])
+
+// 绝区零的频段名。数据文件里的脏池 key 可能撞上星铁合法键（如 common），
+// 所以除按 key 白名单外，再按名称剔一次，两条判据任一命中即丢弃
+const ZZZ_POOL_NAMES = new Set(['独家频段', '独家重映', '音擎频段', '音擎回响', '常驻频段', '邦布频段'])
+
+function cleanSrPools(pools) {
+  const out = {}
+  for (const [key, pool] of Object.entries(pools || {})) {
+    if (!SR_POOL_KEYS.has(key)) continue
+    if (ZZZ_POOL_NAMES.has(String(pool?.name || ''))) continue
+    out[key] = pool
   }
+  return out
+}
+
+export function buildSrStatView(data, uid, e, keys = [], commonType = null) {
+  const pickByType = t => (t === '光锥' ? '光锥' : '角色')
+  const cleanPools = cleanSrPools(data?.pools)
   // 常驻跃迁按类型决定是否纳入
   const wantedKeys = []
   for (const key of keys.length ? keys : Object.keys(cleanPools)) {
@@ -488,7 +502,8 @@ export function buildSrStatView(data, uid, e, keys = [], commonType = null) {
     : `共获得限定五星 ${limitedNum} 个，常驻五星 ${commonNum} 个，具体如下：`
 
   // 分池进度条：长度按抽数相对保底的比例（角色池 90、光锥池 80），颜色阈值同比例
-  const UP_POOLS = new Set(['GachaType_AvatarUp', 'GachaType_EquipmentUp'])
+  // 会歪的池：普通 UP 池与联动跃迁（联动同样存在小保底歪，工坊不标注、本卡标注）
+  const UP_POOLS = new Set(['GachaType_AvatarUp', 'GachaType_EquipmentUp', 'GachaType_CollabAvatarUp', 'GachaType_CollabEquipmentUp'])
   const pityBaseOf = p => (p.key === 'GachaType_EquipmentUp' || p.key === 'GachaType_CollabEquipmentUp' ? 80 : 90)
   const pctOf = (n, base) => Math.min(100, Math.max(8, Math.round((Number(n) / base) * 100)))
   const clsOf = (n, base) => (n < base * 0.5 ? 'good' : n < base * 0.78 ? 'mid' : 'bad')
@@ -885,8 +900,8 @@ export function buildPoolFromRows(gachaType, pool, rows) {
         id: String(row.id || ''),
         name: row.name || '未知',
         item_type: itemType,
-        // 联动跃迁（'21'/'22'）限定不歪，5 星均视为 UP
-        is_up: gachaType === '21' || gachaType === '22',
+        // 联动跃迁同样存在小保底歪；authkey 接口不返回 is_up，先置 false 由 ck/工坊校准
+        is_up: false,
         gacha_count: pulls,
         time: row.time || '',
         icon: row.icon || '',
@@ -1018,8 +1033,8 @@ function buildPoolFromPulls(gachaType, rows) {
       id: String(row?.id || ''),
       name: row?.name || '未知',
       item_type: row?.item_type === '光锥' ? '光锥' : '角色',
-      // 联动跃迁（'21'/'22'）限定不歪，5 星均视为 UP
-      is_up: gachaType === '21' || gachaType === '22',
+      // 联动跃迁同样存在小保底歪；authkey 接口不返回 is_up，先置 false 由 ck/工坊校准
+      is_up: false,
       gacha_count: 0,
       time: row?.time || '',
       icon: '',
@@ -1642,8 +1657,20 @@ export class sr_gacha extends plugin {
   async renderSummary(e, keys = [], layout = 'grid', commonType = null) {
     const auth = await getUserAuth(e)
     if (auth.error) return e.reply(auth.error)
-    let data = readData(getDataFile(auth.qq, auth.uid)) || readSummary(`./data/srGachaSummary/${auth.uid}.json`)
+    const local = readData(getDataFile(auth.qq, auth.uid))
+    let data = local || readSummary(`./data/srGachaSummary/${auth.uid}.json`)
     if (!data?.pools) return e.reply('暂无星铁抽卡记录，请先发送【#xhh星铁更新抽卡记录】')
+    // 剔除混入星铁数据的绝区零池（如 GachaType_Permanent「常驻频段」）；
+    // 有剔除时顺手写回本插件的数据文件，把脏数据永久清掉，不必等下次更新覆盖
+    const cleaned = cleanSrPools(data.pools)
+    const dropped = Object.keys(data.pools).filter(k => !cleaned[k])
+    if (dropped.length) {
+      logger.mark(`[xhh][sr_gacha] 已剔除混入星铁数据的池：${dropped.map(k => `${k}(${data.pools[k]?.name || '?'})`).join('、')}`)
+      data = { ...data, pools: cleaned }
+      if (local) {
+        try { saveData(getDataFile(auth.qq, auth.uid), data) } catch (err) { logger.warn(`[xhh][sr_gacha] 脏池写回失败：${err?.message || err}`) }
+      }
+    }
     // 常驻跃迁是角色+光锥混合池：按 commonType 只保留对应类型，避免角色记录混入光锥
     if (commonType && data?.pools?.common) {
       const pool = data.pools.common
