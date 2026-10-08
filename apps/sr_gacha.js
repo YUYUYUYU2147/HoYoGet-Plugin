@@ -6,6 +6,12 @@ import GachaLog from '../../genshin/model/gachaLog/gachaLog.js'
 import { SrGachaSummary, readSummary, getSrGachaCookieFile, readSrGachaCookie, saveSrGachaCookie, extractSrGachaCookie, formatSrGachaFailure } from '../../genshin/model/gachaLog/srGachaSummary.js'
 import { Character, Weapon } from '../../miao-plugin/models/index.js'
 import MysInfo from '../../genshin/model/mys/mysInfo.js'
+import { fileURLToPath } from 'node:url'
+
+// ESM 作用域没有 __dirname，按仓库既有写法（apps/custom_guide.js）从 import.meta 取。
+// 数据路径一律相对插件根，不依赖进程 cwd（Yunzai 启动时 cwd 即插件目录）。
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const PLUGIN_ROOT = path.resolve(__dirname, '..')
 
 const API_URL = 'https://act-api-takumi.mihoyo.com/event/rpg_gacha_record/five_star_list'
 const BADGE_API_URL = 'https://api-takumi.mihoyo.com/common/badge/v1/login/account'
@@ -27,11 +33,11 @@ const POOL_ORDER = [
   'common',
 ]
 
-function sleep(ms) {
+export function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-function setCookieValue(headers, name) {
+export function setCookieValue(headers, name) {
   const raw = headers?.getSetCookie?.() || headers?.raw?.()?.['set-cookie'] || []
   for (const item of raw) {
     const match = String(item).match(new RegExp(`(?:^|,\\s*)${name}=([^;,]*)`))
@@ -42,7 +48,7 @@ function setCookieValue(headers, name) {
   return match?.[1] || ''
 }
 
-function sum(arr, field) {
+export function sum(arr, field) {
   return arr.reduce((n, v) => n + Number(v?.[field] || 0), 0)
 }
 
@@ -80,18 +86,18 @@ function buildPoolStats(pool) {
   }
 }
 
-function pct(a, b) {
+export function pct(a, b) {
   if (!b) return '0.0'
   return ((a / b) * 100).toFixed(1)
 }
 
-function formatNow() {
+export function formatNow() {
   const d = new Date()
   const pad = n => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-function timeFromId(id) {
+export function timeFromId(id) {
   const ms = Number(String(id || '').slice(0, 13))
   if (!Number.isFinite(ms) || ms <= 0) return ''
   const d = new Date(ms)
@@ -99,7 +105,67 @@ function timeFromId(id) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-function buildSummaryView(data, uid, e, layout = 'grid') {
+// 各游戏的卡池定义差异较大（星铁与绝区零编号、命名、货币都不同），
+// 视图层按 game 取对应配置，避免把绝区零的编号写进星铁分支
+const GAME_VIEW_CONF = {
+  sr: {
+    poolOrder: POOL_ORDER,
+    currency: '星琼',
+    typeMap: {
+      GachaType_AvatarUp: '301',
+      GachaType_EquipmentUp: '302',
+      GachaType_CollabAvatarUp: '303',
+      GachaType_CollabEquipmentUp: '304',
+      GachaType_Newbie: '1001',
+      common: '200',
+    },
+    labelClassMap: {
+      GachaType_AvatarUp: 'char',
+      GachaType_EquipmentUp: 'weapon',
+      GachaType_CollabAvatarUp: 'collabChar',
+      GachaType_CollabEquipmentUp: 'collabWeapon',
+      GachaType_Newbie: 'newbie',
+      common: 'common',
+    },
+  },
+  // 绝区零：频段池；暂无可靠图源，图标一律留空（见 zzz_gacha.js 顶部说明）
+  zzz: {
+    poolOrder: [
+      'GachaType_CharacterUp',
+      'GachaType_RerunCharacter',
+      'GachaType_WeaponUp',
+      'GachaType_RerunWeapon',
+      'GachaType_Permanent',
+      'GachaType_Bangboo',
+    ],
+    currency: '菲林',
+    typeMap: {
+      GachaType_CharacterUp: '1',
+      GachaType_RerunCharacter: '2',
+      GachaType_WeaponUp: '3',
+      GachaType_RerunWeapon: '4',
+      GachaType_Permanent: '5',
+      GachaType_Bangboo: '6',
+    },
+    labelClassMap: {
+      GachaType_CharacterUp: 'char',
+      GachaType_RerunCharacter: 'collabChar',
+      GachaType_WeaponUp: 'weapon',
+      GachaType_RerunWeapon: 'collabWeapon',
+      GachaType_Permanent: 'common',
+      GachaType_Bangboo: 'newbie',
+    },
+  },
+}
+const DEFAULT_POOL_CONF = {
+  key: 'GachaType_Permanent',
+  type: '5',
+  labelClass: 'common',
+  name: '常驻频段',
+}
+
+export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr') {
+  const conf = GAME_VIEW_CONF[game] || GAME_VIEW_CONF.sr
   const pools = Object.entries(data?.pools || {}).map(([key, pool]) => {
     const recent = Array.isArray(pool.records) ? pool.records : (Array.isArray(pool.recent) ? pool.recent : [])
     const fiveNum = Number(pool?.fiveNum) || recent.length
@@ -115,19 +181,38 @@ function buildSummaryView(data, uid, e, layout = 'grid') {
     const maxPity = pullValues.length ? Math.max(...pullValues) : 0
     const minPity = pullValues.length ? Math.min(...pullValues) : 0
     const upRate = fiveNum ? pct(upNum, fiveNum) : '--'
+    const MIAO_RES = '../../../../../plugins/miao-plugin/resources'
+    const miaoGame = game === 'zzz' ? 'zzz' : 'sr'
+    // 绝区零：官方物品配置接口忽略 game 参数只返回星铁数据，miao-plugin 也无绝区零资源，
+    // 且图源站点在本机不可达，因此这里只认记录自带的 icon，不做任何猜测性拼接
     const makeIcon = item => {
+      if (game === 'zzz') return item?.icon || ''
+      // 记录自带图标优先：星穹工坊云端同步时按 item_id 从官方物品配置反查得到，官方 CDN 可达。
+      // 此前这里直接丢弃 item.icon 改用 miao 查表，而 miao 的星铁 data.json 不提供
+      // imgs.face（98 个角色全为空），于是星铁卡片从来没有头像
+      if (item?.icon) return item.icon
       try {
         if (item.item_type === '角色') {
-          const char = Character.get(item.name, 'sr')
+          const char = Character.get(item.name, miaoGame)
           const face = char?.imgs?.face || char?.face || ''
-          return face ? `../../../../../plugins/miao-plugin/resources${face}` : ''
+          if (face) return `${MIAO_RES}${face}`
         }
         if (item.item_type === '光锥') {
-          const weapon = Weapon.get(item.name, 'sr')
+          const weapon = Weapon.get(item.name, miaoGame)
           const img = weapon?.getData?.('img')?.img || weapon?.img || ''
-          return img ? `../../../../../plugins/miao-plugin/resources/${String(img).replace(/^\//, '')}` : ''
+          if (img) return `${MIAO_RES}/${String(img).replace(/^\//, '')}`
         }
       } catch {}
+      // miao 星铁角色的 imgs 目录里有 face.webp，只是 data.json 未引用，按约定路径兜底
+      const name = String(item?.name || '')
+      if (game === 'sr' && item?.item_type === '角色' && name) {
+        const local = `meta-sr/character/${name}/imgs/face.webp`
+        try {
+          if (fs.existsSync(path.join(process.cwd(), 'plugins/miao-plugin/resources', local))) {
+            return `${MIAO_RES}/${local}`
+          }
+        } catch {}
+      }
       return ''
     }
     // 五星历史：按时间倒序，供卡片网格使用
@@ -174,31 +259,15 @@ function buildSummaryView(data, uid, e, layout = 'grid') {
       [
         { num: fourPity || '--', unit: '', lable: '未出四星' },
         { num: upAvg, unit: '', lable: 'UP平均' },
-        { num: upYs, unit: '', lable: 'UP花费星琼' },
+        { num: upYs, unit: '', lable: `UP花费${conf.currency}` },
         { num: minPity || '--', unit: '', lable: '最欧' },
       ],
     ]
-    const typeMap = {
-      GachaType_AvatarUp: '301',
-      GachaType_EquipmentUp: '302',
-      GachaType_CollabAvatarUp: '303',
-      GachaType_CollabEquipmentUp: '304',
-      GachaType_Newbie: '1001',
-      common: '200',
-    }
-    const labelClassMap = {
-      GachaType_AvatarUp: 'char',
-      GachaType_EquipmentUp: 'weapon',
-      GachaType_CollabAvatarUp: 'collabChar',
-      GachaType_CollabEquipmentUp: 'collabWeapon',
-      GachaType_Newbie: 'newbie',
-      common: 'common',
-    }
     return {
       ...pool,
       key,
-      type: typeMap[key] || pool.type || '301',
-      labelClass: labelClassMap[key] || 'char',
+      type: conf.typeMap[key] || pool.type || conf.typeMap[DEFAULT_POOL_CONF.key],
+      labelClass: conf.labelClassMap[key] || DEFAULT_POOL_CONF.labelClass,
       name: pool.name || '未知',
       allNum: totalPulls,
       fiveNum,
@@ -215,8 +284,8 @@ function buildSummaryView(data, uid, e, layout = 'grid') {
       lastTime: fiveLog.length ? fiveLog[0].fullDate : '--',
     }
   }).sort((a, b) => {
-    const ia = POOL_ORDER.indexOf(a.key)
-    const ib = POOL_ORDER.indexOf(b.key)
+    const ia = conf.poolOrder.indexOf(a.key)
+    const ib = conf.poolOrder.indexOf(b.key)
     return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib)
   })
   // progress 进度条布局：每个卡池生成一个进度区块
@@ -270,12 +339,12 @@ function buildSummaryView(data, uid, e, layout = 'grid') {
       sections,
     }
   }
-  if (!pools.some(pool => pool.key === 'common')) {
+  if (!pools.some(pool => pool.key === DEFAULT_POOL_CONF.key)) {
     pools.push({
-      key: 'common',
-      type: '200',
-      labelClass: 'common',
-      name: '常驻跃迁',
+      key: DEFAULT_POOL_CONF.key,
+      type: conf.typeMap[DEFAULT_POOL_CONF.key] || DEFAULT_POOL_CONF.type,
+      labelClass: DEFAULT_POOL_CONF.labelClass,
+      name: DEFAULT_POOL_CONF.name,
       allNum: 0,
       fiveNum: 0,
       upNum: 0,
@@ -287,7 +356,7 @@ function buildSummaryView(data, uid, e, layout = 'grid') {
       yearGroups: [],
       line: [
         [{ num: '--', unit: '', lable: '未出五星' }, { num: '--', unit: '', lable: '五星平均' }, { num: '--', unit: '%', lable: '小保底不歪率' }, { num: '--', unit: '', lable: '最非' }],
-        [{ num: '--', unit: '', lable: '未出四星' }, { num: '--', unit: '', lable: 'UP平均' }, { num: '--', unit: '', lable: 'UP花费星琼' }, { num: '--', unit: '', lable: '最欧' }],
+        [{ num: '--', unit: '', lable: '未出四星' }, { num: '--', unit: '', lable: 'UP平均' }, { num: '--', unit: '', lable: `UP花费${conf.currency}` }, { num: '--', unit: '', lable: '最欧' }],
       ],
       firstTime: '--',
       lastTime: '--',
@@ -300,7 +369,7 @@ function buildSummaryView(data, uid, e, layout = 'grid') {
   }
 }
 
-function filterPools(data, keys = []) {
+export function filterPools(data, keys = []) {
   if (!data?.pools) return data
   if (!keys.length) return data
   const pools = {}
@@ -310,7 +379,7 @@ function filterPools(data, keys = []) {
   return { ...data, pools }
 }
 
-async function requestJson(url, options = {}, retry = 3) {
+export async function requestJson(url, options = {}, retry = 3) {
   let last
   for (let i = 0; i < retry; i++) {
     try {
@@ -440,7 +509,7 @@ async function fetchPool(uid, region, ck, gachaType) {
 }
 
 function getDataFile(uid, qq) {
-  return `./plugins/xhh/data/sr_gacha/${qq}/${uid}/summary.json`
+  return `${PLUGIN_ROOT}/data/sr_gacha/${qq}/${uid}/summary.json`
 }
 
 function buildCommonPoolView(data) {
@@ -501,7 +570,7 @@ const NEW_POOLS = [
 const GACHA_LOG_HOST_CN = 'https://public-operation-hkrpg.mihoyo.com'
 const GACHA_LOG_HOST_OS = 'https://public-operation-hkrpg-sg.hoyoverse.com'
 
-function parseGachaUrl(url) {
+export function parseGachaUrl(url) {
   try {
     const u = String(url).trim().replace(/〈=/g, '&=')
     // 依次尝试从 getGachaLog? / getLdGachaLog? / index.html? / 最后一个 ? 后取参数
@@ -534,7 +603,7 @@ function parseGachaUrl(url) {
 }
 
 /** 从消息中收集所有可能的链接：覆盖文本段、share/json/xml 卡片、CQ 码 raw_message，去重保序 */
-function extractUrlsFromMsg(e) {
+export function extractUrlsFromMsg(e) {
   const urls = new Set()
   const add = str => {
     if (!str) return
@@ -614,7 +683,7 @@ async function resolveAuthkeyRegion(query) {
 }
 
 // 把某个卡池的全量记录统计成渲染所需结构（含四星保底）
-function buildPoolFromRows(gachaType, pool, rows) {
+export function buildPoolFromRows(gachaType, pool, rows) {
   const base = {
     ...(pool || {}),
     type: gachaType,
@@ -690,7 +759,7 @@ function buildPoolFromRows(gachaType, pool, rows) {
   }
 }
 
-async function fetchAllByAuthkey(query) {
+export async function fetchAllByAuthkey(query) {
   const region = await resolveAuthkeyRegion(query)
   const resolvedQuery = { ...query, region }
   const pools = {}
@@ -728,23 +797,11 @@ async function fetchAllByAuthkey(query) {
   return { pools, region }
 }
 
-// 从旧数据继承五星 is_up 标记（authkey 接口不返回 UP 标记）
-function inheritIsUp(oldPools, newPools) {
-  for (const key of Object.keys(newPools)) {
-    const old = oldPools?.[key]
-    if (!old?.records?.length) continue
-    const oldMap = new Map()
-    for (const r of old.records) oldMap.set(`${r.name}|${r.time}`, !!r.is_up)
-    for (const r of newPools[key].records || []) {
-      if (oldMap.get(`${r.name}|${r.time}`)) r.is_up = true
-    }
-  }
-  return newPools
-}
+
 
 // 用 ck（five_star_list 接口，返回准确 UP 标记）校准 authkey 结果的 is_up：
 // authkey 全量接口不带 is_up，新五星只能靠 ck 数据补全，否则会被全部当成非UP
-function mergeIsUp(summaryPools, newPools) {
+export function mergeIsUp(summaryPools, newPools) {
   if (!summaryPools) return newPools
   const map = new Map()
   for (const pool of Object.values(summaryPools)) {
@@ -777,17 +834,44 @@ function mergeIsUp(summaryPools, newPools) {
 //   3. 垫抽/统计：由本次拉取的数据源（最新）提供，并按选定的五星历史重算 totalPulls
 
 // 兼容 records/recent/fiveLog 三种字段、gacha_count/num 两种抽数字段
-function getPoolRecords(pool) {
+export function getPoolRecords(pool) {
   if (Array.isArray(pool?.records)) return pool.records
   if (Array.isArray(pool?.recent)) return pool.recent
   return Array.isArray(pool?.fiveLog) ? pool.fiveLog : []
 }
 
-function countTotal(records) {
+export function countTotal(records) {
   return (records || []).reduce((s, r) => s + Number(r?.gacha_count ?? r?.num ?? 0), 0)
 }
 
 // 两份五星记录中挑"更完整"的一份
+// 云端与本地记录按 id 合并，而不是整组二选一。
+// 云端（api.lingyuan.design）并非总能覆盖全部期次——实测 104359511 的限定角色池
+// 云端只有 15 个五星且整段缺 2025，而本地 ck/徽章侧有 2025 的记录；
+// 若按「取更全的一组」替换，本地独有记录会被云端整段顶掉。
+// 同id 时以新记录（云端）字段优先，用于补名称、图标与抽数。
+export function unionRecords(oldRecords, newRecords) {
+  const byId = new Map()
+  for (const row of oldRecords || []) {
+    if (row?.id) byId.set(String(row.id), { ...row })
+  }
+  for (const row of newRecords || []) {
+    const id = String(row?.id || '')
+    if (!id) continue
+    const exist = byId.get(id)
+    if (!exist) {
+      byId.set(id, { ...row })
+      continue
+    }
+    const merged = { ...exist }
+    for (const [ key, value ] of Object.entries(row)) {
+      if (value !== '' && value !== null && value !== undefined) merged[key] = value
+    }
+    byId.set(id, merged)
+  }
+  return [ ...byId.values() ].sort((a, b) => String(b.id).localeCompare(String(a.id)))
+}
+
 function pickFullerRecords(oldRecords, newRecords) {
   const o = oldRecords || []
   const n = newRecords || []
@@ -798,7 +882,7 @@ function pickFullerRecords(oldRecords, newRecords) {
 }
 
 // 按选定的五星记录重算统计值；pity 兼容数字或 { gacha_count } 两种格式
-function recountPool(pool, records) {
+export function recountPool(pool, records) {
   const pity = Number(typeof pool?.pity === 'object' ? pool.pity?.gacha_count : pool.pity || 0) || 0
   const fiveNum = records.length
   const totalPulls = countTotal(records) + pity
@@ -904,7 +988,7 @@ async function fetchGameRecordCard(uid, ck) {
   }
 }
 
-function readData(file) {
+export function readData(file) {
   try {
     return JSON.parse(fs.readFileSync(file, 'utf8'))
   } catch {
@@ -912,9 +996,235 @@ function readData(file) {
   }
 }
 
-function saveData(file, data) {
+export function saveData(file, data) {
   fs.mkdirSync(path.dirname(file), { recursive: true })
   fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8')
+}
+
+// ===== 星穹工坊云端记录（api.lingyuan.design）=====
+// 星穹工坊把导入过的记录存在自家云端（api.lingyuan.design），保留约三年，
+// 比官方 ck（约一年）与 authkey 网页版（半年）都久，可补齐更早的五星记录。
+// 接口带 union_id 参数（云端只校验非空、不校验内容，未绑定时用占位值兜底）；
+// 绑定入口见 #xhh绑定小助手，保留以防云端将来启用校验。
+// 接口带 union_id 参数，但云端只校验该参数非空、不校验内容（实测传任意非空值
+// 都返回该 UID 的完整记录），因此未绑定时用占位值兜底即可。
+// 保留 #xhh绑定小助手 入口是为了云端将来启用校验时无需改逻辑。
+const HELPER_FALLBACK_UNION_ID = '1'
+const HELPER_API = 'https://api.lingyuan.design/api/v2/game_user/get_sr_draw_v3'
+const HELPER_POOL_MAP = {
+  role_up_card_result: { key: 'GachaType_AvatarUp', type: '11', name: '角色活动跃迁' },
+  guang_up_card_result: { key: 'GachaType_EquipmentUp', type: '12', name: '光锥活动跃迁' },
+  common_card_result: { key: 'common', type: '1', name: '常驻跃迁' },
+  init_card_result: { key: 'GachaType_Newbie', type: '2', name: '新手跃迁' },
+}
+// 集录跃迁（rd_card_*_result）是独立机制，不并入常规卡池，避免污染保底统计
+function getHelperFile(qq) {
+  return `${PLUGIN_ROOT}/data/sr_gacha/${qq}/helper.json`
+}
+
+function readHelperBind(qq) {
+  return readData(getHelperFile(qq))
+}
+
+function saveHelperBind(qq, data) {
+  saveData(getHelperFile(qq), data)
+}
+
+// union_id 允许直接给纯字符串，也允许粘贴含 union_id 的网址/分享文本后自动提取
+function parseUnionId(input) {
+  const raw = String(input || '').trim()
+  if (!raw) return ''
+  const fromUrl = raw.match(/union_id=([A-Za-z0-9_-]+)/)
+  if (fromUrl) return fromUrl[1]
+  return /^[A-Za-z0-9_-]{6,64}$/.test(raw) ? raw : ''
+}
+
+// 自动识别 union_id：扫描本机微信 PC 的 webview HTTP 缓存，
+// 星穹工坊请求过云端后会留下形如 .../get_sr_draw_v3?...&union_id=XXX 的 URL。
+// 仅在本机装有微信 PC 时有效；识别不到时回落到手动绑定。
+function detectHelperUnionId() {
+  try {
+    const appData = process.env?.APPDATA
+    if (!appData) return ''
+    const profilesRoot = path.join(appData, 'Tencent', 'xwechat', 'radium', 'web', 'profiles')
+    if (!fs.existsSync(profilesRoot)) return ''
+    const profiles = fs.readdirSync(profilesRoot).filter(n => String(n).startsWith('webview_'))
+    for (const p of profiles) {
+      const cacheDir = path.join(profilesRoot, p, 'Cache', 'Cache_Data')
+      if (!fs.existsSync(cacheDir)) continue
+      let files = []
+      try { files = fs.readdirSync(cacheDir) } catch { continue }
+      for (const f of files) {
+        if (!f.startsWith('data_')) continue
+        let txt = ''
+        try { txt = fs.readFileSync(path.join(cacheDir, f), 'latin1') } catch { continue }
+        if (!txt.includes('lingyuan.design')) continue
+        const m = txt.match(/union_id=([A-Za-z0-9_-]{6,64})/)
+        if (m?.[1]) return m[1]
+      }
+    }
+    return ''
+  } catch (err) {
+    logger.mark(`[xhh][sr_gacha] 自动识别星穹工坊 union_id 失败：${err?.message || err}`)
+    return ''
+  }
+}
+
+// 用已有记录的时间→名称给星穹工坊缺失名称的五星补名（同一次抽卡时间一致）
+function buildNameHint(pools) {
+  const map = new Map()
+  for (const pool of Object.values(pools || {})) {
+    for (const r of getPoolRecords(pool)) {
+      const t = String(r?.time || '').slice(0, 19)
+      if (t && r?.name) map.set(t, r.name)
+    }
+  }
+  return map
+}
+
+// 官方物品配置索引：item_id -> { name, icon }，另附名称 -> icon 兜底。
+// 云端记录只给 item_id，且多数条目连 name 都没有（渲染会退化成【ID:xxxx】），
+// 故按 item_id 反查名称与图标，名称查不到时再退回按名称查。
+// 结果缓存到 redis，避免每次同步都拉一遍。
+const ITEM_CONFIG_API = 'https://api-takumi.mihoyo.com/event/rpgsimulator/config?game=hkrpg'
+const ITEM_CONFIG_CACHE_KEY = 'sr_gacha_helper_item_index'
+
+function buildSrItemIndex(data) {
+  const byId = new Map()
+  const iconByName = new Map()
+  for (const item of [...(data?.avatar || []), ...(data?.equipment || [])]) {
+    const name = item?.item_name || item?.name || ''
+    const icon = item?.icon_url || item?.new_icon_url || ''
+    if (item?.item_id) byId.set(String(item.item_id), { name, icon })
+    if (name && icon) iconByName.set(String(name), icon)
+  }
+  return { byId, iconByName }
+}
+
+async function loadSrItemIndex() {
+  try {
+    const cached = await redis.get(ITEM_CONFIG_CACHE_KEY)
+    if (cached) {
+      const parsed = JSON.parse(cached)
+      return { byId: new Map(parsed.byId), iconByName: new Map(parsed.iconByName) }
+    }
+  } catch (err) {
+    logger.mark(`[xhh][sr_gacha] 读取物品配置缓存失败：${err?.message || err}`)
+  }
+  let index = { byId: new Map(), iconByName: new Map() }
+  try {
+    const { data } = await requestJson(ITEM_CONFIG_API)
+    index = buildSrItemIndex(data?.data)
+    if (index.byId.size) {
+      try {
+        await redis.set(
+          ITEM_CONFIG_CACHE_KEY,
+          JSON.stringify({ byId: [...index.byId], iconByName: [...index.iconByName] }),
+          'EX',
+          7 * 24 * 3600
+        )
+      } catch (err) {
+        logger.mark(`[xhh][sr_gacha] 写入物品配置缓存失败：${err?.message || err}`)
+      }
+    }
+  } catch (err) {
+    logger.mark(`[xhh][sr_gacha] 物品配置获取失败，云端记录可能显示为ID 且无图标：${err?.message || err}`)
+  }
+  return index
+}
+
+async function fetchHelperCloud(uid, unionId) {
+  const url = `${HELPER_API}?uid=${encodeURIComponent(String(uid))}&union_id=${encodeURIComponent(String(unionId))}`
+  const { data } = await requestJson(url, {
+    headers: {
+      accept: 'application/json, text/plain, */*',
+      referer: 'https://starrail.lelaer.com/',
+      origin: 'https://starrail.lelaer.com',
+    },
+  })
+  if (Number(data?.code) !== 0) throw new Error(data?.message || '星穹工坊云端返回异常')
+  const analysis = data?.data?.card_analysis_json
+  if (!analysis) throw new Error('星穹工坊云端未返回该 UID 的抽卡数据，请确认 UID 是否正确')
+  return analysis
+}
+
+// 星穹工坊云端分析 → 插件渲染所需的 pools 结构
+function convertHelperPools(analysis, nameHint, itemIndex) {
+  const pools = {}
+  for (const [field, def] of Object.entries(HELPER_POOL_MAP)) {
+    const p = analysis?.[field]
+    if (!p) continue
+    const records = (Array.isArray(p.five_cards) ? p.five_cards : []).map(c => {
+      const time = c?.time || ''
+      // 云端多数条目不带 name，先按 item_id 从官方配置取名，再退回云端名/本地同时间记录
+      const meta = itemIndex?.byId?.get(String(c?.item_id ?? ''))
+      const name = meta?.name || c?.name || nameHint.get(String(time).slice(0, 19)) || `【ID:${c?.item_id ?? '?'}】`
+      return {
+        id: String(c?.id || ''),
+        name,
+        item_type: c?.item_type === '光锥' ? '光锥' : '角色',
+        is_up: c?.is_up === true,
+        gacha_count: Number(c?.draw_total || 0),
+        time,
+        // 云端不返回图标：先按 item_id 取，再按名称兜底；都没有则留空由模板跳过
+        icon: meta?.icon || itemIndex?.iconByName?.get(name) || '',
+      }
+    })
+    const fiveNum = records.length
+    const totalPulls = Number(p.draw_total || 0)
+    const avg = Number(p.xbd_avg || 0)
+    pools[def.key] = {
+      key: def.key,
+      type: def.type,
+      name: def.name,
+      records,
+      fourLog: [],
+      fourNum: (Number(p.four_role_total || 0) || 0) + (Number(p.four_guang_total || 0) || 0),
+      fourPity: 0,
+      pity: Number(p?.dian_card_infos?.draw_total || 0) || 0,
+      totalPulls,
+      fiveNum,
+      upNum: records.filter(r => r.is_up).length,
+      avgPity: avg > 0 ? String(avg) : (fiveNum ? (totalPulls / fiveNum).toFixed(1) : '0.0'),
+      latest: records[0]?.time || '',
+      nickname: p.avg_nick_name || '',
+    }
+  }
+  return pools
+}
+
+// 合并后回填缺失图标：pickFullerRecords 是整组二选一，可能继续沿用旧记录，
+// 而旧记录是早期云端同步写入的（当时 icon 为空），故按名称统一补一次。
+function fillMissingIcons(pools, itemIndex) {
+  for (const pool of Object.values(pools || {})) {
+    for (const key of ['records', 'fiveLog', 'recent']) {
+      if (!Array.isArray(pool?.[key])) continue
+      for (const row of pool[key]) {
+        if (!row || row.icon) continue
+        const icon = itemIndex?.iconByName?.get(String(row.name || '')) || ''
+        if (icon) row.icon = icon
+      }
+    }
+  }
+  return pools
+}
+
+// 云端只存五星与统计，四星/常驻明细仍以本地既有数据（ck/authkey）为准：
+// 五星取更全的一份，四星与垫抽从旧数据继承
+function mergeHelperPools(oldPools, newPools) {
+  for (const key of Object.keys(newPools || {})) {
+    const old = oldPools?.[key]
+    if (!old) continue
+    newPools[key] = recountPool(newPools[key], unionRecords(getPoolRecords(old), getPoolRecords(newPools[key])))
+    if (!newPools[key].fourLog?.length) newPools[key].fourLog = old.fourLog || []
+    if (!newPools[key].fourNum) newPools[key].fourNum = old.fourNum || 0
+    if (!newPools[key].fourPity) newPools[key].fourPity = old.fourPity || 0
+  }
+  // 云端没有的卡池（例如尚未解锁的新手池）保留旧数据
+  for (const key of Object.keys(oldPools || {})) {
+    if (!newPools[key]) newPools[key] = oldPools[key]
+  }
+  return newPools
 }
 
 export class sr_gacha extends plugin {
@@ -935,7 +1245,14 @@ export class sr_gacha extends plugin {
         { reg: '^#*(xhh|小花火)(星铁|崩铁)?武器记录$', fnc: 'weaponRecord' },
         { reg: '^#*(xhh|小花火)(星铁|崩铁)?联动角色记录$', fnc: 'collabRoleRecord' },
         { reg: '^#*(xhh|小花火)(星铁|崩铁)?联动武器记录$', fnc: 'collabWeaponRecord' },
-        { reg: '^#*(xhh|小花火)?(星铁|崩铁)?常驻(记录|统计)?$', fnc: 'common' },
+        { reg: '^#*(xhh|小花火)(星铁|崩铁)?绑定小助手(\\s+\\S+)?$', fnc: 'bindHelper' },
+        { reg: // 前缀必须带：本插件所有指令均需 #xhh/ #小花火，否则会抢走
+        // genshin 侧「#更新小助手抽卡记录」（原神·小助手）与「*更新小助手抽卡记录」（星铁·星穹工坊）
+        '^#*(xhh|小花火)(星铁|崩铁)?(更新|刷新|同步)?小助手(抽卡|跃迁)?(记录|数据)$', fnc: 'updateHelper' },
+        // 语义更正后的别名：updateHelper 接的其实是星穹工坊（api.lingyuan.design），
+        // 旧名「更新小助手抽卡记录」保留兼容，新名避免与真正的小助手混淆
+        { reg: '^#*(xhh|小花火)(星铁|崩铁)?(更新|刷新|同步)?星穹工坊(记录|数据)$', fnc: 'updateHelper' },
+        { reg: '^#*(xhh|小花火)(星铁|崩铁)?常驻(记录|统计)?$', fnc: 'common' },
       ],
     })
   }
@@ -1138,22 +1455,102 @@ export class sr_gacha extends plugin {
     }
   }
 
+  // 绑定星穹工坊 union_id（按 QQ 存储）。指令名沿用「小助手」前缀以与原神侧保持一致
+  async bindHelper(e) {
+    const qq = e.user_id
+    const arg = String(e.msg || '').match(/绑定小助手\s*(\S+)/)?.[1] || ''
+    const unionId = parseUnionId(arg)
+    if (!unionId) {
+      // 未绑定且无参数时，先尝试从本机微信缓存自动识别
+      if (!readHelperBind(qq)?.union_id) {
+        const detected = detectHelperUnionId()
+        if (detected) {
+          saveHelperBind(qq, { union_id: detected, update_time: formatNow(), auto: true })
+          return e.reply(`已从本机微信缓存自动识别并绑定 union_id：${detected}\n发送【#xhh更新小助手抽卡记录】拉取云端记录`)
+        }
+      }
+      const cur = readHelperBind(qq)
+      return e.reply([
+        '【星穹工坊云端绑定】',
+        cur?.union_id ? `当前已绑定 union_id：${cur.union_id}` : '尚未绑定 union_id（不影响同步）',
+        '',
+        '用法：#xhh绑定小助手 <union_id>',
+        'union_id 为星穹工坊小程序对应微信账号的身份标识，可选。',
+        '云端目前只校验该参数非空、不校验内容，未绑定时同步会自动使用占位值；',
+        '此处绑定仅用于云端将来启用校验时无需改动。',
+        '',
+        '发送【#xhh更新小助手抽卡记录】可从小助手云端拉取约三年历史五星记录，',
+        '补齐官方 ck（约一年）拿不到的更早数据。',
+      ].join('\n'))
+    }
+    saveHelperBind(qq, { union_id: unionId, update_time: formatNow() })
+    return e.reply(`小助手 union_id 绑定成功：${unionId}\n发送【#xhh更新小助手抽卡记录】拉取云端记录`)
+  }
+
+  async updateHelper(e) {
+    const qq = e.user_id
+    const uid = e.user?.getUid?.('sr')
+    if (!uid) return e.reply('请先用 genshin 侧绑定星铁账号，再更新小助手抽卡记录')
+    let bind = readHelperBind(qq)
+    if (!bind?.union_id) {
+      // 未绑定时先尝试从本机微信缓存自动识别，避免让用户手工去挖union_id
+      const detected = detectHelperUnionId()
+      if (detected) {
+        saveHelperBind(qq, { union_id: detected, update_time: formatNow(), auto: true })
+        bind = readHelperBind(qq)
+        logger.mark(`[xhh][sr_gacha] 已从本机微信缓存自动识别星穹工坊 union_id：${detected}`)
+      }
+    }
+    // union_id 为可选：云端不校验内容，未绑定时用占位值兜底；
+    // 已绑定或从本机微信缓存识别到时优先使用真实值。
+    const unionId = bind?.union_id || HELPER_FALLBACK_UNION_ID
+    if (!bind?.union_id) {
+      logger.mark('[xhh][sr_gacha] 未绑定 union_id，改用占位值请求星穹工坊云端（云端不校验该参数）')
+    }
+    await e.reply(`正在从星穹工坊云端获取抽卡记录，请稍候……${unionId === HELPER_FALLBACK_UNION_ID ? '（未绑定 union_id，使用占位值）' : ''}`)
+    try {
+      const analysis = await fetchHelperCloud(uid, unionId)
+      const old = readData(getDataFile(qq, uid))
+      const itemIndex = await loadSrItemIndex()
+      const cloudPools = convertHelperPools(analysis, buildNameHint(old?.pools), itemIndex)
+      const pools = fillMissingIcons(old?.pools ? mergeHelperPools(old.pools, cloudPools) : cloudPools, itemIndex)
+      const result = { ...(old || {}), uid: String(uid), pools, update_time: formatNow(), source: 'helper' }
+      saveData(getDataFile(qq, uid), result)
+      const stats = Object.values(pools)
+        .filter(p => p.fiveNum || p.totalPulls)
+        .map(p => `【${p.name}】共${p.totalPulls || p.allNum || 0}抽｜五星${p.fiveNum || 0}`)
+        .join('\n')
+      await e.reply(`星穹工坊云端记录同步完成！\n${stats}`)
+      await this.renderSummary(e, [], 'grid')
+      return e.reply('发送【#xhh星铁抽卡帮助】查看全部抽卡指令')
+    } catch (err) {
+      logger.error('[xhh][sr_gacha] updateHelper failed:', err)
+      return e.reply(`星穹工坊云端同步失败：${err?.message || err}`)
+    }
+  }
+
   async help(e) {
+    // 全角空格对齐在不同字体下会错位，改为「指令 —— 说明」单行式，同类指令用 / 合并
     return e.reply([
       '【#xhh星铁抽卡帮助】',
-      '— 更新数据 —',
-      '#xhh星铁更新抽卡记录　刷新抽卡数据（ck）',
-      '#xhh星铁抽卡链接　　　用官方链接获取完整记录（含四星/常驻）',
-      '　　　　　　　　　　　必须带前缀，例如：',
-      '　　　　　　　　　　　#xhh星铁抽卡链接 + 跃迁记录链接',
-      '　　　　　　　　　　　（不带前缀的链接由 genshin 插件处理，互不冲突）',
-      '— 查询指令 —',
-      '#xhh星铁抽卡记录　　　抽卡总览统计',
-      '#xhh星铁角色记录　　　角色卡池进度',
-      '#xhh星铁武器记录　　　武器卡池进度',
-      '#xhh星铁联动角色记录　联动角色卡池进度',
-      '#xhh星铁联动武器记录　联动武器卡池进度',
-      '#xhh星铁常驻记录　　　常驻卡池统计',
+      '',
+      '更新数据',
+      '#xhh星铁更新抽卡记录 —— 用 ck 刷新抽卡数据',
+      '#xhh星铁抽卡链接 <链接> —— 官方链接拉最近几天的逐抽记录',
+      '#xhh星铁导入小助手记录 —— 导入小助手云端全量（含四星，建议先跑）',
+      '#xhh星铁更新星穹工坊记录 —— 补历史五星与 is_up（UP）标记',
+      '#xhh绑定小助手 <id> —— 一般用不到，union_id 可选、不绑定也能同步',
+      '',
+      '查询',
+      '#xhh星铁抽卡记录 —— 抽卡总览统计',
+      '#xhh星铁角色记录 / #xhh星铁武器记录 —— 角色、光锥卡池进度',
+      '#xhh星铁联动角色记录 / #xhh星铁联动武器记录 —— 联动卡池进度',
+      '#xhh星铁常驻记录 —— 常驻卡池统计',
+      '',
+      '提示：xhh 可写作 小花火，星铁可写作 崩铁。',
+      '不带 xhh 前缀的跃迁记录链接由 genshin 插件处理，互不冲突。',
+      '小助手全量数据不含 is_up，建议导入后再发一次星穹工坊记录补 UP 标记。',
+      '#xhh更新小助手抽卡记录 是星穹工坊的旧名，仍可用。',
     ].join('\n'))
   }
 }
