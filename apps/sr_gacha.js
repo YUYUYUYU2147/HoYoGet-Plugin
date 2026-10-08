@@ -797,7 +797,167 @@ export async function fetchAllByAuthkey(query) {
   return { pools, region }
 }
 
+/* ===== 星铁小助手（lelaer）云端全量导入 =====
+   小助手把导入过的记录存进自家 gachabackup 表，可通过导出的 JSON 拿到
+   四个池的逐抽全量（含四星），比官方 authkey 的半年窗口长得多。
+   与星穹工坊的分工（实测 uid 104359511）：
+     · 小助手：2925 条逐抽全量，但**没有 is_up 字段**
+     · 星穹工坊：仅五星与统计，但**带 is_up**
+   两者 id 同源（工坊的 25 条五星有 24 条能按 id 在小助手里找到），可安全按 id 并集。 */
 
+const SR_HELPER_POOL_KEYS = {
+  roleList: null, // 角色池，池内还混有联动角色（gacha_type 21），按条目字段拆
+  weaponList: null,
+  normalList: null,
+  newbieList: null,
+}
+const SR_GACHA_TYPE_MAP = {
+  '11': { key: 'GachaType_AvatarUp', name: '角色活动跃迁' },
+  '21': { key: 'GachaType_CollabAvatarUp', name: '联动角色跃迁' },
+  '12': { key: 'GachaType_EquipmentUp', name: '光锥活动跃迁' },
+  '22': { key: 'GachaType_CollabEquipmentUp', name: '联动光锥跃迁' },
+  '1': { key: 'common', name: '常驻跃迁' },
+  '2': { key: 'GachaType_Newbie', name: '新手跃迁' },
+}
+
+/** 读取本地的小助手全量导出文件（data/sr_gacha/sr_{uid}_full.json） */
+export function readSrHelperFullFile(uid) {
+  const file = `${PLUGIN_ROOT}/data/sr_gacha/sr_${uid}_full.json`
+  if (!fs.existsSync(file)) return null
+  try {
+    const data = JSON.parse(fs.readFileSync(file, 'utf8'))
+    return data && typeof data === 'object' ? data : null
+  } catch (err) {
+    logger.warn(`[xhh][sr_gacha] 小助手全量文件解析失败：${err?.message || err}`)
+    return null
+  }
+}
+
+/** 逐抽记录 -> 渲染所需 pool（按 id 升序遍历才能算出每个条目之前的累计抽数） */
+function buildPoolFromPulls(gachaType, rows) {
+  const def = SR_GACHA_TYPE_MAP[gachaType]
+  const sorted = [ ...rows ].sort((a, b) => {
+    const ai = BigInt(String(a?.id || '0'))
+    const bi = BigInt(String(b?.id || '0'))
+    if (ai === bi) return String(a?.time || '').localeCompare(String(b?.time || ''))
+    return ai < bi ? -1 : 1
+  })
+  let pulls = 0
+  let fourPulls = 0
+  const five = []
+  const four = []
+  for (const row of sorted) {
+    pulls++
+    fourPulls++
+    const rank = String(row?.rank_type || '')
+    const base = {
+      id: String(row?.id || ''),
+      name: row?.name || '未知',
+      item_type: row?.item_type === '光锥' ? '光锥' : '角色',
+      is_up: false,
+      gacha_count: 0,
+      time: row?.time || '',
+      icon: '',
+    }
+    if (rank === '5') {
+      five.push({ ...base, gacha_count: pulls })
+      pulls = 0
+    } else if (rank === '4') {
+      four.push({ ...base, gacha_count: fourPulls })
+      fourPulls = 0
+    }
+    // 三星不入库：卡片统计只认四星与五星
+  }
+  five.reverse()
+  four.sort((a, b) => String(b.time).localeCompare(String(a.time)))
+  return {
+    key: def.key,
+    type: gachaType,
+    name: def.name,
+    records: five,
+    fourLog: four,
+    fourNum: four.length,
+    pity: pulls,
+    fourPity: fourPulls,
+    totalPulls: rows.length,
+    fiveNum: five.length,
+    upNum: 0,
+    avgPity: five.length ? (rows.length / five.length).toFixed(1) : '0.0',
+  }
+}
+
+/** 「【ID:123】」这类占位名，来自云端没解析出名称的条目 */
+function isPlaceholderName(name) {
+  return /^【ID:.*】$/.test(String(name || ''))
+}
+
+/**
+ * 把小助手全量并入现有 pools。
+ * 逐抽明细以小助手为准（它是超集），旧记录里已有的 is_up 标记继承下来——
+ * 小助手导出没有该字段，若直接覆盖会把星穹工坊辛苦算出的 UP 标记弄丢。
+ */
+export function mergeSrHelperFull(pools, full) {
+  const grouped = new Map()
+  for (const list of Object.keys(SR_HELPER_POOL_KEYS)) {
+    for (const row of Array.isArray(full?.[list]) ? full[list] : []) {
+      const gachaType = String(row?.gacha_type || '')
+      if (!SR_GACHA_TYPE_MAP[gachaType]) continue
+      if (!grouped.has(gachaType)) grouped.set(gachaType, [])
+      grouped.get(gachaType).push(row)
+    }
+  }
+  const result = { addedFive: 0, addedFour: 0, pools: [] }
+  for (const [ gachaType, rows ] of grouped) {
+    const incoming = buildPoolFromPulls(gachaType, rows)
+    const old = pools?.[incoming.key]
+    if (!old) {
+      result.pools.push(incoming)
+      result.addedFive += incoming.fiveNum
+      result.addedFour += incoming.fourNum
+      continue
+    }
+    // 五星按 id 并集；旧记录有真实名称时不被新条目的「【ID:x】」占位名覆盖
+    const byId = new Map((old.records || []).map(r => [ String(r.id), { ...r } ]))
+    for (const row of incoming.records) {
+      const exist = byId.get(row.id)
+      if (!exist) {
+        byId.set(row.id, row)
+        result.addedFive++
+      } else {
+        if (isPlaceholderName(exist.name) && !isPlaceholderName(row.name)) exist.name = row.name
+        if (exist.gacha_count == null && row.gacha_count) exist.gacha_count = row.gacha_count
+      }
+    }
+    const records = [ ...byId.values() ].sort((a, b) => String(b.id).localeCompare(String(a.id)))
+    // 四星明细：小助手独有，直接并入
+    const fourIds = new Set((old.fourLog || []).map(r => String(r.id)))
+    const addFour = incoming.fourLog.filter(r => !fourIds.has(r.id))
+    result.addedFour += addFour.length
+    result.pools.push(recountPool({
+      ...old,
+      records,
+      fourLog: [ ...(old.fourLog || []), ...addFour ].sort((a, b) => String(b.time).localeCompare(String(a.time))),
+      totalPulls: incoming.totalPulls || old.totalPulls,
+      fourNum: (old.fourLog || []).length + addFour.length,
+      fourPity: incoming.fourPity,
+    }, records))
+  }
+  return result
+}
+
+// 从旧数据继承五星 is_up 标记（authkey 接口不返回 UP 标记）
+export function inheritIsUp(oldPools, newPools) {
+  for (const key of Object.keys(newPools)) {
+    const old = oldPools?.[key]
+    if (!old?.records?.length) continue
+    const oldMap = new Map()
+    for (const r of old.records) oldMap.set(`${r.name}|${r.time}`, !!r.is_up)
+    for (const r of newPools[key].records || []) {
+      if (oldMap.get(`${r.name}|${r.time}`)) r.is_up = true
+    }
+  }
+  return newPools
+}
 
 // 用 ck（five_star_list 接口，返回准确 UP 标记）校准 authkey 结果的 is_up：
 // authkey 全量接口不带 is_up，新五星只能靠 ck 数据补全，否则会被全部当成非UP
@@ -1252,6 +1412,7 @@ export class sr_gacha extends plugin {
         // 语义更正后的别名：updateHelper 接的其实是星穹工坊（api.lingyuan.design），
         // 旧名「更新小助手抽卡记录」保留兼容，新名避免与真正的小助手混淆
         { reg: '^#*(xhh|小花火)(星铁|崩铁)?(更新|刷新|同步)?星穹工坊(记录|数据)$', fnc: 'updateHelper' },
+        { reg: '^#*(xhh|小花火)(星铁|崩铁)?(导入|合并)小助手(记录|数据)?(\\s+\\S+)?$', fnc: 'importHelperFull' },
         { reg: '^#*(xhh|小花火)(星铁|崩铁)?常驻(记录|统计)?$', fnc: 'common' },
       ],
     })
@@ -1485,6 +1646,52 @@ export class sr_gacha extends plugin {
     }
     saveHelperBind(qq, { union_id: unionId, update_time: formatNow() })
     return e.reply(`小助手 union_id 绑定成功：${unionId}\n发送【#xhh更新小助手抽卡记录】拉取云端记录`)
+  }
+
+  // 从星穹工坊云端同步抽卡记录（云端保留约三年，比 ck 更全）
+  /**
+   * 导入星铁小助手（lelaer）云端全量记录。
+   *
+   * 读本地的 `data/sr_gacha/sr_{UID}_full.json`（从小助手导出的四池逐抽全量，含四星），
+   * 按 id 并入现有记录并保留旧有的 is_up 标记；不发任何网络请求。
+   * 不带参数时用绑定账号的星铁 UID。
+   */
+  async importHelperFull(e) {
+    const arg = String(e.msg || '').match(/小助手(?:记录|数据)?\s+(\d{5,})/)?.[1]
+    const auth = await getUserAuth(e)
+    if (auth.error && !arg) return e.reply(auth.error)
+    const uid = arg || auth?.uid
+    if (!uid) return e.reply('请先绑定星铁账号，或使用【#xhh星铁导入小助手记录 <UID>】指定 UID')
+    const full = readSrHelperFullFile(uid)
+    if (!full) {
+      return e.reply([
+        `未找到 UID:${uid} 的小助手全量文件`,
+        `期望路径：plugins/xhh/data/sr_gacha/sr_${uid}_full.json`,
+        '请先在小助手同步云端记录并导出 JSON，再放到该路径。',
+      ].join('\n'))
+    }
+    const file = getDataFile(uid, auth?.qq || e.user_id)
+    const old = readData(file)
+    if (!old?.pools) return e.reply('尚无本插件的星铁抽卡数据，请先发送【#xhh更新抽卡记录】或【#xhh更新小助手抽卡记录】')
+    const result = mergeSrHelperFull(old.pools, full)
+    if (!result.pools.length) return e.reply('小助手文件里没有识别到可用的卡池数据')
+    for (const pool of result.pools) old.pools[pool.key] = pool
+    saveData(file, { ...old, update_time: formatNow(), source: `${old.source || ''}+lelaer-full`.replace(/^\+/, '') })
+    const detail = result.pools
+      .map(p => `【${p.name}】${p.totalPulls}抽/五星${p.fiveNum}/四星${p.fourNum ?? 0}`)
+      .join('\n')
+    const total = result.pools.reduce((s, p) => s + Number(p.totalPulls || 0), 0)
+    const five = result.pools.reduce((s, p) => s + Number(p.fiveNum || 0), 0)
+    await e.reply([
+      `UID:${uid} 小助手全量导入完成`,
+      detail,
+      '',
+      `合计 ${total} 抽 / ${five} 个五星`,
+      `本次新增：五星 ${result.addedFive} 条、四星 ${result.addedFour} 条`,
+      '提示：小助手数据不含 is_up，UP 标记需再发【#xhh星铁更新星穹工坊记录】补齐。',
+    ].join('\n'))
+    await this.renderSummary(e, [], 'grid')
+    return true
   }
 
   async updateHelper(e) {
