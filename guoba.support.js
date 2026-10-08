@@ -1265,6 +1265,12 @@ export const supportGuoba = () => {
         helpMessage: '输出水晶查询/扫码绑定的详细日志',
         component: 'Switch',
       },
+      {
+        field: 'auto_reload',
+        label: '自举热重载',
+        helpMessage: '改完 apps/ 与 system/ 里的代码自动生效，不用重启（框架的 #重载插件 对 xhh 无效）。新增/删除指令仍需 #重启',
+        component: 'Switch',
+      },
     ],
     getConfigData() {
       const cfg = getCfg()
@@ -1350,6 +1356,7 @@ export const supportGuoba = () => {
         Tl: !!cfg.Tl,
         hbxx: !!cfg.hbxx,
         debug: !!cfg.debug,
+        auto_reload: cfg.auto_reload !== false,
         gacha_art_source: cfg.gacha_art_source || 'custom',
         gacha_header_art_source: cfg.gacha_header_art_source || cfg.gacha_art_source || 'custom',
         gacha_up_icon_source: cfg.gacha_up_icon_source || cfg.gacha_art_source || 'custom',
@@ -1478,6 +1485,7 @@ export const supportGuoba = () => {
         Tl: data.Tl,
         hbxx: data.hbxx,
         debug: data.debug,
+        auto_reload: data.auto_reload,
         bh3_all_note_enable: data.bh3_all_note_enable,
         forwardMsg: data.forwardMsg,
         bh3: data.bh3,

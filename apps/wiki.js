@@ -1,9 +1,9 @@
 import { yaml, render, mys, config, reply_recallMsg } from '#xhh';
-import { gsRoleView, srRoleView } from '../system/role_detail.js';
+import { gsRoleView, srRoleView, stripTags } from '../system/role_detail.js';
 import { buildRelicView, extractRelicArt } from './wiki/relic_view.js';
 import { fetchGsRole, buildGsDetail, fetchGsGuidePage, parseGsGuide, resolveGsGuideIcons, fetchGsRoleList, fetchGsWeaponList, fetchGsArtifactList, fetchSrRoleList, fetchSrLcList, fetchSrRelicList } from './wiki/bwiki_gs.js';
 import { fetchSrRole } from './wiki/bwiki_sr.js';
-import { fetchGsBwikiItem, fetchGsBwikiItemHtml } from './wiki/bwiki_gs_item.js';
+import { fetchGsBwikiItem, fetchGsBwikiItemHtml, paintNumbers } from './wiki/bwiki_gs_item.js';
 import { mihoyoItemAgents, mihoyoEntryId, mihoyoDiscParts } from './wiki/mihoyo_agents.js';
 import { zzzDiscAgents } from './wiki/zzz_disc_agents.js';
 import { fetchSrBwikiItem } from './wiki/bwiki_sr_item.js';
@@ -251,6 +251,90 @@ const GS_STAR_ICON = {
 const SR_STAR_ICON = {
     5: 'https://patchwiki.biligame.com/images/sr/thumb/c/c7/g380fo4o5accoa1rmlckz3e24vpx23e.png/77px-5%E6%98%9F.png',
     4: 'https://patchwiki.biligame.com/images/sr/thumb/9/9c/m5jb29e4h1q35a5etj8t7ehaemzr3kk.png/66px-4%E6%98%9F.png',
+};
+/* nanoka 原神武器详情的两个字段映射（仅供 nanoka 渲染器使用）。
+   武器类型与 system/mys.js 的 GS_WEAPON_CN 同一套取值（nanoka 的 weapon_type 原文）。
+   之前 wiki.js 里没有这两张表，也没有任何地方解析 nanoka 的 weapon 详情 ——
+   测试服模式禁用 Bwiki/米游社后，原神武器就没有任何渲染路径了。 */
+const GS_WEAPON_TYPE_CN = {
+    WEAPON_SWORD_ONE_HAND: '单手剑', WEAPON_CATALYST: '法器', WEAPON_CLAYMORE: '双手剑',
+    WEAPON_BOW: '弓', WEAPON_POLE: '长枪', WEAPON_CROSSBOW: '特弓', ITEM_TPS_WEAPON: '特殊武器'
+};
+/* nanoka 原神武器副属性：stats_modifier 的键 → 中文列名。
+   正式服那张卡的名称由 bwiki_gs_item.js 从 Bwiki 文本里抠（只认暴击伤害/暴击率/充能三种），
+   nanoka 走的是 prop 键，必须另建这张表，否则副属性列只能显示模板兜底的「副属性」。 */
+const GS_PROP_CN = {
+    fight_prop_attack_percent: '攻击力', fight_prop_hp_percent: '生命值',
+    fight_prop_defense_percent: '防御力', fight_prop_critical: '暴击率',
+    fight_prop_critical_hurt: '暴击伤害', fight_prop_physical_add_hurt: '物理伤害加成',
+    fight_prop_fire_add_hurt: '火元素伤害加成', fight_prop_water_add_hurt: '水元素伤害加成',
+    fight_prop_grass_add_hurt: '草元素伤害加成', fight_prop_electric_add_hurt: '雷元素伤害加成',
+    fight_prop_ice_add_hurt: '冰元素伤害加成', fight_prop_wind_add_hurt: '风元素伤害加成',
+    fight_prop_rock_add_hurt: '岩元素伤害加成', fight_prop_element_mastery: '元素精通',
+    fight_prop_charge_efficiency: '元素充能效率', fight_prop_heal_add: '治疗加成',
+};
+/* 命中这些后缀的 prop 是百分比数值（0.413 → 41.3%），元素精通等则是绝对值。
+   「hurt」覆盖 critical_hurt（暴击伤害）与 *_add_hurt（各元素/物理伤害加成）——
+   只写 add_hurt 会把暴击伤害漏成整数，实测秘星典谕 88.2% 显示成「1」。 */
+const GS_PROP_IS_PERCENT = /(_percent|hurt|critical|charge_efficiency|heal_add)$/;
+
+/* 精炼分档压缩：把 N 档描述压成一句「骨架 + 只写变化的数值」，
+   如「暴击伤害提升24%/30%/36%/42%/48%。…元素精通提升48/60/72/84/96点…」
+   —— 官方客户端就是这么写的（用户要求「像正式服那样写变化的数值就行」）。
+   三重守卫，任一不满足返回 null（模板退回逐档全展开）：
+   ① 各档把数字换成占位符后的「骨架」必须完全一致；
+   ② 各档数字个数一致，且压缩结果能逐档还原成原文（自校验，对不上就退回）；
+   ③ 变化的数字位之间必须隔着实质文字（≥4 个非空白字符）——
+      雾切「持有1/2/3层时，获得8/16/28%」这类**同档内列表**跨档合并会串成
+      「8/10/12/14/16/16/20/24/28/32…」，语义错乱，故退回。
+   实测全库 289 把：压缩成功 224 / 退回逐档 16（其余是档数不足 2）。 */
+const REFINE_NUM = /\d+(?:\.\d+)?%?/g;
+
+function compactRefinements(descList) {
+    const list = (descList || []).map(v => String(v || '')).filter(Boolean);
+    if (list.length < 2) return null;
+    const skel = list.map(s => s.replace(REFINE_NUM, '\u0000'));
+    if (new Set(skel).size !== 1) return null;                        // ①
+    const nums = list.map(s => (s.match(REFINE_NUM) || []));
+    const len = nums[0].length;
+    if (!len || nums.some(n => n.length !== len)) return null;         // ② 个数一致
+    const perPos = [];
+    for (let i = 0; i < len; i++) perPos.push(nums.map(n => n[i]));
+    const changed = perPos.map(v => new Set(v).size > 1);
+    const parts = skel[0].split('\u0000');
+    // ③ 相邻两个变化位之间要有实质文字
+    let prev = -1;
+    for (let i = 0; i < len; i++) {
+        if (!changed[i]) continue;
+        if (prev >= 0 && parts.slice(prev + 1, i + 1).join('').replace(/\s/g, '').length < 4) return null;
+        prev = i;
+    }
+    // ② 自校验：逐档还原必须与原文逐字相同
+    let out = '';
+    for (let i = 0; i < len; i++) out += parts[i] + (changed[i] ? perPos[i].join('/') : perPos[i][0]);
+    out += parts[len];
+    for (let k = 0; k < list.length; k++) {
+        let back = '';
+        for (let i = 0; i < len; i++) back += parts[i] + perPos[i][k];
+        back += parts[len];
+        if (back !== list[k]) return null;
+    }
+    return out;
+}
+
+/* 精炼数值上色：paintNumbers 只管百分比，「48/60/72/84/96点」这类无量纲序列
+   要另补。⚠ 顺序要紧：序列规则必须在单数字规则之前，反过来会让单数字规则
+   先吃掉序列最后一个数，出现「48/60/72/84/<span>96</span>点」的半截上色。 */
+const paintRefineText = txt => paintNumbers(String(txt || ''))
+    .replace(/(?<![\d/>])\d+(?:\.\d+)?(?:\s*\/\s*\d+(?:\.\d+)?)+\s*(?:点|秒|层|次|回合|个)/g, run =>
+        run.replace(/\d+(?:\.\d+)?/g, n => `<span class="num">${n}</span>`))
+    .replace(/(?<![\d/>])\d+(?:\.\d+)?\s*(?:点|秒|层|次|回合|个)/g, run =>
+        run.replace(/\d+(?:\.\d+)?/g, n => `<span class="num">${n}</span>`));
+// nanoka 命途内部名 → 中文（与 system/mys.js 的 SR_PATH_CN 同源）
+const SR_PATH_CN = {
+    Knight: '存护', Rogue: '巡猎', Mage: '智识', Warlock: '虚无',
+    Warrior: '毁灭', Priest: '丰饶', Shaman: '同谐',
+    Memory: '记忆', Elation: '欢愉'
 };
 
 export class Wiki extends plugin {
@@ -552,6 +636,17 @@ export class Wiki extends plugin {
     // 直接出列表，省掉一轮 zzz_tujian 请求，也避免日志里出现「角色解析: 武器」这类误导
     if (/^(角色|武器|光锥|遗器|音擎|驱动盘|邦布|圣遗物|圣痕|人偶|协同者|大剑|双手剑|单手剑|长枪|长柄武器|弓|弓箭|法器)$/.test(name)) {
       return this.list(e, name, isSr, isZZZ, isBH3);
+    }
+    /* 「XX角色图鉴」「XX武器图鉴」这类写法，命令正则 `(.+)图鉴` 会把尾部类型词
+       也算进查询名 —— 「星铁阿哈角色图鉴」抽成 name="阿哈角色"，既匹配不到
+       「星神★阿哈」，最后落到「测试服列表只收录…」那句提示上。
+       这里剥掉尾部类型词再查。正则要求前缀(.+?)非空，所以「角色」「圣痕」这类
+       **纯列表关键词**（上面 584 已return list）不会被剥掉；专属武器/圣痕那几条
+       也已在上面处理完，不受影响。 */
+    const typeTail = /^(.+?)(角色|武器|光锥|遗器|音擎|驱动盘|邦布|圣遗物|圣痕|人偶|协同者)$/.exec(name);
+    if (typeTail?.[1]) {
+      logger.debug?.(`[xhh][图鉴] 剥离尾部类型词：${name} → ${typeTail[1]}`);
+      name = typeTail[1];
     }
     // 统一处理角色/武器/遗器查询
     const checkTypes = [
@@ -1182,11 +1277,12 @@ export class Wiki extends plugin {
     if (!/^https?:\/\//i.test(api)) return '';
     const dir = `${process.cwd()}/temp/bg`;
     const key = Buffer.from(api).toString('base64url').slice(0, 40);
-    const out = `${dir}/${key}.jpg`;
+    const outJpg = `${dir}/${key}.jpg`;
+    const outPng = `${dir}/${key}.png`;
     // 6 小时换一张：同一张图反复用没意义，但也别每次出图都去打接口
-    try {
-      if (fs.existsSync(out) && Date.now() - fs.statSync(out).mtimeMs < 6 * 3600 * 1000) return out;
-    } catch { /* 目录还没有，继续下载 */ }
+    const fresh = (f) => { try { return fs.existsSync(f) && Date.now() - fs.statSync(f).mtimeMs < 6 * 3600 * 1000; } catch { return false; } };
+    if (fresh(outJpg)) return outJpg;
+    if (fresh(outPng)) return outPng;
     try {
       const ctrl = AbortSignal.timeout(15000);
       const r = await fetch(api, {
@@ -1198,10 +1294,20 @@ export class Wiki extends plugin {
       if (!r.ok || !ct.startsWith('image/')) return '';
       const buf = Buffer.from(await r.arrayBuffer());
       if (buf.length < 1024) return '';
-      const sharp = (await import('sharp')).default;
       await fs.promises.mkdir(dir, { recursive: true });
-      await sharp(buf).resize({ width: 1100 }).jpeg({ quality: 68 }).toFile(out);
-      return out;
+      // sharp 是可选依赖：装了就压成 1100px jpeg（体积小、QQ 友好）；
+      // 没装则退化为直接存原图——背景图至少能显示（puppeteer 把本地图绘进页面，
+      // 不会单独发大图，成品卡片大小由截图分辨率决定，与原图字节数无关）。
+      try {
+        const sharp = (await import('sharp')).default;
+        await sharp(buf).resize({ width: 1100 }).jpeg({ quality: 68 }).toFile(outJpg);
+        return outJpg;
+      } catch {
+        const ext = /\/png/i.test(ct) ? 'png' : /\/jpe?g/i.test(ct) ? 'jpg' : 'img';
+        const raw = `${dir}/${key}.${ext}`;
+        await fs.promises.writeFile(raw, buf);
+        return raw;
+      }
     } catch (err) {
       logger.debug?.(`[xhh][wiki] 背景图获取失败: ${err?.message}`);
       return '';
@@ -1642,162 +1748,286 @@ export class Wiki extends plugin {
     return hit?.title || '';
   }
 
+  /* 绝区零角色卡（test 模式唯一的渲染路，也是 Bwiki 分支失败后的回落路）。
+     nanoka 详情字段与 zzz_role_nk 模板的键名完全不同，这里逐项映射；
+     取不到的键留空，让模板的 {{if}} 整块跳过，不要塞「未知」占位。 */
   async zzz_role_pictures(e, data) {
     const c = data.content || {};
     const partner = c.partner_info || {};
     const rarity = c.rarity === 4 ? 'S' : c.rarity === 3 ? 'A' : `${c.rarity || '?'}星`;
-    const element = this.zzzFirstValue(c.element_type) || this.zzzFirstValue(c.special_element_type) || '未知属性';
-    const type = this.zzzFirstValue(c.weapon_type) || '未知特性';
-    const camp = this.zzzFirstValue(c.camp) || '未知阵营';
-    const hit = this.zzzFirstValue(c.hit_type) || '未知攻击类型';
+    /* 属性 / 特性 / 阵营 / 伤害类型在 nanoka 里都是 { id: 名称 } 形态
+       （如 element_type = {"201":"火属性"}），用 zzzFirstValue 取名称。
+       模板的 tag 与 badge 用本地图标（zzz_火.png / zzz_异常.png），
+       故属性名要去掉「属性」后缀才匹配得上。 */
+    const ICON = {
+      物理: 'zzz_物理.png', 火: 'zzz_火.png', 冰: 'zzz_冰.png', 电: 'zzz_电.png',
+      以太: 'zzz_以太.png', 风: 'zzz_风.png', 强攻: 'zzz_强攻.png', 击破: 'zzz_击破.png',
+      异常: 'zzz_异常.png', 支援: 'zzz_支援.png', 防护: 'zzz_防护.png', 命破: 'zzz_命破.png',
+    };
+    const element = this.zzzFirstValue(c.element_type) || this.zzzFirstValue(c.special_element_type) || '';
+    const elementShort = String(element).replace(/属性$/, '');
+    const type = this.zzzFirstValue(c.weapon_type) || '';
+    const camp = this.zzzFirstValue(c.camp) || '';
+    const hit = this.zzzFirstValue(c.hit_type) || '';
     const maxLv = c.level?.['6'] || {};
     const base = c.stats || {};
-    const passiveMax = Object.values(c.passive?.level || {}).slice(-1)[0] || {};
-    const skills = Object.entries(c.skill || {}).slice(0, 5).map(([key, val]) => {
-      const first = (val.description || []).find(v => v?.desc) || {};
-      return {
-        name: first.name || ({ basic: '普通攻击', dodge: '闪避', special: '特殊技', chain: '连携技', assist: '支援技' }[key] || key),
-        desc: this.zzzCleanText(first.desc, 110)
-      };
-    }).filter(v => v.name || v.desc);
-    if (passiveMax.name?.length) {
-      skills.unshift({ name: passiveMax.name[0], desc: this.zzzCleanText(passiveMax.desc?.[0], 110) });
-      if (passiveMax.name[1]) skills.unshift({ name: passiveMax.name[1], desc: this.zzzCleanText(passiveMax.desc?.[1], 110) });
-    }
-    const talents = Object.values(c.talent || {}).slice(0, 6).map(v => ({
-      level: v.level,
-      name: v.name,
-      desc: this.zzzCleanText(v.desc, 88)
-    }));
-    const fr = c.fairy_recommend || {};
-    // nanoka 的 part4/5/6 是「主词条推荐集合」，与实际 slot 不是一一对应
-    // （如艾莲 part6=暴击伤害，但 6 号位并无此词条），按主词条/副词条两组展示，避免错误的号位标注
-    const mainStats = [fr.part4?.name, fr.part5?.name, fr.part6?.name].filter(Boolean);
-    const propMap = { ...ZZZ_PROP_NAMES };
-    [fr.part4, fr.part5, fr.part6, fr.part_sub].forEach(p => { if (p?.prop) propMap[p.prop] = p.name; });
-    const subNames = [fr.part_sub?.name, ...(fr.part_sub_list || [])]
-      .map(id => propMap[id] || id)
-      .filter((v, i, arr) => v && arr.indexOf(v) === i);
-    const recommend = {
-      main: mainStats.join(' / '),
-      sub: subNames.join(' / ')
+    /* nanoka 把未实装角色的正文写成「...」占位，这类值一律按空处理，
+       否则卡面上会排出一串省略号。 */
+    const real = v => {
+      const s = String(v ?? '').trim();
+      return /^[.…]{2,}$/.test(s) ? '' : s;
     };
-    // 档案简介是图鉴核心内容，不做字数截断；之前 260 字会在部分角色末尾显示"…"。
-    const profile = this.zzzCleanText(partner.profile_desc || c.desc || '', 9999);
-    const obcIcon = await this.getZzzObcIcon(c.name, 43);
+    /* 技能：nanoka 按 basic / dodge / special / chain / assist 五类给出，
+       每类的 description 里同一分支会重复两遍，按名字去重后再成组。 */
+    const SKILL_GROUP = { basic: '普攻', dodge: '闪避', special: '特殊技', chain: '终结技', assist: '支援技' };
+    const skillGroups = [];
+    for (const [key, groupName] of Object.entries(SKILL_GROUP)) {
+      const seen = new Set();
+      const branches = [];
+      for (const v of c.skill?.[key]?.description || []) {
+        const name = real(v?.name);
+        if (!name || seen.has(name)) continue;
+        seen.add(name);
+        branches.push({ name, desc: this.zzzCleanText(v?.desc || '', 200) });
+      }
+      if (branches.length) skillGroups.push({ type: groupName, icon: '', branches });
+    }
+    // 核心技不在 skill 里，取 passive.level 最高档（含核心被动与额外能力两个分支）
+    const passiveMax = Object.values(c.passive?.level || {}).slice(-1)[0] || {};
+    const coreBranches = (passiveMax.name || []).map((n, i) => ({
+      name: real(n),
+      desc: this.zzzCleanText(passiveMax.desc?.[i] || '', 240),
+    })).filter(b => b.name || b.desc);
+    if (coreBranches.length) skillGroups.push({ type: '核心技', icon: '', branches: coreBranches });
+    /* 影画：与星铁的星魂同位。nanoka 对尚未定稿的文案会带 (TestN) 前缀，
+       或整段写成「...」—— 前缀清掉、占位名留空，正文照常显示。 */
+    const stripTest = s => String(s || '').replace(/\(Test\d+\)/g, '');
+    const achi = Object.values(c.talent || {}).map(t => ({
+      level: t.level ? String(t.level) : '',
+      name: real(stripTest(t.name)),
+      effect: this.zzzCleanText(stripTest(t.desc), 160),
+    })).filter(a => a.name || a.effect);
+    /* 头像：nanoka 的 icon 形如 IconRole{N}。未实装角色的 N 等于词条 id，
+       方形绳网图 IconInterKnotRole{N} 在 nanoka 上是 404，只有 IconRoleSelect{N} 可取；
+       已实装角色反之。两者都取不到时回落米游社列表图标。 */
+    const nkIcon = (() => {
+      const m = String(c.icon || '').match(/^IconRole(\d+)$/);
+      if (!m) return '';
+      return m[1] === String(c.id)
+        ? `https://static.nanoka.cc/assets/zzz/IconRoleSelect${m[1]}.webp`
+        : `https://static.nanoka.cc/assets/zzz/IconInterKnotRole${m[1].padStart(4, '0')}.webp`;
+    })();
+    const portrait = nkIcon || await this.getZzzObcIcon(c.name, 43);
+    /* 基础属性：成长表取 nanoka 的最高档（level['6']，未实装的第 6 档）；
+       固定值取暴击率 / 暴击伤害 / 穿透率 / 能量自动回复，与正式服那张卡同一口径。 */
+    const num = v => (Number.isFinite(Number(v)) ? Number(v) : 0);
+    const baseStats = {
+      growth: maxLv.level_max ? [{
+        lv: String(maxLv.level_max),
+        hp: num(base.hp_max) + num(maxLv.hp_max),
+        atk: num(base.attack) + num(maxLv.attack),
+        def: num(base.defence) + num(maxLv.defence),
+      }] : [],
+      fixed: [
+        { k: '暴击率', v: `${num(base.crit) / 100}%` },
+        { k: '暴击伤害', v: `${num(base.crit_damage) / 100}%` },
+        { k: '穿透率', v: `${num(base.pen_rate) / 100}%` },
+        { k: '能量自动回复', v: String(Number((num(base.sp_recover) / 100).toFixed(1))) },
+      ],
+    };
     const ascendMaterials = await mys.zzzParseRoleAscendMaterials(c.level);
     const skillMaterials = await mys.zzzParseRoleSkillMaterials(c.skill);
     const expMaterials = await mys.zzzParseRoleExpMaterials(c.level_exp);
     const passiveMaterials = await mys.zzzParseRolePassiveMaterials(c.passive);
+    /* 四类材料合并累加：模板只认一个 materials 列表。
+       ⚠ 字段名对齐：zzzMaterialView 返回 { name, img, amount }（img 已是解析好的
+       图标 URL），而 zzz_role_nk 模板读的是 m.icon / m.num。直接透传会让图标和
+       数量双双落空（卡上只剩材料名）。这里统一映射成模板要的 icon / num。 */
+    const matMap = new Map();
+    for (const list of [ascendMaterials, skillMaterials, expMaterials, passiveMaterials]) {
+      for (const m of list || []) {
+        const key = m?.name || '';
+        if (!key) continue;
+        const cur = matMap.get(key) || { name: key, icon: m.img || '', num: 0 };
+        cur.num = num(cur.num) + num(m.amount);
+        matMap.set(key, cur);
+      }
+    }
+    /* 推荐装备（配装 + 词条）：数据来自 nanoka 角色详情的 fairy_recommend。
+       slot4 / slot2 / slot_sub 是驱动盘套装 id，经 equipment.json 解析成
+       套装名 + 图标 + 2/4 阶效果；part4/5/6 是驱动盘 4/5/6 位主词条，
+       part_sub / part_sub_list 是副词条。
+       推荐音擎（guide.weapon）nanoka 角色数据里没有 —— 网站上那部分来自
+       nanoka 之外的数据源，此处不臆造，整块由模板跳过。*/
+    const fr = c.fairy_recommend || {};
+    const suitRow = async id => {
+      if (id == null) return null;
+      const s = await mys.zzzSuitView(id);
+      return s?.name ? s : null;
+    };
+    const set4 = await suitRow(fr.slot4);
+    const set2 = [];
+    for (const id of [fr.slot2, fr.slot_sub]) {
+      const s = await suitRow(id);
+      if (s && !set2.some(x => x.name === s.name)) set2.push(s);
+    }
+    // 模板 guide.drive 只有 set4 / set2 / reason 三个位置：套装效果写进 reason，
+    // 按「套装名·几件套：效果」分行，否则几套效果连成一段看不出归属。
+    // desc2=2 件套效果、desc4=4 件套效果，4 件套同时包含 2 件效果，故两段都留。
+    // desc 里的 <color=#…> 高亮标记经 zzzDisplayText 转成 span（模板按原样输出）。
+    const eff = s => [s?.desc2, s?.desc4]
+      .map(x => this.zzzDisplayText(String(x || '').trim()))
+      .filter(Boolean).join('');
+    const driveReason = [
+      set4 && `【${set4.name} · 4件套】${eff(set4)}`,
+      ...set2.map(s => `【${s.name} · 2件套】${eff(s)}`),
+    ].filter(Boolean).join('\n');
+    const guideDrive = (set4 || set2.length) ? { set4: set4 ? [set4] : [], set2, reason: driveReason } : null;
+    // 主词条：驱动盘 4/5/6 位
+    const mainStats = [
+      { slot: '4', text: fr.part4?.name },
+      { slot: '5', text: fr.part5?.name },
+      { slot: '6', text: fr.part6?.name },
+    ].filter(x => x.text);
+    // 副词条：part_sub_list 只给 prop id，用 part4/5/6/part_sub 里的 {prop,name} 反查名字
+    const propName = {};
+    for (const p of [fr.part4, fr.part5, fr.part6, fr.part_sub]) {
+      if (p?.prop != null && p?.name) propName[p.prop] = p.name;
+    }
+    const subNames = [...new Set([
+      fr.part_sub?.name,
+      ...(fr.part_sub_list || []).map(id => propName[id]),
+    ].filter(Boolean))];
+    const guideStats = (mainStats.length || subNames.length)
+      ? { main: mainStats, sub: subNames.join(' / '), reason: '' }
+      : null;
+    const guide = (guideDrive || guideStats) ? { drive: guideDrive, stats: guideStats, weapon: null } : null;
     const view = {
       name: c.name || '未知代理人',
-      avatar_img: obcIcon,
-      code_name: c.code_name || '',
-      full_name: partner.full_name || '',
-      avatar_text: (c.name || '?').slice(0, 1),
-      tags: [
-        { text: rarity, primary: true },
-        { text: element, primary: true },
-        { text: type },
-        { text: camp },
-        { text: hit }
-      ].filter(v => v.text),
-      profile,
-      info: [
-        { key: '全名', value: partner.full_name || c.name },
-        { key: '生日', value: partner.birthday || '-' },
-        { key: '性别', value: partner.gender || '-' },
-        { key: '阵营', value: camp },
-        { key: '属性', value: element, icon: this.getWikiIcon(element, 'zzz') },
-        { key: '特性', value: type, icon: this.getWikiIcon(type, 'zzz') }
-      ],
-      stats: [
-        { key: '生命', value: (base.hp_max || 0) + (maxLv.hp_max || 0) },
-        { key: '攻击', value: (base.attack || 0) + (maxLv.attack || 0) },
-        { key: '防御', value: (base.defence || 0) + (maxLv.defence || 0) },
-        { key: '冲击力', value: base.break_stun || '-' },
-        { key: '异常掌控', value: base.element_abnormal_power || '-' },
-        { key: '异常精通', value: base.element_mystery || '-' },
-        { key: '暴击率', value: base.crit ? `${base.crit / 100}%` : '-' },
-        { key: '暴击伤害', value: base.crit_damage ? `${base.crit_damage / 100}%` : '-' }
-      ],
-      strategy: (c.strategy || []).map(v => this.zzzCleanText(v, 90)).filter(v => v && !/^\d{1,2}$/.test(v)),
-      skills: skills.slice(0, 6),
-      talents,
-      recommend,
-      ascendMaterials,
-      skillMaterials,
-      expMaterials,
-      passiveMaterials
+      unreleased: isTestDataMode(),
+      // portrait 是方形卡面：未实装角色取 nanoka 的 IconRoleSelect，取不到回落米游社图标
+      portrait,
+      icon: portrait,
+      rarity,
+      damage: elementShort,
+      damageIcon: ICON[elementShort] || '',
+      profession: type,
+      professionIcon: ICON[type] || '',
+      camp,
+      // nanoka 没有阵营图标，留空由模板退化为纯文字
+      campIcon: '',
+      badges: [
+        { k: '全名/本名', v: real(partner.full_name) || c.name || '', icon: '', iconUrl: false },
+        { k: '阵营', v: camp, icon: '', iconUrl: false },
+        { k: '性别', v: real(partner.gender) || '', icon: '', iconUrl: false },
+        { k: '稀有度', v: `${rarity}级`, icon: '', iconUrl: false },
+        { k: '属性', v: elementShort, icon: ICON[elementShort] || '', iconUrl: false },
+        { k: '特性', v: type, icon: ICON[type] || '', iconUrl: false },
+        { k: '伤害类型', v: hit, icon: '', iconUrl: false },
+      ].filter(b => b.v),
+      desc: real(c.desc),
+      // 角色详情即 nanoka 的档案正文，保留全文不截断
+      detailStory: this.zzzCleanText(real(partner.profile_desc), 9999),
+      impression: '',
+      baseStats,
+      skillGroups,
+      achi,
+      materials: [...matMap.values()],
+      guide,
+      gacha: null,
+      // 背景图：纯装饰，与其他图鉴共用同一张随机图 API。测试服模式跳过 Bwiki 分支、
+      // 只走这条 nanoka 渲染路，必须在这里设 bgFile，否则绝区零角色图鉴在测试模式下无背景。
+      bgFile: await this.fetchGsBgFile()
     };
     return render('wiki/zzz_role_nk', view, { e, ret: true });
   }
 
+  /* 绝区零音擎（测试服模式唯一渲染路，也是Bwiki 缺页时的回落路）。
+     ⚠ 以前这里渲染的是**角色**模板 wiki/zzz_role_nk，视图给的是 avatar_img/tags/
+     info/skills 那套角色字段 —— 与音擎数据无一对应，于是音擎卡只剩「名字 + 一堆没有
+     图标数量的材料」（材料字段名也不对：mys 给 {name,img,amount}，角色模板读 icon/num）。
+     正确模板是 wiki/zzz_wq_bwiki，这里按它的字段重写。 */
   async zzz_wq_pictures(e, data) {
     const c = data.content || {};
-    const obcIcon = await this.getZzzObcIcon(c.name, 45);
-    const refinements = Object.entries(c.talents || {})
-      .sort(([a], [b]) => Number(a) - Number(b))
-      .map(([level, talent]) => ({
-        level,
-        name: talent?.name || '音擎效果',
-        desc: this.zzzDisplayText(talent?.desc || '')
-      }))
-      .filter(v => v.desc);
-    const talent = refinements[0];
-    const materials = await mys.zzzParseMaterials(c.materials, c.level);
-    const view = {
-      name: c.name || '未知音擎',
-      avatar_img: obcIcon,
-      code_name: c.code_name || '',
-      avatar_text: '音',
-      tags: [
-        { text: c.rarity === 4 ? 'S' : c.rarity === 3 ? 'A' : `${c.rarity || '?'}星`, primary: true },
-        { text: this.zzzFirstValue(c.weapon_type) || '音擎', primary: true },
-        { text: c.base_property?.name },
-        { text: c.rand_property?.name }
-      ].filter(v => v.text),
-      profile: this.zzzCleanText(c.desc || c.desc3 || '', 260),
-      info: [
-        { key: '类型', value: this.zzzFirstValue(c.weapon_type) || '-' },
-        { key: '基础属性（满级）', value: `${c.base_property?.name || '-'} ${c.max_attack || '-'}` },
-        { key: '副属性（满级）', value: `${c.rand_property?.name || '-'} ${this.zzzMaxRandProperty(c)}` },
-        { key: '适用说明', value: c.desc2 || '-' }
-      ],
-      stats: [],
-      strategy: [],
-      skills: talent ? [{
-        name: talent.name || '音擎效果',
-        desc: this.zzzDisplayText(talent.desc || '')
-      }] : [],
-      refinements,
-      talents: [],
-      recommend: [],
-      materials
+    if (!c.name) return false;
+    const num = v => (Number.isFinite(Number(v)) ? Number(v) : 0);
+    // 未实装内容的正文写成「...」占位，按空处理，避免卡面排出一串省略号
+    const real = v => {
+      const s = String(v ?? '').trim();
+      return /^[.…]{2,}$/.test(s) ? '' : s;
     };
-    return render('wiki/zzz_role_nk', view, { e, ret: true });
+    // 卡面方图：nanoka 的 icon 是游戏内资源路径
+    //（Assets/.../ItemIconWeapon/UnPacker/Weapon_S_1641.png），
+    // 整条路径在 assets 下没发布，但 basename 发布过 —— 拼 assets/zzz/{basename}.webp
+    // 可访问（实测 Weapon_S_1641.webp 返回 200）。
+    const icon = mys.zzzItemIcon?.(c.icon) || '';
+    const feat = this.zzzFirstValue(c.weapon_type) || '';
+    /* 详细面板：只出满级一行（与正式服 Bwiki 那张卡、星铁光锥卡同一口径）。
+       满级基础攻击力 = base_property.value × (10000 + 成长表末级 rate + 满突破 star_rate) / 10000。
+       公式是拿已实装音擎列表的 atk 当真值标定出来的（实测 5/5 命中，误差 ≤1 取整）；
+       未实装音擎不在 weapon.json 列表里（mys.detail 注入的 max_attack 为 0），
+       只能靠这个公式补，否则基础攻击力是空的。 */
+    const lvKeys = Object.keys(c.level || {}).map(Number).filter(n => Number.isFinite(n));
+    const maxLv = lvKeys.length ? Math.max(...lvKeys) : 0;
+    const atkBp = num(c.base_property?.value);
+    const lvRate = num(c.level?.[String(maxLv)]?.rate);
+    const starRate = num(c.stars?.['5']?.star_rate);
+    const maxAtk = num(c.max_attack)
+      || (atkBp && maxLv ? Math.round(atkBp * (10000 + lvRate + starRate) / 10000) : 0);
+    const panel = maxAtk
+      ? [{ lv: `${maxLv}级`, atk: String(maxAtk), sub: this.zzzMaxRandProperty(c) }]
+      : [];
+    const talent = (() => {
+      const t = Object.values(c.talents || {})[0] || {};
+      return { name: real(t.name), desc: this.zzzDisplayText(real(t.desc)) };
+    })();
+    // 突破材料：mys.zzzParseMaterials 返回 { name, img, amount }，
+    // 模板 materialTotal 读 { img, name, num } —— 字段名要对齐
+    const materialTotal = (await mys.zzzParseMaterials(c.materials, c.level)) || [];
+    const view = {
+      name: c.name,
+      icon,
+      rarity: num(c.rarity) >= 5 ? 'S级' : num(c.rarity) >= 4 ? 'A级' : 'B级',
+      feat,
+      brief: real(c.desc2),
+      panel,
+      randName: c.rand_property?.name || '',
+      talent,
+      // nanoka 侧没有「相关代理人 / 获取途径 / 版本 / 音擎故事」这几个字段，
+      // 留空由模板整块跳过（未实装音擎的 desc/desc3 都是「...」占位，本就没有故事）
+      agents: [],
+      materialTotal: materialTotal.map(m => ({ name: m.name, img: m.img, num: num(m.amount) })),
+      unreleased: isTestDataMode(),
+      bgFile: await this.fetchGsBgFile()
+    };
+    return render('wiki/zzz_wq_bwiki', view, { e, ret: true });
   }
 
   async zzz_syw_pictures(e, data) {
+    /* 驱动盘一律渲染**新版卡** zzz_syw_bwiki —— 与正式服 Bwiki 那张卡同一个模板
+       （此前这里走旧模板 wiki/zzz_syw 的单栏版式，于是测试服模式下的驱动盘卡
+       与正式服完全不是一个版式）。
+       模板读 icon / set2 / set4 / desc / stories / parts / agents / rarity / 版本 等，
+       nanoka 详情只给了前五项（parts 散件与 agents 推荐代理人要官方源，
+       测试服模式禁用官方，故留空由 {{if}} 整块跳过）。 */
     const c = data.content || {};
-    // 单栏版式，和星铁 wiki/yiqi 一致：名称与图标左右两格、左对齐，共用 yq_syw.css。
-    // 之前试过原神 wiki/syw 那种 .pic_ 居中块，图标小、留白多，没采用。
-    // 更早之前这里错用角色卡模板 wiki/zzz_role，那是带 info-grid / stats-grid /
-    // skill-grid 的三栏布局，驱动盘只有两条套装效果，套上去又空又宽。
-    // 单独建 wiki/zzz_syw 而不直接用 wiki/yiqi：yiqi 的 {{t.value}} 会转义，
-    // zzzRichText 产出的 <span style="color:…"> 技能名高亮会变成字面量显示在页面上；
-    // zzz_syw 改用 {{@t.value}} 不转义，排版仍与 yiqi 一致。
-    // 官方 Wiki 回退时只有 name/summary，没有 desc2/desc4，套装效果会留空。
     const icon = mys.zzzSuitIcon?.(c.icon) || '';
+    const set2 = this.zzzRichText(c.desc2 || '');
+    const set4 = this.zzzRichText(c.desc4 || '');
+    if (!c.name && !set2 && !set4) return false;
     const view = {
       name: c.name || '未知驱动盘',
-      pic: icon ? [icon] : [],
-      table: [
-        { key: '2件套', value: this.zzzCleanText(c.desc2 || '', 120) },
-        { key: '4件套', value: this.zzzRichText(c.desc4 || '') }
-      ].filter(v => v.value)
+      icon,
+      set2,
+      set4,
+      desc: this.zzzCleanText(c.story || '', 200),
+      stories: [],
+      parts: [],
+      agents: [],
+      unreleased: isTestDataMode(),
+      bgFile: await this.fetchGsBgFile()
     };
-    return render('wiki/zzz_syw', view, { e, ret: true });
+    return render('wiki/zzz_syw_bwiki', view, { e, ret: true });
   }
 
   async zzz_yq_pictures(e, data) {
@@ -1855,13 +2085,34 @@ export class Wiki extends plugin {
 
   //圣遗物图
   async syw_pictures(e, data) {
-    let ext = JSON.parse(data.ext).c_218;
-    data = {
-      name: data.title,
-      icon: data.icon,
-      table: ext.table.list,
-    };
-    render('wiki/syw', data, { e, ret: true });
+    /* 原神圣遗物一律渲染**新版卡** relic_bwiki —— 与正式服 Bwiki 那张卡
+       （gs_syw_bwiki_pictures / gs_syw_fallback_pictures）同一个模板。
+       此前走旧模板 wiki/syw 的单栏版式，于是测试服模式（以及正式服 Bwiki 未收录
+       的套装）出的卡与正式服不是一个版式。
+       件套文本在列表项 ext.c_218.table.list 里，nanoka 的 gsArtifactList 与米游社
+       官方都是这个结构（见 mys.js 注释），直接取即可，不必重新请求列表。 */
+    let set2 = '', set4 = '';
+    try {
+      const box = typeof data?.ext === 'string' ? JSON.parse(data.ext || '{}') : (data?.ext || {});
+      for (const r of (box.c_218?.table?.list || [])) {
+        const k = String(r?.key || '');
+        if (/^2/.test(k) && !set2) set2 = r?.value || '';
+        else if (/^4/.test(k) && !set4) set4 = r?.value || '';
+      }
+    } catch (_) {
+      return false;
+    }
+    if (!set2 && !set4) return false;
+    const icon = data?.icon || '';
+    const view = buildRelicView({
+      game: 'gs',
+      name: data?.title || data?.name || '',
+      base: { set2, set4, icon, bgFile: await this.fetchGsBgFile() },
+      art: { setIcon: icon, pieceIcons: [], agents: [] },
+      storyTitle: '圣遗物故事',
+      unreleased: isTestDataMode(),
+    });
+    return render('wiki/relic_bwiki', view, { e, ret: true });
   }
 
   //圣遗物和遗器
@@ -1924,7 +2175,10 @@ export class Wiki extends plugin {
         if (!detail) return false;
         this.bh3_syw_pictures(e, detail, roleName);
       } else if (isSr) {
-        this.yiqi_pictures(e, data);
+        // 星铁遗器一律出新版卡 relic_bwiki（与正式服同源）；只有件套文本取不到时
+        // 才退回旧模板 wiki/yiqi，避免「查到了却什么都不出」
+        const done = await this.sr_yq_nanoka_pictures(e, data);
+        if (done === false || done == null) this.yiqi_pictures(e, data);
       } else {
         this.syw_pictures(e, data);
       }
@@ -2012,6 +2266,17 @@ export class Wiki extends plugin {
           // 直接丢给 sr_gz_pictures 会读 data.content.contents[0].text 崩溃。
           if (data?.nanoka) this.sr_gz_nanoka_pictures(e, data);
           else this.sr_gz_pictures(e, data);
+        }
+        else if (data?.nanoka) {
+          /* 原神武器此前没有 nanoka 渲染器：gs_wq_pictures 只认米游社的
+             data.page.modules，nanoka 详情的 page 恒为 undefined，于是直接
+             return false —— 测试服模式（禁用 Bwiki/米游社）下原神武器永远
+             「没有找到」。这里改走专门的 nanoka 渲染器。 */
+          const done = await this.gs_wq_nanoka_pictures(e, data);
+          if (done === false || done == null) {
+            logger.debug?.(`[xhh][图鉴] 武器「${wq}」nanoka 渲染失败`);
+            return false;
+          }
         }
         else this.gs_wq_pictures(e, data);
       } catch (err) {
@@ -2188,13 +2453,21 @@ export class Wiki extends plugin {
         const view = isSr ? srRoleView(c, c.id || '') : gsRoleView(c, c.id || '');
         const name = c.name;
         if (!name) return false;
-        if (!isSr) return render(tpl, { ...view, name }, { e, ret: true });
+        if (!isSr) {
+          // 背景图：纯装饰，与星铁角色卡共用同一张随机图 API。测试服模式跳过 Bwiki 分支、
+          // 只走这条 nanoka 渲染路，必须在这里设 bgFile，否则原神角色图鉴在测试模式下无背景。
+          view.bgFile = await this.fetchGsBgFile();
+          // 测试服角标与其他渲染器同一判据：测试服数据模式下 nanoka 收录的即测试服内容
+          return render(tpl, { ...view, name, unreleased: isTestDataMode() }, { e, ret: true });
+        }
 
         // 星铁：基础信息 / 属性成长 / 技能 / 星魂 改用 Bwiki，
         // 推荐光锥、遗器、词条这些 nanoka 更全（页面里也没有），保留 nanoka 的。
         // 抓取或解析失败时 sr 视图保持原样，整张卡退回全 nanoka，不会缺块。
         const bw = await this.mergeSrBwikiRole(name, view);
-        return render(tpl, { ...bw, name }, { e, ret: true });
+        // 背景图：纯装饰，与原神角色卡共用同一张随机图 API；失败返回空串，模板整块跳过
+        bw.bgFile = await this.fetchGsBgFile();
+        return render(tpl, { ...bw, name, unreleased: isTestDataMode() }, { e, ret: true });
     }
 
   /**
@@ -2296,25 +2569,37 @@ export class Wiki extends plugin {
       attr.push({ key: '命途/属性', value: fate + '/' + attribute });
       attr.push({ key: '中文cv', value: js.cncv });
     }
-    data = {
+    /* 版式统一：米游社官方兜底也渲染**新版卡** sr_role_nk（与 Bwiki / nanoka 同源），
+       不再用旧模板 wiki/sr_role —— 此前正式服 Bwiki 限流时同一个角色会出另一种旧版式。
+       米游社这条数据源只有基础信息（名字/星级/命途/属性/阵营等标签）与晋阶材料，
+       技能 / 星魂 / 行迹 / 属性成长一概没有，故那些块留空由模板 {{if}} 整块跳过
+       （与旧卡显示的信息量等价，只是换成新版式）。
+       材料字段对不上：旧模板读 { icon, title, amount }，新模板读 { icon, name, total }，
+       且米游社给的是完整 URL，必须带 iconUrl 否则模板会去拼本地 wiki/imgs 而裂图。 */
+    const view = {
       name: userinfo?.name || data.content.title,
-      //级
-      star: userinfo?.rarity || rarity == '五星' ? 5 : 4,
-      //属性
-      attribute: attribute,
-      //命途
-      fate: fate,
-      //封面链接
-      img:
-        userinfo?.figurePath ||
-        `../../../../../plugins/miao-plugin/resources/meta-sr/character/${data.content.title}/imgs/splash.webp`,
-      //角色标签
-      attr: attr,
-      attr_: userinfo ? true : false,
-      //突破材料(另一个排版没有,懒得写了)
-      material: character_material,
+      icon: userinfo?.figurePath || '',
+      rarity: userinfo?.rarity ? `${userinfo.rarity}星` : (rarity || ''),
+      path: fate || '',
+      damage: attribute || '',
+      camp: (attr.find(a => /阵营/.test(String(a?.key || ''))) || {}).value || '',
+      badges: attr.map(a => ({ k: a?.key || '', v: a?.value || '' })),
+      materials: (character_material || []).map(m => ({
+        icon: m?.icon || '',
+        iconUrl: /^https?:/i.test(String(m?.icon || '')),
+        name: m?.title || '',
+        total: m?.amount ?? 0
+      })),
+      skills: [], ranks: [], passives: [], stories: [], stats: [],
+      hp: '', atk: '', def: '', crit: '', critDmg: '', speed: '',
+      spNeed: '', traceBonus: '', desc: '', detailStory: '',
+      /* 模板 sr_role_nk 有几处直接读 .length（推荐光锥 / 遗器 / 主副词条），
+         米游社源没有这些数据，但必须给空数组，否则模板渲染会抛 undefined 错。 */
+      recoLightcones: [], relicSets2: [], relicSets4: [], mainStats: [], subStats: [],
+      srGuide: null, gacha: null,
+      bgFile: await this.fetchGsBgFile()
     };
-    render('wiki/sr_role', data, { e, ret: true });
+    return render('wiki/sr_role_nk', view, { e, ret: true });
   }
 
   //原神角色
@@ -2405,28 +2690,38 @@ export class Wiki extends plugin {
       grow.value = '19.2%';
     }
     character_material = character_material.list[0].materials;
-    data = {
+    /* 版式统一：米游社官方兜底也渲染**新版卡** gs_role_nk（与 Bwiki / nanoka 同源），
+       不再用旧模板 wiki/gs_role —— 此前正式服 Bwiki 限流时同一个角色会出另一种旧版式。
+       米游社这条数据源只有基础信息（名字/星级/元素/标签）、突破材料、天赋材料与
+       一条成长属性，技能 / 天赋 / 命座一概没有，故那些块留空由模板跳过。
+       材料字段：旧模板读 { img, nickname, amount }，新模板 matSummary[].mats 读
+       { icon, name, count }；天赋材料（pngs/png_names 同源的 talentMaterials）单列一组。
+       成长属性只有键+值一条，按键塞进 critRate / critDmg（其它键模板没有对应字段）。 */
+    const growKey = String(grow?.key || '');
+    const view = {
       name: character.name,
-      //级
-      star: character.star,
-      //元素标志
-      attribute: role_attribute[character.role_attribute],
-      //封面链接
-      img: character.avatar_pc,
-      //角色标签
-      attr: character.attr,
-      //突破材料
-      material: character_material,
-      //成长属性
-      grow: grow.key + ' ' + grow.value,
-      //天赋材料图片
-      pngs: pngs,
-      //天赋材料
-      png_names: png_names,
-      //天赋材料周几
-      week: week,
+      icon: character.avatar_pc || '',
+      rarity: character.star || '',
+      element: role_attribute[character.role_attribute] || '',
+      topBadges: (character.attr || []).map(a => ({ k: a?.key || '', v: a?.value || '' })),
+      ...(growKey === '暴击伤害' ? { critDmg: grow.value } : growKey === '暴击率' ? { critRate: grow.value } : {}),
+      matSummary: [
+        {
+          label: '突破材料',
+          mats: (character_material || []).map(m => ({ icon: m?.img || '', name: m?.nickname || '', count: m?.amount ?? 0 }))
+        },
+        {
+          label: '天赋材料',
+          mats: (talentMaterials || []).map(m => ({ icon: m?.img || '', name: m?.name || '', count: m?.amount ?? 0 }))
+        },
+      ].filter(g => g.mats.length),
+      skills: [], passives: [], constellations: [],
+      baseHp: '', baseAtk: '', baseDef: '', stamina: '',
+      desc: '', detailStory: '', region: '', release: '', birth: '', title: '',
+      guide: null, gacha: null,
+      bgFile: await this.fetchGsBgFile()
     };
-    render('wiki/gs_role', data, { e, ret: true });
+    return render('wiki/gs_role_nk', view, { e, ret: true });
   }
 
   //原神武器（Bwiki 词条页优先，正式服模式）
@@ -2443,6 +2738,110 @@ export class Wiki extends plugin {
     const view = {
       ...item,
       starList: Array.from({ length: Number(item.stars) || 0 }),
+    };
+    view.bgFile = await this.fetchGsBgFile();
+    return render('wiki/gs_item_bwiki', view, { e, ret: true });
+  }
+
+  /* 原神武器 nanoka 渲染器（测试服模式下唯一的详情数据源）。
+     测试服模式按作者要求禁用 Bwiki 与米游社，详情必然是 nanoka 结构
+     { content: {...}, nanoka: true }；而 gs_wq_pictures 只认米游社的
+     data.page.modules，page 为 undefined 时直接 return false ——
+     实测「秘星典谕」详情 nanoka=true、page=undefined，于是测试服模式下
+     原神武器图鉴永远走「没有找到」。这里单独适配成 gs_item_bwiki 的字段，
+     版式与正式服模式一致。
+
+     nanoka 的 zh/weapon/{id}.json 字段：
+       name / desc / weapon_type / weapon_prop / rarity / icon /
+       stats_modifier{atk:{base,levels}, <副属性>:{base,levels}} /
+       ascension{1..6:{fight_prop_base_attack}} / refinement{1..5:{name,desc,param_list}} /
+       materials{1..6:{mats:[{name,id,count}],cost}} / story（游戏内资源路径，非正文） */
+  async gs_wq_nanoka_pictures(e, data) {
+    const c = data?.content || {};
+    if (!c.name) return false;
+    // nanoka 的技能描述带 <color=#..> 与转义换行，模板用 {{@ }} 原样输出 HTML
+    const rich = t => String(t || '')
+      .replace(/<color=(#[0-9a-fA-F]+)>/g, '<span style="color:$1">')
+      .replace(/<\/color>/g, '</span>')
+      .replace(/<\/?unbreak>/g, '')
+      .replace(/\\n/g, '<br>')
+      .trim();
+    const stars = Number(c.rarity) || 0;
+    /* 详细面板：只出满级一行（与正式服 Bwiki 那张卡同一口径 ——
+       bwiki_gs_item.js 也把成长表压成最高等级一行）。
+       攻击力 = 基础值 × 等级系数 + 突破加成累计。ascension 存的是**累计**值
+       （实测 31.1 / 62.2 / … / 186.7，六阶等差的累加），早先把六阶再累加一遍得
+       653.5，lv90 算出 1141（游戏内 674），故只取最高阶那一条。
+       副属性没有突破加成，直接 基础值 × 等级系数。 */
+    // nanoka 的 levels 曲线给到 100 级，游戏内武器满级只到 90（三星及以下 70）
+    const lvCap = stars >= 4 ? 90 : 70;
+    const lvKeys = Object.keys(c.stats_modifier?.atk?.levels || {})
+      .map(Number).filter(n => Number.isFinite(n) && n <= lvCap).sort((a, b) => a - b);
+    const ascStages = Object.keys(c.ascension || {})
+      .sort((a, b) => Number(a) - Number(b))
+      .map(k => Number(c.ascension[k]?.fight_prop_base_attack) || 0);
+    const subKey = Object.keys(c.stats_modifier || {}).find(k => k !== 'atk') || '';
+    const subMod = subKey ? c.stats_modifier[subKey] : null;
+    const panel = (lvKeys.length && subMod) ? (() => {
+      const lv = lvKeys[lvKeys.length - 1];
+      const atk = (c.stats_modifier.atk.base || 0) * (c.stats_modifier.atk.levels[String(lv)] || 0)
+        + (ascStages.length ? ascStages[ascStages.length - 1] : 0);
+      const sub = (subMod.base || 0) * (subMod.levels?.[String(lv)] || 0);
+      return [{
+        lv: `${lv}级`,
+        cells: [
+          { v: String(Math.round(atk)) },
+          { v: GS_PROP_IS_PERCENT.test(subKey) ? `${Number((sub * 100).toFixed(1))}%` : String(Math.round(sub)) },
+        ],
+      }];
+    })() : [];
+    // 突破材料按 id 汇总成「总计」，逐档列出来太长也没有人看
+    const agg = new Map();
+    for (const stage of Object.values(c.materials || {})) {
+      for (const m of stage?.mats || []) {
+        const key = String(m.id ?? m.name ?? '');
+        if (!key) continue;
+        const cur = agg.get(key) || { name: m.name || '', num: 0 };
+        cur.num += m.count || 0;
+        agg.set(key, cur);
+      }
+    }
+    const materialTotal = [...agg.entries()].map(([id, v]) => ({
+      // 原神物品图标由 item_id 直接推出（system/mys.js 实测 9/9 全 200）
+      img: /^\d+$/.test(id) ? `https://static.nanoka.cc/assets/gi/UI_ItemIcon_${id}.webp` : '',
+      name: v.name,
+      num: v.num
+    }));
+    const refKeys = Object.keys(c.refinement || {}).sort((a, b) => Number(a) - Number(b));
+    /* 精炼按官方客户端写法压成一句（只写变化的数值），与正式服那张卡同一口径；
+       守卫不通过（文案骨架不一致 / 同档内列表会串味）才退回逐档全展开。
+       压缩在 stripTags 洗过的纯文本上做（<color> 已剥、字面 \n 已还原），
+       压缩结果用 paintRefineText 统一上色，不再依赖原文各自的 <color> 高亮。 */
+    const compact = compactRefinements(refKeys.map(k => stripTags(c.refinement[k]?.desc || '')));
+    const refinements = compact
+      ? [{ name: c.refinement[refKeys[0]]?.name || '', desc: paintRefineText(compact).replace(/\n/g, '<br>') }]
+      : refKeys
+        .map(k => ({ name: c.refinement[k]?.name || '', desc: rich(c.refinement[k]?.desc) }))
+        .filter(r => r.desc);
+    const view = {
+      name: c.name,
+      icon: c.icon ? `https://static.nanoka.cc/assets/gi/${c.icon}.webp` : '',
+      stars,
+      starList: Array.from({ length: stars }),
+      typeName: GS_WEAPON_TYPE_CN[c.weapon_type] || '',
+      intro: c.desc || '',
+      // story 是游戏内立绘资源路径（ART/UI/Readable/...），不是正文，不能当故事渲染
+      skillLabel: '武器技能',
+      skillName: refinements[0]?.name || '',
+      skillDesc: refinements[0]?.desc || '',
+      refinements,
+      panel,
+      subName: GS_PROP_CN[subKey] || '',
+      materialTotal,
+      agents: [],
+      // 测试服模式下 nanoka 里的条目就是未实装内容，打 TEST 角标
+      unreleased: isTestDataMode(),
+      bgFile: await this.fetchGsBgFile()
     };
     return render('wiki/gs_item_bwiki', view, { e, ret: true });
   }
@@ -2469,6 +2868,7 @@ export class Wiki extends plugin {
       version: meta?.version || detail?.version || '',
       intro: detail?.desc || '',
     };
+    view.bgFile = await this.fetchGsBgFile();
     return render('wiki/sr_item_bwiki', view, { e, ret: true });
   }
 
@@ -2487,7 +2887,7 @@ export class Wiki extends plugin {
     const view = buildRelicView({
       game: 'sr',
       name,
-      base: { ...detail, icon: setIcon },
+      base: { ...detail, icon: setIcon, bgFile: await this.fetchGsBgFile() },
       art: {
         setIcon,
         pieceIcons: detail.pieceIcons || [],
@@ -2498,6 +2898,46 @@ export class Wiki extends plugin {
         reason: detail.desc || '',
       },
       storyTitle: '遗器来历',
+    });
+    return render('wiki/relic_bwiki', view, { e, ret: true });
+  }
+
+  /* 星铁遗器 nanoka 渲染（测试服模式 / Bwiki 未收录时的回退）。
+     以前星铁遗器一律走 yiqi_pictures → 旧模板 wiki/yiqi（只有 2/4 件套文本 + 一张图），
+     与正式服的新版卡 relic_bwiki 完全不是一个版式。这里按 buildRelicView 归一后
+     渲染**同一个**新模板 relic_bwiki，与正式服 Bwiki 那张卡同版式。
+
+     列表项（relicset.json → mys.js 的 hsrRelicsetList）已经给了渲染所需的全部内容：
+       title（套名）/ icon（已转成 assets/hsr/itemfigures URL，实测 64 套全 200）/
+       ext.c_30.table.list（2 件套 / 4 件套；#N[i] 占位符与 <unbreak> 已在 hsrRelicText
+       里还原剥净）—— 不必再请求 zh/relicset/{id}.json，少一次请求也更稳。
+
+     nanoka 侧没有版本 / 获取途径 / TAG / 星级，也没有遗器来历（parts[].story 实测全为
+     null）与散件图标（itemfigures/{partId} 实测 404），这些留空：前三者由徽章 {{if}}
+     跳过，散件宁可不给也不裂图。 */
+  async sr_yq_nanoka_pictures(e, data) {
+    const name = data?.title || data?.name || '';
+    let rows = [];
+    try {
+      const ext = typeof data?.ext === 'string' ? JSON.parse(data.ext || '{}') : (data?.ext || {});
+      rows = (((ext.c_30 || ext) || {}).table || {}).list || [];
+    } catch (_) {
+      return false;
+    }
+    const pick = re => String((rows.find(r => re.test(String(r?.key || ''))) || {}).value || '');
+    const set2 = pick(/^2/), set4 = pick(/^4/);
+    if (!name || (!set2 && !set4)) return false;
+    const setIcon = data?.icon || '';
+    const view = buildRelicView({
+      game: 'sr',
+      name,
+      base: { name, set2, set4, icon: setIcon, bgFile: await this.fetchGsBgFile() },
+      // 散件图标 nanoka 未发布（itemfigures/{partId} 实测 404），不给，避免裂图
+      art: { setIcon, pieceIcons: [], agents: [] },
+      storyTitle: '遗器来历',
+      // 列表层已按 manifest.hsr.new.relicset 打过 isUnreleased（实测 329/330），
+      // 测试服模式下 nanoka 收录的即未实装内容，两者取或
+      unreleased: !!data?.isUnreleased || isTestDataMode(),
     });
     return render('wiki/relic_bwiki', view, { e, ret: true });
   }
@@ -2546,7 +2986,7 @@ export class Wiki extends plugin {
         sub: (cells.length > 1 ? cells[cells.length - 1] : null)?.v || '',
       }]
       : [];
-    return render('wiki/zzz_wq_bwiki', { ...d, name, icon, panel }, { e, ret: true });
+    return render('wiki/zzz_wq_bwiki', { ...d, name, icon, panel, bgFile: await this.fetchGsBgFile() }, { e, ret: true });
   }
 
   // 绝区零驱动盘的 nanoka 兜底视图：Bwiki 抓不到（限流熔断 / 词条缺失）时用，
@@ -2617,7 +3057,7 @@ export class Wiki extends plugin {
       const parts = await mihoyoDiscParts('zzz', entryId);
       if (parts.length) d.parts = parts;
     } catch (_) { /* 官方数据取不到不影响出卡 */ }
-    return render('wiki/zzz_syw_bwiki', { ...d, name }, { e, ret: true });
+    return render('wiki/zzz_syw_bwiki', { ...d, name, bgFile: await this.fetchGsBgFile() }, { e, ret: true });
   }
 
   // 绝区零角色（正式服模式：米游社百科 + Bwiki 徽章/属性/攻略合并，逻辑在 fetchZzzRoleCard）
@@ -2630,6 +3070,8 @@ export class Wiki extends plugin {
       return false;
     }
     if (!card) return false;
+    // 背景图：纯装饰，与其他图鉴共用同一张随机图 API；失败返回空串，模板整块跳过
+    card.bgFile = await this.fetchGsBgFile();
     return render('wiki/zzz_role_nk', card, { e, ret: true });
   }
 
@@ -2657,7 +3099,7 @@ export class Wiki extends plugin {
     if (entryId) {
       try { my = await fetchMihoyoBangboo(entryId); } catch (err) { my = { stats: [], talents: [], teams: [] }; }
     }
-    const view = buildBangbooView({ bw: bw || {}, my, name, icon, entryId });
+    const view = buildBangbooView({ bw: bw || {}, my, name, icon, entryId, bgFile: await this.fetchGsBgFile() });
     return render('wiki/zzz_yq_bwiki', view, { e, ret: true });
   }
 
@@ -2706,7 +3148,7 @@ export class Wiki extends plugin {
     const view = buildRelicView({
       game: 'gs',
       name,
-      base: { ...detail, ji: detail.stars ? `${detail.stars}星` : '' },
+      base: { ...detail, ji: detail.stars ? `${detail.stars}星` : '', bgFile: await this.fetchGsBgFile() },
       art,
       storyTitle: '圣遗物故事',
     });
@@ -2737,7 +3179,7 @@ export class Wiki extends plugin {
     const view = buildRelicView({
       game: 'gs',
       name,
-      base: { set2, set4, icon: item.icon || '' },
+      base: { set2, set4, icon: item.icon || '', bgFile: await this.fetchGsBgFile() },
       art: { setIcon: item.icon || '', pieceIcons: [], agents: [] },
       storyTitle: '圣遗物故事',
     });
@@ -2820,24 +3262,44 @@ export class Wiki extends plugin {
       });
       if (week) break;
     }
-    data = {
+    /* 版式统一：米游社官方兜底也渲染**新版卡** gs_item_bwiki（与 Bwiki / nanoka 同源），
+       不再用旧模板 wiki/wq —— 此前正式服 Bwiki 限流时同一把武器会出另一种旧版式。
+       映射口径：
+         name/icon/typeName ← wq.name / wq.image / wq.category；
+         intro ← 「装备描述」的 rich_text（剥标签）；
+         武器技能 ← 米游社页没有独立技能模块，只在 attr 里找带「技能」的行（找不到就留空，
+                    由模板 {{if}} 整块跳过，与 Bwiki 缺页时一致）；
+         panel ← 成长数值末档的「基础攻击力 / 副属性」，表头由模板固定为
+                 「等级 | 基础攻击力 | {{subName}}」，故只出满级一行两格；
+         materialTotal ← 旧模板读 { img, nickname, amount }，新模板读 { img, name, num }。 */
+    const skillRow = (attr || []).find(a => /技能/.test(String(a?.key || '')));
+    const atkVal = String(arr?.[0] || '').replace(/基础攻击力/g, '').replace(/[:：]/g, '').trim();
+    const subPair = String(arr?.[1] || '').split(/[:：]/);
+    const subVal = (subPair[1] || '').trim();
+    const view = {
       name: wq.name,
-      type: wq.category,
-      //级
-      star: wq.star + '星',
-      //图片
-      img: wq.image,
-      rich_text,
-      attr,
-      materials,
-      // path_img,
-      //基础攻击力
-      atk,
-      //武器副属性
-      attr_,
-      week,
+      icon: wq.image || '',
+      stars: Number(wq.star) || 0,
+      starList: Array.from({ length: Number(wq.star) || 0 }),
+      typeName: wq.category || '',
+      intro: String(rich_text || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
+      skillLabel: '武器技能',
+      skillName: skillRow ? String(skillRow.key || '').replace(/^武器技能\s*[-·:：]?\s*/, '').trim() : '',
+      skillDesc: skillRow ? String(skillRow.value || '') : '',
+      panel: (atkVal || subVal) ? [{ lv: '90级', cells: [{ v: atkVal }, { v: subVal }] }] : [],
+      subName: (subPair[0] || '').trim(),
+      materialTotal: (materials || []).map(m => ({
+        name: m?.nickname || '', img: m?.img || '', num: Number(m?.amount) || 0
+      })),
+      /* 模板是 {{if materialTotal.length}} … {{else if materials.length}}：
+         后者读的是 {stage, items[]} 的逐档表，米游社没有这个结构，
+         必须显式给空数组，否则会掉进 else 分支把米游社的 {img,nickname,amount} 当逐档表渲染。 */
+      materials: [],
+      story: '',
+      agents: [],
+      bgFile: await this.fetchGsBgFile()
     };
-    render('wiki/wq', data, { e, ret: true });
+    return render('wiki/gs_item_bwiki', view, { e, ret: true });
   }
 
   //星铁光锥
@@ -2871,102 +3333,133 @@ export class Wiki extends plugin {
         .replace(/\s+/g, ' ')
         .trim();
     }
-    data = {
+    /* 版式统一：米游社官方兜底也渲染**新版卡** sr_item_bwiki（与 Bwiki / nanoka 同源），
+       不再用旧模板 wiki/gz —— 此前正式服 Bwiki 限流时同一把光锥会出另一种旧版式。
+       映射口径：
+         icon / path / ji ← content.img（立绘）/ content.fate（命途）/ content.rarity（星级）；
+         talent / talentDesc ← content.jineng[0] / [1]（光锥效果，已在上面做好高亮）；
+         intro ← miaoshu（光锥描述）；
+         panel ← grow 是「80级」那一行抠出的数字串，首元素是等级 80 本身要跳过，
+                 其后三个即 生命/攻击/防御，只出满级一行（与 Bwiki / nanoka 同一口径）；
+         materialTotal ← mat（图片 URL 数组）/ mat_num（数量）/ cn（同段抠出的中文名）
+                 三者按出现顺序配对，旧模板也是这么并排显示的；名字对不上时留空不影响出图。 */
+    const g = (grow || []).map(String);
+    const gv = g[0] === '80' ? g.slice(1) : g;
+    const view = {
       name,
-      ...content,
-      mingtu: content.fate,
-      xiyoudu: content.rarity,
-      miaoshu,
-      grow,
-      mat,
-      mat_num,
+      icon: content.img || '',
+      path: content.fate || '',
+      ji: content.rarity || '',
+      intro: miaoshu || '',
+      talent: content.jineng?.[0] || '',
+      talentDesc: content.jineng?.[1] || '',
+      panel: gv.length >= 3
+        ? [{ lv: '80级', cells: [{ v: gv[0] }, { v: gv[1] }, { v: gv[2] }] }]
+        : [],
+      panelHead: ['生命值', '攻击力', '防御力'],
+      materialTotal: (mat || []).map((img, i) => ({
+        name: cn?.[i] || '', img: img || '', num: mat_num?.[i] ?? 0
+      })),
+      version: '',
+      obtain: '',
+      date: '',
+      tag: '',
+      agents: [],
+      bgFile: await this.fetchGsBgFile()
     };
-    render('wiki/gz', data, { e, ret: true });
+    return render('wiki/sr_item_bwiki', view, { e, ret: true });
   }
 
-  // 星铁光锥 nanoka 兜底渲染（Bwiki 限流/缺页时走 detail() 的 nanoka 回退）
-  // nanoka 数据结构：content = { id, name, rarity, base_type, refinements, stats, desc, itemMap, lightconeMap, relicsetMap }
-  // 与 Bwiki HTML 结构完全不同，单独适配成 wiki/gz 模板字段。
+  /* 星铁光锥 nanoka 渲染（Bwiki 限流/缺页、以及测试服模式下走 detail() 的 nanoka 回退）。
+     nanoka 数据结构：content = { id, name, rarity, base_type, refinements, stats, desc,
+     itemMap, lightconeMap, relicsetMap }，与 Bwiki HTML 结构完全不同。
+
+     ⚠️ 以前这里渲染的是旧模板 wiki/gz（只有材料那版），于是星铁光锥在
+     测试服模式下出的卡和原神/绝区零的新版卡片完全不是一个版式。
+     现在改成 sr_item_bwiki，与正式服模式的星铁光锥卡、以及原神武器卡
+     （gs_item_bwiki）保持同一套版式。 */
   async sr_gz_nanoka_pictures(e, data) {
     const c = data?.content || {};
-    const srRarityCn = r => {
+    if (!c.name) return false;
+    const srRarityNum = r => {
       const m = /(\d+)\s*$/.exec(String(r || ''));
-      const n = m ? Number(m[1]) : 0;
-      return n === 5 ? '5星' : n === 4 ? '4星' : n === 3 ? '3星' : n === 2 ? '2星' : n === 1 ? '1星' : '';
+      return m ? Number(m[1]) : 0;
     };
-    const srPathCn = {
-      Knight: '存护', Rogue: '巡猎', Mage: '智识', Warlock: '虚无',
-      Warrior: '毁灭', Priest: '丰饶', Shaman: '同谐',
-      Memory: '记忆', Elation: '欢愉'
-    };
-    const itemIconUrl = raw => {
-      const num = (String(raw).match(/(\d+)\.[a-z0-9]+$/i) || [])[1] || '';
-      return num ? `https://static.nanoka.cc/assets/hsr/itemfigures/${num}.webp` : '';
-    };
+    // 光锥效果：#N[i] 占位符要换成最高叠影档的对应数值
     const refinements = c.refinements || {};
     const levels = refinements.level || {};
-    const maxLv = Math.max(0, ...Object.keys(levels).map(Number));
+    const maxLv = Object.keys(levels).length ? Math.max(...Object.keys(levels).map(Number)) : 0;
     const params = levels[String(maxLv)]?.param_list || [];
-    let skillDesc = String(refinements.desc || '')
+    let talentDesc = String(refinements.desc || '')
       .replace(/<color=(#[0-9a-fA-F]+)>/g, '<span style="color:$1">')
       .replace(/<\/color>/g, '</span>')
-      .replace(/<unbreak>/g, '')
-      .replace(/<\/unbreak>/g, '');
-    skillDesc = skillDesc.replace(/#(\d+)\[i\]/g, (m, n) => {
-      const idx = Number(n) - 1;
-      const v = params[idx];
+      .replace(/<\/?unbreak>/g, '');
+    talentDesc = talentDesc.replace(/#(\d+)\[i\]/g, (m, n) => {
+      const v = params[Number(n) - 1];
       if (v === undefined || v === null) return m;
       if (v < 1 && v > 0) return `${Math.round(v * 100)}%`;
       return String(v);
     });
-    // 80 级属性：stats 按 promotion 升序，最后一段即满级
+    /* 详细面板：stats 是一段一段的晋阶区间，每段给出该段的 max_level 与
+       基础生命/攻击/防御（base_*）及每级增量（base_*_add）。
+       该等级的面板值 = base + add × (max_level - 1)（纳米卡里 add 全段一致、
+       base 已含前序晋阶成长，故这样累加即得该等级上限总值）。
+       之前只取 base_*，等于把 lv80 显示成 lv1 的基底值（如 43/26/24 而非 953/582/529）。
+       只出最高等级一行，不分突破前后（与正式服同一口径，panelHead 也是三列）。 */
     const stats = (c.stats || []).slice().sort((a, b) => (a.promotion || 0) - (b.promotion || 0));
-    const maxStat = stats[stats.length - 1] || {};
-    const grow = ['', maxStat.base_hp || 0, maxStat.base_attack || 0, maxStat.base_defence || 0];
-    // 晋阶材料：按 item_id 汇总，最后一格放信用点
-    const materialCounts = {};
-    let totalCredits = 0;
-    for (const s of stats) {
-      for (const cost of s.promotion_cost_list || []) {
-        if (cost.item_id === 2) {
-          totalCredits += cost.item_num || 0;
-        } else {
-          materialCounts[cost.item_id] = Math.max(materialCounts[cost.item_id] || 0, cost.item_num || 0);
-        }
+    const lvStat = (s, k) => Math.round((s[`base_${k}`] || 0) + (s[`base_${k}_add`] || 0) * ((s.max_level || 1) - 1));
+    const panelRows = stats.filter(s => s?.max_level);
+    const topStat = panelRows.length
+      ? panelRows.reduce((a, b) => ((b.max_level || 0) > (a.max_level || 0) ? b : a))
+      : null;
+    const panel = topStat
+      ? [{
+        lv: `${topStat.max_level}级`,
+        cells: [
+          { v: String(lvStat(topStat, 'hp')) },
+          { v: String(lvStat(topStat, 'attack')) },
+          { v: String(lvStat(topStat, 'defence')) }
+        ]
+      }]
+      : [];
+    /* 突破材料·总计：nanoka 的光锥详情把晋阶花费放在 stats[].promotion_cost_list
+       （每条 = 一个晋阶档位的花费），按item_id 把各档全累加即得「升到满级」的总计。
+       ⚠ 此前这张卡完全没有材料 —— 早先误判成「纳米卡光锥详情无材料字段」，
+       实际只是没人读 promotion_cost_list；数据一直都在（与绝区零音擎同构）。
+       名称取 itemMap（mys.detail 对 isSr 会注入 hsr_detail_maps 的 itemMap），
+       缺名退化为「道具 {id}」；图标与星铁角色卡材料同源，实测全 200。 */
+    const matAcc = new Map();
+    for (const st of stats) {
+      for (const cost of st?.promotion_cost_list || []) {
+        const id = cost?.item_id;
+        const n = Number(cost?.item_num || 0);
+        if (!id || !Number.isFinite(n) || n <= 0) continue;
+        matAcc.set(id, (matAcc.get(id) || 0) + n);
       }
     }
-    const itemMap = c.itemMap || {};
-    const matIds = Object.keys(materialCounts).sort((a, b) => Number(a) - Number(b));
-    const mat = [];
-    const mat_num = [];
-    for (const id of matIds) {
-      const item = itemMap[id];
-      const icon = item?.item_figure_icon_path ? itemIconUrl(item.item_figure_icon_path) : '';
-      if (icon) {
-        mat.push(icon);
-        mat_num.push(materialCounts[id]);
-      }
-    }
-    // 固定补到 6 个材料 + 1 个信用点，避免模板 7 格越界
-    while (mat.length < 6) {
-      mat.push('');
-      mat_num.push('');
-    }
-    const creditIcon = itemMap['2']?.item_figure_icon_path ? itemIconUrl(itemMap['2'].item_figure_icon_path) : '';
-    mat.push(creditIcon);
-    mat_num.push(totalCredits > 0 ? `${(totalCredits / 10000).toFixed(totalCredits % 10000 === 0 ? 0 : 1)}w` : '');
+    const materialTotal = [...matAcc.entries()].map(([id, num]) => ({
+      name: (c.itemMap?.[id]?.item_name || '').trim().replace(/^\.{3}$/, '') || `道具 ${id}`,
+      img: `https://static.nanoka.cc/assets/hsr/itemfigures/${id}.webp`,
+      num
+    }));
+    const star = srRarityNum(c.rarity);
     const view = {
       name: c.name,
-      mingtu: srPathCn[c.base_type] || c.base_type || '',
-      xiyoudu: srRarityCn(c.rarity),
-      img: c.id ? `https://static.nanoka.cc/assets/hsr/lightconemaxfigures/${c.id}.webp` : '',
-      grow,
-      jineng: ['', skillDesc],
-      miaoshu: c.desc || '',
-      mat,
-      mat_num
+      icon: c.id ? `https://static.nanoka.cc/assets/hsr/lightconemaxfigures/${c.id}.webp` : '',
+      path: SR_PATH_CN[c.base_type] || c.base_type || '',
+      ji: star ? `${star}星` : '',
+      starIcon: SR_STAR_ICON[star] || '',
+      intro: c.desc || '',
+      talent: refinements.name || '',
+      talentDesc,
+      panel,
+      panelHead: ['生命值', '攻击力', '防御力'],
+      materialTotal,
+      // 测试服模式下 nanoka 里的条目就是未实装内容，打 TEST 角标
+      unreleased: isTestDataMode(),
+      bgFile: await this.fetchGsBgFile()
     };
-    render('wiki/gz', view, { e, ret: true });
+    return render('wiki/sr_item_bwiki', view, { e, ret: true });
   }
 
   /*

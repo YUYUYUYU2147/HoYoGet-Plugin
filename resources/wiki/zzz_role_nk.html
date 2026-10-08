@@ -14,8 +14,6 @@
   {{else if bg}}<img class="page-bg" src="{{bg}}" alt="" /><div class="page-bg-mask"></div>{{/if}}
   <div class="topbar"></div>
 
-  {{if unreleased}}<div class="test-corner">TEST</div>{{/if}}
-
   <!-- 顶部：方形透明人物卡面 + 名字 + 稀有度 + 属性/特性/阵营 + 徽章 + 一句话简介
        结构与星铁卡（sr_role_nk）一致，便于两个游戏对照查看 -->
   <header class="hero">
@@ -142,7 +140,6 @@
   {{if guide && (guide.drive || guide.stats || guide.weapon)}}
   <div class="panel">
     <div class="ptitle">攻略</div>
-    <div class="gs-note">以下内容可能存在主观性，下方攻略为编辑者个人观点，未必反映客观事实或多数玩家立场。</div>
     {{if guide.drive}}
     <div class="gs-block">
       <div class="gs-label">配装推荐 · 驱动盘套装</div>
@@ -156,7 +153,7 @@
         {{each guide.drive.set2 d}}<span class="ds-item">{{if d.icon}}<img src="{{d.icon}}" alt="" />{{/if}}{{d.name}}</span>{{/each}}
       </div>
       {{/if}}
-      {{if guide.drive.reason}}<div class="gs-text gs-reason">{{guide.drive.reason}}</div>{{/if}}
+      {{if guide.drive.reason}}<div class="gs-text gs-reason">{{@guide.drive.reason}}</div>{{/if}}
     </div>
     {{/if}}
     {{if guide.stats}}

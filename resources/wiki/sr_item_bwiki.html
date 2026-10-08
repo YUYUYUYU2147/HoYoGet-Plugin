@@ -93,6 +93,21 @@
   </div>
   {{/if}}
 
+  <!-- 突破材料：Bwiki 词条页的「晋阶材料」小节，按材料名累加成总计。
+       旧模板 wiki/gz 一直有这一块（正式服回落到米游社百科时走的就是它），
+       新版此前没有，同一条指令会因数据源不同出两种版式，这里补上对齐。
+       nanoka（测试服）的光锥详情不含材料字段，此时整块不渲染。 -->
+  {{if materialTotal && materialTotal.length}}
+  <div class="row">
+    <div class="cell">
+      <div class="cell-t">突破材料 · 总计</div>
+      <div class="agents">
+        {{each materialTotal it}}<span class="agent">{{if it.img}}<img src="{{it.img}}" alt="" />{{/if}}{{it.name}} × {{it.num}}</span>{{/each}}
+      </div>
+    </div>
+  </div>
+  {{/if}}
+
   {{if origin}}
   <div class="row">
     <div class="cell"><div class="cell-t">{{storyTitle || '光锥故事'}}</div><div class="cell-d story">{{@origin}}</div></div>

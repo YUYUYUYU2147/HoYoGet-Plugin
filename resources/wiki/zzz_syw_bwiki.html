@@ -8,6 +8,8 @@
 <!-- 驱动盘卡：Bwiki 驱动盘词条版式。
      数据源 Bwiki（parseZzzBwikiDisc）：图标/稀有度/二件套/四件套/描述/获取途径/实装版本/驱动盘故事(1~6号位)。 -->
 <div class="page" id="container">
+  <!-- 测试服数据标记：右上角 TEST 角标。正式服数据不显示（unreleased 由数据层判定） -->
+  {{if unreleased}}<div class="corner-test">TEST</div>{{/if}}
   {{if bgFile}}<img class="bg" src="file://{{bgFile}}" alt="" />{{/if}}
   <div class="topbar"></div>
 

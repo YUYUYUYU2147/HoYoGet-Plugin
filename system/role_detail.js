@@ -33,6 +33,13 @@ function stripTags(s) {
            会被后面的逻辑留着；而 LINK 标签里不含尖括号，单独剥是安全的。 */
         .replace(/\{LINK#[^}]*\}/g, '')
         .replace(/\{\/LINK\}/g, '')
+        /* 引用型占位符：#{series_ref_skill_desc:UIText_SeriesSkillDescFormat,151129,2}
+           —— 未实装角色的星魂/技能描述里指向「升格强化后文案」的占位，
+           渲染出来就是一串代码（实测阿哈星魂2）。完整形态整块剥掉；
+           个别数据缺头花括号、只剩 #xxx.yyy.zzz,2} 的残缺形态，一并兜底。
+           ⚠ 别动 #N[i]（fillSrDesc 的参数占位，方括号结尾，这两条都匹配不到）。 */
+        .replace(/#\{[^}]*\}/g, '')
+        .replace(/#[a-z0-9_]+(?:\.[a-zA-Z0-9_]+)+,\d*\}/g, '')
         .replace(/<color=[^>]*>/g, '')
         .replace(/<\/color>/g, '')
         .replace(/<unbreak>/g, '')
@@ -460,6 +467,18 @@ function srRoleView(detail, id) {
         };
     }).filter(s => s.desc);
 
+    // 基础属性（模板 sr_role_nk 读的是**扁平** hp/atk/def/crit/critDmg/speed，
+    // 此前这里只给了 growth 数组，模板里根本没有 growth 循环，于是这些字段全空、
+    // 「基础属性 · 80级」整块是空值）。这里按最高一档还原 80 级单值。
+    // 键0~6 七档，实测星铁全部如此（含已实装）；末档（键最大）的 base + add×(80-1)
+    // 即该角色 80 级值（丹恒•饮月→ hp1242 / atk699，与游戏内量级一致）。
+    const MAX_LEVEL = 80;
+    const statKeys = Object.keys(stats).filter(k => Number.isFinite(Number(k)))
+        .sort((a, b) => Number(a) - Number(b));
+    const top = statKeys.length ? stats[statKeys[statKeys.length - 1]] : null;
+    const atMax = (b, a) => Math.round((Number(b) || 0) + (Number(a) || 0) * (MAX_LEVEL - 1));
+    const pct = v => (v == null ? '' : `${Math.round(Number(v) * 100)}%`);
+
     // ---- 培养材料 ----
     // 星铁没有「角色突破」这个独立字段（enhanced 是魂影强化、memosprite 是记忆灵媒），
     // 培养材料就是 skill_trees 各节点的 material_list。这里按 item_id 合并求和，
@@ -479,6 +498,9 @@ function srRoleView(detail, id) {
         name: (d.itemMap?.[itemId]?.item_name || '').trim().replace(/^\.{3}$/, '')
             || `道具 ${itemId}`,
         icon: srItemIcon(itemId),
+        // ⚠ icon 已是完整 URL，模板靠 iconUrl 区分「原样输出」与「拼 ppath+wiki/imgs/
+        // 本地文件名」。缺这个标记，模板会把整条 URL 当文件名拼进本地路径 → 必然裂图。
+        iconUrl: true,
         total,
     })).sort((a, b) => b.total - a.total);
 
@@ -512,6 +534,14 @@ function srRoleView(detail, id) {
         camp: info.camp || '',
         spNeed: d.sp_need,
         desc: stripTags(d.desc),
+        // 扁平基础属性：模板 sr_role_nk 读这几个字段（此前只给了 growth 数组，模板无growth 循环 → 空值）
+        hp: top ? atMax(top.hp_base, top.hp_add) : '',
+        atk: top ? atMax(top.attack_base, top.attack_add) : '',
+        def: top ? atMax(top.defence_base, top.defence_add) : '',
+        crit: pct(top?.critical_chance),
+        critDmg: pct(top?.critical_damage),
+        speed: top?.speed_base ?? '',
+        traceBonus: '', // nanoka 侧没有行迹加成字段，留空由模板跳过
         growth,
         skills,
         materials,

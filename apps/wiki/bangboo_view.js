@@ -123,6 +123,33 @@ function keepMaxLv(rows, keyOf) {
   return [top]
 }
 
+/* 技能倍率的每个数值格是若干 <p> 段落（伤害倍率 / 失衡倍率 / 冷却时间 各一段），
+   <p> 为块级元素，逐段渲染会在卡面上竖排数行、占去大半张卡。
+   合并为同一行：段间以全角空格分隔，去掉段落标签（段内的行内标记原样保留）。 */
+function inlineParas(html) {
+  return String(html || '')
+    .replace(/<\/p>\s*<p[^>]*>/gi, '　')
+    .replace(/<\/?p[^>]*>/gi, '')
+    .trim()
+}
+
+/* Bwiki 邦布面板把生命值 / 攻击力 / 防御力各拆成「突破前 / 突破后」两列。
+   卡片只留最高等级一行，并排的两列已无意义（最高等级的「突破后」恒为空），
+   这里按列对折成一个值：取「突破前」，为空（-）再退回「突破后」。
+   仅当成对出现时折叠，避免误伤列数不成对的表。 */
+function collapseBreakPairs(cells) {
+  const list = Array.isArray(cells) ? cells : []
+  if (list.length < 2 || list.length % 2) return list
+  const pick = (v) => (v && v !== '-' ? v : '')
+  const out = []
+  for (let i = 0; i < list.length; i += 2) {
+    const before = String(list[i] ?? '').trim()
+    const after = String(list[i + 1] ?? '').trim()
+    out.push(pick(before) || pick(after) || before || after)
+  }
+  return out
+}
+
 /* 搭配组合去重：同名角色只留一条（不同表格可能重复登记）。 */
 function teamList(teams) {
   const seen = new Set()
@@ -191,7 +218,8 @@ export function buildBangbooView({ bw = {}, my = {}, name = '', icon = '', entry
   const talents = [...byType.values()];
 
   // 等级表只留最高等级：面板 / 面板·附加 / 技能倍率 / 技能面板
-  const panel = keepMaxLv(bw.panel, r => r?.lv)
+  // 最高等级行的「突破前 / 突破后」两列并排已无意义，折成一列（见 collapseBreakPairs）
+  const panel = keepMaxLv(bw.panel, r => r?.lv).map(r => ({ ...r, cells: collapseBreakPairs(r.cells) }))
   // panelSub 就是 Bwiki 原样的数组形态；空的时候给 null，模板有 panelSub && 守卫
   const panelSub = keepMaxLv(bw.panelSub, r => r?.lv)
   const panelSubHead = bw.panelSubHead || []   // 属性名列名，别丢
@@ -199,6 +227,11 @@ export function buildBangbooView({ bw = {}, my = {}, name = '', icon = '', entry
     if (Array.isArray(t.growth) && t.growth.length) {
       t.growth = keepMaxLv(t.growth, r => String(r?.name || '').replace(/^.*?(\d+)\s*级.*$/, '$1'))
       t.growthLv = t.growth[0]?.name || ''
+      // 技能倍率各段合并到同一行（模板取 row[0][0] 原样输出该 HTML）
+      for (const g of t.growth) {
+        const cell = g?.children?.[0]?.row?.[0]
+        if (Array.isArray(cell) && typeof cell[0] === 'string') cell[0] = inlineParas(cell[0])
+      }
     }
     // 技能面板本身是一行一属性，保留（不是等级表）；若带 lv 列只留最高等级
     if (Array.isArray(t.panel) && t.panel.length && t.panel.every(r => Number.isFinite(Number(r?.lv))))
@@ -224,6 +257,7 @@ export function buildBangbooView({ bw = {}, my = {}, name = '', icon = '', entry
     // 米游社「搭配组合」一整行共用同一句推荐理由，逐个角色渲染会把同一句话重复 N 遍
     teamReasons: groupReasons(my.teams || []),
     materials: bw.materials || [],
+    materialTotal: bw.materialTotal || [],
     panel,
     panelSub,
     panelSubHead,

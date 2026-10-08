@@ -5,9 +5,9 @@ body{margin:0;min-width:1000px;background:#eef1f6;color:#3b4252;
 /* 随机图背景：铺满整页、压到很低的不透明度，再盖一层由白到浅蓝的渐变，
    保证上面的文字对比度不变。加载不出来时只是少这张图，底色还在。 */
 .page > img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
-  opacity:.16;filter:saturate(.9);z-index:0}
+  opacity:.32;filter:saturate(1.05);z-index:0}
 .page > img.bg + .topbar{z-index:2}
-.page > *:not(.bg){position:relative;z-index:1}
+.page > *:not(.bg):not(.corner-test){position:relative;z-index:1}
 .topbar{position:absolute;left:0;top:0;width:100%;height:5px;
   background:linear-gradient(90deg,#d4a017,#c07a2c)}
 

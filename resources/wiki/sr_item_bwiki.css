@@ -1,7 +1,7 @@
 /* 驱动盘卡（Bwiki 版式），与音擎卡 zzz_wq_bwiki 共用一套视觉 */
 .page{position:relative;width:1000px;padding:24px 28px 20px;background:#f7f9fc}
-.page > img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.16;filter:saturate(.9);z-index:0}
-.page > *:not(.bg){position:relative;z-index:1}
+.page > img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.32;filter:saturate(1.05);z-index:0}
+.page > *:not(.bg):not(.corner-test){position:relative;z-index:1}
 .topbar{position:absolute;left:0;top:0;width:100%;height:5px;z-index:2;
   background:linear-gradient(90deg,#e0a92f,#c9881f 55%,#7a4fa8)}
 

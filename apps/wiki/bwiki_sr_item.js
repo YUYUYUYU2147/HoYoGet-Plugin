@@ -79,7 +79,7 @@ export function parseSrBwikiItem(html, type = 'gz') {
     const out = {
         icon: '', setIcons: [], pieceIcons: [], set2: '', set4: '', origin: '',
         talent: '', talentDesc: '', panel: [], panelHead: [], agents: [], stories: [],
-        version: '', obtain: '', tags: '',
+        version: '', obtain: '', tags: '', materialTotal: [],
         baseStats: [], tag: '', date: '', art: '', pageIcon: '', desc: '',
     };
     const text = stripHtml(html);
@@ -229,6 +229,48 @@ export function parseSrBwikiItem(html, type = 'gz') {
         if (out.panel.length > 1) {
             const lvOf = r => Number(String(r?.lv ?? '').replace(/[^\d.]/g, ''))
             out.panel = [out.panel.reduce((a, b) => (lvOf(b) > lvOf(a) ? b : a))]
+        }
+        /* 面板不再分「突破前 / 突破后」：表头压成 生命值/攻击力/防御力 三列
+           （「生命值·突破前/后」这类带后缀的先去掉后缀、再按相邻同组去重），
+           单元格每组取突破后的值，该档没有突破后数据（满级行是「-」）时退回突破前。
+           与原神武器卡（bwiki_gs_item.js）同一做法。 */
+        out.panelHead = out.panelHead
+            .map(g => String(g).replace(/·(突破前|突破后)$/, ''))
+            .filter((g, i, arr) => g !== arr[i - 1]);
+        for (const r of out.panel) {
+            const vals = (r.cells || []).map(c => c.v);
+            const merged = [];
+            for (let i = 0; i < vals.length; i += 2) {
+                const after = vals[i + 1] ?? '-';
+                merged.push({ v: after !== '-' ? after : (vals[i] ?? '-') });
+            }
+            r.cells = merged;
+        }
+
+        /* 晋阶材料：小节里是一张 6 行的表 —— 等级标签行（<th>20级</th>）与数值行交替，
+           数值单元格里有两个 .cailiaoxiao 块（材料、信用点），形如
+             <div class="cailiaoxiao"><a …><img alt="古代零件" …></a><div>8</div></div>
+           按名称累加成总计（信用点同样是这类块，一并计入）。
+           旧模板 wiki/gz 一直有这一块，新版 sr_item_bwiki 没有 ——
+           同一条指令会因数据源不同出两种版式，这里补上以对齐。 */
+        {
+            const at = html.indexOf('mw-headline" id="晋阶材料"');
+            if (at >= 0) {
+                const seg = html.slice(at, at + 20000);
+                const t = (topLevelTables(seg) || [])[0] || '';
+                const acc = new Map();
+                for (const m of String(t).matchAll(/<div class="cailiaoxiao">([\s\S]*?)<\/div><\/div>/g)) {
+                    const b = m[1] || '';
+                    const name = decodeTxt((b.match(/<img[^>]*alt="([^"]*)"/) || [])[1] || '').trim();
+                    const num = Number((b.match(/<div[^>]*>\s*([\d.]+)\s*<\/div>/) || [])[1] || 0);
+                    if (!name || !num) continue;
+                    const img = origIcon((b.match(/<img[^>]*src="([^"]+)"/) || [])[1] || '');
+                    const cur = acc.get(name) || { name, img, num: 0 };
+                    cur.num += num;
+                    acc.set(name, cur);
+                }
+                out.materialTotal = [...acc.values()];
+            }
         }
 
         /* 故事：光锥页的正文是「单元格一整段」的表（没有表头），

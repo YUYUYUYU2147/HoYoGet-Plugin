@@ -56,8 +56,8 @@
       <div class="cell-t">邦布面板 · 最高等级</div>
       <table class="tb">
         <thead>
-          <tr><th rowspan="2">等级</th><th colspan="2">生命值</th><th colspan="2">攻击力</th><th colspan="2">防御力</th></tr>
-          <tr><th>突破前</th><th>突破后</th><th>突破前</th><th>突破后</th><th>突破前</th><th>突破后</th></tr>
+          <!-- 只留最高等级一行；数据层已把「突破前 / 突破后」两列折成一列，表头不再分层 -->
+          <tr><th>等级</th><th>生命值</th><th>攻击力</th><th>防御力</th></tr>
         </thead>
         <tbody>
           {{each panel p}}<tr><td>{{p.lv}}</td>{{each p.cells c}}<td>{{c}}</td>{{/each}}</tr>{{/each}}
@@ -122,16 +122,15 @@
   </div>
   {{/if}}
 
-  {{if materials && materials.length}}
+  {{if materialTotal && materialTotal.length}}
   <div class="row">
     <div class="cell">
       <div class="cell-t">突破材料</div>
+      <!-- 仅显示「总计」一行：逐级各档材料与合计重复，合计已足够表达。
+           逐级数据仍由 parseZzzBwikiBangboo 解析，仅不再渲染。 -->
       <table class="tb">
         <tbody>
-          {{each materials m}}<tr><td class="stage">{{m.stage}}</td><td>{{each m.items it}}<span class="mat">{{if it.img}}<img src="{{it.img}}" alt="" />{{/if}}{{it.name}} × {{it.num}}</span>{{/each}}</td></tr>{{/each}}
-          {{if materialTotal && materialTotal.length}}
           <tr class="total"><td class="stage">总计</td><td>{{each materialTotal it}}<span class="mat">{{if it.img}}<img src="{{it.img}}" alt="" />{{/if}}{{it.name}} × {{it.num}}</span>{{/each}}</td></tr>
-          {{/if}}
         </tbody>
       </table>
     </div>

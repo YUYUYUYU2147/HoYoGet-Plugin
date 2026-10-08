@@ -9,14 +9,14 @@
    给 z-index:1，否则会盖住文字。立绘是竖版，object-fit:cover 会裁掉头，
    所以用 cover + object-position:top（脸在上半部分）。 */
 .page > img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
-  opacity:.16;filter:saturate(.9);z-index:0}
+  opacity:.32;filter:saturate(1.05);z-index:0}
 .page > img.bg + .topbar{z-index:2}
 .page-bg{position:absolute;left:0;top:0;width:100%;height:100%;
-  object-fit:cover;object-position:center top;opacity:.16;z-index:0;pointer-events:none}
+  object-fit:cover;object-position:center top;opacity:.32;z-index:0;pointer-events:none}
 /* 半透明白纱：把立绘压成背景，同时保证正文对比度达标 */
 .page-bg-mask{position:absolute;left:0;top:0;width:100%;height:100%;z-index:0;pointer-events:none;
   background:linear-gradient(180deg,rgba(247,249,252,.72) 0%,rgba(247,249,252,.86) 45%,rgba(247,249,252,.94) 100%)}
-.page > *:not(.bg):not(.page-bg):not(.page-bg-mask){position:relative;z-index:1}
+.page > *:not(.bg):not(.page-bg):not(.page-bg-mask):not(.corner-test){position:relative;z-index:1}
 .topbar{position:absolute;left:0;top:0;width:100%;height:5px;
   background:linear-gradient(90deg,#e0a92f,#c9881f 55%,#7a4fa8)}
 
@@ -105,10 +105,9 @@
 .trust-stage{font-size:12.5px;font-weight:700;color:#6b4fa0}
 .trust-text{margin-top:2px;font-size:12px;line-height:1.75;color:#6b7488;white-space:pre-line}
 
-/* ── 测试服角标 ── */
-.test-corner{position:absolute;top:10px;right:10px;z-index:5;font-size:11px;font-weight:800;
-  letter-spacing:1px;color:#fff;background:linear-gradient(180deg,#e8734a,#c9452a);
-  border-radius:5px;padding:2px 7px;box-shadow:0 1px 4px rgba(180,50,20,.4)}
+/* 测试服角标统一用 .corner-test（右上角黄标，见文件末尾），与原神/星铁各卡一致。
+   此前这里还有一个 .test-corner（同样是 top:10px;right:10px 的红标），与
+   .corner-test 位置完全重复，导致绝区零角色卡同时出现两个 TEST；已删除。 */
 
 /* 底部注释统一用 #ee8e8e（与原神卡/列表一致） */
 .foot{margin-top:10px;text-align:center;font-size:12px;color:#ee8e8e;opacity:.9}

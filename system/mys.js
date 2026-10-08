@@ -33,6 +33,20 @@ const nanokaIcon = key => {
     }
     return `https://static.nanoka.cc/assets/zzz/${key}.webp`;
 };
+/* 绝区零角色头像：character.json 的 icon 形如 IconRole{N}。
+   N 是绳网卡序号（猫又 IconRole11 → IconInterKnotRole0011），可直接取方形头像；
+   但**未实装角色**的 N 恰好等于词条 id（赛维里安 IconRole1631、菲欧妮 IconRole1641），
+   nanoka 对它们没有方形绳网图（实测 IconInterKnotRole1631 / IconInterKnotRole1641 均 404），
+   只有 IconRoleSelect{N}（256×250，200）。故 N 与词条 id 相同时改用 IconRoleSelect，
+   否则沿 nanokaIcon 的绳网卡方形头像。测试服模式只显示未实装角色，走错这一步整列都是空图。 */
+const nanokaZzzRoleIcon = (id, key) => {
+    const k = String(key || '');
+    if (!k) return '';
+    if (/^https?:/i.test(k) || k.includes('/')) return k;
+    const m = k.match(/^IconRole(\d+)$/);
+    if (m && m[1] === String(id)) return `https://static.nanoka.cc/assets/zzz/IconRoleSelect${m[1]}.webp`;
+    return nanokaIcon(k);
+};
 // 米游社图床缩略图：列表渲染几百张图时，把原图压成 100w webp（约 110KB -> 3KB），
 // 否则 puppeteer 全量下载几十 MB 原图会渲染 2 分钟并触发框架 Chromium 超时重启
 const thumbIcon = url => {
@@ -46,9 +60,20 @@ const thumbIcon = url => {
 // nanoka 数据源故障冷却：一旦请求失败，1 小时内所有绝区零查询直接走米游社官方 Wiki，
 // 不再反复请求已失效的 nanoka（每次白打 4+ 个 404、多耗 1~2 秒并刷 ERRO）
 const NANOKA_RETRY_MS = 60 * 60 * 1000;
+/* 测试服模式的冷却必须单独设短。
+   正式服模式下 nanoka 挂了会静默降级到米游社官方 Wiki，用户看到的仍是完整列表，
+   1 小时冷却只是「少一点新数据」，无害。
+   而测试服模式按作者要求禁用一切官方兜底，nanoka 是唯一数据源 ——
+   一次网络抖动触发的 1 小时冷却，会表现为「三个游戏的武器图鉴、绝区零角色图鉴
+   全部查不到任何数据」，且期间重试多少次都一样空，用户无从判断是故障还是真没数据。
+   实测：原神列表成功后星铁一次 10 秒超时即触发熔断，随后星铁/绝区零全部返回空。
+   测试服模式因此改用短冷却，让它有机会自愈。 */
+const NANOKA_RETRY_MS_TEST = 30 * 1000;
 let nanokaDownUntil = 0;
+// 由 getDataMode() 每次读取时同步，markNanokaDown 只管按当前值加时长
+let nanokaRetryMs = NANOKA_RETRY_MS;
 const nanokaDown = () => Date.now() < nanokaDownUntil;
-const markNanokaDown = () => { nanokaDownUntil = Date.now() + NANOKA_RETRY_MS; };
+const markNanokaDown = () => { nanokaDownUntil = Date.now() + nanokaRetryMs; };
 
 /**
  * 判断错误是否为「网络/接口类」失败。
@@ -1022,6 +1047,8 @@ class mys {
         try { v = String(yaml.get(p)?.data_mode || '').trim(); }
         catch { v = ''; }
         this._modeCache = (v === 'test') ? 'test' : 'official';
+        // 同步 nanoka 冷却时长：测试服模式没有官方兜底，冷却必须短（见 NANOKA_RETRY_MS_TEST）
+        nanokaRetryMs = this._modeCache === 'test' ? NANOKA_RETRY_MS_TEST : NANOKA_RETRY_MS;
         this._modeCacheMtime = mtime;
         return this._modeCache;
     }
@@ -1090,6 +1117,38 @@ class mys {
             return {}; // 失败不缓存，下次重试
         }
         return this._zzzItemMap;
+    }
+
+    /* 绝区零驱动盘套装映射（equipment.json，注意在版本根目录、不在 zh/ 下），
+       懒加载并缓存。用于把角色详情 fairy_recommend 里的 slot4 / slot2 /
+       slot_sub 套装 id 解析成套装名 + 图标 + 2/4 阶效果（推荐装备块要用）。
+       条目形如{ icon:'UI/.../SuitFreedomBlues.png', zh:{name}, en:{name,desc2,desc4} }，
+       共 30 套。 */
+    async zzzEquipmentMap() {
+        if (this._zzzEquipMap) return this._zzzEquipMap;
+        try {
+            this._zzzEquipMap = await this.fetchJson(`${await zzzNanokaBase()}/equipment.json`, 'ZZZ nanoka驱动盘');
+        } catch (_) {
+            return {}; // 失败不缓存，下次重试
+        }
+        return this._zzzEquipMap;
+    }
+
+    /* 驱动盘套装 id → { name, icon, desc2, desc4 }。icon 走 zzzSuitIcon把
+       游戏内资源路径转成可访问的 assets webp；取不到就返回 null。 */
+    async zzzSuitView(id) {
+        const map = await this.zzzEquipmentMap();
+        const e = map?.[String(id)];
+        if (!e) return null;
+        return {
+            name: e?.zh?.name || '',
+            icon: this.zzzSuitIcon(e?.icon),
+            /* 套装效果取**中文**（zh.desc2 / zh.desc4）。早先读的是 en.*，
+               卡上就整段显示英文。原始文本里带 <color=#FFFFFF> 高亮标记，
+               交给调用方（wiki.js 的 zzzDisplayText）转成 span，这里原样透传。 */
+            desc2: e?.zh?.desc2 || '',
+            desc4: e?.zh?.desc4 || ''
+        };
     }
 
     // 资源路径（Assets/.../xxx.png）或资源 key（ExBigBoss001 等）→ 可访问 webp 图标
@@ -1828,7 +1887,7 @@ class mys {
                        所以末级再给一次 fallbackIcon 兜底，由 list.html 的 onerror 切换。 */
                     const bwikiSquare = matchBwikiIcon(c.zh);
                     const officialSquare = matchOfficialIcon(c.zh) || '';
-                    const nkSquare = nanokaIcon(c.icon);
+                    const nkSquare = nanokaZzzRoleIcon(id, c.icon);
                     /* 按 Bwiki → 米游社 → nanoka 排序，取第一条非空作 icon，
                        剩下的**全部**按逗号拼进 fallbackIcon。list.html:15 的 onerror
                        是 split(',') + shift() 的逐级降级，能吃任意条数，
@@ -1845,8 +1904,9 @@ class mys {
                     aliases: [c.code, c.en].filter(v => v && v !== c.zh),
                     ext: JSON.stringify({
                         c_30: { picture: { list: [first] } },
-                        /* chain 已含 nanoka 那条；只有三级全空才用原始资源路径兜底 */
-                        fallbackIcon: second || `https://static.nanoka.cc/assets/zzz/${c.icon}.webp`,
+                        /* chain 已含 nanoka 那条；三级全空时兜底也用拼好的 nanoka 图。
+                           原写法 `${c.icon}.webp` 对未实装角色 = 404 的 IconRole{id}.webp。 */
+                        fallbackIcon: second || nkSquare,
                         filter: { text: JSON.stringify([
                             `星级/${c.rank == 4 ? 'S级' : 'A级'}`,
                             `属性/${this.zzz_element_map[c.element] || '未知'}`,

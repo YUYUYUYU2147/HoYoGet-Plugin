@@ -125,6 +125,22 @@ try {
   logger.error(`[xhh] 手动验证码服务启动异常：${err?.message || err}`);
 }
 
+/* 自举热重载：框架的 #重载插件 实测不会重新 import ESM 入口，改完代码不生效、
+   只能 #重启。所以插件自己监听 apps/ 与 system/ 的文件变化，重新 import 后就地
+   把新方法拷到框架正在用的类上 —— 改完即生效，不用重启也不用发命令。
+   开关在 config.yaml 的 auto_reload（缺省即开启）。 */
+try {
+  // ⚠ 这里不能用 config()：index.js 没有从 '#xhh' 导入 config（那是 apps/*.js 才有的），
+  //    直接用会 ReferenceError。入口读配置一律走 yaml.get。
+  const cfg = yaml.get('./plugins/xhh/config/config.yaml') || {};
+  if (cfg.auto_reload !== false) {
+    const { startAutoReload } = await import('./system/hot/auto_reload.js');
+    startAutoReload({ apps, files, root: new URL('./', import.meta.url).href, logger });
+  }
+} catch (err) {
+  logger.error(`[xhh] 自举热重载启动异常：${err?.message || err}`);
+}
+
 // 补齐配置里群号对应的群名，供锅巴群白名单下拉展示
 setTimeout(async () => {
   try {
