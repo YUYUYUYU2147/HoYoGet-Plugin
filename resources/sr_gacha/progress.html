@@ -15,13 +15,21 @@
           <div class="nickname">{{nickname}}</div>
           <div class="uid">#{{uid}}</div>
         </div>
-        <!-- 提示文本（置于白框内居中） -->
+        <!-- 提示文本（置于白框内居中），按游戏区分指令 -->
+        {{if isZzz}}
+        <div class="tip">#xhh绝区零更新抽卡记录 更新，#xhh绝区零抽卡记录 / 角色记录 / 音擎记录 / 邦布记录 查看</div>
+        {{else}}
         <div class="tip">#xhh星铁更新抽卡记录 更新，#xhh星铁抽卡记录 / 角色记录 / 武器记录 查看</div>
+        {{/if}}
         <img class="header_img" src="{{ppath}}Tl/imgs/小花火.png" />
       </div>
 
       {{if !sections.length}}
+      {{if isZzz}}
+      <div class="empty_box">暂无抽卡记录，请先发送【#xhh绝区零更新工坊记录】</div>
+      {{else}}
       <div class="empty_box">暂无抽卡记录，请先发送【#xhh星铁更新抽卡记录】</div>
+      {{/if}}
       {{/if}}
 
       <!-- 每个卡池一个进度条区块 -->
@@ -33,7 +41,11 @@
             <span class="meta_box">总<b>{{sec.allNum}}</b>抽</span>
             <span class="meta_box">金<b>{{sec.fiveNum}}</b></span>
             <span class="meta_box">平均<b>{{sec.avgPity}}</b>抽/金</span>
+            {{if sec.isZzz}}
+            <span class="meta_box">UP需<b>{{sec.upYs}}</b>菲林</span>
+            {{else}}
             <span class="meta_box">UP需<b>{{sec.upYs}}</b>星琼</span>
+            {{/if}}
           </div>
         </div>
         <div class="progress_box">
@@ -41,7 +53,7 @@
             {{each sec.list item idx}}
             {{set hasDate = (idx===0 || idx===sec.list.length-1 || (idx>0 && sec.list[idx-1].date !== item.date))}}
             <div class="gacha-item {{!hasDate?'no-date':'has-date'}} {{item.isUp ?'up':'wai'}} {{item.isCurrent?'no-avatar':''}}">
-              <div class="date">
+              <div class="date {{if sec.isZzz}}zzz{{/if}}">
                 <div class="dot {{idx===0?'first':''}} {{idx===sec.list.length-1?'last':''}}"></div>
                 <div class="txt">{{item.date}}</div>
               </div>

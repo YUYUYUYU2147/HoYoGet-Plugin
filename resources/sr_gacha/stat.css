@@ -1,0 +1,286 @@
+/* 星铁统计卡（工坊风格）：黑底金字，顶部汇总大卡 + 五星头像网格 + 分池进度条
+   与绝区零 zzz_gacha/stat.css 同源；供 sr_gacha/stat.html 使用，
+   与「记录」（progress/summary）模板区分。
+   尺寸体系与 sr_gacha 其余模板一致：1200px 宽 + transform scale(1.2)，
+   最终清晰度由渲染时的 sys.scale(zoom) 控制。行高做了压缩，
+   避免长卡在渲染后端超出截图高度上限被截断。 */
+
+@import url("../../../font/fonts.css");
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+body {
+  position: relative;
+  font-size: 18px;
+  color: #f2f2f2;
+  transform: scale(1.2);
+  transform-origin: 0 0;
+  width: 1200px;
+  background: #16171b;
+  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+.container {
+  width: 1200px;
+  padding: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ===== 顶部汇总大卡 ===== */
+.hero_card {
+  display: flex;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #23252c 0%, #1b1d23 100%);
+  border: 1px solid #3a3d47;
+  border-radius: 14px;
+  padding: 18px 20px;
+  color: #f2f2f2;
+}
+
+.uid_tag {
+  display: inline-block;
+  background: #2f323b;
+  border-radius: 8px;
+  padding: 2px 14px;
+  font-size: 20px;
+  color: #ffd98a;
+}
+
+.hero_title {
+  font-size: 34px;
+  font-weight: 700;
+  color: #ffcf70;
+  margin: 10px 0 8px;
+  text-shadow: 0 2px 8px rgba(255, 207, 112, 0.25);
+}
+
+.hero_row {
+  font-size: 20px;
+  margin: 4px 0;
+  color: #d8d8d8;
+}
+
+.hero_row b {
+  color: #ffd98a;
+  font-size: 24px;
+}
+
+.chips {
+  margin: 10px 0 6px;
+}
+
+.chip {
+  display: inline-block;
+  background: #2f323b;
+  border: 1px solid #4a4e5a;
+  color: #cfd3dc;
+  border-radius: 8px;
+  padding: 2px 12px;
+  font-size: 16px;
+  margin-right: 10px;
+}
+
+.metrics {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.metric {
+  flex: 1;
+  text-align: center;
+}
+
+.m_num {
+  font-size: 26px;
+  font-weight: 700;
+  color: #ffd98a;
+}
+
+.m_unit {
+  font-size: 14px;
+  color: #9aa0ac;
+  margin-left: 2px;
+}
+
+.m_lable {
+  font-size: 14px;
+  color: #9aa0ac;
+  margin-top: 2px;
+}
+
+.hero_side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-left: 16px;
+}
+
+.hero_avatar {
+  display: block;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  border: 3px solid #ffcf70;
+  background: #2f323b center / cover no-repeat;
+}
+
+.hero_note {
+  font-size: 14px;
+  color: #9aa0ac;
+  margin-top: 6px;
+  white-space: nowrap;
+}
+
+/* ===== 五星头像网格 ===== */
+.grid_card {
+  background: #202227;
+  border: 1px solid #3a3d47;
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-top: 14px;
+}
+
+.grid_title {
+  font-size: 15px;
+  color: #d8d8d8;
+  margin-bottom: 10px;
+}
+
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cell {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  border-radius: 12px;
+  border: 2px solid #b98a2f;
+  background: linear-gradient(160deg, #3a3320 0%, #241f14 100%);
+}
+
+.cell_img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  background: #2f323b center / cover no-repeat;
+}
+
+.cell_num {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 28px;
+  text-align: center;
+  background: #e05656;
+  color: #fff;
+  font-size: 16px;
+  line-height: 28px;
+  border-radius: 14px;
+  padding: 0 6px;
+}
+
+/* ===== 分池进度 ===== */
+.pool_card {
+  background: #202227;
+  border: 2px solid #3a3d47;
+  border-radius: 16px;
+  padding: 16px 20px;
+  margin-top: 16px;
+}
+
+.pool_title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #ffcf70;
+  margin-bottom: 12px;
+}
+
+.pool_list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bar_row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bar_img {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: #2f323b center / cover no-repeat;
+  border: 1px solid #4a4e5a;
+}
+
+.q_mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: 700;
+  color: #ffd98a;
+}
+
+.bar_wrap {
+  flex: 1;
+  height: 34px;
+}
+
+.bar_track {
+  height: 34px;
+  border-radius: 17px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  background: #3a3f4b;
+  min-width: 84px;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.bar_track.good { background: linear-gradient(90deg, #3f9e56, #2f7d43); }
+.bar_track.mid { background: linear-gradient(90deg, #d9a13c, #b9822a); }
+.bar_track.bad { background: linear-gradient(90deg, #d95a5a, #b93f3f); }
+
+.bar_text {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.wai_tag {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid #e05656;
+  color: #e05656;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo {
+  text-align: center;
+  color: #6b7078;
+  font-size: 12px;
+  padding: 12px 0 4px;
+}

@@ -277,6 +277,11 @@ body::before {
   flex-shrink: 0;
 }
 
+/* 绝区零进度视图：日期左侧货币图标换成菲林（html 里 .date 会带 zzz 类） */
+.gacha-item .date.zzz .dot {
+  background-image: url('polychrome.png');
+}
+
 /* 统一显示星琼图标，不再使用 date-icon.webp 雪碧图定位 */
 
 .gacha-item .date .txt {

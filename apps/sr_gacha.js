@@ -169,13 +169,17 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr') {
   const pools = Object.entries(data?.pools || {}).map(([key, pool]) => {
     const recent = Array.isArray(pool.records) ? pool.records : (Array.isArray(pool.recent) ? pool.recent : [])
     const fiveNum = Number(pool?.fiveNum) || recent.length
-    const upNum = recent.filter(v => v.is_up).length
+    // 联动跃迁（联动角色/联动光锥）限定不歪，5 星恒为 UP；
+    // 星穹工坊云端无联动池字段、authkey 与小助手均不返回 is_up，故按池类型统一视为 UP
+    const collabPool = key === 'GachaType_CollabAvatarUp' || key === 'GachaType_CollabEquipmentUp'
+    const isUpRec = v => collabPool || v.is_up === true
+    const upNum = recent.filter(isUpRec).length
     const pity = Number(typeof pool.pity === 'object' ? pool.pity?.gacha_count : pool.pity || 0) || 0
     const totalPulls = Number(pool?.totalPulls) || (sum(recent, 'gacha_count') + pity) || 0
     const pullValues = recent.map(v => Number(v.gacha_count || 0)).filter(v => v > 0)
-    const upValues = recent.filter(v => v.is_up).map(v => Number(v.gacha_count || 0)).filter(v => v > 0)
+    const upValues = recent.filter(isUpRec).map(v => Number(v.gacha_count || 0)).filter(v => v > 0)
     const fiveAvg = fiveNum ? (sum(recent, 'gacha_count') / fiveNum).toFixed(1) : '--'
-    const upAvg = upValues.length ? (sum(recent.filter(v => v.is_up), 'gacha_count') / upValues.length).toFixed(1) : '--'
+    const upAvg = upValues.length ? (sum(recent.filter(isUpRec), 'gacha_count') / upValues.length).toFixed(1) : '--'
     let upYs = upValues.length ? String(Math.round(Number(upAvg) * 160)) : '--'
     if (upValues.length && Number(upYs) >= 10000) upYs = `${(Number(upYs) / 10000).toFixed(2)}w`
     const maxPity = pullValues.length ? Math.max(...pullValues) : 0
@@ -223,9 +227,10 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr') {
       return {
         name: item.name || '未知',
         id: String(item.id || ''),
+        item_type: item.item_type || '',
         icon: makeIcon(item),
         num: pulls,
-        isUp: item.is_up === true,
+        isUp: isUpRec(item),
         isNull: false,
         year: full.slice(0, 4) || '----',
         fullDate: full || '--',
@@ -290,7 +295,7 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr') {
   })
   // progress 进度条布局：每个卡池生成一个进度区块
   if (layout === 'progress') {
-    const nickname = data?.nickname || e?.nickname || e?.user?.nickname || '开拓者'
+    const nickname = data?.nickname || e?.nickname || e?.user?.nickname || (game === 'zzz' ? '绳匠' : '开拓者')
     const sections = []
     for (const pool of pools) {
       if (!pool.fiveNum && !pool.pity) continue
@@ -329,6 +334,8 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr') {
         avgPity: pool.fiveAvg,
         upAvg: pool.line?.[1]?.[1]?.num || '--',
         upYs: pool.line?.[1]?.[2]?.num || '--',
+        // 进度模板里货币文案写死过「星琼」，绝区零应为「菲林」；模板按该标记分支
+        isZzz: game === 'zzz',
         list,
       })
     }
@@ -336,6 +343,8 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr') {
       uid,
       nickname,
       avatar: e?.user?.avatar || '',
+      // 顶部指令提示与空状态文案按游戏区分（绝区零用菲林与绝区零指令）
+      isZzz: game === 'zzz',
       sections,
     }
   }
@@ -377,6 +386,160 @@ export function filterPools(data, keys = []) {
     if (keys.includes(key)) pools[key] = value
   }
   return { ...data, pools }
+}
+
+/**
+ * 星铁统计视图（工坊小程序风格）：顶部汇总大卡 + 五星头像网格 + 各池进度条，
+ * 与「记录」（buildSummaryView progress 布局）模板区分。
+ * 常驻跃迁是角色+光锥混合池，按 commonType（角色/光锥）拆分；网格与分池只含所选池。
+ */
+export function buildSrStatView(data, uid, e, keys = [], commonType = null) {
+  const srcPools = data?.pools || {}
+  const pickByType = t => (t === '光锥' ? '光锥' : '角色')
+  // 星铁合法池白名单：剔除混入星铁数据里的绝区零池
+  // （如 GachaType_Permanent「常驻频段」、GachaType_Bangboo「邦布频段」）
+  const SR_POOL_KEYS = new Set([
+    'GachaType_AvatarUp', 'GachaType_CollabAvatarUp',
+    'GachaType_EquipmentUp', 'GachaType_CollabEquipmentUp',
+    'GachaType_Newbie', 'common',
+  ])
+  const cleanPools = {}
+  for (const [key, pool] of Object.entries(srcPools)) {
+    if (SR_POOL_KEYS.has(key)) cleanPools[key] = pool
+  }
+  // 常驻跃迁按类型决定是否纳入
+  const wantedKeys = []
+  for (const key of keys.length ? keys : Object.keys(cleanPools)) {
+    if (key === 'common' && commonType) {
+      const hasType = getPoolRecords(cleanPools[key]).some(r => pickByType(r.item_type) === commonType)
+      if (hasType) wantedKeys.push(key)
+      continue
+    }
+    wantedKeys.push(key)
+  }
+
+  const base = buildSummaryView(filterPools({ ...data, pools: cleanPools }, wantedKeys), uid, e, 'grid', 'sr')
+  const pools = base.pools || []
+  const sumOf = (list, field) => list.reduce((s, p) => s + (Number(p[field]) || 0), 0)
+  const find = key => pools.find(p => p.key === key)
+
+  // 常驻跃迁按类型拆分五星（fiveLog 已带 item_type）
+  const commonPool = find('common')
+  if (commonPool && commonType) {
+    const keep = (commonPool.fiveLog || []).filter(it => pickByType(it.item_type) === commonType)
+    commonPool.fiveLog = keep
+    commonPool.fiveNum = keep.length
+  }
+
+  const allNum = sumOf(pools, 'allNum')
+  const sNum = sumOf(pools, 'fiveNum')
+  const avgGold = sNum ? (allNum / sNum).toFixed(1) : '--'
+  // 称号：53.7 抽 → 「欧气满满大欧皇」（对齐工坊），其余沿用现有分级
+  const title = avgGold === '--' ? '暂无记录' : avgGold <= 55 ? '欧气满满大欧皇' : avgGold <= 65 ? '天选打工人' : avgGold <= 78 ? '平平无奇小保底' : '水逆缠身大非酋'
+
+  // 四项指标（工坊口径）：小保底不歪（按统计类型）、五星数、每UP角色需、每UP光锥需
+  // 「每UP角色需 / 每UP光锥需」与另一类型的不歪率属全账号口径，
+  // 不受本次统计范围（keys）过滤影响，故从全量池视图取值
+  const allBase = buildSummaryView(filterPools({ ...data, pools: cleanPools }, Object.keys(cleanPools)), uid, e, 'grid', 'sr')
+  const allFind = key => allBase.pools.find(p => p.key === key)
+  const allChar = allFind('GachaType_AvatarUp')
+  const allWeapon = allFind('GachaType_EquipmentUp')
+  const ratePool = commonType === '光锥' ? allWeapon : allChar
+  // 池存在但一个五星都没有时 upRate 是 '--%'，统一显示为 '--'
+  const rateNum = ratePool && ratePool.fiveNum ? ratePool.upRate : '--'
+  const metrics = [
+    { num: rateNum, unit: '', lable: '小保底不歪' },
+    { num: sNum, unit: '金', lable: '五星数' },
+    { num: allChar?.line?.[1]?.[1]?.num ?? '--', unit: '抽', lable: '每UP角色需' },
+    { num: allWeapon?.line?.[1]?.[1]?.num ?? '--', unit: '抽', lable: '每UP光锥需' },
+  ]
+
+  // 连击标签：角色/光锥的当前连UP与最长连歪（全账号口径，用 allChar/allWeapon）
+  const chips = []
+  for (const [pool, label] of [[allChar, '角色'], [allWeapon, '光锥']]) {
+    const log = pool?.fiveLog || []
+    let upStreak = 0
+    for (const it of log) { if (it.isUp) upStreak++; else break }
+    let worstStreak = 0
+    let curStreak = 0
+    for (const it of log) {
+      if (it.isUp === false) { curStreak++; worstStreak = Math.max(worstStreak, curStreak) } else curStreak = 0
+    }
+    if (upStreak > 1) chips.push(`${label}${upStreak}连UP`)
+    if (worstStreak > 1) chips.push(`${label}${worstStreak}连歪`)
+  }
+
+  // 五星头像网格：同名去重计数（保持首次出现顺序）
+  const gridMap = new Map()
+  for (const pool of pools) {
+    for (const it of pool.fiveLog || []) {
+      const g = gridMap.get(it.name) || { name: it.name, icon: it.icon, count: 0 }
+      g.count++
+      if (!g.icon) g.icon = it.icon
+      gridMap.set(it.name, g)
+    }
+  }
+
+  // 网格标题：限定（UP 池）与常驻（常驻/新手池）分开计数
+  const limitedNum = sumOf(pools.filter(p => p.key !== 'common' && p.key !== 'GachaType_Newbie'), 'fiveNum')
+  const commonNum = (find('common')?.fiveNum || 0) + (find('GachaType_Newbie')?.fiveNum || 0)
+  const gridTitle = commonType || !commonNum
+    ? `共获得五星 ${sNum} 个，具体如下：`
+    : `共获得限定五星 ${limitedNum} 个，常驻五星 ${commonNum} 个，具体如下：`
+
+  // 分池进度条：长度按抽数相对保底的比例（角色池 90、光锥池 80），颜色阈值同比例
+  const UP_POOLS = new Set(['GachaType_AvatarUp', 'GachaType_EquipmentUp'])
+  const pityBaseOf = p => (p.key === 'GachaType_EquipmentUp' || p.key === 'GachaType_CollabEquipmentUp' ? 80 : 90)
+  const pctOf = (n, base) => Math.min(100, Math.max(8, Math.round((Number(n) / base) * 100)))
+  const clsOf = (n, base) => (n < base * 0.5 ? 'good' : n < base * 0.78 ? 'mid' : 'bad')
+  const sections = pools.map(p => {
+    const base = pityBaseOf(p)
+    return {
+      name: p.name,
+      pity: p.pity || 0,
+      pityPct: p.pity ? pctOf(p.pity, base) : 0,
+      list: (p.fiveLog || []).map(it => {
+        // 常驻跃迁混合池：光锥按 80 保底、角色按 90
+        const itemBase = p.key === 'common' ? (pickByType(it.item_type) === '光锥' ? 80 : 90) : base
+        return {
+          icon: it.icon || '',
+          num: it.num,
+          pct: pctOf(it.num, itemBase),
+          wai: it.isUp === false && UP_POOLS.has(p.key),
+          cls: clsOf(it.num, itemBase),
+        }
+      }),
+    }
+  }).filter(sec => sec.pity > 0 || sec.list.length)
+
+  // 右上角：本次统计范围最新一个五星 + 「XX池N出」（对齐工坊「新手池50出」）
+  const NOTE_BY_KEY = {
+    GachaType_AvatarUp: '角色池',
+    GachaType_CollabAvatarUp: '联动角色池',
+    GachaType_EquipmentUp: '光锥池',
+    GachaType_CollabEquipmentUp: '联动光锥池',
+    GachaType_Newbie: '新手池',
+    common: '常驻池',
+  }
+  const firstS = pools.map(p => ({ key: p.key, first: (p.fiveLog || [])[0] })).find(x => x.first)
+
+  return {
+    uid,
+    total: {
+      uid,
+      title,
+      allNum,
+      avgGold,
+      sNum,
+      chips,
+      metrics,
+      grid: [...gridMap.values()],
+      gridTitle,
+      avatar: firstS?.first?.icon || '',
+      avatarNote: firstS ? `${NOTE_BY_KEY[firstS.key]}${firstS.first.num}出` : '暂无五星',
+    },
+    sections,
+  }
 }
 
 export async function requestJson(url, options = {}, retry = 3) {
@@ -722,7 +885,8 @@ export function buildPoolFromRows(gachaType, pool, rows) {
         id: String(row.id || ''),
         name: row.name || '未知',
         item_type: itemType,
-        is_up: false,
+        // 联动跃迁（'21'/'22'）限定不歪，5 星均视为 UP
+        is_up: gachaType === '21' || gachaType === '22',
         gacha_count: pulls,
         time: row.time || '',
         icon: row.icon || '',
@@ -854,7 +1018,8 @@ function buildPoolFromPulls(gachaType, rows) {
       id: String(row?.id || ''),
       name: row?.name || '未知',
       item_type: row?.item_type === '光锥' ? '光锥' : '角色',
-      is_up: false,
+      // 联动跃迁（'21'/'22'）限定不歪，5 星均视为 UP
+      is_up: gachaType === '21' || gachaType === '22',
       gacha_count: 0,
       time: row?.time || '',
       icon: '',
@@ -1403,6 +1568,8 @@ export class sr_gacha extends plugin {
         { reg: '^#*(xhh|小花火)(星铁|崩铁)?(抽卡记录|抽卡统计)$', fnc: 'summary' },
         { reg: '^#*(xhh|小花火)(星铁|崩铁)?角色记录$', fnc: 'roleRecord' },
         { reg: '^#*(xhh|小花火)(星铁|崩铁)?武器记录$', fnc: 'weaponRecord' },
+        { reg: '^#*(xhh|小花火)(星铁|崩铁)?角色统计$', fnc: 'roleStat' },
+        { reg: '^#*(xhh|小花火)(星铁|崩铁)?武器统计$', fnc: 'weaponStat' },
         { reg: '^#*(xhh|小花火)(星铁|崩铁)?联动角色记录$', fnc: 'collabRoleRecord' },
         { reg: '^#*(xhh|小花火)(星铁|崩铁)?联动武器记录$', fnc: 'collabWeaponRecord' },
         { reg: '^#*(xhh|小花火)(星铁|崩铁)?绑定小助手(\\s+\\S+)?$', fnc: 'bindHelper' },
@@ -1472,11 +1639,17 @@ export class sr_gacha extends plugin {
     }
   }
 
-  async renderSummary(e, keys = [], layout = 'grid') {
+  async renderSummary(e, keys = [], layout = 'grid', commonType = null) {
     const auth = await getUserAuth(e)
     if (auth.error) return e.reply(auth.error)
-    const data = readData(getDataFile(auth.qq, auth.uid)) || readSummary(`./data/srGachaSummary/${auth.uid}.json`)
+    let data = readData(getDataFile(auth.qq, auth.uid)) || readSummary(`./data/srGachaSummary/${auth.uid}.json`)
     if (!data?.pools) return e.reply('暂无星铁抽卡记录，请先发送【#xhh星铁更新抽卡记录】')
+    // 常驻跃迁是角色+光锥混合池：按 commonType 只保留对应类型，避免角色记录混入光锥
+    if (commonType && data?.pools?.common) {
+      const pool = data.pools.common
+      const filtered = getPoolRecords(pool).filter(r => (r.item_type || '角色') === commonType)
+      data = { ...data, pools: { ...data.pools, common: { ...pool, records: filtered, recent: filtered, fiveNum: filtered.length } } }
+    }
     const view = buildSummaryView(filterPools(data, keys), auth.uid, e, layout)
     if (layout === 'progress') {
       let avatar = ''
@@ -1526,11 +1699,36 @@ export class sr_gacha extends plugin {
   }
 
   async roleRecord(e) {
-    return this.renderSummary(e, ['GachaType_AvatarUp', 'GachaType_CollabAvatarUp', 'common'], 'progress')
+    // 常驻跃迁是角色+光锥混合池，角色记录只保留角色（过滤光锥）
+    return this.renderSummary(e, ['GachaType_AvatarUp', 'GachaType_CollabAvatarUp', 'common'], 'progress', '角色')
   }
 
   async weaponRecord(e) {
-    return this.renderSummary(e, ['GachaType_EquipmentUp', 'GachaType_CollabEquipmentUp'], 'progress')
+    // 常驻跃迁是角色+光锥混合池，武器记录只保留光锥
+    return this.renderSummary(e, ['GachaType_EquipmentUp', 'GachaType_CollabEquipmentUp', 'common'], 'progress', '光锥')
+  }
+
+  /** 统计视图：工坊风格（顶部汇总大卡 + 五星网格 + 分池进度条），与「记录」模板区分 */
+  async renderSrStat(e, keys = [], commonType = null) {
+    const auth = await getUserAuth(e)
+    if (auth.error) return e.reply(auth.error)
+    const data = readData(getDataFile(auth.qq, auth.uid)) || readSummary(`./data/srGachaSummary/${auth.uid}.json`)
+    if (!data?.pools) return e.reply('暂无星铁抽卡记录，请先发送【#xhh星铁更新抽卡记录】')
+    const view = buildSrStatView(data, auth.uid, e, keys, commonType)
+    // pct 压低 sys.scale 的 zoom：统计卡内容行数多，避免渲染后端截图高度上限截断
+    const buf = await render('sr_gacha/stat', view, { e, pct: 1.5 })
+    if (Buffer.isBuffer(buf)) return e.reply(segment.image(buf))
+    return e.reply(buf)
+  }
+
+  async roleStat(e) {
+    // 常驻跃迁只取角色
+    return this.renderSrStat(e, ['GachaType_AvatarUp', 'GachaType_CollabAvatarUp', 'common'], '角色')
+  }
+
+  async weaponStat(e) {
+    // 常驻跃迁只取光锥
+    return this.renderSrStat(e, ['GachaType_EquipmentUp', 'GachaType_CollabEquipmentUp', 'common'], '光锥')
   }
 
   async collabRoleRecord(e) {
@@ -1751,6 +1949,7 @@ export class sr_gacha extends plugin {
       '查询',
       '#xhh星铁抽卡记录 —— 抽卡总览统计',
       '#xhh星铁角色记录 / #xhh星铁武器记录 —— 角色、光锥卡池进度',
+      '#xhh星铁角色统计 / #xhh星铁武器统计 —— 工坊风格统计卡',
       '#xhh星铁联动角色记录 / #xhh星铁联动武器记录 —— 联动卡池进度',
       '#xhh星铁常驻记录 —— 常驻卡池统计',
       '',

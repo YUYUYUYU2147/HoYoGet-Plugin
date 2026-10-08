@@ -166,8 +166,14 @@ async function fetchAllByAuthkeyZzz(query) {
 function zzzItemType(row) {
   const type = String(row?.item_type || '')
   if (type === '代理人' || type === '角色') return '角色'
-  if (type === '音擎' || type === '邦布') return type
-  return String(row?.item_id || '').length === 5 ? '邦布' : '角色'
+  if (type === '邦布') return '邦布'
+  // 官方/工坊口径里音擎也叫「武器」，个别数据源用英文名
+  if (type === '音擎' || type === '武器' || /weapon|wengine/i.test(type)) return '音擎'
+  // 兜底：按 item_id 位数与前缀。绝区零：代理人 4 位，音擎 1xxxx，邦布 5xxxx。
+  // 此前「5 位一律邦布」会把音擎误判成邦布，导致武器统计的常驻音擎被过滤掉
+  const id = String(row?.item_id || '')
+  if (id.length === 5) return id.startsWith('5') ? '邦布' : '音擎'
+  return '角色'
 }
 
 /** 与 buildPoolFromRows 同构，但物品类型判定按绝区零规则 */
@@ -519,6 +525,160 @@ function findZzzAuthkeyUrl(e) {
   return ''
 }
 
+/**
+ * 绝区零统计视图（工坊小程序风格）：
+ * 顶部汇总大卡（总抽数/平均每金/S级总数 + 全账号五项指标 + 称号与连击标签），
+ * S级头像网格（同名去重计数），以及各池的进度条列表。
+ * 网格与分池区块只含所选池；五项汇总指标固定按全账号口径。
+ */
+function buildZzzStatView(data, uid, e, keys = [], itemFilter = null) {
+  // 常驻频段（GachaType_Permanent）是混合池：角色/音擎/邦布混在一起。
+  // 统计指令按「类型」拆分：itemFilter 为 角色/音擎/邦布 时，常驻池只保留对应类型的五星，
+  // 其余池（独家频段=角色、音擎频段=音擎、邦布频段=邦布）天然同质，整池取即可。
+  const srcPools = fillZzzIcons(data.pools || {})
+  const pickByType = t => t === '音擎' || t === '邦布' ? t : '角色'
+  // 计算该统计视图实际应包含的池 key（常驻池按 itemFilter 决定是否纳入）
+  const wantedKeys = []
+  for (const key of keys.length ? keys : Object.keys(srcPools)) {
+    if (key === 'GachaType_Permanent' && itemFilter) {
+      const perm = srcPools[key]
+      const hasType = (perm?.records || []).some(r => pickByType(zzzItemType(r)) === itemFilter)
+      if (hasType) wantedKeys.push(key)
+      continue
+    }
+    wantedKeys.push(key)
+  }
+
+  const base = buildSummaryView(filterPools({ ...data, pools: srcPools }, wantedKeys), uid, e, 'grid', 'zzz')
+  const pools = base.pools || []
+  const sumOf = (list, field) => list.reduce((s, p) => s + (Number(p[field]) || 0), 0)
+  const find = key => pools.find(p => p.key === key)
+
+  // 常驻池按类型拆分：把五个五星按 item_type 过滤出本统计要的部分
+  const permPool = find('GachaType_Permanent')
+  if (permPool && itemFilter) {
+    const keep = (permPool.fiveLog || []).filter(it => pickByType(it.item_type || '角色') === itemFilter)
+    permPool.fiveLog = keep
+    permPool.fiveNum = keep.length
+  }
+
+  const allNum = sumOf(pools, 'allNum')
+  const sNum = sumOf(pools, 'fiveNum')
+  const avgGold = sNum ? (allNum / sNum).toFixed(1) : '--'
+  const title = avgGold === '--' ? '暂无记录' : avgGold <= 55 ? '欧气附体小欧皇' : avgGold <= 65 ? '天选打工人' : avgGold <= 78 ? '平平无奇小保底' : '水逆缠身大非酋'
+
+  // 全账号五项指标（与工坊口径一致）：UP平均取 line[1][1]（UP平均列）
+  // 第一项「保底不歪」按统计类型：角色→角色UP池、音擎→音擎UP池；邦布无 UP 概念，显示五星数
+  const UP_KEYS_BY_TYPE = {
+    角色: ['GachaType_CharacterUp', 'GachaType_RerunCharacter'],
+    音擎: ['GachaType_WeaponUp', 'GachaType_RerunWeapon'],
+  }
+  let rateLable, rateNum
+  if (itemFilter === '邦布') {
+    rateLable = '邦布五星数'
+    rateNum = String(find('GachaType_Bangboo')?.fiveNum || 0)
+  } else {
+    const ratePools = (UP_KEYS_BY_TYPE[itemFilter || '角色']).map(k => find(k)).filter(Boolean)
+    const rateFive = sumOf(ratePools, 'fiveNum')
+    const rateUp = sumOf(ratePools, 'upNum')
+    rateLable = itemFilter === '音擎' ? '音擎保底不歪' : '角色保底不歪'
+    rateNum = rateFive ? `${Math.round((rateUp / rateFive) * 1000) / 10}%` : '--'
+  }
+  // 「每UP角色需 / 每UP音擎需 / 常驻每金 / 每邦布需」属全账号口径，不受本次统计
+  // 范围（keys）过滤影响——武器统计里没有角色池、邦布统计里没有角色/音擎池，
+  // 从过滤后的 base.pools 取会恒为 '--'，故从全量池视图取值
+  const allBase = buildSummaryView(filterPools({ ...data, pools: srcPools }, Object.keys(srcPools)), uid, e, 'grid', 'zzz')
+  const allFind = key => allBase.pools.find(p => p.key === key)
+  const metrics = [
+    { num: rateNum, unit: '', lable: rateLable },
+    { num: allFind('GachaType_CharacterUp')?.line?.[1]?.[1]?.num || '--', unit: '抽', lable: '每UP角色需' },
+    { num: allFind('GachaType_WeaponUp')?.line?.[1]?.[1]?.num || '--', unit: '抽', lable: '每UP音擎需' },
+    { num: allFind('GachaType_Permanent')?.avgPity || '--', unit: '抽', lable: '常驻每金' },
+    { num: allFind('GachaType_Bangboo')?.avgPity || '--', unit: '抽', lable: '每邦布需' },
+  ]
+
+  // 连击标签：当前连UP / 最长连歪（按独家频段时间倒序的 fiveLog）
+  const charLog = find('GachaType_CharacterUp')?.fiveLog || []
+  let upStreak = 0
+  for (const it of charLog) { if (it.isUp) upStreak++; else break }
+  let worstStreak = 0
+  let curStreak = 0
+  for (const it of charLog) {
+    if (it.isUp === false) { curStreak++; worstStreak = Math.max(worstStreak, curStreak) } else curStreak = 0
+  }
+  const chips = []
+  if (upStreak > 1) chips.push(`代理${upStreak}连UP`)
+  if (worstStreak > 1) chips.push(`代理${worstStreak}连歪`)
+
+  // S级头像网格：同名去重计数（保持首次出现顺序）
+  const gridMap = new Map()
+  for (const pool of pools) {
+    for (const it of pool.fiveLog || []) {
+      const g = gridMap.get(it.name) || { name: it.name, icon: it.icon, count: 0 }
+      g.count++
+      if (!g.icon) g.icon = it.icon
+      gridMap.set(it.name, g)
+    }
+  }
+
+  // 网格标题按所选范围生成
+  const hasChar = itemFilter === '角色' || itemFilter === null
+  const hasCommon = itemFilter === null || wantedKeys.includes('GachaType_Permanent')
+  const limitedNum = sumOf(pools.filter(p => p.key === 'GachaType_CharacterUp' || p.key === 'GachaType_RerunCharacter'), 'fiveNum')
+  const commonNum = find('GachaType_Permanent')?.fiveNum || 0
+  let gridTitle
+  if (itemFilter) gridTitle = `共获得S级 ${sNum} 个，具体如下：`
+  else if (hasChar && hasCommon) gridTitle = `共获得限定S级 ${limitedNum} 个，常驻S级 ${commonNum} 个，具体如下：`
+  else if (hasChar) gridTitle = `共获得限定S级 ${limitedNum} 个，具体如下：`
+  else gridTitle = `共获得S级 ${sNum} 个，具体如下：`
+
+  // 分池进度条：长度按抽数相对 S 级保底 90 的比例（短=欧、长=非），颜色阈值 45/70 抽
+  const UP_POOLS = new Set(['GachaType_CharacterUp', 'GachaType_RerunCharacter', 'GachaType_WeaponUp'])
+  const pctOf = n => Math.min(100, Math.max(8, Math.round((Number(n) / 90) * 100)))
+  const sections = pools.map(p => ({
+    name: p.name,
+    pity: p.pity || 0,
+    pityPct: p.pity ? pctOf(p.pity) : 0,
+    list: (p.fiveLog || []).map(it => ({
+      icon: it.icon || '',
+      num: it.num,
+      pct: pctOf(it.num),
+      wai: it.isUp === false && UP_POOLS.has(p.key),
+      cls: it.num < 45 ? 'good' : it.num < 70 ? 'mid' : 'bad',
+    })),
+  }))
+
+  // 右上角说明文字按池类型（各池 fiveLog 最新在前，取首个非空池的最新 S）
+  const NOTE_BY_KEY = {
+    GachaType_CharacterUp: '角色池最新S',
+    GachaType_RerunCharacter: '角色池最新S',
+    GachaType_WeaponUp: '音擎池最新S',
+    GachaType_RerunWeapon: '音擎池最新S',
+    GachaType_Permanent: '常驻池最新S',
+    GachaType_Bangboo: '邦布池最新S',
+  }
+  const firstS = pools.map(p => ({ key: p.key, first: (p.fiveLog || [])[0] })).find(x => x.first)
+
+  return {
+    uid,
+    total: {
+      uid,
+      title,
+      allNum,
+      avgGold,
+      sNum,
+      chips,
+      metrics,
+      grid: [...gridMap.values()],
+      gridTitle,
+      // 右上角头像与说明：取本次统计范围内最新一个 S（武器统计→音擎池最新S，以此类推）
+      avatar: firstS?.first?.icon || '',
+      avatarNote: firstS ? NOTE_BY_KEY[firstS.key] : '暂无S记录',
+    },
+    sections,
+  }
+}
+
 export class zzz_gacha extends plugin {
   constructor () {
     super({
@@ -532,8 +692,12 @@ export class zzz_gacha extends plugin {
         { reg: '^#*(xhh|小花火)(绝区零|zzz)?(刷新|更新)抽卡记录$', fnc: 'refresh' },
         { reg: '^#*(xhh|小花火)(绝区零|zzz)?(抽卡|调频)(记录|统计|分析)$', fnc: 'summary' },
         { reg: '^#*(xhh|小花火)(绝区零|zzz)?角色记录$', fnc: 'roleRecord' },
-        { reg: '^#*(xhh|小花火)(绝区零|zzz)?音擎记录$', fnc: 'weaponRecord' },
+        { reg: '^#*(xhh|小花火)(绝区零|zzz)?角色统计$', fnc: 'roleStat' },
+        { reg: '^#*(xhh|小花火)(绝区零|zzz)?(音擎|武器)记录$', fnc: 'weaponRecord' },
+        { reg: '^#*(xhh|小花火)(绝区零|zzz)?(音擎|武器)统计$', fnc: 'weaponStat' },
         { reg: '^#*(xhh|小花火)(绝区零|zzz)?邦布记录$', fnc: 'bangbooRecord' },
+        { reg: '^#*(xhh|小花火)(绝区零|zzz)?邦布统计$', fnc: 'bangbooStat' },
+        { reg: '^#*(xhh|小花火)(绝区零|zzz)?全部统计$', fnc: 'allStat' },
         { reg: '^#*(xhh|小花火)(绝区零|zzz)?(更新|刷新|同步)?工坊(抽卡|调频)?(记录|数据)$', fnc: 'updateWorkshop' },
         { reg: '^#*(xhh|小花火)(绝区零|zzz)?绑定工坊(\\s+\\S+)?$', fnc: 'bindWorkshop' },
         { reg: '^#*(xhh|小花火)(绝区零|zzz)?(导入|合并)四星(\\s+\\S+)?$', fnc: 'importFourStar' },
@@ -558,8 +722,9 @@ export class zzz_gacha extends plugin {
       '查询',
       '#xhh绝区零抽卡记录 —— 抽卡总览统计',
       '#xhh绝区零角色记录 / #xhh绝区零音擎记录 / #xhh绝区零邦布记录 —— 各卡池进度',
+      '#xhh绝区零角色统计 / #xhh绝区零音擎统计 / #xhh绝区零邦布统计 / #xhh绝区零全部统计 —— 工坊风格统计卡（汇总+网格+进度）',
       '',
-      '提示：xhh 可写作 小花火，绝区零可写作 zzz。',
+      '提示：xhh 可写作 小花火，绝区零可写作 zzz，音擎可写作 武器。',
     ].join('\n'))
   }
 
@@ -754,12 +919,19 @@ export class zzz_gacha extends plugin {
     return e.reply(`工坊 union_id 绑定成功：${value}\n发送【#xhh绝区零更新工坊记录】拉取云端记录`)
   }
 
-  async render(e, keys = [], layout = 'grid') {
+  async render(e, keys = [], layout = 'grid', itemFilter = null) {
     const auth = await getUserAuth(e)
     if (auth.error) return e.reply(auth.error)
     const data = readData(getDataFile(auth.uid, auth.qq))
     if (!data?.pools) return e.reply('暂无绝区零抽卡记录，请先发送【#xhh绝区零抽卡链接 + 链接】')
-    const view = buildSummaryView(filterPools({ ...data, pools: fillZzzIcons(data.pools) }, keys), auth.uid, e, layout, 'zzz')
+    let src = { ...data, pools: fillZzzIcons(data.pools) }
+    // 常驻频段是角色+音擎+邦布混合池：记录视图按 itemFilter 只保留对应类型，与统计视图一致
+    if (itemFilter && src.pools?.GachaType_Permanent) {
+      const pool = src.pools.GachaType_Permanent
+      const keep = (Array.isArray(pool.records) ? pool.records : []).filter(r => (r.item_type || '角色') === itemFilter)
+      src = { ...src, pools: { ...src.pools, GachaType_Permanent: { ...pool, records: keep, recent: keep, fiveNum: keep.length } } }
+    }
+    const view = buildSummaryView(filterPools(src, keys), auth.uid, e, layout, 'zzz')
     const template = layout === 'progress' ? 'sr_gacha/progress' : 'sr_gacha/summary'
     const buf = await render(template, view, { e })
     if (Buffer.isBuffer(buf)) return e.reply(segment.image(buf))
@@ -771,14 +943,49 @@ export class zzz_gacha extends plugin {
   }
 
   async roleRecord(e) {
-    return this.render(e, ['GachaType_CharacterUp', 'GachaType_RerunCharacter', 'GachaType_Permanent'], 'progress')
+    // 常驻频段是混合池，角色记录只保留其中 item_type 为「角色」的五星
+    return this.render(e, ['GachaType_CharacterUp', 'GachaType_RerunCharacter', 'GachaType_Permanent'], 'progress', '角色')
   }
 
   async weaponRecord(e) {
-    return this.render(e, ['GachaType_WeaponUp', 'GachaType_RerunWeapon'], 'progress')
+    // 常驻频段是混合池，武器记录只保留其中 item_type 为「音擎」的五星
+    return this.render(e, ['GachaType_WeaponUp', 'GachaType_RerunWeapon', 'GachaType_Permanent'], 'progress', '音擎')
   }
 
   async bangbooRecord(e) {
     return this.render(e, ['GachaType_Bangboo'], 'progress')
+  }
+
+  /** 统计视图：工坊风格（顶部汇总大卡 + S级网格 + 分池进度条），与抽卡记录的模板区分 */
+  async renderStat(e, keys = [], itemFilter = null) {
+    const auth = await getUserAuth(e)
+    if (auth.error) return e.reply(auth.error)
+    const data = readData(getDataFile(auth.uid, auth.qq))
+    if (!data?.pools) return e.reply('暂无绝区零抽卡记录，请先发送【#xhh绝区零更新工坊记录】')
+    const view = buildZzzStatView(data, auth.uid, e, keys, itemFilter)
+    // pct 压低 sys.scale 的 zoom：本卡内容行数多（30+ 条进度），
+    // 全局 zoom 放大后总高会超出渲染后端截图上限被拦腰截断
+    const buf = await render('zzz_gacha/stat', view, { e, pct: 1.5 })
+    if (Buffer.isBuffer(buf)) return e.reply(segment.image(buf))
+    return e.reply(buf)
+  }
+
+  async roleStat(e) {
+    // 常驻频段是混合池，角色统计只取其中 item_type 为「角色」的五星
+    return this.renderStat(e, ['GachaType_CharacterUp', 'GachaType_RerunCharacter', 'GachaType_Permanent'], '角色')
+  }
+
+  async weaponStat(e) {
+    // 常驻频段里的音擎归武器统计
+    return this.renderStat(e, ['GachaType_WeaponUp', 'GachaType_RerunWeapon', 'GachaType_Permanent'], '音擎')
+  }
+
+  async bangbooStat(e) {
+    // 常驻频段里的邦布归邦布统计
+    return this.renderStat(e, ['GachaType_Bangboo', 'GachaType_Permanent'], '邦布')
+  }
+
+  async allStat(e) {
+    return this.renderStat(e, [])
   }
 }
