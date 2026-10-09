@@ -1,7 +1,9 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { pluginPriority } from '#xhh'
+// config 必须一起导入：loadCfg() 要用它读 plugins/xhh/config/config.yaml，
+// 只导入 pluginPriority 会让 config() 抛 ReferenceError，配置全走默认值。
+import { config, pluginPriority } from '#xhh'
 
 /**
  * 绝区零面板更新加速。
@@ -224,26 +226,54 @@ export class zzz_panel_accel extends plugin {
       const elapsed = ((Date.now() - t0) / 1000).toFixed(1)
       const newCount = formatted.filter(item => item.isNew).length
 
-      // 渲染面板图：与上游 updatePanel 同一张模板、同一份数据结构。
-      // 头像已在 fillIconsConcurrently 里并发补齐，可直接渲染。
+      // 渲染面板图：模板 panel/refresh.html 及 beforeRender 注入的
+      // pluResPath / sys.resourcesPath / 玩家信息全在 ZZZ-Plugin 内，
+      // xhh 既没有这张模板、也没有 this.renderImg 这个入口（该名字只存在于
+      // Mys-plugin 的基类与 apps/meme.js 的模块内局部函数里），
+      // 直接调用必然抛错并被下面的 catch 吞掉，表现为「只有文字、没有图」。
+      // 因此借 ZZZ-Plugin 面板类自身的 render()，与上游 refreshPanel() 同一入口。
       let img = null
       try {
-        // renderImg 返回 base64 字符串，必须包 segment 才会作为图片发出
-        img = segment.image(await this.renderImg('panel/refresh.html', { newChar: newCount, list: formatted }))
+        const { Panel } = await import(path.join(ZZZ_ROOT, 'dist', 'apps', 'panel.js'))
+        const panelApp = new Panel()
+        panelApp.e = e
+        panelApp.reply = e.reply.bind(e)
+        // 与上游 refreshPanel() 一致：先取玩家信息，模板头部需要 player / avatar
+        await panelApp.getPlayerInfo().catch(() => {})
+        // retType: 'base64' 让 render 只回数据、不自行发送，便于与文字合并成一条消息。
+        // 返回值形态随渲染后端而异：'base64://…' 字符串 / Buffer / 已是图片消息段。
+        // 12:49 那次只认前两种，把消息段形态的返回值丢掉且不留日志，表现为「图又不见了」，
+        // 因此三种形态都认下来，认不出时把真实形态写进日志。
+        const raw = await panelApp.render('panel/refresh.html', { newChar: newCount, list: formatted }, { retType: 'base64' })
+        if (typeof raw === 'string' && raw) img = segment.image(raw.startsWith('base64://') ? raw : `base64://${raw}`)
+        else if (Buffer.isBuffer(raw)) img = segment.image(raw)
+        else if (raw?.type === 'image' || raw?.data?.file) img = raw
+        if (!img) {
+          // 三种已知形态都不匹配时才走到这里：把真实形态写进日志（对象列键名、字符串截前 24 字符），
+          // 避免再出现「图不见了却查不到原因」的静默失败。
+          const shape = typeof raw === 'string'
+            ? `string(${raw.slice(0, 24)})`
+            : raw && typeof raw === 'object'
+              ? `${Object.prototype.toString.call(raw)} keys=${Object.keys(raw).join('/') || 'none'}${raw.type ? ` type=${raw.type}` : ''}`
+              : String(raw)
+          logger.warn(`[xhh][panel-accel] 面板图返回值未识别（${shape}），仅返回文字`)
+        }
       } catch (err) {
         logger.warn(`[xhh][panel-accel] 面板图渲染失败，仅返回文字：${err?.message || err}`)
       }
 
       // 落盘数据里没有 name 字段（ZZZAvatarInfo 也没有），角色名是 name_mi18n。
       // 早前写成 i.name 导致「新角色」一栏全是空的分隔符。
-      const nameOf = item => item.name_mi18n || item.full_name_mi18n || `#${item.id}`
+      const nameOf = item => item.name_mi18n || item.full_name_mi18n || item.name || `#${item.id}`
       const newItems = formatted.filter(i => i.isNew)
-      return e.reply([
-        ...(img ? [img] : []),
+      const lines = [
         `面板更新完成（并发 ${cfg.concurrency}、间隔 ${cfg.interval}ms）`,
         `共 ${formatted.length} 个角色，新增 ${newCount} 个，耗时 ${elapsed} 秒`,
         newItems.length ? '新角色：' + newItems.map(nameOf).join('、') : ''
-      ].filter(Boolean).join('\n'))
+      ].filter(Boolean)
+      // segment 是对象：和文字一起 join('\n') 只会得到一行 "[object Object]"，
+      // 图必须作为数组元素与文字并列发送（system/bili.js 的扫码消息即此写法）。
+      return e.reply(img ? [img, ...lines] : lines.join('\n'))
     } catch (err) {
       logger.error(`[xhh][panel-accel] 面板更新失败：${err?.message || err}`)
       return e.reply(`面板更新失败：${err?.message || err}`)

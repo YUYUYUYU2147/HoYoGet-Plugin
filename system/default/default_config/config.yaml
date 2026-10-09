@@ -332,8 +332,8 @@ forward_info_priority: -99999999999
 # 取 -9999999999 而非更小的值：锅巴 priorityInput 的 min 是 -9999999999，
 # 填更小的数会被判为越界而在面板上标红。这个值与 custom_guide_priority、
 # user_priority 同档，语义一致（都要「必须优先」）。
-zzz_panel_accel_priority: -9999999999
-mhy_estimate_priority: -9999999999
+zzz_panel_accel_priority: -9999999
+mhy_estimate_priority: -9999999
 video_priority: 1
 voice_priority: 15
 update_priority: 10
