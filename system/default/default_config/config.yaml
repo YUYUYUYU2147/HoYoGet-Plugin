@@ -12,6 +12,16 @@ debug: false
 # （指令表是在 constructor 里交给基类注册的，换不掉）。
 auto_reload: true
 
+#绝区零面板更新加速：把 ZZZ-Plugin「%更新面板」的串行等待改为并发。
+# ZZZ-Plugin 原本每个角色之间固定 sleep 3 秒，44 个角色就是 132 秒纯等待；
+# 这里改成并发窗口 + 小间隔，实测 44 个角色约 1.6~5.7 秒。
+# 改的是本插件的接管逻辑，不动 ZZZ-Plugin 源码，所以更新上游不会被冲掉。
+# 开关在下面 zzz_panel_accel_priority 之前生效；并发越大越快、越容易被米游社限流。
+# 请求被风控拦下时会由 genshin 的 mhyFetch 自动改走代理（见 mhy_proxy 配置）。
+zzz_panel_accel_enabled: true
+zzz_panel_accel_concurrency: 4
+zzz_panel_accel_interval: 400
+
 #图鉴数据模式：official=正式服 / test=测试服
 # 这个键必须写在默认配置里：#切换测试服模式 是把它写回 config/config.yaml，
 # 但引导逻辑是「拿默认配置补齐用户配置里缺的键」，默认配置里没有这一项时，
@@ -317,6 +327,12 @@ gacha_timer_priority: -3000
 #"-Infinity"，pluginPriority 就返回字符串了，所以这里用一个小于所有现有值
 #（最小是 -9999999999）的有限值来保持「永远最优先」。
 forward_info_priority: -99999999999
+# 绝区零面板更新加速：需早于 ZZZ-Plugin 的面板指令（其 priority 取自自身
+# config 的 panel，默认 70），否则规则抢不过它、接管不生效。
+# 取 -9999999999 而非更小的值：锅巴 priorityInput 的 min 是 -9999999999，
+# 填更小的数会被判为越界而在面板上标红。这个值与 custom_guide_priority、
+# user_priority 同档，语义一致（都要「必须优先」）。
+zzz_panel_accel_priority: -9999999999
 mhy_estimate_priority: -9999999999
 video_priority: 1
 voice_priority: 15

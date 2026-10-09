@@ -109,7 +109,10 @@ async function viaProxy(url, obj) {
 function gameOfUrl(url) {
     const s = String(url || '');
     if (s.includes('/hkkrpg/') || s.includes('hkrpg_cn') || s.includes('act_id=e202304121516551')) return 'hkrpg';
-    if (s.includes('/nap/') || s.includes('zzz_cn') || s.includes('act_id=e202406242138391')) return 'nap';
+    // 绝区零除 /nap/ 外还有两种形态：event/game_record_zzz/ 与 zzz_record。
+    // 缺了后者会把面板/调频请求报成 hk4e，代理按原神处理会返回不匹配的数据。
+    if (s.includes('/nap/') || s.includes('zzz_cn') || s.includes('game_record_zzz')
+        || s.includes('zzz_record') || s.includes('act_id=e202406242138391')) return 'nap';
     return 'hk4e';
 }
 

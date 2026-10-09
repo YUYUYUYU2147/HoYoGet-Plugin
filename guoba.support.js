@@ -1173,6 +1173,30 @@ export const supportGuoba = () => {
       priorityInput('bilibili_priority', 'B站解析卡片(bilibili)', -120),
       priorityInput('bilibili_push_priority', 'B站推送(bilibili_push)', -119),
       priorityInput('bili_live_priority', 'B站直播解析(bili_live)', -115),
+      {
+        field: 'zzz_panel_accel_enabled',
+        label: '绝区零面板加速开关',
+        bottomHelpMessage:
+          '把 ZZZ-Plugin「%更新面板」的串行等待改为并发（不改 ZZZ-Plugin 源码）。原版每个角色之间固定等 3 秒，44 个角色就是 132 秒；开启后约 1.6~5.7 秒。修改后需重启',
+        component: 'Switch',
+      },
+      {
+        field: 'zzz_panel_accel_concurrency',
+        label: '面板加速并发数',
+        helpMessage: '默认 4',
+        bottomHelpMessage: '越大越快，也越容易被米游社限流；被拦时会自动改走代理兜底',
+        component: 'InputNumber',
+        componentProps: { min: 1, max: 16, step: 1 },
+      },
+      {
+        field: 'zzz_panel_accel_interval',
+        label: '面板加速请求间隔(ms)',
+        helpMessage: '默认 400',
+        bottomHelpMessage: '每个角色请求后的等待，取代 ZZZ-Plugin 原有的固定 3000ms',
+        component: 'InputNumber',
+        componentProps: { min: 100, max: 10000, step: 100 },
+      },
+      priorityInput('zzz_panel_accel_priority', '绝区零面板加速(zzz_panel_accel)', -9999999999),
       priorityInput('gacha_pool_priority', '全游戏当前卡池(gacha_pool)', -1000000000),
       priorityInput('gs_logs_priority', '原神历史卡池(gs_logs)', -99),
       priorityInput('sr_logs_priority', '星铁历史卡池(sr_logs)', -88),
@@ -1377,6 +1401,10 @@ export const supportGuoba = () => {
         bilibili_priority: cfg.bilibili_priority ?? -120,
         bilibili_push_priority: cfg.bilibili_push_priority ?? -119,
         bili_live_priority: cfg.bili_live_priority ?? -115,
+        zzz_panel_accel_enabled: cfg.zzz_panel_accel_enabled ?? true,
+        zzz_panel_accel_concurrency: Number.isFinite(Number(cfg.zzz_panel_accel_concurrency)) ? Number(cfg.zzz_panel_accel_concurrency) : 4,
+        zzz_panel_accel_interval: Number.isFinite(Number(cfg.zzz_panel_accel_interval)) ? Number(cfg.zzz_panel_accel_interval) : 400,
+        zzz_panel_accel_priority: Number.isFinite(Number(cfg.zzz_panel_accel_priority)) ? Number(cfg.zzz_panel_accel_priority) : -9999999999,
         gacha_pool_priority: cfg.gacha_pool_priority ?? -1000000000,
         gs_logs_priority: cfg.gs_logs_priority ?? -99,
         sr_logs_priority: cfg.sr_logs_priority ?? -88,
@@ -1526,9 +1554,17 @@ export const supportGuoba = () => {
         bili_live_qn: data.bili_live_qn,
         
         bili_live_dm_cd: data.bili_live_dm_cd,
+
+        zzz_panel_accel_concurrency: data.zzz_panel_accel_concurrency,
+        zzz_panel_accel_interval: data.zzz_panel_accel_interval,
       }
       for (const [k, v] of Object.entries(numMap)) {
         if (v != null) yaml.set(_path + 'config.yaml', k, Number(v))
+      }
+
+      // 面板加速开关：关闭时要落 false，所以不能用 if (v) 真值判断
+      if (data.zzz_panel_accel_enabled !== undefined) {
+        yaml.set(_path + 'config.yaml', 'zzz_panel_accel_enabled', !!data.zzz_panel_accel_enabled)
       }
 
       // 随机背景接口：留空就回落到默认地址，不要把空串写进配置
@@ -1693,7 +1729,7 @@ export const supportGuoba = () => {
         'bh3_battlefield_priority', 'bh3_godwar_priority', 'bh3_profile_priority',
         'bh3_all_note_priority', 'bh3_gacha_priority', 'bh3_ledger_priority', 'abyss_report_priority',
         'bilibili_priority', 'bilibili_push_priority', 'bili_live_priority', 'gacha_pool_priority',
-        'gs_logs_priority', 'sr_logs_priority', 'mhy_estimate_priority',
+        'gs_logs_priority', 'sr_logs_priority', 'mhy_estimate_priority', 'zzz_panel_accel_priority',
         'video_priority', 'voice_priority', 'update_priority', 'config_priority', 'tlp_priority',
         'help_priority', 'picture_priority', 'npc_wt_priority', 'huobi_priority',
         'role_combat_priority', 'zzz_md_priority', 'currency_balance_priority',

@@ -1587,6 +1587,14 @@ export class sr_gacha extends plugin {
         { reg: '^#*(xhh|小花火)(星铁|崩铁)?武器统计$', fnc: 'weaponStat' },
         { reg: '^#*(xhh|小花火)(星铁|崩铁)?联动角色记录$', fnc: 'collabRoleRecord' },
         { reg: '^#*(xhh|小花火)(星铁|崩铁)?联动武器记录$', fnc: 'collabWeaponRecord' },
+        // 无 xhh/小花火 前缀的裸指令（*角色记录、*角色统计 等）。
+        // 喵喵的 `^#*(星铁)?(角色|武器|光锥)…(记录|统计)$` 里前缀全部可选，会把这些
+        // 一并吃掉（实测 *角色记录 7 次、*角色统计 5 次落到喵喵）。本插件优先级 1
+        // 比喵喵的 50 小、按框架升序本该先跑，但规则要求 (xhh|小花火) 根本匹配不上，
+        // 故补上裸指令形式。限定 * 前缀，不抢 genshin 侧的 # 指令；
+        // 联动形式必须排在普通形式之前，否则会被抢。
+        { reg: '^[\\*%％][ \\t]*(?:星铁|崩铁)?联动(角色|武器)(记录|统计)$', fnc: 'collabRoleOrWeapon' },
+        { reg: '^[\\*%％][ \\t]*(?:星铁|崩铁)?(角色|武器)(记录|统计)$', fnc: 'roleOrWeapon' },
         { reg: '^#*(xhh|小花火)(星铁|崩铁)?绑定小助手(\\s+\\S+)?$', fnc: 'bindHelper' },
         { reg: // 前缀必须带：本插件所有指令均需 #xhh/ #小花火，否则会抢走
         // genshin 侧「#更新小助手抽卡记录」（原神·小助手）与「*更新小助手抽卡记录」（星铁·星穹工坊）
@@ -1764,6 +1772,30 @@ export class sr_gacha extends plugin {
 
   async collabWeaponRecord(e) {
     return this.renderSummary(e, ['GachaType_CollabEquipmentUp'], 'progress')
+  }
+
+  /** 裸指令分发：*角色记录 / *武器记录 / *角色统计 / *武器统计 */
+  async roleOrWeapon(e) {
+    const msg = e.msg.replace(/(星铁|崩铁)/g, '')
+    if (/角色/.test(msg)) return /统计/.test(msg) ? this.roleStat(e) : this.roleRecord(e)
+    if (/武器/.test(msg)) return /统计/.test(msg) ? this.weaponStat(e) : this.weaponRecord(e)
+    return false
+  }
+
+  /** 联动裸指令分发：*联动角色记录 等。联动池不含常驻，故不传 commonType */
+  async collabRoleOrWeapon(e) {
+    const msg = e.msg.replace(/(星铁|崩铁)/g, '')
+    if (/角色/.test(msg)) {
+      return /统计/.test(msg)
+        ? this.renderSrStat(e, ['GachaType_CollabAvatarUp'])
+        : this.collabRoleRecord(e)
+    }
+    if (/武器/.test(msg)) {
+      return /统计/.test(msg)
+        ? this.renderSrStat(e, ['GachaType_CollabEquipmentUp'])
+        : this.collabWeaponRecord(e)
+    }
+    return false
   }
 
   async common(e) {

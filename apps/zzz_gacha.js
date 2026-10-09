@@ -820,6 +820,24 @@ export class zzz_gacha extends plugin {
         { reg: '^#*(xhh|小花火)(绝区零|zzz)?邦布记录$', fnc: 'bangbooRecord' },
         { reg: '^#*(xhh|小花火)(绝区零|zzz)?邦布统计$', fnc: 'bangbooStat' },
         { reg: '^#*(xhh|小花火)(绝区零|zzz)?全部统计$', fnc: 'allStat' },
+        // 无 xhh/小花火 前缀的裸指令。`%角色记录` 会被框架 zzzReg 改写成
+        // `#绝区零角色记录`，故这里也要认「绝区零」前缀，否则会被喵喵抢走。
+        // 绝区零裸指令。三种前缀都直接认，不依赖框架的规范化结果：
+        //   · %        框架 zzzReg 与 genshin dealPrefix 都会改写成 #绝区零，
+        //               但两者对「前导空格」处理相反（框架无 \s*、dealPrefix 有），
+        //               谁先跑取决于消息里有没有空格 —— 曾导致同一指令时而归本插件、
+        //               时而落到 genshin。这里连原始写法一并匹配，消除该差异。
+        //   · #绝区零   框架规范化后的形式
+        //   · *绝区零   手写星号形式
+        // 另：绝区零前缀不可省，*角色记录 这类裸指令归星铁，否则两模块会同时命中。
+        //   · %        必须能单独成立（%角色统计 里 % 后直接就是「角色」），
+        //               不能强制再跟一个「绝区零」，否则永远匹配不上。
+        //   · #绝区零   框架规范化后的形式
+        //   · 绝区零裸写 / *绝区零  手写形式
+        // 前导空格一并容忍，抹平框架 zzzReg 与 dealPrefix 在该点上的差异。
+        // 末尾允许追加 UID（%代理人记录 12915316），与其他裸指令保持一致
+        { reg: '^[ \\t]*(?:#?[ \\t]*绝区零|[%％]|[ \\t]*(?:绝区|zzz|ZZZ))[ \\t]*(代理人|角色|音擎|武器|邦布|常驻|全部)(记录|统计)(?:\\s*\\d{5,})?$', fnc: 'bareStat' },
+        { reg: '^[*][ \\t]*(?:绝区零|绝区|zzz|ZZZ)[ \\t]*(代理人|角色|音擎|武器|邦布|常驻|全部)(记录|统计)(?:\\s*\\d{5,})?$', fnc: 'bareStat' },
         { reg: '^#*(xhh|小花火)(绝区零|zzz)?(更新|刷新|同步)?工坊(抽卡|调频)?(记录|数据)$', fnc: 'updateWorkshop' },
         { reg: '^#*(xhh|小花火)(绝区零|zzz)?绑定工坊(\\s+\\S+)?$', fnc: 'bindWorkshop' },
         { reg: '^#*(xhh|小花火)(绝区零|zzz)?(导入|合并)四星(\\s+\\S+)?$', fnc: 'importFourStar' },
@@ -1085,6 +1103,18 @@ export class zzz_gacha extends plugin {
 
   async summary(e) {
     return this.render(e, [], 'grid')
+  }
+
+  /** 裸指令分发：#绝区零角色记录 / *音擎统计 等 */
+  async bareStat(e) {
+    const msg = e.msg.replace(/(绝区零|zzz|ZZZ)/g, '')
+    if (/代理人|角色/.test(msg)) return /统计/.test(msg) ? this.roleStat(e) : this.roleRecord(e)
+    if (/音擎|武器/.test(msg)) return /统计/.test(msg) ? this.weaponStat(e) : this.weaponRecord(e)
+    if (/邦布/.test(msg)) return /统计/.test(msg) ? this.bangbooStat(e) : this.bangbooRecord(e)
+    // 「%全部统计」等同 #绝区零全部统计
+    if (/全部/.test(msg)) return this.allStat(e)
+    if (/常驻/.test(msg)) return /统计/.test(msg) ? this.allStat(e) : this.summary(e)
+    return false
   }
 
   async roleRecord(e) {
