@@ -809,7 +809,11 @@ export class zzz_gacha extends plugin {
       event: 'message',
       priority: pluginPriority('zzz_gacha', 1),
       rule: [
-        { reg: '^#*(xhh|小花火)(绝区零|zzz)?(抽卡|调频)?帮助$', fnc: 'help' },
+        // 「绝区零」必须出现，否则 `(绝区零|zzz)?` 与 `(抽卡|调频)?` 都可空，
+        // 会把「#xhh帮助」「小花火帮助」这类总帮助也吃掉（总帮助 priority=100，
+        // 比本模块的 1 大，抽卡模块先跑并返回绝区零帮助）。
+        { reg: '^#*(xhh|小花火)(绝区零|zzz)(抽卡|调频)?帮助$', fnc: 'help' },
+        { reg: '^#*(xhh|小花火)(抽卡|调频)帮助$', fnc: 'help' },
         { reg: '^#*(xhh|小花火)(绝区零|zzz)?抽卡链接(\\s+.*)?$', fnc: 'gachaLink' },
         { reg: '^#*(xhh|小花火)(绝区零|zzz)?(刷新|更新)抽卡记录$', fnc: 'refresh' },
         { reg: '^#*(xhh|小花火)(绝区零|zzz)?(抽卡|调频)(记录|统计|分析)$', fnc: 'summary' },
