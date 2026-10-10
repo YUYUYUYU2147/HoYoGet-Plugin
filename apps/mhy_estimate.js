@@ -103,6 +103,52 @@ function parseGuideSources(value, fallback = []) {
   return result.length ? result : fallback;
 }
 
+/**
+ * 多源对齐：落后最新版本的可选源直接跳过。
+ *
+ * 多个 UP 主里常有停更的——绝区零菲林汇总的两个源，冰是真的菜QAQ 停在 3.2
+ * （2026-09-30），HoYo青枫 10-10 就更到了 3.3。两个都发出去，用户会看到
+ * 新旧版本混在一起，以为自己看的是旧的。
+ *
+ * 判据用「版本号」而不是「距今天数」：
+ *  - 用绝对天数没用：停更只过了 10 天，远不到一个版本周期（�� 6 周），
+ *    但它已经落后一个完整版本了，用户看到的就是过期内容。
+ *  - 用「落后最新源多少天」也不够：阈值难以定，10~14 天这种刚停更的情况仍会漏。
+ * 版本号在这些 UP 的标题里稳定可提取（实测「【绝区零】3.2下半菲林汇总」→「3.2」），
+ * 所以直接按版本号对齐最准。
+ *
+ * 提取不到版本号的源一律保留（不猜），只跳过明确落后 ≥1 版的源。
+ * 若所有源都被跳过，则全部保留并提示——总比一条都发不出、用户以为功能坏了要好。
+ */
+
+/** 从标题里取版本号，如「【绝区零】3.2下半菲林汇总」→ 3.2；取不到返回 0 */
+function postVersion(post = {}) {
+  const text = String(post.subject || '');
+  // 必须优先匹配带 v / 版本 的那个：
+  // 「【3.2攻略征集】绝区零V3.3丨菲林资源统计」里有两个版本号，
+  // 先匹配到的 3.2 是攻略征集的旧版本，真正要的是 V3.3。
+  const m = text.match(/[vV](\d+)\.(\d+)/)
+    || text.match(/(\d+)\.(\d+)\s*版本/)
+    || text.match(/(\d+)\.(\d+)/);
+  if (!m) return 0;
+  return Number(m[1]) * 100 + Number(m[2]);   // 3.2 → 302，便于直接比较大小
+}
+
+/** 版本差：a 比 b 落后几版（0 表示同版或未知） */
+function versionLag(a, b) {
+  if (!a || !b || a >= b) return 0;
+  // a、b 已是「主版本*100+次版本」（3.2→302），直接相减即版本差数。
+  // 曾误写成 (b-a)/100，导致 302 与 303 只差 0.01，永远达不到 1 版的阈值。
+  return b - a;
+}
+
+/** 取帖子发布时间（秒），取不到返回 0 */
+function postAgeDays(post = {}) {
+  const ts = Number(post.created_at || post.publish_at || 0);
+  if (!ts) return 0;
+  return (Date.now() - ts * 1000) / 86400000;
+}
+
 function getPresetArgs(key, cfg) {
   const base = cfg?.args || [];
   if (!['abyss', 'battlefield', 'godwar', 'zzz_defense', 'zzz_deadly'].includes(key)) return base;
@@ -665,7 +711,40 @@ export class mhy_estimate extends plugin {
     const baseArgs = getPresetArgs(key, cfg);
     const args = guideKeys.includes(key) ? buildBh3GuideArgs(key, queryList.length ? queryList : query, baseArgs) : baseArgs;
     const detailGid = GAME_GIDS[key] || 1;
-    for (const [searchWord, uid, indexes, author] of args) {
+
+    // 先探一遍每个源的最新帖，取其版本号与发布时间
+    const sourceMeta = [];
+    for (const arg of args) {
+      const [searchWord, uid] = arg;
+      try {
+        const first = await searchPost(searchWord, uid);
+        sourceMeta.push({
+          arg,
+          version: postVersion(first || {}),
+          ageDays: postAgeDays(first || {}),
+          subject: first?.subject || ''
+        });
+      } catch (err) {
+        sourceMeta.push({ arg, version: 0, ageDays: 0, subject: '' });
+      }
+    }
+
+    // 落后最新版本 ≥1 版的源视为停更并跳过；取不到版本号的一律保留（不猜）。
+    // 不再「首个源豁免」——绝区零菲林这两个源的第一个恰恰就是停更的那个
+    // （args[0] 版本菲林汇总 → 冰是真的菜QAQ 停在 3.2），豁免等于没做。
+    // 真正的兜底是下面的「全被跳过则全部保留」。
+    const knownVersions = sourceMeta.map(m => m.version).filter(v => v > 0);
+    const latestVersion = knownVersions.length ? Math.max(...knownVersions) : 0;
+    const staleSkipped = sourceMeta.filter(m =>
+      latestVersion > 0 && m.version > 0 && versionLag(m.version, latestVersion) >= 1);
+    let keptArgs = sourceMeta.filter(m => !staleSkipped.includes(m)).map(m => m.arg);
+    if (!keptArgs.length) keptArgs = args;
+    if (staleSkipped.length) {
+      logger.mark(`[xhh][estimate] ${cfg.name || key} 跳过 ${staleSkipped.length} 个停更源：`
+        + staleSkipped.map(m => `${m.arg[3]}(停在 ${(m.version / 100).toFixed(1)}，最新 ${(latestVersion / 100).toFixed(1)})`).join('、'));
+    }
+
+    for (const [searchWord, uid, indexes, author] of keptArgs) {
       try {
         const posts = query ? await searchPosts(searchWord, uid, 8) : [await searchPost(searchWord, uid)];
         for (let post of posts.filter(Boolean)) {
@@ -780,10 +859,14 @@ export class mhy_estimate extends plugin {
       }
     }
 
+    // 有源因停更被跳过时明确说明，否则用户会以为漏发了
+    const staleNote = (staleSkipped.length && keptArgs.length)
+      ? `\n（已跳过停更源：${staleSkipped.map(m => m.arg[3]).join('、')}）`
+      : '';
     const title = query ? `${cfg.name}「${query}」攻略来啦~` : `${cfg.name}来啦~`;
     let sent = false;
     if (msg.length) {
-      await e.reply(await makeForwardMsg(e, msg, `${title}\n如果出现图片错误，请忽略`));
+      await e.reply(await makeForwardMsg(e, msg, `${title}${staleNote}\n如果出现图片错误，请忽略`));
       sent = true;
     }
     if (vodSend) {
