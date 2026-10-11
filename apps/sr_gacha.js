@@ -70,12 +70,6 @@ export async function getGenshinMysInfo() {
   return r.ok ? r.value : null
 }
 
-/** 懒加载 GachaLog 类（仅抽卡链接功能用到） */
-async function getGenshinGachaLog() {
-  const r = await loadGenshinModule('model/gachaLog/gachaLog.js', ['model/gachaLog/gachaLog.js', 'model/gachaLog/gachaLog.mjs'], null)
-  return r.ok ? r.value : null
-}
-
 /** 懒加载 srGachaSummary 模块的具名导出 */
 async function getGenshinSrSummary() {
   const r = await loadGenshinModule(
@@ -781,6 +775,27 @@ async function refreshBadgeCookie(uid, ck, region) {
   return `${ck};e_hkrpg_token=${token}`
 }
 
+/**
+ * 用 ck 直接拉取常驻池（gacha_type=1）。
+ *
+ * 原来这里绕道 genshin 的 GachaLog.getGcLogData()，导致 xhh 必须依赖
+ * genshin 里有 model/gachaLog/gachaLog.js（较新版本才有），
+ * 缺失时整个插件 ERR_MODULE_NOT_FOUND 而无法加载。
+ *
+ * 现改用本文件已有的 fetchPool() + buildPoolFromRows()——两者是本插件自己
+ * 实现的同一套徽章接口翻页逻辑（fetchPool 此前无调用者，正是为 authkey 之外
+ * 的 ck 路径预留的），因此常驻池不再依赖任何 genshin 模块。
+ *
+ * 注意：srGachaSummary 的 SR_GACHA_POOLS 只有 5 个池，不含常驻，
+ * 所以 ck 更新时必须在这里单独补 type 1，否则常驻会被旧数据顶掉。
+ */
+async function fetchCommonPoolByCk(uid, region, ck) {
+  const rows = await fetchPool(uid, region, ck, '1')
+  if (!rows?.length) return null
+  const pool = buildPoolFromRows('1', { key: 'common', name: '常驻跃迁' }, rows)
+  return pool?.records?.length || pool?.totalPulls ? pool : null
+}
+
 async function fetchPool(uid, region, ck, gachaType) {
   let versionId = ''
   let maxId = ''
@@ -819,51 +834,6 @@ async function fetchPool(uid, region, ck, gachaType) {
 
 function getDataFile(uid, qq) {
   return `${PLUGIN_ROOT}/data/sr_gacha/${qq}/${uid}/summary.json`
-}
-
-function buildCommonPoolView(data) {
-  const recent = Array.isArray(data?.fiveLog) ? data.fiveLog : []
-  return {
-    key: 'common',
-    type: '1',
-    name: '常驻跃迁',
-    recent: recent.map(item => ({
-      id: String(item.id || `${item.time}-${item.name}`),
-      name: item.name || '未知',
-      item_type: item.item_type || '角色',
-      is_up: !!item.isUp,
-      gacha_count: Number(item.num || 0),
-      time: item.time || '',
-      icon: item.icon || '',
-    })),
-    pity: Number(data?.noFiveNum || 0),
-    totalPulls: Number(data?.allNum || 0),
-    fiveNum: Number(data?.fiveNum || 0),
-    upNum: 0,
-    upRate: '0.0',
-    avgPity: Number(data?.fiveAvg || 0).toFixed?.(1) || String(data?.fiveAvg || 0),
-    maxPity: Math.max(...recent.map(v => Number(v.num || 0)).filter(Boolean), 0),
-    minPity: Math.min(...recent.map(v => Number(v.num || 0)).filter(Boolean), 0) || 0,
-    upAvg: '0.0',
-    upYs: '0',
-  }
-}
-
-async function fetchCommonPool(e, uid) {
-  const fakeEvent = {
-    ...e,
-    isSr: true,
-    msg: '#星铁常驻',
-    raw_message: '#星铁常驻',
-    original_msg: '#星铁常驻',
-    isAll: false,
-    reply: async () => {},
-  }
-  const GachaLogCls = await getGenshinGachaLog()
-  if (!GachaLogCls) return null
-  const data = await new GachaLogCls(fakeEvent).getGcLogData()
-  if (!data?.fiveLog) return null
-  return buildCommonPoolView(data)
 }
 
 // ===== 官方抽卡链接（authkey）全量拉取 =====
@@ -1763,18 +1733,29 @@ export class sr_gacha extends plugin {
         }
       }
       if (!result) throw lastError || new Error('没有可用的崩铁 Cookie')
-      try {
-        const common = await fetchCommonPool(e, auth.uid)
-        if (common?.recent?.length) {
-          result.pools.common = common
+      // 常驻池：srGachaSummary 的 SR_GACHA_POOLS 不含常驻，需用同一 ck 单独拉
+      // type 1。彻底移除对 genshin 的 GachaLog 依赖。
+      const oldFile = getDataFile(auth.qq, auth.uid)
+      const old = readData(oldFile)
+      for (const ck of auth.cookies) {
+        try {
+          const common = await fetchCommonPoolByCk(auth.uid, getSrRegion(auth.uid), ck)
+          if (common?.records?.length) {
+            result.pools.common = common
+            break
+          }
+        } catch (error) {
+          logger.mark(`[xhh][sr_gacha] 常驻池拉取失败（ck 候选）：${error?.message || error}`)
         }
-      } catch (error) {
-        logger.mark(`[xhh][sr_gacha] 常驻同步失败：${error?.message || error}`)
+      }
+      // 拉取失败时保留本地已有的常驻池，避免把 authkey/小助手导入的常驻覆盖成空
+      if (!result.pools?.common || !getPoolRecords(result.pools.common).length) {
+        const localCommon = old?.pools?.common
+        if (getPoolRecords(localCommon).length) result.pools.common = localCommon
       }
       result.update_time = formatNow()
       // 与已有数据合并（可能是 authkey 全量逐抽），避免 ck 更新覆盖丢四星/常驻；
       // ck 只负责补全更早的五星（小程序保留一年）与 UP 标记
-      const old = readData(getDataFile(auth.qq, auth.uid))
       if (old?.pools) {
         result.pools = mergePoolsForCk(old.pools, result.pools)
         result.pools = inheritIsUp(old.pools, result.pools)
