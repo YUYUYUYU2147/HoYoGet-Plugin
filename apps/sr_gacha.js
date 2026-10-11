@@ -2,10 +2,136 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { createHash } from 'node:crypto'
 import { render, mhy, pluginPriority } from '#xhh'
-import GachaLog from '../../genshin/model/gachaLog/gachaLog.js'
-import { SrGachaSummary, readSummary, getSrGachaCookieFile, readSrGachaCookie, saveSrGachaCookie, extractSrGachaCookie, formatSrGachaFailure } from '../../genshin/model/gachaLog/srGachaSummary.js'
-import { Character, Weapon } from '../../miao-plugin/models/index.js'
-import MysInfo from '../../genshin/model/mys/mysInfo.js'
+// === 跨插件依赖：genshin 插件 ===
+//
+// 这几个模块（gachaLog / srGachaSummary）是 genshin 较新版本才有的，
+// 不同用户的 genshin 版本不一：若用静态 import，遇到没有该文件的版本会直接
+// ERR_MODULE_NOT_FOUND，导致**整个 xhh 插件加载失败**（用户反馈在
+// Windows 上出现过「插件加载完毕」卡住不继续的问题）。
+//
+// 因此改为运行时按需加载，且给出多个候选路径；全都找不到时把对应功能标记为
+// 不可用并给出提示，而不是让整个插件起不来。
+// 只在真正要用到该功能时才 import，代价可以忽略。
+
+const GENSHIN_ROOTS = [
+  '../../genshin/',
+  '../genshin/',
+  './genshin/',
+]
+
+/** 在多个候选根下找到第一个存在的相对模块路径 */
+function resolveGenshinModule(relPaths) {
+  const bases = GENSHIN_ROOTS.map(root => new URL(root, import.meta.url).href)
+  const found = []
+  for (const base of bases) {
+    for (const rel of relPaths) {
+      const url = new URL(rel, base).href
+      if (found.includes(url)) continue
+      found.push(url)
+    }
+  }
+  return found
+}
+
+const missingGenshinModules = new Set()
+
+/**
+ * 按需加载 genshin 的一个模块，取其 default 或指定的具名导出。
+ * @param {string} tag 功能标记，用于错误提示与去重
+ * @param {string[]} relPaths 相对 genshin 插件根的候选路径
+ * @param {string|null} named 需要取的具名导出；传 '*' 返回整个模块命名空间；不传则为 default
+ */
+async function loadGenshinModule(tag, relPaths, named = null) {
+  const candidates = resolveGenshinModule(relPaths)
+  let lastErr
+  for (const url of candidates) {
+    try {
+      const mod = await import(url)
+      if (named === '*') return { ok: true, value: mod }
+      if (named) return { ok: true, value: mod[named] }
+      return { ok: true, value: mod.default }
+    } catch (err) {
+      lastErr = err
+    }
+  }
+  if (!missingGenshinModules.has(tag)) {
+    missingGenshinModules.add(tag)
+    logger.error(
+      `[xhh][sr_gacha] 未能在 genshin 插件中找到 ${tag}（已尝试 ${candidates.length} 个路径，` +
+      `最后错误：${lastErr?.message || lastErr}）。该功能将不可用，请更新 genshin 插件。`
+    )
+  }
+  return { ok: false, value: null }
+}
+
+/** 懒加载 genshin 的 MysInfo（取 ck 用）。供本文件与 zzz_gacha.js 复用。 */
+export async function getGenshinMysInfo() {
+  const r = await loadGenshinModule('model/mys/mysInfo.js', ['model/mys/mysInfo.js', 'model/mys/mysInfo.mjs'], null)
+  return r.ok ? r.value : null
+}
+
+/** 懒加载 GachaLog 类（仅抽卡链接功能用到） */
+async function getGenshinGachaLog() {
+  const r = await loadGenshinModule('model/gachaLog/gachaLog.js', ['model/gachaLog/gachaLog.js', 'model/gachaLog/gachaLog.mjs'], null)
+  return r.ok ? r.value : null
+}
+
+/** 懒加载 srGachaSummary 模块的具名导出 */
+async function getGenshinSrSummary() {
+  const r = await loadGenshinModule(
+    'model/gachaLog/srGachaSummary.js',
+    ['model/gachaLog/srGachaSummary.js', 'model/gachaLog/srGachaSummary.mjs'],
+    '*'
+  )
+  return r.ok ? r.value : null
+}
+
+/** 取 srGachaSummary 模块里的某个具名函数 */
+async function getSrSummaryFn(name) {
+  const mod = await getGenshinSrSummary()
+  return mod?.[name] || null
+}
+
+// === 跨插件依赖：miao-plugin ===
+//
+// 与 genshin 同理，miao-plugin 也可能缺失或版本不同（静态 import 缺失会让整个
+// 插件 ERR_MODULE_NOT_FOUND）。这里按需加载：拿不到就跳过图标补全，
+// 后面还有「按约定路径取本地头像」的兜底，不会因为缺 miao 就出不来图。
+
+const MIAO_ROOTS = [
+  '../../miao-plugin/',
+  '../miao-plugin/',
+  './miao-plugin/',
+]
+
+let miaoModelsCache = null
+
+async function getMiaoModels() {
+  if (miaoModelsCache) return miaoModelsCache
+  const bases = MIAO_ROOTS.map(root => new URL(root, import.meta.url).href)
+  let lastErr
+  for (const base of bases) {
+    try {
+      const mod = await import(new URL('models/index.js', base).href)
+      miaoModelsCache = { Character: mod.Character, Weapon: mod.Weapon }
+      return miaoModelsCache
+    } catch (err) {
+      lastErr = err
+    }
+  }
+  if (!missingGenshinModules.has('miao-plugin/models')) {
+    missingGenshinModules.add('miao-plugin/models')
+    logger.error(`[xhh][sr_gacha] 未能在 miao-plugin 中找到 models/index.js（${lastErr?.message || lastErr}）。`
+      + '抽卡卡的图标将退回本地约定路径，不影响其他功能。')
+  }
+  miaoModelsCache = { Character: null, Weapon: null }
+  return miaoModelsCache
+}
+
+// 模块加载即开始预热。buildSummaryView / buildSrStatView 是同步导出，无法内部
+// await，因此统一读同步缓存 miaoModelsCache；预热与首次渲染几乎同 tick 时可能
+// 尚未就绪，此时 makeIcon 走「本地约定路径」兜底（见下方），不影响出图。
+getMiaoModels()
 import { fileURLToPath } from 'node:url'
 
 // ESM 作用域没有 __dirname，按仓库既有写法（apps/custom_guide.js）从 import.meta 取。
@@ -165,7 +291,7 @@ const DEFAULT_POOL_BY_GAME = {
   zzz: { key: 'GachaType_Permanent', name: '常驻频段' },
 }
 
-export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr') {
+export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', miaoModels = miaoModelsCache) {
   const conf = GAME_VIEW_CONF[game] || GAME_VIEW_CONF.sr
   const defPool = DEFAULT_POOL_BY_GAME[game] || DEFAULT_POOL_BY_GAME.sr
   // 星铁视图兜底：即使调用方漏了清洗，也不把混入的绝区零频段池画进星铁卡
@@ -199,12 +325,13 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr') {
       // imgs.face（98 个角色全为空），于是星铁卡片从来没有头像
       if (item?.icon) return item.icon
       try {
-        if (item.item_type === '角色') {
+        const { Character, Weapon } = miaoModels || {}
+        if (item.item_type === '角色' && Character) {
           const char = Character.get(item.name, miaoGame)
           const face = char?.imgs?.face || char?.face || ''
           if (face) return `${MIAO_RES}${face}`
         }
-        if (item.item_type === '光锥') {
+        if (item.item_type === '光锥' && Weapon) {
           const weapon = Weapon.get(item.name, miaoGame)
           const img = weapon?.getData?.('img')?.img || weapon?.img || ''
           if (img) return `${MIAO_RES}/${String(img).replace(/^\//, '')}`
@@ -613,13 +740,17 @@ async function getUserAuth(e) {
   const uid = e.user?.getUid?.('sr')
   if (!uid) return { error: '请先用 genshin 侧绑定星铁账号，再更新抽卡记录' }
 
-  const cookieFile = getSrGachaCookieFile(qq)
+  const getCookieFile = await getSrSummaryFn('getSrGachaCookieFile')
+  const readCookie = await getSrSummaryFn('readSrGachaCookie')
+  const cookieFile = getCookieFile ? getCookieFile(qq) : `./data/srGachaSummary/${uid}.json`
   const candidates = [
-    readSrGachaCookie(cookieFile),
+    readCookie ? readCookie(cookieFile) : null,
     e.cookie,
   ]
   try {
-    const mysInfo = new MysInfo(e)
+    const MysInfoCls = await getGenshinMysInfo()
+    if (!MysInfoCls) return { error: '未找到 genshin 的 mysInfo 模块，请更新 genshin 插件' }
+    const mysInfo = new MysInfoCls(e)
     mysInfo.uid = uid
     candidates.push(await mysInfo.getCookie('sr'))
   } catch {}
@@ -728,7 +859,9 @@ async function fetchCommonPool(e, uid) {
     isAll: false,
     reply: async () => {},
   }
-  const data = await new GachaLog(fakeEvent).getGcLogData()
+  const GachaLogCls = await getGenshinGachaLog()
+  if (!GachaLogCls) return null
+  const data = await new GachaLogCls(fakeEvent).getGcLogData()
   if (!data?.fiveLog) return null
   return buildCommonPoolView(data)
 }
@@ -1617,9 +1750,12 @@ export class sr_gacha extends plugin {
       let result
       for (const cookie of auth.cookies) {
         try {
-          const summary = new SrGachaSummary({ uid: auth.uid, cookie, file: `./data/srGachaSummary/${auth.uid}.json` })
+          const SrGachaSummaryCls = await getGenshinSrSummary()
+          if (!SrGachaSummaryCls) throw new Error('genshin 插件缺少 srGachaSummary 模块，请更新 genshin 插件')
+          const saveCookie = await getSrSummaryFn('saveSrGachaCookie')
+          const summary = new SrGachaSummaryCls({ uid: auth.uid, cookie, file: `./data/srGachaSummary/${auth.uid}.json` })
           result = await summary.update()
-          saveSrGachaCookie(auth.cookieFile, cookie)
+          saveCookie?.(auth.cookieFile, cookie)
           break
         } catch (err) {
           lastError = err
@@ -1658,7 +1794,8 @@ export class sr_gacha extends plugin {
       if (String(err?.message || err).includes('请从游戏内打开参与活动')) {
         return e.reply('当前账号还没在游戏内打开过跃迁活动页。\n请先进《星穹铁道》里点开一次活动跃迁页面，再发送【#xhh星铁更新抽卡记录】重试。')
       }
-      return e.reply(formatSrGachaFailure(err))
+      const formatFailure = await getSrSummaryFn('formatSrGachaFailure')
+      return e.reply(formatFailure ? formatFailure(err) : `更新失败：${err?.message || err}`)
     }
   }
 
@@ -1666,7 +1803,8 @@ export class sr_gacha extends plugin {
     const auth = await getUserAuth(e)
     if (auth.error) return e.reply(auth.error)
     const local = readData(getDataFile(auth.qq, auth.uid))
-    let data = local || readSummary(`./data/srGachaSummary/${auth.uid}.json`)
+    const readSummary = await getSrSummaryFn('readSummary')
+    let data = local || (readSummary ? readSummary(`./data/srGachaSummary/${auth.uid}.json`) : null)
     if (!data?.pools) return e.reply('暂无星铁抽卡记录，请先发送【#xhh星铁更新抽卡记录】')
     // 剔除混入星铁数据的绝区零池（如 GachaType_Permanent「常驻频段」）；
     // 有剔除时顺手写回本插件的数据文件，把脏数据永久清掉，不必等下次更新覆盖
@@ -1685,7 +1823,7 @@ export class sr_gacha extends plugin {
       const filtered = getPoolRecords(pool).filter(r => (r.item_type || '角色') === commonType)
       data = { ...data, pools: { ...data.pools, common: { ...pool, records: filtered, recent: filtered, fiveNum: filtered.length } } }
     }
-    const view = buildSummaryView(filterPools(data, keys), auth.uid, e, layout)
+    const view = buildSummaryView(filterPools(data, keys), auth.uid, e, layout, 'sr', miaoModelsCache)
     if (layout === 'progress') {
       let avatar = ''
       try {
@@ -1747,7 +1885,9 @@ export class sr_gacha extends plugin {
   async renderSrStat(e, keys = [], commonType = null) {
     const auth = await getUserAuth(e)
     if (auth.error) return e.reply(auth.error)
-    const data = readData(getDataFile(auth.qq, auth.uid)) || readSummary(`./data/srGachaSummary/${auth.uid}.json`)
+    const readSummary = await getSrSummaryFn('readSummary')
+    const data = readData(getDataFile(auth.qq, auth.uid))
+      || (readSummary ? readSummary(`./data/srGachaSummary/${auth.uid}.json`) : null)
     if (!data?.pools) return e.reply('暂无星铁抽卡记录，请先发送【#xhh星铁更新抽卡记录】')
     const view = buildSrStatView(data, auth.uid, e, keys, commonType)
     // pct 压低 sys.scale 的 zoom：统计卡内容行数多，避免渲染后端截图高度上限截断
@@ -1845,11 +1985,14 @@ export class sr_gacha extends plugin {
       // 否则刚发链接拉取的新五星会被全部当成非UP，导致角色池统计不准确
       for (const cookie of auth.cookies) {
         try {
-          const summary = new SrGachaSummary({ uid: auth.uid, cookie, file: `./data/srGachaSummary/${auth.uid}.json` })
+          const SrGachaSummaryCls = await getGenshinSrSummary()
+          if (!SrGachaSummaryCls) throw new Error('genshin 插件缺少 srGachaSummary 模块，请更新 genshin 插件')
+          const summary = new SrGachaSummaryCls({ uid: auth.uid, cookie, file: `./data/srGachaSummary/${auth.uid}.json` })
           const sr = await summary.update()
           if (sr?.pools) {
             result.pools = mergeIsUp(sr.pools, result.pools)
-            saveSrGachaCookie(auth.cookieFile, cookie)
+            const saveCookie2 = await getSrSummaryFn('saveSrGachaCookie')
+            saveCookie2?.(auth.cookieFile, cookie)
             break
           }
         } catch (err) {

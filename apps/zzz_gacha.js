@@ -16,7 +16,6 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { mhy, render, pluginPriority } from '#xhh'
-import MysInfo from '../../genshin/model/mys/mysInfo.js'
 
 // ESM 作用域没有 __dirname，按仓库既有写法（apps/custom_guide.js）从 import.meta 取
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -95,9 +94,15 @@ async function getUserAuth(e) {
   if (!uid) return { error: '请先用 genshin 侧绑定绝区零账号，再更新抽卡记录' }
   const cookies = [...new Set([e.cookie, e.user?.getMysUser?.('zzz')?.ck].map(v => String(v || '').trim()).filter(Boolean))]
   try {
-    const mysInfo = new MysInfo(e)
-    mysInfo.uid = uid
-    cookies.push(await mysInfo.getCookie('zzz'))
+    // 动态 import：genshin 版本较旧时可能没有 model/mys/mysInfo.js，
+    // 静态 import 会让整个插件 ERR_MODULE_NOT_FOUND 而加载失败（见 sr_gacha.js 顶部说明）
+    const { getGenshinMysInfo } = await import('./sr_gacha.js')
+    const MysInfoCls = await getGenshinMysInfo()
+    if (MysInfoCls) {
+      const mysInfo = new MysInfoCls(e)
+      mysInfo.uid = uid
+      cookies.push(await mysInfo.getCookie('zzz'))
+    }
   } catch {}
   const list = [...new Set(cookies.filter(Boolean))]
   if (!list.length) return { error: '请先用 genshin 侧绑定绝区零账号，再更新抽卡记录' }
@@ -1098,7 +1103,7 @@ export class zzz_gacha extends plugin {
       const keep = (Array.isArray(pool.records) ? pool.records : []).filter(r => (r.item_type || '角色') === itemFilter)
       src = { ...src, pools: { ...src.pools, GachaType_Permanent: { ...pool, records: keep, recent: keep, fiveNum: keep.length } } }
     }
-    const view = buildSummaryView(filterPools(src, keys), auth.uid, e, layout, 'zzz')
+    const view = buildSummaryView(filterPools(src, keys), auth.uid, e, layout, 'zzz', miaoModelsCache)
     const template = layout === 'progress' ? 'sr_gacha/progress' : 'sr_gacha/summary'
     const buf = await render(template, view, { e })
     if (Buffer.isBuffer(buf)) return e.reply(segment.image(buf))
