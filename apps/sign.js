@@ -28,9 +28,23 @@ let bbsPending = false;
  */
 function markBbsDue() {
     const data = yaml.get('./plugins/xhh/config/sign.yaml') || {};
-    if (!data.bbs_zd_sign || !data.bbs_sign || typeof data.bbs_sign !== 'object') return;
+    if (!data.bbs_zd_sign || !data.bbs_sign || typeof data.bbs_sign !== 'object') {
+        // 开关关着 / 没配群：这是常态，debug 开着也会每分钟走到这里。
+        // 只在「开关本该开却没配群」时提示一次 —— 那才是需要用户处理的。
+        if (data.bbs_zd_sign && (!data.bbs_sign || typeof data.bbs_sign !== 'object')) {
+            logger.warn('[xhh][bbs_sign] 社区自动签到已开启，但 bbs_sign 未配置任何群，任务不会执行。' +
+                '请在群里发送【#加入社区自动签到】登记，或检查 sign.yaml 的 bbs_sign。');
+        }
+        return;
+    }
     // 和 isSignTime 同一套判定：小时与分钟都要精确对上
-    if (isSignTime(data, 'bbs_sign_hour', 'bbs_sign_minute', 0, 0)) bbsPending = true;
+    if (!isSignTime(data, 'bbs_sign_hour', 'bbs_sign_minute', 0, 0)) return;
+    if (bbsPending) return; // 已在等待中，别重复置位刷日志
+    bbsPending = true;
+    // 无条件记：这是社区签到整轮的起点，缺了这一行就无法区分
+    // 「没到点」与「到了但被后续 return 拦下」，排查时完全看不出卡在哪一步。
+    logger.mark(`[xhh][bbs_sign] 已置待执行标记（配置 ${data.bbs_sign_hour}:${String(data.bbs_sign_minute).padStart(2, '0')}` +
+        `，群 ${Object.keys(data.bbs_sign).length} 个）`);
 }
 
 // 各适配器 e.reply 的返回值结构不一致，尽量把 message_id 抠出来（取不到就别撤，绝不能误撤用户消息）
@@ -286,14 +300,36 @@ export class Sign extends plugin {
 
     async scheduled_bbs_sign() {
         const data = yaml.get('./plugins/xhh/config/sign.yaml') || {};
-        if (!data.bbs_zd_sign || !data.bbs_sign || typeof data.bbs_sign !== 'object') return false;
+        if (!data.bbs_zd_sign || !data.bbs_sign || typeof data.bbs_sign !== 'object') {
+            // 同上：常态不记，异常情况已在 markBbsDue 处统一提示，避免重复刷屏
+            return false;
+        }
         // 消费任务开始时置下的标记，而不是在这里重新比对当前分钟。
         // 游戏签到与社区签到配了同一分钟时，游戏签到一耗时就冲掉这一分钟，
         // 实时比对会静默 return（实测社区签到整轮没跑，且无任何日志）。
-        if (!bbsPending) return false;
+        if (!bbsPending) {
+            // 标记为空本身是常态：它在配置分钟被置上、消费掉之后，
+            // 其余每一分钟都会走到这里。所以「非配置分钟」一律不打，
+            // 否则 debug 开着时每分钟一条，纯噪音。
+            //
+            // 只有「此刻正是配置分钟、标记却仍是空的」才是真异常——
+            // 说明 markBbsDue() 没能置上，值得告警。
+            if (isSignTime(data, 'bbs_sign_hour', 'bbs_sign_minute', 0, 0)) {
+                logger.warn('[xhh][bbs_sign] 配置分钟已到但待执行标记为空，社区签到本轮不会执行。' +
+                    `请检查 sign.yaml 的 bbs_sign_hour/bbs_sign_minute（当前 ` +
+                    `${data.bbs_sign_hour}:${String(data.bbs_sign_minute).padStart(2, '0')}）` +
+                    '，以及该分钟 markBbsDue 是否因开关/白名单为空而提前返回。');
+            }
+            return false;
+        }
         // 有别的签到在跑就留着标记，下一分钟再来 —— 不能因为这一轮没排上就丢掉。
-        if (signing || bbsSigning) return false;
+        if (signing || bbsSigning) {
+            logger.mark(`[xhh][bbs_sign] 本轮有其他签到在跑（游戏=${signing} 社区=${bbsSigning}），` +
+                '标记保留，下一分钟重试');
+            return false;
+        }
         bbsPending = false;
+        logger.mark('[xhh][bbs_sign] 开始执行社区签到');
         bbsSigning = true;
         try {
             let groups = Object.keys(data.bbs_sign || {}).filter(group =>
