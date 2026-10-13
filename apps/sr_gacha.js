@@ -180,6 +180,24 @@ export function setCookieValue(headers, name) {
   return match?.[1] || ''
 }
 
+/**
+ * 星铁「可歪池」角色名单 —— 这些角色进入常驻池后也能在限定池被抽到（歪），
+ * 小助手 / 星穹工坊统计「每UP角色花费」时把它们计入常驻而非限定，
+ * 所以「每UP角色花费」的分母只算限定五星的个数。
+ *
+ * 名单依据：小助手角色页「常驻角色」分组。
+ * 注意：同一角色可能先是限定、后进常驻（如希儿 1.0 限定、3.0 后可歪）。
+ * 本表按「当前是否已可歪」判定，与小助手一致。
+ * 新角色进常驻时需同步补充，否则分母偏大、算出的花费偏低。
+ */
+const SR_WAI_POOL_ROLES = new Set([
+  // 以小助手角色页「常驻角色」分组为准（已持有/未持有均属常驻）
+  '姬子', '布洛妮娅', '白露', '彦卿', '克拉拉', '杰帕德', '瓦尔特',
+])
+
+/** 星铁「可歪池」光锥名单（口径同角色，待按小助手光锥页补全） */
+const SR_WAI_POOL_LIGHTCONES = new Set([])
+
 export function sum(arr, field) {
   return arr.reduce((n, v) => n + Number(v?.[field] || 0), 0)
 }
@@ -243,6 +261,10 @@ const GAME_VIEW_CONF = {
   sr: {
     poolOrder: POOL_ORDER,
     currency: '星琼',
+    // 可歪池名单（已进常驻的角色 / 光锥）。用于「每UP花费」的分母：
+    // 小助手把它们算作常驻，不计入限定五星数。
+    waiPoolRoles: SR_WAI_POOL_ROLES,
+    waiPoolLightcones: SR_WAI_POOL_LIGHTCONES,
     typeMap: {
       GachaType_AvatarUp: '301',
       GachaType_EquipmentUp: '302',
@@ -321,9 +343,18 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
     // 的抽数，歪一次就重置。例：77 抽歪了，第 88 抽出 UP —— 那个 UP 记录的
     // gacha_count 只有 11，不含前面垫掉的 77，按记录均值算会低估一半以上。
     // 用总抽数除以 UP 数则正确表达「拿到一个 UP 平均要花多少抽」。
-    const upAvg = upNum ? (totalPulls / upNum).toFixed(1) : '--'
-    let upYs = upNum ? String(Math.round(Number(upAvg) * 160)) : '--'
-    if (upNum && Number(upYs) >= 10000) upYs = `${(Number(upYs) / 10000).toFixed(2)}w`
+    // 分母用「限定五星」个数而非 UP 数：可歪池角色（已进常驻的姬子、杰帕德、
+    // 布洛妮娅等）在限定池抽到也算歪，小助手把它们算作常驻，不计入「每UP花费」
+    // 的分母。实测某账号角色池 29 个五星中 6 个属可歪池，
+    // 1790 ÷ 23 = 77.8，与小程序的 77.7 一致；若不剔除则 1790 ÷ 29 = 61.7。
+    // 角色池用角色名单、光锥池用光锥名单（两者不通用）
+    const isLightconePool = key === 'GachaType_EquipmentUp' || key === 'GachaType_CollabEquipmentUp'
+    const waiSet = isLightconePool ? SR_WAI_POOL_LIGHTCONES : SR_WAI_POOL_ROLES
+    const limitedRecords = recent.filter(r => !waiSet.has(String(r?.name || '')))
+    const limitedNum = limitedRecords.length
+    const upAvg = limitedNum ? (totalPulls / limitedNum).toFixed(1) : '--'
+    let upYs = limitedNum ? String(Math.round(Number(upAvg) * 160)) : '--'
+    if (limitedNum && Number(upYs) >= 10000) upYs = `${(Number(upYs) / 10000).toFixed(2)}w`
     const maxPity = pullValues.length ? Math.max(...pullValues) : 0
     const minPity = pullValues.length ? Math.min(...pullValues) : 0
     const upRate = fiveNum ? pct(upNum, fiveNum) : '--'
@@ -2163,7 +2194,7 @@ export class sr_gacha extends plugin {
     if (!bind?.union_id) {
       logger.mark('[xhh][sr_gacha] 未绑定 union_id，改用占位值请求星穹工坊云端（云端不校验该参数）')
     }
-    await e.reply(`正在从星穹工坊云端获取抽卡记录，请稍候……${unionId === HELPER_FALLBACK_UNION_ID ? '（未绑定 union_id，使用占位值）' : ''}`)
+    await e.reply(`正在从小助手云端获取抽卡记录，请稍候……${unionId === HELPER_FALLBACK_UNION_ID ? '（未绑定 union_id，使用占位值）' : ''}`)
     try {
       const analysis = await fetchHelperCloud(uid, unionId)
       const old = readData(getDataFile(qq, uid))
@@ -2181,7 +2212,7 @@ export class sr_gacha extends plugin {
       return e.reply('发送【#xhh星铁抽卡帮助】查看全部抽卡指令')
     } catch (err) {
       logger.error('[xhh][sr_gacha] updateHelper failed:', err)
-      return e.reply(`星穹工坊云端同步失败：${err?.message || err}`)
+      return e.reply(`小助手云端同步失败：${err?.message || err}`)
     }
   }
 
