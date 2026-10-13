@@ -86,6 +86,18 @@ async function getSrSummaryFn(name) {
   return mod?.[name] || null
 }
 
+/**
+ * 取 SrGachaSummary 类本身。
+ *
+ * 注意：getGenshinSrSummary() 返回的是**模块命名空间对象**，不是类。
+ * 直接 `new (await getGenshinSrSummary())()` 会抛
+ * "SrGachaSummaryCls is not a constructor"——SrGachaSummary 是具名导出，
+ * 必须从命名空间里取出来才能 new。
+ */
+async function getSrSummaryClass() {
+  return await getSrSummaryFn('SrGachaSummary')
+}
+
 // === 跨插件依赖：miao-plugin ===
 //
 // 与 genshin 同理，miao-plugin 也可能缺失或版本不同（静态 import 缺失会让整个
@@ -1720,8 +1732,10 @@ export class sr_gacha extends plugin {
       let result
       for (const cookie of auth.cookies) {
         try {
-          const SrGachaSummaryCls = await getGenshinSrSummary()
-          if (!SrGachaSummaryCls) throw new Error('genshin 插件缺少 srGachaSummary 模块，请更新 genshin 插件')
+          const SrGachaSummaryCls = await getSrSummaryClass()
+          if (typeof SrGachaSummaryCls !== 'function') {
+            throw new Error('genshin 插件缺少 SrGachaSummary 类，请更新 genshin 插件')
+          }
           const saveCookie = await getSrSummaryFn('saveSrGachaCookie')
           const summary = new SrGachaSummaryCls({ uid: auth.uid, cookie, file: `./data/srGachaSummary/${auth.uid}.json` })
           result = await summary.update()
@@ -1966,8 +1980,10 @@ export class sr_gacha extends plugin {
       // 否则刚发链接拉取的新五星会被全部当成非UP，导致角色池统计不准确
       for (const cookie of auth.cookies) {
         try {
-          const SrGachaSummaryCls = await getGenshinSrSummary()
-          if (!SrGachaSummaryCls) throw new Error('genshin 插件缺少 srGachaSummary 模块，请更新 genshin 插件')
+          const SrGachaSummaryCls = await getSrSummaryClass()
+          if (typeof SrGachaSummaryCls !== 'function') {
+            throw new Error('genshin 插件缺少 SrGachaSummary 类，请更新 genshin 插件')
+          }
           const summary = new SrGachaSummaryCls({ uid: auth.uid, cookie, file: `./data/srGachaSummary/${auth.uid}.json` })
           const sr = await summary.update()
           if (sr?.pools) {
