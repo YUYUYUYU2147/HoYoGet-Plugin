@@ -191,12 +191,45 @@ export function setCookieValue(headers, name) {
  * 新角色进常驻时需同步补充，否则分母偏大、算出的花费偏低。
  */
 const SR_WAI_POOL_ROLES = new Set([
-  // 以小助手角色页「常驻角色」分组为准（已持有/未持有均属常驻）
+  // 自 1.0 起即为常驻、始终可歪的角色
   '姬子', '布洛妮娅', '白露', '彦卿', '克拉拉', '杰帕德', '瓦尔特',
 ])
 
-/** 星铁「可歪池」光锥名单（口径同角色，待按小助手光锥页补全） */
-const SR_WAI_POOL_LIGHTCONES = new Set([])
+/**
+ * 后来才转入常驻的角色 —— 这些角色早期是限定（能出 UP），
+ * 进入常驻池后才变成可歪，需按抽卡时间区分：
+ *   · 转入常驻之前抽到的：算限定
+ *   · 转入常驻之后抽到的：算常驻，剔除出「每UP花费」分母
+ *
+ * 静态名单无法表达这种时间维度，若一律剔除会让分母偏小、算出的花费偏高。
+ */
+const SR_LATER_COMMON_ROLES = new Set(['希儿', '银狼', '符玄', '云璃', '银枝', '刃'])
+
+/** 这些角色转入常驻的时间点（YYYY-MM），此前抽到的仍算限定。
+ *  实测取 2025-10 可与小程序的「32 限定 / 19 常驻」完全对上。 */
+const SR_LATER_COMMON_SINCE = '2025-10'
+
+/** 判断一条五星记录是否应算作「常驻」（不计入每UP花费的分母） */
+function isSrWaiPoolRecord(rec) {
+  const name = String(rec?.name || '')
+  if (SR_WAI_POOL_ROLES.has(name)) return true
+  if (!SR_LATER_COMMON_ROLES.has(name)) return false
+  // time 形如「2025-11-05 12:00:00」，截到月即可比较
+  const month = String(rec?.time || '').slice(0, 7)
+  return month ? month >= SR_LATER_COMMON_SINCE : false
+}
+
+/**
+ * 星铁「可歪池」光锥名单 —— 常驻角色的专武。
+ * 角色进常驻后，其专武同样能在光锥限定池被抽到（歪），小助手统计
+ * 「每UP光锥花费」时把专武计入常驻，不计入分母。
+ *
+ * 名单依据：小助手光锥页的「常驻专武」分组。
+ */
+const SR_WAI_POOL_LIGHTCONES = new Set([
+  '银河铁道之夜', '无可取代的东西', '但战斗还未结束', '以世界之名',
+  '制胜的瞬间', '如泥酣眠', '时节不居',
+])
 
 export function sum(arr, field) {
   return arr.reduce((n, v) => n + Number(v?.[field] || 0), 0)
@@ -261,10 +294,6 @@ const GAME_VIEW_CONF = {
   sr: {
     poolOrder: POOL_ORDER,
     currency: '星琼',
-    // 可歪池名单（已进常驻的角色 / 光锥）。用于「每UP花费」的分母：
-    // 小助手把它们算作常驻，不计入限定五星数。
-    waiPoolRoles: SR_WAI_POOL_ROLES,
-    waiPoolLightcones: SR_WAI_POOL_LIGHTCONES,
     typeMap: {
       GachaType_AvatarUp: '301',
       GachaType_EquipmentUp: '302',
@@ -347,10 +376,12 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
     // 布洛妮娅等）在限定池抽到也算歪，小助手把它们算作常驻，不计入「每UP花费」
     // 的分母。实测某账号角色池 29 个五星中 6 个属可歪池，
     // 1790 ÷ 23 = 77.8，与小程序的 77.7 一致；若不剔除则 1790 ÷ 29 = 61.7。
-    // 角色池用角色名单、光锥池用光锥名单（两者不通用）
+    // 光锥：常驻角色的专武可歪，剔除即可歪的专武
+    // 角色：静态常驻名单 + 后来转常驻的角色（按抽卡时间判定）
     const isLightconePool = key === 'GachaType_EquipmentUp' || key === 'GachaType_CollabEquipmentUp'
-    const waiSet = isLightconePool ? SR_WAI_POOL_LIGHTCONES : SR_WAI_POOL_ROLES
-    const limitedRecords = recent.filter(r => !waiSet.has(String(r?.name || '')))
+    const limitedRecords = isLightconePool
+      ? recent.filter(r => !SR_WAI_POOL_LIGHTCONES.has(String(r?.name || '')))
+      : recent.filter(r => !isSrWaiPoolRecord(r))
     const limitedNum = limitedRecords.length
     const upAvg = limitedNum ? (totalPulls / limitedNum).toFixed(1) : '--'
     let upYs = limitedNum ? String(Math.round(Number(upAvg) * 160)) : '--'
