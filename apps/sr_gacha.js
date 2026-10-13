@@ -206,8 +206,10 @@ const SR_WAI_POOL_ROLES = new Set([
 const SR_LATER_COMMON_ROLES = new Set(['希儿', '银狼', '符玄', '云璃', '银枝', '刃'])
 
 /** 这些角色转入常驻的时间点（YYYY-MM），此前抽到的仍算限定。
- *  实测取 2025-10 可与小程序的「32 限定 / 19 常驻」完全对上。 */
-const SR_LATER_COMMON_SINCE = '2025-10'
+ *  取 2025-09：实测某账号角色UP池 29 个五星中 21 个属限定（21/29），
+ *  与人工核对结果一致。若取 2025-10 则该账号摘要能与小程序的
+ *  「32 限定 / 19 常驻」对上，但单池比例会差 1 个，两者不可兼得。 */
+const SR_LATER_COMMON_SINCE = '2025-09'
 
 /** 判断一条五星记录是否应算作「常驻」（不计入每UP花费的分母） */
 function isSrWaiPoolRecord(rec) {
