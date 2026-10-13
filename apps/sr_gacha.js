@@ -1254,6 +1254,36 @@ export function inheritIsUp(oldPools, newPools) {
   return newPools
 }
 
+/**
+ * 把 ck（five_star_list）的 is_up 盖到合并后的记录上。
+ *
+ * 与 mergeIsUp 的区别：这里**只按「名称 + 抽数」匹配**，不用 time。
+ * 原因是 ck 侧 five_star_list 返回的 time 恒为空字符串，而 authkey/小助手
+ * 侧才有精确时间，两边 time 永远对不上；`name|time` 那个 key 等于失效。
+ * 抽数则两边一致（都是官方口径），且同一池内 name+gacha_count 唯一
+ * ——实测 UID 110294447 联动角色池里 Saber 出现 3 次，但抽数分别为
+ * 78 / 77 / 4，不会误配。
+ *
+ * 只写 true 不写 false：ck 是唯一带 is_up 的源，但若某池 ck 没覆盖到
+ * （如 authkey 才有的更早期记录），不该被当成「非 UP」写死。
+ */
+function applyCkIsUp(ckPools, pools) {
+  if (!ckPools) return pools
+  const up = new Set()
+  for (const pool of Object.values(ckPools)) {
+    for (const r of getPoolRecords(pool)) {
+      if (r?.is_up === true) up.add(`${r.name}|${r.gacha_count}`)
+    }
+  }
+  if (!up.size) return pools
+  for (const pool of Object.values(pools || {})) {
+    for (const r of pool?.records || []) {
+      if (up.has(`${r.name}|${r.gacha_count}`)) r.is_up = true
+    }
+  }
+  return pools
+}
+
 // 用 ck（five_star_list 接口，返回准确 UP 标记）校准 authkey 结果的 is_up：
 // authkey 全量接口不带 is_up，新五星只能靠 ck 数据补全，否则会被全部当成非UP
 export function mergeIsUp(summaryPools, newPools) {
@@ -1767,11 +1797,27 @@ export class sr_gacha extends plugin {
         const localCommon = old?.pools?.common
         if (getPoolRecords(localCommon).length) result.pools.common = localCommon
       }
+      // ck 返回的 pools 深拷贝快照。mergePoolsForCk 会**原地**替换 newPools 里
+      // 各池的 records（pickFullerRecords 整组二选一），只留引用的话快照也跟着
+      // 被改，原始 is_up 就找不回来了，必须深拷贝。
+      const ckPools = JSON.parse(JSON.stringify(result.pools || {}))
       result.update_time = formatNow()
       // 与已有数据合并（可能是 authkey 全量逐抽），避免 ck 更新覆盖丢四星/常驻；
       // ck 只负责补全更早的五星（小程序保留一年）与 UP 标记
       if (old?.pools) {
         result.pools = mergePoolsForCk(old.pools, result.pools)
+        // 把 ck 的 is_up 盖到合并结果上（ck 是唯一带 is_up 的源，优先级最高）。
+        //
+        // 顺序很关键，必须在 mergePoolsForCk 之后：
+        // 它内部 pickFullerRecords 是「整组二选一」，条数相同时按抽数总和取大的一边，
+        // 联动角色池这类旧数据与 ck 条数一致的池子会选中旧的那组 ——
+        // 而旧记录的 is_up 来自 authkey / 小助手（这两个源都不返回该字段，
+        // 拉取时统一置 false），于是 ck 里正确的标记被整组丢弃。
+        //
+        // 症状：官方 five_star_list 对联动跃迁是有 is_up 的
+        // （实测 UID 110294447 联动角色池 8 个五星中 6 个 UP、歪 2 个），
+        // 但卡片显示 0.0% 小保底不歪率、UP 平均与 UP 花费均为 --，且无 UP 角标。
+        result.pools = applyCkIsUp(ckPools, result.pools)
         result.pools = inheritIsUp(old.pools, result.pools)
       }
       saveData(getDataFile(auth.qq, auth.uid), result)
