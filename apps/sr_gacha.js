@@ -312,11 +312,18 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
     const pity = Number(typeof pool.pity === 'object' ? pool.pity?.gacha_count : pool.pity || 0) || 0
     const totalPulls = Number(pool?.totalPulls) || (sum(recent, 'gacha_count') + pity) || 0
     const pullValues = recent.map(v => Number(v.gacha_count || 0)).filter(v => v > 0)
-    const upValues = recent.filter(isUpRec).map(v => Number(v.gacha_count || 0)).filter(v => v > 0)
     const fiveAvg = fiveNum ? (sum(recent, 'gacha_count') / fiveNum).toFixed(1) : '--'
-    const upAvg = upValues.length ? (sum(recent.filter(isUpRec), 'gacha_count') / upValues.length).toFixed(1) : '--'
-    let upYs = upValues.length ? String(Math.round(Number(upAvg) * 160)) : '--'
-    if (upValues.length && Number(upYs) >= 10000) upYs = `${(Number(upYs) / 10000).toFixed(2)}w`
+    // UP平均 = 本池总抽数 ÷ UP 数量，与星穹工坊/小程序口径一致。
+    // 工坊风格统计视图（buildSrStatView）的「每UP角色花费」也复用这里的
+    // line 数据，因此两个视图口径统一。
+    //
+    // 不能只对 is_up 的记录取 gacha_count 求平均：gacha_count 是「距上一个五星」
+    // 的抽数，歪一次就重置。例：77 抽歪了，第 88 抽出 UP —— 那个 UP 记录的
+    // gacha_count 只有 11，不含前面垫掉的 77，按记录均值算会低估一半以上。
+    // 用总抽数除以 UP 数则正确表达「拿到一个 UP 平均要花多少抽」。
+    const upAvg = upNum ? (totalPulls / upNum).toFixed(1) : '--'
+    let upYs = upNum ? String(Math.round(Number(upAvg) * 160)) : '--'
+    if (upNum && Number(upYs) >= 10000) upYs = `${(Number(upYs) / 10000).toFixed(2)}w`
     const maxPity = pullValues.length ? Math.max(...pullValues) : 0
     const minPity = pullValues.length ? Math.min(...pullValues) : 0
     const upRate = fiveNum ? pct(upNum, fiveNum) : '--'
