@@ -305,10 +305,23 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
   const pools = Object.entries(viewPools || {}).map(([key, pool]) => {
     const recent = Array.isArray(pool.records) ? pool.records : (Array.isArray(pool.recent) ? pool.recent : [])
     const fiveNum = Number(pool?.fiveNum) || recent.length
-    // 联动跃迁（'21'/'22'）与普通跃迁一样存在小保底歪，is_up 一律按数据真实值；
-    // authkey/小助手不返回 is_up，拉取时先置 false，由 ck 校准（mergeIsUp）与工坊同步补齐
+    // 联动跃迁（'21'/'22'）与普通跃迁一样存在小保底歪，is_up 一律按数据真实值。
+    //
+    // is_up 有三态：
+    //   true  —— ck（官方 five_star_list）确认是 UP
+    //   false —— ck 确认是歪
+    //   null  —— ck 未覆盖（超出约一年的保留范围），来源是 authkey / 小助手，
+    //            这两个源都不返回该字段，无法判断是 UP 还是歪
+    //
+    // 旧实现把「拉取时先置 false」当成真值参与统计，于是 ck 没覆盖到的历史记录
+    // 全被算成歪，不歪率被系统性拉低。实测某账号角色池 29 个五星里 22 个
+    // ck 未覆盖，其中至少一条（大黑塔）经用户确认真实是 UP。
+    //
+    // 因此不歪率只在 ck 已确认的记录上计算，未确认的不参与分子也不参与分母。
     const isUpRec = v => v.is_up === true
-    const upNum = recent.filter(isUpRec).length
+    const known = recent.filter(v => v.is_up === true || v.is_up === false)
+    const knownNum = known.length
+    const upNum = known.filter(isUpRec).length
     const pity = Number(typeof pool.pity === 'object' ? pool.pity?.gacha_count : pool.pity || 0) || 0
     const totalPulls = Number(pool?.totalPulls) || (sum(recent, 'gacha_count') + pity) || 0
     const pullValues = recent.map(v => Number(v.gacha_count || 0)).filter(v => v > 0)
@@ -319,7 +332,9 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
     if (upValues.length && Number(upYs) >= 10000) upYs = `${(Number(upYs) / 10000).toFixed(2)}w`
     const maxPity = pullValues.length ? Math.max(...pullValues) : 0
     const minPity = pullValues.length ? Math.min(...pullValues) : 0
-    const upRate = fiveNum ? pct(upNum, fiveNum) : '--'
+    // 未知（ck 未覆盖）记录不计入分母，避免被当成歪拉低不歪率
+    const upRate = knownNum ? pct(upNum, knownNum) : '--'
+    const unknownNum = fiveNum - knownNum
     const MIAO_RES = '../../../../../plugins/miao-plugin/resources'
     const miaoGame = game === 'zzz' ? 'zzz' : 'sr'
     // 绝区零：官方物品配置接口忽略 game 参数只返回星铁数据，miao-plugin 也无绝区零资源，
@@ -394,7 +409,10 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
       [
         { num: fiveNum ? pity : '--', unit: '', lable: '未出五星' },
         { num: fiveAvg, unit: '', lable: '五星平均' },
-        { num: upRate, unit: '%', lable: '小保底不歪率' },
+        // 有未确认记录时标注样本数：比例只反映 ck 覆盖到的那部分，
+        // 不加说明容易被当成全量统计（实测某账号角色池 29 个五星里
+        // 14 个超出 ck 约一年的保留范围，比例实际基于 15 条）。
+        { num: upRate, unit: '%', lable: unknownNum ? `小保底不歪率(${knownNum}条)` : '小保底不歪率' },
         { num: maxPity || '--', unit: '', lable: '最非' },
       ],
       [
@@ -1269,16 +1287,23 @@ export function inheritIsUp(oldPools, newPools) {
  */
 function applyCkIsUp(ckPools, pools) {
   if (!ckPools) return pools
-  const up = new Set()
+  // ck 已确认的记录：按「名称|抽数」索引
+  const known = new Map()
   for (const pool of Object.values(ckPools)) {
     for (const r of getPoolRecords(pool)) {
-      if (r?.is_up === true) up.add(`${r.name}|${r.gacha_count}`)
+      if (r?.is_up === true || r?.is_up === false) known.set(`${r.name}|${r.gacha_count}`, r.is_up)
     }
   }
-  if (!up.size) return pools
+  if (!known.size) return pools
   for (const pool of Object.values(pools || {})) {
     for (const r of pool?.records || []) {
-      if (up.has(`${r.name}|${r.gacha_count}`)) r.is_up = true
+      const v = known.get(`${r.name}|${r.gacha_count}`)
+      // 命中即用 ck 的权威值（true 或 false 都覆盖）；
+      // 未命中说明 ck 没覆盖到这条（超出约一年的保留范围），
+      // 来源是 authkey / 小助手，无法判断 UP 还是歪 —— 置 null 表示「未知」，
+      // 不能沿用拉取时填的 false，否则会被当成歪参与不歪率统计。
+      if (v !== undefined) r.is_up = v
+      else if (r.is_up === false) r.is_up = null
     }
   }
   return pools
