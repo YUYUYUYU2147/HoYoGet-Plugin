@@ -390,7 +390,10 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
     if (limitedNum && Number(upYs) >= 10000) upYs = `${(Number(upYs) / 10000).toFixed(2)}w`
     const maxPity = pullValues.length ? Math.max(...pullValues) : 0
     const minPity = pullValues.length ? Math.min(...pullValues) : 0
-    const upRate = fiveNum ? pct(upNum, fiveNum) : '--'
+    // 小保底不歪率 = 限定五星数 ÷ 本池五星总数。
+    // 可歪池角色（常驻角色及其专武）在限定池抽到必然是歪，剔除后剩下的
+    // 即为不歪的部分。实测某账号角色池 21/29 = 72.4%、光锥池 9/11 = 81.8%。
+    const upRate = fiveNum ? pct(limitedNum, fiveNum) : '--'
     const MIAO_RES = '../../../../../plugins/miao-plugin/resources'
     const miaoGame = game === 'zzz' ? 'zzz' : 'sr'
     // 绝区零：官方物品配置接口忽略 game 参数只返回星铁数据，miao-plugin 也无绝区零资源，
