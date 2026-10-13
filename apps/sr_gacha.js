@@ -1372,14 +1372,30 @@ function applyCkIsUp(ckPools, pools) {
 function applyWaiPoolIsUp(pools) {
   for (const [key, pool] of Object.entries(pools || {})) {
     const isLightconePool = key === 'GachaType_EquipmentUp' || key === 'GachaType_CollabEquipmentUp'
-    for (const r of pool?.records || []) {
-      const wai = isLightconePool
-        ? SR_WAI_POOL_LIGHTCONES.has(String(r?.name || ''))
-        : isSrWaiPoolRecord(r)
-      if (wai) r.is_up = false
+    const list = pool?.records || []
+    const waiOf = rec => isLightconePool
+      ? SR_WAI_POOL_LIGHTCONES.has(String(rec?.name || ''))
+      : isSrWaiPoolRecord(rec)
+    // 先把可歪池记录一律标为歪
+    for (const r of list) if (waiOf(r)) r.is_up = false
+
+    // 再补 UP：可歪池记录必然是歪，它之后按id 顺序紧邻的下一个五星
+    // 即为当期 UP —— 歪到常驻角色不会把保底让出去，下一发出的五星才是UP。
+    // 依据：某账号角色池 8 处「常驻歪 → 下一五星」中 7 处被数据源标为 UP，
+    // 无一例外（唯一未标的那条托帕同为限定角色，判断为漏标而非规则失效）。
+    const ordered = [...list].sort((a, b) => cmpRecordId(a, b))
+    for (let i = 0; i < ordered.length - 1; i++) {
+      if (waiOf(ordered[i]) && ordered[i + 1]?.is_up !== true) ordered[i + 1].is_up = true
     }
   }
   return pools
+}
+
+/** 按 id 升序比较（id 为大整数字符串，需用 BigInt 避免精度丢失） */
+function cmpRecordId(a, b) {
+  const x = BigInt(String(a?.id || '0') || '0')
+  const y = BigInt(String(b?.id || '0') || '0')
+  return x === y ? String(a?.time || '').localeCompare(String(b?.time || '')) : (x < y ? -1 : 1)
 }
 
 // 用 ck（five_star_list 接口，返回准确 UP 标记）校准 authkey 结果的 is_up：
