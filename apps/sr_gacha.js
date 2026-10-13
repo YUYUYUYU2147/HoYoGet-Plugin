@@ -1353,6 +1353,30 @@ function applyCkIsUp(ckPools, pools) {
   return pools
 }
 
+/**
+ * 按可歪池名单补齐 is_up —— 常驻角色（含专武）在限定池被抽到**必然是歪**，
+ * 这是无需任何接口即可确定的强约束，可用来给缺失标记的记录兜底。
+ *
+ * 反过来不成立：限定角色抽到也可能是歪（歪到另一个限定），所以不能推断 true。
+ * 因此本函数只写 false，不写 true。
+ *
+ * 典型场景：小助手 / 星穹工坊返回的记录缺 is_up，导入时统一填了 false，
+ * 其中「其实是 UP」的无法判断（保持现状等 ck 校准），但「确实是歪」的
+ * 这些常驻角色本就该是 false，本函数让它们与推断出的歪保持一致。
+ */
+function applyWaiPoolIsUp(pools) {
+  for (const [key, pool] of Object.entries(pools || {})) {
+    const isLightconePool = key === 'GachaType_EquipmentUp' || key === 'GachaType_CollabEquipmentUp'
+    for (const r of pool?.records || []) {
+      const wai = isLightconePool
+        ? SR_WAI_POOL_LIGHTCONES.has(String(r?.name || ''))
+        : isSrWaiPoolRecord(r)
+      if (wai) r.is_up = false
+    }
+  }
+  return pools
+}
+
 // 用 ck（five_star_list 接口，返回准确 UP 标记）校准 authkey 结果的 is_up：
 // authkey 全量接口不带 is_up，新五星只能靠 ck 数据补全，否则会被全部当成非UP
 export function mergeIsUp(summaryPools, newPools) {
@@ -1932,6 +1956,8 @@ export class sr_gacha extends plugin {
       const filtered = getPoolRecords(pool).filter(r => (r.item_type || '角色') === commonType)
       data = { ...data, pools: { ...data.pools, common: { ...pool, records: filtered, recent: filtered, fiveNum: filtered.length } } }
     }
+    // 可歪池角色在限定池必然是歪：渲染前统一补齐，避免缺标记时统计偏差
+    applyWaiPoolIsUp(data.pools)
     const view = buildSummaryView(filterPools(data, keys), auth.uid, e, layout, 'sr', miaoModelsCache)
     if (layout === 'progress') {
       let avatar = ''
@@ -1998,6 +2024,7 @@ export class sr_gacha extends plugin {
     const data = readData(getDataFile(auth.qq, auth.uid))
       || (readSummary ? readSummary(`./data/srGachaSummary/${auth.uid}.json`) : null)
     if (!data?.pools) return e.reply('暂无星铁抽卡记录，请先发送【#xhh星铁更新抽卡记录】')
+    applyWaiPoolIsUp(data.pools)
     const view = buildSrStatView(data, auth.uid, e, keys, commonType)
     // pct 压低 sys.scale 的 zoom：统计卡内容行数多，避免渲染后端截图高度上限截断
     const buf = await render('sr_gacha/stat', view, { e, pct: 1.5 })
@@ -2143,11 +2170,11 @@ export class sr_gacha extends plugin {
       }
       const cur = readHelperBind(qq)
       return e.reply([
-        '【星穹工坊云端绑定】',
+        '【小助手云端绑定】',
         cur?.union_id ? `当前已绑定 union_id：${cur.union_id}` : '尚未绑定 union_id（不影响同步）',
         '',
         '用法：#xhh绑定小助手 <union_id>',
-        'union_id 为星穹工坊小程序对应微信账号的身份标识，可选。',
+        'union_id 为小助手对应微信账号的身份标识，可选。',
         '云端目前只校验该参数非空、不校验内容，未绑定时同步会自动使用占位值；',
         '此处绑定仅用于云端将来启用校验时无需改动。',
         '',
@@ -2238,7 +2265,7 @@ export class sr_gacha extends plugin {
         .filter(p => p.fiveNum || p.totalPulls)
         .map(p => `【${p.name}】共${p.totalPulls || p.allNum || 0}抽｜五星${p.fiveNum || 0}`)
         .join('\n')
-      await e.reply(`星穹工坊云端记录同步完成！\n${stats}`)
+      await e.reply(`小助手云端记录同步完成！\n${stats}`)
       await this.renderSummary(e, [], 'grid')
       return e.reply('发送【#xhh星铁抽卡帮助】查看全部抽卡指令')
     } catch (err) {
