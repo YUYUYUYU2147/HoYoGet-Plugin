@@ -1260,9 +1260,9 @@ export function inheritIsUp(oldPools, newPools) {
  * 与 mergeIsUp 的区别：这里**只按「名称 + 抽数」匹配**，不用 time。
  * 原因是 ck 侧 five_star_list 返回的 time 恒为空字符串，而 authkey/小助手
  * 侧才有精确时间，两边 time 永远对不上；`name|time` 那个 key 等于失效。
- * 抽数则两边一致（都是官方口径），且同一池内 name+gacha_count 唯一
- * ——实测 UID 110294447 联动角色池里 Saber 出现 3 次，但抽数分别为
- * 78 / 77 / 4，不会误配。
+ * 抽数则两边一致（都是官方口径），且同一池内 name+gacha_count 唯一 ——
+ * 同一角色在池内重复出现时抽数各不相同（如某联动角色池里某角色出现 3 次，
+ * 抽数分别为 78 / 77 / 4），不会误配。
  *
  * 只写 true 不写 false：ck 是唯一带 is_up 的源，但若某池 ck 没覆盖到
  * （如 authkey 才有的更早期记录），不该被当成「非 UP」写死。
@@ -1814,8 +1814,7 @@ export class sr_gacha extends plugin {
         // 而旧记录的 is_up 来自 authkey / 小助手（这两个源都不返回该字段，
         // 拉取时统一置 false），于是 ck 里正确的标记被整组丢弃。
         //
-        // 症状：官方 five_star_list 对联动跃迁是有 is_up 的
-        // （实测 UID 110294447 联动角色池 8 个五星中 6 个 UP、歪 2 个），
+        // 症状：官方 five_star_list 对联动跃迁是有 is_up 的，
         // 但卡片显示 0.0% 小保底不歪率、UP 平均与 UP 花费均为 --，且无 UP 角标。
         result.pools = applyCkIsUp(ckPools, result.pools)
         result.pools = inheritIsUp(old.pools, result.pools)
