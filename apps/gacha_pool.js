@@ -1917,6 +1917,29 @@ export class xhh_gacha_pool extends plugin {
     return list;
   }
 
+  /**
+   * 组装一条卡池的 imgs：角色封面 + 光锥封面。
+   *
+   * 约束：一条池里若列了两个光锥（gz_five 两条），两张图必须不同 ——
+   * 历史上官方搜索接口会把同一张封面同时当成角色与光锥封面写进去，
+   * 导致第二把武器的图标显示成第一把。校验不过就退回已有的那张（若已有不同），
+   * 而不是用重复值覆盖掉正确的图。
+   */
+  buildPoolImgs(item, roleImg, weaponImg, existingImgs = []) {
+    const cones = Array.isArray(item?.gz_five) ? item.gz_five.filter(Boolean) : [];
+    const pair = [roleImg, weaponImg].filter(Boolean);
+    // 单光锥池：去重即可，重复只会让 Set 把它吃掉
+    if (cones.length <= 1) return [...new Set(pair)];
+    // 双光锥池：两张必须不同
+    if (roleImg && weaponImg && roleImg !== weaponImg) return [roleImg, weaponImg];
+    const keep = existingImgs.filter(Boolean);
+    const distinct = [...new Set(keep)];
+    if (distinct.length >= 2) return distinct;
+    // 已有图里只有一张、且与新拿到的封面相同：优先保留原值，不覆盖成重复
+    if (distinct.length === 1 && distinct[0] === pair[0]) return distinct;
+    return [...new Set(pair)];
+  }
+
   async syncSrImagesFromOfficial(records = []) {
     // 用官方公告列表为本地已有条目补背景图，即使正文为空也能更新图片。
     const history = this.loadSrPoolHistory();
@@ -1941,7 +1964,7 @@ export class xhh_gacha_pool extends plugin {
       if (exactKeywords?.length) {
         const exactImage = await this.srSearchPoolImages(item.ver, [firstUp], false);
         if (exactImage && existingImgs[0] !== exactImage) {
-          item.imgs = [exactImage, weaponImg].filter(Boolean);
+          item.imgs = this.buildPoolImgs(item, exactImage, weaponImg, existingImgs);
           usedRoleImages.set(versionKey, exactImage);
           changed = true;
           continue;
@@ -1950,7 +1973,7 @@ export class xhh_gacha_pool extends plugin {
       // 联动池图片按 UP 名重新校验：旧版本曾把联动 1.0/2.0 写成同一张图，
       // 不能因为已有 imgs 就永久跳过修正。
       if (/^联动/.test(String(item.ver || '')) && roleImg && existingImgs[0] !== roleImg) {
-        item.imgs = [roleImg, weaponImg || existingImgs[1]].filter(Boolean).slice(0, 2);
+        item.imgs = this.buildPoolImgs(item, roleImg, weaponImg || existingImgs[1], existingImgs).slice(0, 2);
         changed = true;
         continue;
       }
@@ -1958,7 +1981,7 @@ export class xhh_gacha_pool extends plugin {
         usedRoleImages.set(versionKey, existingImgs[0]);
         continue;
       }
-      let imgs = [...new Set([roleImg, weaponImg].filter(Boolean))];
+      let imgs = this.buildPoolImgs(item, roleImg, weaponImg, existingImgs);
       // 公告列表里翻不到（旧版本/过期池）时，改用官方号搜索接口找回封面
       if (!imgs.length && searched < 12) {
         searched++;
