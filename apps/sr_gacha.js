@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { createHash } from 'node:crypto'
 import { render, mhy, pluginPriority } from '#xhh'
+import { buildIsUP } from '../system/join_isup.mjs'
 // === 跨插件依赖：genshin 插件 ===
 //
 // 这几个模块（gachaLog / srGachaSummary）是 genshin 较新版本才有的，
@@ -206,19 +207,32 @@ const SR_WAI_POOL_ROLES = new Set([
 const SR_LATER_COMMON_ROLES = new Set(['希儿', '银狼', '符玄', '云璃', '银枝', '刃'])
 
 /** 这些角色转入常驻的时间点（YYYY-MM），此前抽到的仍算限定。
- *  取 2025-09：实测某账号角色UP池 29 个五星中 21 个属限定（21/29），
- *  与人工核对结果一致。若取 2025-10 则该账号摘要能与小程序的
- *  「32 限定 / 19 常驻」对上，但单池比例会差 1 个，两者不可兼得。 */
-const SR_LATER_COMMON_SINCE = '2025-09'
+ *  各角色转入时间不同，不能用同一个全局值：
+ *   · 希儿 / 银狼 / 符玄 / 刃 / 银枝 —— 3.0 版本（2025-01-15）起加入群星跃迁
+ *   · 云璃 —— 2025-09 起加入常驻（游戏内「可歪角色」名单可见）
+ *  若共用 2025-09，会把 2025-01 ~ 2025-08 抽到的前五者误判成限定
+ *  （实测某账号 2025-11 抽到的刃被算成限定 UP，实际已是常驻歪） */
+const SR_LATER_COMMON_SINCE = {
+  '希儿': '2025-01',
+  '银狼': '2025-01',
+  '符玄': '2025-01',
+  '刃': '2025-01',
+  '银枝': '2025-01',
+  '云璃': '2025-09',
+}
 
 /** 判断一条五星记录是否应算作「常驻」（不计入每UP花费的分母） */
 function isSrWaiPoolRecord(rec) {
   const name = String(rec?.name || '')
   if (SR_WAI_POOL_ROLES.has(name)) return true
   if (!SR_LATER_COMMON_ROLES.has(name)) return false
-  // time 形如「2025-11-05 12:00:00」，截到月即可比较
-  const month = String(rec?.time || '').slice(0, 7)
-  return month ? month >= SR_LATER_COMMON_SINCE : false
+  // time 形如「2025-11-05 12:00:00」，截到月即可比较。
+  // 工坊 / ck 来源的记录 time 常为空串（ck 的 five_star_list 恒为空），此时用
+  // id 前 13 位毫秒时间戳反推日期——与 buildSummaryView 日程表查询的
+  // 「time → timeFromId」兜底一致。若两者都拿不到时间，按「转入前=限定」处理：
+  // 宁可少判一个歪，也不能把历史 UP 误杀成常驻。
+  const month = (String(rec?.time || '') || timeFromId(rec?.id)).slice(0, 7)
+  return month ? month >= SR_LATER_COMMON_SINCE[name] : false
 }
 
 /**
@@ -233,6 +247,46 @@ const SR_WAI_POOL_LIGHTCONES = new Set([
   '制胜的瞬间', '如泥酣眠', '时节不居',
 ])
 
+/**
+ * 绝区零「可歪池」名单 —— 常规频段的常驻 S 级，在独家/重映/音擎/音擎回响频段
+ * 抽到均算「歪」。
+ * 角色（9）：
+ *   · 开服常驻 6 人：格莉丝、丽娜、珂蕾妲、猫又、11号、莱卡恩
+ *     （官方「常驻频段累计 300 抽自选招募」名单）
+ *   · 3.1 二周年（2026-07-29）老限定进歪池 3 人：月城柳、凯撒、朱鸢
+ * 音擎（9）：对应专武 —— 硫磺石、拘缚者、嵌合编译器、啜泣摇篮、燃狱齿轮、
+ *   猫爪肉垫（开服 6 把）+ 时流贤者（柳）、奔袭獠牙（凯撒）、防爆者VI型（朱鸢）
+ * 依据：官方 3.1 福利公告「限定S级代理人月城柳、凯撒、朱鸢及其音擎将加入定制调频」。
+ * 3.1 新增的三人有转入时间（此前是纯限定，抽到即 UP），按抽卡月份判定，
+ * 避免把 2026-07 前他们当 UP 抽到的历史记录误判成歪。
+ * 此前 is_up 重算只用星铁名单，绝区零常驻角色永远匹配不上，被 !isWai 强制
+ * 标成 UP —— 表现为小保底不歪率恒 100.0%、歪的常驻也带 UP 角标。
+ */
+const ZZZ_WAI_POOL_ROLES = new Set([
+  '格莉丝', '丽娜', '珂蕾妲', '猫又', '11号', '莱卡恩',
+  '月城柳', '凯撒', '朱鸢',
+])
+const ZZZ_WAI_POOL_LIGHTCONES = new Set([
+  '硫磺石', '拘缚者', '嵌合编译器', '啜泣摇篮', '燃狱齿轮', '猫爪肉垫',
+  '时流贤者', '奔袭獠牙', '防爆者VI型',
+])
+/** 3.1（2026-07-29）起转入常驻的角色/音擎，此前抽到的仍算限定 */
+const ZZZ_LATER_COMMON_SINCE = {
+  '月城柳': '2026-07', '凯撒': '2026-07', '朱鸢': '2026-07',
+  '时流贤者': '2026-07', '奔袭獠牙': '2026-07', '防爆者VI型': '2026-07',
+}
+
+/** 绝区零记录是否为「可歪」：命中名单，且转入期前的历史记录不算 */
+function isZzzWaiPoolRecord(rec) {
+  const name = String(rec?.name || '')
+  if (!ZZZ_WAI_POOL_ROLES.has(name) && !ZZZ_WAI_POOL_LIGHTCONES.has(name)) return false
+  const since = ZZZ_LATER_COMMON_SINCE[name]
+  if (!since) return true
+  // time 形如「2026-08-04 10:56:29」，截到月即可比较
+  const month = String(rec?.time || '').slice(0, 7)
+  return month ? month >= since : false
+}
+
 export function sum(arr, field) {
   return arr.reduce((n, v) => n + Number(v?.[field] || 0), 0)
 }
@@ -242,8 +296,10 @@ function buildGroupStats(pools, keys, title) {
   const totalFive = sum(list, 'fiveNum')
   const totalPulls = sum(list, 'totalPulls')
   const totalUp = sum(list, 'upNum')
+  const totalPity = sum(list, 'pity')
   const avgPity = totalFive ? (totalPulls / totalFive).toFixed(1) : '0.0'
-  const upAvg = totalUp ? (totalPulls / totalUp).toFixed(1) : '0.0'
+  // UP平均与单池口径一致：分子扣掉当前未出五星的垫抽（大小保底总数）
+  const upAvg = totalUp ? ((totalPulls - totalPity) / totalUp).toFixed(1) : '0.0'
   const upYs = Number(upAvg) ? (Number(upAvg) * 160).toFixed(0) : '0'
   const maxPity = list.length ? Math.max(...list.map(v => Number(v.maxPity || 0))) : 0
   const minPity = list.length ? Math.min(...list.map(v => Number(v.minPity || 0)).filter(v => v > 0)) || 0 : 0
@@ -268,6 +324,73 @@ function buildPoolStats(pool) {
     avgPity: pool?.avgPity || '0.0',
     maxPity: Number(pool?.maxPity || 0),
     minPity: Number(pool?.minPity || 0),
+  }
+}
+
+// 会歪池 key（存在 50/50 小保底）：星铁角色/光锥/联动，绝区零代理人/音擎（含重映）。
+// 新手池、常驻池、邦布池不存在 50/50，不歪率无意义。
+const WAI_POOL_KEYS = new Set([
+  'GachaType_AvatarUp', 'GachaType_CollabAvatarUp',
+  'GachaType_EquipmentUp', 'GachaType_CollabEquipmentUp',
+  'GachaType_CharacterUp', 'GachaType_RerunCharacter',
+  'GachaType_WeaponUp', 'GachaType_RerunWeapon',
+])
+
+/**
+ * 算「小保底不歪率」（净不歪率）：
+ *
+ *   不歪率 = (总五星 − 2×歪的次数) / (总五星 − 歪的次数)
+ *
+ * 其中：
+ *   总五星   = 本池五星总数 N
+ *   歪的次数 = 小保底歪（抽到常驻）的次数
+ * 等价地，分母 = N − 歪 = 小保底总场数（不歪 + 歪，含歪后大保底必得的 UP），
+ * 分子 = N − 2×歪 = 小保底总场数 − 2×歪 = 净不歪（赢的场扣掉输的场）。
+ * 即「净不歪率 = 净不歪 / 小保底总场数」。
+ * 分母为 0（全是歪）时无意义，置 '--'。
+ *
+ * 必得（歪之后大保底强制出的 UP）不再从分子分母中扣除：按用户口径，
+ * 例：3 五星 = 刃(歪) + 79(刃后大保底 UP) + 75(小保底 UP)，
+ * 不歪率 = (3 − 2×1) / (3 − 1) = 1/2 = 50%（若扣必得会变成 0/1 = 0%，
+ * 与预期不符）。
+ *
+ * 入参为某会歪池的五星记录（含 is_up 字段，需先经 ck/工坊/可歪池名单校准）。
+ * 处理时按抽卡时间（id 升序，旧→新）遍历，用 guaranteed 标记维护大保底状态：
+ *   · 上一张歪了常驻 → 下一张必得 UP（大保底，记一次必得，不改变歪/总场计数）
+ *   · 否则 is_up=true 即小保底直接赢（不歪），is_up=false 即小保底歪（常驻，记一次歪）
+ * 该遍历不依赖「大保底次数=歪的次数」的恒等式，能兼容记录开头即是大保底、
+ * 或末尾一次歪尚未补偿的残缺情况。
+ *
+ * @returns {{fiveNum:number,wai:number,bigPity:number,smallPity:number,notWai:number,noWaiNum:number,noWaiDen:number,rate:number}}
+ */
+function calcNoWaiRate(records) {
+  const ordered = [...records].sort((a, b) => cmpRecordId(a, b))
+  let wai = 0
+  let bigPity = 0
+  let notWai = 0
+  let guaranteed = false
+  for (const rec of ordered) {
+    if (guaranteed) {
+      bigPity++
+      guaranteed = false
+      continue
+    }
+    if (rec.is_up === true) notWai++
+    else {
+      wai++
+      guaranteed = true
+    }
+  }
+  const total = records.length
+  // 不歪率 = (总五星 − 2×歪) / (总五星 − 歪) = 净不歪 / 小保底总场数。
+  // 必得（大保底 UP）不单独扣除：例 3 五星含 1 歪 1 必得 → (3−2)/(3−1) = 50%。
+  const noWaiNum = total - 2 * wai
+  const noWaiDen = total - wai
+  const smallPity = notWai + wai
+  return {
+    fiveNum: total, wai, bigPity, smallPity, notWai,
+    noWaiNum, noWaiDen,
+    rate: noWaiDen > 0 ? (noWaiNum / noWaiDen) * 100 : 0,
   }
 }
 
@@ -350,13 +473,55 @@ const DEFAULT_POOL_BY_GAME = {
   zzz: { key: 'GachaType_Permanent', name: '常驻频段' },
 }
 
+// 用卡池日程表独立重算 is_up（缓存，避免每次渲染重读 yaml）
+let _isUPSr = null
+let _isUPZzz = null
+function getIsUP(g) {
+  if (g === 'zzz') return _isUPZzz || (_isUPZzz = buildIsUP('zzz'))
+  return _isUPSr || (_isUPSr = buildIsUP('sr'))
+}
+
 export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', miaoModels = miaoModelsCache) {
   const conf = GAME_VIEW_CONF[game] || GAME_VIEW_CONF.sr
   const defPool = DEFAULT_POOL_BY_GAME[game] || DEFAULT_POOL_BY_GAME.sr
   // 星铁视图兜底：即使调用方漏了清洗，也不把混入的绝区零频段池画进星铁卡
   const viewPools = game === 'sr' ? cleanSrPools(data?.pools) : data?.pools
+  // 用卡池日程表独立重算 is_up（缓存，避免每次渲染重读 yaml）。
+  // 修正外部 mergeIsUp 在「占位开始时间（x.x版本更新后）」「伴随者写法（托帕&账账）」
+  // 下漏判 UP 的 bug —— 表现为流萤之后的角色在渲染图里没有 UP 角标、且不歪率虚高。
+  const _isup = getIsUP(game)
   const pools = Object.entries(viewPools || {}).map(([key, pool]) => {
     const recent = Array.isArray(pool.records) ? pool.records : (Array.isArray(pool.recent) ? pool.recent : [])
+    // 重算 is_up：只覆盖会歪池（角色/光锥/联动/复刻）；标准/新手池 is_up 保持原值。
+    // recent 本身就是五星记录，不按 rank_type 过滤（部分数据源不带该字段，
+    // 一旦过滤会把整次重算跳空，表现为修复"不生效"）
+    if (_isup && WAI_POOL_KEYS.has(key)) {
+      const poolRole = (key === 'GachaType_EquipmentUp' || key === 'GachaType_CollabEquipmentUp' ||
+        key === 'GachaType_WeaponUp' || key === 'GachaType_RerunWeapon') ? 'weapon' : 'role'
+      for (const v of recent) {
+        const name = String(v?.name || '')
+        const tv = v.time ? String(v.time).replace(/-/g, '/') : (v.id ? timeFromId(v.id) : '')
+        const t = tv ? new Date(tv).getTime() : 0
+        const u = _isup(name, t, poolRole)
+        // 可歪判定按游戏取各自名单：星铁用静态名单+转常驻时间判定，绝区零用常驻名单+3.1 转入时间
+        const isWai = game === 'zzz'
+          ? isZzzWaiPoolRecord(v)
+          : (poolRole === 'weapon'
+            ? SR_WAI_POOL_LIGHTCONES.has(name)
+            : isSrWaiPoolRecord(v))
+        // 日程表缺期（u===null，复刻未收录、联动1.0 的「长期」兜底期）不再跳过沿用
+        // 旧存储值——残缺数据会把转常驻角色（如刃，历史上当过期 UP 被 ck/继承
+        // 错标 is_up=true）一直错标下去。规则：
+        //   · 名单外五星强制 UP（限定五星不可能 off-banner 掉落，缺期也成立）
+        //   · 名单内（星铁：希儿/刃等按抽卡时间区分转入前后；绝区零：格莉丝/莱卡恩等
+        //     开服常驻）仅当日程表明确判 UP（复刻期收录）才判 UP，否则一律按「歪」兜底
+        v.is_up = u === true || !isWai
+      }
+    } else if (!WAI_POOL_KEYS.has(key)) {
+      // 常驻 / 新手池不存在 UP 概念，任何来源带来的 is_up 一律视作无效，
+      // 避免常驻池误标 UP（如标准光锥被标成 UP）
+      for (const v of recent) v.is_up = false
+    }
     const fiveNum = Number(pool?.fiveNum) || recent.length
     // 联动跃迁（'21'/'22'）与普通跃迁一样存在小保底歪，is_up 一律按数据真实值；
     // authkey/小助手不返回 is_up，拉取时先置 false，由 ck 校准（mergeIsUp）与工坊同步补齐
@@ -366,34 +531,50 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
     const totalPulls = Number(pool?.totalPulls) || (sum(recent, 'gacha_count') + pity) || 0
     const pullValues = recent.map(v => Number(v.gacha_count || 0)).filter(v => v > 0)
     const fiveAvg = fiveNum ? (sum(recent, 'gacha_count') / fiveNum).toFixed(1) : '--'
-    // UP平均 = 本池总抽数 ÷ UP 数量，与星穹工坊/小程序口径一致。
+    // UP平均 = 大小保底总数 ÷ UP 总数（与用户口径/工坊一致）。
+    //   分子「大小保底总数」= 已出五星累计消耗抽数（含歪掉的），即总抽数扣除当前
+    //   未出五星的垫抽 pity——例：77(歪) + 79(大保底UP) + 75(UP) = 231，
+    //   2 个 UP → 231 ÷ 2 = 115.5；当前垫的 39 抽还没出五星，不计入。
     // 工坊风格统计视图（buildSrStatView）的「每UP角色花费」也复用这里的
     // line 数据，因此两个视图口径统一。
     //
     // 不能只对 is_up 的记录取 gacha_count 求平均：gacha_count 是「距上一个五星」
     // 的抽数，歪一次就重置。例：77 抽歪了，第 88 抽出 UP —— 那个 UP 记录的
     // gacha_count 只有 11，不含前面垫掉的 77，按记录均值算会低估一半以上。
-    // 用总抽数除以 UP 数则正确表达「拿到一个 UP 平均要花多少抽」。
-    // 分母用「限定五星」个数而非 UP 数：可歪池角色（已进常驻的姬子、杰帕德、
-    // 布洛妮娅等）在限定池抽到也算歪，小助手把它们算作常驻，不计入「每UP花费」
-    // 的分母。实测某账号角色池 29 个五星中 6 个属可歪池，
-    // 1790 ÷ 23 = 77.8，与小程序的 77.7 一致；若不剔除则 1790 ÷ 29 = 61.7。
-    // 光锥：常驻角色的专武可歪，剔除即可歪的专武
-    // 角色：静态常驻名单 + 后来转常驻的角色（按抽卡时间判定）
-    const isLightconePool = key === 'GachaType_EquipmentUp' || key === 'GachaType_CollabEquipmentUp'
-    const limitedRecords = isLightconePool
-      ? recent.filter(r => !SR_WAI_POOL_LIGHTCONES.has(String(r?.name || '')))
-      : recent.filter(r => !isSrWaiPoolRecord(r))
+    // 分母用 UP（is_up）个数：可歪池角色（星铁：已进常驻的刃、云璃、姬子、布洛妮娅等；
+    // 绝区零：格莉丝、莱卡恩、月城柳、凯撒、朱鸢等）在限定池抽到算歪，不计入分母；歪掉的那次抽数计入分子。
+    // 光锥/音擎：常驻角色的专武可歪，剔除即可歪的专武
+    // 星铁角色：静态常驻名单 + 后来转常驻的角色（按抽卡时间判定）
+    // 绝区零：常驻名单 + 3.1 转入的月城柳/凯撒/朱鸢（按抽卡月份判定），见 isZzzWaiPoolRecord
+    const isLightconePool = key === 'GachaType_EquipmentUp' || key === 'GachaType_CollabEquipmentUp' ||
+      key === 'GachaType_WeaponUp' || key === 'GachaType_RerunWeapon'
+    const limitedRecords = game === 'zzz'
+      ? recent.filter(r => !isZzzWaiPoolRecord(r))
+      : (isLightconePool
+        ? recent.filter(r => !SR_WAI_POOL_LIGHTCONES.has(String(r?.name || '')))
+        : recent.filter(r => !isSrWaiPoolRecord(r)))
     const limitedNum = limitedRecords.length
-    const upAvg = limitedNum ? (totalPulls / limitedNum).toFixed(1) : '--'
-    let upYs = limitedNum ? String(Math.round(Number(upAvg) * 160)) : '--'
-    if (limitedNum && Number(upYs) >= 10000) upYs = `${(Number(upYs) / 10000).toFixed(2)}w`
+    // 「每UP花费」只对存在 50/50 小保底的池有意义；常驻/新手池没有 UP，
+    // 显示数值会误导（实测常驻池 243 抽 ÷ 3 = 81 被当成「UP平均」展示）
+    const upPool = WAI_POOL_KEYS.has(key)
+    // 五星累计消耗 = 总抽数 − 当前垫抽；工坊来源的 totalPulls 含三星逐抽，口径一致
+    const waiSpent = Math.max(0, totalPulls - pity)
+    const upAvg = upPool && upNum ? (waiSpent / upNum).toFixed(1) : '--'
+    let upYs = upPool && upNum ? String(Math.round(Number(upAvg) * 160)) : '--'
+    if (upPool && upNum && Number(upYs) >= 10000) upYs = `${(Number(upYs) / 10000).toFixed(2)}w`
     const maxPity = pullValues.length ? Math.max(...pullValues) : 0
     const minPity = pullValues.length ? Math.min(...pullValues) : 0
-    // 小保底不歪率 = 限定五星数 ÷ 本池五星总数。
-    // 可歪池角色（常驻角色及其专武）在限定池抽到必然是歪，剔除后剩下的
-    // 即为不歪的部分。实测某账号角色池 21/29 = 72.4%、光锥池 9/11 = 81.8%。
-    const upRate = fiveNum ? pct(limitedNum, fiveNum) : '--'
+    // 小保底不歪率（净不歪率）：= (总五星−2×歪)/(总五星−歪)，见 calcNoWaiRate。
+    // 分母=小保底总场数，分子=净不歪（总场数扣掉输的场）；必得（大保底 UP）不单独扣。
+    // 新手池 / 常驻池无 50/50，不歪率无意义，置 '--'。
+    let upRate = '--'
+    let noWai = null
+    if (WAI_POOL_KEYS.has(key) && recent.length) {
+      noWai = calcNoWaiRate(recent)
+      // 不歪率 = (总五星−2×歪)/(总五星−歪)；分子为净不歪，可能为负，
+      // 显示钳到 0 避免负百分比；分母为小保底总场数，为 0（全歪）时置 '--'
+      upRate = noWai.noWaiDen > 0 ? pct(Math.max(0, noWai.noWaiNum), noWai.noWaiDen) : '--'
+    }
     const MIAO_RES = '../../../../../plugins/miao-plugin/resources'
     const miaoGame = game === 'zzz' ? 'zzz' : 'sr'
     // 绝区零：官方物品配置接口忽略 game 参数只返回星铁数据，miao-plugin 也无绝区零资源，
@@ -468,7 +649,7 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
       [
         { num: fiveNum ? pity : '--', unit: '', lable: '未出五星' },
         { num: fiveAvg, unit: '', lable: '五星平均' },
-        { num: upRate, unit: '%', lable: '小保底不歪率' },
+        { num: upRate, unit: upRate === '--' ? '' : '%', lable: '小保底不歪率' },
         { num: maxPity || '--', unit: '', lable: '最非' },
       ],
       [
@@ -491,6 +672,7 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
       maxPity,
       minPity,
       upRate: `${upRate}%`,
+      noWai,
       fiveLog,
       yearGroups,
       line,
@@ -1165,13 +1347,16 @@ export async function fetchAllByAuthkey(query) {
   return { pools, region }
 }
 
-/* ===== 星铁小助手（lelaer）云端全量导入 =====
-   小助手把导入过的记录存进自家 gachabackup 表，可通过导出的 JSON 拿到
-   四个池的逐抽全量（含四星），比官方 authkey 的半年窗口长得多。
+/* ===== 星铁小助手（lelaer）全量文件导入 =====
+   小助手把导入过的记录存进自家 gachabackup 表，可经小程序「同步云端 → 导出 JSON」拿到
+   四个池的逐抽全量（含四星），比官方 authkey 的半年窗口长得多；lelaer 无可用在线接口，
+   故数据来自本机已导出的 data/sr_gacha/sr_{UID}_full.json，由 importHelperFull 读取。
    与星穹工坊的分工（实测 uid 104359511）：
      · 小助手：2925 条逐抽全量，但**没有 is_up 字段**
-     · 星穹工坊：仅五星与统计，但**带 is_up**
-   两者 id 同源（工坊的 25 条五星有 24 条能按 id 在小助手里找到），可安全按 id 并集。 */
+     · 星穹工坊（api.lingyuan.design）：仅五星与统计，但**带 is_up**
+   工坊返回的 id 体系与本机小助手/ck 记录不同，按 id 并集会在同一池叠加出重复五星
+   （抽卡重叠），因此本模块对「小助手有的池」采取整池覆盖（见 mergeSrHelperFull），
+   仅继承旧记录的 is_up 标记，不按 id 并集。 */
 
 const SR_HELPER_POOL_KEYS = {
   roleList: null, // 角色池，池内还混有联动角色（gacha_type 21），按条目字段拆
@@ -1198,6 +1383,39 @@ export function readSrHelperFullFile(uid) {
   } catch (err) {
     logger.warn(`[xhh][sr_gacha] 小助手全量文件解析失败：${err?.message || err}`)
     return null
+  }
+}
+
+/* ===== 星铁小助手（lelaer）数据库直连 =====
+   lelaer 的 HTTP 接口（getWishHistory.php / getWishDetail.php / getWishAuthkey.php /
+   getGachaRank.php）实测拿不到单 UID 的逐抽详情（getWishHistory 忽略 uid 返回公共
+   样例、getWishDetail 500、getWishAuthkey 参数错误、getGachaRank 只是排行榜），
+   数据只存在其 MySQL 的 gachabackup 表（gachaData longtext 存四池全量逐抽）。
+   因此「更新小助手抽卡记录」只能直连该库读取（凭据来自小助手 conn_aliyun.php 明文）。
+   需要：插件装 mysql2 依赖、且服务器 IP 在该 RDS 白名单内。 */
+const LELAER_DB = {
+  host: 'rm-wz9q977u3l08hbowtno.mysql.rds.aliyuncs.com',
+  user: 'zzpro',
+  password: 'aaaaaa89',
+  database: 'starrail',
+}
+
+async function fetchLelaerGachaData(uid) {
+  let mysql
+  try { mysql = await import('mysql2/promise') } catch {
+    throw new Error('插件缺少 mysql2 依赖，请在 plugins/xhh 目录执行 `pnpm i mysql2` 后重试')
+  }
+  const conn = await mysql.createConnection({ ...LELAER_DB, connectTimeout: 10000 })
+  try {
+    const [rows] = await conn.query('SELECT gachaData FROM gachabackup WHERE uid = ? ORDER BY id DESC LIMIT 1', [String(uid)])
+    if (!rows?.length || !rows[0].gachaData) {
+      throw new Error(`小助手云端没有 UID:${uid} 的抽卡记录（可能未在小助手同步过云端）`)
+    }
+    let obj
+    try { obj = JSON.parse(rows[0].gachaData) } catch { throw new Error('小助手云端数据解析失败') }
+    return obj
+  } finally {
+    await conn.end()
   }
 }
 
@@ -1255,11 +1473,6 @@ function buildPoolFromPulls(gachaType, rows) {
   }
 }
 
-/** 「【ID:123】」这类占位名，来自云端没解析出名称的条目 */
-function isPlaceholderName(name) {
-  return /^【ID:.*】$/.test(String(name || ''))
-}
-
 /**
  * 把小助手全量并入现有 pools。
  * 逐抽明细以小助手为准（它是超集），旧记录里已有的 is_up 标记继承下来——
@@ -1267,10 +1480,17 @@ function isPlaceholderName(name) {
  */
 export function mergeSrHelperFull(pools, full) {
   const grouped = new Map()
+  // 小助手导出的逐抽可能含重复行（多次云端同步时尾部记录偶发重复），按 id 全局去重，
+  // 否则同一五星会在同一卡池出现两份、总抽数虚高（即「角色跃迁重复」）。
+  // 与 fetchAllByAuthkey 的 seenIds 逻辑一致：跨四个池统一判重，同一 id 只保留首次出现。
+  const seenIds = new Set()
   for (const list of Object.keys(SR_HELPER_POOL_KEYS)) {
     for (const row of Array.isArray(full?.[list]) ? full[list] : []) {
       const gachaType = String(row?.gacha_type || '')
       if (!SR_GACHA_TYPE_MAP[gachaType]) continue
+      const rid = String(row?.id || '')
+      if (rid && seenIds.has(rid)) continue
+      if (rid) seenIds.add(rid)
       if (!grouped.has(gachaType)) grouped.set(gachaType, [])
       grouped.get(gachaType).push(row)
     }
@@ -1285,31 +1505,44 @@ export function mergeSrHelperFull(pools, full) {
       result.addedFour += incoming.fourNum
       continue
     }
-    // 五星按 id 并集；旧记录有真实名称时不被新条目的「【ID:x】」占位名覆盖
-    const byId = new Map((old.records || []).map(r => [ String(r.id), { ...r } ]))
-    for (const row of incoming.records) {
-      const exist = byId.get(row.id)
-      if (!exist) {
-        byId.set(row.id, row)
-        result.addedFive++
-      } else {
-        if (isPlaceholderName(exist.name) && !isPlaceholderName(row.name)) exist.name = row.name
-        if (exist.gacha_count == null && row.gacha_count) exist.gacha_count = row.gacha_count
+    // 谁抽数多谁更准：小助手可能只是最近才导入链接、数据偏少，整池覆盖会
+    // 把更全的旧数据（授权链接 / authkey）顶掉（实测刃 77 抽被算成 33）。
+    // 故不再无条件以整池覆盖小助手，而是与 authkey/ck 合并一致——
+    // 取记录更多（抽数更多）的一方整池保留；id 体系不同无法安全并集。
+    const oldRecords = getPoolRecords(old)
+    const newRecords = getPoolRecords(incoming)
+    if (pickFullerRecords(oldRecords, newRecords) === newRecords) {
+      // 小助手数据更多 → 以小助手为准（五星/四星明细取自它），
+      // 仅按「名称+抽数」「名称+时间」继承旧记录的 is_up 标记（小助手导出无该字段）
+      const oldUp = new Map()
+      for (const r of oldRecords) {
+        if (r?.is_up === true) {
+          oldUp.set(`${r.name}|${r.gacha_count}`, true)
+          oldUp.set(`${r.name}|${r.time}`, true)
+        }
       }
+      const records = incoming.records.map(rec => {
+        const up = oldUp.get(`${rec.name}|${rec.gacha_count}`) || oldUp.get(`${rec.name}|${rec.time}`)
+        return up ? { ...rec, is_up: true } : rec
+      })
+      result.addedFive += records.length
+      result.addedFour += incoming.fourNum
+      result.pools.push(recountPool({
+        ...old,
+        records,
+        fourLog: incoming.fourLog,
+        totalPulls: incoming.totalPulls,
+        fourNum: incoming.fourNum,
+        fourPity: incoming.fourPity,
+        // pity 必须一并覆盖：...old 会带入旧池的垫抽数，recountPool 按
+        // countTotal(records) + pity 重算总抽数，旧值会把 totalPulls 抬高
+        // （实测角色活动跃迁 226 抽被显示成 270 抽、五星平均 75.3 变 90.0）
+        pity: incoming.pity,
+      }, records))
+    } else {
+      // 旧数据更多 → 保留更全的旧池，不被稀疏的小助手覆盖
+      result.pools.push(old)
     }
-    const records = [ ...byId.values() ].sort((a, b) => String(b.id).localeCompare(String(a.id)))
-    // 四星明细：小助手独有，直接并入
-    const fourIds = new Set((old.fourLog || []).map(r => String(r.id)))
-    const addFour = incoming.fourLog.filter(r => !fourIds.has(r.id))
-    result.addedFour += addFour.length
-    result.pools.push(recountPool({
-      ...old,
-      records,
-      fourLog: [ ...(old.fourLog || []), ...addFour ].sort((a, b) => String(b.time).localeCompare(String(a.time))),
-      totalPulls: incoming.totalPulls || old.totalPulls,
-      fourNum: (old.fourLog || []).length + addFour.length,
-      fourPity: incoming.fourPity,
-    }, records))
   }
   return result
 }
@@ -1814,7 +2047,78 @@ function mergeHelperPools(oldPools, newPools) {
   for (const key of Object.keys(newPools || {})) {
     const old = oldPools?.[key]
     if (!old) continue
-    newPools[key] = recountPool(newPools[key], unionRecords(getPoolRecords(old), getPoolRecords(newPools[key])))
+    const oldRecs = getPoolRecords(old) || []
+    const newRecs = getPoolRecords(newPools[key]) || []
+    // 原则：来源与本地「谁五星记录多（抽数更多）谁更准」。小助手 / 工坊两个云端任一
+    // 更全即以它为准，避免稀疏来源把更全数据顶掉，也避免旧写法以本地为主追加工坊独有
+    // 五星、在工坊含更多不同名五星时把常驻数量算多（与 mergeSrHelperFull 一致）。
+    // 工坊仅返回五星汇总 + is_up（无四星逐抽），当选中工坊为更全方时，四星 / 垫抽
+    // 仍从旧数据继承，避免本地四星被丢弃。
+    const chosen = pickFullerRecords(oldRecs, newRecs)
+    let merged
+    if (chosen === newRecs) {
+      // 工坊更全：以工坊五星为准（is_up 由工坊提供），仅按 id / 名称+时间把本地
+      // 同名记录的图标等补充字段并入（不覆盖工坊已有字段）
+      const oldById = new Map()
+      for (const r of oldRecs) if (r?.id) oldById.set(String(r.id), r)
+      const oldByNameTime = new Map()
+      for (const r of oldRecs) {
+        const t = String(r?.time || '').slice(0, 19)
+        if (t) oldByNameTime.set(`${r.name}|${t}`, r)
+      }
+      merged = newRecs.map(w => {
+        const id = String(w?.id || '')
+        let hit = id ? oldById.get(id) : null
+        if (!hit) {
+          const t = String(w?.time || '').slice(0, 19)
+          if (t) hit = oldByNameTime.get(`${w.name}|${t}`)
+        }
+        if (!hit) return { ...w }
+        const rec = { ...w }
+        for (const [k, v] of Object.entries(hit)) {
+          if (v !== '' && v !== null && v !== undefined && rec[k] === undefined) rec[k] = v
+        }
+        return rec
+      })
+    } else {
+      // 本地更全（或数量持平）：以本地为主、按 id / 名称+时间补全工坊字段，
+      // 工坊独有五星（本地缺的期次）才追加；本地记录绝不因合并而翻倍。
+      const newById = new Map()
+      for (const r of newRecs) if (r?.id) newById.set(String(r.id), r)
+      const newByNameTime = new Map()
+      for (const r of newRecs) {
+        const t = String(r?.time || '').slice(0, 19)
+        if (t) newByNameTime.set(`${r.name}|${t}`, r)
+      }
+      const usedNew = new Set()
+      merged = []
+      for (const r of oldRecs) {
+        const id = String(r?.id || '')
+        let hit = id ? newById.get(id) : null
+        if (!hit) {
+          const t = String(r?.time || '').slice(0, 19)
+          if (t) hit = newByNameTime.get(`${r.name}|${t}`) || null
+        }
+        if (hit) {
+          usedNew.add(hit)
+          const rec = { ...r }
+          for (const [k, v] of Object.entries(hit)) {
+            if (v !== '' && v !== null && v !== undefined) rec[k] = v
+          }
+          merged.push(rec)
+        } else {
+          merged.push(r)
+        }
+      }
+      // 工坊独有五星（本地缺的期次）：仅当本地无同名记录时才追加，
+      // 避免时间格式不一致导致同名记录被误叠加
+      for (const w of newRecs) {
+        if (usedNew.has(w)) continue
+        if (oldRecs.some(r => r?.name === w?.name)) continue
+        merged.push({ ...w })
+      }
+    }
+    newPools[key] = recountPool(newPools[key], merged)
     if (!newPools[key].fourLog?.length) newPools[key].fourLog = old.fourLog || []
     if (!newPools[key].fourNum) newPools[key].fourNum = old.fourNum || 0
     if (!newPools[key].fourPity) newPools[key].fourPity = old.fourPity || 0
@@ -1856,11 +2160,17 @@ export class sr_gacha extends plugin {
         { reg: '^[\\*%％][ \\t]*(?:星铁|崩铁)?(角色|武器)(记录|统计)$', fnc: 'roleOrWeapon' },
         { reg: '^#*(xhh|小花火)(星铁|崩铁)?绑定小助手(\\s+\\S+)?$', fnc: 'bindHelper' },
         { reg: // 前缀必须带：本插件所有指令均需 #xhh/ #小花火，否则会抢走
-        // genshin 侧「#更新小助手抽卡记录」（原神·小助手）与「*更新小助手抽卡记录」（星铁·星穹工坊）
-        '^#*(xhh|小花火)(星铁|崩铁)?(更新|刷新|同步)?小助手(抽卡|跃迁)?(记录|数据)$', fnc: 'updateHelper' },
-        // 语义更正后的别名：updateHelper 接的其实是星穹工坊（api.lingyuan.design），
-        // 旧名「更新小助手抽卡记录」保留兼容，新名避免与真正的小助手混淆
+        // genshin 侧「#更新小助手抽卡记录」（原神·小助手）与「*更新小助手抽卡记录」（星铁·工坊别名）。
+        // 小助手（lelaer）与星穹工坊（lingyuan）是两个不同云端，不可混用：
+        //   · #xhh(星铁)(更新|刷新|同步)小助手(抽卡)?(记录|数据) —— fnc: importHelperLive，
+        //     直连小助手（lelaer）MySQL gachabackup 表拉全量（lelaer HTTP 接口拿不到单 UID，只能直连 DB）；
+        //   · #xhh(星铁)导入/合并小助手记录 <UID> —— fnc: importHelperFull，
+        //     读取小助手（lelaer）云端导出的全量文件 data/sr_gacha/sr_<UID>_full.json（离线兜底）；
+        //   · #xhh(星铁)更新星穹工坊记录 / 更新工坊(抽卡)?记录 —— 同 updateHelper，
+        //     走工坊（api.lingyuan.design）云端，仅五星汇总 + is_up。
+        '^#*(xhh|小花火)(星铁|崩铁)?(更新|刷新|同步)小助手(抽卡|跃迁)?(记录|数据)$', fnc: 'importHelperLive' },
         { reg: '^#*(xhh|小花火)(星铁|崩铁)?(更新|刷新|同步)?星穹工坊(记录|数据)$', fnc: 'updateHelper' },
+        { reg: '^#*(xhh|小花火)(星铁|崩铁)?(更新|刷新|同步)?工坊(抽卡|跃迁)?(记录|数据)$', fnc: 'updateHelper' },
         { reg: '^#*(xhh|小花火)(星铁|崩铁)?(导入|合并)小助手(记录|数据)?(\\s+\\S+)?$', fnc: 'importHelperFull' },
         { reg: '^#*(xhh|小花火)(星铁|崩铁)?常驻(记录|统计)?$', fnc: 'common' },
       ],
@@ -2229,9 +2539,9 @@ export class sr_gacha extends plugin {
         '请先在小助手同步云端记录并导出 JSON，再放到该路径。',
       ].join('\n'))
     }
-    const file = getDataFile(uid, auth?.qq || e.user_id)
-    const old = readData(file)
-    if (!old?.pools) return e.reply('尚无本插件的星铁抽卡数据，请先发送【#xhh更新抽卡记录】或【#xhh更新小助手抽卡记录】')
+    const file = getDataFile(auth?.qq || e.user_id, uid)
+    let old = readData(file)
+    if (!old?.pools) old = { uid, pools: {} }
     const result = mergeSrHelperFull(old.pools, full)
     if (!result.pools.length) return e.reply('小助手文件里没有识别到可用的卡池数据')
     for (const pool of result.pools) old.pools[pool.key] = pool
@@ -2253,10 +2563,50 @@ export class sr_gacha extends plugin {
     return true
   }
 
+  /**
+   * 直连小助手（lelaer）云端数据库拉全量（lelaer HTTP 接口拿不到单 UID，只能直连 DB）。
+   * 返回结构同 readSrHelperFullFile：{ roleList, weaponList, normalList, newbieList }。
+   */
+  async importHelperLive(e) {
+    const arg = String(e.msg || '').match(/小助手(?:抽卡|记录|数据)?\s+(\d{5,})/)?.[1]
+    const auth = await getUserAuth(e)
+    if (auth.error && !arg) return e.reply(auth.error)
+    const uid = arg || auth?.uid
+    if (!uid) return e.reply('请先绑定星铁账号，或使用【#xhh星铁导入小助手记录 <UID>】指定 UID')
+    await e.reply(`正在直连小助手云端拉取 UID:${uid} 的全量记录，请稍候……`)
+    let full
+    try { full = await fetchLelaerGachaData(uid) } catch (err) { return e.reply(`小助手云端拉取失败：${err?.message || err}`) }
+    // getDataFile 全项目约定第一参为 qq、第二参为 uid（路径 sr_gacha/<uid>/<qq>/summary.json），
+    // 与 summary 渲染 / authkey / 工坊同步读写同一份；此前传反成 (uid, qq)，
+    // 小助手合并结果被写进孤立文件 sr_gacha/<qq>/<uid>/，摘要卡永远看不到（常驻停在 243 抽）。
+    const file = getDataFile(auth?.qq || e.user_id, uid)
+    let old = readData(file)
+    if (!old?.pools) old = { uid, pools: {} }
+    const result = mergeSrHelperFull(old.pools, full)
+    if (!result.pools.length) return e.reply('小助手云端没有识别到可用的卡池数据')
+    for (const pool of result.pools) old.pools[pool.key] = pool
+    saveData(file, { ...old, update_time: formatNow(), source: `${old.source || ''}+lelaer-db`.replace(/^\+/, '') })
+    const detail = result.pools
+      .map(p => `【${p.name}】${p.totalPulls}抽/五星${p.fiveNum}/四星${p.fourNum ?? 0}`)
+      .join('\n')
+    const total = result.pools.reduce((s, p) => s + Number(p.totalPulls || 0), 0)
+    const five = result.pools.reduce((s, p) => s + Number(p.fiveNum || 0), 0)
+    await e.reply([
+      `UID:${uid} 小助手云端全量同步完成`,
+      detail,
+      '',
+      `合计 ${total} 抽 / ${five} 个五星`,
+      `本次新增：五星 ${result.addedFive} 条、四星 ${result.addedFour} 条`,
+      '提示：小助手数据不含 is_up，UP 标记需再发【#xhh星铁更新星穹工坊记录】补齐。',
+    ].join('\n'))
+    await this.renderSummary(e, [], 'grid')
+    return true
+  }
+
   async updateHelper(e) {
     const qq = e.user_id
     const uid = e.user?.getUid?.('sr')
-    if (!uid) return e.reply('请先用 genshin 侧绑定星铁账号，再更新小助手抽卡记录')
+    if (!uid) return e.reply('请先用 genshin 侧绑定星铁账号，再更新抽卡记录')
     let bind = readHelperBind(qq)
     if (!bind?.union_id) {
       // 未绑定时先尝试从本机微信缓存自动识别，避免让用户手工去挖union_id
@@ -2271,9 +2621,9 @@ export class sr_gacha extends plugin {
     // 已绑定或从本机微信缓存识别到时优先使用真实值。
     const unionId = bind?.union_id || HELPER_FALLBACK_UNION_ID
     if (!bind?.union_id) {
-      logger.mark('[xhh][sr_gacha] 未绑定 union_id，改用占位值请求星穹工坊云端（云端不校验该参数）')
+      logger.mark('[xhh][sr_gacha] 未绑定 union_id，改用占位值请求云端（云端不校验该参数）')
     }
-    await e.reply(`正在从小助手云端获取抽卡记录，请稍候……${unionId === HELPER_FALLBACK_UNION_ID ? '（未绑定 union_id，使用占位值）' : ''}`)
+    await e.reply(`正在从云端同步抽卡记录，请稍候……${unionId === HELPER_FALLBACK_UNION_ID ? '（未绑定 union_id，使用占位值）' : ''}`)
     try {
       const analysis = await fetchHelperCloud(uid, unionId)
       const old = readData(getDataFile(qq, uid))
@@ -2303,8 +2653,9 @@ export class sr_gacha extends plugin {
       '更新数据',
       '#xhh星铁更新抽卡记录 —— 用 ck 刷新抽卡数据',
       '#xhh星铁抽卡链接 <链接> —— 官方链接拉最近几天的逐抽记录',
-      '#xhh星铁导入小助手记录 —— 导入小助手云端全量（含四星，建议先跑）',
-      '#xhh星铁更新星穹工坊记录 —— 补历史五星与 is_up（UP）标记',
+      '#xhh更新小助手抽卡记录 —— 小助手（lelaer）云端全量：直连其 gachabackup 库（含四星逐抽；需装 mysql2 且服务器 IP 在 RDS 白名单）',
+      '#xhh星铁导入小助手记录 <UID> —— 小助手全量离线导入：读本机 data/sr_gacha/sr_<UID>_full.json',
+      '#xhh更新工坊抽卡记录 / #xhh星铁更新星穹工坊记录 —— 星穹工坊（lingyuan）云端，补历史五星与 is_up（与小助手非同一后端）',
       '#xhh绑定小助手 <id> —— 一般用不到，union_id 可选、不绑定也能同步',
       '',
       '查询',
@@ -2316,8 +2667,7 @@ export class sr_gacha extends plugin {
       '',
       '提示：xhh 可写作 小花火，星铁可写作 崩铁。',
       '不带 xhh 前缀的跃迁记录链接由 genshin 插件处理，互不冲突。',
-      '小助手全量数据不含 is_up，建议导入后再发一次星穹工坊记录补 UP 标记。',
-      '#xhh更新小助手抽卡记录 是星穹工坊的旧名，仍可用。',
+      '小助手（lelaer）云端全量含四星逐抽见 #xhh星铁导入小助手记录（需先导出 data/sr_gacha/sr_<UID>_full.json）；工坊（lingyuan）在线同步见 #xhh更新小助手抽卡记录 / #xhh星铁更新星穹工坊记录。',
     ].join('\n'))
   }
 }

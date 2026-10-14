@@ -7,13 +7,12 @@
   "imports": {
     "#xhh": "./system/index.js"
   },
-  "scripts": {
-  },
+  "scripts": {},
   "dependencies": {
     "jsdom": "^26.1.0",
+    "mysql2": "^3.24.5",
     "qrcode": "^1.5.4",
     "sharp": "0.34.5"
   },
-  "devDependencies": {
-  }
+  "devDependencies": {}
 }

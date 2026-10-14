@@ -1103,7 +1103,10 @@ export class zzz_gacha extends plugin {
       const keep = (Array.isArray(pool.records) ? pool.records : []).filter(r => (r.item_type || '角色') === itemFilter)
       src = { ...src, pools: { ...src.pools, GachaType_Permanent: { ...pool, records: keep, recent: keep, fiveNum: keep.length } } }
     }
-    const view = buildSummaryView(filterPools(src, keys), auth.uid, e, layout, 'zzz', miaoModelsCache)
+    // 第 6 参 miaoModels 省略：buildSummaryView 有默认值（取 sr_gacha 模块内缓存），
+    // 且绝区零 makeIcon 分支只用记录自带 icon、不查 miao 模型；此前直接传
+    // miaoModelsCache 会因本文件未定义该变量抛 ReferenceError 导致渲染失败
+    const view = buildSummaryView(filterPools(src, keys), auth.uid, e, layout, 'zzz')
     const template = layout === 'progress' ? 'sr_gacha/progress' : 'sr_gacha/summary'
     const buf = await render(template, view, { e })
     if (Buffer.isBuffer(buf)) return e.reply(segment.image(buf))
