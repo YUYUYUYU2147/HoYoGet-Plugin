@@ -850,6 +850,8 @@ export class zzz_gacha extends plugin {
         { reg: '^#*(xhh|小花火)(绝区零|zzz)?(更新|刷新|同步)?工坊(抽卡|调频)?(记录|数据)$', fnc: 'updateWorkshop' },
         { reg: '^#*(xhh|小花火)(绝区零|zzz)?绑定工坊(\\s+\\S+)?$', fnc: 'bindWorkshop' },
         { reg: '^#*(xhh|小花火)(绝区零|zzz)?(导入|合并)四星(\\s+\\S+)?$', fnc: 'importFourStar' },
+        { reg: '^#*(xhh|小花火)(绝区零|zzz)?导出(抽卡)?(记录|json)$', fnc: 'exportLog' },
+        { reg: '^#*(xhh|小花火)(绝区零|zzz)?(导入)(抽卡)?(记录|json)$', fnc: 'importLog' },
         { reg: '^#*(xhh|小花火)(绝区零|zzz)?重建图标(索引)?$', fnc: 'rebuildIconIndex' },
       ],
     })
@@ -864,6 +866,8 @@ export class zzz_gacha extends plugin {
       '#xhh绝区零更新抽卡记录 —— 直连官方接口拉逐抽明细（含四星/常驻/邦布），无需链接',
       '#xhh绝区零更新工坊记录 —— 从工坊云端补更早的历史（五星与统计）',
       '#xhh绝区零导入四星 —— 从 ZZZ-Plugin 已存数据补四星明细（不发请求，可选）',
+      '#xhh绝区零导出记录 —— 导出 UIGF v2 JSON（可备份、可再导入）',
+      '#xhh绝区零导入记录 —— 发指令后把导出的 JSON 发回来，按 id 去重并入',
       '#xhh绝区零抽卡链接 <链接> —— 官方接口取不到时的手动备选（需复制调频记录页网址）',
       '#xhh绝区零绑定工坊 <id> —— 一般用不到，union_id 可选',
       '#xhh绝区零重建图标索引 —— 绝区零出新角色后重建图标',
@@ -1039,6 +1043,197 @@ export class zzz_gacha extends plugin {
       '',
       '已有记录需要重新同步一次才会带上图标（发【#xhh绝区零更新工坊记录】即可）。',
     ].filter(Boolean).join('\n'))
+  }
+
+  /**
+   * 导出抽卡记录（UIGF v2）。
+   *
+   * 格式沿用官方 UIGF：`{ info:{ uid, lang, uigf_version, ...}, list:[...] }`，
+   * 逐抽逐条写出五星与四星明细，可直接被 UIGF 系工具读取，也能被本插件的
+   * 「导入记录」原样导回。绝区零的 UIGF 里 list 元素用 `gacha_type` 表示卡池。
+   */
+  async exportLog(e) {
+    const auth = await getUserAuth(e)
+    if (auth.error) return e.reply(auth.error)
+    const data = readData(getDataFile(auth.uid, auth.qq))
+    if (!data?.pools) return e.reply('暂无绝区零抽卡记录，请先发送【#xhh绝区零更新抽卡记录】')
+    const list = []
+    for (const meta of ZZZ_POOLS) {
+      const pool = data.pools[meta.key]
+      if (!pool) continue
+      const fiveIds = new Set((pool.records || []).map(r => String(r?.id || '')))
+      const seen = new Set()
+      for (const row of [...(pool.records || []), ...(pool.fourLog || [])]) {
+        const id = String(row?.id || '')
+        if (!id || seen.has(id)) continue
+        seen.add(id)
+        const isFive = fiveIds.has(id)
+        list.push({
+          uid: String(auth.uid),
+          gacha_id: '2c1f5692fdfbb733a08733f9eb69d32aed1d37',
+          gacha_type: meta.type,
+          item_id: '',
+          count: isFive ? String(Number(row.gacha_count) || 1) : '1',
+          time: String(row.time || ''),
+          name: String(row.name || '未知'),
+          lang: 'zh-cn',
+          item_type: String(row.item_type || meta.hint),
+          rank_type: isFive ? '5' : '4',
+          // UP 标记非 UIGF 标准字段：官方侧无此概念，但丢掉会导致导入后全部变歪，
+          // 故原样带出并在导入时读回
+          is_up: isFive ? !!row.is_up : false,
+          id,
+        })
+      }
+    }
+    if (!list.length) return e.reply('本地没有可导出的逐抽记录')
+    list.sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0))
+    const payload = {
+      info: {
+        uid: String(auth.uid),
+        lang: 'zh-cn',
+        uigf_version: 'v2.3',
+        export_time: formatNow(),
+        export_app: 'xhh',
+      },
+      list,
+    }
+    const dir = `${PLUGIN_ROOT}/data/zzz_gacha/${auth.qq}/${auth.uid}`
+    const file = `${dir}/${auth.uid}.json`
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+    fs.writeFileSync(file, JSON.stringify(payload, null, '\t'))
+    await e.reply(`UID:${auth.uid} 导出成功：${auth.uid}.json，共 ${list.length} 条\n请接收文件`)
+    const send = e.group?.sendFile || e.friend?.sendFile
+    if (send) await send.call(e.group || e.friend, file)
+    else await e.reply('导出失败：当前适配器不支持发送文件')
+    fs.unlink(file, () => {})
+    return true
+  }
+
+  /**
+   * 导入抽卡记录（UIGF v2）。需先发指令，再发 JSON 文件或文件链接。
+   * 与既有来源一致：按 id 去重并入，只补不缺，不覆盖本地已有记录。
+   */
+  async importLog(e) {
+    if (!e.file && !/^\s*[{[]/.test(String(e.msg || '')) && !/https?:\/\//.test(String(e.msg || ''))) {
+      this.setContext('importLogFile')
+      return e.reply('请发送抽卡记录文件（UIGF v2 JSON，支持文件、文件链接，或直接把 JSON 文本贴出来）')
+    }
+    return this.importLogFile(e)
+  }
+
+  /**
+   * 读取用户发来的文件内容。
+   *
+   * 各适配器给的字段差别很大：QQ/NTQQ 常只给文件名不给本地路径（file.path 为空），
+   * 只认 path 必然回「未读取到文件内容」。这里按
+   * 本地路径 -> http 链接 -> base64 data URI -> 直接贴在消息里的 JSON 逐级兜底。
+   */
+  async readIncomingContent(e) {
+    const file = e.file
+    if (file) {
+      const p = file?.path || file?.file || file?.name
+      if (p && fs.existsSync(p) && fs.statSync(p).isFile()) return fs.readFileSync(p, 'utf8')
+      let url = String(file?.url || '')
+      // 群/好友文件只给文件名时，必须用 fid 换下载地址，否则永远读不到内容
+      // （同 genshin ExportLog.getImportSource 的做法）
+      if (!url.startsWith('http') && file?.fid) {
+        if (e.group?.getFileUrl) url = await e.group.getFileUrl(file.fid)
+        else if (e.friend?.getFileUrl) url = await e.friend.getFileUrl(file.fid)
+      }
+      if (url.startsWith('http')) {
+        const res = await fetch(url, { method: 'GET', timeout: 30000 })
+        return await res.text()
+      }
+      if (url.startsWith('data:')) return Buffer.from(url.slice(url.indexOf(',') + 1), 'base64').toString('utf8')
+    }
+    const text = String(e.msg || '').trim()
+    if (text.startsWith('{') || text.startsWith('[')) return text
+    const link = text.match(/https?:\/\/\S+/)?.[0]
+    if (link) {
+      const res = await fetch(link, { method: 'GET', timeout: 30000 })
+      return await res.text()
+    }
+    return ''
+  }
+
+  async importLogFile(e) {
+    this.finish('importLogFile')
+    let text = ''
+    try {
+      text = await this.readIncomingContent(e)
+    } catch (err) {
+      return e.reply(`读取失败：${err?.message || err}`)
+    }
+    if (!text) return e.reply('未读取到文件内容，请直接把 JSON 文本或文件链接发过来')
+    let json
+    try {
+      json = JSON.parse(text)
+    } catch {
+      return e.reply('不是合法的 JSON 文件')
+    }
+    const list = json?.list || json?.gachaLog?.list || json?.hkrpg?.[0]?.list
+    if (!Array.isArray(list) || !list.length) return e.reply('文件里没有可导入的抽卡记录（缺少 list）')
+    const auth = await getUserAuth(e)
+    if (auth.error) return e.reply(auth.error)
+    const file = getDataFile(auth.uid, auth.qq)
+    const old = readData(file)
+    if (!old?.pools) return e.reply('尚无本插件的绝区零抽卡数据，请先发送【#xhh绝区零更新抽卡记录】')
+    // 卡池归属按 UIGF 的 gacha_type；认不出的一律跳过，不硬塞进某个池
+    const grouped = {}
+    for (const row of list) {
+      const meta = ZZZ_POOLS.find(p => p.type === String(row?.gacha_type))
+      if (!meta) continue
+      if (!grouped[meta.key]) grouped[meta.key] = []
+      grouped[meta.key].push(row)
+    }
+    const detail = []
+    let added = 0
+    for (const meta of ZZZ_POOLS) {
+      const rows = grouped[meta.key]
+      if (!rows?.length) continue
+      const pool = old.pools[meta.key]
+      if (!pool) continue
+      // 四星条目一并并入 fourLog，否则导出的明细导回后会只剩五星
+      const four = rows.filter(r => String(r.rank_type) !== '5')
+      if (four.length) {
+        const mergedFour = unionRecords(pool.fourLog || [], four.map(r => ({
+          id: String(r.id || ''),
+          name: r.name || '未知',
+          item_type: r.item_type || meta.hint,
+          gacha_count: 0,
+          time: String(r.time || ''),
+          icon: '',
+        })))
+        pool.fourLog = mergedFour.sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0))
+        pool.fourNum = mergedFour.length
+      }
+      const five = rows.filter(r => String(r.rank_type) === '5')
+      if (!five.length) {
+        detail.push(`【${meta.name}】四星+${four.length}`)
+        continue
+      }
+      const merged = unionRecords(pool.records || [], five.map(r => ({
+        id: String(r.id || ''),
+        name: r.name || '未知',
+        item_type: r.item_type || meta.hint,
+        is_up: !!r.is_up,
+        gacha_count: 0,
+        time: String(r.time || ''),
+        icon: '',
+      })))
+      const grow = merged.length - (pool.records || []).length
+      if (grow > 0) added += grow
+      // 只重排 gacha_count，不动 totalPulls：新记录的抽数无从得知（UIGF 不含逐抽序号），
+      // 用 recountPool 会拿 countTotal 反推总抽数，把本地已有的工坊口径直接冲掉
+      pool.records = merged.sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0))
+      pool.fiveNum = pool.records.length
+      detail.push(`【${meta.name}】五星+${grow}${four.length ? `，四星+${four.length}` : ''}`)
+    }
+    if (!added) return e.reply('没有新记录可导入（按 id 判重后已全部存在）')
+    saveData(file, { ...old, pools: fillZzzIcons(old.pools), update_time: formatNow() })
+    await e.reply(`UID:${auth.uid}\n导入完成：新增 ${added} 条五星\n${detail.filter(Boolean).join('，')}`)
+    return true
   }
 
   /**
