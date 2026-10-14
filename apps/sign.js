@@ -18,6 +18,17 @@ let bbsSigning = false;
 // 社区签到的「该跑了」标记。在两个签到都还没开始执行时置上，
 // 避免游戏签到耗时把社区签到那一分钟拖过去（详见 this.task.fnc 处的说明）。
 let bbsPending = false;
+// 今天是否已成功发起过社区签到（按本地日期）。用于：
+// 1) 跨天重置，允许每天跑一次；2) 防止 cron 漂移后每分钟重复置标记刷日志。
+let bbsDoneDay = '';
+// 游戏自动签到今日是否已跑（按本地日期），与社区侧 bbsDoneDay 同机制，用于跨天去重与防重复。
+let signDoneDay = '';
+
+// 本地日期指纹（年-月-日），跨天即变化，用于社区签到的每日去重。
+function bbsDay() {
+    const d = new Date();
+    return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
 
 /**
  * 任务每分钟被调一次，这里只在该跑的那一刻置标记。
@@ -37,13 +48,25 @@ function markBbsDue() {
         }
         return;
     }
-    // 和 isSignTime 同一套判定：小时与分钟都要精确对上
-    if (!isSignTime(data, 'bbs_sign_hour', 'bbs_sign_minute', 0, 0)) return;
+    // 跨天：新的一天允许重新签到
+    if (bbsDoneDay === bbsDay()) return; // 今天已经跑过了，别再置标记
     if (bbsPending) return; // 已在等待中，别重复置位刷日志
+
+    // 容差判定：不再要求「当前分钟精确等于配置分钟」。
+    // 原来用 isSignTime 精确比对，一旦 cron 在该分钟之外（哪怕只晚几十秒）才执行到
+    // 这里，标记就置不上，社区签到整轮漏跑且告警。改为「当前分钟数 >= 配置分钟数」
+    // 即视为到点，配合 bbsDoneDay 防重复，cron 漂移也能补上。
+    const cfgH = clampInt(data.bbs_sign_hour, 0, 23, 0);
+    const cfgM = clampInt(data.bbs_sign_minute, 0, 59, 0);
+    const now = new Date();
+    const cur = now.getHours() * 60 + now.getMinutes();
+    const cfg = cfgH * 60 + cfgM;
+    if (cur < cfg) return; // 还没到点
+
     bbsPending = true;
     // 无条件记：这是社区签到整轮的起点，缺了这一行就无法区分
     // 「没到点」与「到了但被后续 return 拦下」，排查时完全看不出卡在哪一步。
-    logger.mark(`[xhh][bbs_sign] 已置待执行标记（配置 ${data.bbs_sign_hour}:${String(data.bbs_sign_minute).padStart(2, '0')}` +
+    logger.mark(`[xhh][bbs_sign] 已置待执行标记（配置 ${cfgH}:${String(cfgM).padStart(2, '0')}` +
         `，群 ${Object.keys(data.bbs_sign).length} 个）`);
 }
 
@@ -314,7 +337,8 @@ export class Sign extends plugin {
             //
             // 只有「此刻正是配置分钟、标记却仍是空的」才是真异常——
             // 说明 markBbsDue() 没能置上，值得告警。
-            if (isSignTime(data, 'bbs_sign_hour', 'bbs_sign_minute', 0, 0)) {
+            const dayNow = bbsDay();
+            if (bbsDoneDay !== dayNow && isSignTime(data, 'bbs_sign_hour', 'bbs_sign_minute', 0, 0)) {
                 logger.warn('[xhh][bbs_sign] 配置分钟已到但待执行标记为空，社区签到本轮不会执行。' +
                     `请检查 sign.yaml 的 bbs_sign_hour/bbs_sign_minute（当前 ` +
                     `${data.bbs_sign_hour}:${String(data.bbs_sign_minute).padStart(2, '0')}）` +
@@ -329,6 +353,7 @@ export class Sign extends plugin {
             return false;
         }
         bbsPending = false;
+        bbsDoneDay = bbsDay(); // 今日已发起，避免 cron 漂移后每分钟重复置标记
         logger.mark('[xhh][bbs_sign] 开始执行社区签到');
         bbsSigning = true;
         try {
@@ -366,7 +391,20 @@ export class Sign extends plugin {
     async scheduled_sign() {
         const data = yaml.get('./plugins/xhh/config/sign.yaml') || {};
         const isManual = !!this.e?.msg;
-        if (!isManual && !isSignTime(data, 'sign_hour', 'sign_minute', 0, 0)) return false;
+        // 手动触发（群里发指令）不受时间与今日去重限制，直接走下面的签到逻辑。
+        if (!isManual) {
+            // 跨天即变化：今天已成功发起过游戏自动签到则跳过，避免每分钟重复跑。
+            if (signDoneDay === bbsDay()) return false;
+            // 容差判定：不再要求「当前分钟精确等于配置分钟」。
+            // 原来用 isSignTime 精确比对，cron 一旦在该分钟之外执行就判定未到点而漏跑；
+            // 改为「当前分钟数 >= 配置分钟数」即视为到点，容忍调度漂移。
+            const cfgH = clampInt(data.sign_hour, 0, 23, 0);
+            const cfgM = clampInt(data.sign_minute, 0, 59, 0);
+            const now = new Date();
+            const cur = now.getHours() * 60 + now.getMinutes();
+            const cfg = cfgH * 60 + cfgM;
+            if (cur < cfg) return false; // 还没到点
+        }
         if (!data.zd_sign) return false;
         if (!data.sign || typeof data.sign != 'object' || !Object.keys(data.sign).length) {
             // 开关开着却没有群记录时静默 return，表现为「自动签到开了却什么都不做」。
@@ -375,6 +413,7 @@ export class Sign extends plugin {
                 + '请在目标群里发「#加入自动签到」登记一次');
             return false;
         }
+        signDoneDay = bbsDay(); // 今日已发起，避免 cron 漂移后每分钟重复签到
         signing = true;
         try {
 
