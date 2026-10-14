@@ -840,8 +840,8 @@ export function buildSrStatView(data, uid, e, keys = [], commonType = null) {
   // 称号：53.7 抽 → 「欧气满满大欧皇」（对齐工坊），其余沿用现有分级
   const title = avgGold === '--' ? '暂无记录' : avgGold <= 55 ? '欧气满满大欧皇' : avgGold <= 65 ? '天选打工人' : avgGold <= 78 ? '平平无奇小保底' : '水逆缠身大非酋'
 
-  // 四项指标（工坊口径）：小保底不歪（按统计类型）、五星数、每UP角色需、每UP光锥需
-  // 「每UP角色需 / 每UP光锥需」与另一类型的不歪率属全账号口径，
+  // 四项指标（工坊口径）：小保底不歪（按统计类型）、五星数、角色UP平均、武器UP平均
+  // 「角色UP平均 / 武器UP平均」与另一类型的不歪率属全账号口径，
   // 不受本次统计范围（keys）过滤影响，故从全量池视图取值
   const allBase = buildSummaryView(filterPools({ ...data, pools: cleanPools }, Object.keys(cleanPools)), uid, e, 'grid', 'sr')
   const allFind = key => allBase.pools.find(p => p.key === key)
@@ -853,8 +853,10 @@ export function buildSrStatView(data, uid, e, keys = [], commonType = null) {
   const metrics = [
     { num: rateNum, unit: '', lable: '小保底不歪' },
     { num: sNum, unit: '金', lable: '五星数' },
-    { num: allChar?.line?.[1]?.[1]?.num ?? '--', unit: '抽', lable: '每UP角色需' },
-    { num: allWeapon?.line?.[1]?.[1]?.num ?? '--', unit: '抽', lable: '每UP光锥需' },
+    // 文案取「角色UP平均 / 武器UP平均」：原「每UP角色需 / 每UP光锥需」在指标栏宽度下
+    // 会折成三行，把 85.2 这类数值与标签错开
+    { num: allChar?.line?.[1]?.[1]?.num ?? '--', unit: '抽', lable: '角色UP平均' },
+    { num: allWeapon?.line?.[1]?.[1]?.num ?? '--', unit: '抽', lable: '武器UP平均' },
   ]
 
   // 连击标签：角色/光锥的当前连UP与最长连歪（全账号口径，用 allChar/allWeapon）

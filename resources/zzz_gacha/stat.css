@@ -90,13 +90,17 @@ body {
   margin-top: 10px;
 }
 
+/* 数值与单位、标签同排一行：原先标签另起一行，四项并排时标签被压成多行 */
 .metric {
   flex: 1;
-  text-align: center;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  white-space: nowrap;
 }
 
 .m_num {
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 700;
   color: #ffd98a;
 }
@@ -110,7 +114,7 @@ body {
 .m_lable {
   font-size: 14px;
   color: #9aa0ac;
-  margin-top: 2px;
+  margin-left: 6px;
 }
 
 .hero_side {

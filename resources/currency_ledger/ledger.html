@@ -9,7 +9,14 @@
   <div class="accent-bar" style="background:{{accent}}"></div>
 
   <header class="head">
-    <div class="head-icon">{{gameName.slice(0, 1)}}</div>
+    <!-- 左上角优先显示角色头像（与统计页同一套 roleProfile 头像），取不到时退回文字徽章 -->
+    <div class="head-icon">
+      {{if avatarUrl}}
+      <img class="head-avatar" src="{{avatarUrl}}" alt="" draggable="false">
+      {{else}}
+      <span class="head-badge">{{gameName.slice(0, 1)}}</span>
+      {{/if}}
+    </div>
     <div class="head-text">
       <h1>{{title}}</h1>
       <div class="sub">{{label}} · UID {{uid}}</div>
