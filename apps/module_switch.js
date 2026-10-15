@@ -1,4 +1,5 @@
-import yaml from 'node:yaml'
+// 用 yaml 包（Node 内置 node:yaml 在本机 Node 24 下不可用：ERR_UNKNOWN_BUILTIN_MODULE）
+import YAML from 'yaml'
 import fs from 'node:fs'
 import { pluginPriority } from '#xhh'
 import { MODULES, isModuleEnabled, disabledModuleLabels } from '../system/modules.js'
@@ -23,7 +24,7 @@ export class ModuleSwitch extends plugin {
 
   readCfg() {
     try {
-      return yaml.parse(fs.readFileSync(CFG_PATH, 'utf8')) || {}
+      return YAML.parse(fs.readFileSync(CFG_PATH, 'utf8')) || {}
     } catch (err) {
       logger.warn(`[xhh][modules] 读取配置失败：${err?.message || err}`)
       return {}
@@ -38,7 +39,7 @@ export class ModuleSwitch extends plugin {
       const firstKey = raw.search(/^[A-Za-z_]/m)
       if (firstKey > 0) header = raw.slice(0, firstKey)
     } catch {}
-    fs.writeFileSync(CFG_PATH, header + yaml.stringify(cfg))
+    fs.writeFileSync(CFG_PATH, header + YAML.stringify(cfg))
   }
 
   list(e) {
