@@ -1354,7 +1354,7 @@ export async function fetchAllByAuthkey(query) {
    小助手把导入过的记录存进自家 gachabackup 表，可经小程序「同步云端 → 导出 JSON」拿到
    四个池的逐抽全量（含四星），比官方 authkey 的半年窗口长得多；lelaer 无可用在线接口，
    故数据来自本机已导出的 data/sr_gacha/sr_{UID}_full.json，由 importHelperFull 读取。
-   与星穹工坊的分工（实测 uid 104359511）：
+   与星穹工坊的分工（实测某账号）：
      · 小助手：2925 条逐抽全量，但**没有 is_up 字段**
      · 星穹工坊（api.lingyuan.design）：仅五星与统计，但**带 is_up**
    工坊返回的 id 体系与本机小助手/ck 记录不同，按 id 并集会在同一池叠加出重复五星
@@ -1681,7 +1681,7 @@ export function countTotal(records) {
 
 // 两份五星记录中挑"更完整"的一份
 // 云端与本地记录按 id 合并，而不是整组二选一。
-// 云端（api.lingyuan.design）并非总能覆盖全部期次——实测 104359511 的限定角色池
+// 云端（api.lingyuan.design）并非总能覆盖全部期次——实测某账号的限定角色池
 // 云端只有 15 个五星且整段缺 2025，而本地 ck/徽章侧有 2025 的记录；
 // 若按「取更全的一组」替换，本地独有记录会被云端整段顶掉。
 // 同id 时以新记录（云端）字段优先，用于补名称、图标与抽数。

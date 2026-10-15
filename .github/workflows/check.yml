@@ -1,0 +1,36 @@
+name: "check"
+
+# 语法与配置自检。xhh 没有构建步骤，核心代码全是 ESM，
+# 一次 node --check 就能把「少一个分号/括号不配对」这类低级错误挡在推送之外。
+#
+# 不装依赖：仓库没有测试套件，依赖（sharp / mysql2 等）也不参与本检查，
+# 装它们只会让 CI 又慢又容易因为原生模块或锁文件问题挂掉。
+on:
+  push:
+    branches: [v3]
+  pull_request:
+  workflow_dispatch:
+
+# 同一分支连续推送只保留最新一次运行，避免一次改动连收好几封通知
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 语法预检
+        run: node tools/ci/syntax-check.mjs
+
+      - name: 配置与卡池表自检
+        run: node tools/ci/config-check.mjs
+
+      - name: 隐私信息扫描
+        run: node tools/ci/privacy-scan.mjs
