@@ -1,0 +1,69 @@
+name: "star"
+
+# 每天记一次仓库的 star / fork / watcher 数。
+#
+# 为什么不用 shields 徽章：img.shields.io/github/stars/... 本身就是实时的，
+# 不需要工作流；这里记的是**历史序列**，方便看关注增长的趋势。
+#
+# 注意：本仓库是私有的，star 数对外不可见，这个工作流主要是把数据留在仓库里备查。
+on:
+  schedule:
+    - cron: '0 3 * * *' # 每天 UTC 03:00
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: star
+  cancel-in-progress: true
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 抓取并记录
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const dir = path.join(process.env.GITHUB_WORKSPACE, 'docs');
+            fs.mkdirSync(dir, { recursive: true });
+            const file = path.join(dir, 'repo-stats.json');
+
+            const { data: repo } = await github.rest.repos.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+
+            let history = [];
+            if (fs.existsSync(file)) {
+              try {
+                const prev = JSON.parse(fs.readFileSync(file, 'utf8'));
+                if (Array.isArray(prev.history)) history = prev.history;
+              } catch (e) {
+                core.warning(`旧记录解析失败，重建：${e.message}`);
+              }
+            }
+            const today = new Date().toISOString().slice(0, 10);
+            history = history.filter(h => h.date !== today); // 同一天重跑只覆盖不追加
+            history.push({
+              date: today,
+              stars: repo.stargazers_count,
+              forks: repo.forks_count,
+              watchers: repo.subscribers_count,
+              open_issues: repo.open_issues_count,
+            });
+            // 只留最近 180 天，避免仓库无限膨胀
+            history = history.slice(-180);
+
+            const content = {
+              updated_at: new Date().toISOString(),
+              current: history[history.length - 1],
+              history,
+            };
+            fs.writeFileSync(file, JSON.stringify(content, null, 2) + '\n');
+            core.info(`已记录：stars=${content.current.stars} forks=${content.current.forks}`);
