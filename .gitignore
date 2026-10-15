@@ -9,3 +9,7 @@ system/default/*.yaml.bak
 service/geetest/.venv/
 service/geetest/__pycache__/
 *.pyc
+
+# AI 协作约束与交接文档：仅本地留存，不入库
+AGENTS.md
+HANDOFF_*.md
