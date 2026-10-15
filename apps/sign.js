@@ -13,8 +13,6 @@ import {
 import lodash from 'lodash';
 import Runtime from '../../../lib/plugins/runtime.js';
 
-// 社区签到的「该跑了」标记。在两个签到都还没开始执行时置上，
-// 避免游戏签到耗时把社区签到那一分钟拖过去（详见 this.task.fnc 处的说明）。
 /**
  * 跨天去重的状态挂到 globalThis，而不是模块级 let。
  *
@@ -26,60 +24,19 @@ import Runtime from '../../../lib/plugins/runtime.js';
  * 挂到 globalThis 后新旧闭包共享同一份状态，热重载不再丢标记。
  */
 const signState = (globalThis.__xhh_sign_state ||= {
-    bbsPending: false,
     bbsDoneDay: '',
     signDoneDay: '',
     signing: false,
     bbsSigning: false,
 });
-// 今天是否已成功发起过社区签到（按本地日期）。用于：
-// 1) 跨天重置，允许每天跑一次；2) 防止 cron 漂移后每分钟重复置标记刷日志。
-// 游戏自动签到今日是否已跑（按本地日期），与社区侧 bbsDoneDay 同机制，用于跨天去重与防重复。
+// 状态字段：
+//   bbsDoneDay / signDoneDay —— 各签到今日是否已跑（本地日期），用于跨天重置与当日去重；
+//   signing / bbsSigning       —— 是否正在执行，用于避免手动指令与定时任务撞车。
 
 // 本地日期指纹（年-月-日），跨天即变化，用于社区签到的每日去重。
 function bbsDay() {
     const d = new Date();
     return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
-}
-
-/**
- * 任务每分钟被调一次，这里只在该跑的那一刻置标记。
- *
- * 置上之后不因为「已经过了那一分钟」而清除 —— 这正是要修的那个 bug：
- * 置标记时是准的，消费时可能已经晚了几分钟，那反而说明社区签到确实被漏掉了，
- * 应该补跑而不是丢弃。
- */
-function markBbsDue() {
-    const data = yaml.get('./plugins/xhh/config/sign.yaml') || {};
-    if (!data.bbs_zd_sign || !data.bbs_sign || typeof data.bbs_sign !== 'object') {
-        // 开关关着 / 没配群：这是常态，debug 开着也会每分钟走到这里。
-        // 只在「开关本该开却没配群」时提示一次 —— 那才是需要用户处理的。
-        if (data.bbs_zd_sign && (!data.bbs_sign || typeof data.bbs_sign !== 'object')) {
-            logger.warn('[xhh][bbs_sign] 社区自动签到已开启，但 bbs_sign 未配置任何群，任务不会执行。' +
-                '请在群里发送【#加入社区自动签到】登记，或检查 sign.yaml 的 bbs_sign。');
-        }
-        return;
-    }
-    // 跨天：新的一天允许重新签到
-    if (signState.bbsDoneDay === bbsDay()) return; // 今天已经跑过了，别再置标记
-    if (signState.bbsPending) return; // 已在等待中，别重复置位刷日志
-
-    // 容差判定：不再要求「当前分钟精确等于配置分钟」。
-    // 原来用 isSignTime 精确比对，一旦 cron 在该分钟之外（哪怕只晚几十秒）才执行到
-    // 这里，标记就置不上，社区签到整轮漏跑且告警。改为「当前分钟数 >= 配置分钟数」
-    // 即视为到点，配合 bbsDoneDay 防重复，cron 漂移也能补上。
-    const cfgH = clampInt(data.bbs_sign_hour, 0, 23, 0);
-    const cfgM = clampInt(data.bbs_sign_minute, 0, 59, 0);
-    const now = new Date();
-    const cur = now.getHours() * 60 + now.getMinutes();
-    const cfg = cfgH * 60 + cfgM;
-    if (cur < cfg) return; // 还没到点
-
-    signState.bbsPending = true;
-    // 无条件记：这是社区签到整轮的起点，缺了这一行就无法区分
-    // 「没到点」与「到了但被后续 return 拦下」，排查时完全看不出卡在哪一步。
-    logger.mark(`[xhh][bbs_sign] 已置待执行标记（配置 ${cfgH}:${String(cfgM).padStart(2, '0')}` +
-        `，群 ${Object.keys(data.bbs_sign).length} 个）`);
 }
 
 // 各适配器 e.reply 的返回值结构不一致，尽量把 message_id 抠出来（取不到就别撤，绝不能误撤用户消息）
@@ -181,29 +138,29 @@ export class Sign extends plugin {
                 },
             ],
         });
-        this.task = {
-            cron: '0 * * * * *', //每分钟检查一次，实际执行时间由 sign.yaml 的 sign_hour/sign_minute 控制
+        // 定时触发时间直接写进 cron（与 ji-plugin 同款）：框架只在配置的那一刻唤起，
+        // 任务表不再每分钟空转，日志里也不会出现一堆「开始处理/完成」。
+        // 顺带解决「社区签到被游戏签到耗时拖过那一分钟」的老问题 ——
+        // 两者是**两个独立任务**，各自按自己的时间触发，不再有同一分钟内的先后依赖。
+        //
+        // 注意：cron 在构造时读 sign.yaml，改配置后需 #重启 才会生效。
+        const signCfg = yaml.get('./plugins/xhh/config/sign.yaml') || {};
+        this.task = [{
+            cron: buildSignCron(signCfg.sign_hour, signCfg.sign_minute),
             name: '[小花火]米游社签到',
+            log: true,
             fnc: async () => {
-                // 社区签到靠标记触发，不用等到它自己那一分钟。
-                //
-                // 原来是在 scheduled_bbs_sign 里实时比对 getMinutes()。而这里是顺序
-                // await：游戏签到先跑，跑完才轮到社区签到。两个任务配了同一分钟时，
-                // 游戏签到一旦耗时（被风控时更慢，实测能跑 2 分 38 秒），等轮到社区
-                // 签到时那一分钟早就过了，于是它静默 return，连日志都不打 ——
-                // 表现就是「开关开着、却什么都没发生」，而日志里看不出原因。
-                //
-                // 所以在任务开始、两个签到都还没跑的时候先把标记置上，
-                // 之后无论游戏签到跑多久，社区签到都会消费这个标记执行一次。
-                markBbsDue();
                 await this.scheduled_sign();
+            },
+        },
+        {
+            cron: buildSignCron(signCfg.bbs_sign_hour, signCfg.bbs_sign_minute),
+            name: '[小花火]米游社社区签到',
+            log: true,
+            fnc: async () => {
                 await this.scheduled_bbs_sign();
             },
-            // log: false —— 框架会为每次任务触发打「开始处理/完成」两行。
-            // 本任务是每分钟轮询，绝大多数分钟什么都不做（跨天去重/未到点/开关关闭），
-            // 每分钟两行噪声把真正的日志淹掉。改为静默触发，只在真的执行签到时自行打点。
-            log: false,
-        };
+        }];
     }
 
     async sign(e) {
@@ -339,36 +296,27 @@ export class Sign extends plugin {
     async scheduled_bbs_sign() {
         const data = yaml.get('./plugins/xhh/config/sign.yaml') || {};
         if (!data.bbs_zd_sign || !data.bbs_sign || typeof data.bbs_sign !== 'object') {
-            // 同上：常态不记，异常情况已在 markBbsDue 处统一提示，避免重复刷屏
+            // 常态不记：开关关着或没登记群时每天都会走到这里
             return false;
         }
-        // 消费任务开始时置下的标记，而不是在这里重新比对当前分钟。
-        // 游戏签到与社区签到配了同一分钟时，游戏签到一耗时就冲掉这一分钟，
-        // 实时比对会静默 return（实测社区签到整轮没跑，且无任何日志）。
-        if (!signState.bbsPending) {
-            // 标记为空本身是常态：它在配置分钟被置上、消费掉之后，
-            // 其余每一分钟都会走到这里。所以「非配置分钟」一律不打，
-            // 否则 debug 开着时每分钟一条，纯噪音。
-            //
-            // 只有「此刻正是配置分钟、标记却仍是空的」才是真异常——
-            // 说明 markBbsDue() 没能置上，值得告警。
-            const dayNow = bbsDay();
-            if (signState.bbsDoneDay !== dayNow && isSignTime(data, 'bbs_sign_hour', 'bbs_sign_minute', 0, 0)) {
-                logger.warn('[xhh][bbs_sign] 配置分钟已到但待执行标记为空，社区签到本轮不会执行。' +
-                    `请检查 sign.yaml 的 bbs_sign_hour/bbs_sign_minute（当前 ` +
-                    `${data.bbs_sign_hour}:${String(data.bbs_sign_minute).padStart(2, '0')}）` +
-                    '，以及该分钟 markBbsDue 是否因开关/白名单为空而提前返回。');
-            }
-            return false;
-        }
-        // 有别的签到在跑就留着标记，下一分钟再来 —— 不能因为这一轮没排上就丢掉。
+        // 社区签到是独立任务、按自己的 cron 触发（不再靠游戏签到那个任务的标记），
+        // 这里只保留「当日去重 + 调度漂移容差」两道判定。
+        const bbsDone = signState.bbsDoneDay === bbsDay();
+        const bbsCfg = clampInt(data.bbs_sign_hour, 0, 23, 0) * 60 + clampInt(data.bbs_sign_minute, 0, 59, 0);
+        const bbsCur = new Date().getHours() * 60 + new Date().getMinutes();
+        if (!bbsDone && (bbsCur < bbsCfg || bbsCur > bbsCfg + 10)) return false;
+        // 与游戏签到撞在同一分钟时（两边配了同一时间）：游戏签到实测能跑 2 分多钟，
+        // 这里原地等待它结束，而不是像以前那样「留着标记等下一分钟」——
+        // 任务不再每分钟轮询，没有「下一分钟」了。
         if (signState.signing || signState.bbsSigning) {
-            logger.mark(`[xhh][bbs_sign] 本轮有其他签到在跑（游戏=${signState.signing} 社区=${signState.bbsSigning}），` +
-                '标记保留，下一分钟重试');
-            return false;
+            logger.mark(`[xhh][bbs_sign] 游戏签到仍在执行，等待其结束后再跑社区签到`);
+            const waited = await waitOtherSignDone();
+            if (!waited) {
+                logger.warn('[xhh][bbs_sign] 等待游戏签到超时（10 分钟），本轮社区签到跳过');
+                return false;
+            }
         }
-        signState.bbsPending = false;
-        signState.bbsDoneDay = bbsDay(); // 今日已发起，避免 cron 漂移后每分钟重复置标记
+        signState.bbsDoneDay = bbsDay(); // 今日已发起，重启/漂移都不重复跑
         logger.mark('[xhh][bbs_sign] 开始执行社区签到');
         signState.bbsSigning = true;
         try {
@@ -410,15 +358,16 @@ export class Sign extends plugin {
         if (!isManual) {
             // 跨天即变化：今天已成功发起过游戏自动签到则跳过，避免每分钟重复跑。
             if (signState.signDoneDay === bbsDay()) return false;
-            // 容差判定：不再要求「当前分钟精确等于配置分钟」。
-            // 原来用 isSignTime 精确比对，cron 一旦在该分钟之外执行就判定未到点而漏跑；
-            // 改为「当前分钟数 >= 配置分钟数」即视为到点，容忍调度漂移。
+            // cron 已经只在配置那一刻触发，这里只留一层容差：
+            // 调度漂移（机器繁忙、休眠唤醒）时，10 分钟内仍允许补跑；
+            // 超出窗口说明这次触发异常，直接跳过，等明天。
             const cfgH = clampInt(data.sign_hour, 0, 23, 0);
             const cfgM = clampInt(data.sign_minute, 0, 59, 0);
             const now = new Date();
             const cur = now.getHours() * 60 + now.getMinutes();
             const cfg = cfgH * 60 + cfgM;
-            if (cur < cfg) return false; // 还没到点
+            if (cur < cfg || cur > cfg + 10) return false;
+
         }
         if (!data.zd_sign) return false;
         if (!data.sign || typeof data.sign != 'object' || !Object.keys(data.sign).length) {
@@ -518,11 +467,25 @@ function addBbs(e) {
     return yaml.set(path, 'bbs_sign', data.bbs_sign);
 }
 
-function isSignTime(data = {}, hourKey = 'sign_hour', minuteKey = 'sign_minute', defHour = 0, defMinute = 0) {
-    const hour = clampInt(data[hourKey], 0, 23, defHour);
-    const minute = clampInt(data[minuteKey], 0, 59, defMinute);
-    const now = new Date();
-    return now.getHours() === hour && now.getMinutes() === minute;
+
+/**
+ * 由配置的小时/分钟拼出 cron（6 位，含秒）：`0 分 时 * * *`。
+ * 与 ji-plugin 一致，把时间交给框架调度，插件内部不再做「到点判定」。
+ */
+/** 等待另一个签到任务结束；超时（默认 10 分钟）返回 false */
+async function waitOtherSignDone(timeoutMs = 10 * 60 * 1000) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+        if (!signState.signing && !signState.bbsSigning) return true;
+        await sleep(10000);
+    }
+    return false;
+}
+
+function buildSignCron(hour, minute) {
+    const h = clampInt(hour, 0, 23, 0);
+    const m = clampInt(minute, 0, 59, 0);
+    return `0 ${m} ${h} * * *`;
 }
 
 function clampInt(value, min, max, fallback) {
