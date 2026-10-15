@@ -13,16 +13,28 @@ import {
 import lodash from 'lodash';
 import Runtime from '../../../lib/plugins/runtime.js';
 
-let signing = false;
-let bbsSigning = false;
 // 社区签到的「该跑了」标记。在两个签到都还没开始执行时置上，
 // 避免游戏签到耗时把社区签到那一分钟拖过去（详见 this.task.fnc 处的说明）。
-let bbsPending = false;
+/**
+ * 跨天去重的状态挂到 globalThis，而不是模块级 let。
+ *
+ * 原因：插件有「自举热重载」，改任意 apps/system 文件都会重新 import 本模块，
+ * 新模块的模块级变量是全新的空值 —— 而框架里跑着的定时任务是**旧闭包**创建的
+ * `this.scheduled_sign`，热重载只把原型方法换成新的（新方法用的是新闭包变量）。
+ * 于是每热重载一次，「今日已签到」标记就被清空，定时任务下一分钟就又跑一遍签到，
+ * 表现为「时不时就自动触发一次」（实测改代码期间 21:23/21:35/21:37… 反复触发）。
+ * 挂到 globalThis 后新旧闭包共享同一份状态，热重载不再丢标记。
+ */
+const signState = (globalThis.__xhh_sign_state ||= {
+    bbsPending: false,
+    bbsDoneDay: '',
+    signDoneDay: '',
+    signing: false,
+    bbsSigning: false,
+});
 // 今天是否已成功发起过社区签到（按本地日期）。用于：
 // 1) 跨天重置，允许每天跑一次；2) 防止 cron 漂移后每分钟重复置标记刷日志。
-let bbsDoneDay = '';
 // 游戏自动签到今日是否已跑（按本地日期），与社区侧 bbsDoneDay 同机制，用于跨天去重与防重复。
-let signDoneDay = '';
 
 // 本地日期指纹（年-月-日），跨天即变化，用于社区签到的每日去重。
 function bbsDay() {
@@ -49,8 +61,8 @@ function markBbsDue() {
         return;
     }
     // 跨天：新的一天允许重新签到
-    if (bbsDoneDay === bbsDay()) return; // 今天已经跑过了，别再置标记
-    if (bbsPending) return; // 已在等待中，别重复置位刷日志
+    if (signState.bbsDoneDay === bbsDay()) return; // 今天已经跑过了，别再置标记
+    if (signState.bbsPending) return; // 已在等待中，别重复置位刷日志
 
     // 容差判定：不再要求「当前分钟精确等于配置分钟」。
     // 原来用 isSignTime 精确比对，一旦 cron 在该分钟之外（哪怕只晚几十秒）才执行到
@@ -63,7 +75,7 @@ function markBbsDue() {
     const cfg = cfgH * 60 + cfgM;
     if (cur < cfg) return; // 还没到点
 
-    bbsPending = true;
+    signState.bbsPending = true;
     // 无条件记：这是社区签到整轮的起点，缺了这一行就无法区分
     // 「没到点」与「到了但被后续 return 拦下」，排查时完全看不出卡在哪一步。
     logger.mark(`[xhh][bbs_sign] 已置待执行标记（配置 ${cfgH}:${String(cfgM).padStart(2, '0')}` +
@@ -203,14 +215,14 @@ export class Sign extends plugin {
         // 不在代码里硬写 return false —— 数字越大越晚处理，想让位就把它调大。
         // sign 是群号到QQ列表的白名单映射，不是开关，不能拿它判断。
         const signCfg = yaml.get('./plugins/xhh/config/sign.yaml') || {};
-        if (signing) return e.reply('有签到任务进行中, 过会儿再试吧！');
+        if (signState.signing) return e.reply('有签到任务进行中, 过会儿再试吧！');
         if (e.isGroup) {
             const wl = signCfg.sign_group || [];
             if (wl.length > 0 && !wl.includes(String(e.group_id)) && !wl.includes(Number(e.group_id))) {
                 return e.reply(`本群不在游戏签到白名单里，已跳过（白名单：${wl.join('、')}）\n可在锅巴「签到设置 → 游戏签到白名单群」里增删，或清空表示不限制`, true, { recallMsg: 120 });
             }
         }
-        signing = true;
+        signState.signing = true;
         let recallTip;
         const allAccounts = /全部游戏/.test(e.msg || '');
         const GAME_MAP = {
@@ -236,7 +248,7 @@ export class Sign extends plugin {
         } catch (error) {
             logger.error(`签到异常: ${error.message}`);
         } finally {
-            signing = false;
+            signState.signing = false;
             try { await recallTip?.(); } catch (_) {}
         }
         return false;
@@ -297,7 +309,7 @@ export class Sign extends plugin {
         // 不再挡手动指令；让位靠 config.yaml 的 sign_priority。
         // sign 是群号到QQ列表的白名单映射，不是开关。
         const bbsCfg = yaml.get('./plugins/xhh/config/sign.yaml') || {};
-        if (signing || bbsSigning) {
+        if (signState.signing || signState.bbsSigning) {
             await e.reply('有签到任务进行中, 过会儿再试吧！');
             return false;
         }
@@ -308,7 +320,7 @@ export class Sign extends plugin {
                 return e.reply(`本群不在社区签到白名单里，已跳过（白名单：${wl.join('、')}）\n可在锅巴「签到设置 → 社区签到白名单群」里增删，或清空表示不限制`, true, { recallMsg: 120 });
             }
         }
-        signing = true;
+        signState.signing = true;
         let recallTip;
         try {
             // 只是「请稍等」的临时提示：结果出来就撤，最迟 60s 兜底撤回
@@ -318,7 +330,7 @@ export class Sign extends plugin {
         } catch (error) {
             logger.error(`社区签到异常: ${error.message}`);
         } finally {
-            signing = false;
+            signState.signing = false;
             try { await recallTip?.(); } catch (_) {}
         }
         return false;
@@ -333,7 +345,7 @@ export class Sign extends plugin {
         // 消费任务开始时置下的标记，而不是在这里重新比对当前分钟。
         // 游戏签到与社区签到配了同一分钟时，游戏签到一耗时就冲掉这一分钟，
         // 实时比对会静默 return（实测社区签到整轮没跑，且无任何日志）。
-        if (!bbsPending) {
+        if (!signState.bbsPending) {
             // 标记为空本身是常态：它在配置分钟被置上、消费掉之后，
             // 其余每一分钟都会走到这里。所以「非配置分钟」一律不打，
             // 否则 debug 开着时每分钟一条，纯噪音。
@@ -341,7 +353,7 @@ export class Sign extends plugin {
             // 只有「此刻正是配置分钟、标记却仍是空的」才是真异常——
             // 说明 markBbsDue() 没能置上，值得告警。
             const dayNow = bbsDay();
-            if (bbsDoneDay !== dayNow && isSignTime(data, 'bbs_sign_hour', 'bbs_sign_minute', 0, 0)) {
+            if (signState.bbsDoneDay !== dayNow && isSignTime(data, 'bbs_sign_hour', 'bbs_sign_minute', 0, 0)) {
                 logger.warn('[xhh][bbs_sign] 配置分钟已到但待执行标记为空，社区签到本轮不会执行。' +
                     `请检查 sign.yaml 的 bbs_sign_hour/bbs_sign_minute（当前 ` +
                     `${data.bbs_sign_hour}:${String(data.bbs_sign_minute).padStart(2, '0')}）` +
@@ -350,15 +362,15 @@ export class Sign extends plugin {
             return false;
         }
         // 有别的签到在跑就留着标记，下一分钟再来 —— 不能因为这一轮没排上就丢掉。
-        if (signing || bbsSigning) {
-            logger.mark(`[xhh][bbs_sign] 本轮有其他签到在跑（游戏=${signing} 社区=${bbsSigning}），` +
+        if (signState.signing || signState.bbsSigning) {
+            logger.mark(`[xhh][bbs_sign] 本轮有其他签到在跑（游戏=${signState.signing} 社区=${signState.bbsSigning}），` +
                 '标记保留，下一分钟重试');
             return false;
         }
-        bbsPending = false;
-        bbsDoneDay = bbsDay(); // 今日已发起，避免 cron 漂移后每分钟重复置标记
+        signState.bbsPending = false;
+        signState.bbsDoneDay = bbsDay(); // 今日已发起，避免 cron 漂移后每分钟重复置标记
         logger.mark('[xhh][bbs_sign] 开始执行社区签到');
-        bbsSigning = true;
+        signState.bbsSigning = true;
         try {
             let groups = Object.keys(data.bbs_sign || {}).filter(group =>
                 Array.isArray(data.bbs_sign[group]) && data.bbs_sign[group].length > 0
@@ -386,7 +398,7 @@ export class Sign extends plugin {
         } catch (error) {
             logger.error(`社区自动签到异常: ${error.message}`);
         } finally {
-            bbsSigning = false;
+            signState.bbsSigning = false;
         }
         return false;
     }
@@ -397,7 +409,7 @@ export class Sign extends plugin {
         // 手动触发（群里发指令）不受时间与今日去重限制，直接走下面的签到逻辑。
         if (!isManual) {
             // 跨天即变化：今天已成功发起过游戏自动签到则跳过，避免每分钟重复跑。
-            if (signDoneDay === bbsDay()) return false;
+            if (signState.signDoneDay === bbsDay()) return false;
             // 容差判定：不再要求「当前分钟精确等于配置分钟」。
             // 原来用 isSignTime 精确比对，cron 一旦在该分钟之外执行就判定未到点而漏跑；
             // 改为「当前分钟数 >= 配置分钟数」即视为到点，容忍调度漂移。
@@ -416,9 +428,9 @@ export class Sign extends plugin {
                 + '请在目标群里发「#加入自动签到」登记一次');
             return false;
         }
-        signDoneDay = bbsDay(); // 今日已发起，避免 cron 漂移后每分钟重复签到
+        signState.signDoneDay = bbsDay(); // 今日已发起，避免 cron 漂移后每分钟重复签到
         logger.mark(`[游戏自动签到] 开始执行（本分钟 cron 触发）`);
-        signing = true;
+        signState.signing = true;
         try {
 
             let groups = Object.keys(data.sign).sort(
@@ -472,7 +484,7 @@ export class Sign extends plugin {
         } catch (error) {
             logger.error(`自动签到异常: ${error.message}`);
         } finally {
-            signing = false;
+            signState.signing = false;
         }
     }
 }
