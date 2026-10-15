@@ -1,6 +1,7 @@
 import fetch from 'node-fetch';
 import moment from 'moment';
 import { yaml, reply_recallMsg, sleep, pluginPriority } from '#xhh';
+import { guardModuleByFile } from '../system/modules.js'
 
 export class tpl extends plugin {
   constructor() {
@@ -54,3 +55,6 @@ export class tpl extends plugin {
     }
   }
 }
+
+// 模块开关：锅巴里关掉「tlp」后，本文件所有指令静默不响应
+guardModuleByFile(tpl, 'tlp', 'TLP.js')

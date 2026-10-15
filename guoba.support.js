@@ -165,6 +165,74 @@ export const supportGuoba = () => {
         label: '小花火图鉴启用',
         component: 'Switch',
       },
+      // 模块总开关：关掉后对应指令静默不响应（不提示、不报错），
+      // 与 system/modules.js 的 MODULES 一一对应
+      {
+        field: 'Tl',
+        label: '模块 · 体力查询',
+        component: 'Switch',
+      },
+      {
+        field: 'tlp',
+        label: '模块 · 塔罗牌',
+        component: 'Switch',
+      },
+      {
+        field: 'gs_logs',
+        label: '模块 · 原神历史卡池',
+        component: 'Switch',
+      },
+      {
+        field: 'sr_logs',
+        label: '模块 · 星铁历史卡池',
+        component: 'Switch',
+      },
+      {
+        field: 'zzz_logs',
+        label: '模块 · 绝区零历史卡池',
+        component: 'Switch',
+      },
+      {
+        field: 'gs_gacha_enable',
+        label: '模块 · 原神抽卡记录',
+        component: 'Switch',
+      },
+      {
+        field: 'sr_gacha_enable',
+        label: '模块 · 星铁抽卡记录',
+        component: 'Switch',
+      },
+      {
+        field: 'zzz_gacha_enable',
+        label: '模块 · 绝区零抽卡记录',
+        component: 'Switch',
+      },
+      {
+        field: 'bh3_gacha_enable',
+        label: '模块 · 崩坏三抽卡记录',
+        component: 'Switch',
+      },
+      {
+        field: 'sign',
+        label: '模块 · 米游社签到',
+        component: 'Switch',
+      },
+      {
+        field: 'gacha_pool_enable',
+        label: '模块 · 卡池日程维护',
+        component: 'Switch',
+      },
+      {
+        field: 'meme_enable',
+        label: '模块 · 表情包',
+        component: 'Switch',
+      },
+      {
+        field: 'module_switch_enable',
+        label: '模块 · 模块开关指令',
+        helpMessage: '关掉后连 #小花火模块 这条开关指令也不响应',
+        component: 'Switch',
+      },
       {
         field: 'gs_bg',
         label: '角色图鉴随机背景',

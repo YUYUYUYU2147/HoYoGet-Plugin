@@ -3,6 +3,7 @@ import moment from 'moment';
 import fs from 'fs';
 import NoteUser from '../../genshin/model/mys/NoteUser.js';
 import { mhy, render, api, config, yaml, pluginPriority, makeForwardMsg } from '#xhh';
+import { guardModuleByFile } from '../system/modules.js'
 
 const path = process.cwd();
 
@@ -661,3 +662,6 @@ function getTime(time) {
   let day = days === 0 ? '今天' : days === 1 ? '明天' : '后天';
   return `${day}${hours}:${minutes}`;
 }
+
+// 模块开关：锅巴里关掉「tl」后，本文件所有指令静默不响应
+guardModuleByFile(TL, 'tl', 'TL.js')

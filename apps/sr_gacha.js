@@ -140,6 +140,7 @@ async function getMiaoModels() {
 // 尚未就绪，此时 makeIcon 走「本地约定路径」兜底（见下方），不影响出图。
 getMiaoModels()
 import { fileURLToPath } from 'node:url'
+import { guardModuleByFile } from '../system/modules.js'
 
 // ESM 作用域没有 __dirname，按仓库既有写法（apps/custom_guide.js）从 import.meta 取。
 // 数据路径一律相对插件根，不依赖进程 cwd（Yunzai 启动时 cwd 即插件目录）。
@@ -2673,3 +2674,6 @@ export class sr_gacha extends plugin {
     ].join('\n'))
   }
 }
+
+// 模块开关：锅巴里关掉「sr_gacha」后，本文件所有指令静默不响应
+guardModuleByFile(sr_gacha, 'sr_gacha', 'sr_gacha.js')

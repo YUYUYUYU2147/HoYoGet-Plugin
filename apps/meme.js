@@ -16,6 +16,7 @@ import lodash from 'lodash';
 import sharp from '../node_modules/sharp/lib/index.js';
 import puppeteer from '../../../lib/puppeteer/puppeteer.js';
 import { render, config, pluginPriority, getSource } from '#xhh';
+import { guardModuleByFile } from '../system/modules.js'
 
 const DATA_DIR = './plugins/xhh/data/memes/';
 const INFOS_FILE = DATA_DIR + 'infos.json';
@@ -802,3 +803,6 @@ async function getAvatar(e) {
   } catch { }
   return `https://q1.qlogo.cn/g?b=qq&s=0&nk=${e.user_id}`;
 }
+
+// 模块开关：锅巴里关掉「meme」后，本文件所有指令静默不响应
+guardModuleByFile(meme, 'meme', 'meme.js')

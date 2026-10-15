@@ -16,6 +16,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { mhy, render, pluginPriority } from '#xhh'
+import { guardModuleByFile } from '../system/modules.js'
 
 // ESM 作用域没有 __dirname，按仓库既有写法（apps/custom_guide.js）从 import.meta 取
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -1371,3 +1372,6 @@ export class zzz_gacha extends plugin {
     return this.renderStat(e, [])
   }
 }
+
+// 模块开关：锅巴里关掉「zzz_gacha」后，本文件所有指令静默不响应
+guardModuleByFile(zzz_gacha, 'zzz_gacha', 'zzz_gacha.js')

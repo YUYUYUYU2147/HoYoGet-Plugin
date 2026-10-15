@@ -5,6 +5,7 @@ import YAML from 'yaml';
 import moment from 'moment';
 import NoteUser from '../../genshin/model/mys/NoteUser.js';
 import puppeteer from '../../../lib/puppeteer/puppeteer.js';
+import { guardModuleByFile } from '../system/modules.js'
 
 const DATA_DIR = './plugins/xhh/data/bh3_gacha';
 const BH3_POOL_HISTORY_PATH = './plugins/xhh/system/default/bh3_gacha_pool_history.yaml';
@@ -1253,3 +1254,6 @@ export class bh3_gacha extends plugin {
     return sendMsg(e, msg);
   }
 }
+
+// 模块开关：锅巴里关掉「bh3_gacha」后，本文件所有指令静默不响应
+guardModuleByFile(bh3_gacha, 'bh3_gacha', 'bh3_gacha.js')

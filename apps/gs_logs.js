@@ -3,6 +3,7 @@ import { yaml, makeForwardMsg, config, pluginPriority } from '#xhh';
 const path = './plugins/xhh/system/default/gslogs.yaml';
 import common from '../../../lib/common/common.js';
 import { xhh_gacha_pool } from './gacha_pool.js';
+import { guardModuleByFile } from '../system/modules.js'
 function latestGsVersion(data = {}) {
   return Object.keys(data?.date || {})
     .map(key => key.match(/【(\d+\.\d+)/)?.[1])
@@ -203,3 +204,6 @@ export class gs_logs extends plugin {
     return msg;
   }
 }
+
+// 模块开关：锅巴里关掉「gs_logs」后，本文件所有指令静默不响应
+guardModuleByFile(gs_logs, 'gs_logs', 'gs_logs.js')
