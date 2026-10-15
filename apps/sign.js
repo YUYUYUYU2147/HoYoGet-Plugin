@@ -187,7 +187,10 @@ export class Sign extends plugin {
                 await this.scheduled_sign();
                 await this.scheduled_bbs_sign();
             },
-            log: true,
+            // log: false —— 框架会为每次任务触发打「开始处理/完成」两行。
+            // 本任务是每分钟轮询，绝大多数分钟什么都不做（跨天去重/未到点/开关关闭），
+            // 每分钟两行噪声把真正的日志淹掉。改为静默触发，只在真的执行签到时自行打点。
+            log: false,
         };
     }
 
@@ -414,6 +417,7 @@ export class Sign extends plugin {
             return false;
         }
         signDoneDay = bbsDay(); // 今日已发起，避免 cron 漂移后每分钟重复签到
+        logger.mark(`[游戏自动签到] 开始执行（本分钟 cron 触发）`);
         signing = true;
         try {
 

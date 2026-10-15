@@ -222,7 +222,12 @@ async function loadData(force = false) {
                 infosTmp[key] = info;
               }
             }
-            logger.mark(`[xhh-meme] 正在拉取表情信息 ${Math.min(i + CONCURRENCY, keys.length)}/${keys.length}`);
+            // 进度日志按 1/10 抽样打印：全量打一次会有近千行（实测 989 条刷满屏），
+            // 真正需要排查的是开头与结尾，中间进度用 debug 即可
+            const done = Math.min(i + CONCURRENCY, keys.length);
+            if (done === keys.length || done % 100 === 0) {
+              logger.mark(`[xhh-meme] 正在拉取表情信息 ${done}/${keys.length}`);
+            }
           }
           if (Object.keys(infosTmp).length) infos = infosTmp;
           if (Object.keys(keyMapTmp).length) keyMap = keyMapTmp;
