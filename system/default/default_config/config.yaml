@@ -348,3 +348,14 @@ zzz_md_priority: 100
 currency_balance_priority: 100
 meme_priority: 50
 custom_guide_priority: -9999999999
+
+# ===== 功能模块开关（true 开，false 关；关掉后该模块指令静默不响应）=====
+# 下面这些键与 system/modules.js 的 MODULES 一一对应，增删请两边同步。
+# 没配过的键一律按「开」处理，老用户升级不会因为缺键被停用。
+gs_gacha_enable: true
+sr_gacha_enable: true
+zzz_gacha_enable: true
+bh3_gacha_enable: true
+gacha_pool_enable: true
+meme_enable: true
+module_switch_enable: true

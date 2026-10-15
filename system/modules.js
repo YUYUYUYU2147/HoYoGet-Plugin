@@ -22,6 +22,7 @@ import { fileURLToPath } from 'node:url'
 import yaml from './yaml.js'
 
 const CFG_PATH = './plugins/xhh/config/config.yaml'
+const DEF_CFG_PATH = './plugins/xhh/system/default/default_config/config.yaml'
 
 // 本文件位于 <插件根>/system/，上溯一级即插件根（与 apps/ 下各文件的取法一致）
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -29,6 +30,21 @@ const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 function readCfg() {
   try {
     return yaml.get(CFG_PATH) || {}
+  } catch (_) {
+    return {}
+  }
+}
+
+/**
+ * 用户配置里没有的键，回落到默认配置。
+ *
+ * config/ 是用户目录（.gitignore 忽略，不入库），system/default/default_config/
+ * 才是随仓库走的默认配置。新增模块开关时两处都要写：默认配置决定新装用户的
+ * 初值，用户配置决定实际生效值。
+ */
+function readDefaultCfg() {
+  try {
+    return yaml.get(DEF_CFG_PATH) || {}
   } catch (_) {
     return {}
   }
@@ -76,7 +92,7 @@ export const MODULES = {
 export function isModuleEnabled(id) {
   const mod = MODULES[id]
   if (!mod) return true
-  const value = readCfg()[mod.key]
+  const value = readCfg()[mod.key] ?? readDefaultCfg()[mod.key]
   if (value === undefined || value === null) return true
   if (value === false || value === 0) return false
   if (typeof value === 'string') {

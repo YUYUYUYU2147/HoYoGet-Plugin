@@ -1,7 +1,5 @@
-// 用 yaml 包（Node 内置 node:yaml 在本机 Node 24 下不可用：ERR_UNKNOWN_BUILTIN_MODULE）
-import YAML from 'yaml'
-import fs from 'node:fs'
 import { pluginPriority } from '#xhh'
+import yaml from '../system/yaml.js'
 import { MODULES, isModuleEnabled, disabledModuleLabels } from '../system/modules.js'
 
 const CFG_PATH = './plugins/xhh/config/config.yaml'
@@ -24,22 +22,16 @@ export class ModuleSwitch extends plugin {
 
   readCfg() {
     try {
-      return YAML.parse(fs.readFileSync(CFG_PATH, 'utf8')) || {}
+      return yaml.get(CFG_PATH) || {}
     } catch (err) {
       logger.warn(`[xhh][modules] 读取配置失败：${err?.message || err}`)
       return {}
     }
   }
 
-  writeCfg(cfg) {
-    // 保留文件头的注释说明：只重写数据体，头部注释单独拼回
-    let header = ''
-    try {
-      const raw = fs.readFileSync(CFG_PATH, 'utf8')
-      const firstKey = raw.search(/^[A-Za-z_]/m)
-      if (firstKey > 0) header = raw.slice(0, firstKey)
-    } catch {}
-    fs.writeFileSync(CFG_PATH, header + YAML.stringify(cfg))
+  /** 只改一个键，走 yaml.set 保留文件里的注释与排版（详见 system/yaml.js 的说明） */
+  writeKey(key, value) {
+    return yaml.set(CFG_PATH, key, value)
   }
 
   list(e) {
@@ -78,9 +70,8 @@ export class ModuleSwitch extends plugin {
     const [, action, id] = String(e.msg || '').match(/(关闭|开启)模块\s+(\S+)/) || []
     const mod = MODULES[id]
     if (!mod) return e.reply(`没有这个模块：${id}\n发送 #小花火模块帮助 查看全部模块`)
-    const cfg = this.readCfg()
-    cfg[mod.key] = action === '开启'
-    this.writeCfg(cfg)
-    return e.reply(`「${mod.label}」已${action}（配置项 ${mod.key} = ${cfg[mod.key]}）\n重启机器人后完全生效`)
+    const on = action === '开启'
+    this.writeKey(mod.key, on)
+    return e.reply(`「${mod.label}」已${action}（配置项 ${mod.key} = ${on}）\n重启机器人后完全生效`)
   }
 }
