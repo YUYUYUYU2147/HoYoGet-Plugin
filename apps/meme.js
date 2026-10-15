@@ -147,17 +147,24 @@ function safeJson(response) {
 }
 
 async function fetchJsonWithRetry(url, retries = 3) {
+  // 重试过程记 debug、只在**最终失败**时 warn 一次：
+  // 资源站点不可达时原来会打「2 个文件 × 3 次重试」共 6 条 warn，
+  // 加上后面的逐条兜底进度，一次启动就是一屏日志。失败原因对用户只有
+  // 「站点挂了、走兜底」这一条结论，中间几次重试没有信息量。
+  let lastErr = '';
   for (let i = 0; i < retries; i++) {
     try {
       const res = await fetch(url);
       const data = await safeJson(res);
       if (data) return data;
-      logger.warn(`[xhh-meme] 拉取 ${url} 返回非预期内容 (第${i + 1}次)`);
+      lastErr = '返回非预期内容';
     } catch (e) {
-      logger.warn(`[xhh-meme] 拉取 ${url} 失败 (第${i + 1}次): ${e.message}`);
+      lastErr = e.message;
     }
+    logger.debug(`[xhh-meme] 拉取 ${url} ${lastErr} (第${i + 1}次)，将重试`);
     if (i < retries - 1) await new Promise(r => setTimeout(r, 1000 * (i + 1)));
   }
+  logger.warn(`[xhh-meme] 拉取 ${url} 失败（重试 ${retries} 次）：${lastErr}`);
   return null;
 }
 
@@ -174,6 +181,8 @@ function readJsonFile(file) {
 async function loadData(force = false) {
   if (!force && Object.keys(keyMap).length && Object.keys(infos).length) return;
   if (loadPromise) return loadPromise;
+  // 本次加载是否走了逐条兜底，决定收尾那行日志用 info 还是省掉
+  let usedFallback = false;
   loadPromise = (async () => {
     mkdirs(DATA_DIR);
     if (!force) {
@@ -205,7 +214,8 @@ async function loadData(force = false) {
       }
       // 静态资源获取失败时，走逐条查询兜底（并发分批，避免串行过慢）
       if (Object.keys(infos).length === 0 || Object.keys(keyMap).length === 0) {
-        logger.mark('[xhh-meme] 静态资源拉取失败，尝试逐条在线查询');
+        usedFallback = true;
+        logger.mark('[xhh-meme] 静态资源不可用，改走逐条在线查询（较慢）');
         const keys = await fetchJsonWithRetry(`${base}/memes/keys`);
         if (Array.isArray(keys) && keys.length) {
           const keyMapTmp = {};
@@ -374,7 +384,9 @@ export class meme extends plugin {
       ...r,
       reg: r.reg instanceof RegExp ? r.reg : new RegExp(r.reg),
     }));
-    logger.mark(`[xhh-meme] 资源加载完成，共 ${Object.keys(infos).length} 个 meme`);
+    // 正常路径（静态资源可用）只留一行结论；走逐条兜底时 warn 已经打过，
+    // 这里再打一遍「完成」纯属重复
+    if (!usedFallback) logger.info(`[xhh-meme] 资源加载完成，共 ${Object.keys(infos).length} 个 meme`);
   }
 
   // ---------- 列表 ----------
