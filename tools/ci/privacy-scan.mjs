@@ -31,7 +31,11 @@ function trackedFiles() {
   try {
     // --others --exclude-standard 带上「还没提交但没被忽略」的新文件：
     // 只用 ls-files 的话，新写的文件在 commit 之前是扫不到的，而那正是最需要拦的时候
-    return execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard'], { cwd: ROOT, encoding: 'utf8' })
+    return execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'], // 非 git 环境下静默降级，不往日志里喷 fatal
+    })
       .split('\n')
       .filter(Boolean)
       .filter(f => EXTS.has(path.extname(f)))

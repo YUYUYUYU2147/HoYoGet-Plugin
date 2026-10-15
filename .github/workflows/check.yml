@@ -3,8 +3,9 @@ name: "check"
 # 语法与配置自检。xhh 没有构建步骤，核心代码全是 ESM，
 # 一次 node --check 就能把「少一个分号/括号不配对」这类低级错误挡在推送之外。
 #
-# 不装依赖：仓库没有测试套件，依赖（sharp / mysql2 等）也不参与本检查，
-# 装它们只会让 CI 又慢又容易因为原生模块或锁文件问题挂掉。
+# 只装一个依赖：yaml（config-check 需要它解析 YAML）。运行期依赖里 sharp 是原生
+# 模块、mysql2 也不参与检查，--omit=dev 之外还要整体跳过生产依赖，才不会因为
+# 装 sharp 失败或拖慢 CI。
 on:
   push:
     branches: [v3]
@@ -25,6 +26,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      - name: 安装检查用依赖（仅 yaml）
+        run: npm install --no-save --no-package-lock --no-audit --no-fund yaml@^2.6.1
 
       - name: 语法预检
         run: node tools/ci/syntax-check.mjs
