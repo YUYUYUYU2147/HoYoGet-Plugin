@@ -29,7 +29,11 @@ const protectList = ['lash', 'do', 'beat_up', 'little_do', 'fast_do', 'qi', 'fas
 
 let keyMap = {};
 let infos = {};
-let loadPromise = null;
+let loadPromise = null
+// 本次加载是否走了逐条兜底（静态资源不可用时逐条在线查）。
+// 必须是模块级：init() 在构造末尾也要读它来决定收尾日志用 info 还是省掉，
+// 放成 loadData 的局部变量会直接 ReferenceError。
+let usedFallback = false;
 
 
 const getCfg = () => config();
@@ -181,8 +185,7 @@ function readJsonFile(file) {
 async function loadData(force = false) {
   if (!force && Object.keys(keyMap).length && Object.keys(infos).length) return;
   if (loadPromise) return loadPromise;
-  // 本次加载是否走了逐条兜底，决定收尾那行日志用 info 还是省掉
-  let usedFallback = false;
+  usedFallback = false; // 每次真实加载重新计数
   loadPromise = (async () => {
     mkdirs(DATA_DIR);
     if (!force) {
