@@ -30,10 +30,6 @@ const protectList = ['lash', 'do', 'beat_up', 'little_do', 'fast_do', 'qi', 'fas
 let keyMap = {};
 let infos = {};
 let loadPromise = null
-// 本次加载是否走了逐条兜底（静态资源不可用时逐条在线查）。
-// 必须是模块级：init() 在构造末尾也要读它来决定收尾日志用 info 还是省掉，
-// 放成 loadData 的局部变量会直接 ReferenceError。
-let usedFallback = false;
 
 
 const getCfg = () => config();
@@ -150,11 +146,14 @@ function safeJson(response) {
   }
 }
 
-async function fetchJsonWithRetry(url, retries = 3) {
+async function fetchJsonWithRetry(url, retries = 3, quiet = false) {
   // 重试过程记 debug、只在**最终失败**时 warn 一次：
   // 资源站点不可达时原来会打「2 个文件 × 3 次重试」共 6 条 warn，
   // 加上后面的逐条兜底进度，一次启动就是一屏日志。失败原因对用户只有
   // 「站点挂了、走兜底」这一条结论，中间几次重试没有信息量。
+  //
+  // quiet=true 用于逐条拉取表情详情的场景：上千个 key 里偶有几个取不到是
+  // 常态，逐条 warn 会把日志刷满，这类失败降级为 debug。
   let lastErr = '';
   for (let i = 0; i < retries; i++) {
     try {
@@ -168,7 +167,8 @@ async function fetchJsonWithRetry(url, retries = 3) {
     logger.debug(`[xhh-meme] 拉取 ${url} ${lastErr} (第${i + 1}次)，将重试`);
     if (i < retries - 1) await new Promise(r => setTimeout(r, 1000 * (i + 1)));
   }
-  logger.warn(`[xhh-meme] 拉取 ${url} 失败（重试 ${retries} 次）：${lastErr}`);
+  if (quiet) logger.debug(`[xhh-meme] 拉取 ${url} 失败：${lastErr}`);
+  else logger.warn(`[xhh-meme] 拉取 ${url} 失败（重试 ${retries} 次）：${lastErr}`);
   return null;
 }
 
@@ -183,9 +183,11 @@ function readJsonFile(file) {
 }
 
 async function loadData(force = false) {
-  if (!force && Object.keys(keyMap).length && Object.keys(infos).length) return;
+  if (!force && Object.keys(keyMap).length && Object.keys(infos).length) {
+    logger.debug(`[xhh-meme] 命中本地缓存：${Object.keys(infos).length} 个 meme / ${Object.keys(keyMap).length} 个关键词`);
+    return;
+  }
   if (loadPromise) return loadPromise;
-  usedFallback = false; // 每次真实加载重新计数
   loadPromise = (async () => {
     mkdirs(DATA_DIR);
     if (!force) {
@@ -201,33 +203,27 @@ async function loadData(force = false) {
       return;
     }
     try {
-      if (Object.keys(infos).length === 0) {
-        const data = await fetchJsonWithRetry(`${base}/memes/static/infos.json`);
-        if (data && Object.keys(data).length) {
-          infos = data;
-          fs.writeFileSync(INFOS_FILE, JSON.stringify(infos));
-        }
-      }
-      if (Object.keys(keyMap).length === 0) {
-        const data = await fetchJsonWithRetry(`${base}/memes/static/keyMap.json`);
-        if (data && Object.keys(data).length) {
-          keyMap = data;
-          fs.writeFileSync(KEYMAP_FILE, JSON.stringify(keyMap));
-        }
-      }
-      // 静态资源获取失败时，走逐条查询兜底（并发分批，避免串行过慢）
-      if (Object.keys(infos).length === 0 || Object.keys(keyMap).length === 0) {
-        usedFallback = true;
-        logger.mark('[xhh-meme] 静态资源不可用，改走逐条在线查询（较慢）');
+      // 资源站点 0.1.14 起去掉了 /memes/static/infos.json、keyMap.json 两个静态
+      // 端点（请求返回 404 {"detail":"Not Found"}），改为 API 暴露：
+      //   /memes/keys            全部表情 key 列表
+      //   /memes/{key}/info      单个表情的元信息（含 keywords）
+      // 现在直接走这套 API，不再先试静态文件 —— 少 6 次必然失败的请求和
+      // 6 秒退避，启动时也不会再刷那两条 WARN。
+      // 仍保留静态端点作为**兜底**，以便服务端回退到旧版时还能用。
+      const needInfos = Object.keys(infos).length === 0;
+      const needKeyMap = Object.keys(keyMap).length === 0;
+      if (needInfos || needKeyMap) {
         const keys = await fetchJsonWithRetry(`${base}/memes/keys`);
         if (Array.isArray(keys) && keys.length) {
+          const version = await fetchJsonWithRetry(`${base}/meme/version`, 1, true);
+          logger.mark(`[xhh-meme] 拉取表情数据：${keys.length} 个（服务端版本 ${version || '未知'}）`);
           const keyMapTmp = {};
           const infosTmp = {};
           const CONCURRENCY = 12;
           for (let i = 0; i < keys.length; i += CONCURRENCY) {
             const batch = keys.slice(i, i + CONCURRENCY);
             const results = await Promise.all(batch.map(async key => {
-              const info = await fetchJsonWithRetry(`${base}/memes/${key}/info`, 1);
+              const info = await fetchJsonWithRetry(`${base}/memes/${key}/info`, 1, true);
               return { key, info };
             }));
             for (const { key, info } of results) {
@@ -239,14 +235,32 @@ async function loadData(force = false) {
             // 进度日志按 1/10 抽样打印：全量打一次会有近千行（实测 989 条刷满屏），
             // 真正需要排查的是开头与结尾，中间进度用 debug 即可
             const done = Math.min(i + CONCURRENCY, keys.length);
-            if (done === keys.length || done % 100 === 0) {
+            if (done === keys.length || done % 200 === 0) {
               logger.mark(`[xhh-meme] 正在拉取表情信息 ${done}/${keys.length}`);
             }
           }
-          if (Object.keys(infosTmp).length) infos = infosTmp;
-          if (Object.keys(keyMapTmp).length) keyMap = keyMapTmp;
+          if (Object.keys(infosTmp).length) infos = { ...infos, ...infosTmp };
+          if (Object.keys(keyMapTmp).length) keyMap = { ...keyMap, ...keyMapTmp };
           fs.writeFileSync(KEYMAP_FILE, JSON.stringify(keyMap));
           fs.writeFileSync(INFOS_FILE, JSON.stringify(infos));
+          logger.mark(`[xhh-meme] 表情数据就绪：${Object.keys(infos).length} 个表情 / ${Object.keys(keyMap).length} 个关键词`);
+        } else {
+          // 服务端没有 /memes/keys，说明还是旧版，再试静态文件
+          logger.warn('[xhh-meme] /memes/keys 不可用，回退静态资源端点');
+          if (needInfos) {
+            const data = await fetchJsonWithRetry(`${base}/memes/static/infos.json`);
+            if (data && Object.keys(data).length) {
+              infos = data;
+              fs.writeFileSync(INFOS_FILE, JSON.stringify(infos));
+            }
+          }
+          if (needKeyMap) {
+            const data = await fetchJsonWithRetry(`${base}/memes/static/keyMap.json`);
+            if (data && Object.keys(data).length) {
+              keyMap = data;
+              fs.writeFileSync(KEYMAP_FILE, JSON.stringify(keyMap));
+            }
+          }
         }
       }
     } catch (err) {
@@ -326,8 +340,11 @@ export class meme extends plugin {
     };
     super(option);
 
+    // 6 位 cron 是「秒 分 时 日 月 周」，原来写 '0 3 * * * *' 是**每小时**第 3 分
+    // 跑一次 —— 一天 24 次全量重拉近千个表情，纯浪费；服务端接口挂掉时还会每小时
+    // 刷一轮失败日志。表情库又不是分钟级更新的资源，改成每天一次足够。
     this.task = {
-      cron: '0 3 * * * *',
+      cron: '0 30 4 * * *',
       name: '[小花火]meme资源自动更新',
       fnc: () => this.init(true),
       log: false,
@@ -340,6 +357,10 @@ export class meme extends plugin {
   }
 
   async init(force = false) {
+    // 收尾日志一律不打在这里：本类的 init() 会被调三次 ——
+    // 构造函数末尾自己调一次、框架 loadPlugin 对第一个实例调一次、
+    // 第二个实例的构造函数又调一次（框架 new 两次，见 lib/plugins/loader.js），
+    // 打在这里必是三行。结论只在 loadData 里打，那里由 loadPromise 保证只打一次。
     await loadData(force);
     let rules = [
       {
@@ -387,9 +408,6 @@ export class meme extends plugin {
       ...r,
       reg: r.reg instanceof RegExp ? r.reg : new RegExp(r.reg),
     }));
-    // 正常路径（静态资源可用）只留一行结论；走逐条兜底时 warn 已经打过，
-    // 这里再打一遍「完成」纯属重复
-    if (!usedFallback) logger.info(`[xhh-meme] 资源加载完成，共 ${Object.keys(infos).length} 个 meme`);
   }
 
   // ---------- 列表 ----------
