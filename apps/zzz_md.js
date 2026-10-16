@@ -1,5 +1,9 @@
 import { api, mhy, render, pluginPriority } from '#xhh';
-import NoteUser from '../../genshin/model/mys/NoteUser.js';
+
+// genshin 的 NoteUser 必须动态加载：静态 import 在 genshin 缺失或版本变动时会让**整个插件**
+// 加载失败（ESM 解析阶段抛 ERR_MODULE_NOT_FOUND，没有 try/catch 兜底）。
+import { makeGenshinLoader } from '../system/genshin_loader.js'
+const getNoteUser = makeGenshinLoader('model/mys/NoteUser.js', ['model/mys/NoteUser.js'])
 
 export class zzz extends plugin {
     constructor(e) {
@@ -31,8 +35,8 @@ export class zzz extends plugin {
         }
 
         if (qq) {
-            uid = (await NoteUser.create(qq)).getUid('zzz');
-            ck = (await NoteUser.create(qq)).getMysUser('zzz')?.ck
+            uid = (await (await getNoteUser()).create(qq)).getUid('zzz');
+            ck = (await (await getNoteUser()).create(qq)).getMysUser('zzz')?.ck
         }
 
         if (!uid || !ck) {

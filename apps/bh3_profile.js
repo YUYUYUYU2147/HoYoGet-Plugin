@@ -1,8 +1,12 @@
 import { yaml, mhy, api, pluginPriority } from '#xhh';
 import fs from 'fs';
-import NoteUser from '../../genshin/model/mys/NoteUser.js';
 import puppeteer from '../../../lib/puppeteer/puppeteer.js';
 import moment from 'moment';
+
+// genshin 的 NoteUser 必须动态加载：静态 import 在 genshin 缺失或版本变动时会让**整个插件**
+// 加载失败（ESM 解析阶段抛 ERR_MODULE_NOT_FOUND，没有 try/catch 兜底）。
+import { makeGenshinLoader } from '../system/genshin_loader.js'
+const getNoteUser = makeGenshinLoader('model/mys/NoteUser.js', ['model/mys/NoteUser.js'])
 
 function sendMsg(e, msg, opts = {}) {
   if (opts?.recallMsg !== undefined) return e.reply(msg, true, opts);
@@ -97,7 +101,7 @@ export class bh3_profile extends plugin {
         region = entry.region || region;
         if (entry.stuid) {
           try {
-            const nu = await NoteUser.create(qq);
+            const nu = await (await getNoteUser()).create(qq);
             for (const ltuid in nu.mysUsers || {}) {
               if (String(ltuid) === String(entry.stuid)) {
                 ck = nu.mysUsers[ltuid].ck;
@@ -110,13 +114,13 @@ export class bh3_profile extends plugin {
     }
 
     if (!uid) {
-      try { uid = (await NoteUser.create(qq)).getUid('bh3'); } catch (_) {}
+      try { uid = (await (await getNoteUser()).create(qq)).getUid('bh3'); } catch (_) {}
     }
     if (!region) region = 'cn_gf01';
 
     if (!ck) {
       try {
-        const nu = await NoteUser.create(qq);
+        const nu = await (await getNoteUser()).create(qq);
         for (const ltuid in nu.mysUsers || {}) {
           if (nu.mysUsers[ltuid]?.ck) {
             ck = nu.mysUsers[ltuid].ck;

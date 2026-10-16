@@ -1,9 +1,13 @@
 import fs from 'fs';
 import { segment } from 'oicq';
 import Runtime from '../../../lib/plugins/runtime.js';
-import NoteUser from '../../genshin/model/mys/NoteUser.js';
 import { TL } from './TL.js';
 import { yaml, pluginPriority } from '#xhh';
+
+// genshin 的 NoteUser 必须动态加载：静态 import 在 genshin 缺失或版本变动时会让**整个插件**
+// 加载失败（ESM 解析阶段抛 ERR_MODULE_NOT_FOUND，没有 try/catch 兜底）。
+import { makeGenshinLoader } from '../system/genshin_loader.js'
+const getNoteUser = makeGenshinLoader('model/mys/NoteUser.js', ['model/mys/NoteUser.js'])
 
 const cfgFile = './plugins/xhh/config/bh3_remind.yaml';
 const stokenDir = './plugins/xhh/data/Stoken';
@@ -323,7 +327,7 @@ export class stamina_remind extends plugin {
       let uid = '';
       let user;
       try {
-        user = await NoteUser.create(String(qq));
+        user = await (await getNoteUser()).create(String(qq));
         uid = String(user.getUid(game === 'bh3' ? 'bh3' : game) || '');
       } catch (err) {
         logger.warn(`[stamina_remind] 获取${GAME_META[game].name}当前UID失败(${qq})：${err.message}`);

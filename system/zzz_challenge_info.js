@@ -1,5 +1,9 @@
-import NoteUser from '../../genshin/model/mys/NoteUser.js';
 import { mhy, api } from '#xhh';
+
+// genshin 的 NoteUser 必须动态加载：静态 import 在 genshin 缺失或版本变动时会让**整个插件**
+// 加载失败（ESM 解析阶段抛 ERR_MODULE_NOT_FOUND，没有 try/catch 兜底）。
+import { makeGenshinLoader } from './genshin_loader.js'
+const getNoteUser = makeGenshinLoader('model/mys/NoteUser.js', ['model/mys/NoteUser.js'])
 
 const zzzServerMap = {
   cn_gf01: '国服',
@@ -15,7 +19,7 @@ async function getZzzAuth(e) {
   let uid = '';
   let ck = '';
   try {
-    const nu = await NoteUser.create(qq);
+    const nu = await (await getNoteUser()).create(qq);
     uid = nu.getUid('zzz');
     ck = nu.getMysUser('zzz')?.ck || '';
   } catch (_) {}

@@ -2,9 +2,13 @@ import moment from 'moment';
 import fs from 'fs';
 import path from 'path';
 import { render, pluginPriority, mhy, config } from '#xhh';
-import MysInfo from '../../genshin/model/mys/mysInfo.js';
 import { xhh_gacha_pool } from './gacha_pool.js';
 import { getRoleProfile, serverName as toServerName } from '../system/roleProfile.js';
+
+// genshin 的 MysInfo 必须动态加载：静态 import 在 genshin 缺失或版本变动时会让**整个插件**
+// 加载失败（ESM 解析阶段抛 ERR_MODULE_NOT_FOUND，没有 try/catch 兜底）。
+import { makeGenshinLoader } from '../system/genshin_loader.js'
+const getMysInfo = makeGenshinLoader('model/mys/mysInfo.js', ['model/mys/mysInfo.js'])
 /**
  * 原神原石 / 星铁星琼 / 绝区零菲林的月报与统计
  *
@@ -347,7 +351,7 @@ export class CurrencyLedger extends plugin {
         e.game = game;
         e.noTips = false;
         try {
-            const res = await MysInfo.get(e, 'ledger', { month: meta.monthArg(mInfo) }, { log: false, game });
+            const res = await (await getMysInfo()).get(e, 'ledger', { month: meta.monthArg(mInfo) }, { log: false, game });
             if (!res || res.retcode !== 0) {
                 return { error: res?.message || '月报接口返回异常，请确认已扫码绑定 Cookie 且在米游社 App 内开启「账本」权限。' };
             }
@@ -402,7 +406,7 @@ export class CurrencyLedger extends plugin {
         const meta = GAMES[game];
         const mInfo = parseMonth(msg);
         const isCount = /统计/.test(msg);
-        // 必须在 MysInfo.init 之前设好 e.game：
+        // 必须在 (await getMysInfo()).init 之前设好 e.game：
         // getUid 里是 `const game = e?.game || (e?.isSr ? "sr" : "gs")`，
         // 之前这里没设，init 拿到的 e.game 是空的 → 一律回落到 "gs"，
         // 于是原石/星琼/菲林三个指令都在用**原神 UID** 去查另外两个游戏。
@@ -411,7 +415,7 @@ export class CurrencyLedger extends plugin {
         e.game = game;
         let auth;
         try {
-            auth = await MysInfo.init(e, 'ledger');
+            auth = await (await getMysInfo()).init(e, 'ledger');
         } finally {
             e.game = oldGame;
         }

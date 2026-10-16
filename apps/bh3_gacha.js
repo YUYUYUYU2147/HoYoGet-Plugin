@@ -3,9 +3,14 @@ import fs from 'fs';
 import path from 'path';
 import YAML from 'yaml';
 import moment from 'moment';
-import NoteUser from '../../genshin/model/mys/NoteUser.js';
 import puppeteer from '../../../lib/puppeteer/puppeteer.js';
 import { guardModuleByFile } from '../system/modules.js'
+
+// genshin 的 NoteUser 必须动态加载：静态 import 在 genshin 缺失或版本变动时会让**整个插件**
+// 加载失败（ESM 解析阶段抛 ERR_MODULE_NOT_FOUND，没有 try/catch 兜底）。
+import { makeGenshinLoader } from '../system/genshin_loader.js'
+const getNoteUser = makeGenshinLoader('model/mys/NoteUser.js', ['model/mys/NoteUser.js'])
+const getMhyFetch = makeGenshinLoader('model/mys/mhyFetch.js', ['model/mys/mhyFetch.js'])
 
 const DATA_DIR = './plugins/xhh/data/bh3_gacha';
 const BH3_POOL_HISTORY_PATH = './plugins/xhh/system/default/bh3_gacha_pool_history.yaml';
@@ -52,6 +57,42 @@ function gachaHeaders() {
     Referer: 'https://webstatic.mihoyo.com/',
     Origin: 'https://webstatic.mihoyo.com/',
   };
+}
+
+// 米游社出口：默认裸 fetch，被风控拦下时改走 genshin 的 mhyFetch（自动切代理）。
+// 崩三这几个接口都在 mhyFetch 的白名单域内：api-takumi 与 public-operation-common。
+// genshin 缺失时退回裸 fetch，功能仍可用，只是没有代理兜底。
+async function bh3Fetch(url, opts = {}) {
+  const fn = await getMhyFetch();
+  return (fn || fetch)(url, opts);
+}
+
+/**
+ * 安全解析米游社响应。
+ *
+ * 之前各处直接 .then(r => r.json())，本机 IP 被 WAF 拦下时拿到的是 HTTP 405
+ * 加一段 HTML 阻断页，JSON.parse 抛 `SyntaxError: Unexpected token '<'` ——
+ * 用户只看到「开始更新抽卡记录」就没有下文，完全看不出是风控。
+ * 这里把「拿不到 JSON」翻译成能读懂的提示。
+ */
+async function bh3Json(res, what = '米游社接口') {
+  let text = '';
+  try {
+    text = await res.text();
+  } catch (err) {
+    throw new Error(`${what} 响应读取失败：${err?.message || err}`);
+  }
+  if (!text.trim().startsWith('{')) {
+    const hint = [ 405, 412, 429 ].includes(Number(res.status))
+      ? '疑似 IP 被米游社风控拦截（未配置米游社接口代理时会出现），请稍后重试'
+      : '返回内容不是 JSON';
+    throw new Error(`${what} HTTP ${res.status} ${hint}`);
+  }
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    throw new Error(`${what} 返回内容无法解析：${err?.message || err}`);
+  }
 }
 
 export class bh3_gacha extends plugin {
@@ -306,7 +347,7 @@ export class bh3_gacha extends plugin {
         stokenCookie = entry.ck_stoken || (entry.stuid && entry.stoken ? `stuid=${entry.stuid};stoken=${entry.stoken};${entry.mid ? `mid=${entry.mid};` : ''}` : null);
         if (entry.stuid) {
           try {
-            const nu = await NoteUser.create(qq);
+            const nu = await (await getNoteUser()).create(qq);
             for (const ltuid in nu.mysUsers || {}) {
               if (String(ltuid) === String(entry.stuid)) {
                 ck = nu.mysUsers[ltuid].ck;
@@ -319,7 +360,7 @@ export class bh3_gacha extends plugin {
     }
 
     if (!uid) {
-      try { uid = (await NoteUser.create(qq)).getUid('bh3'); } catch (_) {}
+      try { uid = (await (await getNoteUser()).create(qq)).getUid('bh3'); } catch (_) {}
     }
     if (!region) region = 'cn_gf01';
 
@@ -328,7 +369,7 @@ export class bh3_gacha extends plugin {
     }
     if (!ck) {
       try {
-        const nu = await NoteUser.create(qq);
+        const nu = await (await getNoteUser()).create(qq);
         for (const ltuid in nu.mysUsers || {}) {
           if (nu.mysUsers[ltuid]?.ck) {
             ck = nu.mysUsers[ltuid].ck;
@@ -348,7 +389,7 @@ export class bh3_gacha extends plugin {
       region,
     };
     const bodyStr = JSON.stringify(body);
-    const res = await fetch(GET_AUTHKEY_URL, {
+    let res = await bh3Fetch(GET_AUTHKEY_URL, {
       method: 'POST',
       headers: {
         Cookie: stokenCookie,
@@ -366,7 +407,8 @@ export class bh3_gacha extends plugin {
         Host: 'api-takumi.mihoyo.com',
       },
       body: bodyStr,
-    }).then(r => r.json());
+    });
+    res = await bh3Json(res, 'genAuthKey');
     if (res?.retcode === 0 && res.data?.authkey) return res.data.authkey;
     logger.warn('[xhh][bh3_gacha] genAuthKey failed:', JSON.stringify(res));
     return null;
@@ -408,9 +450,9 @@ export class bh3_gacha extends plugin {
     const seen = new Set();
     for (const menuType of menuTypes) {
       const params = this.gachaBaseParams(uid, authkey, menuType);
-      const res = await fetch(`${GACHA_MENUS_URL}?${params.toString()}`, {
+      const res = await bh3Json(await bh3Fetch(`${GACHA_MENUS_URL}?${params.toString()}`, {
         headers: gachaHeaders(),
-      }).then(r => r.json());
+      }), 'GetMenus');
       logger.mark(`[xhh][bh3_gacha] GetMenus raw type=${menuType} response:`, JSON.stringify(res));
       const list = Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.list) ? res.data.list : Array.isArray(res?.data?.menus) ? res.data.menus : [];
       for (const menu of list) {
@@ -436,9 +478,9 @@ export class bh3_gacha extends plugin {
     // 这里逐个探测并合并，避免 type=1 返回空数组时误判失败。
     for (const menuType of ['1', '2', '3', '4', '5', '6']) {
       const params = this.gachaBaseParams(uid, authkey, menuType);
-      const res = await fetch(`${GACHA_MENUS_URL}?${params.toString()}`, {
+      const res = await bh3Json(await bh3Fetch(`${GACHA_MENUS_URL}?${params.toString()}`, {
         headers: gachaHeaders(),
-      }).then(r => r.json());
+      }), 'GetMenus');
       logger.mark(`[xhh][bh3_gacha] GetMenus type=${menuType} response:`, JSON.stringify(res));
       const list = Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.list) ? res.data.list : Array.isArray(res?.data?.menus) ? res.data.menus : [];
       for (const menu of list) {
@@ -481,9 +523,9 @@ export class bh3_gacha extends plugin {
       params.set('page', String(page));
       params.set('size', '20');
       params.set('end_id', '0');
-      const res = await fetch(`${GACHA_LOG_URL}?${params.toString()}`, {
+      const res = await bh3Json(await bh3Fetch(`${GACHA_LOG_URL}?${params.toString()}`, {
         headers: gachaHeaders(),
-      }).then(r => r.json());
+      }), 'GetUserGacha');
       if (res?.retcode !== 0) {
         // 失败必须和「这个池没有记录」区分开。原先只打一行日志就 break，返回空数组后
         // 调用方按「没有新增」处理——1034 验证码、-100 authkey 失效、1103 限流、网络抖动
@@ -543,7 +585,7 @@ export class bh3_gacha extends plugin {
         params.set('end_id', '0');
         let res;
         try {
-          res = await fetch(`${url}?${params.toString()}`, { headers: gachaHeaders() }).then(r => r.json());
+          res = await bh3Json(await bh3Fetch(`${url}?${params.toString()}`, { headers: gachaHeaders() }), 'GetUserGacha');
         } catch (err) {
           lastError = err?.message || String(err);
           break;
@@ -1221,6 +1263,12 @@ export class bh3_gacha extends plugin {
         ...player,
         bg: ['bg', 'bg1', 'IMG_20250717_034154'][Math.floor(Math.random() * 3)],
         sys: { scale: 'style=transform:scale(1)' },
+        // 这里直接调 puppeteer.render，绕过了 system/render.js 里注入 ppath 的
+        // beforeRender，模板里的 {{ppath}} 会被渲染成空串：CSS 与背景图全部 404，
+        // 页面退化成没有样式的裸 HTML（文字纵向堆叠、原图按原始尺寸铺开）。
+        // 层数 = 资源目录段数 + 3：HTML 落在 temp/html/小花火/bh3_gacha/gacha/，
+        // 从那里回到 TRSS-Yunzai 根要上跳 5 层，再进 plugins/xhh/resources/。
+        ppath: '../../../../../plugins/xhh/resources/',
         tplFile: process.cwd() + '/plugins/xhh/resources/bh3_gacha/gacha.html',
         saveId: 'gacha',
       });

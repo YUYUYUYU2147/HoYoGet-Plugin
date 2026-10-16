@@ -11,11 +11,11 @@
  * 所以同一个插件里两套取头像的逻辑，用户看到的就是「水晶统计有头像、
  * 账本没有」。这里把四个游戏统一到同一套。
  *
- * 为什么走 MysInfo.get 而不是自己 fetch：
+ * 为什么走 (await getMysInfo()).get 而不是自己 fetch：
  * index 接口对 device_fp 敏感，缺了会返回 -10001 invalid request。
  * genshin 插件的 getData() 会自动补 getFp，而且 URL / DS / 各游戏的 hostRecord
  * 都在它自己的 apiTool 里维护好了 —— 自己拼很容易漏头（第一版就是这么翻车的，
- * 星铁报「米游社接口异常」）。MysInfo.get 不校验 auth 名单，
+ * 星铁报「米游社接口异常」）。(await getMysInfo()).get 不校验 auth 名单，
  * 'index' 虽然不在 auth 数组里但能正常调用。
  *
  * 四个游戏的 index 路径（取自 genshin/model/mys/apiTool.js）：
@@ -25,8 +25,12 @@
  *   绝区零  event/game_record_zzz/api/zzz/index
  */
 
-import MysInfo from '../../genshin/model/mys/mysInfo.js';
 import { api, mhy } from '#xhh';
+
+// genshin 的 MysInfo 必须动态加载：静态 import 在 genshin 缺失或版本变动时会让**整个插件**
+// 加载失败（ESM 解析阶段抛 ERR_MODULE_NOT_FOUND，没有 try/catch 兜底）。
+import { makeGenshinLoader } from './genshin_loader.js'
+const getMysInfo = makeGenshinLoader('model/mys/mysInfo.js', ['model/mys/mysInfo.js'])
 
 // 服务器代码 → 中文名
 const SERVER_CN = {
@@ -103,7 +107,7 @@ export async function getRoleProfile(e, uid, game, auth = {}) {
     const out = { nickname: '', avatar: '', serverName: '', userLevel: 0 };
     if (!uid) return out;
     out.serverName = serverName(mhy.getServer(String(uid), game));
-    // e.game 必须先设好：MysInfo.get 内部靠它选游戏和对应的 hostRecord
+    // e.game 必须先设好：(await getMysInfo()).get 内部靠它选游戏和对应的 hostRecord
     const oldGame = e.game;
     e.game = game;
     try {
@@ -125,7 +129,7 @@ export async function getRoleProfile(e, uid, game, auth = {}) {
                 })
                 : null;
         } else {
-            res = await MysInfo.get(e, 'index', {}, { log: false, game });
+            res = await (await getMysInfo()).get(e, 'index', {}, { log: false, game });
         }
         if (!res || res.retcode !== 0 || !res.data) return out;
         const d = res.data;
@@ -142,7 +146,7 @@ export async function getRoleProfile(e, uid, game, auth = {}) {
         // game_record/app/genshin/api/gcg/basicInfo（七圣召唤），
         // 跟角色资料完全不相干，不能通用化。
         if (!out.nickname && game === 'sr') {
-            const bi = await MysInfo.get(e, 'basicInfo', {}, { log: false, game });
+            const bi = await (await getMysInfo()).get(e, 'basicInfo', {}, { log: false, game });
             if (bi?.retcode === 0 && bi?.data) {
                 out.nickname = findNickname(bi.data) || out.nickname;
                 out.avatar = findFaceUrl(bi.data) || out.avatar;

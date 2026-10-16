@@ -1,11 +1,15 @@
 import { api, mhy, yaml, config, pluginPriority } from '#xhh';
 import { mhyFetch } from '../system/mhy_fetch.js';
 import puppeteer from '../../../lib/puppeteer/puppeteer.js';
-import NoteUser from '../../genshin/model/mys/NoteUser.js';
 import { getRoleProfile } from '../system/roleProfile.js';
 import moment from "moment";
 import fs from 'fs';
 import YAML from 'yaml';
+
+// genshin 的 NoteUser 必须动态加载：静态 import 在 genshin 缺失或版本变动时会让**整个插件**
+// 加载失败（ESM 解析阶段抛 ERR_MODULE_NOT_FOUND，没有 try/catch 兜底）。
+import { makeGenshinLoader } from '../system/genshin_loader.js'
+const getNoteUser = makeGenshinLoader('model/mys/NoteUser.js', ['model/mys/NoteUser.js'])
 
 async function sendMsg(e, msg, opts = {}) {
     if (opts?.recallMsg !== undefined) {
@@ -247,7 +251,7 @@ export class bh3_ledger extends plugin {
                     debugLog('[水晶] entry found:', !!entry, 'stuid:', entry?.stuid);
                     if (entry?.stuid) {
                         region = entry.region || region;
-                        let nu = await NoteUser.create(qq);
+                        let nu = await (await getNoteUser()).create(qq);
                         for (let ltuid in nu.mysUsers) {
                             if (String(ltuid) === String(entry.stuid)) {
                                 ck = nu.mysUsers[ltuid].ck;
@@ -261,7 +265,7 @@ export class bh3_ledger extends plugin {
                             let result = await mhy.refresh_cookies(e, hdrs, entry.stoken, entry.stuid, { bindGenshinCookie: false });
                             debugLog('[水晶] refresh result:', { hasLtoken: !!result.ltoken, hasCk: !!result.ck });
                             if (result.ltoken && result.ck) {
-                                let nu2 = await NoteUser.create(qq);
+                                let nu2 = await (await getNoteUser()).create(qq);
                                 for (let ltuid in nu2.mysUsers) {
                                     if (String(ltuid) === String(entry.stuid)) {
                                         ck = nu2.mysUsers[ltuid].ck;
@@ -278,13 +282,13 @@ export class bh3_ledger extends plugin {
 
         if (!uid) {
             try {
-                uid = (await NoteUser.create(qq)).getUid('bh3');
+                uid = (await (await getNoteUser()).create(qq)).getUid('bh3');
                 debugLog('[水晶] fallback uid from NoteUser:', uid);
             } catch (_) {}
         }
         if (!ck) {
             try {
-                let nu = await NoteUser.create(qq);
+                let nu = await (await getNoteUser()).create(qq);
                 for (let g of ['bh3', 'gs', 'sr', 'zzz']) {
                     let mu = nu.getMysUser(g);
                     if (mu) { ck = mu.ck; debugLog('[水晶] fallback CK from:', g); break; }

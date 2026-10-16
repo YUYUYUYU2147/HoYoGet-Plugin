@@ -11,9 +11,13 @@ import {
     yaml,
     config
 } from '#xhh';
-import NoteUser from '../../genshin/model/mys/NoteUser.js';
 import { manualGeetest } from './manual_geetest.js';
 import { mhyFetch } from './mhy_fetch.js';
+
+// genshin 的 NoteUser 必须动态加载：静态 import 在 genshin 缺失或版本变动时会让**整个插件**
+// 加载失败（ESM 解析阶段抛 ERR_MODULE_NOT_FOUND，没有 try/catch 兜底）。
+import { makeGenshinLoader } from './genshin_loader.js'
+const getNoteUser = makeGenshinLoader('model/mys/NoteUser.js', ['model/mys/NoteUser.js'])
 
 
 function cookiePart(ck = '', key) {
@@ -1635,7 +1639,7 @@ async function zd_MysSign(qqs) {
             return false;
         };
         for (let game of games) {
-            let user = (await NoteUser.create(qq)).getMysUser(game); //只要当前xx游戏绑定ck的账号信息（原神可能有多个，如渠道服）
+            let user = (await (await getNoteUser()).create(qq)).getMysUser(game); //只要当前xx游戏绑定ck的账号信息（原神可能有多个，如渠道服）
             // 逍遥插件在该游戏下也有账号时一并处理，别因为 xhh 侧没绑就整个游戏跳过
             const xiaoyaoForGame = getXiaoyaoEntries(qq).filter(v => v.game === game && v.uid);
             if (!user && !xiaoyaoForGame.length) continue;
