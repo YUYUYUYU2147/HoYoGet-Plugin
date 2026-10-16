@@ -917,6 +917,11 @@ export class bh3_gacha extends plugin {
     return !/^\[(材料|角色|武器|圣痕|协同者|人偶)\]/.test(c);
   }
 
+  // 协同者记录形如「[协同者]晨雪」，部分带「协作者」写法
+  extractPartnerName(content = '') {
+    return String(content || '').replace(/^\[协(?:同者|作者)\]\s*/, '').trim();
+  }
+
   extractCostumeName(content = '') {
     return String(content || '').replace(/^\[[^\]]*\]\s*/, '').trim();
   }
@@ -927,10 +932,17 @@ export class bh3_gacha extends plugin {
     const weapon = {};
     const charIcon = {};
     const weaponIcon = {};
+    // 协同者频道取 218：这是「当前可抽协同者」频道（8 条），图标是 115×116 的
+    // 标准半身立绘，和角色/武器同一量级。另有 36 号频道是历史全量（43 条），
+    // 图标是 840×920 的 Q 版大头透明底 —— 套进方框里头像很小、四周还露空，
+    // 不要用那个。之前 getItemIcon 没有 partner 分支，协同者一律返回空 URL，
+    // 模板就渲染成文字占位块。
+    const partnerIcon = {};
     try {
-      const [chars, weapons] = await Promise.all([
+      const [chars, weapons, partners] = await Promise.all([
         fetch(`${BH3_WIKI_BASE}&channel_id=18`).then(r => r.json()),
         fetch(`${BH3_WIKI_BASE}&channel_id=20`).then(r => r.json()),
+        fetch(`${BH3_WIKI_BASE}&channel_id=218`).then(r => r.json()).catch(() => null),
       ]);
       for (const item of chars?.data?.list?.[0]?.list || []) {
         let rank = 0;
@@ -960,11 +972,14 @@ export class bh3_gacha extends plugin {
         if (rank) weapon[item.title] = rank;
         if (item.icon) weaponIcon[item.title] = item.icon;
       }
-      logger.mark(`[xhh][bh3_gacha] star maps: char=${Object.keys(char).length}, weapon=${Object.keys(weapon).length}`);
+      for (const item of partners?.data?.list?.[0]?.list || []) {
+        if (item.icon && item.title) partnerIcon[item.title] = item.icon;
+      }
+      logger.mark(`[xhh][bh3_gacha] star maps: char=${Object.keys(char).length}, weapon=${Object.keys(weapon).length}, partner=${Object.keys(partnerIcon).length}`);
     } catch (err) {
       logger.warn?.('[xhh][bh3_gacha] 获取出金星级映射失败:', err);
     }
-    starMapCache = { char, weapon, charIcon, weaponIcon };
+    starMapCache = { char, weapon, charIcon, weaponIcon, partnerIcon };
     return starMapCache;
   }
 
@@ -1068,6 +1083,10 @@ export class bh3_gacha extends plugin {
     if (poolType === 'weapon') {
       const name = this.extractWeaponName(content);
       return this.cacheIcon(name, maps.weaponIcon?.[name], 'weapon');
+    }
+    if (poolType === 'partner') {
+      const name = this.extractPartnerName(content);
+      return this.cacheIcon(name, maps.partnerIcon?.[name], 'partner');
     }
     if (poolType === 'costume') {
       // 百科没有服装频道，用服装名去反查所属女武神的头像（如「雾都丽影」→ 幽兰黛尔）
@@ -1205,8 +1224,10 @@ export class bh3_gacha extends plugin {
             pulls,
             display: poolType === 'char' ? this.extractCharacterName(r.content)
               : poolType === 'weapon' ? this.extractWeaponName(r.content)
-                : poolType === 'costume' ? this.extractCostumeName(r.content)
-                  : r.content,
+                // 协同者去掉「[协同者]」前缀，占位文字才不至于把标签也显示出来
+                : poolType === 'partner' ? this.extractPartnerName(r.content)
+                  : poolType === 'costume' ? this.extractCostumeName(r.content)
+                    : r.content,
             icon: await this.getItemIcon(r.content, poolType, maps),
           });
           pullCounts.push(pulls);

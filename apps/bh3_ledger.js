@@ -534,6 +534,10 @@ export class bh3_ledger extends plugin {
                     : `当前共绑定 ${accounts.length} 个崩坏3账号，发送 #切换水晶uid 序号 即可切换`;
         try {
             const buf = await puppeteer.render('小花火/bh3_ledger/uid_switch', {
+                // {{ppath}} 不会由框架注入（只有 system/render.js 那条路会），
+                // 缺了它 CSS/背景图/图标全部 404，页面退化成无样式的裸 HTML。
+                // 层数 = 资源目录段数 + 3：小花火/bh3_ledger/uid_switch 落在 temp/html/下同深度目录。
+                ppath: '../../../../../plugins/xhh/resources/',
                 accounts,
                 current,
                 selected,
@@ -810,6 +814,10 @@ export class bh3_ledger extends plugin {
             const hcoinBalance = Number(latest?.hcoinBalance) || Number(latest?.month_level) || 0;
 
             let buf = await puppeteer.render('小花火/bh3_ledger/ledger_count', {
+                // {{ppath}} 不会由框架注入（只有 system/render.js 那条路会），
+                // 缺了它 CSS/背景图/图标全部 404，页面退化成无样式的裸 HTML。
+                // 层数 = 资源目录段数 + 3：小花火/bh3_ledger/ledger_count 落在 temp/html/下同深度目录。
+                ppath: '../../../../../plugins/xhh/resources/',
                 uid,
                 qq,
                 rangeText,
@@ -906,6 +914,10 @@ export class bh3_ledger extends plugin {
         let icons = ["1-1", "1-2", "1-3", "2-1", "2-2", "2-3", "3-1", "3-2", "3-3"];
 
         let buf = await puppeteer.render('小花火/bh3_ledger/ledger', {
+            // {{ppath}} 不会由框架注入（只有 system/render.js 那条路会），
+            // 缺了它 CSS/背景图/图标全部 404，页面退化成无样式的裸 HTML。
+            // 层数 = 资源目录段数 + 3：小花火/bh3_ledger/ledger 落在 temp/html/下同深度目录。
+            ppath: '../../../../../plugins/xhh/resources/',
             ...MonthData,
             MonthData,
             uid,
@@ -1044,6 +1056,10 @@ export class bh3_ledger extends plugin {
         let icons = ["1-1", "1-2", "1-3", "2-1", "2-2", "2-3", "3-1", "3-2", "3-3"];
 
         let buf = await puppeteer.render('小花火/bh3_ledger/ledger', {
+            // {{ppath}} 不会由框架注入（只有 system/render.js 那条路会），
+            // 缺了它 CSS/背景图/图标全部 404，页面退化成无样式的裸 HTML。
+            // 层数 = 资源目录段数 + 3：小花火/bh3_ledger/ledger 落在 temp/html/下同深度目录。
+            ppath: '../../../../../plugins/xhh/resources/',
             ...lastMonthData,
             MonthData: lastMonthData,
             uid,

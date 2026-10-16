@@ -190,6 +190,9 @@ export class bh3_all_note extends plugin {
         ...data,
         sys: { scale: 'style=transform:scale(1)' },
         deviceScaleFactor: 2,
+        // {{ppath}} 不会由框架注入（只有 system/render.js 那条路会），
+        // 缺了它 CSS 与背景图全部 404，页面退化成无样式的裸 HTML。
+        ppath: '../../../../../plugins/xhh/resources/',
         tplFile: process.cwd() + '/plugins/xhh/resources/all_note/all_note.html',
         saveId: 'all_note',
       });

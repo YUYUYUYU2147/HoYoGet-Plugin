@@ -216,6 +216,10 @@ export class bh3_profile extends plugin {
 
     try {
       const buf = await puppeteer.render('小花火/bh3_profile/profile', {
+        // {{ppath}} 不会由框架注入（只有 system/render.js 那条路会），
+        // 缺了它 CSS/背景图/图标全部 404，页面退化成无样式的裸 HTML。
+        // 层数 = 资源目录段数 + 3：小花火/bh3_profile/profile 落在 temp/html/下同深度目录。
+        ppath: '../../../../../plugins/xhh/resources/',
         ...data,
         sys: { scale: 'style=transform:scale(1)' },
         deviceScaleFactor: 2,
