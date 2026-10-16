@@ -922,6 +922,31 @@ export class bh3_gacha extends plugin {
     return String(content || '').replace(/^\[协(?:同者|作者)\]\s*/, '').trim();
   }
 
+  /**
+   * 协同者图标查表。
+   *
+   * 百科 218 频道用的是全名（当前 8 条：希娜狄雅、白鹿游云、晨雪、
+   * 德丽莎·阿波卡利斯、瑟拉珮姆、松雀、寻梦者·2P、寻梦者·1P），
+   * 而抽卡记录里是简写：例如「[协同者]游云」对应百科的「白鹿游云」，
+   * 精确匹配必然落空 -> 图标取不到 -> 模板渲染成文字占位块。
+   * 所以这里分两级：先精确，再双向「包含」（取最长的那个），与服装按
+   * 女武神名反查的处理思路一致。
+   */
+  lookupPartnerIcon(name = '', map = {}) {
+    const key = String(name || '').trim();
+    if (!key) return '';
+    if (map[key]) return map[key];
+    // 长度门槛 2：单字名包含匹配太容易误伤（「云」→「白鹿游云」并不代表同一个协同者）
+    if (key.length >= 2) {
+      const hit = Object.keys(map)
+        .filter(n => n && n.length >= 2 && (n.includes(key) || key.includes(n)))
+        .sort((a, b) => b.length - a.length)[0];
+      if (hit) return map[hit];
+      logger.debug(`[xhh][bh3_gacha] 协同者图标未命中：${key}（百科 218 频道共 ${Object.keys(map).length} 条）`);
+    }
+    return '';
+  }
+
   extractCostumeName(content = '') {
     return String(content || '').replace(/^\[[^\]]*\]\s*/, '').trim();
   }
@@ -1086,7 +1111,7 @@ export class bh3_gacha extends plugin {
     }
     if (poolType === 'partner') {
       const name = this.extractPartnerName(content);
-      return this.cacheIcon(name, maps.partnerIcon?.[name], 'partner');
+      return this.cacheIcon(name, this.lookupPartnerIcon(name, maps.partnerIcon || {}), 'partner');
     }
     if (poolType === 'costume') {
       // 百科没有服装频道，用服装名去反查所属女武神的头像（如「雾都丽影」→ 幽兰黛尔）
