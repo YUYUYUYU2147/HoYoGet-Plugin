@@ -99,11 +99,16 @@ function getPlayerBadge(e, gamePlayer = null) {
   return { playerName: gameName || qqName, playerAvatar: gameAvatar || qqAvatar }
 }
 
+/** 多账号 CK 里挑出与当前 ZZZ UID 匹配的那条，避免拿到原神/别的账号的 cookie */
+function pickCkItem(ck, uid = '') {
+  const list = Object.values(ck || {}).filter(item => item?.ck)
+  return list.find(item => String(item.uid) === String(uid)) || list[0] || null
+}
+
 /** CK 对象 -> 字符串（mhy.getHeaders 只认字符串） */
-function ckStringOf(ck) {
+function ckStringOf(ck, uid = '') {
   if (typeof ck === 'string') return ck
-  const hit = Object.values(ck || {}).find(item => item?.ck)
-  return hit?.ck || ''
+  return pickCkItem(ck, uid)?.ck || ''
 }
 
 /** 复用 ZZZ-Plugin 缓存的设备指纹：它查面板前会自动 getFp 并写 Redis，不必手动绑定设备 */
@@ -140,7 +145,7 @@ function zzzDeviceInfo() {
 }
 
 /** 自动 getFp：和 ZZZ-Plugin 一样由插件申请设备指纹，用户不需要手动绑定设备 */
-async function fetchZzzDeviceFp(ck) {
+async function fetchZzzDeviceFp(ck, uid = '') {
   const { productName, modelName, osVersion, board, deviceInfo } = zzzDeviceInfo()
   const uuid = crypto.randomUUID()
   const brand = deviceInfo.split('/')[0]
@@ -177,7 +182,7 @@ async function fetchZzzDeviceFp(ck) {
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 miHoYoBBS/2.73.1',
-        Cookie: ckStringOf(ck),
+        Cookie: ckStringOf(ck, uid),
       },
       body: JSON.stringify(body),
     }).then(r => r.json())
@@ -191,8 +196,8 @@ async function fetchZzzDeviceFp(ck) {
 }
 
 /** 设备指纹优先级：本地绑定文件 → CK 自带 → ZZZ-Plugin 的 Redis 缓存 → 自动 getFp */
-async function resolveZzzDevice(e, ck) {
-  const ckItem = Object.values(ck || {}).find(item => item?.ck)
+async function resolveZzzDevice(e, ck, uid = '') {
+  const ckItem = pickCkItem(ck, uid)
   const fpFile = `./plugins/HoYoGet-Plugin/data/fp/${e?.user_id}.yaml`
   let file = {}
   if (fs.existsSync(fpFile)) {
@@ -208,7 +213,7 @@ async function resolveZzzDevice(e, ck) {
     } catch { /* Redis 不可用就继续自动申请 */ }
   }
   if (fp) return { fp, device_id: deviceId || crypto.randomUUID() }
-  const got = await fetchZzzDeviceFp(ck)
+  const got = await fetchZzzDeviceFp(ck, uid)
   if (got.fp && ltuid && typeof redis !== 'undefined') {
     try {
       await redis.set(`ZZZ:DEVICE_FP:${ltuid}:FP`, got.fp, { EX: 86400 * 7 })
@@ -219,13 +224,13 @@ async function resolveZzzDevice(e, ck) {
 }
 
 /** 按 ZZZ-Plugin 的口径生成 record 接口请求头（4x salt + query 参与 DS） */
-function zzzHeaders(e, ck, query = '', dev = null) {
+function zzzHeaders(e, ck, query = '', dev = null, uid = '') {
   const fpFile = `./plugins/HoYoGet-Plugin/data/fp/${e?.user_id}.yaml`
   let fp = {}
   if (fs.existsSync(fpFile)) {
     try { fp = yaml.get(fpFile) || {} } catch { fp = {} }
   }
-  const ckItem = Object.values(ck || {}).find(item => item?.ck)
+  const ckItem = pickCkItem(ck, uid)
   if (!fp.device_id && ckItem?.device_id) fp.device_id = ckItem.device_id
   if (!fp.fp && ckItem?.fp) fp.fp = ckItem.fp
   if (dev?.device_id) fp.device_id = dev.device_id
@@ -245,7 +250,7 @@ function zzzHeaders(e, ck, query = '', dev = null) {
     Referer: 'https://act.mihoyo.com/',
     Accept: 'application/json, text/plain, */*',
     DS: `${t},${r},${DS}`,
-    Cookie: ck || '',
+    Cookie: ckStringOf(ck, uid),
   }
   // 设备信息只在用户绑定过设备时带；随便生成一个 device_id 反而更容易触发风控
   if (fp.device_id) headers['x-rpc-device_id'] = String(fp.device_id)
@@ -254,17 +259,17 @@ function zzzHeaders(e, ck, query = '', dev = null) {
 }
 
 /** 本地全自动过码服务：返回 challenge 后带 x-rpc-challenge 重试原接口 */
-async function zzzAutoVerify(e, ck) {
+async function zzzAutoVerify(e, ck, uid = '') {
   const addr = String(config()?.auto_verify_addr ?? 'http://127.0.0.1:2149/solve').trim()
   if (!addr) return ''
-  const dev = await resolveZzzDevice(e, ck)
+  const dev = await resolveZzzDevice(e, ck, uid)
   const deviceId = dev.device_id || mhy.getDeviceGuid()
   const deviceFp = dev.fp || ''
   try {
     const res = await fetch(addr, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cookie: ckStringOf(ck), deviceId, deviceFp, clientType: '2', challengeGame: '8' }),
+      body: JSON.stringify({ cookie: ckStringOf(ck, uid), deviceId, deviceFp, clientType: '2', challengeGame: '8' }),
       signal: AbortSignal.timeout(360000),
     }).then(r => r.json())
     if (res?.data?.result === 'ok' && res.data.challenge) {
@@ -286,8 +291,8 @@ async function zzzGet(e, uid, ck, type, query, extraHeaders = {}, retried = fals
       ? 'https://api-takumi-record.mihoyo.com/event/game_record_zzz/api/zzz/avatar/info'
       : 'https://api-takumi-record.mihoyo.com/event/game_record_zzz/api/zzz/avatar/basic'
   const url = `${base}?${query}`
-  const dev = await resolveZzzDevice(e, ck)
-  const headers = { ...zzzHeaders(e, ck, query, dev), ...extraHeaders }
+  const dev = await resolveZzzDevice(e, ck, uid)
+  const headers = { ...zzzHeaders(e, ck, query, dev, uid), ...extraHeaders }
   const resp = await mhyFetch(url, { method: 'GET', headers })
   const text = await resp.text()
   let json
@@ -306,7 +311,7 @@ async function zzzGet(e, uid, ck, type, query, extraHeaders = {}, retried = fals
     }
     if ([1034, 10035].includes(code)) {
       if (!retried) {
-        const challenge = await zzzAutoVerify(e, ck)
+        const challenge = await zzzAutoVerify(e, ck, uid)
         if (challenge) {
           // 过码成功后立刻重打有时仍是验证码（风控还没放行），按梯度等一会儿再试
           let lastErr = null
