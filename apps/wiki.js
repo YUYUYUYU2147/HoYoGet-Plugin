@@ -154,6 +154,11 @@ function zzzAliasMap(channelId = 43) {
 }
 
 
+/** 清空绝区零别名缓存：运行时增删别名后调用，避免仍用旧映射 */
+export function clearZzzAliasCache() {
+  for (const key of Object.keys(_zzzAliasCache)) delete _zzzAliasCache[key];
+}
+
 function collectWikiValues(input, nameOnly = false, out = []) {
   if (input === undefined || input === null) return out;
   if (typeof input === 'string') {

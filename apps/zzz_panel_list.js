@@ -2,7 +2,7 @@ import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { config, mhy, pluginPriority, render, yaml } from '#HoYoGet'
+import { config, mhy, pluginPriority, render, yaml, makeForwardMsg } from '#HoYoGet'
 import { damageSkillsAt, getCharRates } from '../system/zzz_skill_rate.js'
 import { getBuffAreas } from '../system/zzz_buff.js'
 import { mhyFetch } from '../system/mhy_fetch.js'
@@ -1122,6 +1122,9 @@ const DAMAGE_REG = new RegExp(`${PREFIX_REG}(?!更新|刷新)(.+?)伤害\\s*(\\d
 const DETAIL_REG_OLD = /^(?:米游社|%|#?绝区零)面板\s+(.+)$/
 const HELP_REG = /^米游社面板$/
 const ORIGINAL_REG = /^(?:米游社|#?绝区零)原图$/
+const PANEL_UPLOAD_REG = /^(?:米游社|%|#?绝区零)?(?:上传|添加)(.+?)(?:角色|面板)图$/
+const PANEL_IMAGES_REG = /^(?:米游社|%|#?绝区零)?(?:获取|查看)(.+?)(?:角色|面板)图\s*(\d*)$/
+const PANEL_DELETE_IMG_REG = /^(?:米游社|%|#?绝区零)?删除(.+?)(?:角色|面板)图(.+)$/
 
 export class zzz_panel_list extends plugin {
   constructor() {
@@ -1138,6 +1141,9 @@ export class zzz_panel_list extends plugin {
         { reg: DETAIL_REG_OLD.source, fnc: 'panelDetail' },
         { reg: HELP_REG.source, fnc: 'panelDetailHelp' },
         { reg: ORIGINAL_REG.source, fnc: 'panelOriginal' },
+        { reg: PANEL_UPLOAD_REG.source, fnc: 'panelUploadImages' },
+        { reg: PANEL_IMAGES_REG.source, fnc: 'panelImageList' },
+        { reg: PANEL_DELETE_IMG_REG.source, fnc: 'panelDeleteImages' },
       ],
     })
   }
@@ -1268,6 +1274,123 @@ export class zzz_panel_list extends plugin {
     }
   }
 
+  /** 把别名/本名解析成资源目录里的正式角色名 */
+  resolvePanelRole(raw = '') {
+    const clean = String(raw || '').replace(/[「」]/g, '').trim()
+    if (!clean) return ''
+    const norm = v => String(v || '').replace(/[\s·・\-—_「」『』《》【】\[\]（）()]/g, '').toLowerCase()
+    const localBase = path.join(PLUGIN_ROOT, 'resources', 'zzz_panel', 'images', 'panel')
+    const hasDir = name => CUSTOM_PORTRAIT_DIRS.some(base => fs.existsSync(path.join(base, name)))
+    if (hasDir(clean)) return clean
+    try {
+      const names = yaml.get(path.join(PLUGIN_ROOT, 'system', 'default', 'zzz_js_names.yaml')) || {}
+      for (const [formal, aliases] of Object.entries(names)) {
+        if (norm(formal) === norm(clean) || (Array.isArray(aliases) && aliases.some(a => norm(a) === norm(clean)))) {
+          return formal
+        }
+      }
+    } catch { /* 别名表读不到就只认本名 */ }
+    return ''
+  }
+
+  async collectPanelImages(e) {
+    const images = []
+    const push = arr => {
+      for (const val of (Array.isArray(arr) ? arr : [])) {
+        if (val?.type === 'image') images.push(val)
+      }
+    }
+    push(e.message)
+    if (!images.length) {
+      try {
+        const src = e.getReply ? await e.getReply() : null
+        push(src?.message)
+      } catch { /* 引用取不到就只认当前消息 */ }
+    }
+    return images
+  }
+
+  /** 上传自定义角色面板图：%上传艾莲面板图（可带图或引用图片） */
+  async panelUploadImages(e) {
+    if (!e.isMaster) return e.reply('只有主人才能上传面板图')
+    const m = String(e.msg || '').match(PANEL_UPLOAD_REG)
+    const role = this.resolvePanelRole(m?.[1] || '')
+    if (!role) return e.reply('未找到对应角色')
+    const images = await this.collectPanelImages(e)
+    if (!images.length) return e.reply('消息中未找到图片，请把图片和指令一起发，或引用要添加的图片')
+    const dir = path.join(PLUGIN_ROOT, 'resources', 'zzz_panel', 'images', 'panel', role)
+    fs.mkdirSync(dir, { recursive: true })
+    let ok = 0, fail = 0
+    for (const img of images) {
+      try {
+        const url = img.url || img.file || ''
+        let buf
+        if (/^https?:/i.test(url)) {
+          const resp = await mhyFetch(url)
+          buf = Buffer.from(await resp.arrayBuffer())
+        } else {
+          const file = String(url).replace(/^file:\/\//, '')
+          buf = fs.readFileSync(file)
+        }
+        const rawName = path.basename(String(img.file || url || '').split('?')[0])
+        let ext = (path.extname(rawName) || '.png').toLowerCase()
+        if (!/\.(png|jpe?g|webp)$/.test(ext)) ext = '.png'
+        let base = path.basename(rawName, path.extname(rawName)) || String(Date.now())
+        let target = path.join(dir, `${base}${ext}`)
+        if (fs.existsSync(target)) target = path.join(dir, `${base}_${Date.now()}${ext}`)
+        fs.writeFileSync(target, buf)
+        ok++
+      } catch (err) {
+        logger.warn?.(`[HoYoGet][zzz_panel] 上传面板图失败：${err?.message || err}`)
+        fail++
+      }
+    }
+    return e.reply(`成功上传${ok}张图片，失败${fail}张图片。`)
+  }
+
+  /** 查看某角色已上传的面板图，带 ID 便于删除 */
+  async panelImageList(e) {
+    const m = String(e.msg || '').match(PANEL_IMAGES_REG)
+    const role = this.resolvePanelRole(m?.[1] || '')
+    if (!role) return e.reply('未找到对应角色')
+    const dir = path.join(PLUGIN_ROOT, 'resources', 'zzz_panel', 'images', 'panel', role)
+    let files = []
+    try { files = fs.readdirSync(dir).filter(f => /\.(png|jpe?g|webp)$/i.test(f)).sort() } catch { files = [] }
+    if (!files.length) return e.reply(`【${role}】还没有上传过面板图`)
+    const pageSize = 5
+    let page = Number(m?.[2]) || 1
+    if (page < 1) page = 1
+    const total = Math.ceil(files.length / pageSize)
+    if (page > total) return e.reply('哪有这么多图片')
+    const slice = files.slice((page - 1) * pageSize, page * pageSize)
+    const msg = [`当前页数：${page}，总页数：${total}，查询指定页数请在指令后面加上页码。`]
+    slice.forEach((file, i) => {
+      const id = (page - 1) * pageSize + i + 1
+      msg.push([`ID：${id}`, segment.image(path.join(dir, file))])
+    })
+    msg.push('删除或添加后会重新排序 ID，删除前请重新查看列表。')
+    return e.reply(await makeForwardMsg(e, msg))
+  }
+
+  /** 删除自定义面板图：%删除艾莲面板图1,2 */
+  async panelDeleteImages(e) {
+    if (!e.isMaster) return e.reply('只有主人才能删除面板图')
+    const m = String(e.msg || '').match(PANEL_DELETE_IMG_REG)
+    const role = this.resolvePanelRole(m?.[1] || '')
+    if (!role) return e.reply('未找到对应角色')
+    const dir = path.join(PLUGIN_ROOT, 'resources', 'zzz_panel', 'images', 'panel', role)
+    let files = []
+    try { files = fs.readdirSync(dir).filter(f => /\.(png|jpe?g|webp)$/i.test(f)).sort() } catch { files = [] }
+    const ids = String(m?.[2] || '').split(/[,，、\s]+/).filter(Boolean)
+    const ok = [], fail = []
+    for (const id of ids) {
+      const idx = Number(id) - 1
+      if (!Number.isInteger(idx) || idx < 0 || idx >= files.length) { fail.push(id); continue }
+      try { fs.unlinkSync(path.join(dir, files[idx])); ok.push(id) } catch { fail.push(id) }
+    }
+    return e.reply([`成功删除ID为${ok.join(',') || '无'}的图片`, fail.length ? `删除失败ID为${fail.join(',')}` : '无失败ID'].join('\n'))
+  }
+
   /** 「%原图」：取回面板实际使用的角色原图（data URI），不是截图 */
   async panelOriginal(e) {
     if (config().zzz_panel_allow_original === false) return e.reply('已禁止获取绝区零面板原图')
@@ -1299,6 +1422,7 @@ export class zzz_panel_list extends plugin {
       '（序号看「米游社更新面板」列表从左到右第几个）',
       '',
       '取回面板角色原图：%原图（引用面板消息）',
+      '上传/查看/删除面板图：%上传艾莲面板图 / %查看艾莲面板图 / %删除艾莲面板图1,2',
       '看某一招的详细计算：米游社<角色>伤害<招数>',
       '示例：米游社艾莲伤害3',
       '　　　米游社艾莲伤害（不带序号＝伤害最高那招）',
