@@ -45,15 +45,15 @@ body {
 .rarity-icon { width: 2.4em; height: 2.4em; }
 
 /* ============ 头部：立绘 + 属性 ============ */
-.hero { display: flex; gap: 20px; }
+.hero { display: flex; gap: 14px; }
 .hero .portrait {
   /* 立绘是透明底全身图，不画边框/阴影/圆角，直接融进背景 */
-  width: 340px; min-width: 340px;
+  width: 440px; min-width: 440px;
   align-self: stretch;
 }
 .hero .portrait img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .hero .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.hero .title-row { display: flex; align-items: center; gap: 10px; }
+.hero .title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .hero .name { font-size: 2.1em; font-weight: 800; letter-spacing: 1px; line-height: 1.1; }
 .hero .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .hero .chip {
@@ -81,7 +81,7 @@ body {
 .sec-title .sub { font-size: .7em; color: #c3cad8; font-weight: 400; }
 
 /* ============ 技能（顶部名字右边，等级左下角小黑牌） ============ */
-.skills-top { margin-left: auto; display: flex; gap: 9px; flex: none; }
+.skills-top { margin-left: 12px; display: flex; gap: 8px; flex: none; }
 .sk { position: relative; width: 32px; height: 32px; }
 .sk img { width: 100%; height: 100%; border-radius: 50%; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); display: block; }
 .sk-lv { position: absolute; left: -5px; bottom: -5px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: #000; border: 1px solid rgba(255,255,255,.4); color: #fff; font-size: .68em; font-weight: 800; display: flex; align-items: center; justify-content: center; }
