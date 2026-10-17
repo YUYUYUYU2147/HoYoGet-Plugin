@@ -48,10 +48,21 @@ body {
 .hero { display: flex; gap: 14px; }
 .hero .portrait {
   /* 立绘是透明底全身图，不画边框/阴影/圆角，直接融进背景 */
+  position: relative;
   width: 440px; min-width: 440px;
   align-self: stretch;
 }
-.hero .portrait img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.player-badge {
+  position: absolute; left: 10px; top: 10px; z-index: 2;
+  display: flex; align-items: center; gap: 8px;
+  max-width: calc(100% - 20px); padding: 4px 10px 4px 4px;
+  border-radius: 999px; background: rgba(5,7,12,.58);
+  border: 1px solid rgba(255,255,255,.18); box-shadow: 0 4px 14px rgba(0,0,0,.35);
+  backdrop-filter: blur(4px);
+}
+.player-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex: none; border: 1px solid rgba(255,255,255,.35); }
+.player-name { color: #fff; font-size: 13px; font-weight: 700; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hero .portrait > img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .hero .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .hero .title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .hero .name { font-size: 2.1em; font-weight: 800; letter-spacing: 1px; line-height: 1.1; }

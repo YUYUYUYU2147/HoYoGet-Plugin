@@ -87,6 +87,14 @@ function formatNow() {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
 }
 
+/** 面板左上角的玩家头像/昵称：优先群名片，其次昵称，最后 QQ 号 */
+function getPlayerBadge(e) {
+  const qq = e?.user_id || e?.sender?.user_id || ''
+  const name = e?.sender?.card || e?.sender?.nickname || e?.friend?.nickname || e?.user?.nickname || (qq ? String(qq) : '')
+  const avatar = e?.sender?.avatar || (qq ? `https://q1.qlogo.cn/g?b=qq&s=100&nk=${qq}` : '')
+  return { playerName: name, playerAvatar: avatar }
+}
+
 // 面板随机背景：默认用 yppp 的随机二次元图；配置成空字符串可恢复纯黑底
 const DEFAULT_PANEL_BG = 'https://api.yppp.net/api.php'
 function getPanelBg() {
@@ -962,7 +970,7 @@ export class zzz_panel_list extends plugin {
     const charData = detail.charData
     const footer = 'from 米哈游'
     try {
-      const img = await render('zzz_panel/detail', { ...detail, footer, bgImage: getPanelBg() }, { e, ret: true })
+      const img = await render('zzz_panel/detail', { ...detail, footer, bgImage: getPanelBg(), ...getPlayerBadge(e) }, { e, ret: true })
       return img
     } catch (err) {
       logger.error?.(`[HoYoGet][zzz_panel] 详情渲染失败：${err?.message || err}`)

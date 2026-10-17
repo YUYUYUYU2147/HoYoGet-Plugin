@@ -14,7 +14,15 @@
     {{set c = charData}}
 
     <div class="hero">
-      <div class="portrait"><img src="{{c.role_icon}}"{{if c.role_fallback}} onerror="this.onerror=null;this.src='{{c.role_fallback}}'"{{/if}}></div>
+      <div class="portrait">
+        <img src="{{c.role_icon}}"{{if c.role_fallback}} onerror="this.onerror=null;this.src='{{c.role_fallback}}'"{{/if}}>
+        {{if playerName || playerAvatar}}
+        <div class="player-badge">
+          {{if playerAvatar}}<img class="player-avatar" src="{{playerAvatar}}" onerror="this.style.display='none'">{{/if}}
+          {{if playerName}}<span class="player-name">{{playerName}}</span>{{/if}}
+        </div>
+        {{/if}}
+      </div>
       <div class="main">
         <div class="title-row">
           <span class="rarity-icon {{c.rarity}}"></span>
