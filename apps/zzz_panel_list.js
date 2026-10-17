@@ -1114,10 +1114,12 @@ function normalizeDetail(a, uid) {
 const CMD_REG = /^\s*米游社\s*(更新|刷新)\s*(全部)?\s*面板$/
 // 详情新格式：米游社<名字>面板（如 米游社南宫羽面板）；保留旧「米游社面板 <名字>」兼容。
 // 负向预查 (?!更新|刷新) 避免与「米游社更新面板 / 米游社刷新面板」抢。
-const DETAIL_REG = /^米游社(?!更新|刷新)(.+?)面板$/
+// 也接受绝区零常用的 % 前缀；%zzz/%绝区零 仍留给 ZZZ-Plugin，避免把它的指令吃掉
+const PREFIX_REG = '^(?:米游社|%(?!zzz|ZZZ|绝区零))'
+const DETAIL_REG = new RegExp(`${PREFIX_REG}(?!更新|刷新)(.+?)面板$`)
 // 米游社<角色>伤害[序号]：序号省略时默认取伤害最高那一招
-const DAMAGE_REG = /^米游社(?!更新|刷新)(.+?)伤害\s*(\d*)$/
-const DETAIL_REG_OLD = /^米游社面板\s+(.+)$/
+const DAMAGE_REG = new RegExp(`${PREFIX_REG}(?!更新|刷新)(.+?)伤害\\s*(\\d*)$`)
+const DETAIL_REG_OLD = /^(?:米游社|%)面板\s+(.+)$/
 const HELP_REG = /^米游社面板$/
 
 export class zzz_panel_list extends plugin {
@@ -1254,7 +1256,7 @@ export class zzz_panel_list extends plugin {
     return e.reply([
       '绝区零·单角色面板',
       '用法：米游社<角色名或序号>面板',
-      '示例：米游社南宫羽面板',
+      '示例：米游社南宫羽面板 / %南宫羽面板',
       '　　　米游社3面板',
       '（序号看「米游社更新面板」列表从左到右第几个）',
       '',
