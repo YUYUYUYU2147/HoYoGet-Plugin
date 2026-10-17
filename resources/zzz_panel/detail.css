@@ -147,6 +147,7 @@ body {
 .dc-meta { color: #b0b9c9; font-size: .8em; display: flex; align-items: center; gap: 6px; margin-top: 2px; }
 .dc-meta .rarity-icon { width: 1.5em; height: 1.5em; }
 .dc-meta .dc-score { margin-left: auto; color: #f5c96b; font-weight: 700; font-size: 1.15em; }
+.dc-meta .dc-score.ACE, .dc-meta .dc-score.MAX { color: #ff4d4f; }
 .dc-props { display: flex; flex-direction: column; gap: 3px; }
 .dp { display: flex; align-items: center; gap: 7px; font-size: .86em; padding: 2px 0; }
 .dp .prop-icon { width: 1.15em; height: 1.15em; }
