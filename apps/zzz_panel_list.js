@@ -50,7 +50,9 @@ const ZPROP = {
   9: { k: 'penratio', c: 'penratio' }, 23103: { k: 'penratio', c: 'penratio' },
   11: { k: 'sprecover', c: 'sprecover' }, 30502: { k: 'sprecover', c: 'sprecover' },
   232: { k: 'penvalue', c: 'penvalue' }, 23203: { k: 'penvalue', c: 'penvalue' },
-  319: { k: 'dmgbonus', c: 'dmgbonus' },
+  315: { k: 'dmgbonus', c: 'dmgbonus' }, 316: { k: 'dmgbonus', c: 'dmgbonus' },
+  317: { k: 'dmgbonus', c: 'dmgbonus' }, 318: { k: 'dmgbonus', c: 'dmgbonus' },
+  319: { k: 'dmgbonus', c: 'dmgbonus' }, 323: { k: 'dmgbonus', c: 'dmgbonus' },
 }
 // 字段键 → 中文标签（属性行显示名）
 const ZPROP_LABEL = {
@@ -1481,6 +1483,17 @@ export class zzz_panel_list extends plugin {
     return null
   }
 
+  /** ZZZ-Plugin data/panel 的角色属性是 111/121/...，转成本插件 API 的 1/2/... */
+  normalizeRecordProps(a) {
+    const map = { 111: 1, 121: 2, 131: 3, 122: 4, 201: 5, 211: 6, 314: 7, 312: 8, 231: 9, 305: 11, 232: 232 }
+    if (!a || !Array.isArray(a.properties)) return a
+    a.properties = a.properties.map(p => {
+      const id = Number(p.property_id)
+      return map[id] ? { ...p, property_id: map[id] } : p
+    })
+    return a
+  }
+
   /** 找一份该角色的面板记录：本地优先，过渡期兼容 ZZZ-Plugin 的 data/panel */
   findExtremeRecord(e, role) {
     const norm = v => String(v || '').replace(/[\s·・\-—_「」『』《》【】\[\]（）()]/g, '').toLowerCase()
@@ -1490,7 +1503,7 @@ export class zzz_panel_list extends plugin {
       try {
         const obj = JSON.parse(fs.readFileSync(file, 'utf8'))
         const a = obj?.data || obj
-        return match(a) ? a : null
+        return match(a) ? this.normalizeRecordProps(a) : null
       } catch { return null }
     }
     const uid = this.getZzzUid(e)
@@ -1510,7 +1523,7 @@ export class zzz_panel_list extends plugin {
           const list = JSON.parse(fs.readFileSync(path.join('./plugins/ZZZ-Plugin/data/panel', f), 'utf8'))
           if (Array.isArray(list)) {
             const a = list.find(match)
-            if (a) return a
+            if (a) return this.normalizeRecordProps(a)
           }
         } catch { /* 跳过坏文件 */ }
       }
@@ -1537,21 +1550,21 @@ export class zzz_panel_list extends plugin {
       const m = String(v ?? '').replace(/,/g, '').match(/-?\d+(?:\.\d+)?/)
       return m ? Number(m[0]) : 0
     }
-    const pct = id => [201, 211, 231, 314].includes(Number(id)) || (Number(id) >= 315 && Number(id) <= 319)
-    const fmt = (id, value) => pct(id) ? `${value.toFixed(1)}%` : (Number(id) === 305 ? value.toFixed(2) : `${Math.round(value)}`)
+    const pct = id => [5, 6, 7, 8, 9].includes(Number(id)) || (Number(id) >= 315 && Number(id) <= 323)
+    const fmt = (id, value) => pct(id) ? `${value.toFixed(1)}%` : (Number(id) === 11 ? value.toFixed(2) : `${Math.round(value)}`)
     const toChar = id => {
       id = Number(id)
-      if (id === 11102 || id === 11103) return 111
-      if (id === 12102 || id === 12103) return 121
-      if (id === 13102 || id === 13103) return 131
-      if (id === 12202) return 122
-      if (id === 20103) return 201
-      if (id === 21103) return 211
-      if (id === 23103) return 231
+      if (id === 11102 || id === 11103) return 1
+      if (id === 12102 || id === 12103) return 2
+      if (id === 13102 || id === 13103) return 3
+      if (id === 12202) return 4
+      if (id === 20103) return 5
+      if (id === 21103) return 6
+      if (id === 31402) return 7
+      if (id === 31203) return 8
+      if (id === 23103) return 9
       if (id === 23203) return 232
-      if (id === 30502) return 305
-      if (id === 31203) return 312
-      if (id === 31402) return 314
+      if (id === 30502) return 11
       if (id >= 31503 && id <= 32303) return Math.trunc(id / 100)
       return null
     }
