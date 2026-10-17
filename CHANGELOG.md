@@ -49,7 +49,7 @@
 | 优化 | **绝区零面板取数去 ZZZ-Plugin 化** —— 角色列表/详情/玩家信息改走本插件直连 ZZZ record 接口（2.73.1、client_type=2、4x DS，头与 ZZZ-Plugin 对齐），不再依赖 `MysZZZApi`；CK 仍按 ZZZ-Plugin→Stoken→genshin 兜底 | `米游社<角色>面板` |
 | 修复 | **绝区零面板风控处理** —— 自动 `getFp` 申请并缓存设备指纹（同 ZZZ-Plugin，无需手动绑定）；`1034/10035` 走本机 `/solve` 自动过码并按梯度重试；`10041` 仅在自动取指纹失败时提示绑定设备 | `米游社<角色>面板` |
 | 修复 | **绝区零面板 -100** —— ZZZ-Plugin 的 CK 对象含多账号，改为按当前 ZZZ `uid` 精确选 CK，避免拿成原神/别的账号的 cookie | `米游社<角色>面板` |
-| 修复 | **绝区零面板头像/字体** —— 左上角优先游戏内头像（NoteData `role_info.avatar` → `index.role.avatar` → 本地 → QQ）；Unifont 移到 `sans-serif` 之后，普通汉字不再落到点阵字体 | `米游社<角色>面板` |
+| 修复 | **绝区零面板头像/字体** —— 左上角优先游戏内头像（NoteData `role_info.avatar` → `index.role.avatar` → 本地 → QQ）；Unifont 限定 `unicode-range` 到生僻字扩展区，普通汉字回到系统 CJK 字体 | `米游社<角色>面板` |
 | 优化 | **绑定设备指令避让 genshin** —— genshin 的 `#绑定设备` 是 `priority:-Infinity`，有限优先级抢不过；新增 `#米哈游绑定设备` / `#绝区零绑定设备` / `#米哈游删除设备` 前缀指令 | `#米哈游绑定设备` |
 
 ### 速览

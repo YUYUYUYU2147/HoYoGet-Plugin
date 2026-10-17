@@ -1,4 +1,4 @@
-@font-face { font-family: 'Unifont'; src: url('../font/unifont.otf') format('opentype'); font-display: swap; }
+@font-face { font-family: 'Unifont'; src: url('../font/unifont.otf') format('opentype'); font-display: swap; unicode-range: U+3400-4DBF, U+20000-2FA1F; }
 /* 绝区零角色面板（深色版式，自控布局；图标映射见 panel-icons.css） */
 * { box-sizing: border-box; }
 body {

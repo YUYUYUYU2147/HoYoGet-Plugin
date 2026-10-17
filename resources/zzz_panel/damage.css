@@ -1,4 +1,4 @@
-@font-face { font-family: 'Unifont'; src: url('../font/unifont.otf') format('opentype'); font-display: swap; }
+@font-face { font-family: 'Unifont'; src: url('../font/unifont.otf') format('opentype'); font-display: swap; unicode-range: U+3400-4DBF, U+20000-2FA1F; }
 /* 绝区零 · 单招伤害计算过程页
    配色与 detail.css 一致（同一套面板观感），此处只补本页独有的块 */
 /* body 宽度必须和 #container 一致：渲染器只截 #container，

@@ -1,4 +1,4 @@
-@font-face { font-family: 'Unifont'; src: url('../font/unifont.otf') format('opentype'); font-display: swap; }
+@font-face { font-family: 'Unifont'; src: url('../font/unifont.otf') format('opentype'); font-display: swap; unicode-range: U+3400-4DBF, U+20000-2FA1F; }
 * {
   margin: 0;
   padding: 0;
