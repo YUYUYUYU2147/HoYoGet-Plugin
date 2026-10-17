@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { config, pluginPriority, render, yaml } from '#HoYoGet'
+import { api, config, mhy, pluginPriority, render, yaml } from '#HoYoGet'
 import { damageSkillsAt, getCharRates } from '../system/zzz_skill_rate.js'
 import { getBuffAreas } from '../system/zzz_buff.js'
 
@@ -95,6 +95,13 @@ function getPlayerBadge(e, gamePlayer = null) {
   const gameName = gamePlayer?.nickname || gamePlayer?.game_name || ''
   const gameAvatar = gamePlayer?.avatar || gamePlayer?.game_avatar || gamePlayer?.gameAvatar || ''
   return { playerName: gameName || qqName, playerAvatar: gameAvatar || qqAvatar }
+}
+
+/** CK 对象 -> 字符串（mhy.getHeaders 只认字符串） */
+function ckStringOf(ck) {
+  if (typeof ck === 'string') return ck
+  const hit = Object.values(ck || {}).find(item => item?.ck)
+  return hit?.ck || ''
 }
 
 /** 从本插件 Stoken 里找 ZZZ 条目：优先当前 UID，其次 nap_cn 条目，最后第一条带 ck 的 */
@@ -1110,11 +1117,14 @@ export class zzz_panel_list extends plugin {
   /** 取游戏内玩家昵称/头像；接口失败时回落迁移过来的本地 player 数据 */
   async fetchPlayer(e, uid, ck) {
     try {
-      const apiMod = await import(path.join(ZZZ_ROOT, 'dist', 'lib', 'mysapi.js'))
-      const MysZZZApi = apiMod.default
-      const api = new MysZZZApi(uid, ck, { handler: e?.runtime?.handler || {}, e })
-      const data = await api.getFinalData('zzzUser')
-      const player = data?.list?.find(p => String(p.game_uid) === String(uid)) || data?.list?.[0]
+      const res = await api(e, {
+        uid,
+        game: 'zzz',
+        type: 'zzz_user',
+        headers: mhy.getHeaders(e, ckStringOf(ck)),
+        silent: true,
+      })
+      const player = res?.data?.list?.find(p => String(p.game_uid) === String(uid)) || res?.data?.list?.[0]
       if (player?.nickname) return player
     } catch (err) {
       logger.debug?.(`[HoYoGet][zzz_panel] 游戏玩家信息获取失败，回落本地/QQ：${err?.message || err}`)
@@ -1134,27 +1144,19 @@ export class zzz_panel_list extends plugin {
   /** 取单角色详情接口 avatar/info，原样返回 data（契约同 fetchRaw） */
   async fetchDetail(e, uid, ck, id) {
     try {
-      const apiMod = await import(path.join(ZZZ_ROOT, 'dist', 'lib', 'mysapi.js'))
-      const MysZZZApi = apiMod.default
-      const api = new MysZZZApi(uid, ck, { handler: e?.runtime?.handler || {}, e })
-
-      const fpFile = `./plugins/HoYoGet-Plugin/data/fp/${e.user_id}.yaml`
-      let deviceFp
-      if (fs.existsSync(fpFile)) {
-        // fp 文件是 YAML（system/mhy.js 用 YAML.stringify 写盘），不能当 JSON 解析
-        const fp = yaml.get(fpFile) || {}
-        if (fp.fp) { api.device_fp = fp.fp; deviceFp = fp.fp }
-        if (fp.device_id) { api._device = fp.device_id }
-      } else {
-        const hit = Object.values(ck).find(i => i?.ck && String(i.uid) === String(uid))
-        if (hit?.ltuid) deviceFp = await redis.get(`ZZZ:DEVICE_FP:${hit.ltuid}:FP`)
+      const res = await api(e, {
+        uid,
+        game: 'zzz',
+        type: 'zzz_avatar_info',
+        id_list: [id],
+        headers: mhy.getHeaders(e, ckStringOf(ck)),
+        silent: true,
+      })
+      if (!res?.data) {
+        const msg = typeof res === 'string' ? res : (res?.message || '接口未返回数据')
+        return { __error: `单角色详情获取失败：${msg}。若遇验证码请先完成过码再试。` }
       }
-
-      const data = await api.getFinalData('zzzAvatarInfo', { deviceFp, query: { id_list: [id] } })
-      if (data === null || data === undefined) {
-        return { __error: '单角色详情返回 null。过码链已由插件内部触发，若仍失败请先发【#过码】等验证完成再试。' }
-      }
-      return { data }
+      return { data: res.data }
     } catch (err) {
       logger.error?.(`[HoYoGet][zzz_panel] 详情取数失败：${err?.message || err}`)
       return { __error: `详情取数失败：${err?.message || err}` }
@@ -1257,32 +1259,19 @@ export class zzz_panel_list extends plugin {
    */
   async fetchRaw(e, uid, server, ck) {
     try {
-      const apiMod = await import(path.join(ZZZ_ROOT, 'dist', 'lib', 'mysapi.js'))
-      const MysZZZApi = apiMod.default
-      const hit = Object.values(ck).find(i => i?.ck && String(i.uid) === String(uid))
-      const ltuid = hit?.ltuid
-      const api = new MysZZZApi(uid, ck, { handler: e?.runtime?.handler || {}, e })
-
-      // 设备指纹：优先用 xhh 自己存的常用设备，能显著降低风控概率
-      const fpFile = `./plugins/HoYoGet-Plugin/data/fp/${e.user_id}.yaml`
-      let appliedFp = false
-      let deviceFp
-      if (fs.existsSync(fpFile)) {
-        // fp 文件是 YAML（system/mhy.js 用 YAML.stringify 写盘），不能当 JSON 解析
-        const fp = yaml.get(fpFile) || {}
-        if (fp.fp) { api.device_fp = fp.fp; deviceFp = fp.fp; appliedFp = true }
-        if (fp.device_id) { api._device = fp.device_id; appliedFp = true }
-      } else if (ltuid) {
-        const cached = await redis.get(`ZZZ:DEVICE_FP:${ltuid}:FP`)
-        if (cached) { api.device_fp = cached; deviceFp = cached; appliedFp = true }
+      const res = await api(e, {
+        uid,
+        server,
+        game: 'zzz',
+        type: 'zzz_avatar_list',
+        headers: mhy.getHeaders(e, ckStringOf(ck)),
+        silent: true,
+      })
+      if (!res?.data) {
+        const msg = typeof res === 'string' ? res : (res?.message || '接口未返回数据')
+        return { __error: `取数失败：${msg}。若遇验证码请先完成过码再试。` }
       }
-
-      // getFinalData 只从入参 data.deviceFp 读指纹，设置 api.device_fp 不会生效
-      const data = await api.getFinalData('zzzAvatarList', { deviceFp })
-      if (data === null || data === undefined) {
-        return { __error: '接口未返回数据。过码链已由插件内部触发，若仍失败请先发【#过码】等验证完成再试。' }
-      }
-      return { retcode: 0, data, __fp: appliedFp }
+      return { retcode: 0, data: res.data, __fp: true }
     } catch (err) {
       logger.error?.(`[HoYoGet][zzz_panel] 取数失败：${err?.message || err}`)
       return { __error: `取数失败：${err?.message || err}` }

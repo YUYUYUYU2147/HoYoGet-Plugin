@@ -89,6 +89,27 @@ async function api(e, data = {}) {
                 }),
             },
         },
+        //绝区零角色列表（面板）
+        zzz_avatar_list: {
+            url: `https://api-takumi-record.mihoyo.com/event/game_record_zzz/api/zzz/avatar/basic?lang=zh-cn&role_id=${uid}&server=${server}`,
+            obj: {
+                method: 'GET',
+            }
+        },
+        //绝区零单角色详情（面板）
+        zzz_avatar_info: {
+            url: `https://api-takumi-record.mihoyo.com/event/game_record_zzz/api/zzz/avatar/info?lang=zh-cn&role_id=${uid}&server=${server}&need_wiki=false${(Array.isArray(data.id_list) ? data.id_list : (data.id_list ? [data.id_list] : [])).filter(Boolean).map(id => `&id_list[]=${encodeURIComponent(id)}`).join('')}`,
+            obj: {
+                method: 'GET',
+            }
+        },
+        //绝区零玩家昵称/头像
+        zzz_user: {
+            url: `https://api-takumi.mihoyo.com/binding/api/getUserGameRolesByCookie?game_biz=nap_cn&region=${server}&game_uid=${uid}`,
+            obj: {
+                method: 'GET',
+            }
+        },
         //绝区零母带
         zzz_md: {
             url: `https://api-takumi-record.mihoyo.com/event/game_record_zzz/api/zzz/cur_gacha_detail?uid=${uid}&region=${server}`,
