@@ -26,6 +26,7 @@ import { mhyFetch } from '../system/mhy_fetch.js'
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const ZZZ_ROOT = path.join(process.cwd(), 'plugins', 'ZZZ-Plugin')
 const OUT_DIR = path.join(PLUGIN_ROOT, 'data', 'zzz_panel')
+const RECORDS_DIR = path.join(OUT_DIR, 'records')
 
 // 属性 / 职业 中文映射，与 system/mys.js 的 zzz_element_map / zzz_type_map 保持一致
 //（属产品形态，非角色数值表，数值表一律现取、不搬）。
@@ -1280,6 +1281,18 @@ export class zzz_panel_list extends plugin {
     try {
       let gamePlayer = null
       try { gamePlayer = await this.fetchPlayer(e, uid, ck) } catch { /* 取不到游戏昵称就回落 QQ */ }
+      // 落盘原始面板，供极限面板/排名复用（不依赖 ZZZ-Plugin 的 data/panel）
+      try {
+        fs.mkdirSync(RECORDS_DIR, { recursive: true })
+        fs.writeFileSync(path.join(RECORDS_DIR, `${uid}.json`), JSON.stringify({
+          uid,
+          data: avatar,
+          player: gamePlayer || null,
+          updatedAt: Date.now(),
+        }))
+      } catch (err) {
+        logger.debug?.(`[HoYoGet][zzz_panel] 面板记录落盘失败：${err?.message || err}`)
+      }
       const img = await render('zzz_panel/detail', { ...detail, footer, bgImage: getPanelBg(), ...getPlayerBadge(e, gamePlayer) }, { e, ret: true })
       const sent = await e.reply(img)
       // 缓存面板用的角色原图，供「%原图」直接取回
