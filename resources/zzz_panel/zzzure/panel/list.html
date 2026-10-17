@@ -1,0 +1,34 @@
+{{extend defaultLayout}}
+
+{{block 'css'}}
+<link rel="stylesheet" href="{{@sys.currentPath}}/refresh.css">
+{{/block}}
+
+{{block 'main'}}
+<div class="panel">
+  <div class="info">
+    {{include sys.playerInfo}}
+    <div class="count">共计 {{count}} 个角色</div>
+    <div class="icon"></div>
+  </div>
+  <div class="list">
+    {{if list.length === 0}}
+    <div class="empty">暂无数据，请先刷新面板</div>
+    {{/if}}
+    {{each list item}}
+    <div class="item">
+      <div class="icon">
+        <img class="streng" src="{{item.square_icon}}" alt="" />
+        <div class="rank r{{item.rank}}">
+          <span> {{item.rank}} </span>
+        </div>
+      </div>
+      <div class="name">
+        <span>{{item.name_mi18n}}</span>
+        <div class="rank-icon img {{item.rarity}}"></div>
+      </div>
+    </div>
+    {{/each}}
+  </div>
+</div>
+{{/block}}

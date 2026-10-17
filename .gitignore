@@ -13,3 +13,6 @@ service/geetest/__pycache__/
 # 仅本地留存的开发笔记与排查记录
 AGENTS.md
 HANDOFF_*.md
+
+# 绝区零面板：用户自定义立绘目录，放的是自己下载的图片，不入库
+resources/zzz_panel/images/panel/

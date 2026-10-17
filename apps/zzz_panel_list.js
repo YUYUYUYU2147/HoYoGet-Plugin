@@ -1,0 +1,849 @@
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+// config 必须一起导入：loadCfg() 要用它读 plugins/HoYoGet-Plugin/config/config.yaml，
+// 只导入 pluginPriority 会让 config() 抛 ReferenceError。
+import { config, pluginPriority, render, yaml } from '#HoYoGet'
+import { damageSkillsAt, getCharRates } from '../system/zzz_skill_rate.js'
+
+/**
+ * 绝区零面板（xhh 自研）—— 第 2 步：归一化 + 自研渲染。
+ *
+ * 数据源：米游社 record 接口 avatar/basic（角色基础列表）。
+ * 第 1 步探针已确认真实字段（见 HANDOFF_zzz_panel.md），本步据此写归一化与渲染，
+ * 不复用 ZZZ-Plugin 的模板/算法，只借鉴产品形态。
+ *
+ * 单角色详情指令（米游社<名字>面板，如 米游社南宫羽面板）已实现：复用同一份基础列表取 id，
+ * 再调 avatar/info 拿 专武/驱动盘/技能/影，自研模板 resources/zzz_panel/detail.html 出图。
+ *
+ * 入口指令：
+ *   - `米游社更新面板`  → 列表面板（本插件）
+ *   - `米游社<名字>面板`（如 米游社南宫羽面板）→ 单角色详情（本插件，旧「米游社面板 <名字>」仍兼容）
+ *   都不带 # 前缀，靠有无 # 区分绝区零（本插件）/ 原神（miao-plugin 的 #米游社更新面板）。
+ */
+
+const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const ZZZ_ROOT = path.join(process.cwd(), 'plugins', 'ZZZ-Plugin')
+const OUT_DIR = path.join(PLUGIN_ROOT, 'data', 'zzz_panel')
+
+// 属性 / 职业 中文映射，与 system/mys.js 的 zzz_element_map / zzz_type_map 保持一致
+//（属产品形态，非角色数值表，数值表一律现取、不搬）。
+const ZZZ_ELEMENT_MAP = { 200: '物理', 201: '火', 202: '冰', 203: '电', 204: '风', 205: '以太', 300: '流明' }
+const ZZZ_TYPE_MAP = { 1: '强攻', 2: '击破', 3: '异常', 4: '支援', 5: '防护', 6: '命破', 7: '锋御' }
+// 卡片配色（展示用，对应属性主题色）
+const ELEMENT_COLOR = { 物理: '#9aa4ad', 火: '#ff6b4a', 冰: '#5cc8ff', 电: '#ffd84d', 风: '#6fe3b0', 以太: '#b98bff', 流明: '#ffe9a8' }
+const RARITY_COLOR = { S: '#ffcf5c', A: '#9b8cff' }
+
+// 米游社属性 id → ZZZure 模板字段键 / 精灵类名（对应 resources/zzz_panel/zzzure/common/images/property 下的 Icon*.png）
+const ZPROP = {
+  1: { k: 'hpmax', c: 'hpmax' }, 11102: { k: 'hpmax', c: 'hpmax' }, 11103: { k: 'hpmax', c: 'hpmax' },
+  2: { k: 'attack', c: 'attack' }, 12101: { k: 'attack', c: 'attack' }, 12102: { k: 'attack', c: 'attack' }, 12103: { k: 'attack', c: 'attack' },
+  3: { k: 'def', c: 'def' }, 13102: { k: 'def', c: 'def' }, 13103: { k: 'def', c: 'def' },
+  4: { k: 'breakstun', c: 'breakstun' }, 12202: { k: 'breakstun', c: 'breakstun' },
+  5: { k: 'crit', c: 'crit' }, 20103: { k: 'crit', c: 'crit' },
+  6: { k: 'critdam', c: 'critdam' }, 21103: { k: 'critdam', c: 'critdam' },
+  7: { k: 'elementabnormalpower', c: 'elementabnormalpower' }, 31402: { k: 'elementabnormalpower', c: 'elementabnormalpower' },
+  8: { k: 'elementmystery', c: 'elementmystery' }, 31203: { k: 'elementmystery', c: 'elementmystery' },
+  9: { k: 'penratio', c: 'penratio' }, 23103: { k: 'penratio', c: 'penratio' },
+  11: { k: 'sprecover', c: 'sprecover' }, 30502: { k: 'sprecover', c: 'sprecover' },
+  232: { k: 'penvalue', c: 'penvalue' }, 23203: { k: 'penvalue', c: 'penvalue' },
+  319: { k: 'dmgbonus', c: 'dmgbonus' },
+}
+// 字段键 → 中文标签（属性行显示名）
+const ZPROP_LABEL = {
+  hpmax: '生命值', attack: '攻击力', def: '防御力', breakstun: '冲击力', crit: '暴击率',
+  critdam: '暴击伤害', elementabnormalpower: '异常掌控', elementmystery: '异常精通',
+  penratio: '穿透率', sprecover: '能量自动回复', penvalue: '穿透值', dmgbonus: '伤害加成',
+}
+// 元素 type → 精灵类名（element-icon 用；小写；以太用 ether）
+const ZELEM = { 200: 'physical', 201: 'fire', 202: 'ice', 203: 'electric', 204: 'wind', 205: 'ether', 300: 'lumiflux' }
+const ZELEM_STR = { 200: 'Physical', 201: 'Fire', 202: 'Ice', 203: 'Electric', 204: 'Wind', 205: 'Ether', 300: 'Lumiflux' }
+// 技能类型 → 固定槽位顺序（模板按 skills[0..5] 取，与 ZZZure 一致）
+const SKILL_POS = [0, 1, 2, 3, 5, 6]
+
+/** 把米游社一条基础列表角色，归一化为卡片所需的最小字段，不引入任何猜测字段 */
+function normalizeAvatar(item) {
+  const element = ZZZ_ELEMENT_MAP[item?.element_type] || `属性${item?.element_type ?? ''}`
+  const type = ZZZ_TYPE_MAP[item?.avatar_profession] || `类型${item?.avatar_profession ?? ''}`
+  const rarity = item?.rarity === 'S' ? 'S' : (item?.rarity || 'A')
+  return {
+    id: item?.id,
+    name: item?.name_mi18n || item?.full_name_mi18n || `角色${item?.id}`,
+    level: item?.level ?? 0,
+    rarity,
+    rarityColor: RARITY_COLOR[rarity] || '#9b8cff',
+    element,
+    elementColor: ELEMENT_COLOR[element] || '#888',
+    type,
+    camp: item?.camp_name_mi18n || '',
+    rank: item?.rank ?? 0,
+    icon: item?.role_square_url || item?.hollow_icon_path || item?.group_icon_path || '',
+  }
+}
+
+/** 本地时间字符串，用于面板页脚时间戳 */
+function formatNow() {
+  const d = new Date()
+  const p = n => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+const SKILL_NAME = { 0: '普攻', 1: '特殊技', 2: '闪避', 3: '连携技', 5: '核心技', 6: '支援技' }
+// 技能展示顺序（贴近米游社面板）：普攻/闪避/特殊技/支援技/连携/核心
+const SKILL_ORDER = [0, 2, 1, 6, 3, 5]
+// 技能等级上限：核心被动为 7，其余为 12（产品形态，非数值表）
+const SKILL_MAX = { 0: 12, 1: 12, 2: 12, 3: 12, 5: 7, 6: 12 }
+const RATING_MAP = { ER_SS: 'SS', ER_S_Plus: 'S+', ER_S: 'S', ER_A_Plus: 'A+', ER_A: 'A', ER_B_Plus: 'B+', ER_B: 'B', ER_C: 'C' }
+
+/** 剥离米游社富文本标签（<color=...>、</color>、<IconMap:...>）并压平换行，纯展示用 */
+function stripTags(s) {
+  return String(s || '')
+    .replace(/<color=[^>]*>/g, '')
+    .replace(/<\/color>/g, '')
+    .replace(/<IconMap:[^>]*>/g, '')
+    .replace(/\r?\n/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+}
+
+/** 百分比字符串 → 小数（"9.8%"→0.098；无数值→0） */
+function toRatio(v) {
+  const n = parseFloat(v)
+  if (isNaN(n)) return 0
+  return String(v).includes('%') ? n / 100 : n
+}
+/** 纯数值字符串 → 数字（无数值→0） */
+function toNum(v) {
+  const n = parseFloat(v)
+  return isNaN(n) ? 0 : n
+}
+
+/**
+ * 伤害乘区（公式严格对齐 ZZZure `src/model/damage/Calculator.ts`）。
+ * 敌方面板默认：level=角色等级、1级基础防御力=50（敌防=等级基数）、抗性=-0.2（有弱点）。
+ * 仅计算与技能无关的乘区；基础区=技能倍率×攻击力，倍率需角色数据（米游社接口不返回），故不展示。
+ */
+function calcDamageAreas(bp, level) {
+  const crit = Math.min(1, toRatio(bp.crit?.final))
+  const critdmg = Math.min(5, toRatio(bp.critdam?.final))
+  const lv = level && level > 0 ? level : 1
+  const getBase = l => Math.floor(0.1551 * Math.min(60, l) ** 2 + 3.141 * Math.min(60, l) + 47.2039)
+  const base = getBase(lv)
+  const DEF = (50 / 50) * getBase(lv)
+  const penRatio = Math.min(2, toRatio(bp.penratio?.final))
+  const pen = toNum(bp.penvalue?.final)
+  const effectiveDef = Math.max(0, DEF * (1 - penRatio) - pen)
+  return {
+    critical: 1 + crit * critdmg,
+    boost: 1 + toRatio(bp.dmgbonus?.final),
+    vulnerability: 1,
+    resistance: 1 - (-0.2),
+    defence: Math.min(1, Math.max(0, base / (effectiveDef + base))),
+  }
+}
+
+/**
+ * 逐技能伤害。
+ *
+ * 公式（绝区零）：
+ *   基础区 = 技能倍率(该技能等级) × 面板攻击力
+ *   期望伤害 = 基础区 × 暴击区 × 增伤区 × 易伤区 × 抗性区 × 防御区
+ *   暴击伤害 = 基础区 × (1+暴伤) × 增伤区 × 易伤区 × 抗性区 × 防御区
+ * 其中暴击区 = 1 + 暴击率×暴伤（期望），暴击伤害那列不含暴击率。
+ *
+ * 技能等级不能一律取满级：倍率表按级给出，且接口里每个技能组等级不同
+ * （普攻常 12、闪避 8），所以按接口实际等级逐个代入。
+ * 接口与倍率表靠**技能中文名**对齐（两边都形如「连携技：星落间章」）。
+ */
+// 接口与倍率表的前缀用词不一致（接口「普通攻击/强化特殊技」，表里「普攻/强E」），
+// 只比核心技能名会撞车（普攻与强化普攻同名），所以「类别 + 核心名」一起匹配。
+const SKILL_PREFIX_RE = /^(普通攻击|强化普攻|蓄力普攻|蓄力攻击|普攻|强化特殊技|特殊技|强E|闪避反击|冲刺攻击|闪避|连携技|终结技|核心被动|额外能力|快速支援|招架支援|支援突击|支援)\s*[：:]\s*/
+const skillCore = (s) => String(s || '')
+  .replace(SKILL_PREFIX_RE, '')
+  .replace(/[\s·・（）()【】「」]/g, '')
+  .toLowerCase()
+function skillCat(text) {
+  const t = String(text || '')
+  if (/终结技/.test(t)) return 'RZ'
+  if (/连携技/.test(t)) return 'RL'
+  if (/强化特殊技|强E/.test(t)) return 'EQ'
+  if (/特殊技/.test(t)) return 'E'
+  if (/强化普攻/.test(t)) return 'AQ'
+  if (/蓄力普攻|蓄力攻击|蓄力/.test(t)) return 'AX'
+  if (/普通攻击|普攻/.test(t)) return 'AP'
+  if (/闪避反击/.test(t)) return 'CF'
+  if (/冲刺攻击/.test(t)) return 'CA'
+  if (/闪避/.test(t)) return 'C'
+  if (/核心被动|额外能力/.test(t)) return 'T'
+  if (/快速支援|招架支援|支援突击|支援/.test(t)) return 'L'
+  return ''
+}
+function keyCat(key) {
+  const k = String(key || '').toUpperCase()
+  if (/^AP/.test(k)) return 'AP'
+  if (/^AQ/.test(k)) return 'AQ'
+  if (/^AX/.test(k)) return 'AX'
+  if (/^CF/.test(k)) return 'CF'
+  if (/^EQ/.test(k)) return 'EQ'
+  if (/^RL/.test(k)) return 'RL'
+  if (/^RZ/.test(k)) return 'RZ'
+  if (/^C/.test(k)) return 'C'
+  if (/^E/.test(k)) return 'E'
+  if (/^R/.test(k)) return 'R'
+  if (/^T/.test(k)) return 'T'
+  if (/^L/.test(k)) return 'L'
+  return k
+}
+
+function calcDamage(bp, level, avatar, charName) {
+  const atk = parseFloat(bp?.attack?.final) || 0
+  if (!atk) return { ok: false, error: '面板攻击力为 0，无法计算' }
+
+  const rates = damageSkillsAt(charName, 16)
+  if (!rates.ok) return { ok: false, error: rates.error }
+
+  const areas = calcDamageAreas(bp, level)
+  const critdmg = Math.min(5, toRatio(bp?.critdam?.final))
+  // 期望区含暴击率，暴击列不含
+  const expectMul = areas.boost * areas.vulnerability * areas.resistance * areas.defence
+  const table = new Map()
+  for (const s of rates.skills) {
+    if (!s.name) continue
+    table.set(`${keyCat(s.key)}|${skillCore(s.name)}`, s)
+  }
+
+  // 接口 skills[]：skill_type 0普攻 1特殊技 2闪避 3连携 5核心 6支援
+  const out = []
+  for (const sk of avatar?.skills || []) {
+    const skLv = Number(sk.level) || 1
+    for (const item of sk.items || []) {
+      const title = String(item?.title || '').trim()
+      if (!title) continue
+      const hit = table.get(`${skillCat(title)}|${skillCore(title)}`)
+      if (!hit) continue                      // 倍率表没有这个技能（如新角色未收录）
+      const idx = Math.max(1, Math.min(skLv, hit.rateList?.length || 16)) - 1
+      const rate = Number(hit.rates?.[idx] ?? hit.rate)
+      if (!Number.isFinite(rate) || rate <= 0) continue
+      const base = rate * atk
+      out.push({
+        name: title,
+        skillType: Number(sk.skill_type),
+        level: skLv,
+        rate,
+        base: Math.round(base),
+        expect: Math.round(base * areas.critical * expectMul),
+        crit: Math.round(base * (1 + critdmg) * expectMul),
+      })
+    }
+  }
+  if (!out.length) return { ok: false, error: '接口技能与倍率表没有交集（该角色可能未收录倍率）' }
+
+  // 按倍率降序：面板上最痛的招式排前面
+  out.sort((a, b) => b.rate - a.rate)
+  const r2 = (v) => Math.round(v * 1000) / 1000
+  return {
+    ok: true,
+    atk,
+    areas,
+    critdmg,
+    skills: out,
+    top: out[0],
+    areasTxt: `暴击${r2(areas.critical)} 增伤${r2(areas.boost)} 易伤${r2(areas.vulnerability)} 抗性${r2(areas.resistance)} 防御${r2(areas.defence)}`,
+  }
+}
+
+/**
+ * 读取用户自定义面板图，返回 data URI；无则返回 ''。
+ * 放置目录：plugins/HoYoGet-Plugin/resources/zzz_panel/images/panel/[角色名]/ 下第一张 png/jpg/webp。
+ * [角色名] 依次尝试 简称(name_mi18n)、全称(full_name_mi18n)。
+ */
+function loadCustomPortrait(names) {
+  const base = path.join(PLUGIN_ROOT, 'resources', 'zzz_panel', 'images', 'panel')
+  for (const nm of names) {
+    if (!nm) continue
+    const dir = path.join(base, nm)
+    if (!fs.existsSync(dir)) continue
+    let files = []
+    try { files = fs.readdirSync(dir).filter(f => /\.(png|jpe?g|webp)$/i.test(f)).sort() } catch { files = [] }
+    if (!files.length) continue
+    const file = files[0]
+    const ext = path.extname(file).slice(1).toLowerCase()
+    const mime = ext === 'jpg' ? 'jpeg' : ext
+    try {
+      const buf = fs.readFileSync(path.join(dir, file))
+      return `data:image/${mime};base64,${buf.toString('base64')}`
+    } catch { /* 读取失败则试下一个名字 */ }
+  }
+  return ''
+}
+
+/**
+ * 驱动盘评分（公式/权重对齐 ZZZure src/model/score）。
+ * 依据角色名取预设规则→权重(按 property_id)，逐盘算分(1-3号位副词条55分制、4-6号位主12+副43)，
+ * 乘以等级系数(0.25+等级*0.05)与品质系数(S=1/A=2/3/B=1/3)，六盘求和得 0~330 总分与段位。
+ * 扁平词条(小攻击/生命/防御)未做动态等效映射，对结果影响很小。
+ */
+const SCORE_PROP_ID = {
+  '生命值百分比': 11102, '攻击力百分比': 12102, '防御力百分比': 13102, '冲击力': 12202,
+  '暴击率': 20103, '暴击伤害': 21103, '穿透率': 23103, '穿透值': 23203,
+  '能量自动回复': 30502, '异常精通': 31203, '异常掌控': 31402,
+}
+const ELEM_DMG_ID = { 200: 31503, 201: 31603, 202: 31703, 203: 31803, 204: 32303, 205: 31903 }
+// 可能的副词条 id（用于理论最大词条）
+const SUB_STAT_IDS = [11102, 11103, 12102, 12103, 13102, 13103, 20103, 21103, 23203, 31203]
+// 4/5/6 号位主词条候选
+const SCORE_MAIN_STATS = {
+  4: [11102, 12102, 13102, 20103, 21103, 31203],
+  5: [11102, 12102, 13102, 23103, 31503, 31603, 31703, 31803, 32303, 31903],
+  6: [11102, 12102, 12202, 13102, 30502, 31402],
+}
+// 预设权重规则（rule 用面板属性判定：atk/crit(率)/critdmg/am(异常掌控)/ap(异常精通)）
+const SCORE_RULES = {
+  '主C·双爆': { rule: s => s.atk > 2400 && s.crit * 2 + s.critdmg >= 2.2 && s.am < 150 && s.ap < 200, w: { '攻击力百分比': .75, '暴击率': 1, '暴击伤害': 1, '穿透率': 1, '穿透值': .25, '属性伤害加成': 1 } },
+  '主C·异常': { rule: s => { if (s.crit * 2 + s.critdmg >= 2) return false; if (s.atk < 2400) return false; return (s.am >= 180 && s.ap >= 200) || (s.am >= 120 && s.ap >= 300) || (s.am >= 150 && s.ap >= 250) }, w: { '攻击力百分比': .75, '异常精通': 1, '异常掌控': 1, '穿透率': 1, '穿透值': .25, '属性伤害加成': 1 } },
+  '命破·双爆': { rule: () => true, w: { '生命值百分比': .5, '攻击力百分比': .25, '暴击率': 1, '暴击伤害': 1, '属性伤害加成': 1 } },
+  '锋御·双爆': { rule: () => true, w: { '防御力百分比': 1, '暴击率': 1, '暴击伤害': .75, '穿透率': 1, '穿透值': .25, '属性伤害加成': 1 } },
+  '辅助·双爆': { rule: s => s.crit * 2 + s.critdmg >= 1.5 && s.ap < 200, w: { '攻击力百分比': .75, '暴击率': 1, '暴击伤害': 1, '穿透率': .75, '穿透值': .25, '能量自动回复': 1, '属性伤害加成': 1 } },
+  '辅助·攻击': { rule: s => s.crit * 2 + s.critdmg >= 1.5, w: { '攻击力百分比': 1, '暴击率': 1, '暴击伤害': .75, '穿透率': .75, '穿透值': .25, '能量自动回复': 1, '属性伤害加成': 1 } },
+  '辅助·异常': { rule: s => s.crit * 2 + s.critdmg < 2 && s.ap >= 200, w: { '攻击力百分比': .75, '穿透率': .75, '穿透值': .25, '能量自动回复': 1, '异常精通': 1, '异常掌控': 1, '属性伤害加成': 1 } },
+  '冲击·双爆': { rule: s => s.crit * 2 + s.critdmg >= 1.5 && s.am < 150 && s.ap < 200, w: { '攻击力百分比': .75, '冲击力': 1, '暴击率': 1, '暴击伤害': 1, '穿透率': .75, '穿透值': .25, '能量自动回复': 1, '属性伤害加成': 1 } },
+  '冲击·攻击': { rule: s => s.atk > 2000 && s.crit * 2 + s.critdmg >= 1 && s.am < 150 && s.ap < 200, w: { '攻击力百分比': 1, '冲击力': 1, '暴击率': 1, '暴击伤害': .75, '穿透率': .75, '穿透值': .25, '能量自动回复': 1, '属性伤害加成': 1 } },
+  '冲击·异常': { rule: s => s.crit * 2 + s.critdmg < 2 && (s.am >= 150 || s.ap >= 200), w: { '攻击力百分比': .75, '冲击力': 1, '穿透率': .75, '穿透值': .25, '能量自动回复': 1, '异常精通': 1, '异常掌控': 1, '属性伤害加成': 1 } },
+}
+// 无预设时按职业回退
+const SCORE_PROF_RULES = { 1: ['主C·双爆'], 2: ['冲击·双爆', '冲击·攻击', '冲击·异常'], 3: ['主C·异常', '辅助·异常'], 4: ['辅助·双爆', '辅助·异常'], 5: ['辅助·双爆', '辅助·异常'], 6: ['命破·双爆'], 7: ['锋御·双爆'] }
+// 角色 → 评分规则（对齐 resources/map/EquipScore.json）
+const EQUIP_SCORE = {
+  '安比': ['冲击·双爆'], '猫又': ['主C·双爆'], '妮可': ['辅助·双爆', '辅助·异常'], '「11号」': ['主C·双爆'], '可琳': ['主C·双爆'], '凯撒': ['冲击·双爆'], '比利': ['主C·双爆'], '星见雅': { rules: ['主C·双爆'], '异常精通': .3, '异常掌控': .75 }, '珂蕾妲': ['冲击·双爆'], '安东': ['主C·双爆'], '本': { rules: ['辅助·双爆'], '防御力百分比': 1 }, '苍角': ['辅助·攻击'], '莱卡恩': ['冲击·双爆'], '露西': ['辅助·攻击'], '莱特': ['冲击·双爆'], '柏妮思': ['辅助·异常', '辅助·双爆'], '格莉丝': ['辅助·异常'], '艾莲': ['主C·双爆'], '悠真': ['主C·双爆'], '丽娜': { rules: ['辅助·双爆', '辅助·异常'], '穿透率': 1 }, '柳': ['辅助·异常'], '朱鸢': ['主C·双爆'], '青衣': ['冲击·双爆'], '简': ['主C·异常'], '赛斯': { rules: ['辅助·双爆', '辅助·异常'], '攻击力百分比': 1 }, '派派': ['主C·异常'], '耀嘉音': { rules: ['辅助·攻击', '辅助·异常'], '攻击力百分比': 1 }, '伊芙琳': ['主C·双爆'], '波可娜': ['冲击·双爆'], '零号·安比': ['主C·双爆'], '「扳机」': ['冲击·双爆'], '薇薇安': ['辅助·异常'], '雨果': ['主C·双爆'], '仪玄': ['命破·双爆'], '潘引壶': ['辅助·攻击'], '橘福福': ['冲击·攻击'], '浮波柚叶': { rules: ['辅助·异常', '辅助·双爆'], '攻击力百分比': 1 }, '爱丽丝': ['主C·异常', '主C·双爆'], '席德': ['主C·双爆'], '奥菲斯': ['主C·双爆'], '卢西娅': { '生命值百分比': 1, '攻击力百分比': 0, '防御力百分比': 0, '冲击力': 0, '暴击率': .5, '暴击伤害': .5, '穿透率': 0, '穿透值': 0, '能量自动回复': 1, '异常精通': 0, '异常掌控': 0, '属性伤害加成': 0 }, '狛野真斗': ['命破·双爆'], '伊德海莉': { rules: ['命破·双爆'], '生命值百分比': .75 }, '琉音': { '生命值百分比': 0, '攻击力百分比': .75, '防御力百分比': 0, '冲击力': 1, '暴击率': 1, '暴击伤害': .75, '穿透率': .75, '穿透值': .25, '能量自动回复': 1, '异常精通': 0, '异常掌控': 0, '属性伤害加成': .75 }, '般岳': ['命破·双爆'], '叶瞬光': ['主C·双爆'], '照': { '生命值百分比': 1, '攻击力百分比': 0, '防御力百分比': 0, '冲击力': 0, '暴击率': .5, '暴击伤害': .5, '穿透率': 0, '穿透值': 0, '能量自动回复': 1, '异常精通': 0, '异常掌控': 0, '属性伤害加成': 0 }, '千夏': { '生命值百分比': 0, '攻击力百分比': 1, '防御力百分比': 0, '冲击力': 0, '暴击率': .5, '暴击伤害': .5, '穿透率': .5, '穿透值': .25, '能量自动回复': 1, '异常精通': .5, '异常掌控': 0, '属性伤害加成': 1 }, '爱芮': ['主C·异常'], '南宫羽': ['冲击·异常'], '希希芙': ['主C·双爆'], '普罗米娅': ['主C·异常'], '星徽·比利': ['命破·双爆'], '维琳娜·艾嘉德': ['主C·异常'], '蕾米埃尔·丹': { '生命值百分比': 0, '攻击力百分比': 1, '防御力百分比': 0, '冲击力': 0, '暴击率': 0, '暴击伤害': 0, '穿透率': 1, '穿透值': .25, '能量自动回复': 0, '异常精通': 1, '异常掌控': 0, '属性伤害加成': 0 }, '克拉蕾': ['锋御·双爆'],
+}
+function pickRule(rules, stats) {
+  const valid = rules.filter(r => SCORE_RULES[r])
+  if (!valid.length) return ''
+  if (valid.length === 1) return valid[0]
+  return valid.find(r => SCORE_RULES[r].rule(stats)) || valid[0]
+}
+/** 取评分权重（按 property_id） */
+function getScoreWeight(charName, stats, profession, elementType) {
+  const elemId = ELEM_DMG_ID[elementType]
+  const def = EQUIP_SCORE[charName]
+  let ruleName = '默认'
+  const named = {} // 属性名→权重
+  if (Array.isArray(def)) {
+    ruleName = pickRule(def, stats)
+    if (ruleName) Object.assign(named, SCORE_RULES[ruleName].w)
+  } else if (def && def.rules) {
+    ruleName = pickRule(def.rules, stats)
+    if (ruleName) Object.assign(named, SCORE_RULES[ruleName].w)
+    for (const k in def) if (k !== 'rules') named[k] = def[k]
+  } else if (def && Object.keys(def).length) {
+    Object.assign(named, def); ruleName = '自定义'
+  }
+  if (!Object.keys(named).length) {
+    ruleName = pickRule(SCORE_PROF_RULES[profession] || ['主C·双爆'], stats)
+    if (ruleName) Object.assign(named, SCORE_RULES[ruleName].w)
+  }
+  const weight = {}
+  for (const nm in named) {
+    const id = nm === '属性伤害加成' ? elemId : SCORE_PROP_ID[nm]
+    if (id != null) weight[id] = named[nm]
+  }
+  return { ruleName, weight }
+}
+/** 计算驱动盘总分与段位；另返回每个盘评分 discScores 与有益/有效词条数 */
+function calcEquipScore(equip_final, charName, stats, profession, elementType) {
+  const { ruleName, weight } = getScoreWeight(charName, stats, profession, elementType)
+  let total = 0
+  const discScores = []
+  let useful = 0
+  let effective = 0
+  for (const eq of (equip_final || [])) {
+    const slot = eq.slot || 0
+    const levelMult = 0.25 + (eq.level ?? 0) * 0.05
+    const rarityMult = eq.rarity === 'S' ? 1 : eq.rarity === 'A' ? 2 / 3 : eq.rarity === 'B' ? 1 / 3 : 1
+    const mainId = (eq.main_properties && eq.main_properties[0]) ? eq.main_properties[0].pid : 0
+    let actual = 0
+    for (const p of (eq.properties || [])) {
+      const w = weight[p.pid]
+      if (w) { actual += w * (p.count ?? 0); useful += (p.count ?? 0); effective += w * (p.count ?? 0) }
+    }
+    const cand = SUB_STAT_IDS.filter(id => id !== mainId && weight[id]).sort((a, b) => weight[b] - weight[a]).slice(0, 4)
+    let score = 0
+    if (cand.length) {
+      let max = weight[cand[0]] * 6
+      for (let i = 1; i < cand.length; i++) max += weight[cand[i]] || 0
+      if (max > 0) {
+        if (slot >= 1 && slot <= 3) {
+          const minScore = 12 * levelMult * rarityMult
+          score = actual === 0 ? minScore : Math.max(actual / max * levelMult * rarityMult * 55, minScore)
+        } else {
+          const ms = (SCORE_MAIN_STATS[slot] || []).filter(id => weight[id]).sort((a, b) => weight[b] - weight[a])[0]
+          const mainScore = ms ? 12 * (weight[mainId] || 0) / weight[ms] : 12
+          const subScore = actual / max * 43
+          score = (mainScore + subScore) * levelMult * rarityMult
+        }
+      }
+    }
+    discScores.push(+score.toFixed(2))
+    total += score
+  }
+  const rating = total >= 280 ? 'MAX' : total >= 220 ? 'ACE' : total >= 200 ? 'SSS' : total >= 180 ? 'SS' : total >= 160 ? 'S' : total >= 120 ? 'A' : total >= 80 ? 'B' : 'C'
+  return { score: +total.toFixed(1), rating, ruleName, discScores, usefulCount: useful, effectiveCount: +effective.toFixed(2) }
+}
+
+/**
+ * 把一条 avatar/info 详情归一化为 ZZZure 面板模板所需的 charData。
+ * 模板字段名严格对齐 resources/zzz_panel/zzzure/panel/card.html，
+ * 不复用其算法（评分用接口分近似；伤害乘区公式取自其 Calculator.ts，按面板属性计算）。
+ */
+function normalizeDetail(a, uid) {
+  const rarity = a?.rarity === 'S' ? 'S' : (a?.rarity || 'A')
+  const subElement = ZELEM[a?.element_type] || 'physical'
+  const elementStr = ZELEM_STR[a?.element_type] || 'Physical'
+  const w = a?.weapon || {}
+
+  // 武器
+  const weapon = w?.name ? {
+    name: w.name,
+    rarity: w.rarity || rarity,
+    level: w.level ?? 0,
+    star: (w.rarity === 'S' ? 5 : 4),
+    stars: Array.from({ length: w.rarity === 'S' ? 5 : 4 }, () => (w.rarity === 'S' ? 5 : 4)),
+    refine: w.star ?? 0,
+    square_icon: w.icon || '',
+    talent_title: w.talent_title || '',
+    talent: stripTags(w.talent_content || ''),
+    main_properties: (w.main_properties || []).map(p => ({
+      classname: (ZPROP[p.property_id] || {}).c || 'attack',
+      property_name: p.property_name || '',
+      base: p.base || '',
+    })),
+    properties: (w.properties || []).map(p => ({
+      classname: (ZPROP[p.property_id] || {}).c || 'attack',
+      property_name: p.property_name || '',
+      base: p.base || '',
+    })),
+  } : null
+
+  // 角色基础属性 → basic_properties（按字段键；伤害加成单独处理以挂元素图标）
+  const basic_properties = {}
+  for (const p of (a?.properties || [])) {
+    const m = ZPROP[p.property_id]
+    if (!m || m.k === 'dmgbonus') continue
+    const base = p.base || ''
+    const add = (p.add !== undefined && p.add !== '' && p.add !== '0') ? p.add : ''
+    const final = (p.final !== undefined && p.final !== '') ? p.final : (base || '')
+    basic_properties[m.k] = { base, add, final }
+  }
+  const dmg = (a?.properties || []).find(p => (ZPROP[p.property_id] || {}).k === 'dmgbonus')
+  if (dmg) {
+    const base = dmg.base || ''
+    const add = (dmg.add !== undefined && dmg.add !== '' && dmg.add !== '0') ? dmg.add : ''
+    const final = (dmg.final !== undefined && dmg.final !== '') ? dmg.final : (base || '')
+    basic_properties.dmgbonus = { property_name: dmg.property_name || '伤害加成', property_id: dmg.property_id, base, add, final }
+  }
+
+  // 技能：按固定槽位顺序产出，模板按 skills[0..5] 取
+  const skills = SKILL_POS.map(t => {
+    const s = (a?.skills || []).find(x => x.skill_type === t)
+    return { level: s?.level ?? 0 }
+  })
+
+  // 驱动盘
+  const discsRaw = a?.equip || []
+  const equip_final = discsRaw.map(d => {
+    const suit = d.equip_suit || {}
+    return {
+      slot: d.equipment_type ?? 0,
+      suit_icon: d.icon || '',
+      level: d.level ?? 0,
+      rarity: d.rarity || 'A',
+      name: d.name || '',
+      suit_name: suit.name || '',
+      own: suit.own || 0,
+      main_properties: (d.main_properties || []).map(p => ({
+        pid: p.property_id,
+        classname: (ZPROP[p.property_id] || {}).c || 'attack',
+        short_name: p.property_name || '',
+        base: p.base || '',
+      })),
+      properties: (d.properties || []).map(p => {
+        const valid = !!p.valid
+        return {
+          pid: p.property_id,
+          classname: (ZPROP[p.property_id] || {}).c || 'attack',
+          property_name: p.property_name || '',
+          base: p.base || '',
+          count: p.level ?? 0,
+          hit: Math.max(0, (p.level ?? 0) - 1),
+          count_arr: Array.from({ length: Math.max(0, (p.level ?? 0) - 1) }, () => 0),
+          base_score: valid ? 1 : 0,
+        }
+      }),
+    }
+  })
+
+  // 词条统计：有效副词条按 property_id 聚合（区分百分比/固定值），显示 强化次数徽标+属性名+累计值
+  const ZSHORT = { 11102: '生命', 11103: '生命', 12102: '攻击', 12103: '攻击', 13102: '防御', 13103: '防御', 20103: '暴击', 21103: '暴伤', 23203: '穿透', 31203: '精通', 12202: '冲击', 30502: '回能', 31402: '掌控', 23103: '穿透率' }
+  const agg = {}
+  for (const d of discsRaw) {
+    for (const p of (d.properties || [])) {
+      const pid = p.property_id
+      const isPct = String(p.base).includes('%')
+      if (!agg[pid]) agg[pid] = { name: ZSHORT[pid] || p.property_name || ('x' + pid), count: 0, value: 0, isPct }
+      agg[pid].count += (p.level ?? 0)
+      const num = parseFloat(p.base)
+      if (!isNaN(num)) agg[pid].value += num
+    }
+  }
+  const propertyStats = Object.values(agg)
+    .map(s => ({ name: s.name, count: s.count, value: s.value.toFixed(1) + (s.isPct ? '%' : '') }))
+    .sort((x, y) => y.count - x.count)
+
+  // 评分：按 ZZZure 权重公式计算（0~330 分制），替换接口分
+  const scoreStats = {
+    atk: parseFloat(basic_properties.attack?.final) || 0,
+    crit: toRatio(basic_properties.crit?.final),
+    critdmg: toRatio(basic_properties.critdam?.final),
+    am: parseFloat(basic_properties.elementabnormalpower?.final) || 0,
+    ap: parseFloat(basic_properties.elementmystery?.final) || 0,
+  }
+  const scoreRes = calcEquipScore(equip_final, a?.name_mi18n || '', scoreStats, a?.avatar_profession, a?.element_type)
+  const rating = scoreRes.rating
+  const equip_score = scoreRes.score
+  equip_final.forEach((eq, i) => { eq.score = scoreRes.discScores[i] ?? 0 })
+  const usefulStats = `有益词条数：${scoreRes.usefulCount} 有效词条数：${scoreRes.effectiveCount}`
+  const validCount = a?.equip_plan_info?.valid_property_cnt
+    ?? discsRaw.reduce((s, d) => s + (d.properties || []).filter(p => p.valid).length, 0)
+
+  const damageAreas = calcDamageAreas(basic_properties, a?.level)
+  // 逐技能伤害：倍率取自本地静态表，与接口技能按中文名对齐
+  const damage = calcDamage(basic_properties, a?.level, a, a?.name_mi18n || a?.full_name_mi18n || '')
+  const damageAvailable = damage.ok
+  const rateCovered = (() => {
+    try { return getCharRates(a?.name_mi18n || '').ok } catch (_) { return false }
+  })()
+
+  // 套装效果：按 suit_id 聚合，并收集该套装已装备盘图标作配图
+  const setMap = {}
+  for (const d of discsRaw) {
+    const s = d.equip_suit
+    if (!s || s.suit_id == null) continue
+    if (!setMap[s.suit_id]) setMap[s.suit_id] = { name: s.name || '', own: s.own || 0, desc1: stripTags(s.desc1 || ''), desc2: stripTags(s.desc2 || ''), icons: [] }
+    if (d.icon) setMap[s.suit_id].icons.push(d.icon)
+  }
+  const sets = Object.values(setMap)
+
+  // 属性行（固定顺序，供模板 {{each}} 遍历；伤害加成用元素图标）
+  const STAT_ORDER = [
+    ['hpmax', '生命值'], ['attack', '攻击力'], ['def', '防御力'], ['breakstun', '冲击力'],
+    ['crit', '暴击率'], ['critdam', '暴击伤害'], ['elementabnormalpower', '异常掌控'], ['elementmystery', '异常精通'],
+    ['penratio', '穿透率'], ['sprecover', '能量自动回复'], ['dmgbonus', '伤害加成'], ['penvalue', '穿透值'],
+  ]
+  const stat_rows = []
+  for (const [k, label] of STAT_ORDER) {
+    const v = basic_properties[k]
+    if (!v) continue
+    if (k === 'dmgbonus') stat_rows.push({ label: v.property_name || label, icon: 'element', cls: elementStr, base: v.base, add: v.add, final: v.final })
+    else stat_rows.push({ label, icon: 'prop', cls: k, base: v.base, add: v.add, final: v.final })
+  }
+
+  const charData = {
+    uid: uid || a?.id || '',
+    role_icon: loadCustomPortrait([a?.name_mi18n, a?.full_name_mi18n]) || a?.role_vertical_painting_url || a?.role_square_url || '',
+    skills,
+    rarity,
+    sub_element_str: subElement,
+    element_str: elementStr,
+    element_cn: ZZZ_ELEMENT_MAP[a?.element_type] || `属性${a?.element_type ?? ''}`,
+    profession: ZZZ_TYPE_MAP[a?.avatar_profession] || `类型${a?.avatar_profession ?? ''}`,
+    full_name_mi18n: a?.full_name_mi18n || a?.name_mi18n || `角色${a?.id}`,
+    level: a?.level ?? 0,
+    rank: a?.rank ?? 0,
+    basic_properties,
+    weapon,
+    equip_score,
+    equip_comment: rating,
+    weightRule: scoreRes.ruleName,
+    useful_stats: usefulStats,
+    propertyStats,
+    equip_final,
+    damageAreas,
+    damage,
+    damageAvailable,
+    rateCovered,
+    sets,
+    stat_rows,
+  }
+  return { uid: charData.uid, charData }
+}
+
+// 前缀刻意收窄到「不带 #」：
+//   「米游社更新面板」  → 绝区零（本插件）
+//   「#米游社更新面板」 → 原神（miao-plugin，已有的约定）
+// 带 % 会被绝区零前缀规则（zzzReg = /^#?(%|％|绝区零|zzz)+/）先一步吃掉，实测抢不到，
+// 所以绝区零这边干脆不用任何前缀，用有无 # 来区分两个游戏。
+const CMD_REG = /^\s*米游社\s*(更新|刷新)\s*(全部)?\s*面板$/
+// 详情新格式：米游社<名字>面板（如 米游社南宫羽面板）；保留旧「米游社面板 <名字>」兼容。
+// 负向预查 (?!更新|刷新) 避免与「米游社更新面板 / 米游社刷新面板」抢。
+const DETAIL_REG = /^米游社(?!更新|刷新)(.+?)面板$/
+const DETAIL_REG_OLD = /^米游社面板\s+(.+)$/
+const HELP_REG = /^米游社面板$/
+
+export class zzz_panel_list extends plugin {
+  constructor() {
+    super({
+      name: '[米哈游]绝区零面板列表',
+      dsc: '绝区零面板列表（自研，网格卡片）',
+      event: 'message',
+      // 必须压过 miao-plugin 的米游社面板与 ZZZ-Plugin 面板，否则规则抢不过它们
+      priority: pluginPriority('zzz_panel_list', -100),
+      rule: [
+        { reg: CMD_REG.source, fnc: 'panelList' },
+        { reg: DETAIL_REG.source, fnc: 'panelDetail' },
+        { reg: DETAIL_REG_OLD.source, fnc: 'panelDetail' },
+        { reg: HELP_REG.source, fnc: 'panelDetailHelp' },
+      ],
+    })
+  }
+
+  async panelList(e) {
+    const uid = e.user?.getUid?.('zzz')
+    if (!uid) return e.reply('请先绑定绝区零账号')
+
+    const ck = await this.getCk(e)
+    if (!ck || !Object.values(ck).some(item => item?.ck)) {
+      return e.reply('尚未绑定 cookie，请先绑定 cookie 或 #扫码登录')
+    }
+    const server = await this.pickServer(uid, ck)
+    if (!server) return e.reply('未能判断服务器分区（官服 prod_gf_cn / 渠道 prod_qd_cn），请确认绑定信息')
+
+    const raw = await this.fetchRaw(e, uid, server, ck)
+    if (raw?.__error) return e.reply(raw.__error)
+
+    // 落盘原始响应，便于后续排查 / 字段再核对（按需，不影响出图）
+    fs.mkdirSync(OUT_DIR, { recursive: true })
+    const basicFile = path.join(OUT_DIR, 'avatar_basic.json')
+    fs.writeFileSync(basicFile, JSON.stringify({ uid, server, deviceFpApplied: !!raw.__fp, data: raw?.data }, null, 2))
+
+    const list = this.pickList(raw?.data)
+    if (!Array.isArray(list) || !list.length) {
+      return e.reply(`已取到响应，但没识别出角色列表。原始数据已存到：\n${basicFile}\n请检查接口返回结构。`)
+    }
+
+    // 归一化后交模板渲染（自研，不复用 ZZZ-Plugin 模板）
+    const cards = list.map(it => normalizeAvatar(it))
+    try {
+      const img = await render('zzz_panel/list', {
+        cards,
+        uid,
+        server,
+        count: cards.length,
+        time: formatNow(),
+      }, { e, ret: true })
+      return img
+    } catch (err) {
+      logger.error?.(`[HoYoGet][zzz_panel] 渲染失败：${err?.message || err}`)
+      // 渲染失败兜底：回退成文字列表，至少把数据给到
+      const lines = cards.slice(0, 30).map(c => `${c.name} Lv${c.level} ${c.rarity} ${c.element}/${c.type} 影${c.rank}`)
+      return e.reply([
+        `面板渲染失败，文字兜底（共 ${cards.length} 名代理人）：`,
+        ...lines,
+        `原始数据：${basicFile}`,
+      ])
+    }
+  }
+
+  /** 单角色详情：米游社<名字>面板（如 米游社南宫羽面板；旧 米游社面板 <名字> 仍兼容） */
+  async panelDetail(e) {
+    const msg = String(e.msg || '')
+    const m = msg.match(DETAIL_REG) || msg.match(DETAIL_REG_OLD)
+    const arg = (m && m[1] ? m[1] : '').trim()
+    if (!arg) return this.panelDetailHelp(e)
+
+    const uid = e.user?.getUid?.('zzz')
+    if (!uid) return e.reply('请先绑定绝区零账号')
+
+    const ck = await this.getCk(e)
+    if (!ck || !Object.values(ck).some(item => item?.ck)) {
+      return e.reply('尚未绑定 cookie，请先绑定 cookie 或 #扫码登录')
+    }
+    const server = await this.pickServer(uid, ck)
+    if (!server) return e.reply('未能判断服务器分区（官服 prod_gf_cn / 渠道 prod_qd_cn），请确认绑定信息')
+
+    const raw = await this.fetchRaw(e, uid, server, ck)
+    if (raw?.__error) return e.reply(raw.__error)
+
+    const list = this.pickList(raw?.data)
+    if (!Array.isArray(list) || !list.length) {
+      return e.reply('未能取到角色列表，请稍后再试')
+    }
+
+    // 解析目标：纯数字=序号（从 1 起）；否则按名字模糊匹配
+    let target = null
+    if (/^\d+$/.test(arg)) {
+      target = list[parseInt(arg, 10) - 1]
+    } else {
+      const lower = arg.toLowerCase()
+      target = list.find(it => (it.name_mi18n || '').toLowerCase().includes(lower))
+        || list.find(it => (it.full_name_mi18n || '').toLowerCase().includes(lower))
+        || list.find(it => (it.name_mi18n || '').toLowerCase().includes(lower.slice(0, 1)))
+    }
+    if (!target || target.id == null) {
+      const names = list.slice(0, 12).map((it, i) => `${i + 1}.${it.name_mi18n || it.full_name_mi18n}`).join('  ')
+      return e.reply(`没找到「${arg}」。可用序号或名字，例如：\n米游社南宫羽面板\n米游社3面板\n部分角色：${names}`)
+    }
+
+    const info = await this.fetchDetail(e, uid, ck, target.id)
+    if (info?.__error) return e.reply(info.__error)
+
+    const avatar = this.pickInfo(info?.data)
+    if (!avatar) return e.reply('取到详情响应，但没识别到角色数据')
+
+    const detail = normalizeDetail(avatar, uid)
+    const charData = detail.charData
+    const footer = `from 米哈游 · UID ${uid} · ${server} · ${formatNow()}`
+    try {
+      const img = await render('zzz_panel/detail', { ...detail, footer }, { e, ret: true })
+      return img
+    } catch (err) {
+      logger.error?.(`[HoYoGet][zzz_panel] 详情渲染失败：${err?.message || err}`)
+      return e.reply([
+        `【${charData.full_name_mi18n}】Lv${charData.level} ${charData.rarity} 影${charData.rank}`,
+        charData.weapon ? `专武：${charData.weapon.name} Lv${charData.weapon.level}` : '（无专武数据）',
+        `原始数据已落盘 data/zzz_panel/avatar_info.json`,
+      ])
+    }
+  }
+
+  /** 详情指令无参时的用法提示 */
+  async panelDetailHelp(e) {
+    return e.reply([
+      '绝区零·单角色面板',
+      '用法：米游社<角色名或序号>面板',
+      '示例：米游社南宫羽面板',
+      '　　　米游社3面板',
+      '（序号看「米游社更新面板」列表从左到右第几个）',
+    ])
+  }
+
+  /** 取单角色详情接口 avatar/info，原样返回 data（契约同 fetchRaw） */
+  async fetchDetail(e, uid, ck, id) {
+    try {
+      const apiMod = await import(path.join(ZZZ_ROOT, 'dist', 'lib', 'mysapi.js'))
+      const MysZZZApi = apiMod.default
+      const api = new MysZZZApi(uid, ck, { handler: e?.runtime?.handler || {}, e })
+
+      const fpFile = `./plugins/HoYoGet-Plugin/data/fp/${e.user_id}.yaml`
+      let deviceFp
+      if (fs.existsSync(fpFile)) {
+        // fp 文件是 YAML（system/mhy.js 用 YAML.stringify 写盘），不能当 JSON 解析
+        const fp = yaml.get(fpFile) || {}
+        if (fp.fp) { api.device_fp = fp.fp; deviceFp = fp.fp }
+        if (fp.device_id) { api._device = fp.device_id }
+      } else {
+        const hit = Object.values(ck).find(i => i?.ck && String(i.uid) === String(uid))
+        if (hit?.ltuid) deviceFp = await redis.get(`ZZZ:DEVICE_FP:${hit.ltuid}:FP`)
+      }
+
+      const data = await api.getFinalData('zzzAvatarInfo', { deviceFp, query: { id_list: [id] } })
+      if (data === null || data === undefined) {
+        return { __error: '单角色详情返回 null。过码链已由插件内部触发，若仍失败请先发【#过码】等验证完成再试。' }
+      }
+      return { data }
+    } catch (err) {
+      logger.error?.(`[HoYoGet][zzz_panel] 详情取数失败：${err?.message || err}`)
+      return { __error: `详情取数失败：${err?.message || err}` }
+    }
+  }
+
+  /** 从详情响应里取首角色对象，兼容多种包裹结构 */
+  pickInfo(data) {
+    if (!data || typeof data !== 'object') return null
+    if (Array.isArray(data.avatar_list) && data.avatar_list[0]) return data.avatar_list[0]
+    if (Array.isArray(data.list) && data.list[0]) return data.list[0]
+    if (Array.isArray(data)) return data[0]
+    return null
+  }
+
+  /** 取 ck：复用 ZZZ-Plugin 的 getCk，它自行处理 stoken 前缀与 User 实例 */
+  async getCk(e) {
+    try {
+      const { getCk } = await import(path.join(ZZZ_ROOT, 'dist', 'lib', 'common.js'))
+      return await getCk(e)
+    } catch (err) {
+      logger.warn?.(`[HoYoGet][zzz_panel] 读取 ck 失败：${err?.message || err}`)
+      return false
+    }
+  }
+
+  /**
+   * 判分区：ZZZ-Plugin 用的是 uid 尾号之外的信息，这里不照抄它的判定，
+   * 只按「绑定信息里带不含渠道服标记」这一条最直接的依据取。
+   * 还没用真实数据验证过 —— 若拿不到，见下方 TODO 注释里的兜底。
+   */
+  async pickServer(uid, ck) {
+    const hit = Object.values(ck || {}).find(item => item?.ck && String(item.uid) === String(uid))
+    if (hit?.server) return hit.server
+    // TODO: 还没确认绑定信息里是否带 server 字段。若不带，再按 uid 所属渠道判断，
+    // 或直接让用户在 config 里配。**不要**凭猜测写死。
+    return 'prod_gf_cn'
+  }
+
+  /**
+   * 打一次角色列表接口，原样返回 data 部分，不做归一化。
+   *
+   * 契约（ZZZ-Plugin/dist/lib/mysapi.js getFinalData，勿凭印象改）：
+   *   1. 内部已调用 checkCode()，命中 1034/10035/10041 时会走 mys.req.err 过码链；
+   *   2. 成功返回 **res.data**，不是整个响应 —— 拿不到 res.retcode；
+   *   3. 失败（含过码未通过）返回 **null**。
+   * 第一版把返回值当整个响应去读 res.retcode，于是永远拿到 undefined，
+   * 误报「接口返回 retcode=undefined」。
+   */
+  async fetchRaw(e, uid, server, ck) {
+    try {
+      const apiMod = await import(path.join(ZZZ_ROOT, 'dist', 'lib', 'mysapi.js'))
+      const MysZZZApi = apiMod.default
+      const hit = Object.values(ck).find(i => i?.ck && String(i.uid) === String(uid))
+      const ltuid = hit?.ltuid
+      const api = new MysZZZApi(uid, ck, { handler: e?.runtime?.handler || {}, e })
+
+      // 设备指纹：优先用 xhh 自己存的常用设备，能显著降低风控概率
+      const fpFile = `./plugins/HoYoGet-Plugin/data/fp/${e.user_id}.yaml`
+      let appliedFp = false
+      let deviceFp
+      if (fs.existsSync(fpFile)) {
+        // fp 文件是 YAML（system/mhy.js 用 YAML.stringify 写盘），不能当 JSON 解析
+        const fp = yaml.get(fpFile) || {}
+        if (fp.fp) { api.device_fp = fp.fp; deviceFp = fp.fp; appliedFp = true }
+        if (fp.device_id) { api._device = fp.device_id; appliedFp = true }
+      } else if (ltuid) {
+        const cached = await redis.get(`ZZZ:DEVICE_FP:${ltuid}:FP`)
+        if (cached) { api.device_fp = cached; deviceFp = cached; appliedFp = true }
+      }
+
+      // getFinalData 只从入参 data.deviceFp 读指纹，设置 api.device_fp 不会生效
+      const data = await api.getFinalData('zzzAvatarList', { deviceFp })
+      if (data === null || data === undefined) {
+        return { __error: '接口未返回数据。过码链已由插件内部触发，若仍失败请先发【#过码】等验证完成再试。' }
+      }
+      return { retcode: 0, data, __fp: appliedFp }
+    } catch (err) {
+      logger.error?.(`[HoYoGet][zzz_panel] 取数失败：${err?.message || err}`)
+      return { __error: `取数失败：${err?.message || err}` }
+    }
+  }
+
+  /** 只做「哪个数组像是角色列表」的定位，不做字段含义判断 */
+  pickList(data) {
+    if (Array.isArray(data)) return data
+    if (!data || typeof data !== 'object') return null
+    for (const key of [ 'list', 'avatars', 'avatar_list' ]) {
+      if (Array.isArray(data[key])) return data[key]
+    }
+    // 兜底：找出第一个元素是对象的数组
+    for (const val of Object.values(data)) {
+      if (Array.isArray(val) && val.length && typeof val[0] === 'object') return val
+    }
+    return null
+  }
+}

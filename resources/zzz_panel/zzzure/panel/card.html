@@ -1,0 +1,429 @@
+{{extend defaultLayout}}
+
+{{block 'css'}}
+<link rel="stylesheet" href="{{@sys.currentPath}}/card.css">
+{{/block}}
+
+{{block 'main'}}
+<div class="card">
+  <div class="uid">UID {{uid}}</div>
+  <div class="basic">
+    <div class="char">
+      <div class="avatar">
+        <img src="{{charData.role_icon}}" alt="">
+      </div>
+      <div class="skills">
+        <div class="skill">{{charData.skills[0].level}}</div>
+        <div class="skill">{{charData.skills[2].level}}</div>
+        <div class="skill">{{charData.skills[5].level}}</div>
+        <div class="skill">{{charData.skills[1].level}}</div>
+        <div class="skill">{{charData.skills[3].level}}</div>
+        <div class="skill">{{charData.skills[4].level}}</div>
+      </div>
+    </div>
+    <div class="info">
+      <div class="char_info">
+        <div class="base">
+          <div class="rank rank-icon {{charData.rarity}}"></div>
+          <div class="element-icon {{charData.sub_element_str}}"></div>
+          <div class="name">{{charData.full_name_mi18n}}</div>
+        </div>
+        <div class="addition">
+          <div class="level">Lv.{{charData.level}}</div>
+          <div class="role_ranks r{{charData.rank}}">
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+      </div>
+      <div class="property_info">
+        <div class="title">
+          <% include(sys.specialTitle, {en: 'PROPERTY' , cn: '属性' , count: 6 }) %>
+        </div>
+        {{set basic_properties = charData.basic_properties}}
+        <div class="list">
+          <div class="properties">
+            <div class="prop-icon hpmax"></div>
+            <div class="label {{charData.get_label(11102)}}">生命值</div>
+            {{if basic_properties.hpmax.base && basic_properties.hpmax.add && basic_properties.hpmax.add[0] != '0'}}
+            <div class="value-detail no-zzz-font">
+              <span class="base">{{basic_properties.hpmax.base}}</span>
+              <span class="add">+{{basic_properties.hpmax.add}}</span>
+            </div>
+            {{/if}}
+            <div class="value">{{basic_properties.hpmax.final}}</div>
+          </div>
+          {{if charData.avatar_profession === 7}}
+          <div class="properties">
+            <div class="prop-icon laceration"></div>
+            <div class="label yellow">锐暴伤害</div>
+            {{if basic_properties.laceration && basic_properties.laceration.base && basic_properties.laceration.add && basic_properties.laceration.add[0] != '0'}}
+            <div class="value-detail no-zzz-font">
+              <span class="base">{{basic_properties.laceration.base}}</span>
+              <span class="add">+{{basic_properties.laceration.add}}</span>
+            </div>
+            {{/if}}
+            <div class="value">{{basic_properties.laceration ? basic_properties.laceration.final : 0}}</div>
+          </div>
+          {{else}}
+          <div class="properties">
+            <div class="prop-icon attack"></div>
+            <div class="label {{charData.get_label(12102)}}">攻击力</div>
+            {{if basic_properties.attack.base && basic_properties.attack.add && basic_properties.attack.add[0] != '0'}}
+            <div class="value-detail no-zzz-font">
+              <span class="base">{{basic_properties.attack.base}}</span>
+              <span class="add">+{{basic_properties.attack.add}}</span>
+            </div>
+            {{/if}}
+            <div class="value">{{basic_properties.attack.final}}</div>
+          </div>
+          {{/if}}
+          <div class="properties">
+            <div class="prop-icon def"></div>
+            <div class="label {{charData.get_label(13102)}}">防御力</div>
+            {{if basic_properties.def.base && basic_properties.def.add && basic_properties.def.add[0] != '0'}}
+            <div class="value-detail no-zzz-font">
+              <span class="base">{{basic_properties.def.base}}</span>
+              <span class="add">+{{basic_properties.def.add}}</span>
+            </div>
+            {{/if}}
+            <div class="value">{{basic_properties.def.final}}</div>
+          </div>
+          <div class="properties">
+            <div class="prop-icon breakstun"></div>
+            <div class="label {{charData.get_label(12202)}}">冲击力</div>
+            {{if basic_properties.breakstun.base && basic_properties.breakstun.add && basic_properties.breakstun.add[0] != '0'}}
+            <div class="value-detail no-zzz-font">
+              <span class="base">{{basic_properties.breakstun.base}}</span>
+              <span class="add">+{{basic_properties.breakstun.add}}</span>
+            </div>
+            {{/if}}
+            <div class="value">{{basic_properties.breakstun.final}}</div>
+          </div>
+          <div class="properties">
+            <div class="prop-icon crit"></div>
+            <div class="label {{charData.get_label(20103)}}">暴击率</div>
+            {{if basic_properties.crit.base && basic_properties.crit.add && basic_properties.crit.add[0] != '0'}}
+            <div class="value-detail no-zzz-font">
+              <span class="base">{{basic_properties.crit.base}}</span>
+              <span class="add">+{{basic_properties.crit.add}}</span>
+            </div>
+            {{/if}}
+            <div class="value">{{basic_properties.crit.final}}</div>
+          </div>
+          <div class="properties">
+            <div class="prop-icon critdam"></div>
+            <div class="label {{charData.get_label(21103)}}">暴击伤害</div>
+            {{if basic_properties.critdam.base && basic_properties.critdam.add && basic_properties.critdam.add[0] != '0'}}
+            <div class="value-detail no-zzz-font">
+              <span class="base">{{basic_properties.critdam.base}}</span>
+              <span class="add">+{{basic_properties.critdam.add}}</span>
+            </div>
+            {{/if}}
+            <div class="value">{{basic_properties.critdam.final}}</div>
+          </div>
+          <div class="properties">
+            <div class="prop-icon elementabnormalpower"></div>
+            <div class="label {{charData.get_label(31402)}}">异常掌控</div>
+            {{if basic_properties.elementabnormalpower.base && basic_properties.elementabnormalpower.add && basic_properties.elementabnormalpower.add[0] != '0'}}
+            <div class="value-detail no-zzz-font">
+              <span class="base">{{basic_properties.elementabnormalpower.base}}</span>
+              <span class="add">+{{basic_properties.elementabnormalpower.add}}</span>
+            </div>
+            {{/if}}
+            <div class="value">{{basic_properties.elementabnormalpower.final}}</div>
+          </div>
+          <div class="properties">
+            <div class="prop-icon elementmystery"></div>
+            <div class="label {{charData.get_label(31203)}}">异常精通</div>
+            {{if basic_properties.elementmystery.base && basic_properties.elementmystery.add && basic_properties.elementmystery.add[0] != '0'}}
+            <div class="value-detail no-zzz-font">
+              <span class="base">{{basic_properties.elementmystery.base}}</span>
+              <span class="add">+{{basic_properties.elementmystery.add}}</span>
+            </div>
+            {{/if}}
+            <div class="value">{{basic_properties.elementmystery.final}}</div>
+          </div>
+          {{if charData.avatar_profession === 6}}
+          <div class="properties">
+            <div class="prop-icon sheerforce"></div>
+            <div class="label yellow">贯穿力</div>
+            {{if basic_properties.sheerforce && basic_properties.sheerforce.base && basic_properties.sheerforce.add && basic_properties.sheerforce.add[0] != '0'}}
+            <div class="value-detail no-zzz-font">
+              <span class="base">{{basic_properties.sheerforce.base}}</span>
+              <span class="add">+{{basic_properties.sheerforce.add}}</span>
+            </div>
+            {{/if}}
+            <div class="value">{{basic_properties.sheerforce ? basic_properties.sheerforce.final : 0}}</div>
+          </div>
+          <div class="properties">
+            <div class="prop-icon adrenalineaccumulate"></div>
+            <div class="label white">闪能自动累积</div>
+            {{if basic_properties.adrenalineaccumulate && basic_properties.adrenalineaccumulate.base && basic_properties.adrenalineaccumulate.add && basic_properties.adrenalineaccumulate.add[0] != '0'}}
+            <div class="value-detail no-zzz-font">
+              <span class="base">{{basic_properties.adrenalineaccumulate.base}}</span>
+              <span class="add">+{{basic_properties.adrenalineaccumulate.add}}</span>
+            </div>
+            {{/if}}
+            <div class="value">{{basic_properties.adrenalineaccumulate ? basic_properties.adrenalineaccumulate.final : 0}}</div>
+          </div>
+          {{else}}
+          <div class="properties">
+            <div class="prop-icon penratio"></div>
+            <div class="label {{charData.get_label(23103)}}">穿透率</div>
+            {{if basic_properties.penratio.base && basic_properties.penratio.add && basic_properties.penratio.add[0] != '0'}}
+            <div class="value-detail no-zzz-font">
+              <span class="base">{{basic_properties.penratio.base}}</span>
+              <span class="add">+{{basic_properties.penratio.add}}</span>
+            </div>
+            {{/if}}
+            <div class="value">{{basic_properties.penratio.final}}</div>
+          </div>
+          {{if charData.avatar_profession === 7}}
+          <div class="properties">
+            <div class="prop-icon sharpnessaccumulate"></div>
+            <div class="label white">锐能自动累积</div>
+            {{if basic_properties.sharpnessaccumulate && basic_properties.sharpnessaccumulate.base && basic_properties.sharpnessaccumulate.add && basic_properties.sharpnessaccumulate.add[0] != '0'}}
+            <div class="value-detail no-zzz-font">
+              <span class="base">{{basic_properties.sharpnessaccumulate.base}}</span>
+              <span class="add">+{{basic_properties.sharpnessaccumulate.add}}</span>
+            </div>
+            {{/if}}
+            <div class="value">{{basic_properties.sharpnessaccumulate ? basic_properties.sharpnessaccumulate.final : 0}}</div>
+          </div>
+          {{else}}
+          <div class="properties">
+            <div class="prop-icon sprecover"></div>
+            <div class="label {{charData.get_label(30502)}}">能量自动回复</div>
+            {{if basic_properties.sprecover.base && basic_properties.sprecover.add && basic_properties.sprecover.add[0] != '0'}}
+            <div class="value-detail no-zzz-font">
+              <span class="base">{{basic_properties.sprecover.base}}</span>
+              <span class="add">+{{basic_properties.sprecover.add}}</span>
+            </div>
+            {{/if}}
+            <div class="value">{{basic_properties.sprecover.final}}</div>
+          </div>
+          {{/if}}
+          {{/if}}
+          {{if basic_properties.dmgbonus}}
+          <div class="properties">
+            <div class="element-icon {{charData.element_str}}"></div>
+            <div class="label {{charData.get_label(basic_properties.dmgbonus.property_id + '03')}}">{{basic_properties.dmgbonus.property_name}}</div>
+            {{if basic_properties.dmgbonus.base && basic_properties.dmgbonus.add && basic_properties.dmgbonus.add[0] != '0'}}
+            <div class="value-detail no-zzz-font">
+              <span class="base">{{basic_properties.dmgbonus.base}}</span>
+              <span class="add">+{{basic_properties.dmgbonus.add}}</span>
+            </div>
+            {{/if}}
+            <div class="value">{{basic_properties.dmgbonus.final}}</div>
+          </div>
+          {{/if}}
+        </div>
+      </div>
+      <div class="weapon_info">
+        {{if charData.weapon}}
+        <div class="info">
+          <div class="base">
+            <div class="rarity-icon {{charData.weapon.rarity}}"></div>
+            <div class="name">{{charData.weapon.name}}</div>
+          </div>
+          <div class="main">
+            <div class="addition">
+              <div class="star star{{charData.weapon.star}}"></div>
+              <div class="level">Lv.{{charData.weapon.level}}</div>
+            </div>
+            {{each charData.weapon.main_properties prop}}
+            <div class="properties">
+              <div class="prop-icon {{prop.classname}}"></div>
+              <div class="label">{{prop.property_name}}</div>
+              <div class="value">{{prop.base}}</div>
+            </div>
+            {{/each}}
+            {{each charData.weapon.properties prop}}
+            <div class="properties sub">
+              <div class="prop-icon {{prop.classname}}"></div>
+              <div class="label">{{prop.property_name}}</div>
+              <div class="value">{{prop.base}}</div>
+            </div>
+            {{/each}}
+          </div>
+        </div>
+        <div class="icon">
+          <img src="{{charData.weapon.square_icon}}" alt="">
+        </div>
+        {{else}}
+          <div class="info empty">
+            <div class="base">
+              <div class="rarity-icon"></div>
+              <div class="name"></div>
+            </div>
+          </div>
+          {{/if}}
+      </div>
+    </div>
+  </div>
+  <div class="other">
+    <div class="title">
+      <% include(sys.specialTitle, {en: 'METAL' , cn: '驱动盘信息' }) %>
+    </div>
+    {{if charData.equip_score}}
+    <div class="equip-stats">
+      <div class="box1">
+        <div class="equip-score {{charData.equip_comment}}">
+          <div class="comment-box">
+            <div class="comment">{{charData.equip_comment}}</div>
+          </div>
+          <div class="value">
+            <span>{{charData.equip_score.toFixed(2)}}</span>
+            <span class="subt">分</span>
+          </div>
+        </div>
+        <div class="weight-rule">规则：{{charData.weightRule || '默认'}}</div>
+      </div>
+      <div class="box2">
+        <div class="property-stats">
+          {{set stats = charData.propertyStats.slice(0, 9)}}
+          {{each stats item}}
+          <div class="stat-item {{item.weight == 1 ? 'great' : (item.weight >= 0.75 ? 'good' : (item.weight > 0 ? 'useful' : 'useless'))}}">
+            <span class="title"><span class="count">{{item.count}}</span> {{item.name}}</span>
+            <span class="value">+{{item.value}}</span>
+          </div>
+          {{/each}}
+          <% for (let i = 0; i < 9-stats.length; i++) { %>
+            <div class="stat-item"></div>
+          <% } %>
+        </div>
+        <div class="useful-stats">有益词条数：{{
+            stats.reduce((acc, stat) => stat.weight ? acc + stat.count : acc, 0)
+          }} 有效词条数：{{
+            (stats.reduce((acc, stat) => acc + stat.count * stat.weight, 0)).toFixed(2)
+          }}
+        </div>
+      </div>
+    </div>
+    {{/if}}
+    <div class="equip-list">
+      {{each charData.equip_final equip}}
+      {{if equip}}
+      <div class="box">
+        <div class="icon">
+          <img src="{{equip.suit_icon}}" alt="">
+        </div>
+        <div class="info">
+          <div class="level">等级{{equip.level}}</div>
+          <div class="rarity-icon {{equip.rarity}}"></div>
+        </div>
+        <div class="name">{{equip.name}}</div>
+        {{if typeof equip.score === 'number'}}
+        <div class="score {{equip.comment}}">
+          <div class="comment">{{equip.comment}}</div>
+          <div class="value">{{equip.score.toFixed(2)}}</div>
+        </div>
+        {{/if}}
+        <div class="property-list">
+
+          {{each equip.main_properties prop}}
+          <div class="properties main">
+            <div class="prop-icon {{prop.classname}}"></div>
+            <div class="label yellow">{{prop.short_name}}</div>
+            <div class="value">{{prop.base}}</div>
+          </div>
+          {{/each}}
+
+          {{each equip.properties prop}}
+          <div class="properties">
+            <div class="prop-icon {{prop.classname}}"></div>
+            {{if prop.base_score !== false}}
+            <div class="label yellow hit{{(prop.base_score * 100 - (prop.base_score * 100 % 25)).toFixed(0)}}">
+              {{else}}
+                <div class="label yellow">
+                  {{/if}}
+
+                  {{prop.property_name}}
+                </div>
+                {{if prop.count}}
+                <div class="count">
+                  <% for(let i=1 ; i <=prop.count ; i++) { %>
+                    <span></span>
+                    <% } %>
+                </div>
+                {{/if}}
+                <div class="value">{{prop.base}}</div>
+            </div>
+            {{/each}}
+          </div>
+        </div>
+        {{else}}
+          <div class="box empty">
+            <div class="icon">
+            </div>
+          </div>
+          {{/if}}
+
+          {{/each}}
+
+      </div>
+
+      {{set damages = charData?.damages}}
+      {{set showInPanelBuffs = charData?.showInPanelBuffs}}
+      {{if damages?.length || showInPanelBuffs?.length}}
+      <div class="title damage-title">
+        <% include(sys.specialTitle, {en: 'DAMAGE' , cn: '伤害统计' }) %>
+      </div>
+      {{/if}}
+
+      {{if showInPanelBuffs?.length}}
+      <div class="damagelist">
+        <div class="dmg-tr column4 titlebar no-zzz-font">
+          <div class="td dmg-td">%</div>
+          <div class="dmg-td">增益名称</div>
+          <div class="dmg-td">增益类型</div>
+          <div class="dmg-td">增益数值</div>
+        </div>
+        {{each showInPanelBuffs buff}}
+        <div class="dmg-tr column4">
+          <div class="dmg-td">-</div>
+          <div class="dmg-td no-zzz-font">{{buff.name}}</div>
+          <div class="dmg-td no-zzz-font">{{buff.type}}</div>
+          <div class="dmg-td">
+            {{buff.value < 2 ? 
+              ((buff.value * 100).toFixed(0) + '%') : 
+              (buff.value % 1 === 0 ? buff.value : buff.value.toFixed(2))
+            }}{{if buff.max}}/{{
+              buff.max < 2 ? 
+              ((buff.max * 100).toFixed(0) + '%') : 
+              (buff.max % 1 === 0 ? buff.max : buff.max.toFixed(2))
+            }}{{/if}}
+          </div>
+        </div>
+        {{/each}}
+      </div>
+      {{/if}}
+
+      {{if damages?.length}}
+      <div class="damagelist">
+        <div class="dmg-tr column4 titlebar no-zzz-font">
+          <div class="td dmg-td">%</div>
+          <div class="dmg-td">技能类型</div>
+          <div class="dmg-td">暴击伤害</div>
+          <div class="dmg-td">期望伤害</div>
+        </div>
+        {{each damages damage,index}}
+        <div class="dmg-tr {{damage.result.critDMG !== 0 ? 'column4' : 'column3'}}">
+          <div class="dmg-td">{{index+1}}</div>
+          <div class="dmg-td no-zzz-font">{{damage.skill.name}}</div>
+          {{if damage.result.critDMG !== 0}}
+          <div class="dmg-td">{{damage.result.critDMG.toFixed(0)}}</div>
+          {{/if}}
+          <div class="dmg-td">{{damage.result.expectDMG.toFixed(0)}}</div>
+        </div>
+        {{/each}}
+        <div class="tr dmg-tr info-tr no-zzz-font">
+          <div>伤害计算取有弱点、敌人等级{{charData.level}}、1级基础防御力为50的敌方数据，且不考虑失衡易伤区</div>
+          <div>可通过<span>%{{charData.name_mi18n}}伤害+序号</span>查看指定技能伤害详情 如<span>%{{charData.name_mi18n}}伤害1</span></div>
+        </div>
+      </div>
+      {{/if}}
+
+    </div>
+  </div>
+  {{/block}}

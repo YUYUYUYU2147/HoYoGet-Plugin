@@ -1,0 +1,146 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* body 必须显式定宽：渲染器按 body 盒子宽度截图，只给 .wrap 定宽会让
+   body 保持视口宽度，内容右侧被裁掉（只剩左边一列多）。与 zzz_gacha/stat.css
+   的 body{width:1200px} 同一约定。 */
+body {
+  width: 1100px;
+  background: #14161f;
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: #e8eaf0;
+}
+
+.wrap {
+  width: 1100px;
+  padding: 28px 28px 16px;
+  background: linear-gradient(160deg, #1b1e2b, #14161f);
+}
+
+.head {
+  margin-bottom: 20px;
+  border-left: 4px solid #ff6b4a;
+  padding-left: 14px;
+}
+
+.title {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+.sub {
+  font-size: 15px;
+  color: #9aa0b0;
+  margin-top: 6px;
+}
+
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.card {
+  width: 158px;
+  background: #232738;
+  border: 2px solid #888;
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.avawrap {
+  position: relative;
+}
+
+.ava {
+  width: 136px;
+  height: 136px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #2c3146;
+  display: block;
+}
+
+.rar {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #1a1a1a;
+  padding: 1px 8px;
+  border-radius: 8px;
+}
+
+.name {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 8px 0 6px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.lv {
+  background: #3a4058;
+  color: #cdd3e6;
+  padding: 1px 7px;
+  border-radius: 7px;
+  white-space: nowrap;
+}
+
+.el {
+  color: #14161f;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 7px;
+  white-space: nowrap;
+}
+
+.tp {
+  background: #2c3146;
+  color: #b9c0d4;
+  padding: 1px 7px;
+  border-radius: 7px;
+  white-space: nowrap;
+}
+
+.foot {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #8b91a6;
+  margin-top: 7px;
+}
+
+.rk {
+  color: #ffcf5c;
+  font-weight: 700;
+}
+
+.cmp {
+  max-width: 92px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.logo {
+  margin-top: 18px;
+  font-size: 12px;
+  color: #5a6072;
+  text-align: right;
+}

@@ -1,0 +1,156 @@
+/* 绝区零角色面板（深色版式，自控布局；精灵图/字体复用 zzzure/common/style） */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  width: 1000px;
+  font-size: 15px;
+  font-family: "zzz", "tttgbnumber", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: #e7ebf3;
+  background: #0b0e14;
+  -webkit-font-smoothing: antialiased;
+}
+.container {
+  width: 1000px;
+  padding: 22px 24px 34px;
+  background:
+    radial-gradient(1200px 400px at 20% -10%, rgba(120,150,255,.10), transparent 60%),
+    linear-gradient(165deg, #151c2b 0%, #0d1220 55%, #0b0e14 100%);
+  border-radius: 16px;
+}
+/* 精灵图基础尺寸（背景图由 zzzure common/style 的 .prop-icon.xxx 等提供） */
+.prop-icon, .element-icon, .rarity-icon { display: inline-block; background-size: contain; background-repeat: no-repeat; background-position: center; vertical-align: middle; flex: none; }
+.prop-icon { width: 1.5em; height: 1.5em; }
+.element-icon { width: 1.6em; height: 1.6em; }
+.rarity-icon { width: 2.4em; height: 2.4em; }
+
+/* ============ 头部：立绘 + 属性 ============ */
+.hero { display: flex; gap: 20px; }
+.hero .portrait {
+  width: 340px; min-width: 340px; border-radius: 14px; overflow: hidden;
+  background: #05070c; border: 1px solid rgba(255,255,255,.10);
+  box-shadow: 0 8px 30px rgba(0,0,0,.5);
+  align-self: stretch;
+}
+.hero .portrait img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.hero .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.hero .title-row { display: flex; align-items: center; gap: 10px; }
+.hero .name { font-size: 2.1em; font-weight: 800; letter-spacing: 1px; line-height: 1.1; }
+.hero .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.hero .chip {
+  font-size: .82em; padding: 3px 12px; border-radius: 999px;
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); color: #cfd6e6;
+}
+.hero .chip.gold { color: #f5c96b; border-color: rgba(245,201,107,.4); background: rgba(245,201,107,.08); }
+.hero .uid { margin-top: 6px; color: #7c8598; font-size: .82em; letter-spacing: .5px; }
+
+.stats { margin-top: 14px; display: grid; grid-template-columns: 1fr; gap: 0; }
+.stats .row { display: flex; align-items: center; gap: 10px; padding: 6px 2px; border-bottom: 1px solid rgba(255,255,255,.06); }
+.stats .row:last-child { border-bottom: none; }
+.stats .label { color: #98a1b3; white-space: nowrap; }
+.stats .mid { color: #c3cad8; font-size: .95em; white-space: nowrap; }
+.stats .mid .add { color: #6fe3b0; margin-left: 4px; }
+.stats .final { margin-left: auto; font-weight: 700; font-size: 1.05em; white-space: nowrap; }
+
+/* ============ 区块通用 ============ */
+.section { margin-top: 22px; }
+.sec-title {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 1.15em; font-weight: 700; color: #fff; margin-bottom: 12px;
+}
+.sec-title::before { content: ""; width: 4px; height: 1.1em; border-radius: 3px; background: linear-gradient(#ff7fa8, #f5c96b); }
+.sec-title .sub { font-size: .7em; color: #7c8598; font-weight: 400; }
+
+/* ============ 技能（顶部名字右边，等级左下角小黑牌） ============ */
+.skills-top { margin-left: auto; display: flex; gap: 9px; flex: none; }
+.sk { position: relative; width: 32px; height: 32px; }
+.sk img { width: 100%; height: 100%; border-radius: 50%; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); display: block; }
+.sk-lv { position: absolute; left: -5px; bottom: -5px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: #000; border: 1px solid rgba(255,255,255,.4); color: #fff; font-size: .68em; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+
+/* ============ 音擎 ============ */
+.weapon-card { display: flex; gap: 16px; align-items: center; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); border-radius: 14px; padding: 14px 16px; }
+.weapon-card .wicon { width: 76px; height: 76px; border-radius: 12px; background: #05070c; border: 1px solid rgba(255,255,255,.12); object-fit: contain; }
+.weapon-card .winfo { flex: 1; min-width: 0; }
+.weapon-card .wname { display: flex; align-items: center; gap: 8px; font-size: 1.2em; font-weight: 700; }
+.weapon-card .wname .rarity-icon { width: 1.6em; height: 1.6em; }
+.weapon-card .wmeta { color: #8b93a7; font-size: .85em; margin: 4px 0 8px; }
+.weapon-card .wprops { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 24px; }
+.weapon-card .wp { display: flex; align-items: center; gap: 8px; font-size: .92em; padding: 2px 0; }
+.weapon-card .wp.main { color: #7cf3d0; }
+.weapon-card .wp .prop-icon { width: 1.2em; height: 1.2em; }
+.weapon-card .wtalent { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.08); }
+.weapon-card .wt-title { color: #f5c96b; font-weight: 700; font-size: .95em; margin-bottom: 4px; }
+.weapon-card .wt-desc { color: #a7b0c2; font-size: .85em; line-height: 1.6; }
+
+/* ============ 评分 ============ */
+.score-box { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; background: linear-gradient(100deg, rgba(245,201,107,.12), rgba(255,127,168,.06)); border: 1px solid rgba(245,201,107,.3); border-radius: 14px; padding: 14px 22px; }
+.score-box .score-rate { font-size: 1.7em; font-weight: 900; color: #ff7fa8; line-height: 1; }
+.score-box .score-val { font-size: 2.3em; font-weight: 900; color: #f5c96b; line-height: 1.15; }
+.score-box .score-val .unit { font-size: .45em; color: #cfd6e6; margin-left: 5px; font-weight: 700; }
+.score-box .score-meta { color: #9aa3b5; font-size: .85em; }
+.score-wrap { display: flex; gap: 16px; align-items: stretch; }
+.score-box { width: 200px; flex: none; }
+.prop-stats { flex: 1; min-width: 0; display: grid; grid-template-rows: repeat(3, auto); grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px 16px; align-content: center; }
+.ps-item { display: flex; align-items: center; gap: 7px; font-size: .92em; }
+.ps-count { min-width: 2em; height: 2em; padding: 0 .35em; border-radius: 6px; background: rgba(245, 201, 107, .16); border: 1px solid rgba(245, 201, 107, .35); color: #f5c96b; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
+.ps-name { color: #cfd6e6; white-space: nowrap; }
+.ps-val { margin-left: auto; font-weight: 700; color: #e7ebf3; white-space: nowrap; }
+.useful-bar { margin-top: 12px; text-align: center; color: #9aa3b5; font-size: .88em; letter-spacing: .5px; }
+
+/* ============ 驱动盘 ============ */
+.disc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.disc-card { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); border-radius: 14px; padding: 12px 14px; }
+.disc-card.rarityS { border-color: rgba(245,201,107,.35); }
+.disc-card.rarityA { border-color: rgba(155,140,255,.3); }
+.dc-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.dc-icon { width: 44px; height: 44px; border-radius: 10px; background: #05070c; border: 1px solid rgba(255,255,255,.12); object-fit: contain; }
+.dc-title { min-width: 0; }
+.dc-name { font-weight: 700; font-size: .98em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dc-meta { color: #8b93a7; font-size: .8em; display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+.dc-meta .rarity-icon { width: 1.5em; height: 1.5em; }
+.dc-meta .dc-score { margin-left: auto; color: #f5c96b; font-weight: 700; font-size: 1.15em; }
+.dc-props { display: flex; flex-direction: column; gap: 3px; }
+.dp { display: flex; align-items: center; gap: 7px; font-size: .86em; padding: 2px 0; }
+.dp .prop-icon { width: 1.15em; height: 1.15em; }
+.dp .dp-name { color: #a7b0c2; flex: 1; white-space: nowrap; overflow: hidden; }
+.dp .dp-hit { color: #f5c96b; font-size: .82em; font-weight: 700; }
+.dp:not(.on) .dp-hit { color: #6b7386; }
+.dp .dp-val { font-weight: 700; }
+.dp.main .dp-name, .dp.main .dp-val { color: #7cf3d0; }
+.dp.on .dp-val { color: #e7ebf3; }
+.dp:not(.on) .dp-val, .dp:not(.on) .dp-name { color: #6b7386; }
+
+/* ============ 套装效果 ============ */
+.set-item { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); border-radius: 12px; padding: 10px 14px; margin-bottom: 10px; }
+.sets-wrap { display: flex; gap: 22px; align-items: center; }
+.set-ring { position: relative; width: 244px; height: 244px; min-width: 244px; }
+.set-ring .wep { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 88px; height: 88px; border-radius: 50%; background: #05070c; border: 2px solid rgba(245, 201, 107, .55); object-fit: contain; padding: 5px; box-shadow: 0 0 18px rgba(245, 201, 107, .25); }
+.set-ring .disc { position: absolute; left: 50%; top: 50%; width: 60px; height: 60px; margin: -30px 0 0 -30px; border-radius: 50%; background: #05070c; border: 2px solid rgba(255, 255, 255, .2); object-fit: contain; padding: 3px; }
+.set-ring .d0 { transform: rotate(0deg) translate(84px) rotate(0deg); }
+.set-ring .d1 { transform: rotate(60deg) translate(84px) rotate(-60deg); }
+.set-ring .d2 { transform: rotate(120deg) translate(84px) rotate(-120deg); }
+.set-ring .d3 { transform: rotate(180deg) translate(84px) rotate(-180deg); }
+.set-ring .d4 { transform: rotate(240deg) translate(84px) rotate(-240deg); }
+.set-ring .d5 { transform: rotate(300deg) translate(84px) rotate(-300deg); }
+.sets-text { flex: 1; min-width: 0; }
+.set-item .set-meta { display: flex; align-items: baseline; gap: 8px; }
+.set-item b { color: #f5c96b; }
+.set-item .own { color: #8b93a7; font-size: .85em; margin-left: 6px; }
+.set-item .set-desc { color: #a7b0c2; font-size: .86em; margin-top: 4px; line-height: 1.5; }
+
+.copyright { margin-top: 20px; text-align: center; color: #6b7386; font-size: .78em; }
+
+/* —— 伤害计算段 —— */
+.dmg-wrap { padding: 18px 20px 14px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.09); border-radius: 12px; }
+.dmg-head { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 12px; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.08); }
+.dmg-mul, .dmg-atk { font-size: 13px; color: #9aa3b8; }
+.dmg-mul b { margin-left: 8px; color: #cfd6e6; font-weight: 500; }
+.dmg-atk b { margin-left: 4px; color: #ffcf5c; font-size: 17px; font-weight: 700; }
+.dmg-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.dmg-table th { font-weight: 500; color: #7c8496; font-size: 12px; padding: 4px 8px; text-align: left; }
+.dmg-table th.r, .dmg-table td.r { text-align: right; }
+.dmg-table td { padding: 6px 8px; border-top: 1px solid rgba(255,255,255,.05); color: #dfe4ef; }
+.dmg-table td.n { width: 52%; }
+.dmg-table td.n i { font-style: normal; font-size: 11px; color: #6b7386; margin-left: 4px; }
+.dmg-table td.r { font-variant-numeric: tabular-nums; color: #e8ecf5; }
+.dmg-table td.crit { color: #ffcf5c; }
+.dmg-none { padding: 16px 20px; font-size: 14px; color: #7c8496; background: rgba(255,255,255,.03); border: 1px dashed rgba(255,255,255,.12); border-radius: 12px; }

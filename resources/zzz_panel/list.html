@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}zzz_panel/list.css" />
+  </head>
+
+  <body {{sys.scale}}>
+    <div class="wrap">
+      <div class="head">
+        <div class="title">绝区零 · 代理人面板</div>
+        <div class="sub">UID {{uid}} · 共 {{count}} 名代理人 · {{time}}</div>
+      </div>
+
+      <div class="grid">
+        {{each cards c}}
+        <div class="card" style="border-color:{{c.elementColor}}">
+          <div class="avawrap">
+            <img class="ava" src="{{c.icon}}" onerror="this.style.visibility='hidden'" />
+            <span class="rar" style="background:{{c.rarityColor}}">
+              {{c.rarity}}
+            </span>
+          </div>
+          <div class="name">{{c.name}}</div>
+          <div class="line">
+            <span class="lv">Lv{{c.level}}</span>
+            <span class="el" style="background:{{c.elementColor}}">
+              {{c.element}}
+            </span>
+            <span class="tp">{{c.type}}</span>
+          </div>
+          <div class="foot">
+            <span class="rk">影{{c.rank}}</span>
+            <span class="cmp">{{c.camp}}</span>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+
+      <div class="logo">from 米哈游 · 数据源 米游社</div>
+    </div>
+  </body>
+</html>
