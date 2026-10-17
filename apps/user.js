@@ -53,6 +53,16 @@ export class user extends plugin {
             }, ],
             priority: pluginPriority('user', -9999999999),
             rule: [{
+                    // genshin 的 #绑定设备 是 priority:-Infinity，有限优先级抢不过；
+                    // 加「米哈游/绝区零」前缀就能绕开它的正则，稳定进本插件。
+                    reg: '^#?(米哈游|绝区零)(绑定)?设备(绑定)?帮助$',
+                    fnc: 'help',
+                },
+                {
+                    reg: '^#?(米哈游|绝区零)(删除|绑定)设备(.*)$',
+                    fnc: 'fp',
+                },
+                {
                     reg: '^#?(删除|绑定)*设备(.*)$',
                     fnc: 'fp',
                 },
@@ -106,7 +116,7 @@ export class user extends plugin {
     fp(e) {
         if (!config().bdsb) return false
         if (e.msg.includes('删除')) return this.Delete(e);
-        let msg = e.msg.replace(/绑定|设备|#/g, '');
+        let msg = e.msg.replace(/米哈游|绝区零|绑定|设备|#/g, '');
         let info;
         try {
             info = JSON.parse(msg);
@@ -132,17 +142,17 @@ export class user extends plugin {
             'https://e-e.lanzouw.com/isfXD2f00v6f',
             '密码:xhh',
             '2. 打开app后点击按钮复制设备信息(注意:oaid不能全是0，也不能出现error)',
-            '3. 发送：设备（+设备信息）',
+            '3. 发送：#米哈游绑定设备（+设备信息）',
             '-------------------------------',
             '方法二(不会抓包就别试了)：',
             '1. 使用抓包软件抓取常用手机的米游社APP请求',
             '2. 在请求头内找到【x-rpc-device_id】和【x-rpc-device_fp】',
             '3. 自行构造如下格式的信息：',
             '   {"device_id": "x-rpc-device_id的内容", "device_fp": "x-rpc-device_fp的内容"}',
-            '4. 发送：设备（+构造的设备信息）',
+            '4. 发送：#米哈游绑定设备（+构造的设备信息）',
             '-------------------------------',
             '[删除设备]',
-            '发送 删除设备 即可',
+            '发送 #米哈游删除设备 即可',
         ].join('\n');
         e.reply(await makeForwardMsg(e, msg));
     }
