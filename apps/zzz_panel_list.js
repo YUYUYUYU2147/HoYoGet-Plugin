@@ -443,8 +443,8 @@ function calcDamage(bp, level, avatar, charName) {
 
 // 咕咕牛的面板图在 ZZZ-Plugin/resources/images/panel；本插件自己的自定义图作为第二来源
 const CUSTOM_PORTRAIT_DIRS = [
-  './plugins/ZZZ-Plugin/resources/images/panel',
   path.join(PLUGIN_ROOT, 'resources', 'zzz_panel', 'images', 'panel'),
+  './plugins/ZZZ-Plugin/resources/images/panel',
 ]
 
 /**
