@@ -357,7 +357,13 @@ function findZzzStokenEntry(qq, uid = '') {
 // 面板随机背景：默认用 yppp 的随机二次元图；配置成空字符串可恢复纯黑底
 const DEFAULT_PANEL_BG = 'https://api.yppp.net/api.php'
 function getPanelBg() {
-  try { return String(config()?.zzz_panel_bg_url ?? DEFAULT_PANEL_BG).trim() } catch { return DEFAULT_PANEL_BG }
+  let url = DEFAULT_PANEL_BG
+  try { url = String(config()?.zzz_panel_bg_url ?? DEFAULT_PANEL_BG).trim() } catch { /* 用默认 */ }
+  if (!url) return ''
+  // 随机图接口的 URL 不变时 Chromium 会直接吃缓存，每次加个唯一参数强制重新取图
+  if (!/^https?:\/\//i.test(url)) return url
+  const sep = url.includes('?') ? '&' : '?'
+  return `${url}${sep}_=${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 }
 
 const SKILL_NAME = { 0: '普攻', 1: '特殊技', 2: '闪避', 3: '连携技', 5: '核心技', 6: '支援技' }
