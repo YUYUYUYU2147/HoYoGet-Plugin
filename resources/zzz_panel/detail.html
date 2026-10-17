@@ -174,11 +174,12 @@
         <div class="dmg-atk">攻击力 <b>{{c.damage.atk}}</b></div>
       </div>
       <table class="dmg-table">
-        <tr><th class="n">技能</th><th class="r">等效倍率</th><th class="r">增伤区</th><th class="r">期望</th><th class="r">暴击</th></tr>
-        {{each c.damage.skills d}}
-        <tr><td class="n">{{d.name}} <i>Lv{{d.level}}</i>{{if d.adds.length}}<u>多段</u>{{/if}}</td><td class="r">{{d.totalRate}}</td><td class="r">{{d.boost}}</td><td class="r">{{d.expect}}</td><td class="r crit">{{d.crit}}</td></tr>
+        <tr><th class="idx">#</th><th class="n">技能</th><th class="r">等效倍率</th><th class="r">增伤区</th><th class="r">期望</th><th class="r">暴击</th></tr>
+        {{each c.damage.skills d i}}
+        <tr><td class="idx">{{i + 1}}</td><td class="n">{{d.name}} <i>Lv{{d.level}}</i>{{if d.adds.length}}<u>多段</u>{{/if}}</td><td class="r">{{d.totalRate}}</td><td class="r">{{d.boost}}</td><td class="r">{{d.expect}}</td><td class="r crit">{{d.crit}}</td></tr>
         {{/each}}
       </table>
+      <div class="dmg-sub">看详细计算：米游社{{c.full_name_mi18n}}伤害1 / 2 / 3 …（序号见左列）</div>
       {{if c.damage.buffRows}}
       <div class="dmg-sub">已计入增益（以「{{c.damage.skills[0].name}}」为准）</div>
       <div class="dmg-buffs">

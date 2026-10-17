@@ -179,6 +179,7 @@ body {
 .dmg-table th.r, .dmg-table td.r { text-align: right; }
 .dmg-table td { padding: 6px 8px; border-top: 1px solid rgba(255,255,255,.05); color: #dfe4ef; }
 .dmg-table td.n { width: 52%; }
+.dmg-table th.idx, .dmg-table td.idx { width: 30px; color: #9aa3b5; text-align: center; padding-left: 0; padding-right: 4px; }
 .dmg-table td.n i { font-style: normal; font-size: 11px; color: #9aa3b5; margin-left: 4px; }
 .dmg-table td.r { font-variant-numeric: tabular-nums; color: #e8ecf5; }
 .dmg-table td.crit { color: #ffcf5c; }
