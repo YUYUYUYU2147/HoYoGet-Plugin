@@ -594,11 +594,13 @@ function getScoreWeight(charName, stats, profession, elementType) {
   }
   return { ruleName, weight }
 }
-/** 单个驱动盘的段位：沿用 ZZZ-Plugin 的 48/40/36 分界，压缩成 A/SSS/ACE/MAX 四档 */
+/** 单个驱动盘的段位：沿用 ZZZ-Plugin 的分界，保留 A/S/SS/SSS/ACE/MAX */
 function discGrade(score) {
   if (score >= 48) return 'MAX'
   if (score >= 40) return 'ACE'
   if (score >= 36) return 'SSS'
+  if (score >= 32) return 'SS'
+  if (score >= 28) return 'S'
   return 'A'
 }
 
