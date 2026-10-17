@@ -534,6 +534,8 @@ const SCORE_PROP_ID = {
   '能量自动回复': 30502, '异常精通': 31203, '异常掌控': 31402,
 }
 const ELEM_DMG_ID = { 200: 31503, 201: 31603, 202: 31703, 203: 31803, 204: 32303, 205: 31903 }
+// 单条副词条的基础值：用于把固定攻击/生命/防御换算成百分比等效权重
+const BASE_VALUE = { 11102: 3, 11103: 112, 12102: 3, 12103: 19, 13102: 4.8, 13103: 15 }
 // 可能的副词条 id（用于理论最大词条）
 const SUB_STAT_IDS = [11102, 11103, 12102, 12103, 13102, 13103, 20103, 21103, 23203, 31203]
 // 4/5/6 号位主词条候选
@@ -568,7 +570,7 @@ function pickRule(rules, stats) {
   return valid.find(r => SCORE_RULES[r].rule(stats)) || valid[0]
 }
 /** 取评分权重（按 property_id） */
-function getScoreWeight(charName, stats, profession, elementType) {
+function getScoreWeight(charName, stats, profession, elementType, baseProps = {}) {
   const elemId = ELEM_DMG_ID[elementType]
   const def = EQUIP_SCORE[charName]
   let ruleName = '默认'
@@ -592,6 +594,15 @@ function getScoreWeight(charName, stats, profession, elementType) {
     const id = nm === '属性伤害加成' ? elemId : SCORE_PROP_ID[nm]
     if (id != null) weight[id] = named[nm]
   }
+  // 固定攻击/生命/防御也要按角色基础值折算成百分比等效权重。
+  // 公式与社区面板一致：小词条基础值 × 100 / (大词条基础值 × 角色基础值) × 大词条权重。
+  // 少了这一步，固定攻击会被当成 0 权重，有益/有效词条数会比对方少几条。
+  for (const [small, big, key] of [[11103, 11102, 'hpmax'], [12103, 12102, 'attack'], [13103, 13102, 'def']]) {
+    if (!weight[big]) continue
+    const base = parseFloat(baseProps?.[key]?.base)
+    if (!(base > 0)) continue
+    weight[small] ??= BASE_VALUE[small] * 100 / (BASE_VALUE[big] * base) * weight[big]
+  }
   return { ruleName, weight }
 }
 /** 单个驱动盘的段位：沿用 ZZZ-Plugin 的分界，保留 A/S/SS/SSS/ACE/MAX */
@@ -605,8 +616,8 @@ function discGrade(score) {
 }
 
 /** 计算驱动盘总分与段位；另返回每个盘评分 discScores 与有益/有效词条数 */
-function calcEquipScore(equip_final, charName, stats, profession, elementType) {
-  const { ruleName, weight } = getScoreWeight(charName, stats, profession, elementType)
+function calcEquipScore(equip_final, charName, stats, profession, elementType, baseProps = {}) {
+  const { ruleName, weight } = getScoreWeight(charName, stats, profession, elementType, baseProps)
   let total = 0
   const discScores = []
   let useful = 0
@@ -762,7 +773,7 @@ function normalizeDetail(a, uid) {
     am: parseFloat(basic_properties.elementabnormalpower?.final) || 0,
     ap: parseFloat(basic_properties.elementmystery?.final) || 0,
   }
-  const scoreRes = calcEquipScore(equip_final, a?.name_mi18n || '', scoreStats, a?.avatar_profession, a?.element_type)
+  const scoreRes = calcEquipScore(equip_final, a?.name_mi18n || '', scoreStats, a?.avatar_profession, a?.element_type, basic_properties)
   const rating = scoreRes.rating
   const equip_score = scoreRes.score
   equip_final.forEach((eq, i) => {
