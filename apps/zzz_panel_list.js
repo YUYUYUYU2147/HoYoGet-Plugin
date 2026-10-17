@@ -106,13 +106,130 @@ function ckStringOf(ck) {
   return hit?.ck || ''
 }
 
+/** 复用 ZZZ-Plugin 缓存的设备指纹：它查面板前会自动 getFp 并写 Redis，不必手动绑定设备 */
+async function enrichCkDevice(ck) {
+  if (!ck || typeof redis === 'undefined') return ck
+  for (const item of Object.values(ck)) {
+    if (!item?.ltuid) continue
+    try {
+      if (!item.fp) item.fp = (await redis.get(`ZZZ:DEVICE_FP:${item.ltuid}:FP`)) || ''
+      if (!item.device_id) item.device_id = (await redis.get(`ZZZ:DEVICE_FP:${item.ltuid}:ID`)) || ''
+    } catch { /* Redis 不可用就退回本地 fp 文件 */ }
+  }
+  return ck
+}
+
+/** 读 ZZZ-Plugin 的设备配置；没有就退回它 defSet 里的同款默认值 */
+function zzzDeviceInfo() {
+  const files = [
+    path.join(ZZZ_ROOT, 'config', 'device.yaml'),
+    path.join(ZZZ_ROOT, 'defSet', 'device.yaml'),
+  ]
+  let cfg = {}
+  for (const f of files) {
+    if (!fs.existsSync(f)) continue
+    try { cfg = yaml.get(f) || {}; break } catch { cfg = {} }
+  }
+  return {
+    productName: cfg.productName || 'XQ-BC52_EEA',
+    modelName: cfg.modelName || 'XQ-BC52',
+    osVersion: String(cfg.osVersion || '13'),
+    board: cfg.board || 'lahaina',
+    deviceInfo: cfg.deviceInfo || 'Sony/XQ-BC52_EEA/XQ-BC52:13/61.2.A.0.472A/061002A0000472A0046651803:user/release-keys',
+  }
+}
+
+/** 自动 getFp：和 ZZZ-Plugin 一样由插件申请设备指纹，用户不需要手动绑定设备 */
+async function fetchZzzDeviceFp(ck) {
+  const { productName, modelName, osVersion, board, deviceInfo } = zzzDeviceInfo()
+  const uuid = crypto.randomUUID()
+  const brand = deviceInfo.split('/')[0]
+  const display = deviceInfo.split('/')[3] || ''
+  const ext = {
+    proxyStatus: 1, isRoot: 0, romCapacity: '768', deviceName: modelName, productName,
+    romRemain: '727', hostname: 'BuildHost', screenSize: '1096x2434', isTablet: 0,
+    aaid: uuid, model: modelName, brand, hardware: 'qcom', deviceType: modelName,
+    devId: 'REL', serialNumber: 'unknown', sdCapacity: 224845, buildTime: '1692775759000',
+    buildUser: 'BuildUser', simState: 1, ramRemain: '218344', appUpdateTimeDiff: 1740498108042,
+    deviceInfo, vaid: uuid, buildType: 'user', sdkVersion: '33',
+    ui_mode: 'UI_MODE_TYPE_NORMAL', isMockLocation: 0, cpuType: 'arm64-v8a', isAirMode: 0,
+    ringMode: 2, chargeStatus: 1, manufacturer: brand, emulatorStatus: 0, appMemory: '768',
+    osVersion, vendor: 'unknown', accelerometer: '-1.588236x6.8404818x6.999604',
+    sdRemain: 218214, buildTags: 'release-keys', packageName: 'com.mihoyo.hyperion',
+    networkType: 'WiFi', oaid: uuid, debugStatus: 1, ramCapacity: '224845',
+    magnetometer: '-47.04375x51.3375x137.96251', display,
+    appInstallTimeDiff: 1740498108042, packageVersion: '2.35.0',
+    gyroscope: '-0.22601996x-0.09453133x0.09040799', batteryStatus: 88, hasKeyboard: 0, board,
+  }
+  const body = {
+    app_name: 'bbs_cn',
+    bbs_device_id: uuid,
+    device_fp: '38d805c20d53d',
+    device_id: 'cc57c40f763ae4cc',
+    ext_fields: JSON.stringify(ext),
+    platform: '2',
+    seed_id: uuid,
+    seed_time: String(Date.now()),
+  }
+  try {
+    const res = await mhyFetch('https://public-data-api.mihoyo.com/device-fp/api/getFp', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 miHoYoBBS/2.73.1',
+        Cookie: ckStringOf(ck),
+      },
+      body: JSON.stringify(body),
+    }).then(r => r.json())
+    const fp = res?.data?.device_fp || ''
+    if (!fp) logger.warn?.(`[HoYoGet][zzz_panel] getFp 失败：retcode=${res?.retcode} ${res?.message || ''}`)
+    return { fp, device_id: uuid }
+  } catch (err) {
+    logger.warn?.(`[HoYoGet][zzz_panel] getFp 异常：${err?.message || err}`)
+    return { fp: '', device_id: uuid }
+  }
+}
+
+/** 设备指纹优先级：本地绑定文件 → CK 自带 → ZZZ-Plugin 的 Redis 缓存 → 自动 getFp */
+async function resolveZzzDevice(e, ck) {
+  const ckItem = Object.values(ck || {}).find(item => item?.ck)
+  const fpFile = `./plugins/HoYoGet-Plugin/data/fp/${e?.user_id}.yaml`
+  let file = {}
+  if (fs.existsSync(fpFile)) {
+    try { file = yaml.get(fpFile) || {} } catch { file = {} }
+  }
+  let deviceId = file.device_id || ckItem?.device_id || ''
+  let fp = file.fp || ckItem?.fp || ''
+  const ltuid = ckItem?.ltuid
+  if (!fp && ltuid && typeof redis !== 'undefined') {
+    try {
+      fp = (await redis.get(`ZZZ:DEVICE_FP:${ltuid}:FP`)) || ''
+      deviceId = deviceId || (await redis.get(`ZZZ:DEVICE_FP:${ltuid}:ID`)) || ''
+    } catch { /* Redis 不可用就继续自动申请 */ }
+  }
+  if (fp) return { fp, device_id: deviceId || crypto.randomUUID() }
+  const got = await fetchZzzDeviceFp(ck)
+  if (got.fp && ltuid && typeof redis !== 'undefined') {
+    try {
+      await redis.set(`ZZZ:DEVICE_FP:${ltuid}:FP`, got.fp, { EX: 86400 * 7 })
+      await redis.set(`ZZZ:DEVICE_FP:${ltuid}:ID`, got.device_id, { EX: 86400 * 7 })
+    } catch { /* 缓存失败不影响本次请求 */ }
+  }
+  return got
+}
+
 /** 按 ZZZ-Plugin 的口径生成 record 接口请求头（4x salt + query 参与 DS） */
-function zzzHeaders(e, ck, query = '') {
+function zzzHeaders(e, ck, query = '', dev = null) {
   const fpFile = `./plugins/HoYoGet-Plugin/data/fp/${e?.user_id}.yaml`
   let fp = {}
   if (fs.existsSync(fpFile)) {
     try { fp = yaml.get(fpFile) || {} } catch { fp = {} }
   }
+  const ckItem = Object.values(ck || {}).find(item => item?.ck)
+  if (!fp.device_id && ckItem?.device_id) fp.device_id = ckItem.device_id
+  if (!fp.fp && ckItem?.fp) fp.fp = ckItem.fp
+  if (dev?.device_id) fp.device_id = dev.device_id
+  if (dev?.fp) fp.fp = dev.fp
   const t = Math.round(Date.now() / 1000)
   const r = Math.floor(Math.random() * 900000 + 100000)
   const salt = 'xV8v4Qu54lUKrEYFZkJhB8cuOh9Asafs'
@@ -140,13 +257,9 @@ function zzzHeaders(e, ck, query = '') {
 async function zzzAutoVerify(e, ck) {
   const addr = String(config()?.auto_verify_addr ?? 'http://127.0.0.1:2149/solve').trim()
   if (!addr) return ''
-  const fpFile = `./plugins/HoYoGet-Plugin/data/fp/${e?.user_id}.yaml`
-  let fp = {}
-  if (fs.existsSync(fpFile)) {
-    try { fp = yaml.get(fpFile) || {} } catch { fp = {} }
-  }
-  const deviceId = fp.device_id || mhy.getDeviceGuid()
-  const deviceFp = fp.fp || ''
+  const dev = await resolveZzzDevice(e, ck)
+  const deviceId = dev.device_id || mhy.getDeviceGuid()
+  const deviceFp = dev.fp || ''
   try {
     const res = await fetch(addr, {
       method: 'POST',
@@ -173,7 +286,8 @@ async function zzzGet(e, uid, ck, type, query, extraHeaders = {}, retried = fals
       ? 'https://api-takumi-record.mihoyo.com/event/game_record_zzz/api/zzz/avatar/info'
       : 'https://api-takumi-record.mihoyo.com/event/game_record_zzz/api/zzz/avatar/basic'
   const url = `${base}?${query}`
-  const headers = { ...zzzHeaders(e, ckStringOf(ck), query), ...extraHeaders }
+  const dev = await resolveZzzDevice(e, ck)
+  const headers = { ...zzzHeaders(e, ck, query, dev), ...extraHeaders }
   const resp = await mhyFetch(url, { method: 'GET', headers })
   const text = await resp.text()
   let json
@@ -1289,7 +1403,7 @@ export class zzz_panel_list extends plugin {
     try {
       const { getCk } = await import(path.join(ZZZ_ROOT, 'dist', 'lib', 'common.js'))
       const ck = await getCk(e)
-      if (ck && Object.values(ck).some(item => item?.ck)) return ck
+      if (ck && Object.values(ck).some(item => item?.ck)) return enrichCkDevice(ck)
     } catch { /* 没装 ZZZ-Plugin 就继续 */ }
 
     // 2) 本插件 data/Stoken（迁移过来的 CK）
@@ -1306,7 +1420,7 @@ export class zzz_panel_list extends plugin {
       }
     })() : null
     // 完整 cookie 优先；只有 stoken 的条目先留给 genshin，失败后再兜底
-    if (stokenCk && /cookie_token=/.test(stokenCk.default.ck)) return stokenCk
+    if (stokenCk && /cookie_token=/.test(stokenCk.default.ck)) return enrichCkDevice(stokenCk)
 
     // 3) genshin NoteUser
     try {
@@ -1315,21 +1429,21 @@ export class zzz_panel_list extends plugin {
       const user = await NoteUser?.create?.(e)
       const mys = user?.getMysUser?.('zzz')
       if (mys?.ck) {
-        return {
+        return enrichCkDevice({
           default: {
             ck: mys.ck,
             uid: String(uid || mys.uid || ''),
             ltuid: String(mys.ltuid || ''),
             device_id: mys.device || '',
           },
-        }
+        })
       }
     } catch (err) {
       logger.debug?.(`[HoYoGet][zzz_panel] genshin NoteUser 兜底失败：${err?.message || err}`)
     }
 
     // 4) 最后再用 Stoken（可能只有 stuid/stoken）
-    if (stokenCk) return stokenCk
+    if (stokenCk) return enrichCkDevice(stokenCk)
     logger.warn?.('[HoYoGet][zzz_panel] 没有可用 CK（ZZZ-Plugin / Stoken / genshin 均失败）')
     return false
   }

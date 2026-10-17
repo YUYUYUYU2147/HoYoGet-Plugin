@@ -47,7 +47,7 @@
 | 变更 | **绝区零用户数据迁移** —— 新增迁移脚本，把 ZZZ-Plugin 的 UID/CK、逐抽记录、菲林月报转到本插件；抽卡记录优先读本插件 `data/zzz_gacha/zzz_plugin/`，不再依赖 ZZZ-Plugin 原目录 | 绝区零抽卡/菲林统计 |
 | 优化 | **绝区零面板 CK 兜底** —— UID/CK 依次从 ZZZ-Plugin、本插件 Stoken（完整 CK）、genshin NoteUser、Stoken（仅 stoken）取，ZZZ-Plugin 缺失或 CK 失效时面板仍可尝试取数 | `米游社<角色>面板` |
 | 优化 | **绝区零面板取数去 ZZZ-Plugin 化** —— 角色列表/详情/玩家信息改走本插件直连 ZZZ record 接口（2.73.1、client_type=2、4x DS，头与 ZZZ-Plugin 对齐），不再依赖 `MysZZZApi`；CK 仍按 ZZZ-Plugin→Stoken→genshin 兜底 | `米游社<角色>面板` |
-| 修复 | **绝区零面板风控处理** —— `1034/10035` 走本机 `/solve` 自动过码并按梯度重试；`10041` 是设备指纹风控，提示先绑定设备，不再误走滑块 | `米游社<角色>面板` |
+| 修复 | **绝区零面板风控处理** —— 自动 `getFp` 申请并缓存设备指纹（同 ZZZ-Plugin，无需手动绑定）；`1034/10035` 走本机 `/solve` 自动过码并按梯度重试；`10041` 仅在自动取指纹失败时提示绑定设备 | `米游社<角色>面板` |
 
 ### 速览
 
