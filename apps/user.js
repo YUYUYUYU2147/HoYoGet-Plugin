@@ -88,7 +88,14 @@ export class user extends plugin {
         if (!e.isMaster) return false
         let path = './plugins/HoYoGet-Plugin/config/config.yaml';
         fs.cpSync('./plugins/HoYoGet-Plugin/system/checkCode/gs.txt', './plugins/genshin/model/mys/mysInfo.js')
-        fs.cpSync('./plugins/HoYoGet-Plugin/system/checkCode/sr.txt', './plugins/StarRail-plugin/runtime/MysSRApi.js')
+        // 星铁这份实现依赖 StarRail-plugin 自己的 SRApiTool/getDeviceFp；
+        // 这两个文件不存在时覆盖过去只会让 StarRail-plugin 直接 ERR_MODULE_NOT_FOUND。
+        const srRuntime = './plugins/StarRail-plugin/runtime'
+        if (fs.existsSync(`${srRuntime}/SRApiTool.js`) && fs.existsSync(`${srRuntime}/getDeviceFp.js`)) {
+            fs.cpSync('./plugins/HoYoGet-Plugin/system/checkCode/sr.txt', `${srRuntime}/MysSRApi.js`)
+        } else {
+            logger.warn('[HoYoGet] StarRail-plugin 缺少 SRApiTool/getDeviceFp，已跳过星铁设备绑定注入')
+        }
         await yaml.set(path, 'bdsb', true);
         await e.reply('开启设备完成，执行重启！')
         new Restart(this.e).restart();
