@@ -68,11 +68,15 @@
               <span class="wp main"><i class="wp-tag">主</i><span class="prop-icon {{prop.classname}}"></span>{{prop.property_name}} {{prop.base}}</span>
               {{/each}}
             </div>
+            <!-- 副词条可能为空（接口没给全），整行不输出：
+                 否则 .wp-line + .wp-line 的分隔虚线会孤零零挂在主词条下面 -->
+            {{if c.weapon.properties.length}}
             <div class="wp-line">
               {{each c.weapon.properties prop}}
               <span class="wp"><i class="wp-tag">副</i><span class="prop-icon {{prop.classname}}"></span>{{prop.property_name}} {{prop.base}}</span>
               {{/each}}
             </div>
+            {{/if}}
           </div>
           {{if c.weapon.talent}}
           <div class="wtalent">
