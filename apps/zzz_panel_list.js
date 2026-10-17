@@ -722,7 +722,7 @@ const CUSTOM_PORTRAIT_DIRS = [
 
 /**
  * 读取自定义面板图，返回 data URI；无则返回 ''。
- * 每个角色目录取第一张 png/jpg/webp；名字同时尝试简称/全称和「」包裹形式。
+ * 每个角色目录随机取一张 png/jpg/webp；名字同时尝试简称/全称和「」包裹形式。
  */
 function loadCustomPortrait(names) {
   const variants = []
@@ -737,7 +737,7 @@ function loadCustomPortrait(names) {
       let files = []
       try { files = fs.readdirSync(dir).filter(f => /\.(png|jpe?g|webp)$/i.test(f)).sort() } catch { files = [] }
       if (!files.length) continue
-      const file = files[0]
+      const file = files[Math.floor(Math.random() * files.length)]
       const ext = path.extname(file).slice(1).toLowerCase()
       const mime = ext === 'jpg' ? 'jpeg' : ext
       try {
