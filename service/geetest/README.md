@@ -68,13 +68,13 @@ Windows 需要 Python，安装时勾选「Add to PATH」和 venv 组件。
 手动装（在 TRSS-Yunzai 根目录执行）：
 
 ```bash
-cd plugins/xhh/service/geetest
+cd plugins/HoYoGet-Plugin/service/geetest
 python3 -m venv .venv                              # Windows 用 python -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt  # Windows 用 .venv\Scripts\python -m pip
 pm2 start .venv/bin/python --name xhh-geetest-solver -- server.py
 ```
 
-> 如果已经在 `plugins/xhh` 目录里，则第一行改成 `cd service/geetest`。其余内容不变。
+> 如果已经在 `plugins/HoYoGet-Plugin` 目录里，则第一行改成 `cd service/geetest`。其余内容不变。
 
 > glibc 低于 2.31 装不上 `bili-ticket-gt-python`（它只有 manylinux_2_31 的 wheel）。
 > `#过码部署` 会提前检查并说清原因，不会让你对着一堆 pip 报错发懵。

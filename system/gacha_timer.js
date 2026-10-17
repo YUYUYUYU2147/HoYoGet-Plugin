@@ -1,5 +1,5 @@
 ﻿import fs from 'fs';
-import { yaml } from '#xhh';
+import { yaml } from '#HoYoGet';
 
 // 卡池计时器 / UP 总览数据层
 // 原神、星铁、绝区零：抓取 wiki.biligame.com 的「卡池计时器」页面（MediaWiki，静态渲染，无需鉴权）
@@ -16,9 +16,9 @@ export const TIMER_GAMES = {
     bh3: { key: 'bh3', name: '崩坏3', source: '本地卡池史料库', url: '' },
 };
 
-const BH3_YAML_PATH = './plugins/xhh/system/default/bh3_gacha_pool_history.yaml';
-const BH3_JSON_PATH = './plugins/xhh/system/default/bh3_gacha_pool_history.json';
-const BH3_JS_NAMES_PATH = './plugins/xhh/system/default/bh3_js_names.yaml';
+const BH3_YAML_PATH = './plugins/HoYoGet-Plugin/system/default/bh3_gacha_pool_history.yaml';
+const BH3_JSON_PATH = './plugins/HoYoGet-Plugin/system/default/bh3_gacha_pool_history.json';
+const BH3_JS_NAMES_PATH = './plugins/HoYoGet-Plugin/system/default/bh3_js_names.yaml';
 
 const CACHE = new Map();
 

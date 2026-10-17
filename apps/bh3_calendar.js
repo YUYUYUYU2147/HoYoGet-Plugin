@@ -1,7 +1,7 @@
 import fs from 'fs';
 import fetch from 'node-fetch';
 import moment from 'moment';
-import { render, pluginPriority } from '#xhh';
+import { render, pluginPriority } from '#HoYoGet';
 
 const NEWS_API = 'https://bbs-api-static.miyoushe.com/painter/wapi/getNewsList?gids=1&page_size=80&type=1';
 const POST_API = 'https://bbs-api.miyoushe.com/post/wapi/getPostFull?gids=1&read=1&post_id=';
@@ -137,7 +137,7 @@ export class bh3_calendar extends plugin {
 
 
   getFixedSplash() {
-    const dir = './plugins/xhh/resources/gacha_pool/fixed_splash/崩坏3';
+    const dir = './plugins/HoYoGet-Plugin/resources/gacha_pool/fixed_splash/崩坏3';
     try {
       if (!fs.existsSync(dir)) return '';
       const files = fs.readdirSync(dir)
@@ -236,7 +236,7 @@ export class bh3_calendar extends plugin {
     const keys = [raw, Number.isNaN(num) ? '' : num.toFixed(1)];
     let auto = {};
     try {
-      auto = JSON.parse(fs.readFileSync('./plugins/xhh/system/default/bh3_version_start.json', 'utf-8'));
+      auto = JSON.parse(fs.readFileSync('./plugins/HoYoGet-Plugin/system/default/bh3_version_start.json', 'utf-8'));
     } catch (_) {
       auto = {};
     }

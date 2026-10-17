@@ -1,4 +1,4 @@
-import { yaml, mhy, api, pluginPriority } from '#xhh';
+import { yaml, mhy, api, pluginPriority } from '#HoYoGet';
 import fs from 'fs';
 import puppeteer from '../../../lib/puppeteer/puppeteer.js';
 import moment from 'moment';
@@ -90,7 +90,7 @@ export class bh3_note extends plugin {
     let region = uid ? await redis.get(`xhh:bh3_region:${qq}`) : null;
     let ck = null;
 
-    const stokenPath = `./plugins/xhh/data/Stoken/${qq}.yaml`;
+    const stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${qq}.yaml`;
     if (fs.existsSync(stokenPath)) {
       const stokenData = yaml.get(stokenPath) || {};
       if (!uid) {
@@ -211,11 +211,11 @@ export class bh3_note extends plugin {
         // {{ppath}} 不会由框架注入（只有 system/render.js 那条路会），
         // 缺了它 CSS/背景图/图标全部 404，页面退化成无样式的裸 HTML。
         // 层数 = 资源目录段数 + 3：小花火/bh3_note/note 落在 temp/html/下同深度目录。
-        ppath: '../../../../../plugins/xhh/resources/',
+        ppath: '../../../../../plugins/HoYoGet-Plugin/resources/',
         ...data,
         sys: { scale: 'style=transform:scale(1)' },
         deviceScaleFactor: 2,
-        tplFile: process.cwd() + '/plugins/xhh/resources/bh3_note/note.html',
+        tplFile: process.cwd() + '/plugins/HoYoGet-Plugin/resources/bh3_note/note.html',
         saveId: 'bh3_note',
       });
       if (buf && Buffer.isBuffer(buf)) return sendMsg(e, buf);

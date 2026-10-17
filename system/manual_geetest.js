@@ -3,7 +3,7 @@ import { URL } from 'node:url';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import { spawn } from 'node:child_process';
-import { sleep } from '#xhh';
+import { sleep } from '#HoYoGet';
 import { pickSentMsgId, scheduleGroupRecall } from './msgRecall.js';
 
 const tasks = new Map();
@@ -26,7 +26,7 @@ const MANUAL_GT_TIMEOUT = 120;
 // 路径可移植：环境变量 > 插件数据目录（默认，随仓库走）> /root/.xhh（兼容旧写法）。
 const TUNNEL_URL_FILES = [
   process.env.XHH_MANUAL_GT_URL_FILE,
-  './plugins/xhh/data/manual_gt_url',
+  './plugins/HoYoGet-Plugin/data/manual_gt_url',
   '/root/.xhh/manual_gt_url',
 ].filter(Boolean);
 
@@ -125,7 +125,7 @@ function resolveCloudflared() {
   logger.warn(
     `[xhh][manual_gt] 未找到 cloudflared，已探测：${tried.join('、') || '(候选为空)'}\n` +
     '  · 安装：https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/\n' +
-    '  · 或运行 tools/manual_gt_tunnel.sh（地址写入 plugins/xhh/data/manual_gt_url，插件自动读取）\n' +
+    '  · 或运行 tools/manual_gt_tunnel.sh（地址写入 plugins/HoYoGet-Plugin/data/manual_gt_url，插件自动读取）\n' +
     '  · 或设置环境变量 XHH_MANUAL_GT_PUBLIC_URL，指向你自己的固定域名/反向代理',
   )
   return ''

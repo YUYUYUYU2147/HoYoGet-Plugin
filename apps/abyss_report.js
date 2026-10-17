@@ -3,7 +3,7 @@ import path from 'node:path';
 import fetch from 'node-fetch';
 import _ from 'lodash';
 import moment from 'moment';
-import { render, config, pluginPriority, makeForwardMsg } from '#xhh';
+import { render, config, pluginPriority, makeForwardMsg } from '#HoYoGet';
 import sharp from '../node_modules/sharp/lib/index.js';
 import { enrichFromAlioth, pickEnrich } from '../system/sr_enrich.js';
 

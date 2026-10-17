@@ -10,7 +10,7 @@ import {
     render,
     yaml,
     config
-} from '#xhh';
+} from '#HoYoGet';
 import { manualGeetest } from './manual_geetest.js';
 import { mhyFetch } from './mhy_fetch.js';
 
@@ -61,7 +61,7 @@ function stableDeviceId(seed) {
 }
 
 function getStokenEntry(qq, uid) {
-    const path = `./plugins/xhh/data/Stoken/${qq}.yaml`;
+    const path = `./plugins/HoYoGet-Plugin/data/Stoken/${qq}.yaml`;
     if (!fs.existsSync(path)) return null;
     try {
         return (yaml.get(path) || {})[uid] || null;
@@ -71,7 +71,7 @@ function getStokenEntry(qq, uid) {
 }
 
 function getStokenData(qq) {
-    const path = `./plugins/xhh/data/Stoken/${qq}.yaml`;
+    const path = `./plugins/HoYoGet-Plugin/data/Stoken/${qq}.yaml`;
     if (!fs.existsSync(path)) return {};
     try {
         return yaml.get(path) || {};
@@ -355,7 +355,7 @@ async function MysSign(e, games) {
 }
 
 function add(e) {
-    const path = './plugins/xhh/config/sign.yaml';
+    const path = './plugins/HoYoGet-Plugin/config/sign.yaml';
     const data = yaml.get(path);
     if (!data.zd_sign || !e.isGroup) return;
     if (!isAllowSignGroup(data.sign_group, e.group_id)) return;
@@ -475,7 +475,7 @@ function getXiaoyaoEntries(qq) {
 const xiaoyaoCk = e => e.ck_stoken || `stuid=${e.stuid};stoken=${e.stoken};${e.mid ? `mid=${e.mid};` : ''}`;
 
 function getBbsAccounts(e) {
-    const path = `./plugins/xhh/data/Stoken/${e.user_id}.yaml`;
+    const path = `./plugins/HoYoGet-Plugin/data/Stoken/${e.user_id}.yaml`;
     const accounts = new Map();
     // 收单个条目。必须和收整张表分开：原来只有 collect(data) 一个函数去遍历
     // Object.values(data)，逍遥那路传进来的是「一个扁平条目」而不是「uid→条目」的表，
@@ -1186,7 +1186,7 @@ async function ckForGameUid(e, game, uid, fallback, entry = null) {
 //
 // 所以改成：先用着，等它真的报错了才验一次；验明失效就写进 data/ck_state.json，
 // 之后每轮开局直接跳过，一个请求都不多发。有效的也记一笔，同样省掉重复验。
-const CK_STATE_PATH = './plugins/xhh/data/ck_state.json';
+const CK_STATE_PATH = './plugins/HoYoGet-Plugin/data/ck_state.json';
 const CK_STATE_TTL = 24 * 60 * 60 * 1000; // 一天后重验，别把一次误判记成永久
 let _ckState = null;
 
@@ -1216,7 +1216,7 @@ function saveCkState() {
         const now = Date.now();
         const out = {};
         for (const [k, v] of _ckState) out[k] = { a: v, t: now };
-        fs.mkdirSync('./plugins/xhh/data', { recursive: true });
+        fs.mkdirSync('./plugins/HoYoGet-Plugin/data', { recursive: true });
         fs.writeFileSync(CK_STATE_PATH, JSON.stringify(out, null, 2));
     } catch (err) {
         if (config().debug) logger.mark(`[xhh][sign] 写 ck 状态失败: ${err.message}`);
@@ -1369,7 +1369,7 @@ async function probeCk(ck) {
  * 账号也一律回 -100（前者缺 cookie_token、后者认设备指纹），拿它们的返回值当判据
  * 会把全部绑定误删。这里只在真签到结论上下手。
  */
-const INVALID_FILE = './plugins/xhh/data/invalid_stuid.json';
+const INVALID_FILE = './plugins/HoYoGet-Plugin/data/invalid_stuid.json';
 function markInvalid(account, rows) {
     if (!rows.some(r => /登录失效/.test(r.tip || ''))) return;
     const stuid = String(account?.stuid || '');

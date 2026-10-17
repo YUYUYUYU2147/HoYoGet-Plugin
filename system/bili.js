@@ -8,7 +8,7 @@ import {
     makeForwardMsg,
     config,
     splitImage
-} from '#xhh';
+} from '#HoYoGet';
 import moment from 'moment';
 import crypto from 'node:crypto';
 import http from 'node:http';
@@ -18,8 +18,8 @@ import {
     execSync
 } from 'child_process';
 
-let path = './plugins/xhh/config/config.yaml';
-let path_ = './plugins/xhh/config/bili_group.yaml';
+let path = './plugins/HoYoGet-Plugin/config/config.yaml';
+let path_ = './plugins/HoYoGet-Plugin/config/bili_group.yaml';
 let headers = {
     Accept: 'application/json, text/plain, */*',
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
@@ -34,9 +34,9 @@ const DOWNLOAD_IDLE_TIMEOUT = 30000;
 const DOWNLOAD_RETRY = 4;
 // 下载过程产生的临时文件，结束后统一清理
 const BILI_TEMP_FILES = [
-    './plugins/xhh/temp/bili/video.m4s',
-    './plugins/xhh/temp/bili/audio.m4s',
-    './plugins/xhh/temp/bili/temp.mp4'
+    './plugins/HoYoGet-Plugin/temp/bili/video.m4s',
+    './plugins/HoYoGet-Plugin/temp/bili/audio.m4s',
+    './plugins/HoYoGet-Plugin/temp/bili/temp.mp4'
 ];
 
 const urlClient = url => (String(url).startsWith('http://') ? http : https);
@@ -298,9 +298,9 @@ class bili {
 
     //简介
     async jj(e, msg_id) {
-        if (!fs.existsSync(`./plugins/xhh/temp/bili/${msg_id}.json`)) return false;
+        if (!fs.existsSync(`./plugins/HoYoGet-Plugin/temp/bili/${msg_id}.json`)) return false;
         let data = JSON.parse(
-            fs.readFileSync(`./plugins/xhh/temp/bili/${msg_id}.json`, 'utf-8')
+            fs.readFileSync(`./plugins/HoYoGet-Plugin/temp/bili/${msg_id}.json`, 'utf-8')
         );
         render('bilibili/video_', data, {
             e,
@@ -310,9 +310,9 @@ class bili {
 
     //展开评论区
     async reply_(e, n, msg_id) {
-        if (!fs.existsSync(`./plugins/xhh/temp/bili/${msg_id}.json`)) return false;
+        if (!fs.existsSync(`./plugins/HoYoGet-Plugin/temp/bili/${msg_id}.json`)) return false;
         let data = JSON.parse(
-            fs.readFileSync(`./plugins/xhh/temp/bili/${msg_id}.json`, 'utf-8')
+            fs.readFileSync(`./plugins/HoYoGet-Plugin/temp/bili/${msg_id}.json`, 'utf-8')
         );
         if (!n) n = 1;
         let img,
@@ -353,7 +353,7 @@ class bili {
             if (re.data?.message_id) re.message_id = re.data.message_id; //onebot
             re.message_id = re.message_id.toString().replace(/\//g, '');
             fs.writeFileSync(
-                `./plugins/xhh/temp/bili/${re.message_id}.json`,
+                `./plugins/HoYoGet-Plugin/temp/bili/${re.message_id}.json`,
                 JSON.stringify(data),
                 'utf-8'
             );
@@ -365,9 +365,9 @@ class bili {
     async fm(e, msg_id, bv = '') {
         let data;
         if (msg_id) {
-            if (!fs.existsSync(`./plugins/xhh/temp/bili/${msg_id}.json`))
+            if (!fs.existsSync(`./plugins/HoYoGet-Plugin/temp/bili/${msg_id}.json`))
                 return false;
-            data = fs.readFileSync(`./plugins/xhh/temp/bili/${msg_id}.json`, 'utf-8');
+            data = fs.readFileSync(`./plugins/HoYoGet-Plugin/temp/bili/${msg_id}.json`, 'utf-8');
             data = JSON.parse(data).pic;
         } else if (bv) {
             data = await this.sp_(bv);
@@ -380,9 +380,9 @@ class bili {
 
     //下载评论区图片
     async tu(e, msg_id) {
-        if (!fs.existsSync(`./plugins/xhh/temp/bili/${msg_id}.json`)) return false;
+        if (!fs.existsSync(`./plugins/HoYoGet-Plugin/temp/bili/${msg_id}.json`)) return false;
         let data = fs.readFileSync(
-            `./plugins/xhh/temp/bili/${msg_id}.json`,
+            `./plugins/HoYoGet-Plugin/temp/bili/${msg_id}.json`,
             'utf-8'
         );
         data = JSON.parse(data).pic;
@@ -391,7 +391,7 @@ class bili {
         let n = data.n;
         n--;
         data = JSON.parse(
-            fs.readFileSync(`./plugins/xhh/temp/bili/${msg_id}.json`, 'utf-8')
+            fs.readFileSync(`./plugins/HoYoGet-Plugin/temp/bili/${msg_id}.json`, 'utf-8')
         );
         let pic = data.pls[n].pic;
         if (!pic.length) return false;
@@ -578,7 +578,7 @@ class bili {
         if (re.data?.message_id) re.message_id = re.data.message_id; //onebot
         re.message_id = re.message_id.toString().replace(/\//g, '');
         fs.writeFileSync(
-            `./plugins/xhh/temp/bili/${re.message_id}.json`,
+            `./plugins/HoYoGet-Plugin/temp/bili/${re.message_id}.json`,
             JSON.stringify(data),
             'utf-8'
         );
@@ -1042,7 +1042,7 @@ class bili {
         if (re.data?.message_id) re.message_id = re.data.message_id; //onebot
         re.message_id = re.message_id.toString().replace(/\//g, '');
         fs.writeFileSync(
-            `./plugins/xhh/temp/bili/${re.message_id}.json`,
+            `./plugins/HoYoGet-Plugin/temp/bili/${re.message_id}.json`,
             JSON.stringify(data),
             'utf-8'
         );
@@ -1612,7 +1612,7 @@ class bili {
         await downloadToFile(aInfo, v_path1, headers, '音频');
         logger.mark('[小花火bili]:视频和音频下载完成');
         logger.mark('[小花火bili]:合并视频和音频中');
-        execSync(`cd plugins/xhh/temp/bili/ && ffmpeg -i video.m4s -i audio.m4s -c:v copy -c:a copy -f mp4 -y -loglevel error temp.mp4`);
+        execSync(`cd plugins/HoYoGet-Plugin/temp/bili/ && ffmpeg -i video.m4s -i audio.m4s -c:v copy -c:a copy -f mp4 -y -loglevel error temp.mp4`);
         logger.mark('[小花火bili]:视频和音频合并完成');
         let v_re,
             video = segment.video(sp_path);
@@ -1819,8 +1819,8 @@ class bili {
     }
 
     temp() {
-        if (!fs.existsSync('./plugins/xhh/temp/bili/')) {
-            fs.mkdirSync('./plugins/xhh/temp/bili/', {
+        if (!fs.existsSync('./plugins/HoYoGet-Plugin/temp/bili/')) {
+            fs.mkdirSync('./plugins/HoYoGet-Plugin/temp/bili/', {
                 recursive: true
             });
         }

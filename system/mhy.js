@@ -3,7 +3,7 @@ import md5 from 'md5';
 import lodash from 'lodash';
 import fs from 'fs';
 import YAML from 'yaml';
-import { yaml, api, config } from '#xhh';
+import { yaml, api, config } from '#HoYoGet';
 import { mhyFetch } from './mhy_fetch.js';
 
   // 走 mhyFetch 出口：默认直连，被米游社风控拦了才切代理。
@@ -108,7 +108,7 @@ class mhy {
       fp: fp,
       device_info: info || '',
     };
-    const yaml_url = `./plugins/xhh/data/fp/${e.user_id}.yaml`;
+    const yaml_url = `./plugins/HoYoGet-Plugin/data/fp/${e.user_id}.yaml`;
     fs.writeFileSync(yaml_url, YAML.stringify(a_), 'utf-8');
     let ltuid = this.getUser(e).ltuid;
     //作用ZZZ-plugin???
@@ -135,7 +135,7 @@ class mhy {
   getHeaders(e, ck, Ds_ = true, info) {
     let device_id, device_fp;
     if (!info) {
-      const yaml_url = `./plugins/xhh/data/fp/${e.user_id}.yaml`;
+      const yaml_url = `./plugins/HoYoGet-Plugin/data/fp/${e.user_id}.yaml`;
       if (fs.existsSync(yaml_url)) {
         const data = YAML.parse(fs.readFileSync(yaml_url, 'utf-8'));
         device_id = data.device_id;
@@ -253,7 +253,7 @@ class mhy {
 
   //通过uid获取stoken
   async getstoken(e, uid) {
-    const path = `./plugins/xhh/data/Stoken/${e.user_id}.yaml`;
+    const path = `./plugins/HoYoGet-Plugin/data/Stoken/${e.user_id}.yaml`;
     const path2 = `./plugins/xiaoyao-cvs-plugin/data/yaml/${e.user_id}.yaml`;
     let data;
     if (fs.existsSync(path)) {
@@ -270,7 +270,7 @@ class mhy {
 
   //stoken(刷新ck用)
   async getSToken(e) {
-    const path = `./plugins/xhh/data/Stoken/${e.user_id}.yaml`;
+    const path = `./plugins/HoYoGet-Plugin/data/Stoken/${e.user_id}.yaml`;
     const path2 = `./plugins/xiaoyao-cvs-plugin/data/yaml/${e.user_id}.yaml`;
     let data,
       data_ = {};
@@ -339,7 +339,7 @@ class mhy {
     const qq = String(e?.user_id || '');
     if (!/^\d{5,12}$/.test(qq)) return { ok: false, reason: 'qq 无效' };
     if (!config().auto_backfill) return { ok: false, reason: '开关关闭' };
-    const xhPath = `./plugins/xhh/data/Stoken/${qq}.yaml`;
+    const xhPath = `./plugins/HoYoGet-Plugin/data/Stoken/${qq}.yaml`;
     const xyPath = `./plugins/xiaoyao-cvs-plugin/data/yaml/${qq}.yaml`;
     if (fs.existsSync(xhPath)) return { ok: true, skipped: '已有 xhh 文件' };
     if (!fs.existsSync(xyPath)) return { ok: false, reason: '两个来源都没有' };

@@ -1,9 +1,9 @@
 import fs from 'fs';
 import moment from 'moment';
 import lodash from 'lodash';
-import { bili, yaml, makeForwardMsg, sleep, pluginPriority } from '#xhh';
+import { bili, yaml, makeForwardMsg, sleep, pluginPriority } from '#HoYoGet';
 
-let path = './plugins/xhh/config/bili_group.yaml';
+let path = './plugins/HoYoGet-Plugin/config/bili_group.yaml';
 
 if (!fs.existsSync(path)) {
   fs.writeFileSync(path, '');
@@ -112,7 +112,7 @@ export class bilibili_push extends plugin {
   }
 
   async Check() {
-    const bilibili = (await yaml.get('./plugins/xhh/config/config.yaml'))
+    const bilibili = (await yaml.get('./plugins/HoYoGet-Plugin/config/config.yaml'))
       .bilibili;
     return bilibili;
   }

@@ -1,5 +1,5 @@
 import fetch from 'node-fetch';
-import { yaml } from '#xhh'
+import { yaml } from '#HoYoGet'
 class yyjson {
     cleanName(name = '') {
         return String(name || '').replace(/[\s·・\-—_「」『』《》【】\[\]（）()]/g, '').toLowerCase()
@@ -140,7 +140,7 @@ class yyjson {
     // }
 
     async gs_other_download(name) {
-        const names = yaml.get('./plugins/xhh/system/default/gs_en_id.yaml')
+        const names = yaml.get('./plugins/HoYoGet-Plugin/system/default/gs_en_id.yaml')
         if (!names[name]) return false
         const id = names[name]
         let data = await fetch(`https://gensh.honeyhunterworld.com/${id}/?lang=CHS`).then(res => res.text())
@@ -168,7 +168,7 @@ class yyjson {
     }
 
     async sr_other_download(name) {
-        const names = yaml.get('./plugins/xhh/system/default/sr_en_id.yaml')
+        const names = yaml.get('./plugins/HoYoGet-Plugin/system/default/sr_en_id.yaml')
         if (!names[name]) return false
         const id = names[name]
         let data = await fetch(`https://starrail.honeyhunterworld.com/${id}/?lang=CN`).then(res => res.text())
@@ -195,7 +195,7 @@ class yyjson {
     async bh3_other_download(name) {
         const listUrl = 'https://api-takumi-static.mihoyo.com/common/blackboard/bh3_wiki/v1/home/content/list?app_sn=bh3_wiki&channel_id=18'
         const dataUrl = id => `https://api-takumi-static.mihoyo.com/common/blackboard/bh3_wiki/v1/content/info?app_sn=bh3_wiki&content_id=${id}`
-        const aliases = yaml.get('./plugins/xhh/system/default/bh3_js_names.yaml') || {}
+        const aliases = yaml.get('./plugins/HoYoGet-Plugin/system/default/bh3_js_names.yaml') || {}
         for (const [real, arr] of Object.entries(aliases)) {
             if (real === name || (Array.isArray(arr) && arr.includes(name))) {
                 name = real

@@ -1,5 +1,5 @@
 import fetch from 'node-fetch';
-import { makeForwardMsg, config, pluginPriority, oldPostWarn } from '#xhh';
+import { makeForwardMsg, config, pluginPriority, oldPostWarn } from '#HoYoGet';
 import fs from 'fs';
 import {
   getCurrentZzzDefenseInfoByEvent,
@@ -9,7 +9,7 @@ import {
 } from '../system/zzz_challenge_info.js';
 
 async function loadBh3BossModule() {
-  const modulePath = './plugins/xhh/system/bh3_abyss_boss.js';
+  const modulePath = './plugins/HoYoGet-Plugin/system/bh3_abyss_boss.js';
   const version = fs.existsSync(modulePath) ? fs.statSync(modulePath).mtimeMs : Date.now();
   return await import(`../system/bh3_abyss_boss.js?v=${version}`);
 }
@@ -19,7 +19,7 @@ const GLOBAL_SEARCH_API = 'https://bbs-api.miyoushe.com/post/wapi/searchPosts';
 const POST_FULL_API = 'https://bbs-api.miyoushe.com/post/wapi/getPostFull';
 const GAME_GIDS = { abyss: 1, battlefield: 1, godwar: 1, zzz_defense: 8, zzz_deadly: 8 };
 // 攻略视频直发：超过该大小的视频不下载，回退封面+链接
-const VOD_TEMP_DIR = './plugins/xhh/temp/mys_vod/';
+const VOD_TEMP_DIR = './plugins/HoYoGet-Plugin/temp/mys_vod/';
 const VOD_MAX_SIZE = 50 * 1024 * 1024;
 
 function pickGame(msg) {

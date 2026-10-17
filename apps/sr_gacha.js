@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { createHash } from 'node:crypto'
-import { render, mhy, pluginPriority } from '#xhh'
+import { render, mhy, pluginPriority } from '#HoYoGet'
 import { buildIsUP } from '../system/join_isup.mjs'
 // === 跨插件依赖：genshin 插件 ===
 //
@@ -1406,7 +1406,7 @@ const LELAER_DB = {
 async function fetchLelaerGachaData(uid) {
   let mysql
   try { mysql = await import('mysql2/promise') } catch {
-    throw new Error('插件缺少 mysql2 依赖，请在 plugins/xhh 目录执行 `pnpm i mysql2` 后重试')
+    throw new Error('插件缺少 mysql2 依赖，请在 plugins/HoYoGet-Plugin 目录执行 `pnpm i mysql2` 后重试')
   }
   const conn = await mysql.createConnection({ ...LELAER_DB, connectTimeout: 10000 })
   try {
@@ -2538,7 +2538,7 @@ export class sr_gacha extends plugin {
     if (!full) {
       return e.reply([
         `未找到 UID:${uid} 的小助手全量文件`,
-        `期望路径：plugins/xhh/data/sr_gacha/sr_${uid}_full.json`,
+        `期望路径：plugins/HoYoGet-Plugin/data/sr_gacha/sr_${uid}_full.json`,
         '请先在小助手同步云端记录并导出 JSON，再放到该路径。',
       ].join('\n'))
     }

@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 import moment from 'moment';
-import { render, pluginPriority } from '#xhh';
+import { render, pluginPriority } from '#HoYoGet';
 import { Character } from '../../miao-plugin/models/index.js';
 
 const MANIFEST_URL = 'https://static.nanoka.cc/manifest.json';

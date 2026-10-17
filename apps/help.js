@@ -1,7 +1,7 @@
-import { render, pluginPriority, yaml } from '#xhh';
+import { render, pluginPriority, yaml } from '#HoYoGet';
 
-const HELP_PATH = './plugins/xhh/system/default/help.yaml';
-const DETAIL_HELP_PATH = './plugins/xhh/system/default/help-detail.yaml';
+const HELP_PATH = './plugins/HoYoGet-Plugin/system/default/help.yaml';
+const DETAIL_HELP_PATH = './plugins/HoYoGet-Plugin/system/default/help-detail.yaml';
 const HELP_URL = 'https://yuyu2147.dpdns.org/';
 const GAME_HELP_ALIASES = {
   原神: ['原神'],

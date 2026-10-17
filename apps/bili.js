@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { bili, config, getSource, pluginPriority } from '#xhh';
+import { bili, config, getSource, pluginPriority } from '#HoYoGet';
 import fetch from 'node-fetch';
 import moment from 'moment';
 
@@ -111,7 +111,7 @@ export class bilibili extends plugin {
       try {
         data = JSON.parse(
           fs.readFileSync(
-            `./plugins/xhh/temp/bili/${source.message_id}.json`,
+            `./plugins/HoYoGet-Plugin/temp/bili/${source.message_id}.json`,
             'utf-8'
           )
         );
@@ -242,7 +242,7 @@ export class bilibili extends plugin {
   async ggg(e) {
     if (!this.Check()) return false;
     try {
-      fs.rmSync('./plugins/xhh/temp/bili/', { recursive: true });
+      fs.rmSync('./plugins/HoYoGet-Plugin/temp/bili/', { recursive: true });
     } catch (err) {
       return false;
     }

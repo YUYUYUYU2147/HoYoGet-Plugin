@@ -9,7 +9,7 @@ import {
     yaml,
     sleep,
     pluginPriority
-} from '#xhh';
+} from '#HoYoGet';
 import lodash from 'lodash';
 import Runtime from '../../../lib/plugins/runtime.js';
 
@@ -144,7 +144,7 @@ export class Sign extends plugin {
         // 两者是**两个独立任务**，各自按自己的时间触发，不再有同一分钟内的先后依赖。
         //
         // 注意：cron 在构造时读 sign.yaml，改配置后需 #重启 才会生效。
-        const signCfg = yaml.get('./plugins/xhh/config/sign.yaml') || {};
+        const signCfg = yaml.get('./plugins/HoYoGet-Plugin/config/sign.yaml') || {};
         this.task = [{
             cron: buildSignCron(signCfg.sign_hour, signCfg.sign_minute),
             name: '[小花火]米游社签到',
@@ -171,7 +171,7 @@ export class Sign extends plugin {
         // 「这个命令该让给别的插件」由 config.yaml 的 sign_priority 决定，
         // 不在代码里硬写 return false —— 数字越大越晚处理，想让位就把它调大。
         // sign 是群号到QQ列表的白名单映射，不是开关，不能拿它判断。
-        const signCfg = yaml.get('./plugins/xhh/config/sign.yaml') || {};
+        const signCfg = yaml.get('./plugins/HoYoGet-Plugin/config/sign.yaml') || {};
         if (signState.signing) return e.reply('有签到任务进行中, 过会儿再试吧！');
         if (e.isGroup) {
             const wl = signCfg.sign_group || [];
@@ -265,7 +265,7 @@ export class Sign extends plugin {
         // 同上：bbs_zd_sign 只管定时任务（scheduled_bbs_sign 内部会查），
         // 不再挡手动指令；让位靠 config.yaml 的 sign_priority。
         // sign 是群号到QQ列表的白名单映射，不是开关。
-        const bbsCfg = yaml.get('./plugins/xhh/config/sign.yaml') || {};
+        const bbsCfg = yaml.get('./plugins/HoYoGet-Plugin/config/sign.yaml') || {};
         if (signState.signing || signState.bbsSigning) {
             await e.reply('有签到任务进行中, 过会儿再试吧！');
             return false;
@@ -294,7 +294,7 @@ export class Sign extends plugin {
     }
 
     async scheduled_bbs_sign() {
-        const data = yaml.get('./plugins/xhh/config/sign.yaml') || {};
+        const data = yaml.get('./plugins/HoYoGet-Plugin/config/sign.yaml') || {};
         if (!data.bbs_zd_sign || !data.bbs_sign || typeof data.bbs_sign !== 'object') {
             // 常态不记：开关关着或没登记群时每天都会走到这里
             return false;
@@ -352,7 +352,7 @@ export class Sign extends plugin {
     }
 
     async scheduled_sign() {
-        const data = yaml.get('./plugins/xhh/config/sign.yaml') || {};
+        const data = yaml.get('./plugins/HoYoGet-Plugin/config/sign.yaml') || {};
         const isManual = !!this.e?.msg;
         // 手动触发（群里发指令）不受时间与今日去重限制，直接走下面的签到逻辑。
         if (!isManual) {
@@ -439,7 +439,7 @@ export class Sign extends plugin {
 }
 
 function del(qqs, group) {
-    const path = './plugins/xhh/config/sign.yaml';
+    const path = './plugins/HoYoGet-Plugin/config/sign.yaml';
     const data = yaml.get(path);
     data.sign[group] = removeCommonElements(data.sign[group], qqs)
     return yaml.set(path, 'sign', data.sign);
@@ -453,7 +453,7 @@ function isAllowSignGroup(signGroup, group) {
 }
 
 function addBbs(e) {
-    const path = './plugins/xhh/config/sign.yaml';
+    const path = './plugins/HoYoGet-Plugin/config/sign.yaml';
     const data = yaml.get(path) || {};
     if (!data.bbs_zd_sign || !e.isGroup) return false;
     if (!isAllowSignGroup(data.bbs_sign_group, e.group_id)) return false;
@@ -502,7 +502,7 @@ function removeCommonElements(arr1, arr2) {
 }
 
 async function render(path, data_, cfg = {}) {
-    let tplFile = process.cwd() + '/plugins/xhh/resources/' + path + '.html';
+    let tplFile = process.cwd() + '/plugins/HoYoGet-Plugin/resources/' + path + '.html';
     const img = await new Runtime().render('小花火', path, data_, {
         retType: 'base64',
         beforeRender({
@@ -525,7 +525,7 @@ async function render(path, data_, cfg = {}) {
                     scale: `style=zoom:${(config().img_quality / 100) * 2.4 || 2.4 * 0.8}`,
                 },
                 ...data_,
-                ppath: data_.ppath || ('../'.repeat(depth) + 'plugins/xhh/resources/'),
+                ppath: data_.ppath || ('../'.repeat(depth) + 'plugins/HoYoGet-Plugin/resources/'),
                 tplFile: tplFile,
                 // sign/sign.html 被游戏签到和社区签到共用，saveId 撞了会命中对方的渲染缓存
                 saveId: cfg.saveId || path.split('/')[path.split('/').length - 1],

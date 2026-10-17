@@ -1,9 +1,9 @@
 import fetch from 'node-fetch';
 import moment from 'moment';
 import { segment } from 'oicq';
-import { yaml, pluginPriority } from '#xhh';
+import { yaml, pluginPriority } from '#HoYoGet';
 
-const _path = './plugins/xhh/config/';
+const _path = './plugins/HoYoGet-Plugin/config/';
 const cfgFile = _path + 'activity_remind.yaml';
 const defaultCfg = {
   enable: false,

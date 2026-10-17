@@ -1,7 +1,7 @@
 import moment from 'moment';
 import fs from 'fs';
 import path from 'path';
-import { render, pluginPriority, mhy, config } from '#xhh';
+import { render, pluginPriority, mhy, config } from '#HoYoGet';
 import { xhh_gacha_pool } from './gacha_pool.js';
 import { getRoleProfile, serverName as toServerName } from '../system/roleProfile.js';
 
@@ -28,7 +28,7 @@ const getMysInfo = makeGenshinLoader('model/mys/mysInfo.js', ['model/mys/mysInfo
  *
  * 鉴权与端点都复用 genshin 插件的 MysInfo，这里只做「取数 + 归一化 + 渲染」。
  */
-const DATA_DIR = './plugins/xhh/data/CurrencyLedger';
+const DATA_DIR = './plugins/HoYoGet-Plugin/data/CurrencyLedger';
 const ZZZ_ACTION_NAME = {
     event_rewards: '活动奖励',
     daily_activity_rewards: '日常活跃奖励',

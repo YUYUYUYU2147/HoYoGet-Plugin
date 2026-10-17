@@ -1,14 +1,14 @@
-import { config } from '#xhh';
+import { config } from '#HoYoGet';
 import fs from 'node:fs';
 // 临时自测：验证 system/ 下的模块是否随热重载重新求值。
 // 置于模块顶层 —— 只要本模块被重新加载就会输出一行，无需触发任何指令。
 // 日志之外再落盘一份标记，避免日志被过滤或 console 未被捕获导致误判。
 // 验证通过后删除本段。
 logger.info?.('[xhh][热重载自测] system/render.js 模块已加载');
-try { fs.appendFileSync('./plugins/xhh/temp/hot_reload.log', `${new Date().toISOString()} render.js 模块加载\n`) } catch (_) { }
+try { fs.appendFileSync('./plugins/HoYoGet-Plugin/temp/hot_reload.log', `${new Date().toISOString()} render.js 模块加载\n`) } catch (_) { }
 async function render(path, data_, cfg) {
   let tplFile =
-    data_.tplFile || process.cwd() + '/plugins/xhh/resources/' + path + '.html';
+    data_.tplFile || process.cwd() + '/plugins/HoYoGet-Plugin/resources/' + path + '.html';
   let { e } = cfg;
   if (!e.runtime) {
     logger.error('未找到e.runtime');
@@ -30,7 +30,7 @@ async function render(path, data_, cfg) {
       // 原图按原始尺寸铺开（攻略区几张武器图能占几千 px）、
       // 正文字号回到默认、角色详细那种长段落也不换行约束，图高能到 7000+ px。
       const depth = path.split('/').filter(Boolean).length + 3;
-      const ppath = '../'.repeat(depth) + 'plugins/xhh/resources/';
+      const ppath = '../'.repeat(depth) + 'plugins/HoYoGet-Plugin/resources/';
       return {
         sys: {
           scale: `style=zoom:${cfg.pct || (config().img_quality / 100) * 2.4 || 2.4 * 0.8}`,

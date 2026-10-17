@@ -1,4 +1,4 @@
-import { yaml, render, config, pluginPriority } from '#xhh';
+import { yaml, render, config, pluginPriority } from '#HoYoGet';
 
 const path = '../../../../..';
 function latestSrVersion(data = []) {
@@ -27,13 +27,13 @@ export class sr_logs extends plugin {
   async sr(e) {
     if (!config().sr_logs) return false;
     let name = e.msg.replace(/#|\*|星铁|卡池|跃迁|,|，|!|！|」|「/g, '');
-    let srlogs = await yaml.get('./plugins/xhh/system/default/sr_logs.yaml');
+    let srlogs = await yaml.get('./plugins/HoYoGet-Plugin/system/default/sr_logs.yaml');
     let data = [],
       m = 0;
     if (!name.includes('.') && name != '联动') {
       //角色，光锥
       let js_names = await yaml.get(
-        './plugins/xhh/system/default/sr_js_names.yaml'
+        './plugins/HoYoGet-Plugin/system/default/sr_js_names.yaml'
       ); //角色别名
       for (let i in js_names) {
         if (js_names[i].includes(name)) {
@@ -44,7 +44,7 @@ export class sr_logs extends plugin {
       }
       if (!m) {
         let gz_names = await yaml.get(
-          './plugins/xhh/system/default/gz_names.yaml'
+          './plugins/HoYoGet-Plugin/system/default/gz_names.yaml'
         ); //光锥别名
         for (let i in gz_names) {
           if (gz_names[i].includes(name)) {

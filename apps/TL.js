@@ -1,7 +1,7 @@
 import fetch from 'node-fetch';
 import moment from 'moment';
 import fs from 'fs';
-import { mhy, render, api, config, yaml, pluginPriority, makeForwardMsg } from '#xhh';
+import { mhy, render, api, config, yaml, pluginPriority, makeForwardMsg } from '#HoYoGet';
 import { guardModuleByFile } from '../system/modules.js'
 
 // genshin 的 NoteUser 必须动态加载：静态 import 在 genshin 缺失或版本变动时会让**整个插件**
@@ -239,7 +239,7 @@ export class TL extends plugin {
     const uidSet = new Set();
     const defaultUid = e.user?.getUid?.(game === 'bh3' ? 'bh3' : game);
     if (defaultUid) uidSet.add(String(defaultUid));
-    const stokenPath = `./plugins/xhh/data/Stoken/${e.user_id}.yaml`;
+    const stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${e.user_id}.yaml`;
     if (fs.existsSync(stokenPath)) {
       try {
         const stokenData = yaml.get(stokenPath) || {};
@@ -331,7 +331,7 @@ export class TL extends plugin {
   }
 
   getStokenEntry(e, uid) {
-    const stokenPath = `./plugins/xhh/data/Stoken/${e.user_id}.yaml`;
+    const stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${e.user_id}.yaml`;
     if (!uid || !fs.existsSync(stokenPath)) return null;
     try {
       const data = yaml.get(stokenPath) || {};
@@ -438,7 +438,7 @@ export class TL extends plugin {
     let ck = null;
     let signEntry = null;
 
-    const stokenPath = `./plugins/xhh/data/Stoken/${qq}.yaml`;
+    const stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${qq}.yaml`;
     if (fs.existsSync(stokenPath)) {
       const stokenData = yaml.get(stokenPath) || {};
       if (!uid) {

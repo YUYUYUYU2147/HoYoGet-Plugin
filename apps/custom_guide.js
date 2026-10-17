@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fetch from 'node-fetch';
-import { makeForwardMsg, config, pluginPriority, oldPostWarn } from '#xhh';
+import { makeForwardMsg, config, pluginPriority, oldPostWarn } from '#HoYoGet';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // 插件根目录（apps 的上一级），别名表读取不依赖进程 cwd、也不依赖任何外部插件

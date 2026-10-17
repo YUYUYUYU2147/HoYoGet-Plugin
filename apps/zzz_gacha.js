@@ -15,7 +15,7 @@ import {
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { mhy, render, pluginPriority } from '#xhh'
+import { mhy, render, pluginPriority } from '#HoYoGet'
 import { guardModuleByFile } from '../system/modules.js'
 
 // ESM 作用域没有 __dirname，按仓库既有写法（apps/custom_guide.js）从 import.meta 取
@@ -458,7 +458,7 @@ function fillZzzIcons(pools) {
  * 而 ZZZ-Plugin 靠自己反复刷新把历史逐抽攒了下来。
  * 该文件按中文池名分组，rank_type 为数字制：4=S(5星) 3=A(4星) 2=B(3星)。
  */
-// 相对 cwd 不可靠：Yunzai 的 cwd 是 plugins/xhh，而数据在仓库根的 data/ 下，
+// 相对 cwd 不可靠：Yunzai 的 cwd 是 plugins/HoYoGet-Plugin，而数据在仓库根的 data/ 下，
 // 故按 cwd 上溯到插件根目录再定位（插件自身运行时亦在仓库根启动，双路径都覆盖）
 // ZZZ-Plugin 的数据在仓库根 data/ 下（插件自身在 plugins/xxx），故按插件根的上一级定位，
 // 不依赖进程 cwd（Yunzai 启动时 cwd 是插件目录，会找不到）

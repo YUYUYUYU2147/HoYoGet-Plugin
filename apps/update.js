@@ -2,7 +2,7 @@ import common from '../../../lib/common/common.js';
 import { Restart } from '../../other/restart.js';
 import { createRequire } from 'module';
 import lodash from 'lodash';
-import { yaml, config, pluginPriority } from '#xhh';
+import { yaml, config, pluginPriority } from '#HoYoGet';
 
 const require = createRequire(import.meta.url);
 const { exec, execSync } = require('child_process');
@@ -44,7 +44,7 @@ export class update extends plugin {
       this.oldCommitId = await this.getcommitId('xhh');
       uping = true;
       let cm =
-        'cd plugins/xhh && git reset --hard && git pull --rebase --allow-unrelated-histories';
+        'cd plugins/HoYoGet-Plugin && git reset --hard && git pull --rebase --allow-unrelated-histories';
       let ret = await this.execSync(cm);
       uping = false;
       if (ret.error) {

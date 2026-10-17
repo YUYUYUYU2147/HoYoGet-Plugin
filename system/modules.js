@@ -21,8 +21,8 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import yaml from './yaml.js'
 
-const CFG_PATH = './plugins/xhh/config/config.yaml'
-const DEF_CFG_PATH = './plugins/xhh/system/default/default_config/config.yaml'
+const CFG_PATH = './plugins/HoYoGet-Plugin/config/config.yaml'
+const DEF_CFG_PATH = './plugins/HoYoGet-Plugin/system/default/default_config/config.yaml'
 
 // 本文件位于 <插件根>/system/，上溯一级即插件根（与 apps/ 下各文件的取法一致）
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')

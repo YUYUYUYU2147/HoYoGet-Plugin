@@ -4,7 +4,7 @@ import {
     recallMsg,
     getSource,
     pluginPriority
-} from '#xhh';
+} from '#HoYoGet';
 export class picture extends plugin {
     constructor(e) {
         super({

@@ -11,7 +11,7 @@ import common from '../../../lib/common/common.js';
 const _path = process.cwd();
 
 //存放切割图片的目录
-const outputDir =_path+'/plugins/xhh/temp/bili/'
+const outputDir =_path+'/plugins/HoYoGet-Plugin/temp/bili/'
 
 /**
  * 按照高度阈值(16800像素)均匀切割图片

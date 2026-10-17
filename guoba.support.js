@@ -1,7 +1,7 @@
 import yaml from './system/yaml.js'
 import { getGroupNameMap, refreshGroupNames } from './system/group_name.js'
 
-const _path = './plugins/xhh/config/'
+const _path = './plugins/HoYoGet-Plugin/config/'
 
 function getCfg() {
   return yaml.get(_path + 'config.yaml') || {}
@@ -127,7 +127,7 @@ export const supportGuoba = () => {
     icon: 'mdi:fire',
     iconColor: '#ff6b35',
     // 显示成图片：使用插件自带的花火立绘（绝对路径，锅巴优先展示 iconPath）
-    iconPath: process.cwd() + '/plugins/xhh/resources/Tl/imgs/小花火.png',
+    iconPath: process.cwd() + '/plugins/HoYoGet-Plugin/resources/Tl/imgs/小花火.png',
   },
   configInfo: {
     schemas: [

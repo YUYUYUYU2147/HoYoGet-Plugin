@@ -1,20 +1,20 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { config, yaml, sleep, makeForwardMsg, gameOfEntry, pluginPriority } from '#xhh';
+import { config, yaml, sleep, makeForwardMsg, gameOfEntry, pluginPriority } from '#HoYoGet';
 import { scheduleGroupRecall } from '../system/msgRecall.js';
 
 /**
  * 扫码绑定情况一览 + 主人代签到
  *
  * 「谁扫码过来了」的数据来自两处，插件自身存的和逍遥插件存的：
- *   ./plugins/xhh/data/Stoken/<QQ>.yaml
+ *   ./plugins/HoYoGet-Plugin/data/Stoken/<QQ>.yaml
  *   ./plugins/xiaoyao-cvs-plugin/data/yaml/<QQ>.yaml
  * 两边可能都绑（这时按 stuid 去重），也可能只有一边。
  */
 
-const XH_DIR = './plugins/xhh/data/Stoken';
+const XH_DIR = './plugins/HoYoGet-Plugin/data/Stoken';
 const XY_DIR = './plugins/xiaoyao-cvs-plugin/data/yaml';
-const SIGN_YAML = './plugins/xhh/config/sign.yaml';
+const SIGN_YAML = './plugins/HoYoGet-Plugin/config/sign.yaml';
 
 const GAME_CN = { gs: '原神', sr: '星铁', zzz: '绝区零', bh3: '崩三' };
 
@@ -344,7 +344,7 @@ export class SignManage extends plugin {
             return { user_id: Number(acc.qq) || acc.qq, nickname: name, message: describe(acc) };
         });
 
-        const { render } = await import('#xhh');
+        const { render } = await import('#HoYoGet');
         const card = {
             title,
             total: all.length,
@@ -392,7 +392,7 @@ export class SignManage extends plugin {
     }
 
     async signGenshinCks(e) {
-        const { getGenshinCks, probeCk, bbsSignCks, render } = await import('#xhh');
+        const { getGenshinCks, probeCk, bbsSignCks, render } = await import('#HoYoGet');
         const cks = await getGenshinCks();
         if (!cks.length) {
             return e.reply('没读到 genshin 插件的 CK。\n'
@@ -473,7 +473,7 @@ export class SignManage extends plugin {
         );
         if (e.isGroup) scheduleGroupRecall(e.group_id, notice, 60);
 
-        const { zd_MysSign, BbsAutoSign, render } = await import('#xhh');
+        const { zd_MysSign, BbsAutoSign, render } = await import('#HoYoGet');
         let game = null, bbs = null;
         if (scope !== 'bbs') {
             try { game = await zd_MysSign(withCk); } catch (err) { logger.error(`[xhh][代签到] 游戏签到异常: ${err.message}`); }

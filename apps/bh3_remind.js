@@ -1,12 +1,12 @@
-import { yaml, pluginPriority } from '#xhh';
+import { yaml, pluginPriority } from '#HoYoGet';
 import { segment } from 'oicq';
 import fs from 'fs';
 
-const _path = './plugins/xhh/config/';
+const _path = './plugins/HoYoGet-Plugin/config/';
 const cfgFile = _path + 'bh3_remind.yaml';
 
 async function loadBh3BossModule() {
-  const modulePath = './plugins/xhh/system/bh3_abyss_boss.js';
+  const modulePath = './plugins/HoYoGet-Plugin/system/bh3_abyss_boss.js';
   const version = fs.existsSync(modulePath) ? fs.statSync(modulePath).mtimeMs : Date.now();
   return await import(`../system/bh3_abyss_boss.js?v=${version}`);
 }

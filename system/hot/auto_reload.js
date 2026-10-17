@@ -54,7 +54,7 @@ function patchClass(oldC, NewC) {
  * @param {object} o
  * @param {Record<string, Function>} o.apps  index.js 的 apps 映射（文件名 → 类）
  * @param {string[]} o.files                apps 目录下的文件名列表
- * @param {string}   o.root                 插件根目录 URL（file:///…/plugins/xhh/）
+ * @param {string}   o.root                 插件根目录 URL（file:///…/plugins/HoYoGet-Plugin/）
  * @param {object}   o.logger               日志对象
  */
 export function startAutoReload({ apps = {}, files = [], root = '', logger } = {}) {

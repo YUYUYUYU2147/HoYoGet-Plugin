@@ -2,12 +2,12 @@ import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import fs from 'node:fs';
 import path from 'node:path';
-import { config, yaml, sleep, pluginPriority, ttocrPoints } from '#xhh';
+import { config, yaml, sleep, pluginPriority, ttocrPoints } from '#HoYoGet';
 
 const execAsync = promisify(exec);
 
 // service/geetest 由 #过码部署 装在本机，只监听 127.0.0.1
-const SERVICE_DIR = './plugins/xhh/service/geetest';
+const SERVICE_DIR = './plugins/HoYoGet-Plugin/service/geetest';
 const VENV_DIR = `${SERVICE_DIR}/.venv`;
 const PM2_NAME = 'xhh-geetest-solver';
 

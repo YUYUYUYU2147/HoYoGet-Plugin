@@ -37,8 +37,8 @@
 
 ```bash
 # 在云崽根目录执行
-git clone -b v2 https://github.com/YUYUYUYU2147/xhh.git ./plugins/xhh/
-cd ./plugins/xhh && pnpm i
+git clone -b v2 https://github.com/YUYUYUYU2147/xhh.git ./plugins/HoYoGet-Plugin/
+cd ./plugins/HoYoGet-Plugin && pnpm i
 ```
 重启云崽 → 群里发 `#小花火帮助` 就能看到全部指令。
 
@@ -47,10 +47,10 @@ cd ./plugins/xhh && pnpm i
 
 ```bash
 # GitHub 访问慢时用加速前缀（换成你可用的加速地址）
-git clone -b v2 <加速前缀>https://github.com/YUYUYUYU2147/xhh.git ./plugins/xhh/
+git clone -b v2 <加速前缀>https://github.com/YUYUYUYU2147/xhh.git ./plugins/HoYoGet-Plugin/
 
 # 已安装：换源
-cd plugins/xhh
+cd plugins/HoYoGet-Plugin
 git remote set-url origin https://github.com/YUYUYUYU2147/xhh.git
 
 # 更新
@@ -249,7 +249,7 @@ git fetch origin && git checkout -B v2 origin/v2 && git pull && pnpm i
 
 ## 配置说明
 
-配置目录 `plugins/xhh/config/`，建议优先用锅巴修改。
+配置目录 `plugins/HoYoGet-Plugin/config/`，建议优先用锅巴修改。
 
 | 文件 | 作用 |
 | --- | --- |
@@ -476,15 +476,15 @@ docker run -v /usr/local/bin/cloudflared:/usr/local/bin/cloudflared:ro ...
 **C. 后台常驻隧道（systemd，推荐长期运行 / 无人值守）**
 ```bash
 REPO=/path/to/TRSS-Yunzai                  # 换成你的云崽根目录
-sudo cp $REPO/plugins/xhh/tools/manual_gt_tunnel.sh /usr/local/bin/
+sudo cp $REPO/plugins/HoYoGet-Plugin/tools/manual_gt_tunnel.sh /usr/local/bin/
 sudo chmod +x /usr/local/bin/manual_gt_tunnel.sh
-sudo cp $REPO/plugins/xhh/tools/xhh-gt-tunnel.service /etc/systemd/system/
+sudo cp $REPO/plugins/HoYoGet-Plugin/tools/xhh-gt-tunnel.service /etc/systemd/system/
 # 记得把 service 里 ExecStart 的端口改成手动过码实际监听的端口（默认 8080）
 sudo systemctl daemon-reload
 sudo systemctl enable --now xhh-gt-tunnel
 ```
 - 隧道常驻（占用约 24MB 内存），`Restart=always` 掉线自动重连
-- 实际地址写入 `<仓库>/plugins/xhh/data/manual_gt_url`（可用 `URL_FILE` 环境变量改路径），插件自动读取
+- 实际地址写入 `<仓库>/plugins/HoYoGet-Plugin/data/manual_gt_url`（可用 `URL_FILE` 环境变量改路径），插件自动读取
 - **不需要把临时域名写进配置**
 - 用了这个方案就设 `XHH_MANUAL_GT_PUBLIC_URL`，避免插件再拉第二条隧道
 
@@ -492,7 +492,7 @@ sudo systemctl enable --now xhh-gt-tunnel
 ```bash
 systemctl status xhh-gt-tunnel        # 看状态
 systemctl restart xhh-gt-tunnel       # 重启（会换新地址）
-cat <仓库>/plugins/xhh/data/manual_gt_url
+cat <仓库>/plugins/HoYoGet-Plugin/data/manual_gt_url
 ```
 
 **D. 固定地址（最稳定，强烈建议生产用）**
@@ -591,14 +591,14 @@ export XHH_MANUAL_GT_PUBLIC_URL='https://xhh-gt.你的域名'
 cd到云崽的根目录，然后↘↓↙
 
 ```
-git clone https://gitee.com/this_e/xhh.git ./plugins/xhh/
+git clone https://gitee.com/this_e/xhh.git ./plugins/HoYoGet-Plugin/
 ```
 
 <details>
   <summary>Github</summary>
   
 ```
-git clone https://github.com/thisee/xhh.git ./plugins/xhh/
+git clone https://github.com/thisee/xhh.git ./plugins/HoYoGet-Plugin/
 ```
 
 </details>

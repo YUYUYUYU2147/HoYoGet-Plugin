@@ -22,6 +22,10 @@ zzz_panel_accel_enabled: true
 zzz_panel_accel_concurrency: 4
 zzz_panel_accel_interval: 400
 
+#绝区零自研面板数据探针（米游社更新面板）：把真实接口响应原样落盘，供写归一化用。
+# 默认 -100，压过 miao-plugin 与原神/ZZZ-Plugin 的同名面板指令，确保本插件先抢到。
+zzz_panel_list_priority: -100
+
 #图鉴数据模式：official=正式服 / test=测试服
 # 这个键必须写在默认配置里：#切换测试服模式 是把它写回 config/config.yaml，
 # 但引导逻辑是「拿默认配置补齐用户配置里缺的键」，默认配置里没有这一项时，

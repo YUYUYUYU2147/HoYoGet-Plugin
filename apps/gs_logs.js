@@ -1,6 +1,6 @@
-import { yaml, makeForwardMsg, config, pluginPriority } from '#xhh';
+import { yaml, makeForwardMsg, config, pluginPriority } from '#HoYoGet';
 
-const path = './plugins/xhh/system/default/gslogs.yaml';
+const path = './plugins/HoYoGet-Plugin/system/default/gslogs.yaml';
 import common from '../../../lib/common/common.js';
 import { xhh_gacha_pool } from './gacha_pool.js';
 import { guardModuleByFile } from '../system/modules.js'
@@ -51,7 +51,7 @@ export class gs_logs extends plugin {
     if (!type.includes('.')) {
       let m = 0;
       let gsnames = yaml.get(
-        './plugins/xhh/system/default/gs_js_names.yaml',
+        './plugins/HoYoGet-Plugin/system/default/gs_js_names.yaml',
         'utf-8'
       );
       for (let i in gsnames) {
@@ -64,7 +64,7 @@ export class gs_logs extends plugin {
 
       if (!m) {
         var wqnames = await yaml.get(
-          './plugins/xhh/system/default/wqname.yaml'
+          './plugins/HoYoGet-Plugin/system/default/wqname.yaml'
         );
         for (let wqname in wqnames) {
           for (let wq of wqnames[wqname]) {
@@ -154,7 +154,7 @@ export class gs_logs extends plugin {
 
         //QQ不支持发https://upload-bbs.miyoushe.com/
         if (tu?.includes('https://upload-bbs.miyoushe.com/')) {
-          let tupath = `./plugins/xhh/temp/[1-3].[0-8]卡池.jpg`;
+          let tupath = `./plugins/HoYoGet-Plugin/temp/[1-3].[0-8]卡池.jpg`;
           await common.downFile(tu, tupath);
           msg.push(segment.image(tupath));
         } else {
@@ -166,7 +166,7 @@ export class gs_logs extends plugin {
 
         //QQ不支持发https://upload-bbs.miyoushe.com/
         if (tu?.includes('https://upload-bbs.miyoushe.com/')) {
-          let tupath = `./plugins/xhh/temp/[1-3].[0-8]卡池.jpg`;
+          let tupath = `./plugins/HoYoGet-Plugin/temp/[1-3].[0-8]卡池.jpg`;
           await common.downFile(tu, tupath);
           msg.push(segment.image(tupath));
         } else {

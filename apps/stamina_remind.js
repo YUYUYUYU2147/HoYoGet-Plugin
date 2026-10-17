@@ -2,15 +2,15 @@ import fs from 'fs';
 import { segment } from 'oicq';
 import Runtime from '../../../lib/plugins/runtime.js';
 import { TL } from './TL.js';
-import { yaml, pluginPriority } from '#xhh';
+import { yaml, pluginPriority } from '#HoYoGet';
 
 // genshin 的 NoteUser 必须动态加载：静态 import 在 genshin 缺失或版本变动时会让**整个插件**
 // 加载失败（ESM 解析阶段抛 ERR_MODULE_NOT_FOUND，没有 try/catch 兜底）。
 import { makeGenshinLoader } from '../system/genshin_loader.js'
 const getNoteUser = makeGenshinLoader('model/mys/NoteUser.js', ['model/mys/NoteUser.js'])
 
-const cfgFile = './plugins/xhh/config/bh3_remind.yaml';
-const stokenDir = './plugins/xhh/data/Stoken';
+const cfgFile = './plugins/HoYoGet-Plugin/config/bh3_remind.yaml';
+const stokenDir = './plugins/HoYoGet-Plugin/data/Stoken';
 const STAMINA_GAMES = ['gs', 'sr', 'zzz', 'bh3'];
 const GAME_ALIASES = {
   原神: 'gs',

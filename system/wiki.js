@@ -1,4 +1,4 @@
-import { yaml, render, mys, config, reply_recallMsg } from '#xhh';
+import { yaml, render, mys, config, reply_recallMsg } from '#HoYoGet';
 import fs from 'fs';
 import { JSDOM } from 'jsdom';
 const { window } = new JSDOM();
@@ -111,7 +111,7 @@ function extractHonkaiStarRailData(html = '') {
   };
 }
 
-const pr = yaml.get('./plugins/xhh/config/other.yaml').wiki;
+const pr = yaml.get('./plugins/HoYoGet-Plugin/config/other.yaml').wiki;
 export class Wiki extends plugin {
   constructor(e) {
     super({
@@ -877,12 +877,12 @@ export class Wiki extends plugin {
       return true;
     }
     const path = isZZZ
-      ? './plugins/xhh/system/default/zzz_syw_names.yaml'
+      ? './plugins/HoYoGet-Plugin/system/default/zzz_syw_names.yaml'
       : isBH3
-      ? './plugins/xhh/system/default/bh3_syw_names.yaml'
+      ? './plugins/HoYoGet-Plugin/system/default/bh3_syw_names.yaml'
       : isSr
-      ? './plugins/xhh/system/default/yiqi.yaml'
-      : './plugins/xhh/system/default/syw.yaml';
+      ? './plugins/HoYoGet-Plugin/system/default/yiqi.yaml'
+      : './plugins/HoYoGet-Plugin/system/default/syw.yaml';
     const _name = yaml.get(path);
     for (let i in _name) {
       if (_name[i].includes(name)) {
@@ -926,12 +926,12 @@ export class Wiki extends plugin {
       return true;
     }
     const path = isZZZ
-      ? './plugins/xhh/system/default/zzz_wq_names.yaml'
+      ? './plugins/HoYoGet-Plugin/system/default/zzz_wq_names.yaml'
       : isBH3
-      ? './plugins/xhh/system/default/bh3_wq_names.yaml'
+      ? './plugins/HoYoGet-Plugin/system/default/bh3_wq_names.yaml'
       : !isSr
-      ? './plugins/xhh/system/default/wqname.yaml'
-      : './plugins/xhh/system/default/gz_names.yaml';
+      ? './plugins/HoYoGet-Plugin/system/default/wqname.yaml'
+      : './plugins/HoYoGet-Plugin/system/default/gz_names.yaml';
     const wq_name = yaml.get(path);
     for (let i in wq_name) {
       if (wq_name[i].includes(name)) {
@@ -964,12 +964,12 @@ export class Wiki extends plugin {
       return true;
     }
     const path = isZZZ
-      ? './plugins/xhh/system/default/zzz_js_names.yaml'
+      ? './plugins/HoYoGet-Plugin/system/default/zzz_js_names.yaml'
       : isBH3
-      ? './plugins/xhh/system/default/bh3_js_names.yaml'
+      ? './plugins/HoYoGet-Plugin/system/default/bh3_js_names.yaml'
       : isSr
-      ? './plugins/xhh/system/default/sr_js_names.yaml'
-      : './plugins/xhh/system/default/gs_js_names.yaml';
+      ? './plugins/HoYoGet-Plugin/system/default/sr_js_names.yaml'
+      : './plugins/HoYoGet-Plugin/system/default/gs_js_names.yaml';
     const role_name = yaml.get(path);
     for (let i in role_name) {
       if (role_name[i].includes(name)) {
@@ -1351,7 +1351,7 @@ export class Wiki extends plugin {
   }
 
   resolveBh3RoleAlias(name = '') {
-    const roleNames = yaml.get('./plugins/xhh/system/default/bh3_js_names.yaml') || {};
+    const roleNames = yaml.get('./plugins/HoYoGet-Plugin/system/default/bh3_js_names.yaml') || {};
     if (roleNames[name]) return name;
     const clean = String(name || '').replace(/[\s·・!！♪♥☆★「」『』:：-]/g, '').toLowerCase();
     let first = '';
@@ -1411,7 +1411,7 @@ export class Wiki extends plugin {
   }
 
   hasBh3StigmaName(name = '') {
-    const names = yaml.get('./plugins/xhh/system/default/bh3_syw_names.yaml') || {};
+    const names = yaml.get('./plugins/HoYoGet-Plugin/system/default/bh3_syw_names.yaml') || {};
     if (names[name]) return true;
     return Object.values(names).some(list => Array.isArray(list) && list.includes(name));
   }

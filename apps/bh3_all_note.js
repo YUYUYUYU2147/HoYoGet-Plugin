@@ -1,5 +1,5 @@
 import fetch from 'node-fetch';
-import { yaml, mhy, api, config, pluginPriority } from '#xhh';
+import { yaml, mhy, api, config, pluginPriority } from '#HoYoGet';
 import fs from 'fs';
 import puppeteer from '../../../lib/puppeteer/puppeteer.js';
 import moment from 'moment';
@@ -92,7 +92,7 @@ export class bh3_all_note extends plugin {
     let region = uid ? await redis.get(`xhh:${game}_region:${qq}`) : null;
     let ck = null;
 
-    const stokenPath = `./plugins/xhh/data/Stoken/${qq}.yaml`;
+    const stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${qq}.yaml`;
     if (fs.existsSync(stokenPath)) {
       const stokenData = yaml.get(stokenPath) || {};
       if (!uid) {
@@ -192,8 +192,8 @@ export class bh3_all_note extends plugin {
         deviceScaleFactor: 2,
         // {{ppath}} 不会由框架注入（只有 system/render.js 那条路会），
         // 缺了它 CSS 与背景图全部 404，页面退化成无样式的裸 HTML。
-        ppath: '../../../../../plugins/xhh/resources/',
-        tplFile: process.cwd() + '/plugins/xhh/resources/all_note/all_note.html',
+        ppath: '../../../../../plugins/HoYoGet-Plugin/resources/',
+        tplFile: process.cwd() + '/plugins/HoYoGet-Plugin/resources/all_note/all_note.html',
         saveId: 'all_note',
       });
     } catch (err) {

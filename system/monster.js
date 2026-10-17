@@ -87,7 +87,7 @@ function cleanName(name = '') {
 
 // 崩三深渊/社区昵称（虚数猪…）映射到图鉴标准名（帕凡提…）。
 // 别名表统一放在 system/default/bh3_boss_names.yaml（格式同 bh3_js_names.yaml）。
-const BH3_BOSS_NAMES_FILE = './plugins/xhh/system/default/bh3_boss_names.yaml';
+const BH3_BOSS_NAMES_FILE = './plugins/HoYoGet-Plugin/system/default/bh3_boss_names.yaml';
 let _bh3BossAliasCache = null;
 function loadBh3BossAlias() {
     if (_bh3BossAliasCache) return _bh3BossAliasCache;

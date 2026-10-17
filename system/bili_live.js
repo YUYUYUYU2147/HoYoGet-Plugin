@@ -9,7 +9,7 @@ import common from '../../../lib/common/common.js';
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
 const HEADERS = { 'User-Agent': UA, Referer: 'https://live.bilibili.com/' };
 const LIVE_HOST = 'https://live.bilibili.com/';
-const TEMP_DIR = './plugins/xhh/temp/bili_live/';
+const TEMP_DIR = './plugins/HoYoGet-Plugin/temp/bili_live/';
 
 // live.bilibili.com/房间号 与 live.bilibili.com/h5/房间号
 const LIVE_LINK_RE = /live\.bilibili\.com\/(?:h5\/)?(\d+)/g;

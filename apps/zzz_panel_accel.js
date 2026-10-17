@@ -1,9 +1,9 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-// config 必须一起导入：loadCfg() 要用它读 plugins/xhh/config/config.yaml，
+// config 必须一起导入：loadCfg() 要用它读 plugins/HoYoGet-Plugin/config/config.yaml，
 // 只导入 pluginPriority 会让 config() 抛 ReferenceError，配置全走默认值。
-import { config, pluginPriority } from '#xhh'
+import { config, pluginPriority } from '#HoYoGet'
 
 /**
  * 绝区零面板更新加速。
@@ -61,7 +61,7 @@ const CFG_KEYS = {
 const ACCEL_RE = /^[#*\s]*(?:%\s*(?:绝区零|zzz|绝区)?|[/%]\s*|绝区零|[zZ][zZ][zZ]|绝区)\s*(?:更新|刷新)(?:全部|全局|所有|全服|本地)?(?:展柜)?面板(?:列表)?$/
 
 /**
- * 读取配置。走 xhh 自己的 config()（即 plugins/xhh/config/config.yaml，
+ * 读取配置。走 xhh 自己的 config()（即 plugins/HoYoGet-Plugin/config/config.yaml，
  * 缺失项由 system/default/default_config/config.yaml 兜底），
  * 不自己解析 YAML——之前手写正则既不支持行内注释，也和插件的读取方式不一致。
  */

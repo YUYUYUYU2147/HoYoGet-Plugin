@@ -1,5 +1,5 @@
 import fetch from 'node-fetch';
-import { makeForwardMsg, pluginPriority } from '#xhh';
+import { makeForwardMsg, pluginPriority } from '#HoYoGet';
 
 const GLOBAL_SEARCH_API = 'https://bbs-api.miyoushe.com/post/wapi/searchPosts';
 const POST_FULL_API = 'https://bbs-api.miyoushe.com/post/wapi/getPostFull';

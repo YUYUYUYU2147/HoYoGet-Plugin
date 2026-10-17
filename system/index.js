@@ -184,7 +184,7 @@ function makeMessage(e, msg) {
 
 //获取配置
 const config = () => {
-    return yaml.get('./plugins/xhh/config/config.yaml');
+    return yaml.get('./plugins/HoYoGet-Plugin/config/config.yaml');
 };
 
 const pluginPriority = (name, defaultVal) => {

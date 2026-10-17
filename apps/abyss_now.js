@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 import moment from 'moment';
-import { render, pluginPriority } from '#xhh';
+import { render, pluginPriority } from '#HoYoGet';
 import { enrichNanokaForAlioth, pickStageEnrich } from '../system/sr_enrich.js';
 
 // 数据来源：Alioth.wiki（开源站点，静态 JSON 直出，无需鉴权）

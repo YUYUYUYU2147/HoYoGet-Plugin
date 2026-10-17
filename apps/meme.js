@@ -15,10 +15,10 @@ import path from 'node:path';
 import lodash from 'lodash';
 import sharp from '../node_modules/sharp/lib/index.js';
 import puppeteer from '../../../lib/puppeteer/puppeteer.js';
-import { render, config, pluginPriority, getSource } from '#xhh';
+import { render, config, pluginPriority, getSource } from '#HoYoGet';
 import { guardModuleByFile } from '../system/modules.js'
 
-const DATA_DIR = './plugins/xhh/data/memes/';
+const DATA_DIR = './plugins/HoYoGet-Plugin/data/memes/';
 const INFOS_FILE = DATA_DIR + 'infos.json';
 const KEYMAP_FILE = DATA_DIR + 'keyMap.json';
 
@@ -103,7 +103,7 @@ async function compressAndSplit(buf) {
 
 // puppeteer.render 直接返回 Buffer（bh3_profile 等已验证），拿到后压缩/切割再发送
 async function renderImg(e, path, data_, cfg = {}) {
-  const tplFile = process.cwd() + '/plugins/xhh/resources/' + path + '.html';
+  const tplFile = process.cwd() + '/plugins/HoYoGet-Plugin/resources/' + path + '.html';
   let buf;
   try {
     buf = await puppeteer.render('小花火/' + path, {
@@ -111,7 +111,7 @@ async function renderImg(e, path, data_, cfg = {}) {
       sys: { scale: 'style=transform:scale(1)' },
       deviceScaleFactor: cfg.scale || 2,
       // 落盘深度 = path 段数 + 3（temp/html/小花火/{path}/{saveId}.html），同 render.js
-      ppath: data_.ppath || '../'.repeat(path.split('/').filter(Boolean).length + 3) + 'plugins/xhh/resources/',
+      ppath: data_.ppath || '../'.repeat(path.split('/').filter(Boolean).length + 3) + 'plugins/HoYoGet-Plugin/resources/',
       tplFile: tplFile,
       saveId: path.split('/')[path.split('/').length - 1],
     });

@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { config, pluginPriority, bili_live, bili, getSource } from '#xhh';
+import { config, pluginPriority, bili_live, bili, getSource } from '#HoYoGet';
 
 // 手动解析：#直播解析 6 / #B站直播解析 https://live.bilibili.com/6 / #解析直播 6
 // 除了最后的 (.*)，其余全部用非捕获组，参数固定取 m[1]

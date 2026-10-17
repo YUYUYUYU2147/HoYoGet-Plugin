@@ -1,4 +1,4 @@
-import { yaml, render, mys, config, reply_recallMsg } from '#xhh';
+import { yaml, render, mys, config, reply_recallMsg } from '#HoYoGet';
 import { gsRoleView, srRoleView, stripTags } from '../system/role_detail.js';
 import { buildRelicView, extractRelicArt } from './wiki/relic_view.js';
 import { fetchGsRole, buildGsDetail, fetchGsGuidePage, parseGsGuide, resolveGsGuideIcons, fetchGsRoleList, fetchGsWeaponList, fetchGsArtifactList, fetchSrRoleList, fetchSrLcList, fetchSrRelicList } from './wiki/bwiki_gs.js';
@@ -106,7 +106,7 @@ function zzzAliasMap(channelId = 43) {
   const file = ZZZ_ALIAS_FILES[channelId] || ZZZ_ALIAS_FILES[43];
   const cacheKey = `__${file}`;
   if (_zzzAliasCache[cacheKey]) return _zzzAliasCache[cacheKey];
-  const names = yaml.get(`./plugins/xhh/system/default/${file}`) || {};
+  const names = yaml.get(`./plugins/HoYoGet-Plugin/system/default/${file}`) || {};
   const norm = v => String(v || '').replace(/[\s·・\-—_「」『』《》【】\[\]（）()]/g, '').toLowerCase();
   const map = {};
   for (const [formal, aliases] of Object.entries(names)) {
@@ -228,7 +228,7 @@ function extractHonkaiStarRailData(html = '') {
   };
 }
 
-const pr = yaml.get('./plugins/xhh/config/other.yaml').wiki;
+const pr = yaml.get('./plugins/HoYoGet-Plugin/config/other.yaml').wiki;
 /* 名称归一化键：星铁同一角色的不同形态在两边写法可能差一个分隔符
    （nanoka「三月七•巡猎」/ 维基「三月七・巡猎」），匹配键统一去掉「•·・」和空格。
    原来是 mergeSrBwikiIcons 里的局部 const，mergeGsBwikiRoleIcons 也在用 →
@@ -493,8 +493,8 @@ export class Wiki extends plugin {
        遍历 *_js_names.yaml，当某正式名的别名数组包含输入名时替换为正式名。
        该逻辑对所有角色通用。 */
     const storyNamePath = isSr
-      ? './plugins/xhh/system/default/sr_js_names.yaml'
-      : './plugins/xhh/system/default/gs_js_names.yaml';
+      ? './plugins/HoYoGet-Plugin/system/default/sr_js_names.yaml'
+      : './plugins/HoYoGet-Plugin/system/default/gs_js_names.yaml';
     const storyNames = yaml.get(storyNamePath);
     for (const i in storyNames) {
       if (Array.isArray(storyNames[i]) && storyNames[i].includes(name)) { name = i; break; }
@@ -2132,12 +2132,12 @@ export class Wiki extends plugin {
       return true;
     }
     const path = isZZZ
-      ? './plugins/xhh/system/default/zzz_syw_names.yaml'
+      ? './plugins/HoYoGet-Plugin/system/default/zzz_syw_names.yaml'
       : isBH3
-      ? './plugins/xhh/system/default/bh3_syw_names.yaml'
+      ? './plugins/HoYoGet-Plugin/system/default/bh3_syw_names.yaml'
       : isSr
-      ? './plugins/xhh/system/default/yiqi.yaml'
-      : './plugins/xhh/system/default/syw.yaml';
+      ? './plugins/HoYoGet-Plugin/system/default/yiqi.yaml'
+      : './plugins/HoYoGet-Plugin/system/default/syw.yaml';
     const _name = yaml.get(path);
     for (let i in _name) {
       if (_name[i].includes(name)) {
@@ -2204,12 +2204,12 @@ export class Wiki extends plugin {
       return true;
     }
     const path = isZZZ
-      ? './plugins/xhh/system/default/zzz_wq_names.yaml'
+      ? './plugins/HoYoGet-Plugin/system/default/zzz_wq_names.yaml'
       : isBH3
-      ? './plugins/xhh/system/default/bh3_wq_names.yaml'
+      ? './plugins/HoYoGet-Plugin/system/default/bh3_wq_names.yaml'
       : !isSr
-      ? './plugins/xhh/system/default/wqname.yaml'
-      : './plugins/xhh/system/default/gz_names.yaml';
+      ? './plugins/HoYoGet-Plugin/system/default/wqname.yaml'
+      : './plugins/HoYoGet-Plugin/system/default/gz_names.yaml';
     const wq_name = yaml.get(path) || {};
     for (let i in wq_name) {
       if (Array.isArray(wq_name[i]) && wq_name[i].includes(name)) {
@@ -2309,12 +2309,12 @@ export class Wiki extends plugin {
       return true;
     }
     const path = isZZZ
-      ? './plugins/xhh/system/default/zzz_js_names.yaml'
+      ? './plugins/HoYoGet-Plugin/system/default/zzz_js_names.yaml'
       : isBH3
-      ? './plugins/xhh/system/default/bh3_js_names.yaml'
+      ? './plugins/HoYoGet-Plugin/system/default/bh3_js_names.yaml'
       : isSr
-      ? './plugins/xhh/system/default/sr_js_names.yaml'
-      : './plugins/xhh/system/default/gs_js_names.yaml';
+      ? './plugins/HoYoGet-Plugin/system/default/sr_js_names.yaml'
+      : './plugins/HoYoGet-Plugin/system/default/gs_js_names.yaml';
     const role_name = yaml.get(path);
     for (let i in role_name) {
       if (role_name[i].includes(name)) {
@@ -3514,7 +3514,7 @@ export class Wiki extends plugin {
   }
 
   resolveBh3RoleAlias(name = '') {
-    const roleNames = yaml.get('./plugins/xhh/system/default/bh3_js_names.yaml') || {};
+    const roleNames = yaml.get('./plugins/HoYoGet-Plugin/system/default/bh3_js_names.yaml') || {};
     if (roleNames[name]) return name;
     const clean = String(name || '').replace(/[\s·・!！♪♥☆★「」『』:：-]/g, '').toLowerCase();
     let first = '';
@@ -3574,7 +3574,7 @@ export class Wiki extends plugin {
   }
 
   hasBh3StigmaName(name = '') {
-    const names = yaml.get('./plugins/xhh/system/default/bh3_syw_names.yaml') || {};
+    const names = yaml.get('./plugins/HoYoGet-Plugin/system/default/bh3_syw_names.yaml') || {};
     if (names[name]) return true;
     return Object.values(names).some(list => Array.isArray(list) && list.includes(name));
   }

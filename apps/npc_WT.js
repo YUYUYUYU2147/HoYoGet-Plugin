@@ -4,7 +4,7 @@ import {
     makeForwardMsg,
     config,
     pluginPriority
-} from '#xhh';
+} from '#HoYoGet';
 
 export class Npcwt extends plugin {
     constructor(e) {
@@ -27,7 +27,7 @@ export class Npcwt extends plugin {
             .replace(/#|＃|？|。|,|，|·|!|！|—|《|》|…|「|」|『|』|、|\.|\?/g, '')
             .trim();
         let data = JSON.parse(
-            fs.readFileSync('./plugins/xhh/system/default/NPCwt.json', 'utf-8')
+            fs.readFileSync('./plugins/HoYoGet-Plugin/system/default/NPCwt.json', 'utf-8')
         );
         for (let i = 0; i < data.length; i++) {
             let v = data[i];

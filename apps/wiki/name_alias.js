@@ -23,10 +23,10 @@ import { fileURLToPath } from 'node:url';
    一律按本文件位置定位插件根（apps/wiki/ → ../../）。 */
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const REPO_ROOT = path.resolve(PLUGIN_ROOT, '../..');   // TRSS-Yunzai 根
-/** './plugins/xhh/…' 与 './plugins/…' 两种写法都要能定位到绝对路径 */
+/** './plugins/HoYoGet-Plugin/…' 与 './plugins/…' 两种写法都要能定位到绝对路径 */
 const p = rel => {
   const v = String(rel || '');
-  if (v.startsWith('./plugins/xhh/')) return path.join(PLUGIN_ROOT, v.slice('./plugins/xhh/'.length));
+  if (v.startsWith('./plugins/HoYoGet-Plugin/')) return path.join(PLUGIN_ROOT, v.slice('./plugins/HoYoGet-Plugin/'.length));
   // ⚠ 只剥掉 './'：REPO_ROOT 已经是 TRSS-Yunzai 根，
   //   再 slice('./plugins/'.length) 会把 plugins/ 目录名也吃掉，
   //   路径就落到 /root/TRSS_AllBot/TRSS-Yunzai/miao-plugin/…（不存在，静默 0 条）
@@ -36,21 +36,21 @@ const p = rel => {
 
 /** 本地别名表：正式名 → [别名…] */
 const YAML_SOURCES = [
-  { file: './plugins/xhh/system/default/gs_js_names.yaml', game: 'gs', type: 'js' },
-  { file: './plugins/xhh/system/default/sr_js_names.yaml', game: 'sr', type: 'js' },
-  { file: './plugins/xhh/system/default/zzz_js_names.yaml', game: 'zzz', type: 'js' },
-  { file: './plugins/xhh/system/default/bh3_js_names.yaml', game: 'bh3', type: 'js' },
-  { file: './plugins/xhh/system/default/wqname.yaml', game: 'gs', type: 'wq' },
-  { file: './plugins/xhh/system/default/gz_names.yaml', game: 'sr', type: 'gz' },
-  { file: './plugins/xhh/system/default/syw.yaml', game: 'gs', type: 'syw' },
-  { file: './plugins/xhh/system/default/yiqi.yaml', game: 'sr', type: 'yq' },
-  { file: './plugins/xhh/system/default/zzz_wq_names.yaml', game: 'zzz', type: 'wq' },
-  { file: './plugins/xhh/system/default/zzz_syw_names.yaml', game: 'zzz', type: 'syw' },
-  { file: './plugins/xhh/system/default/zzz_yq_names.yaml', game: 'zzz', type: 'yq' },
-  { file: './plugins/xhh/system/default/bh3_wq_names.yaml', game: 'bh3', type: 'wq' },
-  { file: './plugins/xhh/system/default/bh3_syw_names.yaml', game: 'bh3', type: 'syw' },
-  { file: './plugins/xhh/system/default/bh3_yq_names.yaml', game: 'bh3', type: 'yq' },
-  { file: './plugins/xhh/system/default/bh3_boss_names.yaml', game: 'bh3', type: 'boss' }
+  { file: './plugins/HoYoGet-Plugin/system/default/gs_js_names.yaml', game: 'gs', type: 'js' },
+  { file: './plugins/HoYoGet-Plugin/system/default/sr_js_names.yaml', game: 'sr', type: 'js' },
+  { file: './plugins/HoYoGet-Plugin/system/default/zzz_js_names.yaml', game: 'zzz', type: 'js' },
+  { file: './plugins/HoYoGet-Plugin/system/default/bh3_js_names.yaml', game: 'bh3', type: 'js' },
+  { file: './plugins/HoYoGet-Plugin/system/default/wqname.yaml', game: 'gs', type: 'wq' },
+  { file: './plugins/HoYoGet-Plugin/system/default/gz_names.yaml', game: 'sr', type: 'gz' },
+  { file: './plugins/HoYoGet-Plugin/system/default/syw.yaml', game: 'gs', type: 'syw' },
+  { file: './plugins/HoYoGet-Plugin/system/default/yiqi.yaml', game: 'sr', type: 'yq' },
+  { file: './plugins/HoYoGet-Plugin/system/default/zzz_wq_names.yaml', game: 'zzz', type: 'wq' },
+  { file: './plugins/HoYoGet-Plugin/system/default/zzz_syw_names.yaml', game: 'zzz', type: 'syw' },
+  { file: './plugins/HoYoGet-Plugin/system/default/zzz_yq_names.yaml', game: 'zzz', type: 'yq' },
+  { file: './plugins/HoYoGet-Plugin/system/default/bh3_wq_names.yaml', game: 'bh3', type: 'wq' },
+  { file: './plugins/HoYoGet-Plugin/system/default/bh3_syw_names.yaml', game: 'bh3', type: 'syw' },
+  { file: './plugins/HoYoGet-Plugin/system/default/bh3_yq_names.yaml', game: 'bh3', type: 'yq' },
+  { file: './plugins/HoYoGet-Plugin/system/default/bh3_boss_names.yaml', game: 'bh3', type: 'boss' }
 ];
 
 /* 喵喵插件的别名/数据源：**自动发现**，不写死文件清单。

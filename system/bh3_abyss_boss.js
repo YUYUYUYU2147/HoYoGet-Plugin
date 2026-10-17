@@ -1,7 +1,7 @@
 import fs from 'fs';
 import fetch from 'node-fetch';
 import moment from 'moment';
-import { yaml, mhy, api, config } from '#xhh';
+import { yaml, mhy, api, config } from '#HoYoGet';
 import monsterWiki, { resolveBh3BossAlias } from './monster.js';
 
 // genshin 的 NoteUser 必须动态加载：静态 import 在 genshin 缺失或版本变动时会让**整个插件**
@@ -9,7 +9,7 @@ import monsterWiki, { resolveBh3BossAlias } from './monster.js';
 import { makeGenshinLoader } from './genshin_loader.js'
 const getNoteUser = makeGenshinLoader('model/mys/NoteUser.js', ['model/mys/NoteUser.js'])
 
-const STOKEN_DIR = './plugins/xhh/data/Stoken';
+const STOKEN_DIR = './plugins/HoYoGet-Plugin/data/Stoken';
 // 与 apps/bh3_abyss.js 的 getAuth 保持一致：不从 Stoken 里挑 cn_gf01/cn_qd01 官服条目，
 // 否则多角色用户会捞到与当前 Cookie 不匹配的官服号，米游社返回 1008「用户信息不匹配」
 const BH3_REGIONS = ['android01', 'ios01', 'pc01', 'bb01', 'yyb01', 'hun01', 'hun02'];

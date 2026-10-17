@@ -1,4 +1,4 @@
-import { yaml, mhy, api, pluginPriority } from '#xhh';
+import { yaml, mhy, api, pluginPriority } from '#HoYoGet';
 import fs from 'fs';
 import path from 'path';
 import YAML from 'yaml';
@@ -12,14 +12,14 @@ import { makeGenshinLoader } from '../system/genshin_loader.js'
 const getNoteUser = makeGenshinLoader('model/mys/NoteUser.js', ['model/mys/NoteUser.js'])
 const getMhyFetch = makeGenshinLoader('model/mys/mhyFetch.js', ['model/mys/mhyFetch.js'])
 
-const DATA_DIR = './plugins/xhh/data/bh3_gacha';
-const BH3_POOL_HISTORY_PATH = './plugins/xhh/system/default/bh3_gacha_pool_history.yaml';
+const DATA_DIR = './plugins/HoYoGet-Plugin/data/bh3_gacha';
+const BH3_POOL_HISTORY_PATH = './plugins/HoYoGet-Plugin/system/default/bh3_gacha_pool_history.yaml';
 // 抽卡记录观测文件：纯派生数据，随时可以从 data/bh3_gacha/*/gacha_logs.json 重建。
 // 与人工整理的 bh3_gacha_pool_history.yaml 完全分开——那份是 85 个版本攒出来的，
 // 绝不能被个人抽卡样本改写；这份只负责「记录抽卡能证明的事实 + 与主库的比对结果」。
 // 放在 data/ 下而不是 system/default/：它由 data/bh3_gacha/ 派生而来，而 data/ 整个
 // 已被 .gitignore 且不受版本控制，每个 bot 的抽卡记录不同，进仓库没有意义。
-const BH3_OBSERVED_PATH = './plugins/xhh/data/bh3_gacha_observed.yaml';
+const BH3_OBSERVED_PATH = './plugins/HoYoGet-Plugin/data/bh3_gacha_observed.yaml';
 // 只有这些槽位是真正的抽卡池。实测各槽位性质：
 //   角色补给A/B  角色池（含角色/武器/圣痕/材料）
 //   装备补给A/B  武器池（无角色掉落）
@@ -35,7 +35,7 @@ const RECHARGE_LOG_URLS = [
 ];
 const BH3_WIKI_BASE = 'https://api-takumi-static.mihoyo.com/common/blackboard/bh3_wiki/v1/home/content/list?app_sn=bh3_wiki';
 let starMapCache = null;
-const ICON_CACHE_DIR = './plugins/xhh/data/bh3_gacha/icons';
+const ICON_CACHE_DIR = './plugins/HoYoGet-Plugin/data/bh3_gacha/icons';
 
 
 async function sendMsg(e, msg) {
@@ -328,7 +328,7 @@ export class bh3_gacha extends plugin {
     let stokenCookie = null;
     let ck = null;
 
-    const stokenPath = `./plugins/xhh/data/Stoken/${qq}.yaml`;
+    const stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${qq}.yaml`;
     if (fs.existsSync(stokenPath)) {
       const stokenData = yaml.get(stokenPath) || {};
       if (!uid) {
@@ -1313,9 +1313,9 @@ export class bh3_gacha extends plugin {
         // beforeRender，模板里的 {{ppath}} 会被渲染成空串：CSS 与背景图全部 404，
         // 页面退化成没有样式的裸 HTML（文字纵向堆叠、原图按原始尺寸铺开）。
         // 层数 = 资源目录段数 + 3：HTML 落在 temp/html/小花火/bh3_gacha/gacha/，
-        // 从那里回到 TRSS-Yunzai 根要上跳 5 层，再进 plugins/xhh/resources/。
-        ppath: '../../../../../plugins/xhh/resources/',
-        tplFile: process.cwd() + '/plugins/xhh/resources/bh3_gacha/gacha.html',
+        // 从那里回到 TRSS-Yunzai 根要上跳 5 层，再进 plugins/HoYoGet-Plugin/resources/。
+        ppath: '../../../../../plugins/HoYoGet-Plugin/resources/',
+        tplFile: process.cwd() + '/plugins/HoYoGet-Plugin/resources/bh3_gacha/gacha.html',
         saveId: 'gacha',
       });
       if (buf && Buffer.isBuffer(buf)) {

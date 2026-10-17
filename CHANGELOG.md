@@ -400,7 +400,7 @@ atob 后变成  "æ" + U+009C + U+0088
 
 - **卡片背景图裂图**：`ledger.css` / `ledger_count.css` 里背景图写的是
   `../../img/ledger/img.jpg`，从 `resources/bh3_ledger/` 往上两级跑到
-  `plugins/xhh/img/` 去了，那里没有文件。正确路径是 `../img/ledger/img.jpg`。
+  `plugins/HoYoGet-Plugin/img/` 去了，那里没有文件。正确路径是 `../img/ledger/img.jpg`。
   **单月水晶图 `#崩三水晶` 也受这个影响**，一并修好了。
 - **图表文字难以辨认**：柱状图的坐标轴刻度、月份标签、数值全用了白色
   （`rgba(255,255,255,…)`），而图表卡片是近白底 `rgba(255,255,255,0.9)`，

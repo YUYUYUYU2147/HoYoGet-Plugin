@@ -1,7 +1,7 @@
 import fetch from 'node-fetch';
 import common from '../../../lib/common/common.js';
 import lodash from 'lodash';
-import { yaml, makeForwardMsg, sleep, config, pluginPriority } from '#xhh';
+import { yaml, makeForwardMsg, sleep, config, pluginPriority } from '#HoYoGet';
 const name_list = {
   gs: '原神',
   sr: '崩铁',
@@ -135,7 +135,7 @@ async function vid(e) {
         img = list[n].post.cover;
         //QQ不支持直接发https://upload-bbs.miyoushe.com/
         if (img.includes('https://upload-bbs.miyoushe.com/')) {
-          path = `./plugins/xhh/temp/${name}视频封面.jpg`;
+          path = `./plugins/HoYoGet-Plugin/temp/${name}视频封面.jpg`;
           //封面图是否原图
           if (getother().cover) await common.downFile(img, path);
           else
@@ -228,7 +228,7 @@ async function vid(e) {
 }
 
 function getother() {
-  return yaml.get('./plugins/xhh/config/other.yaml');
+  return yaml.get('./plugins/HoYoGet-Plugin/config/other.yaml');
 }
 
 

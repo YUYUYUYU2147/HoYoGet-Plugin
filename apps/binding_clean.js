@@ -17,11 +17,11 @@
  */
 import fs from 'node:fs';
 import YAML from 'yaml';
-import { yaml, sleep, makeForwardMsg, pluginPriority } from '#xhh';
+import { yaml, sleep, makeForwardMsg, pluginPriority } from '#HoYoGet';
 
-const INVALID_FILE = './plugins/xhh/data/invalid_stuid.json';
+const INVALID_FILE = './plugins/HoYoGet-Plugin/data/invalid_stuid.json';
 const FILE_SOURCES = [
-    { tag: '小花火', dir: './plugins/xhh/data/Stoken' },
+    { tag: '小花火', dir: './plugins/HoYoGet-Plugin/data/Stoken' },
     { tag: '逍遥', dir: './plugins/xiaoyao-cvs-plugin/data/yaml' },
 ];
 
@@ -155,7 +155,7 @@ export class BindingClean extends plugin {
 
     /** 体检：只列不动 */
     async scan(e) {
-        const { probeCk, getGenshinCks } = await import('#xhh');
+        const { probeCk, getGenshinCks } = await import('#HoYoGet');
         const invalid = readInvalid();
         const items = collectFileEntries();
         const { hits, unknown } = judgeFiles(items, invalid);
@@ -195,7 +195,7 @@ export class BindingClean extends plugin {
     /** 确认后清理；没带「确认」就当手滑了，只回体检 */
     async clean(e) {
         if (!/确认|确定|yes|ok/i.test(e.msg)) return this.scan(e);
-        const { probeCk, getGenshinCks } = await import('#xhh');
+        const { probeCk, getGenshinCks } = await import('#HoYoGet');
         const invalid = readInvalid();
         const { hits } = judgeFiles(collectFileEntries(), invalid);
         if (!hits.length) {

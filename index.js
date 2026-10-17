@@ -27,22 +27,22 @@ logger.info('\x1B[31m-------------------------\x1B[0m');
 var paths = ['config/', 'temp/', 'data/', 'data/fp/', 'data/Stoken/'];
 
 paths.map(path => {
-  if (!fs.existsSync('./plugins/xhh/' + path)) {
-    fs.mkdirSync('./plugins/xhh/' + path);
+  if (!fs.existsSync('./plugins/HoYoGet-Plugin/' + path)) {
+    fs.mkdirSync('./plugins/HoYoGet-Plugin/' + path);
   }
 });
 
 let paths_ = ['config.yaml', 'sign.yaml', 'other.yaml', 'bh3_remind.yaml', 'activity_remind.yaml'];
 
 for (const _path of paths_) {
-  const cfg_path = './plugins/xhh/config/' + _path;
-  const def_cfg_path = './plugins/xhh/system/default/default_config/' + _path;
+  const cfg_path = './plugins/HoYoGet-Plugin/config/' + _path;
+  const def_cfg_path = './plugins/HoYoGet-Plugin/system/default/default_config/' + _path;
   if (!fs.existsSync(cfg_path)) {
     fs.cpSync(def_cfg_path, cfg_path);
     continue;
   }
 
-  let cfg = yaml.get('./plugins/xhh/config/' + _path);
+  let cfg = yaml.get('./plugins/HoYoGet-Plugin/config/' + _path);
   let def_cfg = yaml.get(def_cfg_path);
 
   // 只补默认配置里新增的键，绝不覆盖、绝不删除用户已有的键。
@@ -91,7 +91,7 @@ for (const _path of paths_) {
 }
 
 const files = fs
-  .readdirSync('./plugins/xhh/apps')
+  .readdirSync('./plugins/HoYoGet-Plugin/apps')
   .filter(file => file.endsWith('.js'));
 
 let ret = [];
@@ -145,7 +145,7 @@ try {
 try {
   // ⚠ 这里不能用 config()：index.js 没有从 '#xhh' 导入 config（那是 apps/*.js 才有的），
   //    直接用会 ReferenceError。入口读配置一律走 yaml.get。
-  const cfg = yaml.get('./plugins/xhh/config/config.yaml') || {};
+  const cfg = yaml.get('./plugins/HoYoGet-Plugin/config/config.yaml') || {};
   if (cfg.auto_reload !== false) {
     const { startAutoReload } = await import('./system/hot/auto_reload.js');
     startAutoReload({ apps, files, root: new URL('./', import.meta.url).href, logger });
@@ -166,7 +166,7 @@ setTimeout(async () => {
     }, 5 * 60 * 1000).unref?.();
     const collect = (file, pick) => {
       try {
-        return pick(yaml.get('./plugins/xhh/config/' + file) || {});
+        return pick(yaml.get('./plugins/HoYoGet-Plugin/config/' + file) || {});
       } catch {
         return [];
       }

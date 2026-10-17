@@ -7,7 +7,7 @@ import {
     config,
     getSource,
     pluginPriority
-} from '#xhh';
+} from '#HoYoGet';
 import {
     execSync
 } from 'child_process';
@@ -74,7 +74,7 @@ export class voice extends plugin {
 
         if (!isSr && config().gs_voice !== false) {
             //调用小花火原神别名
-            let gsnames = yaml.get('./plugins/xhh/system/default/gs_js_names.yaml');
+            let gsnames = yaml.get('./plugins/HoYoGet-Plugin/system/default/gs_js_names.yaml');
             for (let i in gsnames) {
                 if (gsnames[i].includes(name)) {
                     name = i;
@@ -84,14 +84,14 @@ export class voice extends plugin {
         }
         //先查原神
         // let gs_id = (await mys.data(name)).id;
-        let background = '../../../plugins/xhh/resources/yytable/bg0.png';
+        let background = '../../../plugins/HoYoGet-Plugin/resources/yytable/bg0.png';
 
         if (name == '空') {
             // gs_id = '505542'
-            background = '../../../plugins/xhh/resources/yytable/bg.png';
+            background = '../../../plugins/HoYoGet-Plugin/resources/yytable/bg.png';
         } else if (name == '荧') {
             // gs_id = '505527'
-            background = '../../../plugins/xhh/resources/yytable/bg.png';
+            background = '../../../plugins/HoYoGet-Plugin/resources/yytable/bg.png';
         }
         // let list
         let img
@@ -114,7 +114,7 @@ export class voice extends plugin {
             }
         } else if (config().sr_voice !== false) {
             //非原神查星铁
-            let srnames = yaml.get('./plugins/xhh/system/default/sr_js_names.yaml');
+            let srnames = yaml.get('./plugins/HoYoGet-Plugin/system/default/sr_js_names.yaml');
             for (let i in srnames) {
                 if (srnames[i].includes(name)) {
                     name = i;
@@ -137,7 +137,7 @@ export class voice extends plugin {
                 for (let v of list) {
                     table.push(v.title);
                 }
-                background = '../../../plugins/xhh/resources/yytable/sr.png';
+                background = '../../../plugins/HoYoGet-Plugin/resources/yytable/sr.png';
                 img = await this.tu(e, table, name, background);
                 // isSr = true;
             }
@@ -166,7 +166,7 @@ export class voice extends plugin {
             if (f.data?.message_id) f.message_id = f.data.message_id;
             f.message_id = f.message_id.toString().replace(/\//g, '');
             fs.writeFileSync(
-                `./plugins/xhh/temp/yy_pic/${f.message_id}.json`,
+                `./plugins/HoYoGet-Plugin/temp/yy_pic/${f.message_id}.json`,
                 JSON.stringify(data),
                 'utf-8'
             );
@@ -188,7 +188,7 @@ export class voice extends plugin {
             e,
             table,
             name,
-            '../../../plugins/xhh/resources/yytable/bg.png',
+            '../../../plugins/HoYoGet-Plugin/resources/yytable/bg.png',
         );
         if (!img) return false;
         const f = await e.reply(img);
@@ -196,7 +196,7 @@ export class voice extends plugin {
         if (f.data?.message_id) f.message_id = f.data.message_id;
         f.message_id = f.message_id.toString().replace(/\//g, '');
         fs.writeFileSync(
-            `./plugins/xhh/temp/yy_pic/${f.message_id}.json`,
+            `./plugins/HoYoGet-Plugin/temp/yy_pic/${f.message_id}.json`,
             JSON.stringify(data),
             'utf-8'
         );
@@ -205,7 +205,7 @@ export class voice extends plugin {
 
     // 崩坏3可查语音角色名一览
     async bh3VoiceIndex(e) {
-        const roles = yaml.get('./plugins/xhh/system/default/bh3_js_names.yaml') || {};
+        const roles = yaml.get('./plugins/HoYoGet-Plugin/system/default/bh3_js_names.yaml') || {};
         const names = Object.keys(roles);
         if (!names.length) return e.reply('未读取到崩坏3角色数据~', true);
         const lines = [];
@@ -271,7 +271,7 @@ export class voice extends plugin {
 
         source.message_id = source.message_id.toString().replace(/\//g, '');
 
-        const dir = './plugins/xhh/temp/yy_pic/'
+        const dir = './plugins/HoYoGet-Plugin/temp/yy_pic/'
         let cachePath = `${dir}${source.message_id}.json`
         if (!fs.existsSync(cachePath)) {
             // 多账号/适配器下 message_id 可能对不上，回退到最近一次的语音列表
@@ -360,7 +360,7 @@ export class voice extends plugin {
             })
             if (!res.ok) return e.reply('获取该语音失败~', true);
             data = Buffer.from(await res.arrayBuffer())
-            yy = './plugins/xhh/temp/yy_pic/temp.ogg'
+            yy = './plugins/HoYoGet-Plugin/temp/yy_pic/temp.ogg'
             fs.writeFileSync(yy, data);
         }
         // if (!yy_ || typeof yy_ != 'string') return e.reply('获取该语音失败~', true);
@@ -374,7 +374,7 @@ export class voice extends plugin {
 
     async qc(e) {
         try {
-            fs.rmSync('./plugins/xhh/temp/yy_pic/', {
+            fs.rmSync('./plugins/HoYoGet-Plugin/temp/yy_pic/', {
                 recursive: true
             });
         } catch (err) {}
@@ -382,8 +382,8 @@ export class voice extends plugin {
     }
 
     async temp() {
-        if (!fs.existsSync('./plugins/xhh/temp/yy_pic/')) {
-            fs.mkdirSync('./plugins/xhh/temp/yy_pic/', {
+        if (!fs.existsSync('./plugins/HoYoGet-Plugin/temp/yy_pic/')) {
+            fs.mkdirSync('./plugins/HoYoGet-Plugin/temp/yy_pic/', {
                 recursive: true
             });
         }

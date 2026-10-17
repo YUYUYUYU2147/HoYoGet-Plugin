@@ -5,7 +5,7 @@
   "description": "小花火插件",
   "type": "module",
   "imports": {
-    "#xhh": "./system/index.js"
+    "#HoYoGet": "./system/index.js"
   },
   "scripts": {
     "ci": "node tools/ci/syntax-check.mjs && node tools/ci/config-check.mjs && node tools/ci/ppath-check.mjs && node tools/ci/privacy-scan.mjs"

@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import yaml from './yaml.js'
 
-const CACHE_PATH = './plugins/xhh/data/GroupName.yaml'
+const CACHE_PATH = './plugins/HoYoGet-Plugin/data/GroupName.yaml'
 
 const getCache = () => {
   try {

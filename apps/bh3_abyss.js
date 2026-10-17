@@ -1,4 +1,4 @@
-import { yaml, mhy, api, pluginPriority, makeForwardMsg } from '#xhh';
+import { yaml, mhy, api, pluginPriority, makeForwardMsg } from '#HoYoGet';
 import fs from 'fs';
 import puppeteer from '../../../lib/puppeteer/puppeteer.js';
 import moment from 'moment';
@@ -10,7 +10,7 @@ import { makeGenshinLoader } from '../system/genshin_loader.js'
 const getNoteUser = makeGenshinLoader('model/mys/NoteUser.js', ['model/mys/NoteUser.js'])
 
 async function loadAbyssBossModule() {
-  const modulePath = './plugins/xhh/system/bh3_abyss_boss.js';
+  const modulePath = './plugins/HoYoGet-Plugin/system/bh3_abyss_boss.js';
   const version = fs.existsSync(modulePath) ? fs.statSync(modulePath).mtimeMs : Date.now();
   return await import(`../system/bh3_abyss_boss.js?v=${version}`);
 }
@@ -99,7 +99,7 @@ const ICON_BASE = 'https://api-takumi-static.mihoyo.com';
 // 详细日志：调试模式开启时打印取号/接口轮询/渲染过程，便于排查「查不出来」的原因
 function bh3Dbg(...args) {
   try {
-    if ((yaml?.get?.('./plugins/xhh/config/config.yaml') || {}).debug) logger.mark('[xhh][bh3_abyss]', ...args);
+    if ((yaml?.get?.('./plugins/HoYoGet-Plugin/config/config.yaml') || {}).debug) logger.mark('[xhh][bh3_abyss]', ...args);
   } catch (_) {}
 }
 
@@ -166,7 +166,7 @@ export class bh3_abyss extends plugin {
     let region = uid ? await redis.get(`xhh:bh3_region:${qq}`) : null;
     let ck = null;
 
-    const stokenPath = `./plugins/xhh/data/Stoken/${qq}.yaml`;
+    const stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${qq}.yaml`;
     if (fs.existsSync(stokenPath)) {
       const stokenData = yaml.get(stokenPath) || {};
       if (!uid) {
@@ -455,11 +455,11 @@ async abyss(e) {
         // {{ppath}} 不会由框架注入（只有 system/render.js 那条路会），
         // 缺了它 CSS/背景图/图标全部 404，页面退化成无样式的裸 HTML。
         // 层数 = 资源目录段数 + 3：小花火/bh3_abyss/abyss 落在 temp/html/下同深度目录。
-        ppath: '../../../../../plugins/xhh/resources/',
+        ppath: '../../../../../plugins/HoYoGet-Plugin/resources/',
         ...data,
         sys: { scale: 'style=transform:scale(1)' },
         deviceScaleFactor: 2,
-        tplFile: process.cwd() + '/plugins/xhh/resources/bh3_abyss/abyss.html',
+        tplFile: process.cwd() + '/plugins/HoYoGet-Plugin/resources/bh3_abyss/abyss.html',
         saveId: 'bh3_abyss',
       });
     } catch (err) {

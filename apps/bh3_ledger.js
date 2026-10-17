@@ -1,4 +1,4 @@
-import { api, mhy, yaml, config, pluginPriority } from '#xhh';
+import { api, mhy, yaml, config, pluginPriority } from '#HoYoGet';
 import { mhyFetch } from '../system/mhy_fetch.js';
 import puppeteer from '../../../lib/puppeteer/puppeteer.js';
 import { getRoleProfile } from '../system/roleProfile.js';
@@ -243,7 +243,7 @@ export class bh3_ledger extends plugin {
         }
 
         if (uid) {
-            let stokenPath = `./plugins/xhh/data/Stoken/${qq}.yaml`;
+            let stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${qq}.yaml`;
             if (fs.existsSync(stokenPath)) {
                 try {
                     let stokenData = await yaml.get(stokenPath);
@@ -304,7 +304,7 @@ export class bh3_ledger extends plugin {
 
         if (uid && String(uid) === String(e.user.getUid('gs')) && qq) {
             debugLog('[水晶] uid matches gs, searching Stoken YAML');
-            let stokenPath = `./plugins/xhh/data/Stoken/${qq}.yaml`;
+            let stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${qq}.yaml`;
             if (fs.existsSync(stokenPath)) {
                 try {
                     let stokenData = JSON.parse(JSON.stringify(await yaml.get(stokenPath)));
@@ -323,7 +323,7 @@ export class bh3_ledger extends plugin {
 
         if (!uid || !ck) {
             debugLog('[水晶] step4 scanning Stoken YAML');
-            let stokenPath = `./plugins/xhh/data/Stoken/${qq}.yaml`;
+            let stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${qq}.yaml`;
             if (fs.existsSync(stokenPath)) {
                 try {
                     let stokenData = await yaml.get(stokenPath);
@@ -388,7 +388,7 @@ export class bh3_ledger extends plugin {
 
     async switchBh3Uid(e) {
         const qq = e.user_id;
-        const stokenPath = `./plugins/xhh/data/Stoken/${qq}.yaml`;
+        const stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${qq}.yaml`;
         if (!fs.existsSync(stokenPath)) return e.reply('请先 #小花火扫码绑定 后再切换UID');
 
         let stokenData;
@@ -421,7 +421,7 @@ export class bh3_ledger extends plugin {
     async deleteBh3Uid(e) {
         const qq = e.user_id;
         const arg = e.msg.replace(/^#*删除水晶uid\s*/, '').trim();
-        const stokenPath = `./plugins/xhh/data/Stoken/${qq}.yaml`;
+        const stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${qq}.yaml`;
         const current = await redis.get(`xhh:bh3_uid:${qq}`);
         const currentRegion = await redis.get(`xhh:bh3_region:${qq}`);
         const { data: stokenData, uidList } = await this.loadBh3UidList(qq);
@@ -470,7 +470,7 @@ export class bh3_ledger extends plugin {
     }
 
     async loadBh3UidList(qq) {
-        const stokenPath = `./plugins/xhh/data/Stoken/${qq}.yaml`;
+        const stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${qq}.yaml`;
         let data = {};
         if (fs.existsSync(stokenPath)) {
             try { data = await yaml.get(stokenPath) || {}; } catch (_) { data = {}; }
@@ -537,7 +537,7 @@ export class bh3_ledger extends plugin {
                 // {{ppath}} 不会由框架注入（只有 system/render.js 那条路会），
                 // 缺了它 CSS/背景图/图标全部 404，页面退化成无样式的裸 HTML。
                 // 层数 = 资源目录段数 + 3：小花火/bh3_ledger/uid_switch 落在 temp/html/下同深度目录。
-                ppath: '../../../../../plugins/xhh/resources/',
+                ppath: '../../../../../plugins/HoYoGet-Plugin/resources/',
                 accounts,
                 current,
                 selected,
@@ -547,7 +547,7 @@ export class bh3_ledger extends plugin {
                 count: accounts.length,
                 time: moment().format('YYYY-MM-DD HH:mm:ss'),
                 sys: { scale: `style=transform:scale(2.4)` },
-                tplFile: process.cwd() + '/plugins/xhh/resources/bh3_ledger/uid_switch.html',
+                tplFile: process.cwd() + '/plugins/HoYoGet-Plugin/resources/bh3_ledger/uid_switch.html',
                 saveId: `bh3_uid_switch_${e.user_id}`,
             });
             if (buf && Buffer.isBuffer(buf)) return e.reply(segment.image(buf));
@@ -817,7 +817,7 @@ export class bh3_ledger extends plugin {
                 // {{ppath}} 不会由框架注入（只有 system/render.js 那条路会），
                 // 缺了它 CSS/背景图/图标全部 404，页面退化成无样式的裸 HTML。
                 // 层数 = 资源目录段数 + 3：小花火/bh3_ledger/ledger_count 落在 temp/html/下同深度目录。
-                ppath: '../../../../../plugins/xhh/resources/',
+                ppath: '../../../../../plugins/HoYoGet-Plugin/resources/',
                 uid,
                 qq,
                 rangeText,
@@ -838,7 +838,7 @@ export class bh3_ledger extends plugin {
                 userLevel,
                 serverName,
             sys: { scale: 'style=transform:scale(2.4)' },
-            tplFile: process.cwd() + '/plugins/xhh/resources/bh3_ledger/ledger_count.html',
+            tplFile: process.cwd() + '/plugins/HoYoGet-Plugin/resources/bh3_ledger/ledger_count.html',
             saveId: 'ledger_count',
             });
             if (buf && Buffer.isBuffer(buf)) return e.reply(segment.image(buf));
@@ -917,7 +917,7 @@ export class bh3_ledger extends plugin {
             // {{ppath}} 不会由框架注入（只有 system/render.js 那条路会），
             // 缺了它 CSS/背景图/图标全部 404，页面退化成无样式的裸 HTML。
             // 层数 = 资源目录段数 + 3：小花火/bh3_ledger/ledger 落在 temp/html/下同深度目录。
-            ppath: '../../../../../plugins/xhh/resources/',
+            ppath: '../../../../../plugins/HoYoGet-Plugin/resources/',
             ...MonthData,
             MonthData,
             uid,
@@ -937,7 +937,7 @@ export class bh3_ledger extends plugin {
             hcoinList: [],
             hcoinListB64: "",
             sys: { scale: `style=transform:scale(2.4)` },
-            tplFile: process.cwd() + '/plugins/xhh/resources/bh3_ledger/ledger.html',
+            tplFile: process.cwd() + '/plugins/HoYoGet-Plugin/resources/bh3_ledger/ledger.html',
             saveId: 'ledger',
         });
         try {
@@ -1059,7 +1059,7 @@ export class bh3_ledger extends plugin {
             // {{ppath}} 不会由框架注入（只有 system/render.js 那条路会），
             // 缺了它 CSS/背景图/图标全部 404，页面退化成无样式的裸 HTML。
             // 层数 = 资源目录段数 + 3：小花火/bh3_ledger/ledger 落在 temp/html/下同深度目录。
-            ppath: '../../../../../plugins/xhh/resources/',
+            ppath: '../../../../../plugins/HoYoGet-Plugin/resources/',
             ...lastMonthData,
             MonthData: lastMonthData,
             uid,
@@ -1082,7 +1082,7 @@ export class bh3_ledger extends plugin {
             hcoinDiffPercentAbs,
             starDiffPercentAbs,
             sys: { scale: `style=transform:scale(2.4)` },
-            tplFile: process.cwd() + '/plugins/xhh/resources/bh3_ledger/ledger.html',
+            tplFile: process.cwd() + '/plugins/HoYoGet-Plugin/resources/bh3_ledger/ledger.html',
             saveId: 'ledger',
         });
         try {

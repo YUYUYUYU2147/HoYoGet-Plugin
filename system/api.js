@@ -1,7 +1,7 @@
 import {
     mhy,
     config
-} from '#xhh';
+} from '#HoYoGet';
 import {
     user
 } from '../apps/user.js';

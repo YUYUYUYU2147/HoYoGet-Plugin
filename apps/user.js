@@ -9,7 +9,7 @@ import {
     api,
     config,
     pluginPriority
-} from '#xhh';
+} from '#HoYoGet';
 import YAML from 'yaml';
 import fs from 'fs';
 import moment from 'moment';
@@ -86,9 +86,9 @@ export class user extends plugin {
 
     async kq(e) {
         if (!e.isMaster) return false
-        let path = './plugins/xhh/config/config.yaml';
-        fs.cpSync('./plugins/xhh/system/checkCode/gs.txt', './plugins/genshin/model/mys/mysInfo.js')
-        fs.cpSync('./plugins/xhh/system/checkCode/sr.txt', './plugins/StarRail-plugin/runtime/MysSRApi.js')
+        let path = './plugins/HoYoGet-Plugin/config/config.yaml';
+        fs.cpSync('./plugins/HoYoGet-Plugin/system/checkCode/gs.txt', './plugins/genshin/model/mys/mysInfo.js')
+        fs.cpSync('./plugins/HoYoGet-Plugin/system/checkCode/sr.txt', './plugins/StarRail-plugin/runtime/MysSRApi.js')
         await yaml.set(path, 'bdsb', true);
         await e.reply('开启设备完成，执行重启！')
         new Restart(this.e).restart();
@@ -290,7 +290,7 @@ export class user extends plugin {
                             };
                         }
                     });
-                    let yaml_url = `./plugins/xhh/data/Stoken/${e.user_id}.yaml`;
+                    let yaml_url = `./plugins/HoYoGet-Plugin/data/Stoken/${e.user_id}.yaml`;
                     await this.process_files(yaml_url, data_);
                     const yaml_path = './plugins/xiaoyao-cvs-plugin/data/yaml/';
                     if (fs.existsSync(yaml_path)) { //fs.mkdirSync(yaml_path, { recursive: true });
@@ -313,7 +313,7 @@ export class user extends plugin {
 
     //删除设备
     async Delete(e) {
-        const path = `./plugins/xhh/data/fp/${e.user_id}.yaml`;
+        const path = `./plugins/HoYoGet-Plugin/data/fp/${e.user_id}.yaml`;
         if (!fs.existsSync(path)) return e.reply('你没有绑定过设备', true);
         fs.unlinkSync(path);
         //ZZZ-Plugin???
@@ -326,7 +326,7 @@ export class user extends plugin {
 
     //删除stoken
     del(e) {
-        const path = `./plugins/xhh/data/Stoken/${e.user_id}.yaml`;
+        const path = `./plugins/HoYoGet-Plugin/data/Stoken/${e.user_id}.yaml`;
         const path2 = `./plugins/xiaoyao-cvs-plugin/data/yaml/${e.user_id}.yaml`;
         if (!fs.existsSync(path) && !fs.existsSync(path2)) {
             return e.reply('你没有绑定过stoken', true);
@@ -343,7 +343,7 @@ export class user extends plugin {
             kg;
         let data_ = await mhy.getSToken(e);
         if (!data_) return e.reply(`未绑定米游社，请发送[扫码绑定]`, true);
-        const path = `./plugins/xhh/data/Stoken/${e.user_id}.yaml`;
+        const path = `./plugins/HoYoGet-Plugin/data/Stoken/${e.user_id}.yaml`;
         let data;
         if (!Array.isArray(data_)) data = yaml.get(path);
         else((data = data_[1]), (data_ = data_[0]));
@@ -492,7 +492,7 @@ export class user extends plugin {
 
         mysApi.getUrl = (...args) => this.getUrl.apply(mysApi, args)
 
-        const yaml_url = `./plugins/xhh/data/fp/${e.user_id}.yaml`;
+        const yaml_url = `./plugins/HoYoGet-Plugin/data/fp/${e.user_id}.yaml`;
         if (fs.existsSync(yaml_url)) {
             let data_ = fs.readFileSync(yaml_url, 'utf-8');
             data_ = YAML.parse(data_);

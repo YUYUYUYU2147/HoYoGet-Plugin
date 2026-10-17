@@ -9,13 +9,13 @@
 cd /root/TRSS_AllBot/TRSS-Yunzai
 
 # 1) 抓数据：拉渲染 HTML → 16 张表 → 结构化 JSON + HTML 落盘
-node plugins/xhh/tools/bwiki-gs/parse.mjs 菲林斯
+node plugins/HoYoGet-Plugin/tools/bwiki-gs/parse.mjs 菲林斯
 
 # 2) 渲染出图：JSON → gsRoleView → 模板 → PNG
-node plugins/xhh/tools/bwiki-gs/render.mjs 菲林斯
+node plugins/HoYoGet-Plugin/tools/bwiki-gs/render.mjs 菲林斯
 ```
 
-产物在 `plugins/xhh/temp/` 与 `/tmp/opencode/out/`。
+产物在 `plugins/HoYoGet-Plugin/temp/` 与 `/tmp/opencode/out/`。
 
 ## 接口
 

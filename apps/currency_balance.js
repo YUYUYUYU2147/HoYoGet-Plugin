@@ -1,14 +1,14 @@
 import fs from 'fs';
 import path from 'path';
 import moment from 'moment';
-import { pluginPriority } from '#xhh';
+import { pluginPriority } from '#HoYoGet';
 
 // genshin 的 MysInfo 必须动态加载：静态 import 在 genshin 缺失或版本变动时会让**整个插件**
 // 加载失败（ESM 解析阶段抛 ERR_MODULE_NOT_FOUND，没有 try/catch 兜底）。
 import { makeGenshinLoader } from '../system/genshin_loader.js'
 const getMysInfo = makeGenshinLoader('model/mys/mysInfo.js', ['model/mys/mysInfo.js'])
 
-const DATA_DIR = './plugins/xhh/data/currency_balance';
+const DATA_DIR = './plugins/HoYoGet-Plugin/data/currency_balance';
 
 const GAME_META = {
   gs: {

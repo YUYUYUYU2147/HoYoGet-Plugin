@@ -1,6 +1,6 @@
-import { yaml, makeForwardMsg, config, pluginPriority } from '#xhh';
+import { yaml, makeForwardMsg, config, pluginPriority } from '#HoYoGet';
 
-let path = './plugins/xhh/config/config.yaml';
+let path = './plugins/HoYoGet-Plugin/config/config.yaml';
 
 const name_list = {
   gs: '原神',
@@ -234,7 +234,7 @@ export class Config extends plugin {
 
 
 function getother() {
-  return yaml.get('./plugins/xhh/config/other.yaml');
+  return yaml.get('./plugins/HoYoGet-Plugin/config/other.yaml');
 }
 
 

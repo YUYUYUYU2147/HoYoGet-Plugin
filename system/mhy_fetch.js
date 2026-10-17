@@ -18,7 +18,7 @@
  */
 
 import fetch from 'node-fetch';
-import { config } from '#xhh';
+import { config } from '#HoYoGet';
 
 /** 米游社返回的不是 JSON 时会带这些特征，用来识别风控拦截页 */
 function looksBlocked(text) {

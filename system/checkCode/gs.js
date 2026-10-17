@@ -521,5 +521,5 @@ export default class MysInfo {
 }
 
 function config(){
-    return YAML.parse(fs.readFileSync('./plugins/xhh/config/config.yaml', 'utf-8'))
+    return YAML.parse(fs.readFileSync('./plugins/HoYoGet-Plugin/config/config.yaml', 'utf-8'))
 }

@@ -1,4 +1,4 @@
-import { render, config, pluginPriority } from '#xhh';
+import { render, config, pluginPriority } from '#HoYoGet';
 import monsterWiki from '../system/monster.js';
 
 // 怪物 / BOSS 图鉴

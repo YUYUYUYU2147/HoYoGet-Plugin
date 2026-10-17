@@ -1,8 +1,8 @@
-import { pluginPriority } from '#xhh'
+import { pluginPriority } from '#HoYoGet'
 import yaml from '../system/yaml.js'
 import { MODULES, isModuleEnabled, disabledModuleLabels } from '../system/modules.js'
 
-const CFG_PATH = './plugins/xhh/config/config.yaml'
+const CFG_PATH = './plugins/HoYoGet-Plugin/config/config.yaml'
 
 /** 功能模块开关：关掉后对应指令静默不响应（不提示、不报错，消息放给别的插件） */
 export class ModuleSwitch extends plugin {

@@ -100,12 +100,12 @@ const isTransientNetError = err => {
     return /fetch failed|network|ECONN|ETIMEDOUT|socket hang up|非 JSON|返回非 JSON|HTTP\s*5\d\d|timed?\s*out/i.test(msg);
 };
 
-const ZZZ_ITEM_ICON_CACHE = './plugins/xhh/temp/zzz_item_icons';
+const ZZZ_ITEM_ICON_CACHE = './plugins/HoYoGet-Plugin/temp/zzz_item_icons';
 const localFileUrl = file => `file://${process.cwd()}/${String(file).replace(/^\.\//, '')}`;
 // 邦布本地补图目录：resources/xhh/wiki/zzz_bangboo/<邦布名>.png|webp|jpg
 // 剧情邦布（如伊埃斯）不在 nanoka/官方观测枢/bwiki 任何图鉴里，上游永远拿不到图标；
 // 用户往该目录放一张同名图片即可修复，对以后其它缺图邦布同样通用。
-const ZZZ_BANGBOO_ICON_DIR = './plugins/xhh/resources/wiki/zzz_bangboo';
+const ZZZ_BANGBOO_ICON_DIR = './plugins/HoYoGet-Plugin/resources/wiki/zzz_bangboo';
 const localBangbooIcon = name => {
     const clean = String(name || '').replace(/[「」『』·\s]/g, '');
     if (!clean) return '';
@@ -189,7 +189,7 @@ const nanokaBase = async game => {
 // zzz new.character [1631, 1641]、new.weapon [13022, 14163, 14164]
 let nanokaManifestCache = null;
 const NANOKA_MANIFEST_URL = 'https://static.nanoka.cc/manifest.json';
-const NANOKA_MANIFEST_CACHE = './plugins/xhh/config/nanoka_manifest_cache.json';
+const NANOKA_MANIFEST_CACHE = './plugins/HoYoGet-Plugin/config/nanoka_manifest_cache.json';
 const cleanZzzKey = v => String(v || '').replace(/[\s·・\-—_「」『』《》【】\[\]（）(),]/g, '').toLowerCase();
 const getNanokaNew = async game => {
     if (!nanokaManifestCache) {
@@ -436,7 +436,7 @@ const isSrStandardLc = ([id, lc]) => {
 // 排序必须按解析出的日期显式做。
 // 该文件由 apps/gacha_pool.js 每次刷新卡池后自动更新，运行时读，
 // 不写死顺序，新版本上线不用改代码。
-const GS_LOGS_YAML = './plugins/xhh/system/default/gslogs.yaml';
+const GS_LOGS_YAML = './plugins/HoYoGet-Plugin/system/default/gslogs.yaml';
 let gsDebutCache = null;
 
 // 绝区零角色/音擎的上线时间，来源是 system/default/zzz_gacha_pool_history.yaml
@@ -453,7 +453,7 @@ let gsDebutCache = null;
 //      不做 unescape 就匹配不上，角色会被误判成「无记录」。
 //   2. 同一版本上下半的 timer 可能完全相同（克拉蕾与洛克茜都是 2026-09-30），
 //      日期只能定到版本粒度，同一天的角色之间仍靠 id 兜底。
-const ZZZ_GACHA_YAML = './plugins/xhh/system/default/zzz_gacha_pool_history.yaml';
+const ZZZ_GACHA_YAML = './plugins/HoYoGet-Plugin/system/default/zzz_gacha_pool_history.yaml';
 // 星铁光锥的上线时间，来源是 system/default/sr_logs.yaml 的 gz_five 卡池记录，
 // 做法与上面原神武器、绝区零一致：按时间升序取每个名字的首次出现。
 //
@@ -468,7 +468,7 @@ const ZZZ_GACHA_YAML = './plugins/xhh/system/default/zzz_gacha_pool_history.yaml
 // 必须取「首次出现」而不是「最近一次出现」：58 个能查到记录的光锥里有 49 个是重跑池，
 // 例如 灼尽炼狱的新骸 在 4.6 下半和 4.3 上半都出现过。按最近一次算，它会被当成
 // 4.6 的新光锥排到很前面，而它真正的首发是 4.3 上半。重跑必须跳过。
-const SR_LOGS_YAML = './plugins/xhh/system/default/sr_logs.yaml';
+const SR_LOGS_YAML = './plugins/HoYoGet-Plugin/system/default/sr_logs.yaml';
 let srDebutCache = null;
 // 崩坏3图鉴数据缓存。bh3_tujian() 每次调用都并发拉 5 个频道，
 // 而一次查询里 role / weapon / syw_yiqi 会各调一次，无前缀兜底再加上
@@ -526,7 +526,7 @@ const gsArtifactStar = id => {
 // system/default/manual_overrides.yaml 只做加法：里面不填就纯走上面的自动规则，
 // 读不到文件也只是退回自动规则，不会报错。和 syw.yaml / yiqi.yaml 那些
 // 别名表放一起，要改哪个表一眼能看到。
-const MANUAL_YAML = './plugins/xhh/system/default/manual_overrides.yaml';
+const MANUAL_YAML = './plugins/HoYoGet-Plugin/system/default/manual_overrides.yaml';
 let manualCache = null;
 function getManual() {
     if (manualCache) return manualCache;
@@ -1029,14 +1029,14 @@ class mys {
     /* ── 图鉴数据模式：official=正式服 / test=测试服 ────────────────────
        开关有三个入口，值以 config.yaml 的 data_mode 为准：
          ① 锅巴 UI（guoba.support.js 里注册了 data_mode 单选）
-         ② 直接改 plugins/xhh/config/config.yaml
+         ② 直接改 plugins/HoYoGet-Plugin/config/config.yaml
          ③ 群指令 #切换正式服模式 / #切换测试服模式（会写回 config.yaml，即时生效）
        读取走 yaml.get；取不到就当 official（正式服），宁可少出卡也不混进测试服数据。 */
     getDataMode() {
         /* 缓存按 config.yaml 的 mtime 失效。之前是永久缓存，只有群指令那条路
            （走 setDataMode）才刷新，结果从锅巴面板改模式不写缓存、又绕过了
            setDataMode，面板改了永远不生效，只能重启插件。 */
-        const p = './plugins/xhh/config/config.yaml';
+        const p = './plugins/HoYoGet-Plugin/config/config.yaml';
         let mtime = 0;
         try { mtime = fs.statSync(p).mtimeMs; } catch { mtime = 0; }
         if (this._modeCache && this._modeCacheMtime === mtime) return this._modeCache;
@@ -1058,7 +1058,7 @@ class mys {
         const v = mode === 'test' ? 'test' : 'official';
         this._modeCache = v;
         try {
-            const p = './plugins/xhh/config/config.yaml';
+            const p = './plugins/HoYoGet-Plugin/config/config.yaml';
             try { this._modeCacheMtime = fs.statSync(p).mtimeMs; } catch { this._modeCacheMtime = 0; }
             const txt = fs.readFileSync(p, 'utf8');
             const next = /^data_mode\s*:.*$/m.test(txt)
@@ -2270,7 +2270,7 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
                 }
             }
             // 图鉴别名补缺
-            //  const pa='./plugins/xhh/system/default/gz_names.yaml'
+            //  const pa='./plugins/HoYoGet-Plugin/system/default/gz_names.yaml'
             //  const _data=yaml.get(pa)
             //  names.map(v=>{
             //     if(!_data[v]) _data[v]=[v]
@@ -2551,7 +2551,7 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
                         }
                     }
                 } catch (err) {
-                    try { if ((yaml.get('./plugins/xhh/config/config.yaml') || {}).debug) logger.mark(`[xhh] BH3 wiki ext解析失败: ${title}`); } catch (_) {}
+                    try { if ((yaml.get('./plugins/HoYoGet-Plugin/config/config.yaml') || {}).debug) logger.mark(`[xhh] BH3 wiki ext解析失败: ${title}`); } catch (_) {}
                 }
 
                 const damageTypes = normalizeDamageTypes(damage, title);

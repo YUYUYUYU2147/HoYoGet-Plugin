@@ -1,4 +1,4 @@
-import { makeForwardMsg, render, yaml, pluginPriority, config } from '#xhh';
+import { makeForwardMsg, render, yaml, pluginPriority, config } from '#HoYoGet';
 import fs from 'fs';
 import YAML from 'yaml';
 import { bh3_gacha } from './bh3_gacha.js';
@@ -9,7 +9,7 @@ const ZZZ_META_URL = 'https://raw.githubusercontent.com/iaoongin/GachaClock/main
 const ZZZ_RAW_BASE = 'https://raw.githubusercontent.com/iaoongin/GachaClock/main/spider/';
 const ZZZ_CACHE_KEY = 'xhh:zzz:pool_history:data:v2';
 const ZZZ_CACHE_EXPIRE_KEY = 'xhh:zzz:pool_history:expire:v2';
-const ZZZ_POOL_HISTORY_YAML_PATH = './plugins/xhh/system/default/zzz_gacha_pool_history.yaml';
+const ZZZ_POOL_HISTORY_YAML_PATH = './plugins/HoYoGet-Plugin/system/default/zzz_gacha_pool_history.yaml';
 // ── 米游社公告刷新限速 ──
 // 背景（实测）：卡池详情接口 getPostFull 的 retcode 1034 是「验证码」，但这条链路
 // 全程不带 Cookie/DS，是纯 IP 级限速，所以借账号过码解不开、加 CK 也没用。
@@ -80,10 +80,10 @@ const MYS_COVER_CACHE = new Map();
 const SR_COVER_CACHE = new Map();
 const MYS_ASPECT_CACHE = new Map();
 const YS_BWIKI_URL = 'https://wiki.biligame.com/ys/' + encodeURIComponent('往期祈愿');
-const GS_POOL_HISTORY_YAML_PATH = './plugins/xhh/system/default/gslogs.yaml';
-const SR_POOL_HISTORY_YAML_PATH = './plugins/xhh/system/default/sr_logs.yaml';
-const BH3_POOL_HISTORY_YAML_PATH = './plugins/xhh/system/default/bh3_gacha_pool_history.yaml';
-const BH3_POOL_HISTORY_PATH = './plugins/xhh/system/default/bh3_gacha_pool_history.json';
+const GS_POOL_HISTORY_YAML_PATH = './plugins/HoYoGet-Plugin/system/default/gslogs.yaml';
+const SR_POOL_HISTORY_YAML_PATH = './plugins/HoYoGet-Plugin/system/default/sr_logs.yaml';
+const BH3_POOL_HISTORY_YAML_PATH = './plugins/HoYoGet-Plugin/system/default/bh3_gacha_pool_history.yaml';
+const BH3_POOL_HISTORY_PATH = './plugins/HoYoGet-Plugin/system/default/bh3_gacha_pool_history.json';
 const BH3_MARK_ICON = 'bh3_note/bh3_pool_banner.png';
 const BH3_CARD_FALLBACK_ICON = 'bh3_note/bh3_icon.png';
 const ZZZ_MARK_ICON = 'zzz_md/imgs/ellen.png';
@@ -93,10 +93,10 @@ const GS_MARK_ICON = 'gs_mark/paimon.png';
 // 不要写死别人机器上的绝对路径，否则换机就裂图。
 const SR_MARK_ICON = [
   './plugins/miao-plugin/resources/meta-sr/character/三月七/imgs/splash.webp',
-  './plugins/xhh/resources/srlogs/imgs/sr/1.png',
-  './plugins/xhh/resources/srlogs/imgs/h.png',
+  './plugins/HoYoGet-Plugin/resources/srlogs/imgs/sr/1.png',
+  './plugins/HoYoGet-Plugin/resources/srlogs/imgs/h.png',
 ].find(p => { try { return fs.existsSync(p) } catch (_) { return false } })
-  || './plugins/xhh/resources/srlogs/imgs/h.png';
+  || './plugins/HoYoGet-Plugin/resources/srlogs/imgs/h.png';
 const MYS_MARK_ICON = 'gacha_pool/mys.png';
 // 当前版本不写死：由 Bwiki/本地卡池/官方公告的实际数据动态推导。
 const CURRENT_VERSION = {};
@@ -110,7 +110,7 @@ const ZZZ_VERSION_UP_NAMES = {
 // 优先用自动抓取的结果（落盘 bh3_version_start.json，来源：米游社「X.X版本更新公告」），
 // 抓不到时用种子表，最后按 BH3_VERSION_DAYS（约 63 天）外推。
 // bh3_calendar.js 也从这里取，崩三日历与卡池同步共用一份，无需手工维护版本号。
-const BH3_VERSION_START_FILE = './plugins/xhh/system/default/bh3_version_start.json';
+const BH3_VERSION_START_FILE = './plugins/HoYoGet-Plugin/system/default/bh3_version_start.json';
 const BH3_VERSION_START_SEED = {
   // 崩三补给节奏：12:00 开、04:00 收（如 9月4日12:00~9月24日04:00）
   '9.0': '2026-07-23 12:00',
@@ -597,12 +597,12 @@ export class xhh_gacha_pool extends plugin {
     if (!this.useCustomGachaArt()) return '';
     const gameName = String(game || '').trim();
     const primaryDirs = [
-      `./plugins/xhh/resources/gacha_pool/fixed_splash/${gameName}`,
-      `./plugins/xhh/resources/gacha_pool/fixed_splash/${this.detectOfficialGame(gameName) || gameName}`
+      `./plugins/HoYoGet-Plugin/resources/gacha_pool/fixed_splash/${gameName}`,
+      `./plugins/HoYoGet-Plugin/resources/gacha_pool/fixed_splash/${this.detectOfficialGame(gameName) || gameName}`
     ];
     const fallbackDirs = [];
-    if (gameName === '星穹铁道') fallbackDirs.push('./plugins/xhh/resources/srlogs/imgs/sr');
-    if (gameName === '绝区零') fallbackDirs.push('./plugins/xhh/resources/zzz_md/imgs/custom', './plugins/xhh/resources/zzzlogs/imgs');
+    if (gameName === '星穹铁道') fallbackDirs.push('./plugins/HoYoGet-Plugin/resources/srlogs/imgs/sr');
+    if (gameName === '绝区零') fallbackDirs.push('./plugins/HoYoGet-Plugin/resources/zzz_md/imgs/custom', './plugins/HoYoGet-Plugin/resources/zzzlogs/imgs');
     const readDirImages = (dir, safeCheck = true) => {
       if (!dir || !fs.existsSync(dir)) return [];
       const files = [];
@@ -644,7 +644,7 @@ export class xhh_gacha_pool extends plugin {
 
   useCustomGachaArt(kind = 'header') {
     try {
-      const cfg = yaml.get('./plugins/xhh/config/config.yaml') || {};
+      const cfg = yaml.get('./plugins/HoYoGet-Plugin/config/config.yaml') || {};
       const legacy = cfg.gacha_art_source || 'custom';
       const key = kind === 'up' ? 'gacha_up_icon_source' : 'gacha_header_art_source';
       return (cfg[key] || legacy || 'custom') !== 'official';
@@ -831,7 +831,7 @@ export class xhh_gacha_pool extends plugin {
     const game = String(gameName || '').trim();
     const raw = String(name || '').trim();
     if (!game || !raw) return '';
-    const base = './plugins/xhh/resources/gacha_pool/custom_splash';
+    const base = './plugins/HoYoGet-Plugin/resources/gacha_pool/custom_splash';
     const names = [...new Set([
       raw,
       raw.replace(/[「」『』【】［］]/g, ''),
@@ -3422,7 +3422,7 @@ export class xhh_gacha_pool extends plugin {
   }
 
   getLocalZzzMarkIcon() {
-    const customDir = './plugins/xhh/resources/zzz_md/imgs/custom/';
+    const customDir = './plugins/HoYoGet-Plugin/resources/zzz_md/imgs/custom/';
     if (!fs.existsSync(customDir)) return '';
     try {
       const files = fs.readdirSync(customDir)
@@ -4497,11 +4497,11 @@ ${r.summary || ''}`;
   normalizeSrName(name = '') {
     let query = String(name || '').trim();
     try {
-      const jsNames = yaml.get('./plugins/xhh/system/default/sr_js_names.yaml') || {};
+      const jsNames = yaml.get('./plugins/HoYoGet-Plugin/system/default/sr_js_names.yaml') || {};
       for (const [key, aliases] of Object.entries(jsNames)) {
         if (key === query || (Array.isArray(aliases) && aliases.includes(query))) return key;
       }
-      const gzNames = yaml.get('./plugins/xhh/system/default/gz_names.yaml') || {};
+      const gzNames = yaml.get('./plugins/HoYoGet-Plugin/system/default/gz_names.yaml') || {};
       for (const [key, aliases] of Object.entries(gzNames)) {
         if (key === query || (Array.isArray(aliases) && aliases.includes(query))) return key;
       }
@@ -5244,11 +5244,11 @@ ${r.summary || ''}`;
   normalizeGsName(name = '') {
     let query = String(name || '').trim();
     try {
-      const gsnames = yaml.get('./plugins/xhh/system/default/gs_js_names.yaml') || {};
+      const gsnames = yaml.get('./plugins/HoYoGet-Plugin/system/default/gs_js_names.yaml') || {};
       for (const [key, aliases] of Object.entries(gsnames)) {
         if (Array.isArray(aliases) && aliases.includes(query)) return key;
       }
-      const wqnames = yaml.get('./plugins/xhh/system/default/wqname.yaml') || {};
+      const wqnames = yaml.get('./plugins/HoYoGet-Plugin/system/default/wqname.yaml') || {};
       for (const [key, aliases] of Object.entries(wqnames)) {
         if (Array.isArray(aliases) && aliases.includes(query)) return key;
       }
@@ -5273,7 +5273,7 @@ ${r.summary || ''}`;
     const fallback = [];
     for (const n of candidates) {
       for (const ext of ['.webp', '.png', '.jpg']) {
-        const p = `./plugins/xhh/resources/gslogs/imgs/${n}${ext}`;
+        const p = `./plugins/HoYoGet-Plugin/resources/gslogs/imgs/${n}${ext}`;
         if (fs.existsSync(p) && this.isSafeCornerSplashFile(p)) custom.push(fs.realpathSync(p));
       }
       const profile = this.getMiaoProfileImage(n, true);
@@ -5659,7 +5659,7 @@ ${r.summary || ''}`;
     if (!data?.pools?.length) return data;
     const charNames = new Set();
     try {
-      const names = yaml.get('./plugins/xhh/system/default/bh3_js_names.yaml') || {};
+      const names = yaml.get('./plugins/HoYoGet-Plugin/system/default/bh3_js_names.yaml') || {};
       for (const [suit, aliasesRaw] of Object.entries(names)) {
         charNames.add(this.cleanBh3Name(suit));
         for (const alias of (Array.isArray(aliasesRaw) ? aliasesRaw : [])) charNames.add(this.cleanBh3Name(alias));
@@ -6144,7 +6144,7 @@ ${r.summary || ''}`;
     const clean = this.cleanBh3Name(raw);
     const set = new Set([raw].filter(Boolean));
     try {
-      const names = yaml.get('./plugins/xhh/system/default/bh3_js_names.yaml');
+      const names = yaml.get('./plugins/HoYoGet-Plugin/system/default/bh3_js_names.yaml');
       if (names) {
         for (const [suit, aliasesRaw] of Object.entries(names)) {
           const aliases = Array.isArray(aliasesRaw) ? aliasesRaw : [];
@@ -6226,9 +6226,9 @@ ${r.summary || ''}`;
     }
     // 兼容武器/圣痕别名表里的短名：例如“澄爱挚语”可反查“澄爱挚语·馨愿”。
     for (const file of [
-      './plugins/xhh/system/default/bh3_wq_names.yaml',
-      './plugins/xhh/system/default/bh3_syw_names.yaml',
-      './plugins/xhh/system/default/bh3_js_names.yaml'
+      './plugins/HoYoGet-Plugin/system/default/bh3_wq_names.yaml',
+      './plugins/HoYoGet-Plugin/system/default/bh3_syw_names.yaml',
+      './plugins/HoYoGet-Plugin/system/default/bh3_js_names.yaml'
     ]) {
       try {
         const data = yaml.get(file);
@@ -6311,8 +6311,8 @@ ${r.summary || ''}`;
   async getBh3HistoryIcon(name = '', weapon = false, maps = null) {
     const prefixes = weapon ? ['weapon_', ''] : ['char_', '角色_', ''];
     const dirs = [
-      './plugins/xhh/data/bh3_gacha/icons',
-      './plugins/xhh/resources/bh3logs/icons'
+      './plugins/HoYoGet-Plugin/data/bh3_gacha/icons',
+      './plugins/HoYoGet-Plugin/resources/bh3logs/icons'
     ];
     // 先跨目录精确匹配，避免 data 缓存里的角色头像通过模糊匹配抢在 resources 的圣痕套装图前面。
     for (const dir of dirs) {

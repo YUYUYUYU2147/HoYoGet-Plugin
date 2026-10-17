@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 import moment from 'moment';
-import { yaml, reply_recallMsg, sleep, pluginPriority } from '#xhh';
+import { yaml, reply_recallMsg, sleep, pluginPriority } from '#HoYoGet';
 import { guardModuleByFile } from '../system/modules.js'
 
 export class tpl extends plugin {
@@ -19,7 +19,7 @@ export class tpl extends plugin {
     });
   }
   async tlp(e) {
-    let kg = await yaml.get('./plugins/xhh/config/config.yaml');
+    let kg = await yaml.get('./plugins/HoYoGet-Plugin/config/config.yaml');
     if (!kg.tlp) return false;
     var max = kg.tlpcs;
     let num = await redis.get(`xhh:tlp:${e.user_id}`);

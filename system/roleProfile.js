@@ -25,7 +25,7 @@
  *   绝区零  event/game_record_zzz/api/zzz/index
  */
 
-import { api, mhy } from '#xhh';
+import { api, mhy } from '#HoYoGet';
 
 // genshin 的 MysInfo 必须动态加载：静态 import 在 genshin 缺失或版本变动时会让**整个插件**
 // 加载失败（ESM 解析阶段抛 ERR_MODULE_NOT_FOUND，没有 try/catch 兜底）。

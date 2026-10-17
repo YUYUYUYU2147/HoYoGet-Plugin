@@ -1,4 +1,4 @@
-﻿import { render, config, pluginPriority } from '#xhh';
+﻿import { render, config, pluginPriority } from '#HoYoGet';
 import gachaTimer from '../system/gacha_timer.js';
 
 // 卡池计时器：多久没复刻 / UP 总览
