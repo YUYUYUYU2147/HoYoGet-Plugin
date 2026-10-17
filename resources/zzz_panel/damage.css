@@ -7,7 +7,7 @@ body { position: relative; margin: 0; padding: 0; width: 480px; background: #0b0
 /* 随机背景图铺在内容后面，上面压一层深色渐变保证文字可读 */
 .panel-bg { position: absolute; inset: 0; z-index: 0; background-size: cover; background-position: center; background-repeat: no-repeat; }
 .panel-bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(4,7,13,.24), rgba(4,7,13,.52)); }
-.container { position: relative; z-index: 1; width: 480px; font-family: 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', 'Unifont', sans-serif; color: #dfe4ef; background: rgba(16,19,28,.56); border-radius: 14px; padding: 16px 18px; box-sizing: border-box; }
+.container { position: relative; z-index: 1; width: 480px; font-family: 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', sans-serif, 'Unifont'; color: #dfe4ef; background: rgba(16,19,28,.56); border-radius: 14px; padding: 16px 18px; box-sizing: border-box; }
 
 .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, .1); }
 .hd-name { display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 700; }

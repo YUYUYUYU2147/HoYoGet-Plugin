@@ -287,9 +287,11 @@ async function zzzAutoVerify(e, ck, uid = '') {
 async function zzzGet(e, uid, ck, type, query, extraHeaders = {}, retried = false) {
   const base = type === 'user'
     ? 'https://api-takumi.mihoyo.com/binding/api/getUserGameRolesByCookie'
-    : type === 'info'
-      ? 'https://api-takumi-record.mihoyo.com/event/game_record_zzz/api/zzz/avatar/info'
-      : 'https://api-takumi-record.mihoyo.com/event/game_record_zzz/api/zzz/avatar/basic'
+    : type === 'index'
+      ? 'https://api-takumi-record.mihoyo.com/event/game_record_zzz/api/zzz/index'
+      : type === 'info'
+        ? 'https://api-takumi-record.mihoyo.com/event/game_record_zzz/api/zzz/avatar/info'
+        : 'https://api-takumi-record.mihoyo.com/event/game_record_zzz/api/zzz/avatar/basic'
   const url = `${base}?${query}`
   const dev = await resolveZzzDevice(e, ck, uid)
   const headers = { ...zzzHeaders(e, ck, query, dev, uid), ...extraHeaders }
@@ -1347,8 +1349,31 @@ export class zzz_panel_list extends plugin {
 
   /** 取游戏内玩家昵称/头像；接口失败时回落迁移过来的本地 player 数据 */
   async fetchPlayer(e, uid, ck) {
+    const server = mhy.getServer(uid, 'zzz')
+    // 本地 NoteData 的 role_info 带游戏内头像，优先读，避免多打一次 index 触发风控
     try {
-      const server = mhy.getServer(uid, 'zzz')
+      const note = JSON.parse(fs.readFileSync(`./data/NoteData/zzz/${uid}.json`, 'utf8'))
+      for (const year of Object.values(note || {})) {
+        for (const month of Object.values(year || {})) {
+          const role = month?.role_info
+          if (role?.nickname) return { nickname: role.nickname, avatar: role.avatar || '' }
+        }
+      }
+    } catch { /* 没有 NoteData 就继续走接口 */ }
+    // index 的 role 也带游戏内头像；getUserGameRolesByCookie 只有昵称
+    try {
+      const data = await zzzGet(e, uid, ck, 'index', `lang=zh-cn&role_id=${uid}&server=${server}`)
+      const role = data?.role || data?.role_basic_info || {}
+      if (role.nickname) {
+        return {
+          nickname: role.nickname,
+          avatar: role.avatar || role.avatar_url || role.icon || '',
+        }
+      }
+    } catch (err) {
+      logger.debug?.(`[HoYoGet][zzz_panel] index 玩家信息获取失败：${err?.message || err}`)
+    }
+    try {
       const query = `game_biz=nap_cn&region=${server}&game_uid=${uid}`
       const data = await zzzGet(e, uid, ck, 'user', query)
       const player = data?.list?.find(p => String(p.game_uid) === String(uid)) || data?.list?.[0]
