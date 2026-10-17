@@ -1998,10 +1998,10 @@ export class xhh_gacha_pool extends plugin {
         changed = true;
         continue;
       }
-      // 已知联动池的图源这次没取到（公告接口临时失败）时，保留本地已修正的图；
-      // 否则后面的通用搜索会用旧图把正确的联动封面覆盖掉。
+      // 已知联动池只认 fetchSrCollabImage 的结果：它这次没取到图（公告接口临时失败）时
+      // 直接跳过，绝不让后面的通用搜索拿旧图覆盖。通用搜索无法区分联动1.0/2.0 的封面。
       const collabSpec = SR_COLLAB_IMAGE_POSTS[String(item.ver || '')];
-      if (!collabImage && collabSpec && String(item.imgs?.[0] || '').includes(collabSpec.match)) {
+      if (!collabImage && collabSpec) {
         continue;
       }
       const roleImg = this.getSrOfficialPoolImage(item, false, records);
