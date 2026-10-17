@@ -124,7 +124,8 @@ body {
 .dp:not(.on) .dp-hit { color: #6b7386; }
 .dp .dp-val { font-weight: 700; }
 .dp.main .dp-name, .dp.main .dp-val { color: #7cf3d0; }
-.dp.on .dp-val { color: #e7ebf3; }
+/* 有效副词条（暴击/暴伤/攻击等）整行金色，和评分区「有效词条数」呼应 */
+.dp.on .dp-name, .dp.on .dp-val { color: #f5c96b; }
 .dp:not(.on) .dp-val, .dp:not(.on) .dp-name { color: #6b7386; }
 
 /* ============ 套装效果 ============ */
