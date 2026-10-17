@@ -73,9 +73,14 @@ body {
 .weapon-card .wname { display: flex; align-items: center; gap: 8px; font-size: 1.2em; font-weight: 700; }
 .weapon-card .wname .rarity-icon { width: 1.6em; height: 1.6em; }
 .weapon-card .wmeta { color: #8b93a7; font-size: .85em; margin: 4px 0 8px; }
-.weapon-card .wprops { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 24px; }
-.weapon-card .wp { display: flex; align-items: center; gap: 8px; font-size: .92em; padding: 2px 0; }
+.weapon-card .wprops { margin-top: 2px; }
+.weapon-card .wp-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 18px; padding: 3px 0; }
+/* 副词条行与主词条行之间加一条淡分隔线，两行视觉上才分得开 */
+.weapon-card .wp-line + .wp-line { border-top: 1px dashed rgba(255,255,255,.07); margin-top: 3px; padding-top: 6px; }
+.weapon-card .wp { display: flex; align-items: center; gap: 6px; font-size: .92em; white-space: nowrap; }
 .weapon-card .wp.main { color: #7cf3d0; }
+.weapon-card .wp .wp-tag { font-style: normal; font-size: .72em; line-height: 1.6; text-align: center; color: #6b7386; background: rgba(255,255,255,.06); border-radius: 3px; padding: 0 3px; }
+.weapon-card .wp.main .wp-tag { color: #7cf3d0; background: rgba(124,243,208,.12); }
 .weapon-card .wp .prop-icon { width: 1.2em; height: 1.2em; }
 .weapon-card .wtalent { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.08); }
 .weapon-card .wt-title { color: #f5c96b; font-weight: 700; font-size: .95em; margin-bottom: 4px; }

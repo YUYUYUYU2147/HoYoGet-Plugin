@@ -61,12 +61,18 @@
           <div class="wname"><span class="rarity-icon {{c.weapon.rarity}}"></span>{{c.weapon.name}}</div>
           <div class="wmeta">Lv.{{c.weapon.level}} · 精炼 {{c.weapon.refine}}</div>
           <div class="wprops">
-            {{each c.weapon.main_properties prop}}
-            <div class="wp main"><span class="prop-icon {{prop.classname}}"></span>{{prop.property_name}} {{prop.base}}</div>
-            {{/each}}
-            {{each c.weapon.properties prop}}
-            <div class="wp"><span class="prop-icon {{prop.classname}}"></span>{{prop.property_name}} {{prop.base}}</div>
-            {{/each}}
+            <!-- 主词条一行、副词条一行：音擎主词条只有 1 条，副词条 3~4 条，
+                 原来用两列 grid 混排会出现「1 条 + 3 条」参差、右侧大片空白 -->
+            <div class="wp-line">
+              {{each c.weapon.main_properties prop}}
+              <span class="wp main"><i class="wp-tag">主</i><span class="prop-icon {{prop.classname}}"></span>{{prop.property_name}} {{prop.base}}</span>
+              {{/each}}
+            </div>
+            <div class="wp-line">
+              {{each c.weapon.properties prop}}
+              <span class="wp"><i class="wp-tag">副</i><span class="prop-icon {{prop.classname}}"></span>{{prop.property_name}} {{prop.base}}</span>
+              {{/each}}
+            </div>
           </div>
           {{if c.weapon.talent}}
           <div class="wtalent">
