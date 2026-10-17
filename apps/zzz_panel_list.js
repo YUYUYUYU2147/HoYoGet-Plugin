@@ -182,7 +182,20 @@ async function zzzGet(e, uid, ck, type, query, extraHeaders = {}, retried = fals
     if ([1034, 10035, 10041].includes(code)) {
       if (!retried) {
         const challenge = await zzzAutoVerify(e, ck)
-        if (challenge) return zzzGet(e, uid, ck, type, query, { ...extraHeaders, 'x-rpc-challenge': challenge }, true)
+        if (challenge) {
+          // 过码成功后立刻重打有时仍是 10041（风控还没放行），按梯度等一会儿再试
+          let lastErr = null
+          for (const gap of [0, 3000, 8000, 15000]) {
+            if (gap) await new Promise(r => setTimeout(r, gap))
+            try {
+              return await zzzGet(e, uid, ck, type, query, { ...extraHeaders, 'x-rpc-challenge': challenge }, true)
+            } catch (err) {
+              lastErr = err
+              if (!/验证码|风控/.test(String(err?.message || err))) throw err
+            }
+          }
+          if (lastErr) throw lastErr
+        }
       }
       throw new Error(`米游社验证码/风控（${code}），自动过码未通过，请稍后重试或手动完成验证`)
     }
