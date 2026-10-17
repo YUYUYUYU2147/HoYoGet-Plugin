@@ -750,7 +750,6 @@ function normalizeDetail(a, uid) {
   const rating = scoreRes.rating
   const equip_score = scoreRes.score
   equip_final.forEach((eq, i) => { eq.score = scoreRes.discScores[i] ?? 0 })
-  const usefulStats = `有益词条数：${scoreRes.usefulCount} 有效词条数：${scoreRes.effectiveCount}`
   const validCount = a?.equip_plan_info?.valid_property_cnt
     ?? discsRaw.reduce((s, d) => s + (d.properties || []).filter(p => p.valid).length, 0)
 
@@ -808,7 +807,8 @@ function normalizeDetail(a, uid) {
     equip_score,
     equip_comment: rating,
     weightRule: scoreRes.ruleName,
-    useful_stats: usefulStats,
+    usefulCount: scoreRes.usefulCount,
+    effectiveCount: scoreRes.effectiveCount,
     propertyStats,
     equip_final,
     damageAreas,

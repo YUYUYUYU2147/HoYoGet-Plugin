@@ -99,7 +99,10 @@ body {
 .ps-count { min-width: 2em; height: 2em; padding: 0 .35em; border-radius: 6px; background: rgba(245, 201, 107, .16); border: 1px solid rgba(245, 201, 107, .35); color: #f5c96b; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
 .ps-name { color: #cfd6e6; white-space: nowrap; }
 .ps-val { margin-left: auto; font-weight: 700; color: #e7ebf3; white-space: nowrap; }
-.useful-bar { margin-top: 12px; text-align: center; color: #9aa3b5; font-size: .88em; letter-spacing: .5px; }
+.useful-bar { margin-top: 12px; display: flex; justify-content: center; align-items: center; gap: 10px; color: #9aa3b5; font-size: .88em; letter-spacing: .5px; }
+.useful-bar b { color: #cfd6e6; font-weight: 800; }
+.useful-bar .useful-sep { color: #4b5263; }
+.useful-bar .useful-effective, .useful-bar .useful-effective b { color: #f5c96b; }
 
 /* ============ 驱动盘 ============ */
 .disc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }

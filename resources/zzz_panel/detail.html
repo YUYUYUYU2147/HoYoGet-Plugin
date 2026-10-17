@@ -107,7 +107,11 @@
           {{/each}}
         </div>
       </div>
-      <div class="useful-bar">{{c.useful_stats}}</div>
+      <div class="useful-bar">
+        <span>有益词条数：<b>{{c.usefulCount}}</b></span>
+        <span class="useful-sep">·</span>
+        <span class="useful-effective">有效词条数：<b>{{c.effectiveCount}}</b></span>
+      </div>
     </div>
 
     <div class="section">
