@@ -133,15 +133,44 @@ function zzzHeaders(e, ck, query = '') {
   return headers
 }
 
+/** 本地全自动过码服务：返回 challenge 后带 x-rpc-challenge 重试原接口 */
+async function zzzAutoVerify(e, ck) {
+  const addr = String(config()?.auto_verify_addr ?? 'http://127.0.0.1:2149/solve').trim()
+  if (!addr) return ''
+  const fpFile = `./plugins/HoYoGet-Plugin/data/fp/${e?.user_id}.yaml`
+  let fp = {}
+  if (fs.existsSync(fpFile)) {
+    try { fp = yaml.get(fpFile) || {} } catch { fp = {} }
+  }
+  const deviceId = fp.device_id || mhy.getDeviceGuid()
+  const deviceFp = fp.fp || ''
+  try {
+    const res = await fetch(addr, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cookie: ckStringOf(ck), deviceId, deviceFp, clientType: '2' }),
+      signal: AbortSignal.timeout(360000),
+    }).then(r => r.json())
+    if (res?.data?.result === 'ok' && res.data.challenge) {
+      logger.mark('[HoYoGet][zzz_panel] 本地服务自动过码成功')
+      return res.data.challenge
+    }
+    logger.warn(`[HoYoGet][zzz_panel] 本地服务未过码：${JSON.stringify(res).slice(0, 160)}`)
+  } catch (err) {
+    logger.warn(`[HoYoGet][zzz_panel] 本地过码服务不可用：${err?.message || err}`)
+  }
+  return ''
+}
+
 /** 直接请求 ZZZ record 接口：返回 data，失败抛带 retcode/message 的错误，便于面板显示真实原因 */
-async function zzzGet(e, uid, ck, type, query) {
+async function zzzGet(e, uid, ck, type, query, extraHeaders = {}, retried = false) {
   const base = type === 'user'
     ? 'https://api-takumi.mihoyo.com/binding/api/getUserGameRolesByCookie'
     : type === 'info'
       ? 'https://api-takumi-record.mihoyo.com/event/game_record_zzz/api/zzz/avatar/info'
       : 'https://api-takumi-record.mihoyo.com/event/game_record_zzz/api/zzz/avatar/basic'
   const url = `${base}?${query}`
-  const headers = zzzHeaders(e, ckStringOf(ck), query)
+  const headers = { ...zzzHeaders(e, ckStringOf(ck), query), ...extraHeaders }
   const resp = await mhyFetch(url, { method: 'GET', headers })
   const text = await resp.text()
   let json
@@ -150,7 +179,13 @@ async function zzzGet(e, uid, ck, type, query) {
   }
   if (Number(json?.retcode) !== 0) {
     const code = Number(json?.retcode)
-    if ([1034, 10035, 10041].includes(code)) throw new Error(`米游社验证码/风控（${code}），请先完成过码再试`)
+    if ([1034, 10035, 10041].includes(code)) {
+      if (!retried) {
+        const challenge = await zzzAutoVerify(e, ck)
+        if (challenge) return zzzGet(e, uid, ck, type, query, { ...extraHeaders, 'x-rpc-challenge': challenge }, true)
+      }
+      throw new Error(`米游社验证码/风控（${code}），自动过码未通过，请稍后重试或手动完成验证`)
+    }
     if ([-100, -101, -111, 10001].includes(code)) throw new Error(`CK 失效或未登录（${code}），请刷新 CK / 重新扫码`)
     throw new Error(`接口返回 ${code}：${json?.message || '未知错误'}`)
   }

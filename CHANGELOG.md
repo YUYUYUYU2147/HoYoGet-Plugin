@@ -47,6 +47,7 @@
 | 变更 | **绝区零用户数据迁移** —— 新增迁移脚本，把 ZZZ-Plugin 的 UID/CK、逐抽记录、菲林月报转到本插件；抽卡记录优先读本插件 `data/zzz_gacha/zzz_plugin/`，不再依赖 ZZZ-Plugin 原目录 | 绝区零抽卡/菲林统计 |
 | 优化 | **绝区零面板 CK 兜底** —— UID/CK 依次从 ZZZ-Plugin、本插件 Stoken（完整 CK）、genshin NoteUser、Stoken（仅 stoken）取，ZZZ-Plugin 缺失或 CK 失效时面板仍可尝试取数 | `米游社<角色>面板` |
 | 优化 | **绝区零面板取数去 ZZZ-Plugin 化** —— 角色列表/详情/玩家信息改走本插件直连 ZZZ record 接口（2.73.1 头 + 4x DS），不再依赖 `MysZZZApi`；CK 仍按 ZZZ-Plugin→Stoken→genshin 兜底，失败会显示具体 retcode | `米游社<角色>面板` |
+| 修复 | **绝区零面板自动过码** —— 遇到 1034/10035/10041 时先调本机 `/solve` 自动过码，拿 challenge 重试；服务未部署时提示先 `#过码部署`，不再只让人手动过码 | `米游社<角色>面板` |
 
 ### 速览
 
