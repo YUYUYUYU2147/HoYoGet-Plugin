@@ -441,27 +441,37 @@ function calcDamage(bp, level, avatar, charName) {
   }
 }
 
+// 咕咕牛的面板图在 ZZZ-Plugin/resources/images/panel；本插件自己的自定义图作为第二来源
+const CUSTOM_PORTRAIT_DIRS = [
+  './plugins/ZZZ-Plugin/resources/images/panel',
+  path.join(PLUGIN_ROOT, 'resources', 'zzz_panel', 'images', 'panel'),
+]
+
 /**
- * 读取用户自定义面板图，返回 data URI；无则返回 ''。
- * 放置目录：plugins/HoYoGet-Plugin/resources/zzz_panel/images/panel/[角色名]/ 下第一张 png/jpg/webp。
- * [角色名] 依次尝试 简称(name_mi18n)、全称(full_name_mi18n)。
+ * 读取自定义面板图，返回 data URI；无则返回 ''。
+ * 每个角色目录取第一张 png/jpg/webp；名字同时尝试简称/全称和「」包裹形式。
  */
 function loadCustomPortrait(names) {
-  const base = path.join(PLUGIN_ROOT, 'resources', 'zzz_panel', 'images', 'panel')
+  const variants = []
   for (const nm of names) {
     if (!nm) continue
-    const dir = path.join(base, nm)
-    if (!fs.existsSync(dir)) continue
-    let files = []
-    try { files = fs.readdirSync(dir).filter(f => /\.(png|jpe?g|webp)$/i.test(f)).sort() } catch { files = [] }
-    if (!files.length) continue
-    const file = files[0]
-    const ext = path.extname(file).slice(1).toLowerCase()
-    const mime = ext === 'jpg' ? 'jpeg' : ext
-    try {
-      const buf = fs.readFileSync(path.join(dir, file))
-      return `data:image/${mime};base64,${buf.toString('base64')}`
-    } catch { /* 读取失败则试下一个名字 */ }
+    variants.push(nm, `「${nm}」`, String(nm).replace(/[「」]/g, ''))
+  }
+  for (const base of CUSTOM_PORTRAIT_DIRS) {
+    for (const nm of variants) {
+      const dir = path.join(base, nm)
+      if (!fs.existsSync(dir)) continue
+      let files = []
+      try { files = fs.readdirSync(dir).filter(f => /\.(png|jpe?g|webp)$/i.test(f)).sort() } catch { files = [] }
+      if (!files.length) continue
+      const file = files[0]
+      const ext = path.extname(file).slice(1).toLowerCase()
+      const mime = ext === 'jpg' ? 'jpeg' : ext
+      try {
+        const buf = fs.readFileSync(path.join(dir, file))
+        return `data:image/${mime};base64,${buf.toString('base64')}`
+      } catch { /* 读取失败则试下一个 */ }
+    }
   }
   return ''
 }
@@ -792,8 +802,8 @@ function normalizeDetail(a, uid) {
   const customPortrait = loadCustomPortrait([a?.name_mi18n, a?.full_name_mi18n])
   const charData = {
     uid: uid || a?.id || '',
-    // 优先官方全身图；自定义图只在没有官方图时兜底（用户放的裁切壁纸会截断立绘）
-    role_icon: fullBody?.primary || customPortrait || apiPortrait,
+    // 优先自定义面板（咕咕牛 / 本插件），没有再回落官方全身图
+    role_icon: customPortrait || fullBody?.primary || apiPortrait,
     role_fallback: fullBody?.fallback || apiPortrait,
     skills,
     rarity,

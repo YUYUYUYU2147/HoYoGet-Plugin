@@ -13,9 +13,35 @@ import { fetchMihoyoBangboo, buildBangbooView } from './wiki/bangboo_view.js';
 import { fetchSrGuide } from './wiki/bwiki_sr_guide.js';
 import { readFileSync } from 'node:fs';
 import fs from 'fs';
+import path from 'node:path';
 import { JSDOM } from 'jsdom';
 const { window } = new JSDOM();
 const DOMParser = window.DOMParser;
+
+/**
+ * 咕咕牛自定义面板图：
+ * - 原神/星铁：miao-plugin/resources/profile/normal-character/<角色>/
+ * - 绝区零：ZZZ-Plugin/resources/images/panel/<角色>/，本插件自己的目录作为补充
+ * 有自定义面板就优先用，没有再由调用方回落官方立绘/随机背景。
+ */
+function findCustomRoleArt(game, name) {
+  if (!name) return '';
+  const variants = [name, `「${name}」`, String(name).replace(/[「」]/g, '')];
+  const dirs = game === 'zzz'
+    ? ['./plugins/ZZZ-Plugin/resources/images/panel', './plugins/HoYoGet-Plugin/resources/zzz_panel/images/panel']
+    : ['./plugins/miao-plugin/resources/profile/normal-character'];
+  for (const base of dirs) {
+    for (const nm of variants) {
+      const dir = path.resolve(base, nm);
+      try {
+        if (!fs.statSync(dir).isDirectory()) continue;
+        const files = fs.readdirSync(dir).filter(f => /\.(png|jpe?g|webp)$/i.test(f)).sort();
+        if (files.length) return path.join(dir, files[0]);
+      } catch { /* 目录不存在就试下一个 */ }
+    }
+  }
+  return '';
+}
 
 // 绝区零角色/音擎别名，分别配置在 system/default/zzz_js_names.yaml、zzz_wq_names.yaml（格式：正式名: [别名列表]）
 // 单字别名（如"雅"）过于宽泛，不能直接参与模糊兜底，否则随机串会误命中，只做精确匹配。
@@ -1939,6 +1965,8 @@ export class Wiki extends plugin {
       // 只走这条 nanoka 渲染路，必须在这里设 bgFile，否则绝区零角色图鉴在测试模式下无背景。
       bgFile: await this.fetchGsBgFile()
     };
+    const customArt = findCustomRoleArt('zzz', view.name);
+    if (customArt) view.bg = 'file://' + customArt;
     return render('wiki/zzz_role_nk', view, { e, ret: true });
   }
 
@@ -2440,7 +2468,10 @@ export class Wiki extends plugin {
     dbg(`${name} → ${detail.name} 技能${detail.skills.length} 命座${detail.constellations.length} ` +
       `天赋${detail.passives.length} 徽章${extra.topBadges.length} 攻略${view.guide ? '有' : '无'}`);
     try {
-      return await render('wiki/gs_role_nk', { ...view, name: detail.name }, { e, ret: true });
+      const roleView = { ...view, name: detail.name };
+      const customArt = findCustomRoleArt('gs', detail.name);
+      if (customArt) roleView.bgFile = customArt;
+      return await render('wiki/gs_role_nk', roleView, { e, ret: true });
     } catch (err) {
       logger.debug?.(`[HoYoGet][bwiki_gs] ${name} 渲染失败: ${err?.message}`);
       return false;
@@ -2599,6 +2630,8 @@ export class Wiki extends plugin {
       srGuide: null, gacha: null,
       bgFile: await this.fetchGsBgFile()
     };
+    const customArt = findCustomRoleArt('sr', view.name);
+    if (customArt) view.bgFile = customArt;
     return render('wiki/sr_role_nk', view, { e, ret: true });
   }
 
@@ -2721,6 +2754,8 @@ export class Wiki extends plugin {
       guide: null, gacha: null,
       bgFile: await this.fetchGsBgFile()
     };
+    const customArt = findCustomRoleArt('gs', view.name);
+    if (customArt) view.bgFile = customArt;
     return render('wiki/gs_role_nk', view, { e, ret: true });
   }
 
@@ -3070,8 +3105,10 @@ export class Wiki extends plugin {
       return false;
     }
     if (!card) return false;
-    // 背景图：纯装饰，与其他图鉴共用同一张随机图 API；失败返回空串，模板整块跳过
-    card.bgFile = await this.fetchGsBgFile();
+    // 优先咕咕牛自定义面板；没有再用随机背景
+    const customArt = findCustomRoleArt('zzz', card.name);
+    if (customArt) card.bg = 'file://' + customArt;
+    else card.bgFile = await this.fetchGsBgFile();
     return render('wiki/zzz_role_nk', card, { e, ret: true });
   }
 
