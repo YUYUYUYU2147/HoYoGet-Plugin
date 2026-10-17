@@ -824,6 +824,20 @@ const SCORE_PROP_ID = {
 const ELEM_DMG_ID = { 200: 31503, 201: 31603, 202: 31703, 203: 31803, 204: 32303, 205: 31903 }
 // 单条副词条的基础值：用于把固定攻击/生命/防御换算成百分比等效权重
 const BASE_VALUE = { 11102: 3, 11103: 112, 12102: 3, 12103: 19, 13102: 4.8, 13103: 15 }
+const SUB_BASE_VALUE = { ...BASE_VALUE, 20103: 2.4, 21103: 4.8, 23203: 9, 31203: 9 }
+const MAIN_MAX_VALUE = {
+  11102: '30%', 12102: '30%', 13102: '48%', 12202: '18%',
+  20103: '24%', 21103: '48%', 23103: '24%', 23203: '24',
+  30502: '60%', 31203: '92', 31402: '30%',
+  31503: '30%', 31603: '30%', 31703: '30%', 31803: '30%', 31903: '30%', 32303: '30%',
+}
+const MAIN_NAME = {
+  11102: '生命值百分比', 11103: '生命值', 12102: '攻击力百分比', 12103: '攻击力',
+  13102: '防御力百分比', 13103: '防御力', 12202: '冲击力', 20103: '暴击率',
+  21103: '暴击伤害', 23103: '穿透率', 23203: '穿透值', 30502: '能量自动回复',
+  31203: '异常精通', 31402: '异常掌控', 31503: '物理伤害加成', 31603: '火属性伤害加成',
+  31703: '冰属性伤害加成', 31803: '电属性伤害加成', 31903: '以太伤害加成', 32303: '风属性伤害加成',
+}
 // 可能的副词条 id（用于理论最大词条）
 const SUB_STAT_IDS = [11102, 11103, 12102, 12103, 13102, 13103, 20103, 21103, 23203, 31203]
 // 4/5/6 号位主词条候选
@@ -1130,6 +1144,7 @@ const ORIGINAL_REG = /^(?:米游社|#?绝区零)原图$/
 const PANEL_UPLOAD_REG = /^(?:米游社|%|#?绝区零)?(?:上传|添加)(.+?)(?:角色|面板)图$/
 const PANEL_IMAGES_REG = /^(?:米游社|%|#?绝区零)?(?:获取|查看)(.+?)(?:角色|面板)图\s*(\d*)$/
 const PANEL_DELETE_IMG_REG = /^(?:米游社|%|#?绝区零)?删除(.+?)(?:角色|面板)图(.+)$/
+const EXTREME_REG = /^(?:米游社|%|#?绝区零)?(.+?)极限面板$/
 const REMIND_PREFIX = '^(?:米游社|%|#?绝区零)?'
 const REMIND_ON_REG = new RegExp(`${REMIND_PREFIX}(开启|关闭)挑战提醒$`)
 const REMIND_GLOBAL_ON_REG = new RegExp(`${REMIND_PREFIX}(开启|启用|关闭|禁用)全局挑战提醒$`)
@@ -1159,6 +1174,7 @@ export class zzz_panel_list extends plugin {
         { reg: ORIGINAL_REG.source, fnc: 'panelOriginal' },
         { reg: PANEL_UPLOAD_REG.source, fnc: 'panelUploadImages' },
         { reg: PANEL_IMAGES_REG.source, fnc: 'panelImageList' },
+        { reg: EXTREME_REG.source, fnc: 'panelExtreme' },
         { reg: PANEL_DELETE_IMG_REG.source, fnc: 'panelDeleteImages' },
         { reg: REMIND_ON_REG.source, fnc: 'zzzRemindToggle' },
         { reg: REMIND_GLOBAL_ON_REG.source, fnc: 'zzzRemindGlobalToggle' },
@@ -1437,6 +1453,189 @@ export class zzz_panel_list extends plugin {
     return e.reply([`成功删除ID为${ok.join(',') || '无'}的图片`, fail.length ? `删除失败ID为${fail.join(',')}` : '无失败ID'].join('\n'))
   }
 
+  /** 找一份该角色的面板记录：本地优先，过渡期兼容 ZZZ-Plugin 的 data/panel */
+  findExtremeRecord(e, role) {
+    const norm = v => String(v || '').replace(/[\s·・\-—_「」『』《》【】\[\]（）()]/g, '').toLowerCase()
+    const want = norm(role)
+    const match = a => a && (norm(a.name_mi18n) === want || norm(a.full_name_mi18n) === want)
+    const readRecord = file => {
+      try {
+        const obj = JSON.parse(fs.readFileSync(file, 'utf8'))
+        const a = obj?.data || obj
+        return match(a) ? a : null
+      } catch { return null }
+    }
+    const uid = this.getZzzUid(e)
+    if (uid) {
+      const own = readRecord(path.join(RECORDS_DIR, `${uid}.json`))
+      if (own) return own
+    }
+    try {
+      for (const f of fs.readdirSync(RECORDS_DIR).filter(f => f.endsWith('.json'))) {
+        const a = readRecord(path.join(RECORDS_DIR, f))
+        if (a) return a
+      }
+    } catch { /* 本地还没有记录 */ }
+    try {
+      for (const f of fs.readdirSync('./plugins/ZZZ-Plugin/data/panel').filter(f => f.endsWith('.json'))) {
+        try {
+          const list = JSON.parse(fs.readFileSync(path.join('./plugins/ZZZ-Plugin/data/panel', f), 'utf8'))
+          if (Array.isArray(list)) {
+            const a = list.find(match)
+            if (a) return a
+          }
+        } catch { /* 跳过坏文件 */ }
+      }
+    } catch { /* 没装 ZZZ-Plugin 就只认本地 */ }
+    return null
+  }
+
+  /** 理论极限：6 命、技能 16/核心 7、音擎满精满突破、六盘满级 S 且副词条满强化 */
+  applyExtremePanel(a) {
+    const out = JSON.parse(JSON.stringify(a || {}))
+    const baseProps = {}
+    for (const p of out.properties || []) {
+      const m = ZPROP[p.property_id]
+      if (m) baseProps[m.k] = { base: p.base }
+    }
+    const { weight } = getScoreWeight(
+      out.name_mi18n || out.full_name_mi18n || '',
+      {},
+      out.avatar_profession,
+      out.element_type,
+      baseProps,
+    )
+    const num = v => {
+      const m = String(v ?? '').replace(/,/g, '').match(/-?\d+(?:\.\d+)?/)
+      return m ? Number(m[0]) : 0
+    }
+    const pct = id => [201, 211, 231, 314].includes(Number(id)) || (Number(id) >= 315 && Number(id) <= 319)
+    const fmt = (id, value) => pct(id) ? `${value.toFixed(1)}%` : (Number(id) === 305 ? value.toFixed(2) : `${Math.round(value)}`)
+    const toChar = id => {
+      id = Number(id)
+      if (id === 11102 || id === 11103) return 111
+      if (id === 12102 || id === 12103) return 121
+      if (id === 13102 || id === 13103) return 131
+      if (id === 12202) return 122
+      if (id === 20103) return 201
+      if (id === 21103) return 211
+      if (id === 23103) return 231
+      if (id === 23203) return 232
+      if (id === 30502) return 305
+      if (id === 31203) return 312
+      if (id === 31402) return 314
+      if (id >= 31503 && id <= 32303) return Math.trunc(id / 100)
+      return null
+    }
+    const totals = equips => {
+      const map = {}
+      const add = (id, value) => { if (id != null) map[id] = (map[id] || 0) + value }
+      for (const eq of equips || []) {
+        for (const p of [...(eq.main_properties || []), ...(eq.properties || [])]) {
+          const id = Number(p.property_id), value = num(p.base)
+          if (!value) continue
+          const cid = toChar(id)
+          if (cid == null) continue
+          if (id === 11102) add(cid, num(baseProps.hpmax?.base) * value / 100)
+          else if (id === 12102) add(cid, num(baseProps.attack?.base) * value / 100)
+          else if (id === 13102) add(cid, num(baseProps.def?.base) * value / 100)
+          else if (id === 12202) add(cid, num(baseProps.breakstun?.base) * value / 100)
+          else if (id === 31402) add(cid, num(baseProps.elementabnormalpower?.base) * value / 100)
+          else add(cid, value)
+        }
+      }
+      return map
+    }
+    const before = totals(out.equip)
+    const oldEquip = out.equip || []
+    out.level = 60
+    out.rank = 6
+    if (Array.isArray(out.ranks)) out.ranks = out.ranks.map(v => ({ ...v, is_unlocked: true }))
+    if (Array.isArray(out.skills)) {
+      out.skills = out.skills.map(v => ({ ...v, level: Number(v.skill_type) === 5 ? 7 : 16 }))
+    }
+    if (out.weapon) out.weapon = { ...out.weapon, level: 60, star: 5, break_level: 5, rarity: 'S' }
+    out.equip = oldEquip.map((eq, idx) => {
+      const slot = Number(eq.equipment_type || idx + 1)
+      const oldMain = Number(eq.main_properties?.[0]?.property_id || 0)
+      const allowed = (SCORE_MAIN_STATS[slot] || []).filter(id => Number(weight[id] || 0) > 0)
+      allowed.sort((x, y) => Number(weight[y] || 0) - Number(weight[x] || 0))
+      const mainId = allowed[0] || oldMain
+      const mainBase = MAIN_MAX_VALUE[mainId]
+        || eq.main_properties?.[0]?.base
+        || `${SUB_BASE_VALUE[mainId] || 0}`
+      const cand = SUB_STAT_IDS
+        .filter(id => id !== mainId && Number(weight[id] || 0) > 0)
+        .sort((x, y) => Number(weight[y] || 0) - Number(weight[x] || 0) || x - y)
+        .slice(0, 4)
+      const counts = cand.map((_, i) => i === 0 ? 6 : 1)
+      const props = cand.map((id, i) => ({
+        property_name: MAIN_NAME[id] || String(id),
+        property_id: id,
+        base: fmt(id, (SUB_BASE_VALUE[id] || 0) * counts[i]),
+        level: counts[i],
+        valid: true,
+        system_id: Math.trunc(id / 100),
+        add: counts[i] - 1,
+      }))
+      return {
+        ...eq,
+        level: 15,
+        rarity: 'S',
+        main_properties: [{
+          property_name: MAIN_NAME[mainId] || String(mainId),
+          property_id: mainId,
+          base: mainBase,
+          level: 1,
+          valid: false,
+          system_id: 0,
+          add: 0,
+        }],
+        properties: props.length ? props : (eq.properties || []),
+        invalid_property_cnt: 0,
+        all_hit: true,
+      }
+    })
+    const after = totals(out.equip)
+    const delta = {}
+    for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
+      delta[key] = Number(after[key] || 0) - Number(before[key] || 0)
+    }
+    out.properties = (out.properties || []).map(p => {
+      const id = Number(p.property_id)
+      const d = delta[id]
+      if (!d) return p
+      const final = num(p.final) + d
+      const add = num(p.add) + d
+      return { ...p, add: fmt(id, add), final: fmt(id, final) }
+    })
+    return out
+  }
+
+  /** 「%艾莲极限面板」：理论最高值面板 */
+  async panelExtreme(e) {
+    const m = String(e.msg || '').match(EXTREME_REG)
+    const role = this.resolvePanelRole(m?.[1] || '')
+    if (!role) return e.reply('未找到对应角色')
+    const base = this.findExtremeRecord(e, role)
+    if (!base) return e.reply(`暂无【${role}】面板记录，请先发一次「米游社${role}面板」`)
+    try {
+      const raw = this.applyExtremePanel(base)
+      const detail = normalizeDetail(raw, '100000000')
+      const img = await render('zzz_panel/detail', {
+        ...detail,
+        footer: 'from 米哈游 · 理论极限',
+        bgImage: getPanelBg(),
+        playerName: '理论极限',
+        playerAvatar: '',
+      }, { e, ret: true })
+      return e.reply(img)
+    } catch (err) {
+      logger.error?.(`[HoYoGet][zzz_panel] 极限面板渲染失败：${err?.message || err}`)
+      return e.reply(`极限面板生成失败：${err?.message || err}`)
+    }
+  }
+
   /** 「%原图」：取回面板实际使用的角色原图（data URI），不是截图 */
   async panelOriginal(e) {
     if (config().zzz_panel_allow_original === false) return e.reply('已禁止获取绝区零面板原图')
@@ -1467,6 +1666,7 @@ export class zzz_panel_list extends plugin {
       '　　　米游社3面板',
       '（序号看「米游社更新面板」列表从左到右第几个）',
       '',
+      '理论极限面板：%艾莲极限面板（6命满精、驱动盘满词条）',
       '取回面板角色原图：%原图（引用面板消息）',
       '上传/查看/删除面板图：%上传艾莲面板图 / %查看艾莲面板图 / %删除艾莲面板图1,2',
       '看某一招的详细计算：米游社<角色>伤害<招数>',

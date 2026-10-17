@@ -29,7 +29,7 @@ zzz_remind_enable: true
 zzz_remind_time: 每日20时
 zzz_remind_abyss_level: 5
 zzz_remind_deadly_stars: 6
-zzz_panel_list_priority: -100
+zzz_panel_list_priority: -20000
 
 # 绝区零单角色面板/伤害详情页的随机背景图；留空则使用纯黑底。
 zzz_panel_bg_url: 'https://api.yppp.net/api.php'
