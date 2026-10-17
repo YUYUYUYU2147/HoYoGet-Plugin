@@ -1,6 +1,7 @@
 /* 绝区零角色面板（深色版式，自控布局；精灵图/字体复用 zzzure/common/style） */
 * { box-sizing: border-box; }
 body {
+  position: relative;
   margin: 0;
   width: 1000px;
   font-size: 15px;
@@ -9,12 +10,29 @@ body {
   background: #0b0e14;
   -webkit-font-smoothing: antialiased;
 }
+/* 随机背景图铺在内容后面，上面压一层深色渐变保证文字可读 */
+.panel-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.panel-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(4,7,13,.52), rgba(4,7,13,.76));
+}
 .container {
+  position: relative;
+  z-index: 1;
   width: 1000px;
   padding: 22px 24px 34px;
   background:
     radial-gradient(1200px 400px at 20% -10%, rgba(120,150,255,.10), transparent 60%),
-    linear-gradient(165deg, #151c2b 0%, #0d1220 55%, #0b0e14 100%);
+    linear-gradient(165deg, rgba(21,28,43,.68) 0%, rgba(13,18,32,.74) 55%, rgba(11,14,20,.80) 100%);
   border-radius: 16px;
 }
 /* 精灵图基础尺寸（背景图由 zzzure common/style 的 .prop-icon.xxx 等提供） */

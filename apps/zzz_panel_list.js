@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { pluginPriority, render, yaml } from '#HoYoGet'
+import { config, pluginPriority, render, yaml } from '#HoYoGet'
 import { damageSkillsAt, getCharRates } from '../system/zzz_skill_rate.js'
 import { getBuffAreas } from '../system/zzz_buff.js'
 
@@ -85,6 +85,12 @@ function formatNow() {
   const d = new Date()
   const p = n => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+// 面板随机背景：默认用 yppp 的随机二次元图；配置成空字符串可恢复纯黑底
+const DEFAULT_PANEL_BG = 'https://api.yppp.net/api.php'
+function getPanelBg() {
+  try { return String(config()?.zzz_panel_bg_url ?? DEFAULT_PANEL_BG).trim() } catch { return DEFAULT_PANEL_BG }
 }
 
 const SKILL_NAME = { 0: '普攻', 1: '特殊技', 2: '闪避', 3: '连携技', 5: '核心技', 6: '支援技' }
@@ -950,7 +956,7 @@ export class zzz_panel_list extends plugin {
     const charData = detail.charData
     const footer = `from 米哈游 · UID ${uid} · ${server} · ${formatNow()}`
     try {
-      const img = await render('zzz_panel/detail', { ...detail, footer }, { e, ret: true })
+      const img = await render('zzz_panel/detail', { ...detail, footer, bgImage: getPanelBg() }, { e, ret: true })
       return img
     } catch (err) {
       logger.error?.(`[HoYoGet][zzz_panel] 详情渲染失败：${err?.message || err}`)
@@ -1058,6 +1064,7 @@ export class zzz_panel_list extends plugin {
         uid,
         command: `米游社${charData.full_name_mi18n || arg}伤害${idx + 1}`,
         footer,
+        bgImage: getPanelBg(),
       }, { e, ret: true })
     } catch (err) {
       logger.error?.(`[HoYoGet][zzz_panel] 伤害详情渲染失败：${err?.message || err}`)

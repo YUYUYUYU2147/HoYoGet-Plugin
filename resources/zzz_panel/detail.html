@@ -9,6 +9,7 @@
   <link rel="stylesheet" type="text/css" href="{{ppath}}zzz_panel/detail.css">
 </head>
 <body {{sys.scale}}>
+  {{if bgImage}}<div class="panel-bg" style="background-image:url('{{bgImage}}')"></div>{{/if}}
   <div class="container" id="container">
     {{set c = charData}}
 
