@@ -1198,6 +1198,21 @@ export class zzz_panel_list extends plugin {
     }
   }
 
+  /**
+   * accept 早于所有规则执行。ZZZ-Plugin 的极限面板桥接也是 accept（priority -30000），
+   * 只靠 rule priority 永远抢不过，所以这里在更早的 -40000 直接截胡极限面板。
+   */
+  async accept(e) {
+    const msg = String(e?.msg || '')
+    if (!EXTREME_REG.test(msg)) return false
+    const m = msg.match(EXTREME_REG)
+    const role = this.resolvePanelRole(m?.[1] || '')
+    if (!role) return false
+    this.e = e
+    await this.panelExtreme(e)
+    return 'return'
+  }
+
   async panelList(e) {
     const uid = this.getZzzUid(e)
     if (!uid) return e.reply('请先绑定绝区零账号')
