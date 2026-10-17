@@ -1250,12 +1250,10 @@ export class zzz_panel_list extends plugin {
   /**
    * 打一次角色列表接口，原样返回 data 部分，不做归一化。
    *
-   * 契约（ZZZ-Plugin/dist/lib/mysapi.js getFinalData，勿凭印象改）：
-   *   1. 内部已调用 checkCode()，命中 1034/10035/10041 时会走 mys.req.err 过码链；
-   *   2. 成功返回 **res.data**，不是整个响应 —— 拿不到 res.retcode；
-   *   3. 失败（含过码未通过）返回 **null**。
-   * 第一版把返回值当整个响应去读 res.retcode，于是永远拿到 undefined，
-   * 误报「接口返回 retcode=undefined」。
+   * 契约（本插件 system/api.js 的 ZZZ record 接口）：
+   *   1. api() 内部会处理 1034/10035 过码链；
+   *   2. 成功返回 **res.data**；
+   *   3. 失败返回错误字符串或空数据，由调用方转成 __error。
    */
   async fetchRaw(e, uid, server, ck) {
     try {
