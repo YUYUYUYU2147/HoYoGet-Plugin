@@ -24,6 +24,7 @@ zzz_panel_accel_interval: 400
 
 #绝区零自研面板数据探针（米游社更新面板）：把真实接口响应原样落盘，供写归一化用。
 # 默认 -100，压过 miao-plugin 与原神/ZZZ-Plugin 的同名面板指令，确保本插件先抢到。
+zzz_panel_allow_original: true
 zzz_panel_list_priority: -100
 
 # 绝区零单角色面板/伤害详情页的随机背景图；留空则使用纯黑底。

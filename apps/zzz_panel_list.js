@@ -1121,6 +1121,7 @@ const DETAIL_REG = new RegExp(`${PREFIX_REG}(?!更新|刷新)(.+?)面板$`)
 const DAMAGE_REG = new RegExp(`${PREFIX_REG}(?!更新|刷新)(.+?)伤害\\s*(\\d*)$`)
 const DETAIL_REG_OLD = /^(?:米游社|%|#?绝区零)面板\s+(.+)$/
 const HELP_REG = /^米游社面板$/
+const ORIGINAL_REG = /^(?:米游社|#?绝区零)原图$/
 
 export class zzz_panel_list extends plugin {
   constructor() {
@@ -1136,6 +1137,7 @@ export class zzz_panel_list extends plugin {
         { reg: DETAIL_REG.source, fnc: 'panelDetail' },
         { reg: DETAIL_REG_OLD.source, fnc: 'panelDetail' },
         { reg: HELP_REG.source, fnc: 'panelDetailHelp' },
+        { reg: ORIGINAL_REG.source, fnc: 'panelOriginal' },
       ],
     })
   }
@@ -1240,7 +1242,22 @@ export class zzz_panel_list extends plugin {
       let gamePlayer = null
       try { gamePlayer = await this.fetchPlayer(e, uid, ck) } catch { /* 取不到游戏昵称就回落 QQ */ }
       const img = await render('zzz_panel/detail', { ...detail, footer, bgImage: getPanelBg(), ...getPlayerBadge(e, gamePlayer) }, { e, ret: true })
-      return img
+      const sent = await e.reply(img)
+      // 缓存面板用的角色原图，供「%原图」直接取回
+      const roleIcon = detail.charData?.role_icon
+      if (roleIcon) {
+        const mid = sent?.message_id || sent?.data?.message_id || sent?.message_id
+        if (mid && typeof redis !== 'undefined') {
+          redis.set(`ZZZ:PANEL:IMAGE:${mid}`, roleIcon, { EX: 3600 * 3 }).catch(() => {})
+        }
+        if (typeof redis !== 'undefined') {
+          const key = e.group_id
+            ? `ZZZ:PANEL:IMAGE:GROUP:${e.group_id}:USER:${e.user_id}`
+            : `ZZZ:PANEL:IMAGE:USER:${e.user_id}`
+          redis.set(key, roleIcon, { EX: 3600 * 3 }).catch(() => {})
+        }
+      }
+      return sent
     } catch (err) {
       logger.error?.(`[HoYoGet][zzz_panel] 详情渲染失败：${err?.message || err}`)
       return e.reply([
@@ -1249,6 +1266,27 @@ export class zzz_panel_list extends plugin {
         `详情渲染失败：${err?.message || err}`,
       ])
     }
+  }
+
+  /** 「%原图」：取回面板实际使用的角色原图（data URI），不是截图 */
+  async panelOriginal(e) {
+    if (config().zzz_panel_allow_original === false) return e.reply('已禁止获取绝区零面板原图')
+    if (!e.isMaster) return e.reply('仅限主人获取绝区零面板原图')
+    let id = e.source?.message_id || e.source?.id || ''
+    try {
+      const src = e.getReply ? await e.getReply() : null
+      id = src?.message_id || src?.data?.message_id || id
+    } catch { /* 取不到引用就试最近一次 */ }
+    let image = ''
+    if (id && typeof redis !== 'undefined') image = (await redis.get(`ZZZ:PANEL:IMAGE:${id}`)) || ''
+    if (!image && typeof redis !== 'undefined') {
+      const key = e.group_id
+        ? `ZZZ:PANEL:IMAGE:GROUP:${e.group_id}:USER:${e.user_id}`
+        : `ZZZ:PANEL:IMAGE:USER:${e.user_id}`
+      image = (await redis.get(key)) || ''
+    }
+    if (!image) return e.reply('未找到原图，请引用要查看的面板图片')
+    return e.reply(segment.image(image))
   }
 
   /** 详情指令无参时的用法提示 */
@@ -1260,6 +1298,7 @@ export class zzz_panel_list extends plugin {
       '　　　米游社3面板',
       '（序号看「米游社更新面板」列表从左到右第几个）',
       '',
+      '取回面板角色原图：%原图（引用面板消息）',
       '看某一招的详细计算：米游社<角色>伤害<招数>',
       '示例：米游社艾莲伤害3',
       '　　　米游社艾莲伤害（不带序号＝伤害最高那招）',
