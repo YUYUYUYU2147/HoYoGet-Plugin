@@ -119,16 +119,19 @@ function zzzHeaders(e, ck, query = '') {
   const DS = crypto.createHash('md5').update(`salt=${salt}&t=${t}&r=${r}&b=&q=${query}`).digest('hex')
   const headers = {
     'x-rpc-app_version': '2.73.1',
-    'x-rpc-client_type': '5',
-    'x-rpc-device_id': String(fp.device_id || mhy.getDeviceGuid()).toUpperCase(),
+    'x-rpc-sys_version': '12',
+    'x-rpc-client_type': '2',
+    'x-rpc-channel': 'mihoyo',
     'User-Agent': 'Mozilla/5.0 (Linux; Android 12; XQ-AT52 Build/58.2.A.7.93; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/100.0.4896.88 Mobile Safari/537.36 miHoYoBBS/2.73.1',
-    Origin: 'https://webstatic.mihoyo.com',
+    Origin: 'https://act.mihoyo.com',
     'X-Requested-With': 'com.mihoyo.hyperion',
-    Referer: 'https://webstatic.mihoyo.com/',
+    Referer: 'https://act.mihoyo.com/',
     Accept: 'application/json, text/plain, */*',
     DS: `${t},${r},${DS}`,
     Cookie: ck || '',
   }
+  // 设备信息只在用户绑定过设备时带；随便生成一个 device_id 反而更容易触发风控
+  if (fp.device_id) headers['x-rpc-device_id'] = String(fp.device_id)
   if (fp.fp) headers['x-rpc-device_fp'] = fp.fp
   return headers
 }
@@ -148,7 +151,7 @@ async function zzzAutoVerify(e, ck) {
     const res = await fetch(addr, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cookie: ckStringOf(ck), deviceId, deviceFp, clientType: '2' }),
+      body: JSON.stringify({ cookie: ckStringOf(ck), deviceId, deviceFp, clientType: '2', challengeGame: '8' }),
       signal: AbortSignal.timeout(360000),
     }).then(r => r.json())
     if (res?.data?.result === 'ok' && res.data.challenge) {
@@ -179,16 +182,24 @@ async function zzzGet(e, uid, ck, type, query, extraHeaders = {}, retried = fals
   }
   if (Number(json?.retcode) !== 0) {
     const code = Number(json?.retcode)
-    if ([1034, 10035, 10041].includes(code)) {
+    // 10041 不是滑块验证码，是设备指纹风控：必须带绑定过的 device_id/device_fp 才能过
+    if (code === 10041) {
+      const fpFile = `./plugins/HoYoGet-Plugin/data/fp/${e?.user_id}.yaml`
+      const bound = fs.existsSync(fpFile)
+      throw new Error(bound
+        ? '米游社风控（10041）：设备指纹未通过，请重新绑定常用设备后再试（#绑定设备帮助）'
+        : '米游社风控（10041）：尚未绑定设备指纹。请先发 #米哈游开启设备绑定，再按 #绑定设备帮助 绑定常用设备')
+    }
+    if ([1034, 10035].includes(code)) {
       if (!retried) {
         const challenge = await zzzAutoVerify(e, ck)
         if (challenge) {
-          // 过码成功后立刻重打有时仍是 10041（风控还没放行），按梯度等一会儿再试
+          // 过码成功后立刻重打有时仍是验证码（风控还没放行），按梯度等一会儿再试
           let lastErr = null
           for (const gap of [0, 3000, 8000, 15000]) {
             if (gap) await new Promise(r => setTimeout(r, gap))
             try {
-              return await zzzGet(e, uid, ck, type, query, { ...extraHeaders, 'x-rpc-challenge': challenge }, true)
+              return await zzzGet(e, uid, ck, type, query, { ...extraHeaders, 'x-rpc-challenge': challenge, 'x-rpc-challenge_game': '8' }, true)
             } catch (err) {
               lastErr = err
               if (!/验证码|风控/.test(String(err?.message || err))) throw err
@@ -197,7 +208,7 @@ async function zzzGet(e, uid, ck, type, query, extraHeaders = {}, retried = fals
           if (lastErr) throw lastErr
         }
       }
-      throw new Error(`米游社验证码/风控（${code}），自动过码未通过，请稍后重试或手动完成验证`)
+      throw new Error(`米游社验证码（${code}），自动过码未通过，请稍后重试或手动完成验证`)
     }
     if ([-100, -101, -111, 10001].includes(code)) throw new Error(`CK 失效或未登录（${code}），请刷新 CK / 重新扫码`)
     throw new Error(`接口返回 ${code}：${json?.message || '未知错误'}`)

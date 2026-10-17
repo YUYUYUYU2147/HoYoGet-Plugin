@@ -127,13 +127,15 @@ def ds2(query='', body=''):
     return f'{t},{r},{hashlib.md5(f"salt={SALT_GT}&t={t}&r={r}&b={body}&q={query}".encode()).hexdigest()}'
 
 
-def gt_headers(cookie, device_id, device_fp):
+def gt_headers(cookie, device_id, device_fp, client_type=None, challenge_game=None):
     """
     过码请求的头。
 
     device_id / device_fp 一律用调用方传进来的那套 —— 过码要跟重签是同一个身份，
-    不然米游社认不出来。x-rpc-challenge_game 也不能少。
+    不然米游社认不出来。x-rpc-challenge_game 也不能少；绝区零是 8，原神/星铁是 2/6。
     """
+    ct = str(client_type or CLIENT_TYPE)
+    cg = str(challenge_game or CHALLENGE_GAME)
     return {
         'Cookie': cookie,
         'User-Agent': UA,
@@ -141,40 +143,43 @@ def gt_headers(cookie, device_id, device_fp):
         'Origin': 'https://webstatic.mihoyo.com',
         'Referer': 'https://webstatic.mihoyo.com',
         'x-rpc-app_version': GT_APP_VERSION,
-        'x-rpc-client_type': str(CLIENT_TYPE),
+        'x-rpc-client_type': ct,
         'x-rpc-device_id': str(device_id or ''),
         'x-rpc-device_fp': str(device_fp or ''),
-        'x-rpc-challenge_game': str(CHALLENGE_GAME),
+        'x-rpc-challenge_game': cg,
         'Accept': 'application/json, text/plain, */*',
     }
 
 
-def app_paths():
+def app_paths(client_type=None):
     """App 端（client_type=2）与网页端（5）的接口路径不同，必须成套用"""
-    if str(CLIENT_TYPE) == '2':
+    if str(client_type or CLIENT_TYPE) == '2':
         return 'misc/api/createVerification', 'misc/api/verifyVerification'
-    return 'misc/wapi/createVerification', 'misc/wapi/verifyVerfication'
+    return 'misc/wapi/createVerification', 'misc/wapi/verifyVerification'
 
 
-def create_verification(cookie, device_id, device_fp):
-    path, _ = app_paths()
-    query = 'is_high=false' if str(CLIENT_TYPE) == '2' else 'gids=2&is_high=false'
-    headers = gt_headers(cookie, device_id, device_fp)
+def create_verification(cookie, device_id, device_fp, client_type=None, challenge_game=None):
+    ct = str(client_type or CLIENT_TYPE)
+    path, _ = app_paths(ct)
+    query = 'is_high=false' if ct == '2' else 'gids=2&is_high=false'
+    headers = gt_headers(cookie, device_id, device_fp, ct, challenge_game)
     headers['DS'] = ds2(query)
     with httpx.Client(timeout=12) as c:
         res = c.get(f'{BBS}/{path}?{query}', headers=headers)
     return res.json()
 
 
-def verify_verification(cookie, challenge, validate, seccode, device_id, device_fp):
-    _, path = app_paths()
+def verify_verification(cookie, challenge, validate, seccode, device_id, device_fp,
+                        client_type=None, challenge_game=None):
+    ct = str(client_type or CLIENT_TYPE)
+    _, path = app_paths(ct)
     body = {
         'geetest_challenge': challenge,
         'geetest_validate': validate,
         'geetest_seccode': seccode,
     }
     text = json.dumps(body, separators=(',', ':'))
-    headers = gt_headers(cookie, device_id, device_fp)
+    headers = gt_headers(cookie, device_id, device_fp, ct, challenge_game)
     headers['DS'] = ds2('', text)
     headers['Content-Type'] = 'application/json;charset=UTF-8'
     with httpx.Client(timeout=12) as c:
@@ -196,14 +201,14 @@ def _get_solver():
     return _solver
 
 
-def solve_once(cookie, device_id, device_fp):
+def solve_once(cookie, device_id, device_fp, client_type=None, challenge_game=None):
     """
     跑完一轮完整过码，返回 validate 信息；任何一步失败返回 None。
 
     极验的 challenge 是一次性的，所以不能分步重试 —— 中途失败这轮就作废，
     由上层重新申请一个新的。
     """
-    cv = create_verification(cookie, device_id, device_fp)
+    cv = create_verification(cookie, device_id, device_fp, client_type, challenge_game)
     gt = (cv.get('data') or {}).get('gt')
     origin_challenge = (cv.get('data') or {}).get('challenge')
     if not gt or not origin_challenge:
@@ -232,7 +237,7 @@ def solve_once(cookie, device_id, device_fp):
     return {'validate': validate, 'challenge': new_challenge, 'distance': distance}
 
 
-def solve(cookie, device_id, device_fp):
+def solve(cookie, device_id, device_fp, client_type=None, challenge_game=None):
     """整次请求：最多试 MAX_ROUNDS 轮，成功后向米游社回执换 x-rpc-challenge"""
     tripped, left = breaker_state()
     if tripped:
@@ -244,11 +249,12 @@ def solve(cookie, device_id, device_fp):
     for round_no in range(1, MAX_ROUNDS + 1):
         t0 = time.time()
         try:
-            got = solve_once(cookie, device_id, device_fp)
+            got = solve_once(cookie, device_id, device_fp, client_type, challenge_game)
             if got:
                 res = verify_verification(
                     cookie, got['challenge'], got['validate'],
-                    f"{got['validate']}|jordan", device_id, device_fp)
+                    f"{got['validate']}|jordan", device_id, device_fp,
+                    client_type, challenge_game)
                 challenge = (res.get('data') or {}).get('challenge', '')
                 if res.get('retcode') == 0 and challenge:
                     with _lock:
@@ -320,6 +326,8 @@ class Handler(BaseHTTPRequestHandler):
         # 调用方指定身份就用它的；没指定才用本机默认值
         device_id = (body.get('deviceId') or '').strip() or None
         device_fp = (body.get('deviceFp') or '').strip() or None
+        client_type = (body.get('clientType') or '').strip() or None
+        challenge_game = (body.get('challengeGame') or '').strip() or None
 
         # 批量模式：一次给多个 ck，并发跑
         if isinstance(body.get('cookies'), list):
@@ -332,7 +340,7 @@ class Handler(BaseHTTPRequestHandler):
 
             def work(i, ck):
                 with sem:
-                    results[i] = solve(ck, device_id, device_fp)
+                    results[i] = solve(ck, device_id, device_fp, client_type, challenge_game)
 
             for i, ck in enumerate(cks):
                 t = threading.Thread(target=work, args=(i, ck))
@@ -348,7 +356,7 @@ class Handler(BaseHTTPRequestHandler):
         if not cookie:
             return self._reply(400, {'error': 'missing cookie'})
         log('收到过码请求')
-        r = solve(cookie, device_id, device_fp)
+        r = solve(cookie, device_id, device_fp, client_type, challenge_game)
         if not r.get('ok'):
             # 熔断拒的也要把 reason 透出去，调用方才能区分「服务端主动拒」和「真解不出来」
             if r.get('reason') == 'breaker open':
