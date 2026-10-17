@@ -65,8 +65,12 @@ function parseAfterOps(fn) {
 async function loadCalcSkills(calcFile) {
   try {
     const mod = await import(pathToFileURL(calcFile).href)
-    if (!Array.isArray(mod.skills)) return null
-    return mod.skills
+    // 老角色是 `export const skills = [...]`，新角色改成 `export default { skills: [...] }`
+    const skills = Array.isArray(mod.skills)
+      ? mod.skills
+      : (Array.isArray(mod.default?.skills) ? mod.default.skills : null)
+    if (!skills) return null
+    return skills
       .filter(s => s && s.type && typeof s.type === 'string')
       .map(s => ({
         name: String(s.name || '').trim(),

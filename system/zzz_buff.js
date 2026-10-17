@@ -24,13 +24,18 @@ const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 const DATA_FILE = path.join(PLUGIN_ROOT, 'system', 'default', 'zzz_buff.json')
 
 let TABLE = null
+let TABLE_MTIME = 0
 function loadTable() {
-  if (TABLE) return TABLE
+  // 按文件 mtime 缓存：重跑提取脚本后无需重启即可读到新表
+  let mtime = 0
+  try { mtime = fs.statSync(DATA_FILE).mtimeMs } catch { /* 文件缺失时按 0 处理 */ }
+  if (TABLE && mtime === TABLE_MTIME) return TABLE
   try {
     TABLE = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'))
   } catch {
     TABLE = null
   }
+  TABLE_MTIME = mtime
   return TABLE
 }
 

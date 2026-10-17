@@ -2,7 +2,7 @@
  "_comment": "绝区零技能倍率数据。数值来源为社区依据官方数值整理的公开数据表（ZZZ-Plugin dist/model/damage/character/*/data.json），非米游社接口返回。仅为数值，不含其计算引擎与评分实现。",
  "_regenerate": "node tools/extract_zzz_skill_rate.mjs（需已安装 ZZZ-Plugin）",
  "_ops": "ops 是多段技能的组合关系：{op:\"add\",key} 表示该招伤害还要加上 key 那一招的完整伤害；{op:\"x\",n} 表示整条伤害乘 n。取自 calc.js 的 after 回调。",
- "generatedAt": "2026-10-17T08:31:30.002Z",
+ "generatedAt": "2026-10-17T09:18:45.044Z",
  "count": 45,
  "skillCount": 382,
  "chars": {
@@ -1490,7 +1490,7 @@
    "fullName": "千夏",
    "skills": [
     {
-     "name": "",
+     "name": "普攻：鬼马流星锤四段",
      "key": "AP4",
      "maxLevel": 16,
      "rates": [
@@ -1513,7 +1513,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "闪避反击：妄想三振",
      "key": "CF",
      "maxLevel": 16,
      "rates": [
@@ -1536,7 +1536,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "支援突击：弹跳练习",
      "key": "LT",
      "maxLevel": 16,
      "rates": [
@@ -1559,7 +1559,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强E：泡泡糖轰炸",
      "key": "EQ",
      "maxLevel": 16,
      "rates": [
@@ -1582,7 +1582,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "长按强E：特别拍照技巧",
      "key": "EQP",
      "maxLevel": 16,
      "rates": [
@@ -1602,10 +1602,13 @@
       18.07,
       18.823,
       19.576
-     ]
+     ],
+     "ops": [],
+     "isMain": true,
+     "isHide": false
     },
     {
-     "name": "",
+     "name": "长按强E（协同）：特别拍照技巧",
      "key": "EQX",
      "maxLevel": 16,
      "rates": [
@@ -1628,7 +1631,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "连携技：别惹猫咪",
      "key": "RL",
      "maxLevel": 16,
      "rates": [
@@ -1651,7 +1654,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "终结技：通通砸碎！",
      "key": "RZ",
      "maxLevel": 16,
      "rates": [
@@ -1842,7 +1845,7 @@
    "fullName": "叶瞬光",
    "skills": [
     {
-     "name": "",
+     "name": "普攻：明心境·分水行三段",
      "key": "ASF3",
      "maxLevel": 16,
      "rates": [
@@ -1865,7 +1868,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "普攻：明心境·斩流光二段",
      "key": "ASZ2",
      "maxLevel": 16,
      "rates": [
@@ -1888,7 +1891,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "普攻：明心境·斩流光 灭[无剑势]",
      "key": "ASMS",
      "maxLevel": 16,
      "rates": [
@@ -1911,7 +1914,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "普攻：明心境·斩流光 灭[有剑势]",
      "key": "ASMP",
      "maxLevel": 16,
      "rates": [
@@ -1934,7 +1937,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "普攻：明心境·斩流光 极",
      "key": "ASJ",
      "maxLevel": 16,
      "rates": [
@@ -1957,7 +1960,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "闪避反击：燕袭",
      "key": "CF",
      "maxLevel": 16,
      "rates": [
@@ -1980,7 +1983,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "支援突击：明心境·抱一",
      "key": "LTS",
      "maxLevel": 16,
      "rates": [
@@ -2003,7 +2006,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强E：定风波",
      "key": "EQP",
      "maxLevel": 16,
      "rates": [
@@ -2026,7 +2029,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强E：明心境·飞光[6剑势]",
      "key": "EQSF6",
      "maxLevel": 16,
      "rates": [
@@ -2049,7 +2052,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强E：明心境·归尘",
      "key": "EQSG",
      "maxLevel": 16,
      "rates": [
@@ -2072,7 +2075,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "连携技：明心境·掣惊雷",
      "key": "RLS",
      "maxLevel": 16,
      "rates": [
@@ -2095,7 +2098,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "终结技：逐云惊霆",
      "key": "RZP",
      "maxLevel": 16,
      "rates": [
@@ -2118,7 +2121,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "终结技：斩妄开天",
      "key": "RZS",
      "maxLevel": 16,
      "rates": [
@@ -2138,7 +2141,10 @@
       67.295,
       70.099,
       72.903
-     ]
+     ],
+     "ops": [],
+     "isMain": true,
+     "isHide": false
     }
    ]
   },
@@ -2741,7 +2747,7 @@
    "fullName": "星徽·比利·奇德",
    "skills": [
     {
-     "name": "",
+     "name": "普通攻击：最高马力星光",
      "key": "APZ",
      "maxLevel": 16,
      "rates": [
@@ -2761,10 +2767,18 @@
       22.769,
       23.718,
       24.667
-     ]
+     ],
+     "ops": [
+      {
+       "op": "add",
+       "key": "Y6"
+      }
+     ],
+     "isMain": false,
+     "isHide": false
     },
     {
-     "name": "",
+     "name": "普通攻击：骑士斗技",
      "key": "AP4",
      "maxLevel": 16,
      "rates": [
@@ -2787,7 +2801,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "冲刺攻击：星-徽-惩-戒",
      "key": "CC",
      "maxLevel": 16,
      "rates": [
@@ -2810,7 +2824,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "闪避反击：决斗之王",
      "key": "CFJ",
      "maxLevel": 16,
      "rates": [
@@ -2833,7 +2847,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "闪避反击：尾焰全旋",
      "key": "CFW",
      "maxLevel": 16,
      "rates": [
@@ -2856,7 +2870,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "特殊技：动力压制",
      "key": "EPD",
      "maxLevel": 16,
      "rates": [
@@ -2879,7 +2893,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "特殊技：脱缰",
      "key": "EPT",
      "maxLevel": 16,
      "rates": [
@@ -2902,7 +2916,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化特殊技：孤轮特技",
      "key": "EQG",
      "maxLevel": 16,
      "rates": [
@@ -2925,7 +2939,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化特殊技：抓地轮毂",
      "key": "EQZ",
      "maxLevel": 16,
      "rates": [
@@ -2948,7 +2962,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化特殊技：摇曳步伐",
      "key": "EQY",
      "maxLevel": 16,
      "rates": [
@@ -2971,7 +2985,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "快速支援：星徽-羁绊之力",
      "key": "LK",
      "maxLevel": 16,
      "rates": [
@@ -2994,7 +3008,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "支援突击：反派退场",
      "key": "LT",
      "maxLevel": 16,
      "rates": [
@@ -3017,7 +3031,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "连携技：骑士漫步",
      "key": "RL",
      "maxLevel": 16,
      "rates": [
@@ -3040,7 +3054,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "终结技：骑士飞踢",
      "key": "RZ",
      "maxLevel": 16,
      "rates": [
@@ -3060,7 +3074,15 @@
       34.745,
       36.193,
       37.641
-     ]
+     ],
+     "ops": [
+      {
+       "op": "add",
+       "key": "Y6"
+      }
+     ],
+     "isMain": false,
+     "isHide": false
     }
    ]
   },
@@ -6043,7 +6065,7 @@
    "fullName": "狛野真斗",
    "skills": [
     {
-     "name": "",
+     "name": "普攻：炽风·胧切四段",
      "key": "AQ4",
      "maxLevel": 16,
      "rates": [
@@ -6066,7 +6088,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "闪避反击：曜刃·掠阵",
      "key": "CF",
      "maxLevel": 16,
      "rates": [
@@ -6089,7 +6111,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "特殊技：归烬",
      "key": "EP",
      "maxLevel": 16,
      "rates": [
@@ -6112,7 +6134,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化特殊技：归烬·天坠",
      "key": "EQ",
      "maxLevel": 16,
      "rates": [
@@ -6135,7 +6157,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "支援突击：孤影·断獠",
      "key": "LTT",
      "maxLevel": 16,
      "rates": [
@@ -6155,10 +6177,18 @@
       3.643,
       3.795,
       3.947
-     ]
+     ],
+     "ops": [
+      {
+       "op": "add",
+       "key": "LTL"
+      }
+     ],
+     "isMain": false,
+     "isHide": false
     },
     {
-     "name": "",
+     "name": "支援突击：孤影·断獠连打",
      "key": "LTL",
      "maxLevel": 16,
      "rates": [
@@ -6178,10 +6208,13 @@
       8.805,
       9.172,
       9.539
-     ]
+     ],
+     "ops": [],
+     "isMain": false,
+     "isHide": true
     },
     {
-     "name": "",
+     "name": "连携技：极炽炎爆",
      "key": "RL",
      "maxLevel": 16,
      "rates": [
@@ -6204,7 +6237,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "终结技：无想荒魂",
      "key": "RQ",
      "maxLevel": 16,
      "rates": [
@@ -6939,7 +6972,7 @@
    "fullName": "般岳",
    "skills": [
     {
-     "name": "",
+     "name": "普攻：峥嵘四段",
      "key": "AA4",
      "maxLevel": 16,
      "rates": [
@@ -6962,7 +6995,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "普攻：崔巍四段",
      "key": "AE4",
      "maxLevel": 16,
      "rates": [
@@ -6985,7 +7018,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "普攻：焚身",
      "key": "AFS",
      "maxLevel": 16,
      "rates": [
@@ -7008,7 +7041,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "普攻：倾山",
      "key": "AQS",
      "maxLevel": 16,
      "rates": [
@@ -7031,7 +7064,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "普攻：摧岳",
      "key": "ACY",
      "maxLevel": 16,
      "rates": [
@@ -7054,7 +7087,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "闪避反击：扬砾",
      "key": "CF",
      "maxLevel": 16,
      "rates": [
@@ -7077,7 +7110,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化特殊技：地动",
      "key": "EQAEA",
      "maxLevel": 16,
      "rates": [
@@ -7100,7 +7133,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化特殊技：山摇",
      "key": "EQEEA",
      "maxLevel": 16,
      "rates": [
@@ -7123,7 +7156,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化特殊技：论道",
      "key": "EQEAE",
      "maxLevel": 16,
      "rates": [
@@ -7146,7 +7179,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化特殊技：狮子吼",
      "key": "EQAAE",
      "maxLevel": 16,
      "rates": [
@@ -7169,7 +7202,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化特殊技：山摇·怒",
      "key": "EQAEAEEA",
      "maxLevel": 16,
      "rates": [
@@ -7192,7 +7225,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化特殊技：狮子吼·怒",
      "key": "EQEAEAAE",
      "maxLevel": 16,
      "rates": [
@@ -7215,7 +7248,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "支援突击：昂霄",
      "key": "LTAX",
      "maxLevel": 16,
      "rates": [
@@ -7238,7 +7271,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "支援突击：冲霄",
      "key": "LTCX",
      "maxLevel": 16,
      "rates": [
@@ -7261,7 +7294,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "连携技：怒焰",
      "key": "RL",
      "maxLevel": 16,
      "rates": [
@@ -7284,7 +7317,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "终结技：撼天动地",
      "key": "RZ",
      "maxLevel": 16,
      "rates": [

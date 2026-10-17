@@ -38,7 +38,11 @@ async function loadBuffs(file) {
   if (/^\s*(type|value|element)\s*:\s*[,}]/m.test(src)) return { buffs: null, template: true }
   try {
     const mod = await import(pathToFileURL(file).href)
-    return { buffs: Array.isArray(mod.buffs) ? mod.buffs : null, template: false }
+    // 兼容两种导出：`export const buffs = [...]` 与 `export default { buffs: [...] }`
+    const buffs = Array.isArray(mod.buffs)
+      ? mod.buffs
+      : (Array.isArray(mod.default?.buffs) ? mod.default.buffs : null)
+    return { buffs, template: false }
   } catch (e) {
     return { buffs: null, template: true, error: String(e).split('\n')[0] }
   }
@@ -120,7 +124,8 @@ const chars = {}
       if (!src) continue
       const nb = normBuff(b, skipped, `角色${d}:${b.name}`)
       if (!nb) continue
-      if (src === core && !nb.range) continue // 无 range 的核心被动无法定位生效技能，跳过
+      // 无 range 的核心被动按「全技能生效」处理：条件触发的 value 通常是函数，
+      // 已在 normValue 阶段跳过；静态数值且没写 range 的，视为常驻。
       src.push({ name: b.name, ...nb })
     }
     // 档位值（如 核心被动 value:'T' → 随技能等级），从 data.json 取完整档位表

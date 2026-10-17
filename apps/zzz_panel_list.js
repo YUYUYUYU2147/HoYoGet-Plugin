@@ -176,7 +176,7 @@ function calcDamageAreas(bp, level, extra = {}) {
 const SKILL_PREFIX_RE = /^(普通攻击|强化普攻|蓄力普攻|蓄力攻击|普攻|强化特殊技|特殊技|强E|闪避反击|冲刺攻击|闪避|连携技|终结技|核心被动|额外能力|快速支援|招架支援|支援突击|支援)\s*[：:]\s*/
 const skillCore = (s) => String(s || '')
   .replace(SKILL_PREFIX_RE, '')
-  .replace(/[\s·・（）()【】「」]/g, '')
+  .replace(/[\s·・（）()【】「」\[\]［］]/g, '')
   .toLowerCase()
 function skillCat(text) {
   const t = String(text || '')

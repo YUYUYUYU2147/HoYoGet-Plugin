@@ -20,16 +20,20 @@ const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 const DATA_FILE = path.join(PLUGIN_ROOT, 'system', 'default', 'zzz_skill_rate.json')
 
 let cache = null
+let cacheMtime = 0
 
-/** 读本地倍率表（进程内缓存一次） */
+/** 读本地倍率表（按文件 mtime 缓存，重跑提取脚本后无需重启） */
 export function loadSkillRateTable() {
-  if (cache) return cache
+  let mtime = 0
+  try { mtime = fs.statSync(DATA_FILE).mtimeMs } catch { /* 文件缺失时按 0 处理 */ }
+  if (cache && mtime === cacheMtime) return cache
   try {
     cache = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8')) || { chars: {} }
   } catch (err) {
     logger.warn?.('[HoYoGet][zzz_skill_rate] 读本地倍率表失败：', err?.message || err)
     cache = { chars: {} }
   }
+  cacheMtime = mtime
   return cache
 }
 
