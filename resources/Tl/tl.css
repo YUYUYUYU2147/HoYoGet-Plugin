@@ -359,7 +359,7 @@ strong {
   margin-top: -8px;
 }
 
-/* 顶部游戏列表限制在左侧，避免崩坏3标签被右上角小花火遮挡 */
+/* 顶部游戏列表限制在左侧，避免崩坏3标签被右上角立绘遮挡 */
 .zi_ .game-tags {
   position: relative;
   z-index: 2;
@@ -368,7 +368,7 @@ strong {
   align-items: center;
   gap: 6px;
   margin-bottom: 4px;
-  padding-right: 118px; /* 给右边小花火留空间 */
+  padding-right: 118px; /* 给右边立绘留空间 */
 }
 
 .zi_ .game_label {

@@ -21,7 +21,7 @@ import { yaml, sleep, makeForwardMsg, pluginPriority } from '#HoYoGet';
 
 const INVALID_FILE = './plugins/HoYoGet-Plugin/data/invalid_stuid.json';
 const FILE_SOURCES = [
-    { tag: '小花火', dir: './plugins/HoYoGet-Plugin/data/Stoken' },
+    { tag: '米哈游', dir: './plugins/HoYoGet-Plugin/data/Stoken' },
     { tag: '逍遥', dir: './plugins/xiaoyao-cvs-plugin/data/yaml' },
 ];
 
@@ -131,7 +131,7 @@ function judgeFiles(items, invalid) {
 export class BindingClean extends plugin {
     constructor(e) {
         super({
-            name: '[小花火]清理无效绑定',
+            name: '[米哈游]清理无效绑定',
             dsc: '体检并清理已失效的米游社绑定（仅主人）',
             event: 'message',
             priority: pluginPriority('sign', -26),
@@ -140,12 +140,12 @@ export class BindingClean extends plugin {
                 // 「无效+账户/ck/记录」这套说法，别名里带上会把那几条抢走
                 // （实测 17:18 就被抢过一次）。
                 {
-                    reg: '^#*(小花火|xhh)*(清理|清除|删除)(无效|失效|过期|无用)(绑定|账号|帐号)(列表|体检|检查)?$',
+                    reg: '^#*米哈游*(清理|清除|删除)(无效|失效|过期|无用)(绑定|账号|帐号)(列表|体检|检查)?$',
                     fnc: 'scan',
                     permission: 'master',
                 },
                 {
-                    reg: '^#*(小花火|xhh)*(清理|清除|删除)(无效|失效|过期|无用)(绑定|账号|帐号)\s*(确认|确定|yes|ok)?$',
+                    reg: '^#*米哈游*(清理|清除|删除)(无效|失效|过期|无用)(绑定|账号|帐号)\s*(确认|确定|yes|ok)?$',
                     fnc: 'clean',
                     permission: 'master',
                 },

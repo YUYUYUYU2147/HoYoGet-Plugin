@@ -14,13 +14,13 @@ function latestGsVersion(data = {}) {
 export class gs_logs extends plugin {
   constructor() {
     super({
-      name: '[小花火]原神卡池历史',
+      name: '[米哈游]原神卡池历史',
       dsc: '',
       event: 'message',
       priority: pluginPriority('gs_logs', -99),
       rule: [
         {
-          reg: '^(?!#*(?:小花火)?原神(?:当前|本期|当期)?卡池$)#*(.*)卡池$',
+          reg: '^(?!#*(?:米哈游)?原神(?:当前|本期|当期)?卡池$)#*(.*)卡池$',
           fnc: 'gslogs',
         },
         {
@@ -36,7 +36,7 @@ export class gs_logs extends plugin {
       .replace(/[＃井]/g, '#')
       .replace(/\s+/g, '');
     // 兜底：旧历史卡池如果抢到“原神卡池/#原神卡池”，直接转统一卡池图片。
-    if (/^#*(?:小花火)?原神(?:当前|本期|当期)?卡池$/.test(normalized)) {
+    if (/^#*(?:米哈游)?原神(?:当前|本期|当期)?卡池$/.test(normalized)) {
       e.msg = normalized;
       return new xhh_gacha_pool(e).gsCurrentPool(e);
     }
@@ -86,7 +86,7 @@ export class gs_logs extends plugin {
     }
     const currentVersion = latestGsVersion(await yaml.get(path));
     if (!msg.length && currentVersion && type.replace(/上半|下半/g, '') === currentVersion) {
-      return e.reply(`原神当前版本为 ${currentVersion}，但 xhh 的原神历史卡池库还没有录入 ${type} 的具体UP信息。`);
+      return e.reply(`原神当前版本为 ${currentVersion}，但本插件的原神历史卡池库还没有录入 ${type} 的具体UP信息。`);
     }
     if (!msg.length) return false;
     if (msg.length > 10) msg = await makeForwardMsg(e, msg, type + '卡池');

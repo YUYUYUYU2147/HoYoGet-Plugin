@@ -265,17 +265,17 @@ async function sendGroup(groupId, message, event = null) {
 export class stamina_remind extends plugin {
   constructor() {
     super({
-      name: '[小花火]体力自动推送',
+      name: '[米哈游]体力自动推送',
       dsc: '四游戏体力达到阈值后自动推送',
       event: 'message',
       priority: pluginPriority('stamina_remind', 100),
       rule: [
         {
-          reg: '^#*(小花火|xhh)(开启|关闭)(原神|星铁|星穹铁道|绝区零|崩三|崩坏3|崩坏三)?体力推送$',
+          reg: '^#*米哈游(开启|关闭)(原神|星铁|星穹铁道|绝区零|崩三|崩坏3|崩坏三)?体力推送$',
           fnc: 'toggleStaminaPush',
         },
         {
-          reg: '^#*(小花火|xhh)体力推送测试$',
+          reg: '^#*米哈游体力推送测试$',
           fnc: 'pushTest',
         },
       ],
@@ -284,7 +284,7 @@ export class stamina_remind extends plugin {
     this.tl = new TL();
     this.task = {
       cron: '0 * * * * *',
-      name: '[小花火]体力自动推送检查',
+      name: '[米哈游]体力自动推送检查',
       fnc: () => this.checkAndPush(),
       log: false,
     };
@@ -471,7 +471,7 @@ export class stamina_remind extends plugin {
 
   async toggleStaminaPush(e) {
     if (!e.isGroup) return e.reply('请在需要接收体力推送的群聊里操作');
-    const match = String(e.msg || '').match(/^#*(?:小花火|xhh)(开启|关闭)(原神|星铁|星穹铁道|绝区零|崩三|崩坏3|崩坏三)?体力推送$/);
+    const match = String(e.msg || '').match(/^#*米哈游(开启|关闭)(原神|星铁|星穹铁道|绝区零|崩三|崩坏3|崩坏三)?体力推送$/);
     if (!match) return false;
 
     const [, action, gameName] = match;

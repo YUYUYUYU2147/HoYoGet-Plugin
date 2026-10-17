@@ -254,7 +254,7 @@ async function api(e, data = {}) {
         try {
             res = JSON.parse(text);
         } catch {
-            logger.error(`[xhh][api] ${data.type} 返回非JSON: ${text.slice(0, 300)}`);
+            logger.error(`[HoYoGet][api] ${data.type} 返回非JSON: ${text.slice(0, 300)}`);
             res = { retcode: -500, message: '接口返回异常(非JSON)', _raw: text };
         }
     } catch (error) {

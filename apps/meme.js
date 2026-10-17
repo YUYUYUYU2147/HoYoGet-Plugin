@@ -73,7 +73,7 @@ async function compressImageBuf(buf, opts = {}) {
       .toBuffer();
   }
   logger.mark(
-    `[xhh-meme] 图片压缩 ${(buf.length / 1024 / 1024).toFixed(2)}MB -> ${(out.length / 1024 / 1024).toFixed(2)}MB (${meta.width}x${meta.height} -> ${width}px, jpeg q${quality})`
+    `[HoYoGet-meme] 图片压缩 ${(buf.length / 1024 / 1024).toFixed(2)}MB -> ${(out.length / 1024 / 1024).toFixed(2)}MB (${meta.width}x${meta.height} -> ${width}px, jpeg q${quality})`
   );
   return out;
 }
@@ -97,7 +97,7 @@ async function compressAndSplit(buf) {
         .toBuffer()
     );
   }
-  logger.mark(`[xhh-meme] 长图 ${height}px 切割为 ${parts} 张`);
+  logger.mark(`[HoYoGet-meme] 长图 ${height}px 切割为 ${parts} 张`);
   return list;
 }
 
@@ -106,7 +106,7 @@ async function renderImg(e, path, data_, cfg = {}) {
   const tplFile = process.cwd() + '/plugins/HoYoGet-Plugin/resources/' + path + '.html';
   let buf;
   try {
-    buf = await puppeteer.render('小花火/' + path, {
+    buf = await puppeteer.render('米哈游/' + path, {
       ...data_,
       sys: { scale: 'style=transform:scale(1)' },
       deviceScaleFactor: cfg.scale || 2,
@@ -116,11 +116,11 @@ async function renderImg(e, path, data_, cfg = {}) {
       saveId: path.split('/')[path.split('/').length - 1],
     });
   } catch (err) {
-    logger.error(`[xhh-meme] 渲染失败 ${path}: ${err.message}`);
+    logger.error(`[HoYoGet-meme] 渲染失败 ${path}: ${err.message}`);
     return [{ type: 'text', data: { text: '图片渲染失败，请稍后再试' } }];
   }
   if (!buf || !Buffer.isBuffer(buf)) {
-    logger.error(`[xhh-meme] 渲染返回异常 ${path}: ${typeof buf}`);
+    logger.error(`[HoYoGet-meme] 渲染返回异常 ${path}: ${typeof buf}`);
     return [{ type: 'text', data: { text: '图片渲染失败，请稍后再试' } }];
   }
   const bufs = await compressAndSplit(buf);
@@ -164,11 +164,11 @@ async function fetchJsonWithRetry(url, retries = 3, quiet = false) {
     } catch (e) {
       lastErr = e.message;
     }
-    logger.debug(`[xhh-meme] 拉取 ${url} ${lastErr} (第${i + 1}次)，将重试`);
+    logger.debug(`[HoYoGet-meme] 拉取 ${url} ${lastErr} (第${i + 1}次)，将重试`);
     if (i < retries - 1) await new Promise(r => setTimeout(r, 1000 * (i + 1)));
   }
-  if (quiet) logger.debug(`[xhh-meme] 拉取 ${url} 失败：${lastErr}`);
-  else logger.warn(`[xhh-meme] 拉取 ${url} 失败（重试 ${retries} 次）：${lastErr}`);
+  if (quiet) logger.debug(`[HoYoGet-meme] 拉取 ${url} 失败：${lastErr}`);
+  else logger.warn(`[HoYoGet-meme] 拉取 ${url} 失败（重试 ${retries} 次）：${lastErr}`);
   return null;
 }
 
@@ -176,7 +176,7 @@ function readJsonFile(file) {
   try {
     if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, 'utf-8'));
   } catch (e) {
-    logger.warn(`[xhh-meme] 本地缓存 ${file} 读取失败，已忽略: ${e.message}`);
+    logger.warn(`[HoYoGet-meme] 本地缓存 ${file} 读取失败，已忽略: ${e.message}`);
     try { fs.unlinkSync(file); } catch { }
   }
   return {};
@@ -184,7 +184,7 @@ function readJsonFile(file) {
 
 async function loadData(force = false) {
   if (!force && Object.keys(keyMap).length && Object.keys(infos).length) {
-    logger.debug(`[xhh-meme] 命中本地缓存：${Object.keys(infos).length} 个 meme / ${Object.keys(keyMap).length} 个关键词`);
+    logger.debug(`[HoYoGet-meme] 命中本地缓存：${Object.keys(infos).length} 个 meme / ${Object.keys(keyMap).length} 个关键词`);
     return;
   }
   if (loadPromise) return loadPromise;
@@ -199,7 +199,7 @@ async function loadData(force = false) {
     }
     const base = memeBaseUrl();
     if (!base) {
-      logger.warn('[xhh-meme] meme_baseUrl 未配置');
+      logger.warn('[HoYoGet-meme] meme_baseUrl 未配置');
       return;
     }
     try {
@@ -216,7 +216,7 @@ async function loadData(force = false) {
         const keys = await fetchJsonWithRetry(`${base}/memes/keys`);
         if (Array.isArray(keys) && keys.length) {
           const version = await fetchJsonWithRetry(`${base}/meme/version`, 1, true);
-          logger.mark(`[xhh-meme] 拉取表情数据：${keys.length} 个（服务端版本 ${version || '未知'}）`);
+          logger.mark(`[HoYoGet-meme] 拉取表情数据：${keys.length} 个（服务端版本 ${version || '未知'}）`);
           const keyMapTmp = {};
           const infosTmp = {};
           const CONCURRENCY = 12;
@@ -236,17 +236,17 @@ async function loadData(force = false) {
             // 真正需要排查的是开头与结尾，中间进度用 debug 即可
             const done = Math.min(i + CONCURRENCY, keys.length);
             if (done === keys.length || done % 200 === 0) {
-              logger.mark(`[xhh-meme] 正在拉取表情信息 ${done}/${keys.length}`);
+              logger.mark(`[HoYoGet-meme] 正在拉取表情信息 ${done}/${keys.length}`);
             }
           }
           if (Object.keys(infosTmp).length) infos = { ...infos, ...infosTmp };
           if (Object.keys(keyMapTmp).length) keyMap = { ...keyMap, ...keyMapTmp };
           fs.writeFileSync(KEYMAP_FILE, JSON.stringify(keyMap));
           fs.writeFileSync(INFOS_FILE, JSON.stringify(infos));
-          logger.mark(`[xhh-meme] 表情数据就绪：${Object.keys(infos).length} 个表情 / ${Object.keys(keyMap).length} 个关键词`);
+          logger.mark(`[HoYoGet-meme] 表情数据就绪：${Object.keys(infos).length} 个表情 / ${Object.keys(keyMap).length} 个关键词`);
         } else {
           // 服务端没有 /memes/keys，说明还是旧版，再试静态文件
-          logger.warn('[xhh-meme] /memes/keys 不可用，回退静态资源端点');
+          logger.warn('[HoYoGet-meme] /memes/keys 不可用，回退静态资源端点');
           if (needInfos) {
             const data = await fetchJsonWithRetry(`${base}/memes/static/infos.json`);
             if (data && Object.keys(data).length) {
@@ -264,7 +264,7 @@ async function loadData(force = false) {
         }
       }
     } catch (err) {
-      logger.warn(`[xhh-meme] 远端资源拉取失败，插件仍可加载: ${err.message}`);
+      logger.warn(`[HoYoGet-meme] 远端资源拉取失败，插件仍可加载: ${err.message}`);
     }
   })();
   try {
@@ -289,7 +289,7 @@ async function queryMemeInfo(key) {
       return data;
     }
   } catch (err) {
-    logger.warn(`[xhh-meme] 在线查询 ${key} 详情失败: ${err.message}`);
+    logger.warn(`[HoYoGet-meme] 在线查询 ${key} 详情失败: ${err.message}`);
   }
   return null;
 }
@@ -306,7 +306,7 @@ function matchKeyword(msg) {
 export class meme extends plugin {
   constructor() {
     let option = {
-      name: '[小花火]Meme表情包',
+      name: '[米哈游]Meme表情包',
       dsc: 'meme表情包制作/在线查询详情',
       event: 'message',
       priority: pluginPriority('meme', 50),
@@ -345,14 +345,14 @@ export class meme extends plugin {
     // 刷一轮失败日志。表情库又不是分钟级更新的资源，改成每天一次足够。
     this.task = {
       cron: '0 30 4 * * *',
-      name: '[小花火]meme资源自动更新',
+      name: '[米哈游]meme资源自动更新',
       fnc: () => this.init(true),
       log: false,
     };
 
     // 异步加载资源，完成后注册动态关键词规则
     this.init().catch(err => {
-      logger.warn(`[xhh-meme] 初始化失败: ${err.message}`);
+      logger.warn(`[HoYoGet-meme] 初始化失败: ${err.message}`);
     });
   }
 
@@ -540,7 +540,7 @@ export class meme extends plugin {
 
   // ---------- 更新 ----------
   async memesUpdate(e) {
-    await e.reply('xhh-meme 资源更新中…', true);
+    await e.reply('米哈游表情包 资源更新中…', true);
     await loadData(true);
     await this.init(true);
     await e.reply(`更新完成，当前共 ${Object.keys(infos).length} 个 meme`, true);
@@ -628,19 +628,19 @@ export class meme extends plugin {
       return true;
     }
 
-    logger.info(`[xhh-meme] 制作 ${key}: images=${imgBuffers.length} texts=${JSON.stringify(texts)}`);
+    logger.info(`[HoYoGet-meme] 制作 ${key}: images=${imgBuffers.length} texts=${JSON.stringify(texts)}`);
 
     let response;
     try {
       response = await fetch(`${memeBaseUrl()}/memes/${key}/`, { method: 'POST', body: formData });
     } catch (err) {
-      logger.error(`[xhh-meme] 请求失败: ${err.message}`);
+      logger.error(`[HoYoGet-meme] 请求失败: ${err.message}`);
       await e.reply(`表情制作失败: ${err.message}`, true);
       return true;
     }
     if (response.status > 299) {
       const errText = await response.text();
-      logger.error(`[xhh-meme] ${key} 制作失败: ${errText}`);
+      logger.error(`[HoYoGet-meme] ${key} 制作失败: ${errText}`);
       await e.reply(`表情制作失败: ${String(errText).slice(0, 120)}`, true);
       return true;
     }
@@ -720,7 +720,7 @@ export class meme extends plugin {
       if (!res.ok) return null;
       return Buffer.from(await res.arrayBuffer());
     } catch (err) {
-      logger.warn(`[xhh-meme] 图片下载失败: ${err.message}`);
+      logger.warn(`[HoYoGet-meme] 图片下载失败: ${err.message}`);
       return null;
     }
   }

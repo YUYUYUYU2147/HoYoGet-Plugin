@@ -123,7 +123,7 @@ function resolveCloudflared() {
     return file
   }
   logger.warn(
-    `[xhh][manual_gt] 未找到 cloudflared，已探测：${tried.join('、') || '(候选为空)'}\n` +
+    `[HoYoGet][manual_gt] 未找到 cloudflared，已探测：${tried.join('、') || '(候选为空)'}\n` +
     '  · 安装：https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/\n' +
     '  · 或运行 tools/manual_gt_tunnel.sh（地址写入 plugins/HoYoGet-Plugin/data/manual_gt_url，插件自动读取）\n' +
     '  · 或设置环境变量 XHH_MANUAL_GT_PUBLIC_URL，指向你自己的固定域名/反向代理',
@@ -138,18 +138,18 @@ async function startQuickTunnel(port) {
   const fromFile = readTunnelUrlFile();
   if (fromFile) {
     tunnelUrl = fromFile;
-    logger.mark(`[xhh][manual_gt] 使用后台隧道地址：${tunnelUrl}`);
+    logger.mark(`[HoYoGet][manual_gt] 使用后台隧道地址：${tunnelUrl}`);
     return tunnelUrl;
   }
   if (tunnelFilePending()) {
-    logger.mark('[xhh][manual_gt] 检测到后台隧道地址文件，正在等待其写入实际地址…');
+    logger.mark('[HoYoGet][manual_gt] 检测到后台隧道地址文件，正在等待其写入实际地址…');
     const waited = await waitTunnelUrlFile(20000);
     if (waited) {
       tunnelUrl = waited;
-      logger.mark(`[xhh][manual_gt] 使用后台隧道地址：${tunnelUrl}`);
+      logger.mark(`[HoYoGet][manual_gt] 使用后台隧道地址：${tunnelUrl}`);
       return tunnelUrl;
     }
-    logger.warn('[xhh][manual_gt] 后台隧道 20 秒内没写出地址，改为插件自建隧道');
+    logger.warn('[HoYoGet][manual_gt] 后台隧道 20 秒内没写出地址，改为插件自建隧道');
   }
   if (tunnelUrl) return tunnelUrl;
   if (tunnelPromise) return tunnelPromise;
@@ -170,7 +170,7 @@ async function startQuickTunnel(port) {
       const m = buf.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/);
       if (!m) return;
       tunnelUrl = m[0];
-      logger.mark(`[xhh][manual_gt] 临时公网地址：${tunnelUrl}（trycloudflare 隧道，重启后地址会变）`);
+      logger.mark(`[HoYoGet][manual_gt] 临时公网地址：${tunnelUrl}（trycloudflare 隧道，重启后地址会变）`);
       finish(tunnelUrl);
     };
     // 冷启动时 cloudflared 连边缘节点可能要十几秒，20s 太紧会误报超时
@@ -178,7 +178,7 @@ async function startQuickTunnel(port) {
       // 把 cloudflared 的原始输出打出来，否则「超时」没有任何线索可查
       const tail = buf.trim().split('\n').slice(-12).join(' | ').slice(0, 900);
       logger.warn(
-        `[xhh][manual_gt] 等待 cloudflared 公网地址超时（45s，pid=${child?.pid ?? '无'}）` +
+        `[HoYoGet][manual_gt] 等待 cloudflared 公网地址超时（45s，pid=${child?.pid ?? '无'}）` +
         (tail ? `\ncloudflared 输出：${tail}` : '\ncloudflared 没有任何输出（可能进程已退出或被环境限制）'),
       );
       finish('');
@@ -186,7 +186,7 @@ async function startQuickTunnel(port) {
     const bin = resolveCloudflared();
     if (!bin) {
       logger.warn(
-        '[xhh][manual_gt] 未找到可用的 cloudflared，公网访问请设置环境变量 XHH_MANUAL_GT_PUBLIC_URL' +
+        '[HoYoGet][manual_gt] 未找到可用的 cloudflared，公网访问请设置环境变量 XHH_MANUAL_GT_PUBLIC_URL' +
         '（或安装 cloudflared 后用 xhh/tools/manual_gt_tunnel.sh 起隧道）',
       );
       // 必须 finish：否则这个 Promise 永远不 resolve，调用方会一直等到 45s 超时定时器，
@@ -194,7 +194,7 @@ async function startQuickTunnel(port) {
       finish('');
       return '';
     }
-    logger.mark(`[xhh][manual_gt] 使用 cloudflared：${bin}`);
+    logger.mark(`[HoYoGet][manual_gt] 使用 cloudflared：${bin}`);
     try {
       const extra = process.env.XHH_CLOUDFLARED_PROTOCOL
         ? ['--protocol', process.env.XHH_CLOUDFLARED_PROTOCOL]
@@ -204,22 +204,22 @@ async function startQuickTunnel(port) {
         stdio: ['ignore', 'pipe', 'pipe'],
         env: { ...process.env, HOME: process.env.HOME || '/tmp' },
       });
-      logger.mark(`[xhh][manual_gt] 已拉起 cloudflared（pid=${child.pid}，端口 ${port}${extra.length ? '，' + extra.join(' ') : ''}）`);
+      logger.mark(`[HoYoGet][manual_gt] 已拉起 cloudflared（pid=${child.pid}，端口 ${port}${extra.length ? '，' + extra.join(' ') : ''}）`);
       tunnelProc = child;
       child.stdout?.on('data', onData);
       child.stderr?.on('data', onData);
       child.on('error', err => {
-        logger.warn(`[xhh][manual_gt] 启动 cloudflared(${bin}) 失败：${err?.message || err}`);
+        logger.warn(`[HoYoGet][manual_gt] 启动 cloudflared(${bin}) 失败：${err?.message || err}`);
         finish('');
       });
       child.on('exit', (code, signal) => {
         if (!settled) {
-          logger.warn(`[xhh][manual_gt] cloudflared 进程退出（code=${code} signal=${signal}），未能取得公网地址`);
+          logger.warn(`[HoYoGet][manual_gt] cloudflared 进程退出（code=${code} signal=${signal}），未能取得公网地址`);
           finish('');
         }
       });
     } catch (err) {
-      logger.warn(`[xhh][manual_gt] 启动 cloudflared(${bin}) 失败：${err?.message || err}`);
+      logger.warn(`[HoYoGet][manual_gt] 启动 cloudflared(${bin}) 失败：${err?.message || err}`);
       finish('');
     }
   });
@@ -270,8 +270,8 @@ async function waitForPublicUrl(cfg) {
 }
 
 function page(key, testMode = false) {
-  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"><title>小花火手动验证</title><style>
-body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1c2438,#41245a);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',sans-serif;color:#fff}.card{width:min(92vw,420px);padding:28px;border-radius:22px;background:rgba(255,255,255,.12);box-shadow:0 18px 60px rgba(0,0,0,.35);backdrop-filter:blur(12px);text-align:center}.title{font-size:24px;font-weight:800;margin-bottom:10px}.sub{opacity:.82;margin-bottom:22px;line-height:1.7}.btn{border:0;border-radius:999px;padding:13px 24px;background:#7cf3d0;color:#102236;font-weight:800;font-size:16px}.wait{display:none;margin:18px 0}.tip{margin-top:18px;font-size:14px;opacity:.78}.ok{font-size:22px;font-weight:800;color:#7cf3d0}</style></head><body><div class="card"><div class="title">小花火手动验证</div><div class="sub" id="sub">米游社签到遇到验证码，请点击下方按钮完成验证。</div><div id="captcha" data-key="${key}"><button class="btn" id="btn">点击验证</button><div class="wait" id="wait">验证码加载中...</div></div><div class="tip">完成后可以回到 QQ 等待签到结果。</div></div><script src="https://static.geetest.com/static/tools/gt.js"></script><script>
+  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"><title>米哈游手动验证</title><style>
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1c2438,#41245a);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',sans-serif;color:#fff}.card{width:min(92vw,420px);padding:28px;border-radius:22px;background:rgba(255,255,255,.12);box-shadow:0 18px 60px rgba(0,0,0,.35);backdrop-filter:blur(12px);text-align:center}.title{font-size:24px;font-weight:800;margin-bottom:10px}.sub{opacity:.82;margin-bottom:22px;line-height:1.7}.btn{border:0;border-radius:999px;padding:13px 24px;background:#7cf3d0;color:#102236;font-weight:800;font-size:16px}.wait{display:none;margin:18px 0}.tip{margin-top:18px;font-size:14px;opacity:.78}.ok{font-size:22px;font-weight:800;color:#7cf3d0}</style></head><body><div class="card"><div class="title">米哈游手动验证</div><div class="sub" id="sub">米游社签到遇到验证码，请点击下方按钮完成验证。</div><div id="captcha" data-key="${key}"><button class="btn" id="btn">点击验证</button><div class="wait" id="wait">验证码加载中...</div></div><div class="tip">完成后可以回到 QQ 等待签到结果。</div></div><script src="https://static.geetest.com/static/tools/gt.js"></script><script>
 const btn=document.getElementById('btn'),wait=document.getElementById('wait'),sub=document.getElementById('sub'),key=document.getElementById('captcha').dataset.key;const testMode=${testMode ? 'true' : 'false'};let captcha=null;
 function done(){btn.style.display='none';wait.style.display='none';sub.innerHTML='<div class="ok">验证成功</div>可以关闭本页面了';}
 function submit(v){btn.style.display='none';wait.style.display='block';fetch('./validate/'+key,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(v)}).then(done).catch(()=>{sub.textContent='提交失败，请重试';wait.style.display='none';btn.style.display='inline-block'})}
@@ -359,9 +359,9 @@ function ensureServer() {
     return sendJson(res, { status: 1, message: 'Not Found' }, 404);
   });
   server.on('error', err => {
-    logger.error(`[xhh][manual_gt] 服务启动失败: ${err.message}（端口 ${cfg.port} 可能被占用）`);
+    logger.error(`[HoYoGet][manual_gt] 服务启动失败: ${err.message}（端口 ${cfg.port} 可能被占用）`);
   });
-  server.listen(cfg.port, cfg.host, () => logger.mark(`[xhh][manual_gt] 手动验证码服务启动: ${cfg.host}:${cfg.port}${cfg.path}`));
+  server.listen(cfg.port, cfg.host, () => logger.mark(`[HoYoGet][manual_gt] 手动验证码服务启动: ${cfg.host}:${cfg.port}${cfg.path}`));
   startedPort = cfg.port;
   return true;
 }
@@ -375,7 +375,7 @@ export function startManualGeetest() {
     // 提前拉会在每次重启后白占 20~45s 和 24MB 内存，用户可能一整天都不撞码。
     return ensureServer();
   } catch (err) {
-    logger.error(`[xhh][manual_gt] 服务启动异常: ${err?.message || err}`);
+    logger.error(`[HoYoGet][manual_gt] 服务启动异常: ${err?.message || err}`);
     return false;
   }
 }
@@ -397,7 +397,7 @@ async function notifyCaptcha(e, cfg, text) {
   }
   const gid = cfg.notifyGroup || (e?.isGroup ? Number(e.group_id) : 0);
   if (!gid) {
-    logger.warn('[xhh][manual_gt] 无可用通知渠道，验证码链接未送达');
+    logger.warn('[HoYoGet][manual_gt] 无可用通知渠道，验证码链接未送达');
     return false;
   }
   // 优先 @ 本次失败账号的 QQ（定时任务构造的 e.user_id），再补上额外通知对象并去重
@@ -419,10 +419,10 @@ async function notifyCaptcha(e, cfg, text) {
     // 用户该点的时间已经给足了。
     const msgId = pickSentMsgId(sent);
     const willRecall = scheduleGroupRecall(gid, sent, Math.max(30, Number(cfg.timeout) || 120));
-    logger.mark(`[xhh][manual_gt] 验证码通知已发送（群 ${gid}${ats.length ? '，已 @' + ats.join(',') : ''}${willRecall ? `，${cfg.timeout}s 后自动撤回` : '，未取到消息ID无法撤回'}）`);
+    logger.mark(`[HoYoGet][manual_gt] 验证码通知已发送（群 ${gid}${ats.length ? '，已 @' + ats.join(',') : ''}${willRecall ? `，${cfg.timeout}s 后自动撤回` : '，未取到消息ID无法撤回'}）`);
     return true;
   } catch (err) {
-    logger.error(`[xhh][manual_gt] 验证码通知发送失败（群 ${gid}）: ${err?.message || err}`);
+    logger.error(`[HoYoGet][manual_gt] 验证码通知发送失败（群 ${gid}）: ${err?.message || err}`);
     return false;
   }
 }
@@ -433,13 +433,13 @@ export async function manualGeetest(e, data = {}, title = '米游社签到') {
   if (!ensureServer()) return false;
   const publicUrl = await waitForPublicUrl(cfg);
   if (cfg.autoTunnel && !publicUrl && !cfg.publicUrl) {
-    logger.warn('[xhh][manual_gt] 没有可用公网地址，未发送无法访问的本机验证码链接');
+    logger.warn('[HoYoGet][manual_gt] 没有可用公网地址，未发送无法访问的本机验证码链接');
     await e.reply('手动验证码服务没有可用的公网地址，请安装 cloudflared，或设置环境变量 XHH_MANUAL_GT_PUBLIC_URL。', true);
     return false;
   }
   const task = makeTask(data, publicUrl);
   const { key, link } = task;
-  await notifyCaptcha(e, cfg, `${title}遇到验证码，请打开地址并完成验证：\n${link}\n验证有效期 ${cfg.timeout} 秒，完成后小花火会自动重试。`);
+  await notifyCaptcha(e, cfg, `${title}遇到验证码，请打开地址并完成验证：\n${link}\n验证有效期 ${cfg.timeout} 秒，完成后米哈游会自动重试。`);
   for (let i = 0; i < cfg.timeout; i += 2) {
     const task = tasks.get(key);
     if (task?.result?.geetest_validate) {
@@ -486,7 +486,7 @@ export async function manualGeetestTest(e) {
     const task = tasks.get(key);
     if (task?.result?.geetest_validate) {
       cleanup(key);
-      logger.mark('[xhh][manual_gt] 模拟验证码提交成功，模拟签到重试成功');
+      logger.mark('[HoYoGet][manual_gt] 模拟验证码提交成功，模拟签到重试成功');
       return e.reply('手动验证完整流程模拟成功：已收到验证结果，并完成模拟签到重试。', true);
     }
     await sleep(1000);

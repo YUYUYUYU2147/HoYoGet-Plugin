@@ -72,7 +72,7 @@ function getMysRating(pref = {}) {
 export class bh3_battlefield extends plugin {
   constructor(e) {
     super({
-      name: '[小花火]崩三记忆战场',
+      name: '[米哈游]崩三记忆战场',
       dsc: '崩坏3记忆战场战报',
       event: 'message',
       priority: pluginPriority('bh3_battlefield', 100),
@@ -257,7 +257,7 @@ export class bh3_battlefield extends plugin {
 
     let buf;
     try {
-      buf = await puppeteer.render('小花火/bh3_battlefield/battlefield', {
+      buf = await puppeteer.render('米哈游/bh3_battlefield/battlefield', {
         // {{ppath}} 不会由框架注入（只有 system/render.js 那条路会），
         // 缺了它 CSS/背景图/图标全部 404，页面退化成无样式的裸 HTML。
         // 层数 = 资源目录段数 + 3：小花火/bh3_battlefield/battlefield 落在 temp/html/下同深度目录。

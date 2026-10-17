@@ -15,17 +15,17 @@ const GAME_HELP_ALIASES = {
 export class help extends plugin {
   constructor(e) {
     super({
-      name: '[小花火]帮助',
+      name: '[米哈游]帮助',
       dsc: '帮助',
       event: 'message',
       priority: pluginPriority('help', 100),
       rule: [
         {
-          reg: '^#*(小花火|xhh)(命令|帮助|菜单|help|说明|功能|指令|使用说明)$',
+          reg: '^#*米哈游(命令|帮助|菜单|help|说明|功能|指令|使用说明)$',
           fnc: 'help',
         },
         {
-          reg: '^#*(小花火|xhh)(原神|星铁|崩铁|绝区零|崩三|崩坏3|卡池|图鉴|攻略|B站|b站|完整)帮助$',
+          reg: '^#*米哈游(原神|星铁|崩铁|绝区零|崩三|崩坏3|卡池|图鉴|攻略|B站|b站|完整)帮助$',
           fnc: 'help',
         },
       ],
@@ -35,7 +35,7 @@ export class help extends plugin {
   async help(e) {
     try {
       const msg = String(e.msg || '').trim().replace(/^#+/, '');
-      const command = msg.replace(/^(?:小花火|xhh)/i, '');
+      const command = msg.replace(/^米哈游/i, '');
       const game = Object.prototype.hasOwnProperty.call(GAME_HELP_ALIASES, command.replace(/帮助$/, ''))
         ? command.replace(/帮助$/, '')
         : '';
@@ -86,8 +86,8 @@ export class help extends plugin {
       const img = await render('help/help', { data, au: !!e.isMaster }, { e, pct: 1 });
       return e.reply(img);
     } catch (err) {
-      logger.warn(`[xhh][help] 帮助图渲染失败: ${err?.message || err}`);
-      return e.reply(`小花火命令帮助：${HELP_URL}`, true, { recallMsg: 60 });
+      logger.warn(`[HoYoGet][help] 帮助图渲染失败: ${err?.message || err}`);
+      return e.reply(`米哈游命令帮助：${HELP_URL}`, true, { recallMsg: 60 });
     }
   }
 }

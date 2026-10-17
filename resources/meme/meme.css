@@ -51,7 +51,7 @@ body {
   z-index: 0;
 }
 
-/* 小花火背景立绘（水平居中） */
+/* 立绘背景（水平居中） */
 .bg-character {
   position: absolute;
   left: 50%;

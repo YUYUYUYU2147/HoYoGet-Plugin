@@ -87,10 +87,10 @@ export function startAutoReload({ apps = {}, files = [], root = '', logger } = {
                     if (patchClass(oldC, NewC)) changed++
                 } catch (err) {
                     // 单个模块失败不影响其它，也不影响正在跑的旧代码
-                    log.error?.(`[xhh][热重载] ${file} 重载失败，保留旧代码：${err?.message || err}`)
+                    log.error?.(`[HoYoGet][热重载] ${file} 重载失败，保留旧代码：${err?.message || err}`)
                 }
             }
-            if (changed) log.mark?.(`[xhh][热重载] 已热更新 ${changed} 个模块`)
+            if (changed) log.mark?.(`[HoYoGet][热重载] 已热更新 ${changed} 个模块`)
         } finally {
             running = false
         }
@@ -125,9 +125,9 @@ export function startAutoReload({ apps = {}, files = [], root = '', logger } = {
     const ok1 = watch(path.join(rootPath, 'apps'))
     const ok2 = watch(path.join(rootPath, 'system'))
     if (!ok1 && !ok2) {
-        log.warn?.('[xhh][热重载] 目录监听失败，热重载未启用')
+        log.warn?.('[HoYoGet][热重载] 目录监听失败，热重载未启用')
         return false
     }
-    log.mark?.('[xhh] 自举热重载已开启：改动 apps/ 与 system/ 后自动生效（新增指令仍需 #重启）')
+    log.mark?.('[HoYoGet] 自举热重载已开启：改动 apps/ 与 system/ 后自动生效（新增指令仍需 #重启）')
     return true
 }

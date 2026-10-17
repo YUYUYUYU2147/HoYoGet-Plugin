@@ -31,7 +31,7 @@ async function fetchJson(url, options = {}, label = '米游社接口') {
         return JSON.parse(text);
     } catch (err) {
         const head = String(text || '').trim().slice(0, 80);
-        logger.mark(`[xhh][sm] ${label} 返回非 JSON，status=${resp.status} body=${head}`);
+        logger.mark(`[HoYoGet][sm] ${label} 返回非 JSON，status=${resp.status} body=${head}`);
         return {
             retcode: -1,
             message: head.startsWith('<') ? '米游社返回拦截页，请稍后重试' : '米游社接口返回异常',
@@ -44,7 +44,7 @@ async function fetchJson(url, options = {}, label = '米游社接口') {
 export class user extends plugin {
     constructor(e) {
         super({
-            name: '[小花火]user',
+            name: '[米哈游]user',
             dsc: '',
             event: 'message',
             handler: [{
@@ -57,7 +57,7 @@ export class user extends plugin {
                     fnc: 'fp',
                 },
                 {
-                    reg: '^#?小花火扫码(登录|绑定|登陆)$',
+                    reg: '^#?米哈游扫码(登录|绑定|登陆)$',
                     fnc: 'sm',
                 },
                 {
@@ -73,7 +73,7 @@ export class user extends plugin {
                     fnc: 'refresh_ck',
                 },
                 {
-                    reg: '^#*(小花火|xhh)开启设备(绑定)?$',
+                    reg: '^#*米哈游开启设备(绑定)?$',
                     fnc: 'kq',
                 },
                 {
@@ -304,7 +304,7 @@ export class user extends plugin {
                     const bh3BindInfo = await this.prepareBh3BindInfo(e, data_);
                     if (bh3BindInfo) sendMsg.push(bh3BindInfo);
                 }
-                await this.replyBindResult(e, sendMsg, '小花火扫码绑定结果');
+                await this.replyBindResult(e, sendMsg, '米哈游扫码绑定结果');
                 break;
             }
         }
@@ -374,7 +374,7 @@ export class user extends plugin {
         msgs.map((v, i) => {
             if (typeof msgs[i] === 'string') msgs[i] = msgs[i].replace(/绑定Cookie/g, '刷新Cookie');
         })
-        await this.replyBindResult(e, msgs, '小花火刷新Cookie结果');
+        await this.replyBindResult(e, msgs, '米哈游刷新Cookie结果');
     }
 
     normalizeBindMessages(msgs = []) {
@@ -425,7 +425,7 @@ export class user extends plugin {
         return chunks;
     }
 
-    async replyBindResult(e, msgs = [], title = '小花火绑定结果') {
+    async replyBindResult(e, msgs = [], title = '米哈游绑定结果') {
         if (e.no_reply) e.reply = e.no_reply;
         const list = this.normalizeBindMessages(msgs);
         if (!list.length) return e.reply('操作完成，但没有可展示的文本结果', true);
@@ -434,7 +434,7 @@ export class user extends plugin {
             const forward = await makeForwardMsg(e, list, title);
             return e.reply(forward);
         } catch (err) {
-            logger.warn(`[xhh][user] 合并转发失败，回退为分段文本: ${err?.message || err}`);
+            logger.warn(`[HoYoGet][user] 合并转发失败，回退为分段文本: ${err?.message || err}`);
             const text = list.join('\n\n');
             if (text.length <= 1800) return e.reply(text, true);
             for (let i = 0; i < text.length; i += 1600) {

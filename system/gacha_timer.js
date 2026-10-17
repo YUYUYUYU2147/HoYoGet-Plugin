@@ -53,9 +53,9 @@ async function fetchPage(url) {
             const text = await res.text();
             clearTimeout(timer);
             if (res.ok && text.length > 50000) return text;
-            globalThis.logger?.warn(`[xhh][卡池计时器] 第${i + 1}次抓取异常: HTTP ${res.status} ${text.length}字节`);
+            globalThis.logger?.warn(`[HoYoGet][卡池计时器] 第${i + 1}次抓取异常: HTTP ${res.status} ${text.length}字节`);
         } catch (err) {
-            globalThis.logger?.warn(`[xhh][卡池计时器] 第${i + 1}次抓取失败: ${err?.message || err}`);
+            globalThis.logger?.warn(`[HoYoGet][卡池计时器] 第${i + 1}次抓取失败: ${err?.message || err}`);
         }
         await sleep(2000);
     }
@@ -142,7 +142,7 @@ async function wikiItems(game) {
     return cachedAsync(`timer-${game}`, 12 * 3600 * 1000, async () => {
         const html = await fetchPage(meta.url);
         const items = parseGachaPage(html, game);
-        if (!items.length) globalThis.logger?.warn(`[xhh][卡池计时器] ${game} 解析到 0 条数据`);
+        if (!items.length) globalThis.logger?.warn(`[HoYoGet][卡池计时器] ${game} 解析到 0 条数据`);
         return items;
     });
 }
@@ -155,13 +155,13 @@ function loadBh3History() {
             const data = yaml.get(BH3_YAML_PATH);
             if (data?.pools?.length) return data;
         } catch (err) {
-            globalThis.logger?.warn(`[xhh][卡池计时器] 崩三 YAML 读取失败: ${err?.message || err}`);
+            globalThis.logger?.warn(`[HoYoGet][卡池计时器] 崩三 YAML 读取失败: ${err?.message || err}`);
         }
         try {
             const data = JSON.parse(fs.readFileSync(BH3_JSON_PATH, 'utf8'));
             if (data?.pools?.length) return data;
         } catch (err) {
-            globalThis.logger?.warn(`[xhh][卡池计时器] 崩三 JSON 读取失败: ${err?.message || err}`);
+            globalThis.logger?.warn(`[HoYoGet][卡池计时器] 崩三 JSON 读取失败: ${err?.message || err}`);
         }
         return null;
     });
@@ -242,7 +242,7 @@ async function bh3Search(keyword) {
         const j = await res.json();
         return j?.data?.list || [];
     } catch (err) {
-        globalThis.logger?.warn(`[xhh][卡池计时器] 崩三头像搜索失败「${keyword}」: ${err?.message || err}`);
+        globalThis.logger?.warn(`[HoYoGet][卡池计时器] 崩三头像搜索失败「${keyword}」: ${err?.message || err}`);
         return [];
     } finally {
         clearTimeout(timer);
@@ -301,7 +301,7 @@ async function bh3ContentAvatar(id) {
             }
         }
     } catch (err) {
-        globalThis.logger?.warn(`[xhh][卡池计时器] 崩三立绘获取失败 id=${id}: ${err?.message || err}`);
+        globalThis.logger?.warn(`[HoYoGet][卡池计时器] 崩三立绘获取失败 id=${id}: ${err?.message || err}`);
     } finally {
         clearTimeout(timer);
     }
@@ -370,7 +370,7 @@ function cleanName(name = '') {
 function loadBh3JsNames() {
     return cached('bh3-js-names', 30 * 60 * 1000, () => {
         try { return yaml.get(BH3_JS_NAMES_PATH) || {}; } catch (err) {
-            globalThis.logger?.warn(`[xhh][卡池计时器] 崩三别名表读取失败: ${err?.message || err}`);
+            globalThis.logger?.warn(`[HoYoGet][卡池计时器] 崩三别名表读取失败: ${err?.message || err}`);
             return {};
         }
     });
@@ -402,7 +402,7 @@ async function find(keyword, game = 'all', limit = 12) {
         try {
             items = await list(g);
         } catch (err) {
-            globalThis.logger?.warn(`[xhh][卡池计时器] ${g} 数据加载失败: ${err?.message || err}`);
+            globalThis.logger?.warn(`[HoYoGet][卡池计时器] ${g} 数据加载失败: ${err?.message || err}`);
             continue;
         }
         for (const it of items) {

@@ -12,24 +12,24 @@ if (!fs.existsSync(path)) {
 export class bilibili_push extends plugin {
   constructor(e) {
     super({
-      name: '[小花火]bili推送',
+      name: '[米哈游]bili推送',
       dsc: '',
       event: 'message.group',
       priority: pluginPriority('bilibili_push', -119),
       rule: [
         {
-          reg: '^#*(小花火)?(添加|开启|取消|删除|关闭)(b站|B站|哔哩哔哩|bili|bilibili)推送(\\d+)$',
+          reg: '^#*(?:米哈游)?(添加|开启|取消|删除|关闭)(b站|B站|哔哩哔哩|bili|bilibili)推送(\\d+)$',
           fnc: 'b',
         },
         {
-          reg: '^#*(小花火)?(b站|B站|哔哩哔哩|bili|bilibili)(视频)?推送列表$',
+          reg: '^#*(?:米哈游)?(b站|B站|哔哩哔哩|bili|bilibili)(视频)?推送列表$',
           fnc: 'lb',
         },
       ],
     });
     this.task = {
       cron: '0 0/3 * * * *', //每3分钟跑一次
-      name: '[小花火]bilibili任务',
+      name: '[米哈游]bilibili任务',
       fnc: () => this.ccc(),
       log: false,
     };

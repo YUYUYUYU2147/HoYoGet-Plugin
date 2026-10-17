@@ -278,20 +278,20 @@ async function sendGroupMsg(groupId, msg, e = null) {
 export class activity_remind extends plugin {
   constructor() {
     super({
-      name: '[小花火]活动到期提醒',
+      name: '[米哈游]活动到期提醒',
       dsc: '原神/星铁/绝区零/崩坏3活动到期推送',
       event: 'message',
       priority: pluginPriority('activity_remind', -1000002),
       rule: [
         { reg: '^#*(原神|星铁|星穹铁道|崩铁|绝区零|ZZZ|崩三|崩坏3|崩坏三|BH3)(开启|关闭)(到期活动|活动到期)(提醒|预警)?(推送)?$', fnc: 'toggleGame', priority: pluginPriority('activity_remind', -1000002) },
         { reg: '^#*(开启|关闭)全部(游戏)?(到期活动|活动到期)(提醒|预警)?(推送)?$', fnc: 'toggleAll', priority: pluginPriority('activity_remind', -1000002) },
-        { reg: '^#*(小花火)?(活动到期|到期活动)(提醒|预警)?状态$', fnc: 'status', priority: pluginPriority('activity_remind', -1000002) },
-        { reg: '^#*(小花火)?(活动到期|到期活动)(提醒|预警)?测试$', fnc: 'testPush', priority: pluginPriority('activity_remind', -1000002) },
+        { reg: '^#*(?:米哈游)?(活动到期|到期活动)(提醒|预警)?状态$', fnc: 'status', priority: pluginPriority('activity_remind', -1000002) },
+        { reg: '^#*(?:米哈游)?(活动到期|到期活动)(提醒|预警)?测试$', fnc: 'testPush', priority: pluginPriority('activity_remind', -1000002) },
       ],
     });
     this.task = {
       cron: '0 0 * * * *',
-      name: '[小花火]活动到期提醒检查',
+      name: '[米哈游]活动到期提醒检查',
       fnc: () => this.checkAndPush(),
       log: false,
     };

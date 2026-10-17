@@ -424,7 +424,7 @@ function loadZzzIconIndex() {
       }
     }
   } catch (err) {
-    logger.warn(`[xhh][zzz_gacha] 绝区零图标索引读取失败，卡片将无图标：${err?.message || err}`)
+    logger.warn(`[HoYoGet][zzz_gacha] 绝区零图标索引读取失败，卡片将无图标：${err?.message || err}`)
   }
   return zzzIconIndex
 }
@@ -447,7 +447,7 @@ function fillZzzIcons(pools) {
       }
     }
   }
-  if (filled) logger.mark(`[xhh][zzz_gacha] 按名称补齐绝区零图标 ${filled} 处`)
+  if (filled) logger.mark(`[HoYoGet][zzz_gacha] 按名称补齐绝区零图标 ${filled} 处`)
   return pools
 }
 
@@ -483,7 +483,7 @@ function readZzzPluginRows(uid) {
     const data = JSON.parse(fs.readFileSync(file, 'utf8'))
     return data && typeof data === 'object' ? data : null
   } catch (err) {
-    logger.warn(`[xhh][zzz_gacha] 读取 ZZZ-Plugin 数据失败：${err?.message || err}`)
+    logger.warn(`[HoYoGet][zzz_gacha] 读取 ZZZ-Plugin 数据失败：${err?.message || err}`)
     return null
   }
 }
@@ -810,26 +810,26 @@ function buildZzzStatView(data, uid, e, keys = [], itemFilter = null) {
 export class zzz_gacha extends plugin {
   constructor () {
     super({
-      name: '[小花火]绝区零抽卡记录',
+      name: '[米哈游]绝区零抽卡记录',
       dsc: '绝区零抽卡记录查询与更新',
       event: 'message',
       priority: pluginPriority('zzz_gacha', 1),
       rule: [
         // 「绝区零」必须出现，否则 `(绝区零|zzz)?` 与 `(抽卡|调频)?` 都可空，
-        // 会把「#xhh帮助」「小花火帮助」这类总帮助也吃掉（总帮助 priority=100，
+        // 会把「#米哈游帮助」「小花火帮助」这类总帮助也吃掉（总帮助 priority=100，
         // 比本模块的 1 大，抽卡模块先跑并返回绝区零帮助）。
-        { reg: '^#*(xhh|小花火)(绝区零|zzz)(抽卡|调频)?帮助$', fnc: 'help' },
-        { reg: '^#*(xhh|小花火)(抽卡|调频)帮助$', fnc: 'help' },
-        { reg: '^#*(xhh|小花火)(绝区零|zzz)?抽卡链接(\\s+.*)?$', fnc: 'gachaLink' },
-        { reg: '^#*(xhh|小花火)(绝区零|zzz)?(刷新|更新)抽卡记录$', fnc: 'refresh' },
-        { reg: '^#*(xhh|小花火)(绝区零|zzz)?(抽卡|调频)(记录|统计|分析)$', fnc: 'summary' },
-        { reg: '^#*(xhh|小花火)(绝区零|zzz)?角色记录$', fnc: 'roleRecord' },
-        { reg: '^#*(xhh|小花火)(绝区零|zzz)?角色统计$', fnc: 'roleStat' },
-        { reg: '^#*(xhh|小花火)(绝区零|zzz)?(音擎|武器)记录$', fnc: 'weaponRecord' },
-        { reg: '^#*(xhh|小花火)(绝区零|zzz)?(音擎|武器)统计$', fnc: 'weaponStat' },
-        { reg: '^#*(xhh|小花火)(绝区零|zzz)?邦布记录$', fnc: 'bangbooRecord' },
-        { reg: '^#*(xhh|小花火)(绝区零|zzz)?邦布统计$', fnc: 'bangbooStat' },
-        { reg: '^#*(xhh|小花火)(绝区零|zzz)?全部统计$', fnc: 'allStat' },
+        { reg: '^#*米哈游(绝区零|zzz)(抽卡|调频)?帮助$', fnc: 'help' },
+        { reg: '^#*米哈游(抽卡|调频)帮助$', fnc: 'help' },
+        { reg: '^#*米哈游(绝区零|zzz)?抽卡链接(\\s+.*)?$', fnc: 'gachaLink' },
+        { reg: '^#*米哈游(绝区零|zzz)?(刷新|更新)抽卡记录$', fnc: 'refresh' },
+        { reg: '^#*米哈游(绝区零|zzz)?(抽卡|调频)(记录|统计|分析)$', fnc: 'summary' },
+        { reg: '^#*米哈游(绝区零|zzz)?角色记录$', fnc: 'roleRecord' },
+        { reg: '^#*米哈游(绝区零|zzz)?角色统计$', fnc: 'roleStat' },
+        { reg: '^#*米哈游(绝区零|zzz)?(音擎|武器)记录$', fnc: 'weaponRecord' },
+        { reg: '^#*米哈游(绝区零|zzz)?(音擎|武器)统计$', fnc: 'weaponStat' },
+        { reg: '^#*米哈游(绝区零|zzz)?邦布记录$', fnc: 'bangbooRecord' },
+        { reg: '^#*米哈游(绝区零|zzz)?邦布统计$', fnc: 'bangbooStat' },
+        { reg: '^#*米哈游(绝区零|zzz)?全部统计$', fnc: 'allStat' },
         // 无 xhh/小花火 前缀的裸指令。`%角色记录` 会被框架 zzzReg 改写成
         // `#绝区零角色记录`，故这里也要认「绝区零」前缀，否则会被喵喵抢走。
         // 绝区零裸指令。三种前缀都直接认，不依赖框架的规范化结果：
@@ -848,12 +848,12 @@ export class zzz_gacha extends plugin {
         // 末尾允许追加 UID（%代理人记录 12915316），与其他裸指令保持一致
         { reg: '^[ \\t]*(?:#?[ \\t]*绝区零|[%％]|[ \\t]*(?:绝区|zzz|ZZZ))[ \\t]*(代理人|角色|音擎|武器|邦布|常驻|全部)(记录|统计)(?:\\s*\\d{5,})?$', fnc: 'bareStat' },
         { reg: '^[*][ \\t]*(?:绝区零|绝区|zzz|ZZZ)[ \\t]*(代理人|角色|音擎|武器|邦布|常驻|全部)(记录|统计)(?:\\s*\\d{5,})?$', fnc: 'bareStat' },
-        { reg: '^#*(xhh|小花火)(绝区零|zzz)?(更新|刷新|同步)?工坊(抽卡|调频)?(记录|数据)$', fnc: 'updateWorkshop' },
-        { reg: '^#*(xhh|小花火)(绝区零|zzz)?绑定工坊(\\s+\\S+)?$', fnc: 'bindWorkshop' },
-        { reg: '^#*(xhh|小花火)(绝区零|zzz)?(导入|合并)四星(\\s+\\S+)?$', fnc: 'importFourStar' },
-        { reg: '^#*(xhh|小花火)(绝区零|zzz)?导出(抽卡)?(记录|json)$', fnc: 'exportLog' },
-        { reg: '^#*(xhh|小花火)(绝区零|zzz)?(导入)(抽卡)?(记录|json)$', fnc: 'importLog' },
-        { reg: '^#*(xhh|小花火)(绝区零|zzz)?重建图标(索引)?$', fnc: 'rebuildIconIndex' },
+        { reg: '^#*米哈游(绝区零|zzz)?(更新|刷新|同步)?工坊(抽卡|调频)?(记录|数据)$', fnc: 'updateWorkshop' },
+        { reg: '^#*米哈游(绝区零|zzz)?绑定工坊(\\s+\\S+)?$', fnc: 'bindWorkshop' },
+        { reg: '^#*米哈游(绝区零|zzz)?(导入|合并)四星(\\s+\\S+)?$', fnc: 'importFourStar' },
+        { reg: '^#*米哈游(绝区零|zzz)?导出(抽卡)?(记录|json)$', fnc: 'exportLog' },
+        { reg: '^#*米哈游(绝区零|zzz)?(导入)(抽卡)?(记录|json)$', fnc: 'importLog' },
+        { reg: '^#*米哈游(绝区零|zzz)?重建图标(索引)?$', fnc: 'rebuildIconIndex' },
       ],
     })
   }
@@ -861,24 +861,24 @@ export class zzz_gacha extends plugin {
   async help(e) {
     // 与星铁保持同款格式：单行「指令 —— 说明」，同类用 / 合并，避免全角空格对齐错位
     return e.reply([
-      '【#xhh绝区零抽卡帮助】',
+      '【#米哈游绝区零抽卡帮助】',
       '',
       '更新数据（建议按顺序跑前两条）',
-      '#xhh绝区零更新抽卡记录 —— 直连官方接口拉逐抽明细（含四星/常驻/邦布），无需链接',
-      '#xhh绝区零更新工坊记录 —— 从工坊云端补更早的历史（五星与统计）',
-      '#xhh绝区零导入四星 —— 从 ZZZ-Plugin 已存数据补四星明细（不发请求，可选）',
-      '#xhh绝区零导出记录 —— 导出 UIGF v2 JSON（可备份、可再导入）',
-      '#xhh绝区零导入记录 —— 发指令后把导出的 JSON 发回来，按 id 去重并入',
-      '#xhh绝区零抽卡链接 <链接> —— 官方接口取不到时的手动备选（需复制调频记录页网址）',
-      '#xhh绝区零绑定工坊 <id> —— 一般用不到，union_id 可选',
-      '#xhh绝区零重建图标索引 —— 绝区零出新角色后重建图标',
+      '#米哈游绝区零更新抽卡记录 —— 直连官方接口拉逐抽明细（含四星/常驻/邦布），无需链接',
+      '#米哈游绝区零更新工坊记录 —— 从工坊云端补更早的历史（五星与统计）',
+      '#米哈游绝区零导入四星 —— 从 ZZZ-Plugin 已存数据补四星明细（不发请求，可选）',
+      '#米哈游绝区零导出记录 —— 导出 UIGF v2 JSON（可备份、可再导入）',
+      '#米哈游绝区零导入记录 —— 发指令后把导出的 JSON 发回来，按 id 去重并入',
+      '#米哈游绝区零抽卡链接 <链接> —— 官方接口取不到时的手动备选（需复制调频记录页网址）',
+      '#米哈游绝区零绑定工坊 <id> —— 一般用不到，union_id 可选',
+      '#米哈游绝区零重建图标索引 —— 绝区零出新角色后重建图标',
       '',
       '查询',
-      '#xhh绝区零抽卡记录 —— 抽卡总览统计',
-      '#xhh绝区零角色记录 / #xhh绝区零音擎记录 / #xhh绝区零邦布记录 —— 各卡池进度',
-      '#xhh绝区零角色统计 / #xhh绝区零音擎统计 / #xhh绝区零邦布统计 / #xhh绝区零全部统计 —— 工坊风格统计卡（汇总+网格+进度）',
+      '#米哈游绝区零抽卡记录 —— 抽卡总览统计',
+      '#米哈游绝区零角色记录 / #米哈游绝区零音擎记录 / #米哈游绝区零邦布记录 —— 各卡池进度',
+      '#米哈游绝区零角色统计 / #米哈游绝区零音擎统计 / #米哈游绝区零邦布统计 / #米哈游绝区零全部统计 —— 工坊风格统计卡（汇总+网格+进度）',
       '',
-      '提示：xhh 可写作 小花火，绝区零可写作 zzz，音擎可写作 武器；',
+      '提示：米哈游即可（不再用旧前缀），绝区零可写作 zzz，音擎可写作 武器；',
       '更新前需先在 genshin 侧绑定绝区零账号（官方接口用的是该账号的 Cookie）。',
     ].join('\n'))
   }
@@ -890,7 +890,7 @@ export class zzz_gacha extends plugin {
     if (!url) {
       return e.reply([
         '请把绝区零【调频记录】页面的链接发给我，格式类似：',
-        '#xhh绝区零抽卡链接 https://public-operation-common.mihoyo.com/common/gacha_record/api/getGachaLog?authkey=xxx&game_biz=nap_cn',
+        '#米哈游绝区零抽卡链接 https://public-operation-common.mihoyo.com/common/gacha_record/api/getGachaLog?authkey=xxx&game_biz=nap_cn',
         '',
         '获取方法：游戏内打开【调频记录】→ 多翻几页 → 分享/网页复制地址栏（必须带 authkey=）',
       ].join('\n'))
@@ -913,9 +913,9 @@ export class zzz_gacha extends plugin {
         .join('\n')
       await e.reply(`调频记录链接解析成功！\n${stats}`)
       await this.render(e, [], 'grid')
-      return e.reply('发送【#xhh绝区零抽卡帮助】查看全部指令')
+      return e.reply('发送【#米哈游绝区零抽卡帮助】查看全部指令')
     } catch (err) {
-      logger.error('[xhh][zzz_gacha] gachaLink failed:', err)
+      logger.error('[HoYoGet][zzz_gacha] gachaLink failed:', err)
       return e.reply(`调频记录链接解析失败：${err?.message || err}`)
     }
   }
@@ -931,21 +931,21 @@ export class zzz_gacha extends plugin {
       result = await fetchAllByCookieZzz(e, auth.cookies, auth.uid)
     } catch (err) {
       officialErr = err?.message || String(err)
-      logger.warn(`[xhh][zzz_gacha] 官方 Cookie 接口拉取失败: ${officialErr}`)
+      logger.warn(`[HoYoGet][zzz_gacha] 官方 Cookie 接口拉取失败: ${officialErr}`)
     }
     if (!result) {
       if (!link?.authkey) {
         return e.reply([
           `官方接口未取到记录：${officialErr || '无返回'}`,
-          '也可以先发送【#xhh绝区零抽卡链接 + 链接】手动缓存一份；',
-          '若只需更新五星与统计数据，直接发送【#xhh绝区零更新工坊记录】即可，无需链接。',
+          '也可以先发送【#米哈游绝区零抽卡链接 + 链接】手动缓存一份；',
+          '若只需更新五星与统计数据，直接发送【#米哈游绝区零更新工坊记录】即可，无需链接。',
         ].join('\n'))
       }
       await e.reply(`官方接口未取到记录（${officialErr}），改用已缓存链接刷新……`)
       try {
         result = await fetchAllByAuthkeyZzz({ ...link, region: link.region })
       } catch (err) {
-        logger.error('[xhh][zzz_gacha] refresh failed:', err)
+        logger.error('[HoYoGet][zzz_gacha] refresh failed:', err)
         return e.reply(`刷新失败：${err?.message || err}`)
       }
     }
@@ -957,7 +957,7 @@ export class zzz_gacha extends plugin {
       await e.reply(`刷新完成\n${stats}`)
       await this.render(e, [], 'grid')
     } catch (err) {
-      logger.error('[xhh][zzz_gacha] refresh failed:', err)
+      logger.error('[HoYoGet][zzz_gacha] refresh failed:', err)
       return e.reply(`刷新失败：${err?.message || err}`)
     }
   }
@@ -967,7 +967,7 @@ export class zzz_gacha extends plugin {
     if (auth.error) return e.reply(auth.error)
     const bind = readData(getWorkshopBindFile(auth.qq))
     const unionId = bind?.union_id || WORKSHOP_FALLBACK_UNION_ID
-    if (!bind?.union_id) logger.mark('[xhh][zzz_gacha] 未绑定 union_id，改用占位值请求工坊云端（云端不校验该参数）')
+    if (!bind?.union_id) logger.mark('[HoYoGet][zzz_gacha] 未绑定 union_id，改用占位值请求工坊云端（云端不校验该参数）')
     await e.reply(`正在从工坊云端获取抽卡记录，请稍候……${unionId === WORKSHOP_FALLBACK_UNION_ID ? '（未绑定 union_id，使用占位值）' : ''}`)
     try {
       const analysis = await fetchWorkshopCloud(auth.uid, unionId)
@@ -978,9 +978,9 @@ export class zzz_gacha extends plugin {
       const stats = Object.values(pools).filter(p => p.fiveNum || p.totalPulls).map(p => `【${p.name}】共${p.totalPulls}抽｜五星${p.fiveNum}`).join('\n')
       await e.reply(`工坊云端记录同步完成！\n${stats}`)
       await this.render(e, [], 'grid')
-      return e.reply('发送【#xhh绝区零抽卡帮助】查看全部指令')
+      return e.reply('发送【#米哈游绝区零抽卡帮助】查看全部指令')
     } catch (err) {
-      logger.error('[xhh][zzz_gacha] updateWorkshop failed:', err)
+      logger.error('[HoYoGet][zzz_gacha] updateWorkshop failed:', err)
       return e.reply(`工坊云端同步失败：${err?.message || err}`)
     }
   }
@@ -1025,7 +1025,7 @@ export class zzz_gacha extends plugin {
         await e.reply(`【${page}】提取 ${count} 条`)
       } catch (err) {
         failed++
-        logger.error(`[xhh][zzz_gacha] 重建图标索引失败 ${page}：${err?.message || err}`)
+        logger.error(`[HoYoGet][zzz_gacha] 重建图标索引失败 ${page}：${err?.message || err}`)
         await e.reply(`【${page}】抓取失败：${err?.message || err}`)
       }
       // Bwiki 限流很凶，页间必须放慢
@@ -1042,7 +1042,7 @@ export class zzz_gacha extends plugin {
       ...Object.entries(counts).map(([ k, v ]) => `　${k}：${v} 条`),
       failed ? `注意：有 ${failed} 个页面抓取失败，索引可能不完整` : '',
       '',
-      '已有记录需要重新同步一次才会带上图标（发【#xhh绝区零更新工坊记录】即可）。',
+      '已有记录需要重新同步一次才会带上图标（发【#米哈游绝区零更新工坊记录】即可）。',
     ].filter(Boolean).join('\n'))
   }
 
@@ -1057,7 +1057,7 @@ export class zzz_gacha extends plugin {
     const auth = await getUserAuth(e)
     if (auth.error) return e.reply(auth.error)
     const data = readData(getDataFile(auth.uid, auth.qq))
-    if (!data?.pools) return e.reply('暂无绝区零抽卡记录，请先发送【#xhh绝区零更新抽卡记录】')
+    if (!data?.pools) return e.reply('暂无绝区零抽卡记录，请先发送【#米哈游绝区零更新抽卡记录】')
     const list = []
     for (const meta of ZZZ_POOLS) {
       const pool = data.pools[meta.key]
@@ -1179,7 +1179,7 @@ export class zzz_gacha extends plugin {
     if (auth.error) return e.reply(auth.error)
     const file = getDataFile(auth.uid, auth.qq)
     const old = readData(file)
-    if (!old?.pools) return e.reply('尚无本插件的绝区零抽卡数据，请先发送【#xhh绝区零更新抽卡记录】')
+    if (!old?.pools) return e.reply('尚无本插件的绝区零抽卡数据，请先发送【#米哈游绝区零更新抽卡记录】')
     // 卡池归属按 UIGF 的 gacha_type；认不出的一律跳过，不硬塞进某个池
     const grouped = {}
     for (const row of list) {
@@ -1246,14 +1246,14 @@ export class zzz_gacha extends plugin {
     const auth = await getUserAuth(e)
     if (auth.error && !arg) return e.reply(auth.error)
     const uid = arg || auth?.uid
-    if (!uid) return e.reply('请先绑定绝区零账号，或使用【#xhh绝区零导入四星 <UID>】指定 UID')
+    if (!uid) return e.reply('请先绑定绝区零账号，或使用【#米哈游绝区零导入四星 <UID>】指定 UID')
     const pluginData = readZzzPluginRows(uid)
     if (!pluginData) {
       return e.reply(`未找到 ZZZ-Plugin 的抽卡数据（${ZZZ_PLUGIN_POOL_DIR}/${uid}.json）\n请先在 ZZZ-Plugin 里更新一次绝区零抽卡记录`)
     }
     const file = getDataFile(uid, auth?.qq || e.user_id)
     const old = readData(file)
-    if (!old?.pools) return e.reply('尚无本插件的绝区零抽卡数据，请先发送【#xhh绝区零更新工坊记录】')
+    if (!old?.pools) return e.reply('尚无本插件的绝区零抽卡数据，请先发送【#米哈游绝区零更新工坊记录】')
     const result = mergeZzzPluginPools(old.pools, pluginData)
     if (!result.fourAdded && !result.fiveAdded) {
       await e.reply(`UID:${uid}\n没有新的四星明细可导入（四星明细 ${Object.values(old.pools).reduce((s, p) => s + (p.fourLog || []).length, 0)} 条）`)
@@ -1278,20 +1278,20 @@ export class zzz_gacha extends plugin {
         '【工坊云端绑定】',
         cur?.union_id ? `当前已绑定 union_id：${cur.union_id}` : '尚未绑定 union_id（不影响同步）',
         '',
-        '用法：#xhh绝区零绑定工坊 <union_id>',
+        '用法：#米哈游绝区零绑定工坊 <union_id>',
         '云端目前只校验该参数非空、不校验内容，未绑定时同步会自动使用占位值；',
         '此处绑定仅用于云端将来启用校验时无需改动。',
       ].join('\n'))
     }
     saveData(getWorkshopBindFile(qq), { union_id: value, update_time: formatNow() })
-    return e.reply(`工坊 union_id 绑定成功：${value}\n发送【#xhh绝区零更新工坊记录】拉取云端记录`)
+    return e.reply(`工坊 union_id 绑定成功：${value}\n发送【#米哈游绝区零更新工坊记录】拉取云端记录`)
   }
 
   async render(e, keys = [], layout = 'grid', itemFilter = null) {
     const auth = await getUserAuth(e)
     if (auth.error) return e.reply(auth.error)
     const data = readData(getDataFile(auth.uid, auth.qq))
-    if (!data?.pools) return e.reply('暂无绝区零抽卡记录，请先发送【#xhh绝区零抽卡链接 + 链接】')
+    if (!data?.pools) return e.reply('暂无绝区零抽卡记录，请先发送【#米哈游绝区零抽卡链接 + 链接】')
     let src = { ...data, pools: fillZzzIcons(data.pools) }
     // 常驻频段是角色+音擎+邦布混合池：记录视图按 itemFilter 只保留对应类型，与统计视图一致
     if (itemFilter && src.pools?.GachaType_Permanent) {
@@ -1344,7 +1344,7 @@ export class zzz_gacha extends plugin {
     const auth = await getUserAuth(e)
     if (auth.error) return e.reply(auth.error)
     const data = readData(getDataFile(auth.uid, auth.qq))
-    if (!data?.pools) return e.reply('暂无绝区零抽卡记录，请先发送【#xhh绝区零更新工坊记录】')
+    if (!data?.pools) return e.reply('暂无绝区零抽卡记录，请先发送【#米哈游绝区零更新工坊记录】')
     const view = buildZzzStatView(data, auth.uid, e, keys, itemFilter)
     // pct 压低 sys.scale 的 zoom：本卡内容行数多（30+ 条进度），
     // 全局 zoom 放大后总高会超出渲染后端截图上限被拦腰截断

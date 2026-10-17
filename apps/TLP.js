@@ -6,7 +6,7 @@ import { guardModuleByFile } from '../system/modules.js'
 export class tpl extends plugin {
   constructor() {
     super({
-      name: '[小花火]塔罗牌',
+      name: '[米哈游]塔罗牌',
       dsc: '',
       event: 'message',
       priority: pluginPriority('tlp', 15),
@@ -27,7 +27,7 @@ export class tpl extends plugin {
       return e.reply('你今日塔罗牌获取次数已达上限，明天再来吧', true);
     let url = 'http://api.tangdouz.com/tarot.php?&return=json';
     let data = await (await fetch(url)).json();
-    if (!data.img) return logger.error('[小花火]塔罗牌接口出错');
+    if (!data.img) return logger.error('[米哈游]塔罗牌接口出错');
     let img = data.img.replace(/\\/g, '');
     // await e.reply("开始洗牌.....",true, { recallMsg:  3 })
     await reply_recallMsg(e, '开始洗牌......', 3, true);

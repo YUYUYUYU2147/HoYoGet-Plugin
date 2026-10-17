@@ -13,15 +13,15 @@ if (!globalThis.__xhhHotHooked) {
     NodeModule.register('./system/hot/hooks.mjs', import.meta.url);
     globalThis.__xhhHotHooked = true;
     // 成功也要留痕：排查「热重载为什么没生效」时，先确认这一行在不在日志里
-    logger.info?.('[xhh] 热重载钩子已注册：插件内所有模块随热重载一起失效');
+    logger.info?.('[HoYoGet] 热重载钩子已注册：插件内所有模块随热重载一起失效');
   } catch (err) {
-    logger.warn?.(`[xhh] 热重载钩子注册失败，仅入口可热重载：${err?.message || err}`);
+    logger.warn?.(`[HoYoGet] 热重载钩子注册失败，仅入口可热重载：${err?.message || err}`);
   }
 }
 const { default: yaml } = await import('./system/yaml.js');
 
 logger.info('\x1B[31m---------៷>ᴗ<៷---------\x1B[0m');
-logger.info('\x1B[31m小花火插件正在载入...\x1B[0m');
+logger.info('\x1B[31m米哈游插件正在载入...\x1B[0m');
 logger.info('\x1B[31m-------------------------\x1B[0m');
 
 var paths = ['config/', 'temp/', 'data/', 'data/fp/', 'data/Stoken/'];
@@ -86,7 +86,7 @@ for (const _path of paths_) {
   // 否则嵌套键（如 groups.nte）会取到 undefined，把 undefined 写进配置文件。
   const pickDefault = p => p.split('\0').reduce((o, k) => (o === null || o === undefined ? undefined : o[k]), def_cfg);
   if (missing.length && yaml.setMissing(cfg_path, missing.map(m => m.path), pickDefault)) {
-    logger.info(`[xhh] 配置 ${_path} 补充新增键：${missing.map(m => m.path.replace(/\0/g, '.')).join(', ')}`);
+    logger.info(`[HoYoGet] 配置 ${_path} 补充新增键：${missing.map(m => m.path.replace(/\0/g, '.')).join(', ')}`);
   }
 }
 
@@ -124,7 +124,7 @@ for (let i in files) {
     ? Object.values(exportsObj).find(v => typeof v === 'function' && v.prototype instanceof base)
     : null
   if (!cls) {
-    logger.error(`[xhh] ${logger.red(name)} 未导出插件类，已跳过注册`)
+    logger.error(`[HoYoGet] ${logger.red(name)} 未导出插件类，已跳过注册`)
     continue
   }
   apps[name] = cls
@@ -135,7 +135,7 @@ try {
   const { startManualGeetest } = await import('./system/manual_geetest.js');
   startManualGeetest();
 } catch (err) {
-  logger.error(`[xhh] 手动验证码服务启动异常：${err?.message || err}`);
+  logger.error(`[HoYoGet] 手动验证码服务启动异常：${err?.message || err}`);
 }
 
 /* 自举热重载：框架的 #重载插件 实测不会重新 import ESM 入口，改完代码不生效、
@@ -143,7 +143,7 @@ try {
    把新方法拷到框架正在用的类上 —— 改完即生效，不用重启也不用发命令。
    开关在 config.yaml 的 auto_reload（缺省即开启）。 */
 try {
-  // ⚠ 这里不能用 config()：index.js 没有从 '#xhh' 导入 config（那是 apps/*.js 才有的），
+  // ⚠ 这里不能用 config()：index.js 没有从 '#米哈游' 导入 config（那是 apps/*.js 才有的），
   //    直接用会 ReferenceError。入口读配置一律走 yaml.get。
   const cfg = yaml.get('./plugins/HoYoGet-Plugin/config/config.yaml') || {};
   if (cfg.auto_reload !== false) {
@@ -151,7 +151,7 @@ try {
     startAutoReload({ apps, files, root: new URL('./', import.meta.url).href, logger });
   }
 } catch (err) {
-  logger.error(`[xhh] 自举热重载启动异常：${err?.message || err}`);
+  logger.error(`[HoYoGet] 自举热重载启动异常：${err?.message || err}`);
 }
 
 // 补齐配置里群号对应的群名，供锅巴群白名单下拉展示
@@ -179,7 +179,7 @@ setTimeout(async () => {
     ].map(v => String(v).trim()).filter(Boolean);
     if (ids.length) await refreshGroupNames([...new Set(ids)]);
   } catch (err) {
-    logger.debug(`[xhh] 群名缓存刷新失败：${err.message}`);
+    logger.debug(`[HoYoGet] 群名缓存刷新失败：${err.message}`);
   }
 }, 30 * 1000);
 

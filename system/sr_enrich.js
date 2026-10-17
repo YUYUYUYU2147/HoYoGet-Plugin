@@ -149,7 +149,7 @@ export async function enrichNanokaForAlioth(phaseId, detail, file = 'chaos') {
   try {
     map = await enrichFromNanoka(phaseId, version);
   } catch (err) {
-    logger.warn?.('[xhh][sr_enrich] nanoka 污染机制补充失败:', err?.message || err);
+    logger.warn?.('[HoYoGet][sr_enrich] nanoka 污染机制补充失败:', err?.message || err);
     return {};
   }
   // 校验：至少要有一个 stage_id 同时存在于 alioth 与 nanoka，否则视为期号对不上
@@ -157,7 +157,7 @@ export async function enrichNanokaForAlioth(phaseId, detail, file = 'chaos') {
   const hit = Object.keys(map).some(sid => aliothStages[sid] != null);
   if (!hit) {
     if (config().debug) {
-      logger.mark('[xhh][sr_enrich] nanoka 期号与 alioth 对不上，跳过污染机制补充:', phaseId, file);
+      logger.mark('[HoYoGet][sr_enrich] nanoka 期号与 alioth 对不上，跳过污染机制补充:', phaseId, file);
     }
     return {};
   }

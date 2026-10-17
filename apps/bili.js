@@ -6,26 +6,26 @@ import moment from 'moment';
 export class bilibili extends plugin {
   constructor(e) {
     super({
-      name: '[小花火]bili',
+      name: '[米哈游]bili',
       dsc: '',
       event: 'message',
       priority: pluginPriority('bilibili', -120),
       rule: [
         {
-          reg: '^#*(小花火)?清(空|除)(b站|B站|哔哩哔哩|bili|bilibili)缓存$',
+          reg: '^#*(?:米哈游)?清(空|除)(b站|B站|哔哩哔哩|bili|bilibili)缓存$',
           fnc: 'ggg',
           permission: 'master',
         },
         {
-          reg: '^#*(小花火)?(强制刷新|刷新|删除)(b站|B站|哔哩哔哩|bili|bilibili)ck$',
+          reg: '^#*(?:米哈游)?(强制刷新|刷新|删除)(b站|B站|哔哩哔哩|bili|bilibili)ck$',
           fnc: 'sx',
         },
         {
-          reg: '^#*(小花火)?(查看)*(我的)*(b站|B站|哔哩哔哩|bili|bilibili)账号$',
+          reg: '^#*(?:米哈游)?(查看)*(我的)*(b站|B站|哔哩哔哩|bili|bilibili)账号$',
           fnc: 'zh',
         },
         {
-          reg: '^#*小花火(b站|B站|哔哩哔哩|bili|bilibili)(扫码)?登(录|路|陆)$',
+          reg: '^#*米哈游(b站|B站|哔哩哔哩|bili|bilibili)(扫码)?登(录|路|陆)$',
           fnc: 'sm',
         },
         {
@@ -37,7 +37,7 @@ export class bilibili extends plugin {
     });
     this.task = {
       cron: '0 0 4 * * *', // Cron表达式，(秒 分 时 日 月 星期)
-      name: '[小花火]清空bilibili缓存',
+      name: '[米哈游]清空bilibili缓存',
       fnc: () => this.ggg(),
     };
   }

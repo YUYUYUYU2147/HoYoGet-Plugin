@@ -22,7 +22,7 @@ body::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: url('../Tl/imgs/小花火.png') no-repeat center;
+  background: url('../Tl/imgs/米哈游.png') no-repeat center;
   background-size: cover;
   opacity: 0.28;
   pointer-events: none;

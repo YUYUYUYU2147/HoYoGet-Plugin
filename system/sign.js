@@ -127,7 +127,7 @@ async function ensureCookieToken(e, ck, entry = null) {
             } catch (err) {
                 // 被风控拦下时米游社回的是 HTML 拦截页，硬解析会抛 SyntaxError
                 const head = String(text || '').trim().slice(0, 80);
-                logger.mark(`[xhh][sign] 返回非 JSON，status=${resp.status} body=${head}`);
+                logger.mark(`[HoYoGet][sign] 返回非 JSON，status=${resp.status} body=${head}`);
                 return { retcode: -1, message: head.startsWith('<') ? '米游社返回拦截页，请稍后重试' : '接口返回异常' };
             }
         } finally {
@@ -144,7 +144,7 @@ async function ensureCookieToken(e, ck, entry = null) {
                 const ltokenRes = await requestJson('https://passport-api.mihoyo.com/account/auth/api/getLTokenBySToken');
                 ltoken = ltokenRes?.data?.ltoken || '';
             }
-            if (config().debug) logger.mark(`[xhh][sign] ensureCookieToken retcode=${cookieRes?.retcode} cookieToken=${!!cookieToken} ltoken=${!!ltoken}`);
+            if (config().debug) logger.mark(`[HoYoGet][sign] ensureCookieToken retcode=${cookieRes?.retcode} cookieToken=${!!cookieToken} ltoken=${!!ltoken}`);
             map.stuid = stuid;
             map.stoken = stoken;
             map.cookie_token = cookieToken;
@@ -156,9 +156,9 @@ async function ensureCookieToken(e, ck, entry = null) {
             }
             return buildCookie(map);
         }
-        if (config().debug) logger.mark(`[xhh][sign] ensureCookieToken 失败 retcode=${cookieRes?.retcode} msg=${cookieRes?.message}`);
+        if (config().debug) logger.mark(`[HoYoGet][sign] ensureCookieToken 失败 retcode=${cookieRes?.retcode} msg=${cookieRes?.message}`);
     } catch (err) {
-        if (config().debug) logger.mark(`[xhh][sign] refresh cookie_token failed: ${err.message}`);
+        if (config().debug) logger.mark(`[HoYoGet][sign] refresh cookie_token failed: ${err.message}`);
     }
     return ck;
 }
@@ -466,7 +466,7 @@ function getXiaoyaoEntries(qq) {
             };
         }).filter(e => e.stuid && e.stoken);
     } catch (err) {
-        if (config().debug) logger.mark(`[xhh][sign] 读取逍遥 stoken 失败: ${err.message}`);
+        if (config().debug) logger.mark(`[HoYoGet][sign] 读取逍遥 stoken 失败: ${err.message}`);
         return [];
     }
 }
@@ -517,7 +517,7 @@ function getBbsAccounts(e) {
         if (hasXh) {
             try { xhN = Object.keys(yaml.get(path) || {}).length; } catch { }
         }
-        logger.mark(`[xhh][bbs] 账号来源 qq=${e.user_id} xhh文件=${hasXh ? '有' : '无'} `
+        logger.mark(`[HoYoGet][bbs] 账号来源 qq=${e.user_id} xhh文件=${hasXh ? '有' : '无'} `
             + `xhh条目=${xhN} 逍遥条目=${xy.length} → 通行证 ${accounts.size}`);
     }
     return [...accounts.values()];
@@ -628,11 +628,11 @@ async function bbsJson(e, account, url, body = null, useBodyDs = false, extraHea
         try {
             return JSON.parse(text);
         } catch {
-            logger.error(`[xhh][bbs] 返回非JSON: ${text.slice(0, 200)}`);
+            logger.error(`[HoYoGet][bbs] 返回非JSON: ${text.slice(0, 200)}`);
             return { retcode: -500, message: '接口返回异常(非JSON)' };
         }
     } catch (err) {
-        logger.error(`[xhh][bbs] 请求失败: ${err.message}`);
+        logger.error(`[HoYoGet][bbs] 请求失败: ${err.message}`);
         return { retcode: -500, message: '请求失败: ' + (err.name === 'AbortError' ? '超时' : err.message) };
     } finally {
         clearTimeout(timer);
@@ -655,11 +655,11 @@ async function bbsVerifyJson(e, account, url, body = null, query = '', challenge
         try {
             return JSON.parse(text);
         } catch {
-            logger.error(`[xhh][bbs_verify] 返回非JSON: ${text.slice(0, 200)}`);
+            logger.error(`[HoYoGet][bbs_verify] 返回非JSON: ${text.slice(0, 200)}`);
             return { retcode: -500, message: '接口返回异常(非JSON)' };
         }
     } catch (err) {
-        logger.error(`[xhh][bbs_verify] 请求失败: ${err.message}`);
+        logger.error(`[HoYoGet][bbs_verify] 请求失败: ${err.message}`);
         return { retcode: -500, message: '请求失败: ' + (err.name === 'AbortError' ? '超时' : err.message) };
     } finally {
         clearTimeout(timer);
@@ -704,7 +704,7 @@ async function autoVerifyAvailable() {
     } catch (_) { /* 地址写坏了就按默认端口探，探不到自然跳过 */ }
     const ok = await probeTcp(host, port);
     autoVerifyProbe = { at: now, ok };
-    if (config().debug) logger.mark(`[xhh][bbs_sign] 本地过码服务 ${host}:${port} ${ok ? '可用' : '不可用，跳过自动过码'}`);
+    if (config().debug) logger.mark(`[HoYoGet][bbs_sign] 本地过码服务 ${host}:${port} ${ok ? '可用' : '不可用，跳过自动过码'}`);
     return ok;
 }
 
@@ -748,12 +748,12 @@ async function ttocrSubmit(gt, challenge) {
         }).then(r => r.json());
         // status=1 且有 resultid 才是提交成功
         if (Number(res?.status) === 1 && res?.resultid) {
-            if (config().debug) logger.mark(`[xhh][bbs_sign] 打码平台已提交 resultid=${String(res.resultid).slice(0, 12)}…`);
+            if (config().debug) logger.mark(`[HoYoGet][bbs_sign] 打码平台已提交 resultid=${String(res.resultid).slice(0, 12)}…`);
             return String(res.resultid);
         }
-        logger.mark(`[xhh][bbs_sign] 打码平台提交失败 status=${res?.status} msg=${String(res?.msg || '').slice(0, 60)}`);
+        logger.mark(`[HoYoGet][bbs_sign] 打码平台提交失败 status=${res?.status} msg=${String(res?.msg || '').slice(0, 60)}`);
     } catch (err) {
-        logger.mark(`[xhh][bbs_sign] 打码平台提交异常: ${err.message}`);
+        logger.mark(`[HoYoGet][bbs_sign] 打码平台提交异常: ${err.message}`);
     }
     return '';
 }
@@ -775,13 +775,13 @@ async function ttocrPoll(resultid) {
                 signal: AbortSignal.timeout(15000),
             }).then(r => r.json());
         } catch (err) {
-            logger.mark(`[xhh][bbs_sign] 打码平台查询异常: ${err.message}`);
+            logger.mark(`[HoYoGet][bbs_sign] 打码平台查询异常: ${err.message}`);
             return null;
         }
         const status = Number(res?.status);
         // status=1 且带 validate 才是识别完成；其余（还在识别 / 失败）继续等
         if (status === 1 && res?.data?.validate) {
-            if (config().debug) logger.mark(`[xhh][bbs_sign] 打码平台识别成功耗时=${res?.time ?? '未知'}ms`);
+            if (config().debug) logger.mark(`[HoYoGet][bbs_sign] 打码平台识别成功耗时=${res?.time ?? '未知'}ms`);
             return {
                 challenge: res.data.challenge || '',
                 validate: res.data.validate,
@@ -790,11 +790,11 @@ async function ttocrPoll(resultid) {
         }
         // 明确的失败状态就别耗着了（识别失败官方不扣点数，重来不亏）
         if (status >= 4000 || (res?.msg && /失败|错误|不存在|过期/.test(String(res.msg)))) {
-            logger.mark(`[xhh][bbs_sign] 打码平台返回失败 status=${status} msg=${String(res?.msg || '').slice(0, 60)}`);
+            logger.mark(`[HoYoGet][bbs_sign] 打码平台返回失败 status=${status} msg=${String(res?.msg || '').slice(0, 60)}`);
             return null;
         }
     }
-    logger.mark('[xhh][bbs_sign] 打码平台等待超时');
+    logger.mark('[HoYoGet][bbs_sign] 打码平台等待超时');
     return null;
 }
 
@@ -845,17 +845,17 @@ async function bbsAutoVerify(e, account) {
         }).then(r => r.json());
         if (res?.data?.result === 'ok') {
             const challenge = res.data.challenge || '';
-            logger.mark(`[xhh][bbs_sign] 本地服务自动过码成功 challenge=${challenge ? '有' : '无'}`);
+            logger.mark(`[HoYoGet][bbs_sign] 本地服务自动过码成功 challenge=${challenge ? '有' : '无'}`);
             return challenge;
         }
         if (res?.error === 'breaker open') {
             // 服务端熔断中：这一条没真去解滑块，是服务端主动拒的，等冷却结束会自动恢复
-            logger.mark(`[xhh][bbs_sign] 本地过码服务熔断中，本次跳过（建议 ${res.retryAfter ?? '若干'} 秒后再试），直接走手动/兜底`);
+            logger.mark(`[HoYoGet][bbs_sign] 本地过码服务熔断中，本次跳过（建议 ${res.retryAfter ?? '若干'} 秒后再试），直接走手动/兜底`);
         } else if (config().debug) {
-            logger.mark(`[xhh][bbs_sign] 本地服务未过码: ${JSON.stringify(res).slice(0, 160)}`);
+            logger.mark(`[HoYoGet][bbs_sign] 本地服务未过码: ${JSON.stringify(res).slice(0, 160)}`);
         }
     } catch (err) {
-        if (config().debug) logger.mark(`[xhh][bbs_sign] 本地过码服务不可用: ${err.message}`);
+        if (config().debug) logger.mark(`[HoYoGet][bbs_sign] 本地过码服务不可用: ${err.message}`);
     }
     return '';
 }
@@ -930,7 +930,7 @@ async function bbsForumSign(e, account, forum, ctx = {}) {
     // 任务态只用于后面判断要不要跑浏览/点赞/分享；板块签到仍然逐个执行。
     if (ctx.missions === undefined) {
         ctx.missions = await bbsMissions(e, refreshed);
-        if (config().debug) logger.mark(`[xhh][bbs_sign] 任务态=${ctx.missions?.res?.retcode} 可获取=${ctx.missions?.canGet ?? '未知'}`);
+        if (config().debug) logger.mark(`[HoYoGet][bbs_sign] 任务态=${ctx.missions?.res?.retcode} 可获取=${ctx.missions?.canGet ?? '未知'}`);
     }
     let signRes = await bbsJson(e, refreshed, signUrl, { gids }, true);
     // 网络抖动/接口超时重试一次，避免整个板块直接判失败
@@ -940,15 +940,15 @@ async function bbsForumSign(e, account, forum, ctx = {}) {
     }
     if (config().debug) {
         const fields = (refreshed.ck || '').split(';').map(s => s.split('=')[0]).filter(Boolean).join(',');
-        logger.mark(`[xhh][bbs_sign] ${forum.name} ck字段=[${fields}]`);
-        logger.mark(`[xhh][bbs_sign] ${forum.name} signRes=${JSON.stringify(signRes).slice(0, 300)}`);
+        logger.mark(`[HoYoGet][bbs_sign] ${forum.name} ck字段=[${fields}]`);
+        logger.mark(`[HoYoGet][bbs_sign] ${forum.name} signRes=${JSON.stringify(signRes).slice(0, 300)}`);
     }
     // 米游社颁的 challenge 要当 x-rpc-challenge 带回：过码完立刻重打仍是 1034，按梯度等放行
     const retryWithChallenge = async ch => {
         for (const gap of CAPTCHA_RETRY_GAPS) {
             if (gap) await sleep(gap);
             const retry = await bbsJson(e, refreshed, signUrl, { gids }, true, { 'x-rpc-challenge': ch });
-            if (config().debug) logger.mark(`[xhh][bbs_sign] retry=${retry?.retcode} msg=${retry?.message} gap=${gap}`);
+            if (config().debug) logger.mark(`[HoYoGet][bbs_sign] retry=${retry?.retcode} msg=${retry?.message} gap=${gap}`);
             signRes = retry;
             // 只在「真的签上了」时收手。以前这里是 !isBbsCaptcha(retry) —— 把
             // 1005 参数错误这种「风控尚未放行」既不是验证码、也不是成功的码，
@@ -976,7 +976,7 @@ async function bbsForumSign(e, account, forum, ctx = {}) {
         if (!verifyBody.geetest_validate) return false;
         const verifyRes = await bbsVerifyJson(e, refreshed, verifyUrl, verifyBody, '', challengeGame, clientType);
         const ch = verifyRes?.data?.challenge;
-        if (config().debug) logger.mark(`[xhh][bbs_sign] verifyVerification=${verifyRes?.retcode} ch=${!!ch}`);
+        if (config().debug) logger.mark(`[HoYoGet][bbs_sign] verifyVerification=${verifyRes?.retcode} ch=${!!ch}`);
         if (!ch) return false;
         return retryWithChallenge(ch);
     };
@@ -1004,12 +1004,12 @@ async function bbsForumSign(e, account, forum, ctx = {}) {
             }
             const gt = createRes?.data?.gt;
             const challenge = createRes?.data?.challenge;
-            if (config().debug) logger.mark(`[xhh][bbs_sign] createVerification=${createRes?.retcode} gt=${!!gt} challenge=${!!challenge} forum=${forum.name}`);
+            if (config().debug) logger.mark(`[HoYoGet][bbs_sign] createVerification=${createRes?.retcode} gt=${!!gt} challenge=${!!challenge} forum=${forum.name}`);
             if (gt && challenge) {
                 captcha = { gt, challenge, new_captcha: createRes.data.new_captcha || 1, success: createRes.data.success ?? 1, verifyClientType, verifyUrl };
             }
         } catch (err) {
-            if (config().debug) logger.mark(`[xhh][bbs_sign] 过码失败: ${err.message}`);
+            if (config().debug) logger.mark(`[HoYoGet][bbs_sign] 过码失败: ${err.message}`);
         }
     }
     // 打码平台兜底：配了 ttocr_appkey 才走。放在本机服务之后、手动之前 ——
@@ -1023,7 +1023,7 @@ async function bbsForumSign(e, account, forum, ctx = {}) {
                 await verifyAndRetry(tt.challenge || captcha.challenge, tt, captcha.verifyClientType, captcha.verifyUrl);
             }
         } catch (err) {
-            if (config().debug) logger.mark(`[xhh][bbs_sign] 打码平台过码异常: ${err.message}`);
+            if (config().debug) logger.mark(`[HoYoGet][bbs_sign] 打码平台过码异常: ${err.message}`);
         }
     }
     // 最后才轮到手动过码：一轮签到只弹一次(否则 7 个板块 × 120s 直接把指令卡死)
@@ -1033,7 +1033,7 @@ async function bbsForumSign(e, account, forum, ctx = {}) {
             const man = await manualGeetest(e, captcha, `${forum.name} 社区签到`);
             if (man?.validate) await verifyAndRetry(man.challenge, man, captcha.verifyClientType, captcha.verifyUrl);
         } catch (err) {
-            if (config().debug) logger.mark(`[xhh][bbs_sign] 手动过码异常: ${err.message}`);
+            if (config().debug) logger.mark(`[HoYoGet][bbs_sign] 手动过码异常: ${err.message}`);
         }
     }
     let signTip;
@@ -1056,7 +1056,7 @@ async function finishBbsAccount(e, account, ctx, rows, lines) {
             if (taskTip) lines.push(`每日任务：${taskTip}`);
         }
     } catch (err) {
-        if (config().debug) logger.mark(`[xhh][bbs_task] ${account.stuid || e.user_id}: ${err.message}`);
+        if (config().debug) logger.mark(`[HoYoGet][bbs_task] ${account.stuid || e.user_id}: ${err.message}`);
     }
     await markBbsSigned(e, account);
     return true;
@@ -1103,7 +1103,7 @@ async function openGameCkDb() {
         const { DatabaseSync } = await import('node:sqlite');
         _ckDb = new DatabaseSync(GAME_CK_DB, { readOnly: true });
     } catch (err) {
-        if (config().debug) logger.mark(`[xhh][sign] 游戏签到 CK 库打不开: ${err.message}`);
+        if (config().debug) logger.mark(`[HoYoGet][sign] 游戏签到 CK 库打不开: ${err.message}`);
         _ckDb = false;
     }
     return _ckDb;
@@ -1142,7 +1142,7 @@ async function gameCkIndex() {
         _ckIndex = idx;
         return idx;
     } catch (err) {
-        if (config().debug) logger.mark(`[xhh][sign] 游戏签到 CK 索引失败: ${err.message}`);
+        if (config().debug) logger.mark(`[HoYoGet][sign] 游戏签到 CK 索引失败: ${err.message}`);
         _ckIndex = false;
         return false;
     }
@@ -1204,7 +1204,7 @@ function loadCkState() {
             }
         }
     } catch (err) {
-        if (config().debug) logger.mark(`[xhh][sign] 读 ck 状态失败，按全空处理: ${err.message}`);
+        if (config().debug) logger.mark(`[HoYoGet][sign] 读 ck 状态失败，按全空处理: ${err.message}`);
         _ckState = new Map();
     }
     return _ckState;
@@ -1219,7 +1219,7 @@ function saveCkState() {
         fs.mkdirSync('./plugins/HoYoGet-Plugin/data', { recursive: true });
         fs.writeFileSync(CK_STATE_PATH, JSON.stringify(out, null, 2));
     } catch (err) {
-        if (config().debug) logger.mark(`[xhh][sign] 写 ck 状态失败: ${err.message}`);
+        if (config().debug) logger.mark(`[HoYoGet][sign] 写 ck 状态失败: ${err.message}`);
     }
 }
 
@@ -1263,13 +1263,13 @@ async function markCkIfDead(ck, game) {
     try {
         alive = await probeCkAlive(ck);
     } catch (err) {
-        if (config().debug) logger.mark(`[xhh][sign] ck 验活失败，按有效处理: ${err.message}`);
+        if (config().debug) logger.mark(`[HoYoGet][sign] ck 验活失败，按有效处理: ${err.message}`);
         return true;
     }
     _ckState.set(key, alive);
     saveCkState();
     if (!alive && config().debug) {
-        logger.mark(`[xhh][sign] ${game} 的这份 ck 已确认过期，记下来以后跳过`);
+        logger.mark(`[HoYoGet][sign] ${game} 的这份 ck 已确认过期，记下来以后跳过`);
     }
     return alive;
 }
@@ -1307,7 +1307,7 @@ async function queryRegionByCk(ck, game, uid) {
             if (hit?.region) region = String(hit.region);
         }
     } catch (err) {
-        if (config().debug) logger.mark(`[xhh][sign] 查区服失败 ${cacheKey}: ${err.message}`);
+        if (config().debug) logger.mark(`[HoYoGet][sign] 查区服失败 ${cacheKey}: ${err.message}`);
     }
     _regionCache.set(cacheKey, region);
     return region;
@@ -1335,7 +1335,7 @@ async function getGenshinCks() {
             })).filter(r => r.ltuid && /cookie_token=/.test(r.ck));
         } finally { db.close(); }
     } catch (err) {
-        if (config().debug) logger.mark(`[xhh][genshin_ck] 读取失败: ${err.message}`);
+        if (config().debug) logger.mark(`[HoYoGet][genshin_ck] 读取失败: ${err.message}`);
         return [];
     }
 }
@@ -1379,7 +1379,7 @@ function markInvalid(account, rows) {
         old[stuid] = { last: new Date().toISOString().slice(0, 19).replace('T', ' ') };
         fs.writeFileSync(INVALID_FILE, JSON.stringify(old, null, 2));
     } catch (err) {
-        logger.error(`[xhh][bbs_sign] 记录失效通行证失败: ${err.message}`);
+        logger.error(`[HoYoGet][bbs_sign] 记录失效通行证失败: ${err.message}`);
     }
 }
 
@@ -1404,7 +1404,7 @@ async function bbsSignCore(e, accounts, title) {
             try {
                 tip = await bbsForumSign(e, account, forum, ctx);
             } catch (err) {
-                logger.error(`[xhh][bbs_sign] ${account.stuid || e.user_id} ${forum.name}: ${err.message}`);
+                logger.error(`[HoYoGet][bbs_sign] ${account.stuid || e.user_id} ${forum.name}: ${err.message}`);
             }
             lines.push(`${forum.name}：${tip}`);
             rows.push({ name: forum.name, tip });
@@ -1500,7 +1500,7 @@ function collapseMsgs(msgs) {
 
 /**
  * 发社区自动签到结果。img 由调用方渲染好传进来 —— 定时任务里没有 e，
- * 而 #xhh 导出的 render 强依赖 e.runtime，只能走 apps/sign.js 里的本地包装。
+ * 而 #米哈游 导出的 render 强依赖 e.runtime，只能走 apps/sign.js 里的本地包装。
  */
 async function sendBbsAutoResult(group, result, img, cfg = {}) {
     const { lines = [], failed = [] } = result || {};
@@ -1576,7 +1576,7 @@ async function replyBbsResultImage(e, msgs, lines) {
             // 与游戏签到共用 sign/sign.html，这里单独给个 saveId，免得命中它的渲染缓存
             saveId: 'bbs_sign',
         }, { e, ret: true });
-        if (config().debug) logger.mark(`[xhh][bbs] 出图发送结果: ${JSON.stringify(sent ?? null).slice(0, 120)}`);
+        if (config().debug) logger.mark(`[HoYoGet][bbs] 出图发送结果: ${JSON.stringify(sent ?? null).slice(0, 120)}`);
         // render 只在截图/渲染失败时给 false，否则已经发出去了
         if (sent !== false) {
             if (!ok) {
@@ -1586,7 +1586,7 @@ async function replyBbsResultImage(e, msgs, lines) {
             return true;
         }
     } catch (err) {
-        logger.error(`[xhh][bbs_sign] 结果渲染失败，回退文本: ${err.message}`);
+        logger.error(`[HoYoGet][bbs_sign] 结果渲染失败，回退文本: ${err.message}`);
     }
     return replyBbsResult(e, lines);
 }
@@ -1683,7 +1683,7 @@ async function zd_MysSign(qqs) {
             );
             const dropped = targets.length - usable.length;
             if (dropped && config().debug) {
-                logger.mark(`[xhh][sign] ${qq} ${game} 跳过 ${dropped} 个已确认凭证失效的账号`);
+                logger.mark(`[HoYoGet][sign] ${qq} ${game} 跳过 ${dropped} 个已确认凭证失效的账号`);
             }
             for (let i = 0; i < usable.length; i++) {
                 z_num++;
@@ -1770,7 +1770,7 @@ async function zd_MysSign(qqs) {
         }
         if (sbai_qqs.includes(qq) && config().debug) {
             // 失败原因只在 debug 下打：内容来自米游社，逐账号会很多
-            logger.mark(`[xhh][sign] 游戏签到失败 qq=${qq} ${diag.length ? [...new Set(diag)].slice(0, 4).join(' | ').slice(0, 400) : '（没拿到原因）'}`);
+            logger.mark(`[HoYoGet][sign] 游戏签到失败 qq=${qq} ${diag.length ? [...new Set(diag)].slice(0, 4).join(' | ').slice(0, 400) : '（没拿到原因）'}`);
         }
         await sleep(500);
     }

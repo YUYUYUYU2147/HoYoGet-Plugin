@@ -8,7 +8,7 @@ import {
 export class picture extends plugin {
     constructor(e) {
         super({
-            name: '[小花火]图片处理',
+            name: '[米哈游]图片处理',
             dsc: '',
             event: 'message',
             priority: pluginPriority('picture', 1234),

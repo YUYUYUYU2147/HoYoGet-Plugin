@@ -62,7 +62,7 @@ function getMysRating(pref = {}) {
 export class bh3_profile extends plugin {
   constructor(e) {
     super({
-      name: '[小花火]崩三角色主页',
+      name: '[米哈游]崩三角色主页',
       dsc: '崩坏3角色主页卡片',
       event: 'message',
       priority: pluginPriority('bh3_profile', 100),
@@ -215,7 +215,7 @@ export class bh3_profile extends plugin {
     };
 
     try {
-      const buf = await puppeteer.render('小花火/bh3_profile/profile', {
+      const buf = await puppeteer.render('米哈游/bh3_profile/profile', {
         // {{ppath}} 不会由框架注入（只有 system/render.js 那条路会），
         // 缺了它 CSS/背景图/图标全部 404，页面退化成无样式的裸 HTML。
         // 层数 = 资源目录段数 + 3：小花火/bh3_profile/profile 落在 temp/html/下同深度目录。

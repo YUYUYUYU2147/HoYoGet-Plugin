@@ -52,7 +52,7 @@ async function fetchJson(url, timeout = 10000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
   try {
-    const res = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': 'Mozilla/5.0 xhh-abyss-now' } });
+    const res = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': 'Mozilla/5.0 HoYoGet-abyss-now' } });
     if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
     return await res.json();
   } finally {
@@ -264,7 +264,7 @@ async function buildAbyss(mode, opts = {}) {
     disorder: cleanRich(floor.Disorder || ''),
     hasDisorder: true,
     sections: [{ title: `第${floor.Index}层`, meta: `HP ${pct(floor.HPRatio)}`, rooms }],
-    tip: layer ? '' : '默认展示最高层，可发送如「xhh原神11层深渊速览」查看其它层',
+    tip: layer ? '' : '默认展示最高层，可发送如「米哈游原神11层深渊速览」查看其它层',
     generatedAt: moment().format('MM-DD HH:mm'),
   };
 }
@@ -559,7 +559,7 @@ async function buildArb(mode, opts = {}) {
 /* ---------------- 消息解析 ---------------- */
 
 function parseMsg(msg = '') {
-  const text = String(msg || '').replace(/^[#＃]{0,2}xhh/i, '').trim();
+  const text = String(msg || '').replace(/^[#＃]{0,2}米哈游/i, '').trim();
   const layer = text.match(/(\d{1,2})层/)?.[1] || '';
   // 版本（7.1）优先于层数；期号支持「58期」「第58期」
   const version = text.match(/([0-9]{1,2}\.[0-9]{1,2})/)?.[1] || '';
@@ -584,13 +584,13 @@ function parseMsg(msg = '') {
 export class AbyssNow extends plugin {
   constructor(e) {
     super({
-      name: '[小花火]深渊速览',
+      name: '[米哈游]深渊速览',
       dsc: 'Alioth 深渊当期速览（原神/星铁全玩法）',
       event: 'message',
       priority: pluginPriority('abyss_now', 100),
       rule: [
         {
-          reg: '^#*xhh(原神|星铁|星穹|崩铁)?(?:([0-9]{1,2}\\.[0-9]{1,2}))?(?:第?([0-9]{2,4})期)?(?:上一期|上期|上一|下一期|下期|下一)?(?:([0-9]{1,2})层)?(深境螺旋|深境|深渊|幻想真境剧诗|幻想剧诗|幻想|真境|剧诗|幽境危战|幽境|危战|混沌回忆|混沌|回忆|虚构叙事|虚构|末日幻影|末日|幻影|异相仲裁|异相|仲裁|王棋)(?:([0-9]{1,2})层)?(?:上一期|上期|上一|下一期|下期|下一)?(速览|一览|详情|情报|阵容)$',
+          reg: '^#*米哈游(原神|星铁|星穹|崩铁)?(?:([0-9]{1,2}\\.[0-9]{1,2}))?(?:第?([0-9]{2,4})期)?(?:上一期|上期|上一|下一期|下期|下一)?(?:([0-9]{1,2})层)?(深境螺旋|深境|深渊|幻想真境剧诗|幻想剧诗|幻想|真境|剧诗|幽境危战|幽境|危战|混沌回忆|混沌|回忆|虚构叙事|虚构|末日幻影|末日|幻影|异相仲裁|异相|仲裁|王棋)(?:([0-9]{1,2})层)?(?:上一期|上期|上一|下一期|下期|下一)?(速览|一览|详情|情报|阵容)$',
           fnc: 'overview',
         },
       ],
@@ -615,7 +615,7 @@ export class AbyssNow extends plugin {
       if (view.tip) await e.reply(view.tip, true, { recallMsg: 60 });
       return e.reply(img);
     } catch (err) {
-      logger.warn(`[xhh][abyss_now] ${mode.title} 速览失败: ${err?.message || err}`);
+      logger.warn(`[HoYoGet][abyss_now] ${mode.title} 速览失败: ${err?.message || err}`);
       return e.reply(`${mode.title}数据获取失败，请稍后再试。`, true, { recallMsg: 60 });
     }
   }

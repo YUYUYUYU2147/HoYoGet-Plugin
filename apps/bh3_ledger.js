@@ -53,7 +53,7 @@ function debugLog(...args) {
 export class bh3_ledger extends plugin {
     constructor(e) {
         super({
-            name: '[小花火]崩三水晶',
+            name: '[米哈游]崩三水晶',
             dsc: '崩坏3水晶统计查询',
             event: 'message',
             priority: pluginPriority('bh3_ledger', 100),
@@ -389,7 +389,7 @@ export class bh3_ledger extends plugin {
     async switchBh3Uid(e) {
         const qq = e.user_id;
         const stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${qq}.yaml`;
-        if (!fs.existsSync(stokenPath)) return e.reply('请先 #小花火扫码绑定 后再切换UID');
+        if (!fs.existsSync(stokenPath)) return e.reply('请先 #米哈游扫码绑定 后再切换UID');
 
         let stokenData;
         try { stokenData = await yaml.get(stokenPath); } catch (_) { }
@@ -533,7 +533,7 @@ export class bh3_ledger extends plugin {
                     ? '当前没有设置默认水晶查询UID，扫码绑定时会自动设置'
                     : `当前共绑定 ${accounts.length} 个崩坏3账号，发送 #切换水晶uid 序号 即可切换`;
         try {
-            const buf = await puppeteer.render('小花火/bh3_ledger/uid_switch', {
+            const buf = await puppeteer.render('米哈游/bh3_ledger/uid_switch', {
                 // {{ppath}} 不会由框架注入（只有 system/render.js 那条路会），
                 // 缺了它 CSS/背景图/图标全部 404，页面退化成无样式的裸 HTML。
                 // 层数 = 资源目录段数 + 3：小花火/bh3_ledger/uid_switch 落在 temp/html/下同深度目录。
@@ -552,7 +552,7 @@ export class bh3_ledger extends plugin {
             });
             if (buf && Buffer.isBuffer(buf)) return e.reply(segment.image(buf));
         } catch (err) {
-            logger.warn(`[xhh][bh3_ledger] 切换UID卡片渲染失败，回退文字: ${err?.message || err}`);
+            logger.warn(`[HoYoGet][bh3_ledger] 切换UID卡片渲染失败，回退文字: ${err?.message || err}`);
         }
         let msg = mode === 'delete'
             ? `已删除默认水晶查询UID：${selected?.uid || ''}`
@@ -813,7 +813,7 @@ export class bh3_ledger extends plugin {
             const latest = monthList[monthList.length - 1];
             const hcoinBalance = Number(latest?.hcoinBalance) || Number(latest?.month_level) || 0;
 
-            let buf = await puppeteer.render('小花火/bh3_ledger/ledger_count', {
+            let buf = await puppeteer.render('米哈游/bh3_ledger/ledger_count', {
                 // {{ppath}} 不会由框架注入（只有 system/render.js 那条路会），
                 // 缺了它 CSS/背景图/图标全部 404，页面退化成无样式的裸 HTML。
                 // 层数 = 资源目录段数 + 3：小花火/bh3_ledger/ledger_count 落在 temp/html/下同深度目录。
@@ -913,7 +913,7 @@ export class bh3_ledger extends plugin {
         let chars = ["Coralie", "Senadina", "Helia"];
         let icons = ["1-1", "1-2", "1-3", "2-1", "2-2", "2-3", "3-1", "3-2", "3-3"];
 
-        let buf = await puppeteer.render('小花火/bh3_ledger/ledger', {
+        let buf = await puppeteer.render('米哈游/bh3_ledger/ledger', {
             // {{ppath}} 不会由框架注入（只有 system/render.js 那条路会），
             // 缺了它 CSS/背景图/图标全部 404，页面退化成无样式的裸 HTML。
             // 层数 = 资源目录段数 + 3：小花火/bh3_ledger/ledger 落在 temp/html/下同深度目录。
@@ -1055,7 +1055,7 @@ export class bh3_ledger extends plugin {
         let chars = ["Coralie", "Senadina", "Helia"];
         let icons = ["1-1", "1-2", "1-3", "2-1", "2-2", "2-3", "3-1", "3-2", "3-3"];
 
-        let buf = await puppeteer.render('小花火/bh3_ledger/ledger', {
+        let buf = await puppeteer.render('米哈游/bh3_ledger/ledger', {
             // {{ppath}} 不会由框架注入（只有 system/render.js 那条路会），
             // 缺了它 CSS/背景图/图标全部 404，页面退化成无样式的裸 HTML。
             // 层数 = 资源目录段数 + 3：小花火/bh3_ledger/ledger 落在 temp/html/下同深度目录。

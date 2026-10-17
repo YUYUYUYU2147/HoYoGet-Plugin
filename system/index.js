@@ -140,7 +140,7 @@ async function makeForwardMsg(e, msg = [], dec = '', Id = '', isGroup = true) {
             }
         } catch (err) {
             if (isForwardCompatMode()) {
-                logger.warn?.('[xhh] 合并转发生成失败，已按hbxx兼容模式改为纯文本:', err?.message || err);
+                logger.warn?.('[HoYoGet] 合并转发生成失败，已按hbxx兼容模式改为纯文本:', err?.message || err);
                 return msg.map(forwardPlainText).filter(Boolean).join('\n');
             }
             throw err;

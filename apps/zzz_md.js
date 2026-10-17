@@ -8,7 +8,7 @@ const getNoteUser = makeGenshinLoader('model/mys/NoteUser.js', ['model/mys/NoteU
 export class zzz extends plugin {
     constructor(e) {
         super({
-            name: '[小花火]绝区零母带',
+            name: '[米哈游]绝区零母带',
             dsc: '绝区零母带查询',
             event: 'message',
             priority: pluginPriority('zzz_md', 100),

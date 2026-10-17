@@ -17,21 +17,21 @@ const path = process.cwd();
 export class voice extends plugin {
     constructor() {
         super({
-            name: '[小花火]角色语音',
+            name: '[米哈游]角色语音',
             dsc: '',
             event: 'message',
             priority: pluginPriority('voice', 15),
             rule: [{
-                    reg: '^#*(小花火)?清(空|除)语音(图片(列表)?)?缓存$',
+                    reg: '^#*(?:米哈游)?清(空|除)语音(图片(列表)?)?缓存$',
                     fnc: 'qc',
                     permission: 'master',
                 },
                 {
-                    reg: '^(#|\\*)?(小花火|xhh)?(崩三|崩坏3|崩坏三|BH3)(.*?)语音(列表)?$',
+                    reg: '^(#|\\*)?米哈游?(崩三|崩坏3|崩坏三|BH3)(.*?)语音(列表)?$',
                     fnc: 'yylb',
                 },
                 {
-                    reg: '^(#|\\*)?(小花火|xhh)(.+?)语音(列表)?$',
+                    reg: '^(#|\\*)?米哈游(.+?)语音(列表)?$',
                     fnc: 'yylb',
                 },
                 {
@@ -46,7 +46,7 @@ export class voice extends plugin {
         });
         this.task = {
             cron: '0 20 4 * * *', //Cron表达式，(秒 分 时 日 月 星期)
-            name: '[小花火]清空语音列表图片缓存',
+            name: '[米哈游]清空语音列表图片缓存',
             fnc: () => this.qc(),
         };
     }
@@ -70,7 +70,7 @@ export class voice extends plugin {
         if (isBh3) return this.bh3VoiceList(e);
         const voiceEnabled = isSr ? config().sr_voice !== false : config().gs_voice !== false;
         if (!config().all_voice || !voiceEnabled) return false;
-        let name = e.msg.replace(/#|\*|小花火|xhh|星铁|原神|语音|列表/gi, '');
+        let name = e.msg.replace(/#|\*|米哈游|星铁|原神|语音|列表/gi, '');
 
         if (!isSr && config().gs_voice !== false) {
             //调用小花火原神别名
@@ -178,7 +178,7 @@ export class voice extends plugin {
     // 崩坏3语音：走官方 WIKI 的配音展示（mp3 直链）
     async bh3VoiceList(e) {
         if (!config().all_voice || config().bh3_voice === false) return false;
-        let name = e.msg.replace(/#|\*|小花火|xhh|崩三|崩坏3|崩坏三|BH3|语音|列表/gi, '').trim();
+        let name = e.msg.replace(/#|\*|米哈游|崩三|崩坏3|崩坏三|BH3|语音|列表/gi, '').trim();
         if (!name) return this.bh3VoiceIndex(e);
         const data = await yyjson.bh3_other_download(name);
         if (!data?.list?.length) return e.reply(`未找到崩坏3角色「${name}」的语音，换个名字试试~`, true);

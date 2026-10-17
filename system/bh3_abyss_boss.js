@@ -346,7 +346,7 @@ function buildInferredAbyssInfo(post = {}, word = '', role = {}, region = '', so
 
 async function inferCurrentAbyssInfoFromMys(role = {}, region = '') {
   const sources = parseGuideSources(config().bh3_guide_abyss_sources);
-  logger.mark(`[xhh][bh3_abyss_boss] 推断开始，攻略源：${sources.map(s => `${s[0]}|${s[1]}`).join(' , ')}`);
+  logger.mark(`[HoYoGet][bh3_abyss_boss] 推断开始，攻略源：${sources.map(s => `${s[0]}|${s[1]}`).join(' , ')}`);
   for (const [keyword, uid, author] of sources) {
     const searchWords = [`${keyword} 超弦`, `${keyword} 深渊`, `${keyword} 共鸣`, `${keyword} 量子`, `${keyword} 泥鳅`, '希鸭花', keyword];
     for (const word of searchWords) {
@@ -354,18 +354,18 @@ async function inferCurrentAbyssInfoFromMys(role = {}, region = '') {
         const posts = await searchMysPosts(word, uid, 8);
         for (const post of posts) {
           const subject = String(post.subject || '').slice(0, 30);
-          if (!isRecentPost(post, 4)) { logger.mark(`[xhh][bh3_abyss_boss] 过滤(超4天)「${subject}」`); continue; }
-          if (!isCurrentAbyssGuidePost(post)) { logger.mark(`[xhh][bh3_abyss_boss] 过滤(非本期)「${subject}」`); continue; }
-          if (isBattlefieldGuidePost(post)) { logger.mark(`[xhh][bh3_abyss_boss] 过滤(战场帖)「${subject}」`); continue; }
+          if (!isRecentPost(post, 4)) { logger.mark(`[HoYoGet][bh3_abyss_boss] 过滤(超4天)「${subject}」`); continue; }
+          if (!isCurrentAbyssGuidePost(post)) { logger.mark(`[HoYoGet][bh3_abyss_boss] 过滤(非本期)「${subject}」`); continue; }
+          if (isBattlefieldGuidePost(post)) { logger.mark(`[HoYoGet][bh3_abyss_boss] 过滤(战场帖)「${subject}」`); continue; }
           const boss = extractBossFromPost(post);
-          if (!boss) { logger.mark(`[xhh][bh3_abyss_boss] 过滤(提不出Boss)「${subject}」`); continue; }
-          logger.mark(`[xhh][bh3_abyss_boss] 命中攻略帖「${subject}」→ Boss：${boss}`);
+          if (!boss) { logger.mark(`[HoYoGet][bh3_abyss_boss] 过滤(提不出Boss)「${subject}」`); continue; }
+          logger.mark(`[HoYoGet][bh3_abyss_boss] 命中攻略帖「${subject}」→ Boss：${boss}`);
           const info = buildInferredAbyssInfo(post, keyword, role, region, author);
           await redis.set(CACHE_KEY, JSON.stringify(info), { EX: 30 * 60 });
           return info;
         }
       } catch (err) {
-        logger.mark(`[xhh][bh3_abyss_boss] 米游社搜索 ${word}/${uid} 失败: ${err.message}`);
+        logger.mark(`[HoYoGet][bh3_abyss_boss] 米游社搜索 ${word}/${uid} 失败: ${err.message}`);
       }
     }
   }
@@ -385,7 +385,7 @@ async function inferCurrentAbyssInfoFromMys(role = {}, region = '') {
       }
     }
   } catch (err) {
-    logger.warn(`[xhh][bh3_abyss_boss] 朔守本期深渊兜底失败: ${err.message}`);
+    logger.warn(`[HoYoGet][bh3_abyss_boss] 朔守本期深渊兜底失败: ${err.message}`);
   }
   return null;
 }
@@ -492,7 +492,7 @@ export async function fetchCurrentAbyssInfo(auth, realE = null) {
         return info;
       }
     } catch (err) {
-      if (config().debug) logger.mark(`[xhh][bh3_abyss_boss] ${item.label} failed: ${err.message}`);
+      if (config().debug) logger.mark(`[HoYoGet][bh3_abyss_boss] ${item.label} failed: ${err.message}`);
     }
   }
   return inferCurrentAbyssInfoFromMys(role, indexServer || auth.region);
@@ -546,7 +546,7 @@ export async function fetchCurrentBattlefieldInfo(auth, realE = null) {
       }
     }
   } catch (err) {
-    if (config().debug) logger.mark(`[xhh][bh3_battlefield_boss] failed: ${err.message}`);
+    if (config().debug) logger.mark(`[HoYoGet][bh3_battlefield_boss] failed: ${err.message}`);
   }
   return null;
 }
@@ -558,7 +558,7 @@ export async function getCurrentAbyssInfoByEvent(e) {
     if (msg.type === 'at') { qq = msg.qq; break; }
   }
   const auth = await getAuthByQQ(qq);
-  logger.mark?.(`[xhh][bh3_abyss_boss] 攻略取号：qq=${auth.qq} uid=${auth.uid} region=${auth.region} ck=${auth.ck ? '有' : '无'}`);
+  logger.mark?.(`[HoYoGet][bh3_abyss_boss] 攻略取号：qq=${auth.qq} uid=${auth.uid} region=${auth.region} ck=${auth.ck ? '有' : '无'}`);
   return fetchCurrentAbyssInfo(auth, e);
 }
 
@@ -613,7 +613,7 @@ export async function getBh3BossCodex(bossName) {
   try {
     candidates = await monsterWiki.search('bh3', queryName, 8);
   } catch (err) {
-    logger.warn(`[xhh][bh3_abyss_boss] 图鉴搜索异常: ${queryName} ${err?.message || err}`);
+    logger.warn(`[HoYoGet][bh3_abyss_boss] 图鉴搜索异常: ${queryName} ${err?.message || err}`);
     return null;
   }
   if (!candidates.length) return false;
@@ -632,7 +632,7 @@ export async function getBh3BossCodex(bossName) {
   try {
     info = await monsterWiki.detail('bh3', pick.id);
   } catch (err) {
-    logger.warn(`[xhh][bh3_abyss_boss] 图鉴详情异常: ${pick.id} ${err?.message || err}`);
+    logger.warn(`[HoYoGet][bh3_abyss_boss] 图鉴详情异常: ${pick.id} ${err?.message || err}`);
   }
   // 详情接口失败时不要直接放弃：搜索候选本身已带名称与绝对图标 URL，用它兜底仍能出图，
   // 否则这里一 return 就会让「当前深渊」退化成纯文本（没有合并转发、也没有 Boss 图）。

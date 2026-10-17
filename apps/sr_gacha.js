@@ -58,7 +58,7 @@ async function loadGenshinModule(tag, relPaths, named = null) {
   if (!missingGenshinModules.has(tag)) {
     missingGenshinModules.add(tag)
     logger.error(
-      `[xhh][sr_gacha] 未能在 genshin 插件中找到 ${tag}（已尝试 ${candidates.length} 个路径，` +
+      `[HoYoGet][sr_gacha] 未能在 genshin 插件中找到 ${tag}（已尝试 ${candidates.length} 个路径，` +
       `最后错误：${lastErr?.message || lastErr}）。该功能将不可用，请更新 genshin 插件。`
     )
   }
@@ -128,7 +128,7 @@ async function getMiaoModels() {
   }
   if (!missingGenshinModules.has('miao-plugin/models')) {
     missingGenshinModules.add('miao-plugin/models')
-    logger.error(`[xhh][sr_gacha] 未能在 miao-plugin 中找到 models/index.js（${lastErr?.message || lastErr}）。`
+    logger.error(`[HoYoGet][sr_gacha] 未能在 miao-plugin 中找到 models/index.js（${lastErr?.message || lastErr}）。`
       + '抽卡卡的图标将退回本地约定路径，不影响其他功能。')
   }
   miaoModelsCache = { Character: null, Weapon: null }
@@ -1384,7 +1384,7 @@ export function readSrHelperFullFile(uid) {
     const data = JSON.parse(fs.readFileSync(file, 'utf8'))
     return data && typeof data === 'object' ? data : null
   } catch (err) {
-    logger.warn(`[xhh][sr_gacha] 小助手全量文件解析失败：${err?.message || err}`)
+    logger.warn(`[HoYoGet][sr_gacha] 小助手全量文件解析失败：${err?.message || err}`)
     return null
   }
 }
@@ -1659,8 +1659,8 @@ export function mergeIsUp(summaryPools, newPools) {
 
 // ---- 两条数据源合并策略 ----
 // 数据源特性：
-//   ck（#xhh星铁更新抽卡记录 / five_star_list）：五星历史全（小程序保留一年），但不含四星/逐抽/常驻
-//   authkey（#xhh星铁抽卡链接 / getGachaLog）：全量逐抽含四星，但网页只保留近半年，超过半年的
+//   ck（#米哈游星铁更新抽卡记录 / five_star_list）：五星历史全（小程序保留一年），但不含四星/逐抽/常驻
+//   authkey（#米哈游星铁抽卡链接 / getGachaLog）：全量逐抽含四星，但网页只保留近半年，超过半年的
 //     五星拉不到、或 gacha_count 被截断算小（如刃从完整 77 被算成 33）
 // 因此合并原则：
 //   1. 五星记录：整份保留"更全"的一方（数量多者；数量相同取 gacha_count 总和更大者），
@@ -1840,10 +1840,10 @@ export function saveData(file, data) {
 // 星穹工坊把导入过的记录存在自家云端（api.lingyuan.design），保留约三年，
 // 比官方 ck（约一年）与 authkey 网页版（半年）都久，可补齐更早的五星记录。
 // 接口带 union_id 参数（云端只校验非空、不校验内容，未绑定时用占位值兜底）；
-// 绑定入口见 #xhh绑定小助手，保留以防云端将来启用校验。
+// 绑定入口见 #米哈游绑定小助手，保留以防云端将来启用校验。
 // 接口带 union_id 参数，但云端只校验该参数非空、不校验内容（实测传任意非空值
 // 都返回该 UID 的完整记录），因此未绑定时用占位值兜底即可。
-// 保留 #xhh绑定小助手 入口是为了云端将来启用校验时无需改逻辑。
+// 保留 #米哈游绑定小助手 入口是为了云端将来启用校验时无需改逻辑。
 const HELPER_FALLBACK_UNION_ID = '1'
 const HELPER_API = 'https://api.lingyuan.design/api/v2/game_user/get_sr_draw_v3'
 const HELPER_POOL_MAP = {
@@ -1900,7 +1900,7 @@ function detectHelperUnionId() {
     }
     return ''
   } catch (err) {
-    logger.mark(`[xhh][sr_gacha] 自动识别星穹工坊 union_id 失败：${err?.message || err}`)
+    logger.mark(`[HoYoGet][sr_gacha] 自动识别星穹工坊 union_id 失败：${err?.message || err}`)
     return ''
   }
 }
@@ -1944,7 +1944,7 @@ async function loadSrItemIndex() {
       return { byId: new Map(parsed.byId), iconByName: new Map(parsed.iconByName) }
     }
   } catch (err) {
-    logger.mark(`[xhh][sr_gacha] 读取物品配置缓存失败：${err?.message || err}`)
+    logger.mark(`[HoYoGet][sr_gacha] 读取物品配置缓存失败：${err?.message || err}`)
   }
   let index = { byId: new Map(), iconByName: new Map() }
   try {
@@ -1959,11 +1959,11 @@ async function loadSrItemIndex() {
           7 * 24 * 3600
         )
       } catch (err) {
-        logger.mark(`[xhh][sr_gacha] 写入物品配置缓存失败：${err?.message || err}`)
+        logger.mark(`[HoYoGet][sr_gacha] 写入物品配置缓存失败：${err?.message || err}`)
       }
     }
   } catch (err) {
-    logger.mark(`[xhh][sr_gacha] 物品配置获取失败，云端记录可能显示为ID 且无图标：${err?.message || err}`)
+    logger.mark(`[HoYoGet][sr_gacha] 物品配置获取失败，云端记录可能显示为ID 且无图标：${err?.message || err}`)
   }
   return index
 }
@@ -2136,46 +2136,46 @@ function mergeHelperPools(oldPools, newPools) {
 export class sr_gacha extends plugin {
   constructor() {
     super({
-      name: '[小花火]星铁抽卡记录',
+      name: '[米哈游]星铁抽卡记录',
       dsc: '星铁抽卡记录查询与更新',
       event: 'message',
       priority: pluginPriority('sr_gacha', 1),
       rule: [
-        // 强制前缀模式：星铁抽卡链接必须带 #xhh星铁抽卡链接 前缀才处理。
+        // 强制前缀模式：星铁抽卡链接必须带 #米哈游星铁抽卡链接 前缀才处理。
         // 不再兜底自动识别链接，原神/星铁等链接默认交给 genshin 插件，避免抢链接冲突
-        { reg: '^#*(xhh|小花火)(星铁|崩铁)?抽卡帮助$', fnc: 'help' },
-        { reg: '^#*(xhh|小花火)(星铁|崩铁)?抽卡链接', fnc: 'gachaLink' },
-        { reg: '^#*(xhh|小花火)(星铁|崩铁)?(刷新|更新)抽卡记录$', fnc: 'refresh' },
-        { reg: '^#*(xhh|小花火)(星铁|崩铁)?(抽卡记录|抽卡统计)$', fnc: 'summary' },
-        { reg: '^#*(xhh|小花火)(星铁|崩铁)?角色记录$', fnc: 'roleRecord' },
-        { reg: '^#*(xhh|小花火)(星铁|崩铁)?武器记录$', fnc: 'weaponRecord' },
-        { reg: '^#*(xhh|小花火)(星铁|崩铁)?角色统计$', fnc: 'roleStat' },
-        { reg: '^#*(xhh|小花火)(星铁|崩铁)?武器统计$', fnc: 'weaponStat' },
-        { reg: '^#*(xhh|小花火)(星铁|崩铁)?联动角色记录$', fnc: 'collabRoleRecord' },
-        { reg: '^#*(xhh|小花火)(星铁|崩铁)?联动武器记录$', fnc: 'collabWeaponRecord' },
+        { reg: '^#*米哈游(星铁|崩铁)?抽卡帮助$', fnc: 'help' },
+        { reg: '^#*米哈游(星铁|崩铁)?抽卡链接', fnc: 'gachaLink' },
+        { reg: '^#*米哈游(星铁|崩铁)?(刷新|更新)抽卡记录$', fnc: 'refresh' },
+        { reg: '^#*米哈游(星铁|崩铁)?(抽卡记录|抽卡统计)$', fnc: 'summary' },
+        { reg: '^#*米哈游(星铁|崩铁)?角色记录$', fnc: 'roleRecord' },
+        { reg: '^#*米哈游(星铁|崩铁)?武器记录$', fnc: 'weaponRecord' },
+        { reg: '^#*米哈游(星铁|崩铁)?角色统计$', fnc: 'roleStat' },
+        { reg: '^#*米哈游(星铁|崩铁)?武器统计$', fnc: 'weaponStat' },
+        { reg: '^#*米哈游(星铁|崩铁)?联动角色记录$', fnc: 'collabRoleRecord' },
+        { reg: '^#*米哈游(星铁|崩铁)?联动武器记录$', fnc: 'collabWeaponRecord' },
         // 无 xhh/小花火 前缀的裸指令（*角色记录、*角色统计 等）。
         // 喵喵的 `^#*(星铁)?(角色|武器|光锥)…(记录|统计)$` 里前缀全部可选，会把这些
         // 一并吃掉（实测 *角色记录 7 次、*角色统计 5 次落到喵喵）。本插件优先级 1
-        // 比喵喵的 50 小、按框架升序本该先跑，但规则要求 (xhh|小花火) 根本匹配不上，
+        // 比喵喵的 50 小、按框架升序本该先跑，但规则要求 米哈游 根本匹配不上，
         // 故补上裸指令形式。限定 * 前缀，不抢 genshin 侧的 # 指令；
         // 联动形式必须排在普通形式之前，否则会被抢。
         { reg: '^[\\*%％][ \\t]*(?:星铁|崩铁)?联动(角色|武器)(记录|统计)$', fnc: 'collabRoleOrWeapon' },
         { reg: '^[\\*%％][ \\t]*(?:星铁|崩铁)?(角色|武器)(记录|统计)$', fnc: 'roleOrWeapon' },
-        { reg: '^#*(xhh|小花火)(星铁|崩铁)?绑定小助手(\\s+\\S+)?$', fnc: 'bindHelper' },
-        { reg: // 前缀必须带：本插件所有指令均需 #xhh/ #小花火，否则会抢走
+        { reg: '^#*米哈游(星铁|崩铁)?绑定小助手(\\s+\\S+)?$', fnc: 'bindHelper' },
+        { reg: // 前缀必须带：本插件所有指令均需 #米哈游/ #小花火，否则会抢走
         // genshin 侧「#更新小助手抽卡记录」（原神·小助手）与「*更新小助手抽卡记录」（星铁·工坊别名）。
         // 小助手（lelaer）与星穹工坊（lingyuan）是两个不同云端，不可混用：
-        //   · #xhh(星铁)(更新|刷新|同步)小助手(抽卡)?(记录|数据) —— fnc: importHelperLive，
+        //   · #米哈游(星铁)(更新|刷新|同步)小助手(抽卡)?(记录|数据) —— fnc: importHelperLive，
         //     直连小助手（lelaer）MySQL gachabackup 表拉全量（lelaer HTTP 接口拿不到单 UID，只能直连 DB）；
-        //   · #xhh(星铁)导入/合并小助手记录 <UID> —— fnc: importHelperFull，
+        //   · #米哈游(星铁)导入/合并小助手记录 <UID> —— fnc: importHelperFull，
         //     读取小助手（lelaer）云端导出的全量文件 data/sr_gacha/sr_<UID>_full.json（离线兜底）；
-        //   · #xhh(星铁)更新星穹工坊记录 / 更新工坊(抽卡)?记录 —— 同 updateHelper，
+        //   · #米哈游(星铁)更新星穹工坊记录 / 更新工坊(抽卡)?记录 —— 同 updateHelper，
         //     走工坊（api.lingyuan.design）云端，仅五星汇总 + is_up。
-        '^#*(xhh|小花火)(星铁|崩铁)?(更新|刷新|同步)小助手(抽卡|跃迁)?(记录|数据)$', fnc: 'importHelperLive' },
-        { reg: '^#*(xhh|小花火)(星铁|崩铁)?(更新|刷新|同步)?星穹工坊(记录|数据)$', fnc: 'updateHelper' },
-        { reg: '^#*(xhh|小花火)(星铁|崩铁)?(更新|刷新|同步)?工坊(抽卡|跃迁)?(记录|数据)$', fnc: 'updateHelper' },
-        { reg: '^#*(xhh|小花火)(星铁|崩铁)?(导入|合并)小助手(记录|数据)?(\\s+\\S+)?$', fnc: 'importHelperFull' },
-        { reg: '^#*(xhh|小花火)(星铁|崩铁)?常驻(记录|统计)?$', fnc: 'common' },
+        '^#*米哈游(星铁|崩铁)?(更新|刷新|同步)小助手(抽卡|跃迁)?(记录|数据)$', fnc: 'importHelperLive' },
+        { reg: '^#*米哈游(星铁|崩铁)?(更新|刷新|同步)?星穹工坊(记录|数据)$', fnc: 'updateHelper' },
+        { reg: '^#*米哈游(星铁|崩铁)?(更新|刷新|同步)?工坊(抽卡|跃迁)?(记录|数据)$', fnc: 'updateHelper' },
+        { reg: '^#*米哈游(星铁|崩铁)?(导入|合并)小助手(记录|数据)?(\\s+\\S+)?$', fnc: 'importHelperFull' },
+        { reg: '^#*米哈游(星铁|崩铁)?常驻(记录|统计)?$', fnc: 'common' },
       ],
     })
   }
@@ -2200,7 +2200,7 @@ export class sr_gacha extends plugin {
           break
         } catch (err) {
           lastError = err
-          logger.mark(`[xhh][sr_gacha] Cookie 候选失败：${err?.message || err}`)
+          logger.mark(`[HoYoGet][sr_gacha] Cookie 候选失败：${err?.message || err}`)
         }
       }
       if (!result) throw lastError || new Error('没有可用的崩铁 Cookie')
@@ -2216,7 +2216,7 @@ export class sr_gacha extends plugin {
             break
           }
         } catch (error) {
-          logger.mark(`[xhh][sr_gacha] 常驻池拉取失败（ck 候选）：${error?.message || error}`)
+          logger.mark(`[HoYoGet][sr_gacha] 常驻池拉取失败（ck 候选）：${error?.message || error}`)
         }
       }
       // 拉取失败时保留本地已有的常驻池，避免把 authkey/小助手导入的常驻覆盖成空
@@ -2255,11 +2255,11 @@ export class sr_gacha extends plugin {
       await e.reply(`${text}${commonText}\n抽卡记录更新完成`)
       // 更新完成后自动输出抽卡记录总览图
       await this.renderSummary(e, [], 'grid')
-      return e.reply('发送【#xhh星铁抽卡帮助】查看全部抽卡指令')
+      return e.reply('发送【#米哈游星铁抽卡帮助】查看全部抽卡指令')
     } catch (err) {
-      logger.error('[xhh][sr_gacha] refresh failed:', err)
+      logger.error('[HoYoGet][sr_gacha] refresh failed:', err)
       if (String(err?.message || err).includes('请从游戏内打开参与活动')) {
-        return e.reply('当前账号还没在游戏内打开过跃迁活动页。\n请先进《星穹铁道》里点开一次活动跃迁页面，再发送【#xhh星铁更新抽卡记录】重试。')
+        return e.reply('当前账号还没在游戏内打开过跃迁活动页。\n请先进《星穹铁道》里点开一次活动跃迁页面，再发送【#米哈游星铁更新抽卡记录】重试。')
       }
       const formatFailure = await getSrSummaryFn('formatSrGachaFailure')
       return e.reply(formatFailure ? formatFailure(err) : `更新失败：${err?.message || err}`)
@@ -2272,16 +2272,16 @@ export class sr_gacha extends plugin {
     const local = readData(getDataFile(auth.qq, auth.uid))
     const readSummary = await getSrSummaryFn('readSummary')
     let data = local || (readSummary ? readSummary(`./data/srGachaSummary/${auth.uid}.json`) : null)
-    if (!data?.pools) return e.reply('暂无星铁抽卡记录，请先发送【#xhh星铁更新抽卡记录】')
+    if (!data?.pools) return e.reply('暂无星铁抽卡记录，请先发送【#米哈游星铁更新抽卡记录】')
     // 剔除混入星铁数据的绝区零池（如 GachaType_Permanent「常驻频段」）；
     // 有剔除时顺手写回本插件的数据文件，把脏数据永久清掉，不必等下次更新覆盖
     const cleaned = cleanSrPools(data.pools)
     const dropped = Object.keys(data.pools).filter(k => !cleaned[k])
     if (dropped.length) {
-      logger.mark(`[xhh][sr_gacha] 已剔除混入星铁数据的池：${dropped.map(k => `${k}(${data.pools[k]?.name || '?'})`).join('、')}`)
+      logger.mark(`[HoYoGet][sr_gacha] 已剔除混入星铁数据的池：${dropped.map(k => `${k}(${data.pools[k]?.name || '?'})`).join('、')}`)
       data = { ...data, pools: cleaned }
       if (local) {
-        try { saveData(getDataFile(auth.qq, auth.uid), data) } catch (err) { logger.warn(`[xhh][sr_gacha] 脏池写回失败：${err?.message || err}`) }
+        try { saveData(getDataFile(auth.qq, auth.uid), data) } catch (err) { logger.warn(`[HoYoGet][sr_gacha] 脏池写回失败：${err?.message || err}`) }
       }
     }
     // 常驻跃迁是角色+光锥混合池：按 commonType 只保留对应类型，避免角色记录混入光锥
@@ -2300,7 +2300,7 @@ export class sr_gacha extends plugin {
         try {
           avatar = await redis.get(`Yz:genshin:uidFaceUrl:sr:${auth.uid}`)
         } catch (err) {
-          logger.mark(`[xhh][sr_gacha] 读取绑定头像缓存失败：${err?.message || err}`)
+          logger.mark(`[HoYoGet][sr_gacha] 读取绑定头像缓存失败：${err?.message || err}`)
         }
         const info = await fetchSrUserInfo(auth.uid, auth.cookies[0])
         // 昵称在 role 字段中
@@ -2312,21 +2312,21 @@ export class sr_gacha extends plugin {
             try {
               await redis.set(`Yz:genshin:uidFaceUrl:sr:${auth.uid}`, avatar, 'EX', 12 * 60 * 60)
             } catch (err) {
-              logger.mark(`[xhh][sr_gacha] 写入绑定头像缓存失败：${err?.message || err}`)
+              logger.mark(`[HoYoGet][sr_gacha] 写入绑定头像缓存失败：${err?.message || err}`)
             }
           }
         }
         if (avatar) view.avatar = avatar
       } catch (error) {
-        logger.mark(`[xhh][sr_gacha] 获取星铁角色信息失败：${error?.message || error}`)
+        logger.mark(`[HoYoGet][sr_gacha] 获取星铁角色信息失败：${error?.message || error}`)
         // 兜底：先试免 DS 的米游社名片接口；仍失败则头像用小花火、昵称保持 QQ 昵称
         try {
           const card = await fetchGameRecordCard(auth.uid, auth.cookies[0])
           if (card?.nickname) view.nickname = card.nickname
           if (!view.avatar && card?.avatar) view.avatar = card.avatar
         } catch (err) {
-          logger.mark(`[xhh][sr_gacha] 名片接口兜底获取用户信息失败：${err?.message || err}`)
-          logger.mark(`[xhh][sr_gacha] 头像改用小花火，昵称使用 QQ 昵称`)
+          logger.mark(`[HoYoGet][sr_gacha] 名片接口兜底获取用户信息失败：${err?.message || err}`)
+          logger.mark(`[HoYoGet][sr_gacha] 头像改用立绘，昵称使用 QQ 昵称`)
         }
       }
     }
@@ -2357,7 +2357,7 @@ export class sr_gacha extends plugin {
     const readSummary = await getSrSummaryFn('readSummary')
     const data = readData(getDataFile(auth.qq, auth.uid))
       || (readSummary ? readSummary(`./data/srGachaSummary/${auth.uid}.json`) : null)
-    if (!data?.pools) return e.reply('暂无星铁抽卡记录，请先发送【#xhh星铁更新抽卡记录】')
+    if (!data?.pools) return e.reply('暂无星铁抽卡记录，请先发送【#米哈游星铁更新抽卡记录】')
     applyWaiPoolIsUp(data.pools)
     const view = buildSrStatView(data, auth.uid, e, keys, commonType)
     // pct 压低 sys.scale 的 zoom：统计卡内容行数多，避免渲染后端截图高度上限截断
@@ -2417,28 +2417,28 @@ export class sr_gacha extends plugin {
     try {
       const url = findSrAuthkeyUrl(e)
       if (!url) return false
-      logger.mark(`[xhh][sr_gacha] 兜底识别到星铁链接: ${url.slice(0, 150)}...`)
+      logger.mark(`[HoYoGet][sr_gacha] 兜底识别到星铁链接: ${url.slice(0, 150)}...`)
       return this.gachaLink(e, url)
     } catch (err) {
-      logger.error(`[xhh][sr_gacha] autoGachaLink 异常: ${err}`)
+      logger.error(`[HoYoGet][sr_gacha] autoGachaLink 异常: ${err}`)
       return false
     }
   }
 
   async gachaLink(e, preUrl = '') {
-    // 强制前缀模式：消息必须带 #xhh星铁抽卡链接 前缀才处理。
+    // 强制前缀模式：消息必须带 #米哈游星铁抽卡链接 前缀才处理。
     // 不带前缀的链接（原神/星铁/绝区零等）一律 return false 放行，交给 genshin 插件正常处理
-    const isCmd = /^#*(xhh|小花火)(星铁|崩铁)?抽卡链接/.test(String(e.msg || ''))
+    const isCmd = /^#*米哈游(星铁|崩铁)?抽卡链接/.test(String(e.msg || ''))
     if (!isCmd) return false
     // 从原始消息段提取链接：兼容纯文本、QQ 分享卡片（share/data.url）、json/xml 卡片、断行等情况
     const fullMsg = [e.msg, ...(Array.isArray(e.message) ? e.message.map(s => (s?.type === 'text' ? s.text : (s?.data?.url || ''))) : [])].filter(Boolean).join('\n')
     const url = preUrl || findSrAuthkeyUrl(e) || (fullMsg.match(/https?:\/\/[^\s,，。、；;）)】\]》"']+/)?.[0] || '')
-    logger.mark(`[xhh][sr_gacha] 收到链接消息: ${String(e.msg || '').slice(0, 200)}`)
+    logger.mark(`[HoYoGet][sr_gacha] 收到链接消息: ${String(e.msg || '').slice(0, 200)}`)
     if (!url) {
       // 命令带链接：无链接时提示用法
       return e.reply(
         '请把崩铁官方【跃迁记录】页面的链接发给我，例如：\n' +
-        '#xhh星铁抽卡链接 https://public-operation-hkrpg.mihoyo.com/common/gacha_record/api/getGachaLog?authkey=xxx&game_biz=hkrpg_cn\n\n' +
+        '#米哈游星铁抽卡链接 https://public-operation-hkrpg.mihoyo.com/common/gacha_record/api/getGachaLog?authkey=xxx&game_biz=hkrpg_cn\n\n' +
         '获取方法：游戏内打开【跃迁记录】→ 右上角【分享/网页】用浏览器打开 → 复制地址栏完整网址（必须带 authkey=）'
       )
     }
@@ -2468,7 +2468,7 @@ export class sr_gacha extends plugin {
             break
           }
         } catch (err) {
-          logger.mark(`[xhh][sr_gacha] ck 校准 UP 标记失败：${err?.message || err}`)
+          logger.mark(`[HoYoGet][sr_gacha] ck 校准 UP 标记失败：${err?.message || err}`)
         }
       }
       result.update_time = formatNow()
@@ -2481,9 +2481,9 @@ export class sr_gacha extends plugin {
       await e.reply(`抽卡链接解析成功！\n${stats}`)
       // 自动输出抽卡记录总览图
       await this.renderSummary(e, [], 'grid')
-      return e.reply('下一步必须发送#xhh星铁更新抽卡记录来保证五星数据的准确性；发送【#xhh星铁抽卡帮助】查看全部抽卡指令')
+      return e.reply('下一步必须发送#米哈游星铁更新抽卡记录来保证五星数据的准确性；发送【#米哈游星铁抽卡帮助】查看全部抽卡指令')
     } catch (err) {
-      logger.error('[xhh][sr_gacha] gachaLink failed:', err)
+      logger.error('[HoYoGet][sr_gacha] gachaLink failed:', err)
       return e.reply(`抽卡链接解析失败：${err?.message || err}`)
     }
   }
@@ -2499,7 +2499,7 @@ export class sr_gacha extends plugin {
         const detected = detectHelperUnionId()
         if (detected) {
           saveHelperBind(qq, { union_id: detected, update_time: formatNow(), auto: true })
-          return e.reply(`已从本机微信缓存自动识别并绑定 union_id：${detected}\n发送【#xhh更新小助手抽卡记录】拉取云端记录`)
+          return e.reply(`已从本机微信缓存自动识别并绑定 union_id：${detected}\n发送【#米哈游更新小助手抽卡记录】拉取云端记录`)
         }
       }
       const cur = readHelperBind(qq)
@@ -2507,17 +2507,17 @@ export class sr_gacha extends plugin {
         '【小助手云端绑定】',
         cur?.union_id ? `当前已绑定 union_id：${cur.union_id}` : '尚未绑定 union_id（不影响同步）',
         '',
-        '用法：#xhh绑定小助手 <union_id>',
+        '用法：#米哈游绑定小助手 <union_id>',
         'union_id 为小助手对应微信账号的身份标识，可选。',
         '云端目前只校验该参数非空、不校验内容，未绑定时同步会自动使用占位值；',
         '此处绑定仅用于云端将来启用校验时无需改动。',
         '',
-        '发送【#xhh更新小助手抽卡记录】可从小助手云端拉取约三年历史五星记录，',
+        '发送【#米哈游更新小助手抽卡记录】可从小助手云端拉取约三年历史五星记录，',
         '补齐官方 ck（约一年）拿不到的更早数据。',
       ].join('\n'))
     }
     saveHelperBind(qq, { union_id: unionId, update_time: formatNow() })
-    return e.reply(`小助手 union_id 绑定成功：${unionId}\n发送【#xhh更新小助手抽卡记录】拉取云端记录`)
+    return e.reply(`小助手 union_id 绑定成功：${unionId}\n发送【#米哈游更新小助手抽卡记录】拉取云端记录`)
   }
 
   // 从星穹工坊云端同步抽卡记录（云端保留约三年，比 ck 更全）
@@ -2533,7 +2533,7 @@ export class sr_gacha extends plugin {
     const auth = await getUserAuth(e)
     if (auth.error && !arg) return e.reply(auth.error)
     const uid = arg || auth?.uid
-    if (!uid) return e.reply('请先绑定星铁账号，或使用【#xhh星铁导入小助手记录 <UID>】指定 UID')
+    if (!uid) return e.reply('请先绑定星铁账号，或使用【#米哈游星铁导入小助手记录 <UID>】指定 UID')
     const full = readSrHelperFullFile(uid)
     if (!full) {
       return e.reply([
@@ -2560,7 +2560,7 @@ export class sr_gacha extends plugin {
       '',
       `合计 ${total} 抽 / ${five} 个五星`,
       `本次新增：五星 ${result.addedFive} 条、四星 ${result.addedFour} 条`,
-      '提示：小助手数据不含 is_up，UP 标记需再发【#xhh星铁更新星穹工坊记录】补齐。',
+      '提示：小助手数据不含 is_up，UP 标记需再发【#米哈游星铁更新星穹工坊记录】补齐。',
     ].join('\n'))
     await this.renderSummary(e, [], 'grid')
     return true
@@ -2575,7 +2575,7 @@ export class sr_gacha extends plugin {
     const auth = await getUserAuth(e)
     if (auth.error && !arg) return e.reply(auth.error)
     const uid = arg || auth?.uid
-    if (!uid) return e.reply('请先绑定星铁账号，或使用【#xhh星铁导入小助手记录 <UID>】指定 UID')
+    if (!uid) return e.reply('请先绑定星铁账号，或使用【#米哈游星铁导入小助手记录 <UID>】指定 UID')
     await e.reply(`正在直连小助手云端拉取 UID:${uid} 的全量记录，请稍候……`)
     let full
     try { full = await fetchLelaerGachaData(uid) } catch (err) { return e.reply(`小助手云端拉取失败：${err?.message || err}`) }
@@ -2600,7 +2600,7 @@ export class sr_gacha extends plugin {
       '',
       `合计 ${total} 抽 / ${five} 个五星`,
       `本次新增：五星 ${result.addedFive} 条、四星 ${result.addedFour} 条`,
-      '提示：小助手数据不含 is_up，UP 标记需再发【#xhh星铁更新星穹工坊记录】补齐。',
+      '提示：小助手数据不含 is_up，UP 标记需再发【#米哈游星铁更新星穹工坊记录】补齐。',
     ].join('\n'))
     await this.renderSummary(e, [], 'grid')
     return true
@@ -2617,14 +2617,14 @@ export class sr_gacha extends plugin {
       if (detected) {
         saveHelperBind(qq, { union_id: detected, update_time: formatNow(), auto: true })
         bind = readHelperBind(qq)
-        logger.mark(`[xhh][sr_gacha] 已从本机微信缓存自动识别星穹工坊 union_id：${detected}`)
+        logger.mark(`[HoYoGet][sr_gacha] 已从本机微信缓存自动识别星穹工坊 union_id：${detected}`)
       }
     }
     // union_id 为可选：云端不校验内容，未绑定时用占位值兜底；
     // 已绑定或从本机微信缓存识别到时优先使用真实值。
     const unionId = bind?.union_id || HELPER_FALLBACK_UNION_ID
     if (!bind?.union_id) {
-      logger.mark('[xhh][sr_gacha] 未绑定 union_id，改用占位值请求云端（云端不校验该参数）')
+      logger.mark('[HoYoGet][sr_gacha] 未绑定 union_id，改用占位值请求云端（云端不校验该参数）')
     }
     await e.reply(`正在从云端同步抽卡记录，请稍候……${unionId === HELPER_FALLBACK_UNION_ID ? '（未绑定 union_id，使用占位值）' : ''}`)
     try {
@@ -2641,9 +2641,9 @@ export class sr_gacha extends plugin {
         .join('\n')
       await e.reply(`小助手云端记录同步完成！\n${stats}`)
       await this.renderSummary(e, [], 'grid')
-      return e.reply('发送【#xhh星铁抽卡帮助】查看全部抽卡指令')
+      return e.reply('发送【#米哈游星铁抽卡帮助】查看全部抽卡指令')
     } catch (err) {
-      logger.error('[xhh][sr_gacha] updateHelper failed:', err)
+      logger.error('[HoYoGet][sr_gacha] updateHelper failed:', err)
       return e.reply(`小助手云端同步失败：${err?.message || err}`)
     }
   }
@@ -2651,26 +2651,26 @@ export class sr_gacha extends plugin {
   async help(e) {
     // 全角空格对齐在不同字体下会错位，改为「指令 —— 说明」单行式，同类指令用 / 合并
     return e.reply([
-      '【#xhh星铁抽卡帮助】',
+      '【#米哈游星铁抽卡帮助】',
       '',
       '更新数据',
-      '#xhh星铁更新抽卡记录 —— 用 ck 刷新抽卡数据',
-      '#xhh星铁抽卡链接 <链接> —— 官方链接拉最近几天的逐抽记录',
-      '#xhh更新小助手抽卡记录 —— 小助手（lelaer）云端全量：直连其 gachabackup 库（含四星逐抽；需装 mysql2 且服务器 IP 在 RDS 白名单）',
-      '#xhh星铁导入小助手记录 <UID> —— 小助手全量离线导入：读本机 data/sr_gacha/sr_<UID>_full.json',
-      '#xhh更新工坊抽卡记录 / #xhh星铁更新星穹工坊记录 —— 星穹工坊（lingyuan）云端，补历史五星与 is_up（与小助手非同一后端）',
-      '#xhh绑定小助手 <id> —— 一般用不到，union_id 可选、不绑定也能同步',
+      '#米哈游星铁更新抽卡记录 —— 用 ck 刷新抽卡数据',
+      '#米哈游星铁抽卡链接 <链接> —— 官方链接拉最近几天的逐抽记录',
+      '#米哈游更新小助手抽卡记录 —— 小助手（lelaer）云端全量：直连其 gachabackup 库（含四星逐抽；需装 mysql2 且服务器 IP 在 RDS 白名单）',
+      '#米哈游星铁导入小助手记录 <UID> —— 小助手全量离线导入：读本机 data/sr_gacha/sr_<UID>_full.json',
+      '#米哈游更新工坊抽卡记录 / #米哈游星铁更新星穹工坊记录 —— 星穹工坊（lingyuan）云端，补历史五星与 is_up（与小助手非同一后端）',
+      '#米哈游绑定小助手 <id> —— 一般用不到，union_id 可选、不绑定也能同步',
       '',
       '查询',
-      '#xhh星铁抽卡记录 —— 抽卡总览统计',
-      '#xhh星铁角色记录 / #xhh星铁武器记录 —— 角色、光锥卡池进度',
-      '#xhh星铁角色统计 / #xhh星铁武器统计 —— 工坊风格统计卡',
-      '#xhh星铁联动角色记录 / #xhh星铁联动武器记录 —— 联动卡池进度',
-      '#xhh星铁常驻记录 —— 常驻卡池统计',
+      '#米哈游星铁抽卡记录 —— 抽卡总览统计',
+      '#米哈游星铁角色记录 / #米哈游星铁武器记录 —— 角色、光锥卡池进度',
+      '#米哈游星铁角色统计 / #米哈游星铁武器统计 —— 工坊风格统计卡',
+      '#米哈游星铁联动角色记录 / #米哈游星铁联动武器记录 —— 联动卡池进度',
+      '#米哈游星铁常驻记录 —— 常驻卡池统计',
       '',
-      '提示：xhh 可写作 小花火，星铁可写作 崩铁。',
-      '不带 xhh 前缀的跃迁记录链接由 genshin 插件处理，互不冲突。',
-      '小助手（lelaer）云端全量含四星逐抽见 #xhh星铁导入小助手记录（需先导出 data/sr_gacha/sr_<UID>_full.json）；工坊（lingyuan）在线同步见 #xhh更新小助手抽卡记录 / #xhh星铁更新星穹工坊记录。',
+      '提示：米哈游即可（不再用旧前缀），星铁可写作 崩铁。',
+      '不带米哈游前缀的跃迁记录链接由 genshin 插件处理，互不冲突。',
+      '小助手（lelaer）云端全量含四星逐抽见 #米哈游星铁导入小助手记录（需先导出 data/sr_gacha/sr_<UID>_full.json）；工坊（lingyuan）在线同步见 #米哈游更新小助手抽卡记录 / #米哈游星铁更新星穹工坊记录。',
     ].join('\n'))
   }
 }

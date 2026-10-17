@@ -14,33 +14,33 @@ const name_list = {
 export class Config extends plugin {
   constructor() {
     super({
-      name: '[小花火]配置',
+      name: '[米哈游]配置',
       dsc: '',
       event: 'message',
       priority: pluginPriority('config', 15),
       rule: [
         {
-          reg: `^#*(小花火|xhh)设置$`,
+          reg: `^#*米哈游设置$`,
           fnc: 'f1',
           permission: 'master',
         },
         {
-          reg: `^#*(小花火|xhh)设置(塔罗牌|自动更新|b站|B站|哔哩哔哩|bili|bilibili)?(开启|关闭)((查)?委托前缀)?$`,
+          reg: `^#*米哈游设置(塔罗牌|自动更新|b站|B站|哔哩哔哩|bili|bilibili)?(开启|关闭)((查)?委托前缀)?$`,
           fnc: 'f2',
           permission: 'master',
         },
         {
-          reg: `^#*(小花火|xhh)设置((塔罗牌(每日)?次数)|((图片)?渲染(精度)?)|自动视频)(\\d+)$`,
+          reg: `^#*米哈游设置((塔罗牌(每日)?次数)|((图片)?渲染(精度)?)|自动视频)(\\d+)$`,
           fnc: 'f3',
           permission: 'master',
         },
         {
-          reg: `^#*(小花火|xhh)?(设置)?(添加|删除)播报群(号)?(.*)$`,
+          reg: `^#*米哈游?(设置)?(添加|删除)播报群(号)?(.*)$`,
           fnc: 'f6',
           permission: 'master',
         },
         {
-          reg: '^#*(小花火|xhh)*(设置)*播报群列表$',
+          reg: '^#*米哈游*(设置)*播报群列表$',
           fnc: 'list',
           permission: 'master',
         }
@@ -52,7 +52,7 @@ export class Config extends plugin {
   }
 
   async f2(e) {
-    const CLEAN_REGEX = /#|小花火|xhh|设置/g;
+    const CLEAN_REGEX = /#|米哈游|设置/g;
     const TYPE_MAP = {
       塔罗牌: 'tlp',
       委托前缀: 'wt',
@@ -79,7 +79,7 @@ export class Config extends plugin {
 
   async f3(e) {
     let num = e.msg.replace(
-      /#|小花火设置|xhh设置|渲染|精度|图片|塔罗牌|自动视频|次数|每日/g,
+      /#|米哈游设置|米哈游设置|渲染|精度|图片|塔罗牌|自动视频|次数|每日/g,
       ''
     );
     if (e.msg.includes('塔罗牌')) await yaml.set(path, 'tlpcs', Number(num));
@@ -121,7 +121,7 @@ export class Config extends plugin {
   async list(e) {
     let msg = this.group_msg(e);
     if (!msg) return false
-    msg = await makeForwardMsg(e, [msg], '小花火播报群列表');
+    msg = await makeForwardMsg(e, [msg], '米哈游播报群列表');
     e.reply(msg);
     return
   }
@@ -170,13 +170,13 @@ export class Config extends plugin {
     let msg = [];
     msg.push(
       [
-        '--------小花火设置状态--------',
+        '--------米哈游设置状态--------',
         `塔罗牌：${data.tlp ? '已开启' : '已关闭'}`,
         `塔罗牌每日次数：${data.tlpcs}次`,
         `查委托必须带#前缀：${data.wt ? '已开启' : '已关闭'}`,
         `b站相关功能：${data.bilibili ? '已开启' : '已关闭'}`,
         `b站视频小于多少MB自动下载：${data.dow_size}MB`,
-        `凌晨3:30自动更新xhh：${data.update ? '已开启' : '已关闭'}`,
+        `凌晨3:30自动更新米哈游：${data.update ? '已开启' : '已关闭'}`,
         `图片渲染精度：${data.img_quality}%`,
         '米哈游视频播报群号：\n',
       ].join('\n')
@@ -190,38 +190,38 @@ export class Config extends plugin {
     let msg_ = [
       '--------设置指令列表--------',
       '1.塔罗牌：',
-      '小花火设置塔罗牌开启',
-      '小花火设置塔罗牌关闭\n',
+      '米哈游设置塔罗牌开启',
+      '米哈游设置塔罗牌关闭\n',
 
       '2.塔罗牌每日次数：',
-      '小花火设置塔罗牌次数(+数字)\n',
+      '米哈游设置塔罗牌次数(+数字)\n',
 
       '4.查委托是否必须带#前缀：',
       '开启委托前缀',
       '关闭委托前缀\n',
 
       '5.b站相关功能：',
-      '小花火设置b站开启',
-      '小花火设置b站关闭\n',
+      '米哈游设置b站开启',
+      '米哈游设置b站关闭\n',
 
       '6.b站视频小于多少MB自动下载：',
-      '小花火设置自动视频(+数字(最大99))\n',
+      '米哈游设置自动视频(+数字(最大99))\n',
 
-      '7.小花火自动更新：',
-      '小花火设置自动更新开启',
-      '小花火设置自动更新关闭\n',
+      '7.米哈游自动更新：',
+      '米哈游设置自动更新开启',
+      '米哈游设置自动更新关闭\n',
 
       '8.图片渲染精度：',
-      '小花火设置渲染(+数字)\n',
+      '米哈游设置渲染(+数字)\n',
 
       '9.米哈游视频播报群号：',
       '添加播报群(+群号)',
       '删除播报群(+群号)\n',
 
-      '更多设置请查看xhh/config/config.yaml文件',
+      '更多设置请查看 HoYoGet-Plugin/config/config.yaml 文件',
     ].join('\n');
     msg = [msg, msg_];
-    msg = await makeForwardMsg(e, msg, '小花火设置');
+    msg = await makeForwardMsg(e, msg, '米哈游设置');
     return e.reply(msg);
   }
 

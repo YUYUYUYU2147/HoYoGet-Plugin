@@ -116,7 +116,7 @@ export const supportGuoba = () => {
   return ({
   pluginInfo: {
     name: 'xhh',
-    title: '小花火(xhh)',
+    title: '米哈游',
     description: '多功能辅助插件，支持米游社签到、B站解析、攻略查询等',
     author: '@dknyxhh',
     authorLink: 'https://github.com/dknyxhh',
@@ -127,7 +127,7 @@ export const supportGuoba = () => {
     icon: 'mdi:fire',
     iconColor: '#ff6b35',
     // 显示成图片：使用插件自带的花火立绘（绝对路径，锅巴优先展示 iconPath）
-    iconPath: process.cwd() + '/plugins/HoYoGet-Plugin/resources/Tl/imgs/小花火.png',
+    iconPath: process.cwd() + '/plugins/HoYoGet-Plugin/resources/Tl/imgs/米哈游.png',
   },
   configInfo: {
     schemas: [
@@ -162,7 +162,7 @@ export const supportGuoba = () => {
       },
       {
         field: 'wiki',
-        label: '小花火图鉴启用',
+        label: '图鉴启用',
         component: 'Switch',
       },
       // 模块总开关：关掉后对应指令静默不响应（不提示、不报错），
@@ -230,7 +230,7 @@ export const supportGuoba = () => {
       {
         field: 'module_switch_enable',
         label: '模块 · 模块开关指令',
-        helpMessage: '关掉后连 #小花火模块 这条开关指令也不响应',
+        helpMessage: '关掉后连 #米哈游模块 这条开关指令也不响应',
         component: 'Switch',
       },
       {
@@ -672,7 +672,7 @@ export const supportGuoba = () => {
       {
         field: 'bili_live_dm',
         label: '直播间发弹幕',
-        helpMessage: '开启后可用「#弹幕 内容」往直播间发弹幕，需要先「小花火b站登录」',
+        helpMessage: '开启后可用「#弹幕 内容」往直播间发弹幕，需要先「#米哈游b站登录」',
         component: 'Switch',
       },
       {
@@ -751,7 +751,7 @@ export const supportGuoba = () => {
       {
         field: 'bh3_all_note_enable',
         label: '启用四游戏体力聚合',
-        helpMessage: '控制 #体力/#小花火体力 等四游戏总览；关闭后仍可使用 #原神体力/#星铁体力 等单游戏查询',
+        helpMessage: '控制 #体力/#米哈游体力 等四游戏总览；关闭后仍可使用 #原神体力/#星铁体力 等单游戏查询',
         component: 'Switch',
       },
       {
@@ -822,7 +822,7 @@ export const supportGuoba = () => {
       {
         field: 'bh3_remind_groups',
         label: '崩三提醒群',
-        helpMessage: '直接选择提醒群，也可群内发送 #小花火开启崩三提醒',
+        helpMessage: '直接选择提醒群，也可群内发送 #米哈游开启崩三提醒',
         component: 'Select',
         componentProps: {
           mode: 'multiple',
@@ -993,7 +993,7 @@ export const supportGuoba = () => {
       {
         field: 'custom_guide_enable',
         label: '自定义攻略源开关',
-        helpMessage: '开启后可用 #角色名攻略 触发（也支持 xhh/小花火 前缀）；角色名即关键词，自动用别名表归一成正式名，无需手填角色列表',
+        helpMessage: '开启后可用 #角色名攻略 触发（也支持米哈游前缀 前缀）；角色名即关键词，自动用别名表归一成正式名，无需手填角色列表',
         component: 'Switch',
       },
       {
@@ -1341,8 +1341,8 @@ export const supportGuoba = () => {
       },
       {
         field: 'Tl',
-        label: '启用小花火体力组件',
-        helpMessage: '开启后由小花火处理体力指令；#体力/小花火体力等为四游戏总览，#原神体力等为单游戏查询',
+        label: '启用体力组件',
+        helpMessage: '开启后由本插件处理体力指令；#体力/#米哈游体力等为四游戏总览，#原神体力等为单游戏查询',
         component: 'Switch',
       },
       {

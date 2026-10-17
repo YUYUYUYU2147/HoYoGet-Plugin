@@ -436,6 +436,6 @@ export async function fetchSrBwikiItem(name, type = 'gz') {
             await sleep(1500 * (i + 1));
         }
     }
-    globalThis.logger?.info?.(`[xhh][bwiki_sr] ${name} 词条抓取失败：${last}（被拦 ${blocked} 次），改用列表数据出卡`);
+    globalThis.logger?.info?.(`[HoYoGet][bwiki_sr] ${name} 词条抓取失败：${last}（被拦 ${blocked} 次），改用列表数据出卡`);
     return null;
 }

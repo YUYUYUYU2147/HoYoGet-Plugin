@@ -246,7 +246,7 @@ export async function sendDanmaku(roomId, text, ck) {
     const data = await res.json().catch(() => ({ code: -1, message: '接口返回异常' }));
 
     const tips = {
-        '-101': 'B站ck已失效，请重新「小花火b站登录」',
+        '-101': 'B站ck已失效，请重新「米哈游b站登录」',
         '-102': 'B站账号被封停了',
         '-111': 'csrf 校验失败，请重新登录B站',
         '-400': '弹幕内容不合法或超长（直播间弹幕最多20字）',

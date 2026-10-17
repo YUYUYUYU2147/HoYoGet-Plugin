@@ -99,7 +99,7 @@ const maskStuid = s => {
 };
 
 function describe(acc) {
-    const src = [acc.fromXh && '小花火', acc.fromXy && '逍遥'].filter(Boolean).join('+');
+    const src = [acc.fromXh && '米哈游', acc.fromXy && '逍遥'].filter(Boolean).join('+');
     const games = acc.games.size
         ? [...acc.games].map(g => GAME_CN[g] || g).join('/')
         : '未知（该来源没记游戏）';
@@ -143,7 +143,7 @@ async function fetchGroupQqs(e) {
  */
 /** 名单卡模板用的扁平结构 */
 function cardData(acc) {
-    const src = [acc.fromXh && '小花火', acc.fromXy && '逍遥'].filter(Boolean).join('+');
+    const src = [acc.fromXh && '米哈游', acc.fromXy && '逍遥'].filter(Boolean).join('+');
     const games = acc.games.size ? [...acc.games].map(g => GAME_CN[g] || g).join('/') : '未知';
     const stuids = [...acc.stuids].map(maskStuid);
     const more = stuids.length > 3 ? ` 等${stuids.length}个` : '';
@@ -229,7 +229,7 @@ export function resolveTargets(input = '', groupId = '', memberQqs = []) {
 export class SignManage extends plugin {
     constructor(e) {
         super({
-            name: '[小花火]签到名单',
+            name: '[米哈游]签到名单',
             dsc: '查看扫码绑定情况，主人可代成员签到',
             event: 'message',
             priority: pluginPriority('sign', -26),
@@ -237,23 +237,23 @@ export class SignManage extends plugin {
                 // 「#签到名单 本群」要排在「#签到名单」前面：
                 // 后者以 $ 结尾，本来就匹配不到带尾巴的形式，但先特指后泛指更不容易将来改错。
                 {
-                    reg: '^#*(小花火|xhh)*(签到|绑定|CK|ck)(名单|列表|情况|一览)\s*(本群|当前群)$',
+                    reg: '^#*米哈游*(签到|绑定|CK|ck)(名单|列表|情况|一览)\s*(本群|当前群)$',
                     fnc: 'listGroup',
                     permission: 'master',
                 },
-                { reg: '^#*(小花火|xhh)*(签到|绑定|CK|ck)(名单|列表|情况|一览)$', fnc: 'list', permission: 'master' },
+                { reg: '^#*米哈游*(签到|绑定|CK|ck)(名单|列表|情况|一览)$', fnc: 'list', permission: 'master' },
                 {
-                    reg: '^#*(小花火|xhh)*(本群|当前群)(签到名单|绑定列表|名单|CK情况)$',
+                    reg: '^#*米哈游*(本群|当前群)(签到名单|绑定列表|名单|CK情况)$',
                     fnc: 'listGroup',
                     permission: 'master',
                 },
                 {
-                    reg: '^#*(小花火|xhh)*(代|帮|代替)(游戏|社区|论坛)?签到(.*)$',
+                    reg: '^#*米哈游*(代|帮|代替)(游戏|社区|论坛)?签到(.*)$',
                     fnc: 'proxySign',
                     permission: 'master',
                 },
                 {
-                    reg: '^#*(小花火|xhh)*(加入|退出|移出)(游戏)?(自动)?(签到|签到群)$',
+                    reg: '^#*米哈游*(加入|退出|移出)(游戏)?(自动)?(签到|签到群)$',
                     fnc: 'enroll',
                     permission: 'master',
                 },
@@ -331,12 +331,12 @@ export class SignManage extends plugin {
         if (!all.length) {
             return e.reply(memberTotal
                 ? `本群 ${memberTotal} 人里，还没有人扫码绑定过 CK。\n`
-                    + '让成员发「#小花火扫码绑定」完成绑定后再试。'
-                : '还没有任何人扫码绑定过 CK。\n让成员发「#小花火扫码绑定」完成绑定后再试。', true);
+                    + '让成员发「#米哈游扫码绑定」完成绑定后再试。'
+                : '还没有任何人扫码绑定过 CK。\n让成员发「#米哈游扫码绑定」完成绑定后再试。', true);
         }
         const both = all.filter(a => a.fromXh && a.fromXy).length;
         const head = `${title}\n`
-            + `小花火侧 ${all.filter(a => a.fromXh).length} 人，逍遥侧 ${all.filter(a => a.fromXy).length} 人`
+            + `米哈游侧 ${all.filter(a => a.fromXh).length} 人，逍遥侧 ${all.filter(a => a.fromXy).length} 人`
             + (both ? `，其中 ${both} 人两边都绑了` : '');
         const nodes = all.map(acc => {
             const who = e.isGroup ? (e.group?.getMemberMap?.()?.get?.(Number(acc.qq))?.card) : '';
@@ -375,7 +375,7 @@ export class SignManage extends plugin {
                     return target.sendMsg(img);
                 }
             } catch (err) {
-                logger.error(`[xhh][签到名单] 出图失败，退回合并转发: ${err.message}`);
+                logger.error(`[HoYoGet][签到名单] 出图失败，退回合并转发: ${err.message}`);
             }
             const msg_ = await makeForwardMsg(e, nodes, head);
             await e.reply('名单含全体 QQ 号，按设置私聊发出。', true);
@@ -386,7 +386,7 @@ export class SignManage extends plugin {
             await render('sign/roster', card, { e, ret: true });
             return true;
         } catch (err) {
-            logger.error(`[xhh][签到名单] 出图失败，退回合并转发: ${err.message}`);
+            logger.error(`[HoYoGet][签到名单] 出图失败，退回合并转发: ${err.message}`);
         }
         return e.reply(await makeForwardMsg(e, nodes, head), true);
     }
@@ -419,7 +419,7 @@ export class SignManage extends plugin {
             + `本次签了 ${alive.length} 条`;
         if (nodes.length) {
             try { return e.reply(await makeForwardMsg(e, nodes, head), true); }
-            catch (err) { logger.error(`[xhh][代签到] genshin 侧转发失败: ${err.message}`); }
+            catch (err) { logger.error(`[HoYoGet][代签到] genshin 侧转发失败: ${err.message}`); }
         }
         return e.reply([head, ...(res.lines || []).slice(1)].join('\n'), true);
     }
@@ -427,7 +427,7 @@ export class SignManage extends plugin {
     async proxySign(e) {
         // 「#代签到 本群」默认游戏+社区一起；写「#代游戏签到 本群」或「#代签到 游戏 本群」
         // 就只跑游戏那一半 —— 游戏失败时单独重试，不用把社区也重跑一遍。
-        const raw = e.msg.replace(/^#*(小花火|xhh)*/, '').trim();
+        const raw = e.msg.replace(/^#*米哈游*/, '').trim();
         const head = /^(?:代|帮|代替)(游戏|社区|论坛)?签到/.exec(raw);
         let scope = head && head[1] ? (head[1] === '游戏' ? 'game' : 'bbs') : 'both';
         let input = raw.replace(/^(?:代|帮|代替)(?:游戏|社区|论坛)?签到/, '').trim();
@@ -476,16 +476,16 @@ export class SignManage extends plugin {
         const { zd_MysSign, BbsAutoSign, render } = await import('#HoYoGet');
         let game = null, bbs = null;
         if (scope !== 'bbs') {
-            try { game = await zd_MysSign(withCk); } catch (err) { logger.error(`[xhh][代签到] 游戏签到异常: ${err.message}`); }
+            try { game = await zd_MysSign(withCk); } catch (err) { logger.error(`[HoYoGet][代签到] 游戏签到异常: ${err.message}`); }
         }
         if (scope !== 'game') {
-            try { bbs = await BbsAutoSign(withCk, e.isGroup ? e.group_id : 0); } catch (err) { logger.error(`[xhh][代签到] 社区签到异常: ${err.message}`); }
+            try { bbs = await BbsAutoSign(withCk, e.isGroup ? e.group_id : 0); } catch (err) { logger.error(`[HoYoGet][代签到] 社区签到异常: ${err.message}`); }
         }
 
         // 写进本群签到名单，之后定时自动签到会覆盖这些人
         let enrolled = [];
         if (e.isGroup && withCk.length) {
-            try { enrolled = recordMembers(e.group_id, withCk); } catch (err) { logger.error(`[xhh][代签到] 写入名单失败: ${err.message}`); }
+            try { enrolled = recordMembers(e.group_id, withCk); } catch (err) { logger.error(`[HoYoGet][代签到] 写入名单失败: ${err.message}`); }
         }
 
         // 与定时签到一致出图：游戏结果用 end_list，社区结果用 sign（复用同一张模板）
@@ -497,7 +497,7 @@ export class SignManage extends plugin {
                 imgs++;
                 return true;
             } catch (err) {
-                logger.error(`[xhh][代签到] ${tpl} 出图失败: ${err.message}`);
+                logger.error(`[HoYoGet][代签到] ${tpl} 出图失败: ${err.message}`);
                 return false;
             }
         };

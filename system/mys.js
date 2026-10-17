@@ -164,7 +164,7 @@ const getNanokaVer = async game => {
             break;
         } catch (err) {
             lastErr = err;
-            logger.debug?.(`[xhh][图鉴] nanoka manifest 第 ${attempt + 1} 次失败（${err?.message || err}）`);
+            logger.debug?.(`[HoYoGet][图鉴] nanoka manifest 第 ${attempt + 1} 次失败（${err?.message || err}）`);
         }
     }
     if (lastErr) {
@@ -211,9 +211,9 @@ const getNanokaNew = async game => {
             } catch (_) {}
             if (cached) {
                 nanokaManifestCache = cached;
-                logger.warn?.('[xhh][图鉴] nanoka manifest 获取失败，改用上次缓存的数据');
+                logger.warn?.('[HoYoGet][图鉴] nanoka manifest 获取失败，改用上次缓存的数据');
             } else {
-                logger.debug?.('[xhh][图鉴] 读 nanoka manifest.json 失败:', err?.message || err);
+                logger.debug?.('[HoYoGet][图鉴] 读 nanoka manifest.json 失败:', err?.message || err);
                 nanokaManifestCache = {};
             }
         }
@@ -534,7 +534,7 @@ function getManual() {
     try {
         manualCache = YAML.parse(fs.readFileSync(MANUAL_YAML, 'utf-8')) || empty;
     } catch (err) {
-        logger.debug?.('[xhh][图鉴] 读 manual_overrides.yaml 失败，全走自动判定:', err?.message || err);
+        logger.debug?.('[HoYoGet][图鉴] 读 manual_overrides.yaml 失败，全走自动判定:', err?.message || err);
         manualCache = empty;
     }
     return manualCache;
@@ -578,7 +578,7 @@ function getZzzDebut(type = 'js') {
             if (!zzzDebutCache[key].has(v.name)) zzzDebutCache[key].set(v.name, v.t);
         }
     } catch (err) {
-        logger.debug?.('[xhh][图鉴] 读 zzz_gacha_pool_history.yaml 失败，退回 id 降序:', err?.message || err);
+        logger.debug?.('[HoYoGet][图鉴] 读 zzz_gacha_pool_history.yaml 失败，退回 id 降序:', err?.message || err);
     }
     zzzDebutCache._loaded.add(key);
     return zzzDebutCache[key];
@@ -614,7 +614,7 @@ function getGsDebut() {
             }
         }
     } catch (err) {
-        logger.debug?.('[xhh][图鉴] 读 gslogs.yaml 失败，武器退回 id 降序:', err?.message || err);
+        logger.debug?.('[HoYoGet][图鉴] 读 gslogs.yaml 失败，武器退回 id 降序:', err?.message || err);
     }
     gsDebutCache = map;
     return map;
@@ -648,7 +648,7 @@ function getSrDebut() {
             for (const name of v.names) if (!map.has(name)) map.set(name, v.t);
         }
     } catch (err) {
-        logger.debug?.('[xhh][图鉴] 读 sr_logs.yaml 失败，光锥退回 id 降序:', err?.message || err);
+        logger.debug?.('[HoYoGet][图鉴] 读 sr_logs.yaml 失败，光锥退回 id 降序:', err?.message || err);
     }
     srDebutCache = map;
     return map;
@@ -921,9 +921,9 @@ const fetchOfficialGsArtifactNames = async () => {
             return set;
         } catch (err) {
             if (attempt) {
-                logger.warn?.(`[xhh][图鉴] 官方圣遗物名单获取失败，本次不剔除（保留 nanoka 全量）: ${err?.message || err}`);
+                logger.warn?.(`[HoYoGet][图鉴] 官方圣遗物名单获取失败，本次不剔除（保留 nanoka 全量）: ${err?.message || err}`);
             } else {
-                logger.debug?.(`[xhh][图鉴] 官方圣遗物名单第 1 次失败，重试: ${err?.message || err}`);
+                logger.debug?.(`[HoYoGet][图鉴] 官方圣遗物名单第 1 次失败，重试: ${err?.message || err}`);
             }
         }
     }
@@ -1065,9 +1065,9 @@ class mys {
                 ? txt.replace(/^data_mode\s*:.*$/m, `data_mode: ${v}`)
                 : txt.replace(/^(\s*#图鉴数据模式[^\n]*\n)/, `$1data_mode: ${v}\n`);
             fs.writeFileSync(p, next, 'utf8');
-            logger.mark?.(`[xhh][图鉴] 数据模式 → ${v}（已写回 config/config.yaml，即时生效）`);
+            logger.mark?.(`[HoYoGet][图鉴] 数据模式 → ${v}（已写回 config/config.yaml，即时生效）`);
         } catch (err) {
-            logger.warn?.(`[xhh][图鉴] 数据模式写回失败（仅本次生效）：${err?.message}`);
+            logger.warn?.(`[HoYoGet][图鉴] 数据模式写回失败（仅本次生效）：${err?.message}`);
         }
         return v;
     }
@@ -1102,7 +1102,7 @@ class mys {
                 lastErr = err;
                 // 最后一次，或者这种错误重试也没意义（404），就直接抛
                 if (attempt >= retry || !isRetryableNanokaErr(err)) throw err;
-                logger.debug?.(`[xhh][图鉴] ${label || url} 第 ${attempt + 1} 次失败（${err?.message || err}），重试`);
+                logger.debug?.(`[HoYoGet][图鉴] ${label || url} 第 ${attempt + 1} 次失败（${err?.message || err}），重试`);
             }
         }
         throw lastErr;
@@ -1187,7 +1187,7 @@ class mys {
                 .toFile(file);
             return localFileUrl(file);
         } catch (err) {
-            logger.warn?.(`[xhh] ZZZ boss材料图标裁剪失败 ${key}: ${err.message || err}`);
+            logger.warn?.(`[HoYoGet] ZZZ boss材料图标裁剪失败 ${key}: ${err.message || err}`);
             return this.zzzItemIcon(icon);
         }
     }
@@ -1435,7 +1435,7 @@ class mys {
         const isTest = x => !!(x?.isUnreleased || x?._src === 'nanoka');
         const kept = mode === 'official' ? list.filter(x => !isTest(x)) : list.filter(isTest);
         if (kept.length !== list.length) {
-            logger.debug?.(`[xhh][图鉴] ${mode === 'official' ? '正式服' : '测试服'}模式：列表 ${list.length} → ${kept.length} 条`);
+            logger.debug?.(`[HoYoGet][图鉴] ${mode === 'official' ? '正式服' : '测试服'}模式：列表 ${list.length} → ${kept.length} 条`);
         }
         return kept;
     }
@@ -1454,7 +1454,7 @@ class mys {
            这些标记不全，挡不住，所以必须在**切换之前**就断掉。 */
         const testModeOnly = this.getDataMode() === 'test';
         if (nanokaDown() && testModeOnly) {
-            logger.debug?.('[xhh][图鉴] 测试服数据模式：nanoka 不可用且禁用官方兜底，原神/星铁列表为空');
+            logger.debug?.('[HoYoGet][图鉴] 测试服数据模式：nanoka 不可用且禁用官方兜底，原神/星铁列表为空');
             return isSr
                 ? { js_list: [], gz_list: [], yq_list: [] }
                 : { js_list: [], wq_list: [], syw_list: [] };
@@ -1467,7 +1467,7 @@ class mys {
                     for (const k of Object.keys(data)) data[k] = this.filterListByMode(data[k]);
                     return data;
                 }
-                logger.warn?.('[xhh][图鉴] nanoka 返回空，回退米游社官方 Wiki');
+                logger.warn?.('[HoYoGet][图鉴] nanoka 返回空，回退米游社官方 Wiki');
             } catch (error) {
                 // 仅网络/接口类失败才全局降级，代码 bug 直接抛出（见 isTransientNetError）
                 if (isTransientNetError(error)) markNanokaDown();
@@ -1477,7 +1477,7 @@ class mys {
         /* 同上：test 模式下 nanoka 返回空也不能落到官方源（正式服）。
            nanoka 有内容时前面已 return，走不到这里。 */
         if (testModeOnly) {
-            logger.debug?.('[xhh][图鉴] 测试服数据模式：nanoka 返回空且禁用官方兜底，原神/星铁列表为空');
+            logger.debug?.('[HoYoGet][图鉴] 测试服数据模式：nanoka 返回空且禁用官方兜底，原神/星铁列表为空');
             return isSr
                 ? { js_list: [], gz_list: [], yq_list: [] }
                 : { js_list: [], wq_list: [], syw_list: [] };
@@ -1536,12 +1536,12 @@ class mys {
                 const kept = rawRelics.filter(x => official.has(normSywName(x.title)));
                 if (kept.length) {
                     if (kept.length !== rawRelics.length) {
-                        logger.info?.(`[xhh][图鉴] 官方名单剔除已移除套装：圣遗物 ${rawRelics.length} → ${kept.length} 条`);
+                        logger.info?.(`[HoYoGet][图鉴] 官方名单剔除已移除套装：圣遗物 ${rawRelics.length} → ${kept.length} 条`);
                     }
                     relicList = kept;
                 } else {
                     // 名单取到却一条都匹配不上 = 数据结构有变，保留原列表，绝不删空
-                    logger.debug?.('[xhh][图鉴] 官方圣遗物名单无一命中，保留 nanoka 全量列表');
+                    logger.debug?.('[HoYoGet][图鉴] 官方圣遗物名单无一命中，保留 nanoka 全量列表');
                 }
             }
         }
@@ -1715,7 +1715,7 @@ class mys {
            官方 Wiki 是正式服源，nanoka 冷却时整份切到它，
            等于把正式服列表当成测试服列表交出去 —— 这里直接返回空。 */
         if (this.getDataMode() === 'test' && nanokaDown()) {
-            logger.debug?.('[xhh][图鉴] 测试服数据模式：nanoka 不可用且禁用官方兜底，列表为空');
+            logger.debug?.('[HoYoGet][图鉴] 测试服数据模式：nanoka 不可用且禁用官方兜底，列表为空');
             return { js_list: [], wq_list: [], syw_list: [], yq_list: [] };
         }
         // 冷却期内直接走官方 Wiki，不再请求已失效的 nanoka
@@ -1763,7 +1763,7 @@ class mys {
                     try {
                         return await this.zzz_official_list(kind);
                     } catch (err) {
-                        logger.debug?.(`[xhh][图鉴] 绝区零官方${kind} 列表获取失败: ${err?.message || err}`);
+                        logger.debug?.(`[HoYoGet][图鉴] 绝区零官方${kind} 列表获取失败: ${err?.message || err}`);
                         return [];
                     }
                 };
@@ -1838,7 +1838,7 @@ class mys {
                 }
                 const hit = Object.keys(bwikiIconMap).length;
                 if (hit < names.length) {
-                    logger.debug?.(`[xhh][图鉴] Bwiki 头像认领 ${hit}/${names.length}（单页认领），其余回落米游社/nanoka`);
+                    logger.debug?.(`[HoYoGet][图鉴] Bwiki 头像认领 ${hit}/${names.length}（单页认领），其余回落米游社/nanoka`);
                 }
             }
             const matchBwikiIcon = zh => bwikiIconMap[String(zh || '').trim()] || '';
@@ -1977,7 +1977,7 @@ class mys {
             logger.error('ZZZ nanoka访问失败，切换米游社官方 Wiki:', error);
             /* test 模式禁用官方兜底（作者要求：只用 nanoka）。 */
             if (this.getDataMode() === 'test') {
-                logger.debug?.('[xhh][图鉴] 测试服数据模式：禁用官方兜底，绝区零列表为空');
+                logger.debug?.('[HoYoGet][图鉴] 测试服数据模式：禁用官方兜底，绝区零列表为空');
                 return { js_list: [], wq_list: [], syw_list: [], yq_list: [] };
             }
             const off = await this.zzz_official_tujian();
@@ -2551,7 +2551,7 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
                         }
                     }
                 } catch (err) {
-                    try { if ((yaml.get('./plugins/HoYoGet-Plugin/config/config.yaml') || {}).debug) logger.mark(`[xhh] BH3 wiki ext解析失败: ${title}`); } catch (_) {}
+                    try { if ((yaml.get('./plugins/HoYoGet-Plugin/config/config.yaml') || {}).debug) logger.mark(`[HoYoGet] BH3 wiki ext解析失败: ${title}`); } catch (_) {}
                 }
 
                 const damageTypes = normalizeDamageTypes(damage, title);
@@ -2665,7 +2665,7 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
             try {
                 const data = await this.nanoka_detail(id, isSr, type);
                 if (data) return data;
-                logger.warn?.('[xhh][图鉴] nanoka 详情为空，回退米游社官方 Wiki');
+                logger.warn?.('[HoYoGet][图鉴] nanoka 详情为空，回退米游社官方 Wiki');
             } catch (error) {
                 // 仅网络/接口类失败才全局降级，代码 bug 直接抛出（见 isTransientNetError）
                 if (isTransientNetError(error)) markNanokaDown();
@@ -2715,7 +2715,7 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
             // 这是「id 体系不匹配」的预期结果，不是接口故障，静默返回让调用方走米游社即可，
             // 不该按 ERROR 打一条误导性的「详情访问失败」。
             if (/HTTP\s*404/.test(String(err?.message || ''))) {
-                logger.debug?.(`[xhh][图鉴] nanoka 无此 id（${id}，应为米游社体系 id），跳过`);
+                logger.debug?.(`[HoYoGet][图鉴] nanoka 无此 id（${id}，应为米游社体系 id），跳过`);
                 return null;
             }
             throw err;

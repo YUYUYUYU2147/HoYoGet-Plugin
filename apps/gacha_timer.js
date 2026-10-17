@@ -17,7 +17,7 @@ const ACTION_WORDS = '多久没复刻|多久没UP|多久没up|多久没卡池|�
 export class gacha_timer extends plugin {
     constructor(e) {
         super({
-            name: '[小花火]卡池计时器',
+            name: '[米哈游]卡池计时器',
             dsc: '卡池UP未复刻统计与总览',
             event: 'message',
             priority: pluginPriority('gacha_timer', -3000),
@@ -32,7 +32,7 @@ export class gacha_timer extends plugin {
     }
 
     dbg(...args) {
-        if (config().debug) logger.mark('[xhh][卡池计时器]', ...args);
+        if (config().debug) logger.mark('[HoYoGet][卡池计时器]', ...args);
     }
 
     async timerQuery(e) {
@@ -67,7 +67,7 @@ export class gacha_timer extends plugin {
         try {
             hits = await gachaTimer.find(keyword, game || 'all', 8);
         } catch (err) {
-            logger.error(`[xhh][卡池计时器] 查询失败: ${err?.message || err}`);
+            logger.error(`[HoYoGet][卡池计时器] 查询失败: ${err?.message || err}`);
             return e.reply('卡池数据获取失败，请稍后再试。');
         }
 
@@ -113,7 +113,7 @@ export class gacha_timer extends plugin {
         try {
             data = await gachaTimer.overview(target, 15);
         } catch (err) {
-            logger.error(`[xhh][卡池计时器] 总览失败: ${err?.message || err}`);
+            logger.error(`[HoYoGet][卡池计时器] 总览失败: ${err?.message || err}`);
             return e.reply('卡池数据获取失败，请稍后再试。');
         }
         if (!data?.total) return e.reply('没取到该游戏的卡池数据，请稍后再试。');

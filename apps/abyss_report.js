@@ -82,7 +82,7 @@ async function scaleImage(input, scale) {
     } else if (typeof file === 'string' && file.startsWith('data:image')) {
       buf = Buffer.from(file.split(',')[1], 'base64');
     } else {
-      logger.warn(`[xhh][abyss_report] scaleImage 跳过非图片输入: ${typeof file}`);
+      logger.warn(`[HoYoGet][abyss_report] scaleImage 跳过非图片输入: ${typeof file}`);
       return input;
     }
     const { width, height } = await sharp(buf).metadata();
@@ -90,11 +90,11 @@ async function scaleImage(input, scale) {
       .resize(Math.round(width * scale), Math.round(height * scale), { kernel: sharp.kernel.lanczos3, fit: 'fill' })
       .png({ compressionLevel: 9 })
       .toBuffer();
-    logger.mark(`[xhh][abyss_report] 图片缩放 ${width}x${height} -> ${Math.round(width * scale)}x${Math.round(height * scale)}`);
+    logger.mark(`[HoYoGet][abyss_report] 图片缩放 ${width}x${height} -> ${Math.round(width * scale)}x${Math.round(height * scale)}`);
     if (typeof input === 'object' && input.file) return { ...input, file: resized };
     return `base64://${resized.toString('base64')}`;
   } catch (err) {
-    logger.warn(`[xhh][abyss_report] scaleImage 失败: ${err.message}`);
+    logger.warn(`[HoYoGet][abyss_report] scaleImage 失败: ${err.message}`);
     return input;
   }
   }
@@ -122,7 +122,7 @@ async function currentVersion(game) {
     const live = game === 'sr' ? manifest?.hsr?.live : game === 'zzz' ? manifest?.zzz?.live : manifest?.gi?.live;
     if (live) return String(live);
   } catch (err) {
-    logger.warn(`[xhh][abyss_report] Nanoka manifest 获取失败: ${err.message}`);
+    logger.warn(`[HoYoGet][abyss_report] Nanoka manifest 获取失败: ${err.message}`);
   }
   return '';
 }
@@ -145,7 +145,7 @@ function allAliasReg() {
 }
 
 function parseMsg(msg = '') {
-  const raw = String(msg || '').replace(/^#*xhh/i, '').trim();
+  const raw = String(msg || '').replace(/^#*米哈游/, '').trim();
   const version = raw.match(/([1-9]\.[0-9]{1,2})/)?.[1];
   const prev = /上一期|上期|上一/i.test(raw);
   const next = /下一期|下期|下一/i.test(raw);
@@ -673,7 +673,7 @@ async function loadSrNanoka(reqType, opts = {}) {
       });
     });
   } catch (err) {
-    logger.warn(`[xhh][abyss_report] 加载星铁怪物映射失败: ${err.message}`);
+    logger.warn(`[HoYoGet][abyss_report] 加载星铁怪物映射失败: ${err.message}`);
   }
   try {
     const valueData = await fetchJson(`https://static.nanoka.cc/hsr/${nv}/monstervalue.json`, 8000) || {};
@@ -700,7 +700,7 @@ async function loadSrNanoka(reqType, opts = {}) {
       });
     });
   } catch (err) {
-    logger.warn(`[xhh][abyss_report] 加载星铁怪物数值失败: ${err.message}`);
+    logger.warn(`[HoYoGet][abyss_report] 加载星铁怪物数值失败: ${err.message}`);
   }
   try {
     const eliteNormal = await fetchJson(`https://static.nanoka.cc/hsr/${nv}/EliteGroup.json`, 8000);
@@ -711,14 +711,14 @@ async function loadSrNanoka(reqType, opts = {}) {
     ];
     hsrEliteMap = new Map(eliteList.filter(e => e?.EliteGroup !== undefined).map(e => [e.EliteGroup, e]));
   } catch (err) {
-    logger.warn(`[xhh][abyss_report] 加载星铁精英组数据失败: ${err.message}`);
+    logger.warn(`[HoYoGet][abyss_report] 加载星铁精英组数据失败: ${err.message}`);
   }
   try {
     const hlgListRaw = await fetchJson(`https://static.nanoka.cc/hsr/${nv}/HardLevelGroup.json`, 8000);
     const hlgList = Array.isArray(hlgListRaw) ? hlgListRaw : [];
     hsrHardLevelMap = new Map(hlgList.filter(e => e?.HardLevelGroup !== undefined && e?.Level !== undefined).map(e => [`${e.HardLevelGroup}_${e.Level}`, e]));
   } catch (err) {
-    logger.warn(`[xhh][abyss_report] 加载星铁等级成长数据失败: ${err.message}`);
+    logger.warn(`[HoYoGet][abyss_report] 加载星铁等级成长数据失败: ${err.message}`);
   }
     const srRefs = { valueByChild: hsrMonsterValueByChild, eliteMap: hsrEliteMap, hlgMap: hsrHardLevelMap, enrichMap: {} };
   const routeMap = {
@@ -766,9 +766,9 @@ async function loadSrNanoka(reqType, opts = {}) {
   try {
     const alFile = cfg.mode === 'doom' ? 'boss' : cfg.mode === 'story' ? 'fiction' : cfg.mode === 'peak' ? 'arbitration' : 'chaos';
     srRefs.enrichMap = await enrichFromAlioth(id, alFile);
-    if (config().debug) logger.mark('[xhh][abyss] alioth 补充数据:', Object.keys(srRefs.enrichMap).length, '个 stage');
+    if (config().debug) logger.mark('[HoYoGet][abyss] alioth 补充数据:', Object.keys(srRefs.enrichMap).length, '个 stage');
   } catch (err) {
-    logger.warn?.('[xhh][abyss] alioth 补充数据失败:', err?.message || err);
+    logger.warn?.('[HoYoGet][abyss] alioth 补充数据失败:', err?.message || err);
   }
 
   const base = { version: nv, id, title: reqType, period: label || `当前版本 ${live}`, tip, gameKey: 'sr', mode: cfg.mode };
@@ -1032,7 +1032,7 @@ async function zzzAllPeriodIds(reqType, versionOverride) {
     const arr = map?.[live];
     if (Array.isArray(arr) && arr.length) return arr.map(Number);
   } catch (err) {
-    logger.warn(`[xhh][abyss_report] ${reqType} 期索引获取失败: ${err.message}`);
+    logger.warn(`[HoYoGet][abyss_report] ${reqType} 期索引获取失败: ${err.message}`);
   }
   return null;
 }
@@ -1060,7 +1060,7 @@ async function loadZzzNanoka(reqType, opts = {}) {
     try {
       map = await fetchJson(cfg.map, 8000);
     } catch (err) {
-      logger.warn(`[xhh][abyss_report] ${reqType} 版本索引获取失败: ${err.message}`);
+      logger.warn(`[HoYoGet][abyss_report] ${reqType} 版本索引获取失败: ${err.message}`);
     }
   }
   const list = await fetchJson(cfg.list, 8000);
@@ -1181,7 +1181,7 @@ async function loadZzzNanoka(reqType, opts = {}) {
       };
     }).filter(Boolean);
 
-    logger.info(`[xhh][abyss_report] 式舆防卫战 ${id} 节点数=${nodes.length} buffs=${nodes.map(n => (n.buffs || []).length).join('/')}`);
+    logger.info(`[HoYoGet][abyss_report] 式舆防卫战 ${id} 节点数=${nodes.length} buffs=${nodes.map(n => (n.buffs || []).length).join('/')}`);
     return { version: nv, id, title: '式舆防卫战', period, tip, gameKey: 'zzz', mode: 'shiyu', nodes };
   }
 
@@ -1342,7 +1342,7 @@ async function listRepoImageNumbers(type) {
         set.add(match[1] || match[2]);
       }
     } catch (err) {
-      logger.warn(`[xhh][abyss_report] 仓库目录读取失败 ${url}: ${err.message}`);
+      logger.warn(`[HoYoGet][abyss_report] 仓库目录读取失败 ${url}: ${err.message}`);
     }
   }
   // 排序：先按"是否为 ID 命名"分组（ID 靠后），组内按 versionBase / ID 数值降序
@@ -1406,7 +1406,7 @@ async function downloadImage(type, number) {
       fs.writeFileSync(local, buf);
       return local;
     } catch (err) {
-      logger.warn(`[xhh][abyss_report] 下载失败 ${url}: ${err.message}`);
+      logger.warn(`[HoYoGet][abyss_report] 下载失败 ${url}: ${err.message}`);
     }
   }
   return '';
@@ -1445,7 +1445,7 @@ async function mergeImages(imageList = [], meta = {}) {
     <rect width="100%" height="100%" fill="url(#bg)"/>
     <text x="${pad}" y="48" fill="#ffe8a8" font-size="22" font-family="sans-serif" letter-spacing="3">XHH ABYSS REPORT</text>
     <text x="${pad}" y="88" fill="#ffffff" font-size="34" font-family="sans-serif" font-weight="700">${meta.gameName || ''} v${meta.version || ''} ${meta.type || ''}</text>
-    <text x="${(width + pad * 2) / 2}" y="${totalH - 24}" text-anchor="middle" fill="#c8d2ea" font-size="18" font-family="sans-serif">数据来源：Abyss Repo / Nanoka · from 小花火</text>
+    <text x="${(width + pad * 2) / 2}" y="${totalH - 24}" text-anchor="middle" fill="#c8d2ea" font-size="18" font-family="sans-serif">数据来源：Abyss Repo / Nanoka · from 米哈游</text>
   </svg>`);
   let top = titleH + pad;
   const composite = [];
@@ -1474,7 +1474,7 @@ async function loadGsBlessing(version) {
       version: nv,
     };
   } catch (err) {
-    logger.warn(`[xhh][abyss_report] 原神 tower 数据获取失败: ${err.message}`);
+    logger.warn(`[HoYoGet][abyss_report] 原神 tower 数据获取失败: ${err.message}`);
     return null;
   }
 }
@@ -1482,17 +1482,17 @@ async function loadGsBlessing(version) {
 export class abyss_report extends plugin {
   constructor() {
     super({
-      name: '[小花火]三游戏深渊速报',
+      name: '[米哈游]三游戏深渊速报',
       dsc: '原神/星铁/绝区零版本深渊速报图',
       event: 'message',
       priority: pluginPriority('abyss_report', 100),
       rule: [
-        { reg: `^#*xhh(原神|星铁|星穹|崩铁|绝区零|ZZZ)?([1-9]\\.[0-9]{1,2})?(全部|所有|全期|全部期)(${allAliasReg()})$`, fnc: 'report' },
-        { reg: `^#*xhh(原神|星铁|星穹|崩铁|绝区零|ZZZ)?([1-9]\\.[0-9]{1,2})(${allAliasReg()})$`, fnc: 'report' },
-        { reg: `^#*xhh(原神|星铁|星穹|崩铁|绝区零|ZZZ)?(上一期|上期|上一|下一期|下期|下一)(${allAliasReg()})$`, fnc: 'report' },
-        { reg: `^#*xhh(原神|星铁|星穹|崩铁|绝区零|ZZZ)?(${allAliasReg()})(上一期|上期|上一|下一期|下期|下一)$`, fnc: 'report' },
-        { reg: `^#*xhh(原神|星铁|星穹|崩铁|绝区零|ZZZ)?(${allAliasReg()})(速报|攻略|查询|信息|图)$`, fnc: 'report' },
-        { reg: `^#*xhh(原神|星铁|星穹|崩铁|绝区零|ZZZ)?(${allAliasReg()})$`, fnc: 'report' },
+        { reg: `^#*米哈游(原神|星铁|星穹|崩铁|绝区零|ZZZ)?([1-9]\\.[0-9]{1,2})?(全部|所有|全期|全部期)(${allAliasReg()})$`, fnc: 'report' },
+        { reg: `^#*米哈游(原神|星铁|星穹|崩铁|绝区零|ZZZ)?([1-9]\\.[0-9]{1,2})(${allAliasReg()})$`, fnc: 'report' },
+        { reg: `^#*米哈游(原神|星铁|星穹|崩铁|绝区零|ZZZ)?(上一期|上期|上一|下一期|下期|下一)(${allAliasReg()})$`, fnc: 'report' },
+        { reg: `^#*米哈游(原神|星铁|星穹|崩铁|绝区零|ZZZ)?(${allAliasReg()})(上一期|上期|上一|下一期|下期|下一)$`, fnc: 'report' },
+        { reg: `^#*米哈游(原神|星铁|星穹|崩铁|绝区零|ZZZ)?(${allAliasReg()})(速报|攻略|查询|信息|图)$`, fnc: 'report' },
+        { reg: `^#*米哈游(原神|星铁|星穹|崩铁|绝区零|ZZZ)?(${allAliasReg()})$`, fnc: 'report' },
       ],
     });
   }
@@ -1515,7 +1515,7 @@ export class abyss_report extends plugin {
         }
         return e.reply(`暂无 原神 ${version} 深境螺旋数据，已回退到数据库仍无可用数据，请稍后再试。`, true, { recallMsg: 60 });
       } catch (err) {
-        logger.warn(`[xhh][abyss_report] tower 数据渲染失败: ${err.message}`);
+        logger.warn(`[HoYoGet][abyss_report] tower 数据渲染失败: ${err.message}`);
         return e.reply(`原神深境螺旋数据获取失败，请稍后再试。`, true, { recallMsg: 60 });
       }
     }
@@ -1578,7 +1578,7 @@ export class abyss_report extends plugin {
         }
         return e.reply(`暂无 ${req.game === 'zzz' ? '绝区零' : '星铁'} ${req.version || ''} ${req.type} 数据，请稍后再试。`, true, { recallMsg: 60 });
       } catch (err) {
-        logger.warn(`[xhh][abyss_report] nanoka ${req.game} 数据渲染失败: ${err.message}`);
+        logger.warn(`[HoYoGet][abyss_report] nanoka ${req.game} 数据渲染失败: ${err.message}`);
         return e.reply(`绝区零/星铁 ${req.type || ''} 数据获取失败，请稍后再试。`, true, { recallMsg: 60 });
       }
     }
@@ -1614,7 +1614,7 @@ export class abyss_report extends plugin {
       imageCount: images.length,
       imageNums: images.map(v => v.num).join(' / ') || '暂无',
       blessing,
-      source: images.length ? 'Abyss Repo / Nanoka' : 'Nanoka / 小花火',
+      source: images.length ? 'Abyss Repo / Nanoka' : 'Nanoka / 米哈游',
       generatedAt: moment().format('MM-DD HH:mm'),
     };
     if (!images.length) {

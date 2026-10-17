@@ -17,7 +17,7 @@ const FETCH_TIMEOUT = 15000;
 const FALLBACK_UID = '74019947';
 
 /**
- * [小花火]自定义攻略源（极简模式）
+ * [米哈游]自定义攻略源（极简模式）
  * 只需在锅巴面板为每个游戏填一个「作者UID」，角色名即关键词。
  * 关键词自动用别名表（xhh 自带 system/default/*alias*.json）把别名/英文名/错别字
  * 归一成正式名，例如「Violet / 沃雅尼沙」都会转成「沃雅妮莎」去搜。
@@ -63,7 +63,7 @@ function loadAliasMaps() {
       const data = JSON.parse(fs.readFileSync(p, 'utf8'));
       if (data && typeof data === 'object') maps[game] = data;
     } catch (err) {
-      logger.warn(`[xhh][custom_guide] 读取别名表失败 ${p}: ${err?.message || err}`);
+      logger.warn(`[HoYoGet][custom_guide] 读取别名表失败 ${p}: ${err?.message || err}`);
     }
   }
   if (Object.keys(maps).length) aliasMaps = maps;
@@ -107,7 +107,7 @@ async function fetchJSON(url) {
     if (!res.ok) return null;
     return await res.json();
   } catch (err) {
-    logger.warn(`[xhh][custom_guide] 请求失败 ${url}: ${err?.message || err}`);
+    logger.warn(`[HoYoGet][custom_guide] 请求失败 ${url}: ${err?.message || err}`);
     return null;
   } finally {
     clearTimeout(timer);
@@ -179,12 +179,12 @@ function pickImages(post = {}, indexes = []) {
 export class custom_guide extends plugin {
   constructor() {
     super({
-      name: '[小花火]自定义攻略源',
+      name: '[米哈游]自定义攻略源',
       dsc: '只需配置各游戏作者UID，关键词自动取角色别名表正式名',
       event: 'message',
       priority: pluginPriority('custom_guide', -9999999999),
       rule: [
-        { reg: '^(?:(?:xhh|小花火)[/#]?)?#?(\\S+)(攻略|一图流|配对|配队)$', fnc: 'guide' },
+        { reg: '^(?:米哈游[/#]?)?#?(\\S+)(攻略|一图流|配对|配队)$', fnc: 'guide' },
       ],
     });
   }
@@ -192,7 +192,7 @@ export class custom_guide extends plugin {
   async guide(e) {
     if (config()?.custom_guide_enable === false) return false;
 
-    const match = /^(?:(?:xhh|小花火)[/#]?)?#?(\S+)(攻略|一图流|配对|配队)$/.exec(e.msg || '');
+    const match = /^(?:米哈游[/#]?)?#?(\S+)(攻略|一图流|配对|配队)$/.exec(e.msg || '');
     if (!match) return false;
     let roleQuery = match[1];
 
@@ -257,7 +257,7 @@ export class custom_guide extends plugin {
       const { keyword: kw, uid, game } = cand;
       try {
         const posts = await searchPosts(kw, uid, DEFAULT_SIZE);
-        logger.mark(`[xhh][custom_guide] ${kw}/${uid} 搜到 ${posts.length} 帖，各帖图数: ${posts.map(p => p.images.length).join(',') || '0'}`);
+        logger.mark(`[HoYoGet][custom_guide] ${kw}/${uid} 搜到 ${posts.length} 帖，各帖图数: ${posts.map(p => p.images.length).join(',') || '0'}`);
         let pushed = false;
         for (const post of posts) {
           const images = pickImages(post, indexes).filter(u => !seenImages.has(u));
@@ -277,7 +277,7 @@ export class custom_guide extends plugin {
         }
         if (pushed) break; // 该候选有结果就不再试下一个
       } catch (err) {
-        logger.warn(`[xhh][custom_guide] ${kw}/${uid} 获取失败: ${err?.message || err}`);
+        logger.warn(`[HoYoGet][custom_guide] ${kw}/${uid} 获取失败: ${err?.message || err}`);
       }
     }
     if (!msg.length) {
@@ -285,7 +285,7 @@ export class custom_guide extends plugin {
     }
 
     if (!msg.length) return e.reply(`未找到「${keyword}」相关攻略图`, true);
-    logger.mark(`[xhh][custom_guide] 准备发送转发节点数: ${msg.length}`);
+    logger.mark(`[HoYoGet][custom_guide] 准备发送转发节点数: ${msg.length}`);
     // 合并转发开关：关闭时逐条拼接发送，且不带「xx攻略来啦~」这类标题文字
     if (cfg.custom_guide_forward !== 'off') {
       await e.reply(await makeForwardMsg(e, msg, `「${keyword}」攻略来啦~`));

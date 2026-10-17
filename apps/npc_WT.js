@@ -9,7 +9,7 @@ import {
 export class Npcwt extends plugin {
     constructor(e) {
         super({
-            name: '[小花火]原神npc委托成就',
+            name: '[米哈游]原神npc委托成就',
             dsc: '',
             event: 'message',
             priority: pluginPriority('npc_wt', 1234),

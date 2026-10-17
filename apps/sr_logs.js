@@ -11,7 +11,7 @@ function latestSrVersion(data = []) {
 export class sr_logs extends plugin {
   constructor(e) {
     super({
-      name: '[小花火]星铁历史卡池',
+      name: '[米哈游]星铁历史卡池',
       dsc: '',
       event: 'message',
       priority: pluginPriority('sr_logs', -88),
@@ -102,7 +102,7 @@ export class sr_logs extends plugin {
 
     const currentVersion = latestSrVersion(srlogs);
     if (!data.length && currentVersion && name.replace(/上半|下半/g, '') === currentVersion) {
-      return e.reply(`星穹铁道当前版本为 ${currentVersion}，但 xhh 的星铁历史卡池库还没有录入 ${name} 的具体UP信息。`);
+      return e.reply(`星穹铁道当前版本为 ${currentVersion}，但本插件的星铁历史卡池库还没有录入 ${name} 的具体UP信息。`);
     }
     if (!data.length) return false;
 

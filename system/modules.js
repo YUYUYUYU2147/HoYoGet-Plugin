@@ -129,14 +129,14 @@ export function guardModule(cls, id, fncNames) {
   for (const name of names) {
     const original = cls.prototype?.[name]
     if (typeof original !== 'function') {
-      logger?.warn?.(`[xhh][modules] ${cls.name}.${name}() 不存在，「${label}」的开关守卫没挂上`)
+      logger?.warn?.(`[HoYoGet][modules] ${cls.name}.${name}() 不存在，「${label}」的开关守卫没挂上`)
       continue
     }
     // 同一个方法可能被多个模块守卫，重复包装只留最外层
     if (original.__xhhModuleGuarded) continue
     const wrapped = async function (...args) {
       if (!isModuleEnabled(id)) {
-        logger?.debug?.(`[xhh][modules]「${label}」已关闭，${cls.name}.${name}() 静默不响应`)
+        logger?.debug?.(`[HoYoGet][modules]「${label}」已关闭，${cls.name}.${name}() 静默不响应`)
         return false
       }
       return original.apply(this, args)
@@ -173,11 +173,11 @@ export function guardModuleByFile(cls, id, file) {
     // 去重
     names = [...new Set(names)]
   } catch (err) {
-    logger?.warn?.(`[xhh][modules] 读取 ${file} 失败，「${MODULES[id]?.label || id}」的守卫改用显式列表`)
+    logger?.warn?.(`[HoYoGet][modules] 读取 ${file} 失败，「${MODULES[id]?.label || id}」的守卫改用显式列表`)
     return guardModule(cls, id, [])
   }
   if (!names.length) {
-    logger?.warn?.(`[xhh][modules] ${file} 里没解析到 fnc，「${MODULES[id]?.label || id}」的守卫没挂上`)
+    logger?.warn?.(`[HoYoGet][modules] ${file} 里没解析到 fnc，「${MODULES[id]?.label || id}」的守卫没挂上`)
     return
   }
   guardModule(cls, id, names)

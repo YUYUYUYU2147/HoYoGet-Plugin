@@ -61,7 +61,7 @@ async function sendMsg(e, msg, opts = {}) {
 export class currency_balance extends plugin {
   constructor() {
     super({
-      name: '[小花火]原石星琼余额估算',
+      name: '[米哈游]原石星琼余额估算',
       dsc: '基于用户手动基准值和官方札记增量估算原石/星琼余额',
       event: 'message',
       priority: pluginPriority('currency_balance', 100),
@@ -169,7 +169,7 @@ export class currency_balance extends plugin {
       `基准时间：${saved.setTime}`,
       `获取时间：${snap.fetchTime}`,
       '说明：官方没有实时余额接口，本功能只按“手动基准 + 札记本月获取增量”估算；抽卡/兑换等消耗需要重新校准。',
-      'from 小花火',
+      'from 米哈游',
     ].join('\n'));
   }
 

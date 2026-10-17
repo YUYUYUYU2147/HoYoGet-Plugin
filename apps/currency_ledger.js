@@ -96,7 +96,7 @@ function poolCornerIcon(e, game) {
     try {
         return new xhh_gacha_pool(e).fixedCornerFallback(POOL_GAME_NAME[game] || '') || '';
     } catch (err) {
-        logger.warn?.('[xhh][账本] 取当前卡池角标失败:', err?.message || err);
+        logger.warn?.('[HoYoGet][账本] 取当前卡池角标失败:', err?.message || err);
         return '';
     }
 }
@@ -144,7 +144,7 @@ function readAll(game, qq) {
             }
         }
     }
-    logger.warn?.(`[xhh][账本] ${game} 存档里有非法月份键 ${dropped.join(',')}，已忽略（统计里原本会多出重复月份）`);
+    logger.warn?.(`[HoYoGet][账本] ${game} 存档里有非法月份键 ${dropped.join(',')}，已忽略（统计里原本会多出重复月份）`);
     return out;
 }
 
@@ -327,16 +327,16 @@ function toB64(obj) {
 export class CurrencyLedger extends plugin {
     constructor() {
         super({
-            name: '[小花火]原石星琼菲林账本',
+            name: '[米哈游]原石星琼菲林账本',
             dsc: '原神原石 / 星铁星琼 / 绝区零菲林的月报与统计',
             event: 'message',
             priority: pluginPriority('currency_ledger', 100),
             rule: [
                 {
-                    // 前缀沿用插件约定：#小花火xxx / #xhhxxx / #xxx 都行
+                    // 前缀沿用插件约定：#小花火xxx / #米哈游xxx / #xxx 都行
                     // 游戏名允许叠加（星铁星琼 / 绝区零菲林 都是常见写法），
                     // 月份支持 8 / 八 / 202608 / 十二月 这几种写法
-                    reg: '^[#%*]*(小花火|xhh)?[#%*]*(原神|原石|星铁|星穹|星琼|铁道|绝区零|菲林)+(札记|月报)?(统计)?\\s*(\\d{1,6}|[一二两三四五六七八九十]+)?月*$',
+                    reg: '^[#%*]*米哈游?[#%*]*(原神|原石|星铁|星穹|星琼|铁道|绝区零|菲林)+(札记|月报)?(统计)?\\s*(\\d{1,6}|[一二两三四五六七八九十]+)?月*$',
                     fnc: 'run',
                 },
             ],
@@ -383,7 +383,7 @@ export class CurrencyLedger extends plugin {
                 };
                 walk(d, '', 0);
                 logger.warn?.(
-                    `[xhh][账本] ${game} 字段探测: ` +
+                    `[HoYoGet][账本] ${game} 字段探测: ` +
                     `group_by=${Array.isArray(raw) ? `array[${raw.length}]` : typeof raw}` +
                     (Array.isArray(raw) && raw[0] ? ` 首条字段=${Object.keys(raw[0]).join(',')}` : '') +
                     ` | 昵称头像命中: ${found.join(' ; ') || '无'}` +

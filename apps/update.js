@@ -12,25 +12,25 @@ let uping = false;
 export class update extends plugin {
   constructor() {
     super({
-      name: '[小花火]插件更新',
-      dsc: '[小花火]插件更新',
+      name: '[米哈游]插件更新',
+      dsc: '[米哈游]插件更新',
       event: 'message',
       priority: pluginPriority('update', 10),
       rule: [
         {
-          reg: '^#*(小花火|xhh)(插件)?(强制)?更新$',
+          reg: '^#*米哈游(插件)?(强制)?更新$',
           fnc: 'update',
         },
         {
-          reg: '^#*(小花火|xhh)(插件)?更新日志$',
+          reg: '^#*米哈游(插件)?更新日志$',
           fnc: 'updateLog',
         },
       ],
     });
-    this.typeName = 'xhh';
+    this.typeName = 'HoYoGet-Plugin';
     this.task = {
       cron: '0 30 3 * * *', //凌晨3.30自动更新
-      name: '[小花火]检查是否需要自动更新',
+      name: '[米哈游]检查是否需要自动更新',
       fnc: () => this.zd(),
       log: true,
     };
@@ -41,20 +41,20 @@ export class update extends plugin {
       if (!git || !git.includes('git version')) {
         return logger.error('未找到git');
       }
-      this.oldCommitId = await this.getcommitId('xhh');
+      this.oldCommitId = await this.getcommitId('HoYoGet-Plugin');
       uping = true;
       let cm =
         'cd plugins/HoYoGet-Plugin && git reset --hard && git pull --rebase --allow-unrelated-histories';
       let ret = await this.execSync(cm);
       uping = false;
       if (ret.error) {
-        logger.mark('xhh更新失败');
+        logger.mark('HoYoGet-Plugin 更新失败');
         return;
       }
       if (/Already up|已经是最新/g.test(ret.stdout)) {
-        logger.info('xhh已经是最新');
+        logger.info('HoYoGet-Plugin 已经是最新');
       } else {
-        logger.info('xhh更新成功,即将重启');
+        logger.info('HoYoGet-Plugin 更新成功,即将重启');
         let npm = await this.checkPnpm();
         cm = `${npm} start`;
         if (process.argv[1].includes('pm2')) {
@@ -82,7 +82,7 @@ export class update extends plugin {
       return;
     }
     /** 获取插件 */
-    let plugin = 'xhh';
+    let plugin = 'HoYoGet-Plugin';
 
     /** 检查git安装 */
     if (!(await this.checkGit())) return;
@@ -172,7 +172,7 @@ export class update extends plugin {
       await this.reply(
         msg +
           `存在冲突：\n${errMsg}\n` +
-          '请解决冲突后再更新，或者执行#小花火强制更新，放弃本地修改'
+          '请解决冲突后再更新，或者执行#米哈游强制更新，放弃本地修改'
       );
       return;
     }
@@ -182,7 +182,7 @@ export class update extends plugin {
         msg + '存在冲突\n',
         errMsg,
         stdout,
-        '\n请解决冲突后再更新，或者执行#小花火强制更新，放弃本地修改',
+        '\n请解决冲突后再更新，或者执行#米哈游强制更新，放弃本地修改',
       ]);
       return;
     }
@@ -267,14 +267,14 @@ export class update extends plugin {
 
     if (log.length <= 0) return '';
 
-    let title = `小花火更新日志，共${line}条`;
+    let title = `米哈游更新日志，共${line}条`;
     log = await common.makeForwardMsg(this.e, [title, log]);
 
     return log;
   }
 
   async updateLog() {
-    let log = await this.getLog('xhh');
+    let log = await this.getLog('HoYoGet-Plugin');
     await this.reply(log);
   }
 

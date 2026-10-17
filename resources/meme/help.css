@@ -76,7 +76,7 @@ body {
   right: 20%;
 }
 
-/* 小花火立绘（底部背景） */
+/* 立绘（底部背景） */
 .bg-character {
   position: absolute;
   right: -25px;
@@ -88,7 +88,7 @@ body {
   filter: drop-shadow(0 18px 36px rgba(190, 24, 93, 0.25));
 }
 
-/* 小花火立绘（标题栏右上角） */
+/* 立绘（标题栏右上角） */
 .head-character {
   position: absolute;
   right: 8px;

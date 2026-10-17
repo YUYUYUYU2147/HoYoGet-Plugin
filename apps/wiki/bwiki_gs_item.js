@@ -500,7 +500,7 @@ export async function fetchGsBwikiItemHtml(name) {
             await wait(1500 * (i + 1));
         }
     }
-    globalThis.logger?.info?.(`[xhh][bwiki_gs] ${name} 抓取失败：${lastReason}（被拦 ${blocked} 次）`);
+    globalThis.logger?.info?.(`[HoYoGet][bwiki_gs] ${name} 抓取失败：${lastReason}（被拦 ${blocked} 次）`);
     return '';
 }
 

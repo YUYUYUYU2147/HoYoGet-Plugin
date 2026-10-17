@@ -57,7 +57,7 @@ export async function loadGenshinModule(tag, relPaths, named = null) {
   if (!missingGenshinModules.has(tag)) {
     missingGenshinModules.add(tag)
     logger.error(
-      `[xhh] 未能在 genshin 插件中找到 ${tag}（已尝试 ${candidates.length} 个路径，` +
+      `[HoYoGet] 未能在 genshin 插件中找到 ${tag}（已尝试 ${candidates.length} 个路径，` +
       `最后错误：${lastErr?.message || lastErr}）。相关功能将不可用，请更新 genshin 插件。`
     )
   }

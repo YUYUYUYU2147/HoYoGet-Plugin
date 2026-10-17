@@ -189,7 +189,7 @@ async function downloadToFile(info, filePath, headers, name = '文件') {
             return await downloadOnce(info.url, filePath, headers, info.length, info.acceptRanges);
         } catch (err) {
             lastErr = err;
-            logger.warn(`[小花火bili]${name}下载失败（第${i}/${DOWNLOAD_RETRY}次）：${err.message}`);
+            logger.warn(`[HoYoGet-bili]${name}下载失败（第${i}/${DOWNLOAD_RETRY}次）：${err.message}`);
             if (i < DOWNLOAD_RETRY) await sleep(1500 * i);
         }
     }
@@ -541,7 +541,7 @@ class bili {
             for (let v of res.data.dash.video) {
                 if (v.id <= qn) {
                     url = v.baseUrl;
-                    logger.mark('[小花火bili]选中画质：' + hz[v.id])
+                    logger.mark('[HoYoGet-bili]选中画质：' + hz[v.id])
                     break;
                 }
             }
@@ -550,16 +550,16 @@ class bili {
             //视频大小（只读响应头，不占用下载连接）
             const vInfo = await resolveStream(url, headers);
             const sp_size = vInfo.length;
-            logger.mark('[小花火bili]视频大小：' + sp_size)
+            logger.mark('[HoYoGet-bili]视频大小：' + sp_size)
 
             //音频大小
             const aInfo = await resolveStream(url1, headers);
             const yp_size = aInfo.length;
-            logger.mark('[小花火bili]音频大小：' + yp_size)
+            logger.mark('[HoYoGet-bili]音频大小：' + yp_size)
 
             //总大小（实际有误差，但忽略不计）
             const size = sp_size + yp_size
-            logger.mark('[小花火bili]总大小：约' + (size / 1048576).toFixed(2) + 'MB')
+            logger.mark('[HoYoGet-bili]总大小：约' + (size / 1048576).toFixed(2) + 'MB')
 
             data['size'] = Math.ceil(size / 1048576) + 'MB';
             //dow是否需要下载视频，_re是否需要回复链接消息
@@ -1527,7 +1527,7 @@ class bili {
             if (!headers) return false
             return await this.doDownload(e, bv, send, res, vo, headers);
         } catch (err) {
-            logger.error('[小花火bili]视频处理失败：' + (err?.message || err));
+            logger.error('[HoYoGet-bili]视频处理失败：' + (err?.message || err));
             if (send) {
                 e.reply(`视频处理失败：${err?.message || '未知错误'}`, true).catch(() => { });
             }
@@ -1576,7 +1576,7 @@ class bili {
         }
         // 没有匹配到画质时退回第一条可用流，避免 url 为空导致下载直接报错
         if (!url && res.data.dash.video?.length) url = res.data.dash.video[0].baseUrl;
-        if (!url) return logger.error('[小花火bili]未获取到视频流地址');
+        if (!url) return logger.error('[HoYoGet-bili]未获取到视频流地址');
         const url1 = res.data.dash.audio[0].baseUrl;
         //视频大小（只读响应头，不占用下载连接）
         const vInfo = await resolveStream(url, headers);
@@ -1606,14 +1606,14 @@ class bili {
         // 清掉上次的残留，避免断点续传时拼进旧数据
         fs.rmSync(v_path, { force: true });
         fs.rmSync(v_path1, { force: true });
-        logger.mark('[小花火bili]:开始下载视频和音频');
+        logger.mark('[HoYoGet-bili]:开始下载视频和音频');
         // 串行流式写盘：不再一次性读进内存，也不会两个连接同时挂着
         await downloadToFile(vInfo, v_path, headers, '视频');
         await downloadToFile(aInfo, v_path1, headers, '音频');
-        logger.mark('[小花火bili]:视频和音频下载完成');
-        logger.mark('[小花火bili]:合并视频和音频中');
+        logger.mark('[HoYoGet-bili]:视频和音频下载完成');
+        logger.mark('[HoYoGet-bili]:合并视频和音频中');
         execSync(`cd plugins/HoYoGet-Plugin/temp/bili/ && ffmpeg -i video.m4s -i audio.m4s -c:v copy -c:a copy -f mp4 -y -loglevel error temp.mp4`);
-        logger.mark('[小花火bili]:视频和音频合并完成');
+        logger.mark('[HoYoGet-bili]:视频和音频合并完成');
         let v_re,
             video = segment.video(sp_path);
         // 大于100MB的视频也不再转群文件，改为直接发送视频（参考 rconsole 的 segment.video 直发）
@@ -1670,7 +1670,7 @@ class bili {
             headers
         })).json();
         if (res.code != 0) {
-            logger.error('小花火[bilibili]:' + res.code + ' ' + res.message);
+            logger.error('HoYoGet[bilibili]:' + res.code + ' ' + res.message);
             return false;
         }
         let data = res.data.list.vlist[0];
@@ -1788,7 +1788,7 @@ class bili {
     async getck() {
         let ck = config().bili_ck;
         if (!ck) {
-            logger.mark('未配置b站ck，请发送：小花火b站登录');
+            logger.mark('未配置b站ck，请发送：米哈游b站登录');
             return false;
         }
         const bili_ticket = await redis.get('xhh_bili_ticket');
@@ -1805,7 +1805,7 @@ class bili {
     async Check(ck) {
         let check = await this.xx(ck);
         if (!check) {
-            logger.error('[小花火]B站ck可能已失效......');
+            logger.error('[米哈游]B站ck可能已失效......');
             return false;
         }
         return true;
@@ -2043,7 +2043,7 @@ async function getBiliTicket(csrf) {
         await redis.set('xhh_bili_ticket', data.data.ticket, {
             EX: 259200
         });
-        return logger.mark('[小花火]生成并保存BiliTicket成功！');
+        return logger.mark('[米哈游]生成并保存BiliTicket成功！');
     } catch (e) {
         throw e;
     }

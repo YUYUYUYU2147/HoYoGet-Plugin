@@ -591,13 +591,13 @@ export async function fetchZzzGacha(name) {
         // Bwiki 有风控（实测会返 567 的 HTML 错误页），失败时静默返回 []
         // 会让「卡池信息」整栏消失且毫无线索，这里留一条日志便于区分
         // 「真没有卡池」和「被风控/网络失败」。
-        console.log(`[xhh][ZZZ卡池] 往期调频抓取失败: ${e?.message || e}`);
+        console.log(`[HoYoGet][ZZZ卡池] 往期调频抓取失败: ${e?.message || e}`);
         await sleep(1500);
       }
     }
   }
   if (!periods?.v) {
-    console.log('[xhh][ZZZ卡池] 往期调频无可用数据，卡池栏将不显示');
+    console.log('[HoYoGet][ZZZ卡池] 往期调频无可用数据，卡池栏将不显示');
     return [];
   }
   const keys = new Set((Array.isArray(name) ? name : [name]).filter(Boolean).map(zzzKey));

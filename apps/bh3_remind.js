@@ -85,20 +85,20 @@ async function sendGroupMsgCompat(groupId, msg, e = null) {
 export class bh3_remind extends plugin {
   constructor(e) {
     super({
-      name: '[小花火]崩三定时提醒',
+      name: '[米哈游]崩三定时提醒',
       dsc: '深渊/战场/乐土 开启/结算定时提醒',
       event: 'message',
       priority: pluginPriority('bh3_remind', 100),
       rule: [
-        { reg: '^#*(小花火)?(?=.*(崩三|崩坏3|崩坏三|BH3))(?=.*(提醒|定时提醒|开关提醒))(?=.*(开启|关闭|on|off)).*$', fnc: 'toggleRemind', priority: pluginPriority('bh3_remind', -1000001) },
-        { reg: '^#*(小花火)?(崩三|崩坏3|崩坏三|BH3).*?提醒状态$', fnc: 'remindStatus', priority: pluginPriority('bh3_remind', -1000001) },
-        { reg: '^#*(小花火)?(崩三|崩坏3|崩坏三|BH3)?提醒测试$', fnc: 'remindTest', priority: pluginPriority('bh3_remind', -1000001) },
+        { reg: '^#*(?:米哈游)?(?=.*(崩三|崩坏3|崩坏三|BH3))(?=.*(提醒|定时提醒|开关提醒))(?=.*(开启|关闭|on|off)).*$', fnc: 'toggleRemind', priority: pluginPriority('bh3_remind', -1000001) },
+        { reg: '^#*(?:米哈游)?(崩三|崩坏3|崩坏三|BH3).*?提醒状态$', fnc: 'remindStatus', priority: pluginPriority('bh3_remind', -1000001) },
+        { reg: '^#*(?:米哈游)?(崩三|崩坏3|崩坏三|BH3)?提醒测试$', fnc: 'remindTest', priority: pluginPriority('bh3_remind', -1000001) },
       ],
     });
 
     this.task = {
       cron: '0 * * * * *',
-      name: '[小花火]崩三提醒检查',
+      name: '[米哈游]崩三提醒检查',
       fnc: () => this.checkAndPush(),
       log: false,
     };
@@ -211,7 +211,7 @@ export class bh3_remind extends plugin {
     const cfg = getRemindConfig();
     const groups = normalizeGroups(cfg.groups);
     if (!groups.length) return e.reply('崩三提醒测试失败：提醒群为空，请先在锅巴填写群号或在群内发送 #小花火开启崩三提醒');
-    const text = `【小花火崩三提醒测试】\n如果你看到了这条消息，说明提醒群配置和 Bot 发群消息正常。\n当前配置群：${groups.join('、')}`;
+    const text = `【米哈游崩三提醒测试】\n如果你看到了这条消息，说明提醒群配置和 Bot 发群消息正常。\n当前配置群：${groups.join('、')}`;
     const msg = buildPushMessage(cfg, { key: 'test' }, text);
     const results = [];
     for (const groupId of groups) {

@@ -48,7 +48,7 @@ function saveDisk(map, t) {
     fs.mkdirSync(path.dirname(CACHE_FILE), { recursive: true });
     fs.writeFileSync(CACHE_FILE, JSON.stringify({ t, index: Object.fromEntries(map) }));
   } catch (e) {
-    globalThis.logger?.debug?.(`[xhh][驱动盘] 推荐代理人索引写入失败: ${e?.message}`);
+    globalThis.logger?.debug?.(`[HoYoGet][驱动盘] 推荐代理人索引写入失败: ${e?.message}`);
   }
 }
 
@@ -134,7 +134,7 @@ async function build() {
   const t = Date.now();
   memCache = { t, map };
   saveDisk(map, t);
-  globalThis.logger?.info?.(`[xhh][驱动盘] 推荐代理人索引已构建：${names.length} 个代理人页 → ${map.size} 个驱动盘`);
+  globalThis.logger?.info?.(`[HoYoGet][驱动盘] 推荐代理人索引已构建：${names.length} 个代理人页 → ${map.size} 个驱动盘`);
   return map;
 }
 
@@ -150,7 +150,7 @@ export async function zzzDiscAgents(discName, entryId = '') {
   const hit = loadDisk();
   if (hit) return hit.get(discName) || [];
   if (!building) building = build().catch(err => {
-    globalThis.logger?.debug?.(`[xhh][驱动盘] 推荐代理人兜底索引构建失败：${err?.message}`);
+    globalThis.logger?.debug?.(`[HoYoGet][驱动盘] 推荐代理人兜底索引构建失败：${err?.message}`);
     return new Map();
   }).finally(() => { building = null; });
   const map = await building;

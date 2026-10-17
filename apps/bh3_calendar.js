@@ -47,7 +47,7 @@ const BIRTHDAYS = {
 export class bh3_calendar extends plugin {
   constructor() {
     super({
-      name: '[小花火]崩三日历',
+      name: '[米哈游]崩三日历',
       dsc: '崩坏3活动/补给日历',
       event: 'message',
       priority: pluginPriority('bh3_calendar', -999999),
@@ -65,7 +65,7 @@ export class bh3_calendar extends plugin {
       if (!data?.list?.length) return e.reply('暂未解析到崩坏3活动日历数据，请稍后再试。');
       return render('bh3_calendar/calendar', data, { e, ret: true, pct: 1.65 });
     } catch (err) {
-      logger.error('[xhh][bh3_calendar] 日历生成失败:', err);
+      logger.error('[HoYoGet][bh3_calendar] 日历生成失败:', err);
       return e.reply(`崩三日历生成失败：${err?.message || err}`);
     }
   }
@@ -93,7 +93,7 @@ export class bh3_calendar extends plugin {
       const title = this.cleanText(post.subject || post.title || '');
       if (!title || ignoreReg.test(title)) continue;
       let detail = null;
-      try { detail = await this.requestPost(post.post_id); } catch (err) { logger.debug?.(`[xhh][bh3_calendar] 帖子详情失败 ${post.post_id}: ${err?.message || err}`); }
+      try { detail = await this.requestPost(post.post_id); } catch (err) { logger.debug?.(`[HoYoGet][bh3_calendar] 帖子详情失败 ${post.post_id}: ${err?.message || err}`); }
       const content = this.htmlToText(detail?.content || post.content || '');
       const time = this.extractTime(content, post.created_at);
       // 已结束的直接不要，别让它们占坑后被裁成窄条堆在日历左上角

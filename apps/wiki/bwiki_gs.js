@@ -410,9 +410,9 @@ export async function fetchGsRole(name) {
       resolvePage(key),
       sleep(20000).then(() => { throw new Error('Bwiki 请求超时 20s'); }),
     ]);
-  } catch (e) { logger.debug?.(`[xhh][bwiki_gs] ${key} 解析页名失败: ${e.message}`); return null; }
+  } catch (e) { logger.debug?.(`[HoYoGet][bwiki_gs] ${key} 解析页名失败: ${e.message}`); return null; }
   if (!resolved) {
-    logger.debug?.(`[xhh][bwiki_gs] Bwiki 无此页: ${key}`);
+    logger.debug?.(`[HoYoGet][bwiki_gs] Bwiki 无此页: ${key}`);
     return null;
   }
   const { page, html } = resolved;
@@ -428,7 +428,7 @@ export async function fetchGsRole(name) {
     cache.set(key, { t: Date.now(), v: res });
     return res;
   } catch (e) {
-    logger.debug?.(`[xhh][bwiki_gs] ${page} 解析异常: ${e.message}`);
+    logger.debug?.(`[HoYoGet][bwiki_gs] ${page} 解析异常: ${e.message}`);
     return null;
   }
 }
@@ -532,7 +532,7 @@ async function pickAvatarFromList(who) {
     const hit = list.find(x => String(x.name || '').trim() === String(who || '').trim());
     return hit?.icon || '';
   } catch (e) {
-    logger.debug?.(`[xhh][bwiki_gs] ${who} 头像取自角色一览失败: ${e?.message}`);
+    logger.debug?.(`[HoYoGet][bwiki_gs] ${who} 头像取自角色一览失败: ${e?.message}`);
     return '';
   }
 }
@@ -818,9 +818,9 @@ export async function fetchGsRoleList() {
   if (hit && Date.now() - hit.t < CACHE_TTL) return hit.v;
   let html = null;
   try { html = await renderHtml('角色', 5); }
-  catch (e) { logger.debug?.(`[xhh][bwiki_gs] 角色一览抓取失败: ${e.message}`); return null; }
+  catch (e) { logger.debug?.(`[HoYoGet][bwiki_gs] 角色一览抓取失败: ${e.message}`); return null; }
   if (!html || !html.includes('divsort')) {
-    logger.debug?.('[xhh][bwiki_gs] 角色一览结构异常（无 divsort）');
+    logger.debug?.('[HoYoGet][bwiki_gs] 角色一览结构异常（无 divsort）');
     return null;
   }
   const list = parseGsRoleList(html);
@@ -941,12 +941,12 @@ export async function fetchSrItemList(page) {
   if (hit && Date.now() - hit.t < CACHE_TTL) return hit.v;
   let html = '';
   try { html = await renderHtml(page, 3, SR_API); } catch (e) {
-    logger.debug?.(`[xhh][bwiki_sr] ${page} 抓取失败: ${e.message}`);
+    logger.debug?.(`[HoYoGet][bwiki_sr] ${page} 抓取失败: ${e.message}`);
     return null;
   }
   const list = parseSrItemList(html);
   if (!list.length) {
-    logger.debug?.(`[xhh][bwiki_sr] ${page} 结构异常（未解析到条目）`);
+    logger.debug?.(`[HoYoGet][bwiki_sr] ${page} 结构异常（未解析到条目）`);
     return null;
   }
   srListCache.set(page, { t: Date.now(), v: list });
@@ -965,12 +965,12 @@ export async function fetchGsItemList(page) {
   if (hit && Date.now() - hit.t < CACHE_TTL) return hit.v;
   let html = '';
   try { html = await renderHtml(page, 3); } catch (e) {
-    logger.debug?.(`[xhh][bwiki_gs] ${page} 抓取失败: ${e.message}`);
+    logger.debug?.(`[HoYoGet][bwiki_gs] ${page} 抓取失败: ${e.message}`);
     return null;
   }
   const list = parseGsItemList(html);
   if (!list.length) {
-    logger.debug?.(`[xhh][bwiki_gs] ${page} 结构异常（未解析到条目）`);
+    logger.debug?.(`[HoYoGet][bwiki_gs] ${page} 结构异常（未解析到条目）`);
     return null;
   }
   itemListCache.set(page, { t: Date.now(), v: list });

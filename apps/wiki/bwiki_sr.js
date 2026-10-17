@@ -52,7 +52,7 @@ async function fetchSrHtml(page, tries = 3) {
       await sleep(1200 * (i + 1));
     }
   }
-  logger.debug?.(`[xhh][bwiki_sr] ${page} 抓取失败: ${last}`);
+  logger.debug?.(`[HoYoGet][bwiki_sr] ${page} 抓取失败: ${last}`);
   return null;
 }
 

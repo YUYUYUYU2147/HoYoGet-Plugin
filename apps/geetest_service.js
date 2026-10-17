@@ -172,14 +172,14 @@ async function glibcTooLow() {
 export class GeetestService extends plugin {
     constructor(e) {
         super({
-            name: '[小花火]过码服务',
+            name: '[米哈游]过码服务',
             dsc: '米游社极验滑块全自动过码服务的部署与状态',
             event: 'message',
             priority: pluginPriority('sign', -26),
             rule: [
                 // 「部署」既可能写在前面（#部署过码）也可能写在后面（#过码部署），两种都得认
-                { reg: '^#*(小花火|xhh)*(部署|安装)?(过码|滑块)(服务|解码器)?(部署|安装)?$', fnc: 'deploy', permission: 'master' },
-                { reg: '^#*(小花火|xhh)*(过码|滑块)(服务|解码器)?(状态|情况)$', fnc: 'status' },
+                { reg: '^#*米哈游*(部署|安装)?(过码|滑块)(服务|解码器)?(部署|安装)?$', fnc: 'deploy', permission: 'master' },
+                { reg: '^#*米哈游*(过码|滑块)(服务|解码器)?(状态|情况)$', fnc: 'status' },
             ],
         });
     }
@@ -337,7 +337,7 @@ export class GeetestService extends plugin {
             h = await health();
         }
         if (!h?.ok) {
-            const log = await has(`test -f "${SERVICE_DIR}/server.log"`) ? '\n日志：#小花火 过码服务日志' : '';
+            const log = await has(`test -f "${SERVICE_DIR}/server.log"`) ? '\n日志：#米哈游 过码服务日志' : '';
             return e.reply(
                 `[过码部署] 服务起来了但探不到响应。\n已完成：${steps.join(' → ')}\n启动方式：${started}${log}\n` +
                 '常见原因：依赖没装成功（glibc 太低）、端口被占。可以先看 server.log。',

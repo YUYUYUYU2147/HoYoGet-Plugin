@@ -3,13 +3,13 @@ import { config, pluginPriority, bili_live, bili, getSource } from '#HoYoGet';
 
 // 手动解析：#直播解析 6 / #B站直播解析 https://live.bilibili.com/6 / #解析直播 6
 // 除了最后的 (.*)，其余全部用非捕获组，参数固定取 m[1]
-const MANUAL_RE = /^#*(?:小花火)?(?:b站|B站|哔哩哔哩|bili|bilibili)?(?:直播(?:间)?解析|解析直播(?:间)?)\s*(.*)$/i;
+const MANUAL_RE = /^#*(?:米哈游)?(?:b站|B站|哔哩哔哩|bili|bilibili)?(?:直播(?:间)?解析|解析直播(?:间)?)\s*(.*)$/i;
 // 弹幕：#弹幕 内容 / #弹幕 房间号 内容 / #发送弹幕 内容
-const DM_RE = /^#*(?:小花火)?(?:b站|B站|哔哩哔哩|bili|bilibili)?(?:直播间?)?(?:发送)?弹幕\s*(.*)$/i;
+const DM_RE = /^#*(?:米哈游)?(?:b站|B站|哔哩哔哩|bili|bilibili)?(?:直播间?)?(?:发送)?弹幕\s*(.*)$/i;
 // 绑定/解绑/查看直播间：#直播间绑定 6 / #绑定直播间 6（必须带"直播间"三字，避免抢别人家的"查看"指令）
-const BIND_RE = /^#*(?:小花火)?(?:b站|B站|哔哩哔哩|bili|bilibili)?(?:(?:直播间?)(绑定|解绑|取消绑定|查看)|(绑定|解绑|取消绑定|查看)直播间?)\s*(\d{1,12})?$/i;
+const BIND_RE = /^#*(?:米哈游)?(?:b站|B站|哔哩哔哩|bili|bilibili)?(?:(?:直播间?)(绑定|解绑|取消绑定|查看)|(绑定|解绑|取消绑定|查看)直播间?)\s*(\d{1,12})?$/i;
 // 实时截屏：#直播截图 / #直播间截屏 6 / #b站实时截图
-const SHOT_RE = /^#*(?:小花火)?(?:b站|B站|哔哩哔哩|bili|bilibili)?(?:直播间?|直播)(?:实时)?(?:截屏|截图|抓图|画面)\s*(.*)$/i;
+const SHOT_RE = /^#*(?:米哈游)?(?:b站|B站|哔哩哔哩|bili|bilibili)?(?:直播间?|直播)(?:实时)?(?:截屏|截图|抓图|画面)\s*(.*)$/i;
 
 // 从卡片/小程序消息段里挖链接：json 取跳转地址，xml 直接正则捞 http
 function segText(msgArr = []) {
@@ -36,25 +36,25 @@ function segText(msgArr = []) {
 export class bili_live_plugin extends plugin {
   constructor(e) {
     super({
-      name: '[小花火]b站直播',
+      name: '[米哈游]b站直播',
       dsc: 'B站直播间解析',
       event: 'message',
       priority: pluginPriority('bili_live', -115),
       rule: [
         {
-          reg: '^#*(?:小花火)?(?:b站|B站|哔哩哔哩|bili|bilibili)?(?:直播(?:间)?解析|解析直播(?:间)?)(.*)$',
+          reg: '^#*(?:米哈游)?(?:b站|B站|哔哩哔哩|bili|bilibili)?(?:直播(?:间)?解析|解析直播(?:间)?)(.*)$',
           fnc: 'parse',
         },
         {
-          reg: '^#*(?:小花火)?(?:b站|B站|哔哩哔哩|bili|bilibili)?(?:直播间?)?(?:发送)?弹幕(.*)$',
+          reg: '^#*(?:米哈游)?(?:b站|B站|哔哩哔哩|bili|bilibili)?(?:直播间?)?(?:发送)?弹幕(.*)$',
           fnc: 'danmaku',
         },
         {
-          reg: '^#*(?:小花火)?(?:b站|B站|哔哩哔哩|bili|bilibili)?(?:直播间?|直播)(?:实时)?(?:截屏|截图|抓图|画面)(.*)$',
+          reg: '^#*(?:米哈游)?(?:b站|B站|哔哩哔哩|bili|bilibili)?(?:直播间?|直播)(?:实时)?(?:截屏|截图|抓图|画面)(.*)$',
           fnc: 'shot',
         },
         {
-          reg: '^#*(?:小花火)?(?:b站|B站|哔哩哔哩|bili|bilibili)?(?:(?:直播间?)(绑定|解绑|取消绑定|查看)|(绑定|解绑|取消绑定|查看)直播间?)(.*)$',
+          reg: '^#*(?:米哈游)?(?:b站|B站|哔哩哔哩|bili|bilibili)?(?:(?:直播间?)(绑定|解绑|取消绑定|查看)|(绑定|解绑|取消绑定|查看)直播间?)(.*)$',
           fnc: 'bind',
           permission: 'master',
         },
@@ -198,12 +198,12 @@ export class bili_live_plugin extends plugin {
 
     try {
       const img = await bili_live.screenshot(roomId, { qn, seconds: 2 });
-      logger.mark(`[xhh][bili_live] 截屏完成 ${roomId}: ${(img.size / 1024).toFixed(0)}KB`);
+      logger.mark(`[HoYoGet][bili_live] 截屏完成 ${roomId}: ${(img.size / 1024).toFixed(0)}KB`);
       await e.reply(segment.image(img.path));
       fs.rmSync(img.path, { force: true });
       return true;
     } catch (err) {
-      logger.warn(`[xhh][bili_live] 截屏失败: ${err?.message || err}`);
+      logger.warn(`[HoYoGet][bili_live] 截屏失败: ${err?.message || err}`);
       return e.reply(`截屏失败：${err?.message || err}`, true);
     }
   }
@@ -233,14 +233,14 @@ export class bili_live_plugin extends plugin {
     }
 
     const ck = await bili.getck();
-    if (!ck) return e.reply('还没登录B站，先发「小花火b站登录」扫码登录后才能发弹幕', true);
+    if (!ck) return e.reply('还没登录B站，先发「米哈游b站登录」扫码登录后才能发弹幕', true);
 
     try {
       await bili_live.sendDanmaku(roomId, text, ck);
-      logger.mark(`[xhh][bili_live] 弹幕已发送 ${roomId}: ${text}`);
+      logger.mark(`[HoYoGet][bili_live] 弹幕已发送 ${roomId}: ${text}`);
       return e.reply(`弹幕已发到直播间 ${roomId}：${text}`, true);
     } catch (err) {
-      logger.warn(`[xhh][bili_live] 弹幕发送失败: ${err?.message || err}`);
+      logger.warn(`[HoYoGet][bili_live] 弹幕发送失败: ${err?.message || err}`);
       return e.reply(`弹幕发送失败：${err?.message || err}`, true);
     }
   }
@@ -274,7 +274,7 @@ export class bili_live_plugin extends plugin {
     try {
       info = await bili_live.roomInfo(roomId);
     } catch (err) {
-      logger.warn(`[xhh][bili_live] 直播间 ${roomId} 解析失败: ${err?.message || err}`);
+      logger.warn(`[HoYoGet][bili_live] 直播间 ${roomId} 解析失败: ${err?.message || err}`);
       return e.reply(`直播间 ${roomId} 解析失败：${err?.message || '接口异常'}`, true);
     }
 
@@ -307,14 +307,14 @@ export class bili_live_plugin extends plugin {
       const rec = await bili_live.recordLive(info.roomId, { seconds, qn, maxBytes });
       rawPath = rec.path;
       const file = bili_live.toMp4(rec.path);
-      logger.mark(`[xhh][bili_live] 录制完成 ${Math.ceil(rec.size / 1048576)}MB -> ${file}`);
+      logger.mark(`[HoYoGet][bili_live] 录制完成 ${Math.ceil(rec.size / 1048576)}MB -> ${file}`);
       await this.sendVideo(e, segment.video(file));
       // 发出去了就删掉，别堆在 temp 里
       fs.rmSync(rec.path, { force: true });
       if (file !== rec.path) fs.rmSync(file, { force: true });
       return true;
     } catch (err) {
-      logger.warn(`[xhh][bili_live] 直播片段录制失败: ${err?.message || err}`);
+      logger.warn(`[HoYoGet][bili_live] 直播片段录制失败: ${err?.message || err}`);
       if (rawPath) fs.rmSync(rawPath, { force: true });
       return e.reply(`直播片段录制失败：${err?.message || err}`, true);
     }

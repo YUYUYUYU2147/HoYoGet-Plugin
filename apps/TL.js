@@ -43,7 +43,7 @@ async function ensureCookieToken(e, ck, entry = null) {
     if (cookieToken && ltoken) return `ltoken=${ltoken};ltuid=${stuid};cookie_token=${cookieToken};account_id=${stuid};`;
     if (cookieToken) return `stuid=${stuid};stoken=${stoken};cookie_token=${cookieToken};account_id=${stuid};`;
   } catch (err) {
-    if (config().debug) logger.mark(`[xhh][TL][bh3] refresh cookie_token failed: ${err.message}`);
+    if (config().debug) logger.mark(`[HoYoGet][TL][bh3] refresh cookie_token failed: ${err.message}`);
   }
   return ck;
 }
@@ -51,13 +51,13 @@ async function ensureCookieToken(e, ck, entry = null) {
 export class TL extends plugin {
   constructor(e) {
     super({
-      name: '[小花火]体力小组件',
+      name: '[米哈游]体力小组件',
       dsc: '体力',
       event: 'message',
       priority: pluginPriority('tl', -99),
       rule: [
         {
-          reg: '^(#|\\*|%)*(?:小花火|xhh)?(?:原神|星铁|绝区零|崩三|崩坏3|崩坏三|BH3)体力$|^(#|\\*|%)*(?:小花火体力|全体力|四游戏体力|米游社体力|体力总览|体力)$',
+          reg: '^(#|\\*|%)*(?:米哈游)?(?:原神|星铁|绝区零|崩三|崩坏3|崩坏三|BH3)体力$|^(#|\\*|%)*(?:米哈游体力|全体力|四游戏体力|米游社体力|体力总览|体力)$',
           fnc: 'note_',
         },
       ],
@@ -96,7 +96,7 @@ export class TL extends plugin {
     const isBH3 = /崩三|崩坏3|崩坏三|BH3/i.test(detectMsg);
     const isGenshinOnly = /原神/.test(detectMsg);
     const singleGameKey = isGenshinOnly ? 'gs' : isStarRail ? 'sr' : isZZZ ? 'zzz' : isBH3 ? 'bh3' : '';
-    const isQueryAll = !singleGameKey && ['体力', '小花火体力', '全体力', '四游戏体力', '米游社体力', '体力总览'].includes(rawMsg);
+    const isQueryAll = !singleGameKey && ['体力', '米哈游体力', '全体力', '四游戏体力', '米游社体力', '体力总览'].includes(rawMsg);
     // 崩坏3扩展里的“四游戏体力聚合”开关也要控制主力 TL 入口。
     // 历史配置没有该字段时按开启处理，避免升级后突然失效。
     if (isQueryAll && config().bh3_all_note_enable === false) return false;
@@ -506,7 +506,7 @@ export class TL extends plugin {
         api(e, { type: 'sign_info', uid: auth.uid, headers: signHeaders, game: 'bh3', server: auth.region, silent: true }).catch(() => null),
       ]);
     } catch (err) {
-      logger.error('[xhh][TL][bh3] API error:', err);
+      logger.error('[HoYoGet][TL][bh3] API error:', err);
       return false;
     }
     if ([-10001, 10001, -100].includes(indexRes?.retcode) || [-10001, 10001, -100].includes(noteRes?.retcode)) {
@@ -576,7 +576,7 @@ export class TL extends plugin {
         : game == 'zzz' && useRoleEndpoint
           ? `${this.zzzNoteUrl}?server=${encodeURIComponent(entry?.region || mhy.getServer(uid, 'zzz') || 'prod_gf_cn')}&role_id=${encodeURIComponent(uid)}`
           : game == 'gs' ? this.gsUrl : game == 'sr' ? this.srUrl : this.zzzUrl;
-    if (config().debug && uidOverride) logger.mark(`[xhh][TL] ${game} uid=${uid} roleEndpoint=${useRoleEndpoint} url=${url}`);
+    if (config().debug && uidOverride) logger.mark(`[HoYoGet][TL] ${game} uid=${uid} roleEndpoint=${useRoleEndpoint} url=${url}`);
     let res = await fetch(url, {
       method: 'get',
       headers,

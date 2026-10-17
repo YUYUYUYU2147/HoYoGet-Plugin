@@ -201,7 +201,7 @@ async function fetchPostFull(post = {}, gids = 1) {
     const full = res?.data?.post?.post || res?.data?.post || {};
     return { ...post, ...full, images: full.images?.length ? full.images : post.images };
   } catch (err) {
-    logger.warn(`[xhh][estimate] 获取米游社帖子详情 ${post.post_id} 失败: ${err?.message || err}`);
+    logger.warn(`[HoYoGet][estimate] 获取米游社帖子详情 ${post.post_id} 失败: ${err?.message || err}`);
     return post;
   }
 }
@@ -603,7 +603,7 @@ function buildGlobalGuideWords(type, queryList, baseArgs) {
 export class mhy_estimate extends plugin {
   constructor() {
     super({
-      name: '[小花火]米游社资源预估与攻略取图',
+      name: '[米哈游]米游社资源预估与攻略取图',
       dsc: '原石/星琼/菲林/水晶预估，崩三深渊战场乐土攻略取图',
       event: 'message',
       priority: pluginPriority('mhy_estimate', -Infinity),
@@ -667,7 +667,7 @@ export class mhy_estimate extends plugin {
           queryList = expandAbyssBossWords([currentAbyssInfo.boss]);
         }
       } catch (err) {
-        logger.warn(`[xhh][estimate] 获取当前深渊Boss失败: ${err?.message || err}`);
+        logger.warn(`[HoYoGet][estimate] 获取当前深渊Boss失败: ${err?.message || err}`);
       }
     }
     if (key === 'battlefield' && !query) {
@@ -680,7 +680,7 @@ export class mhy_estimate extends plugin {
       try {
         currentZzzDefenseInfo = await getCurrentZzzDefenseInfoByEvent(e);
       } catch (err) {
-        logger.warn(`[xhh][estimate] 获取当前防卫战信息失败: ${err?.message || err}`);
+        logger.warn(`[HoYoGet][estimate] 获取当前防卫战信息失败: ${err?.message || err}`);
       }
     }
     if (key === 'zzz_deadly' && !query) {
@@ -691,7 +691,7 @@ export class mhy_estimate extends plugin {
           query = currentZzzDeadlyInfo.bosses.join(' / ');
         }
       } catch (err) {
-        logger.warn(`[xhh][estimate] 获取当前危局Boss失败: ${err?.message || err}`);
+        logger.warn(`[HoYoGet][estimate] 获取当前危局Boss失败: ${err?.message || err}`);
       }
     }
     const guideName = key === 'abyss' ? '深渊' : key === 'battlefield' ? '战场' : key === 'godwar' ? '乐土' : key === 'zzz_defense' ? '防卫战' : key === 'zzz_deadly' ? '危局' : cfg.name;
@@ -740,7 +740,7 @@ export class mhy_estimate extends plugin {
     let keptArgs = sourceMeta.filter(m => !staleSkipped.includes(m)).map(m => m.arg);
     if (!keptArgs.length) keptArgs = args;
     if (staleSkipped.length) {
-      logger.mark(`[xhh][estimate] ${cfg.name || key} 跳过 ${staleSkipped.length} 个停更源：`
+      logger.mark(`[HoYoGet][estimate] ${cfg.name || key} 跳过 ${staleSkipped.length} 个停更源：`
         + staleSkipped.map(m => `${m.arg[3]}(停在 ${(m.version / 100).toFixed(1)}，最新 ${(latestVersion / 100).toFixed(1)})`).join('、'));
     }
 
@@ -776,7 +776,7 @@ export class mhy_estimate extends plugin {
                 downloadedVod = true;
                 vodDownloaded = true;
               } catch (err) {
-                logger.warn(`[xhh][estimate] 攻略视频下载失败 ${post.post_id}: ${err?.message || err}`);
+                logger.warn(`[HoYoGet][estimate] 攻略视频下载失败 ${post.post_id}: ${err?.message || err}`);
               }
             }
           }
@@ -796,7 +796,7 @@ export class mhy_estimate extends plugin {
         }
         if (query && msg.length >= 6) break;
       } catch (err) {
-        logger.warn(`[xhh][estimate] 获取 ${searchWord}/${uid} 失败: ${err?.message || err}`);
+        logger.warn(`[HoYoGet][estimate] 获取 ${searchWord}/${uid} 失败: ${err?.message || err}`);
       }
     }
 
@@ -834,7 +834,7 @@ export class mhy_estimate extends plugin {
                   downloadedVod = true;
                   vodDownloaded = true;
                 } catch (err) {
-                  logger.warn(`[xhh][estimate] 攻略视频下载失败 ${post.post_id}: ${err?.message || err}`);
+                  logger.warn(`[HoYoGet][estimate] 攻略视频下载失败 ${post.post_id}: ${err?.message || err}`);
                 }
               }
             }
@@ -854,7 +854,7 @@ export class mhy_estimate extends plugin {
           }
           if (msg.length >= 6) break;
         } catch (err) {
-          logger.warn(`[xhh][estimate] 米游社全站搜索 ${searchWord} 失败: ${err?.message || err}`);
+          logger.warn(`[HoYoGet][estimate] 米游社全站搜索 ${searchWord} 失败: ${err?.message || err}`);
         }
       }
     }

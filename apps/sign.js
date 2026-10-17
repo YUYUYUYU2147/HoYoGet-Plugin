@@ -54,13 +54,13 @@ async function sendExpireTip(e, text, seconds = 60) {
     try {
         msgId = pickMsgId(await e.reply(text));
     } catch (err) {
-        if (config().debug) logger.mark(`[xhh][bbs_sign] e.reply 失败，退回 Bot.pickXxx: ${err.message}`);
+        if (config().debug) logger.mark(`[HoYoGet][bbs_sign] e.reply 失败，退回 Bot.pickXxx: ${err.message}`);
         try {
             const target = e.isGroup ? Bot?.pickGroup?.(e.group_id) : Bot?.pickFriend?.(e.user_id);
             msgId = pickMsgId(await target?.sendMsg?.(text));
         } catch (_) {}
     }
-    if (config().debug) logger.mark(`[xhh][bbs_sign] 稍等提示 message_id=${msgId || '未取到'}`);
+    if (config().debug) logger.mark(`[HoYoGet][bbs_sign] 稍等提示 message_id=${msgId || '未取到'}`);
     if (!msgId) return async () => {};
     let recalled = false;
     const recall = async () => {
@@ -69,7 +69,7 @@ async function sendExpireTip(e, text, seconds = 60) {
         if (done) {
             recalled = true;
         } else if (config().debug) {
-            logger.mark('[xhh][bbs_sign] 稍等提示撤回失败：适配器不支持主动撤回');
+            logger.mark('[HoYoGet][bbs_sign] 稍等提示撤回失败：适配器不支持主动撤回');
         }
         return done;
     };
@@ -105,34 +105,34 @@ async function recallOwnMsg(e, messageId) {
 export class Sign extends plugin {
     constructor(e) {
         super({
-            name: '[小花火]签到',
+            name: '[米哈游]签到',
             dsc: '签到',
             event: 'message',
             priority: pluginPriority('sign', -26),
             rule: [{
-                    reg: '^#*(小花火|xhh)*(原神|星铁|绝区零|崩三|崩坏3|崩坏三|BH3)*签到$',
+                    reg: '^#*米哈游*(原神|星铁|绝区零|崩三|崩坏3|崩坏三|BH3)*签到$',
                     fnc: 'sign',
                 },
                 {
-                    reg: '^#*(小花火|xhh)*全部游戏签到$',
+                    reg: '^#*米哈游*全部游戏签到$',
                     fnc: 'sign',
                 },
                 {
-                    reg: '^#(小花火|xhh)*(本群)*开始签到$',
+                    reg: '^#米哈游*(本群)*开始签到$',
                     fnc: 'scheduled_sign',
                     permission: 'master',
                 },
                 {
-                    reg: '^#*(小花火|xhh)*((米游社|社区|论坛)(全部)?(米游社|社区|论坛)?|全部(米游社|社区|论坛))签到$',
+                    reg: '^#*米哈游*((米游社|社区|论坛)(全部)?(米游社|社区|论坛)?|全部(米游社|社区|论坛))签到$',
                     fnc: 'bbsSign',
                 },
                 {
-                    reg: '^#*(小花火|xhh)*(手动验证|验证码)(服务)?(自测|测试|test)$',
+                    reg: '^#*米哈游*(手动验证|验证码)(服务)?(自测|测试|test)$',
                     fnc: 'gtTest',
                     permission: 'master',
                 },
                 {
-                    reg: '^#*(小花火|xhh)*(手动)?(过码|过验证码|真实过码)(端到端)?(测试|test)$',
+                    reg: '^#*米哈游*(手动)?(过码|过验证码|真实过码)(端到端)?(测试|test)$',
                     fnc: 'gtRealTest',
                     permission: 'master',
                 },
@@ -147,7 +147,7 @@ export class Sign extends plugin {
         const signCfg = yaml.get('./plugins/HoYoGet-Plugin/config/sign.yaml') || {};
         this.task = [{
             cron: buildSignCron(signCfg.sign_hour, signCfg.sign_minute),
-            name: '[小花火]米游社签到',
+            name: '[米哈游]米游社签到',
             log: true,
             fnc: async () => {
                 await this.scheduled_sign();
@@ -155,7 +155,7 @@ export class Sign extends plugin {
         },
         {
             cron: buildSignCron(signCfg.bbs_sign_hour, signCfg.bbs_sign_minute),
-            name: '[小花火]米游社社区签到',
+            name: '[米哈游]米游社社区签到',
             log: true,
             fnc: async () => {
                 await this.scheduled_bbs_sign();
@@ -218,9 +218,9 @@ export class Sign extends plugin {
         const { default: mhy } = await import('../system/mhy.js');
         const { manualGeetest } = await import('../system/manual_geetest.js');
         const uid = e.user?.getUid?.('gs') || e.user?.getUid?.();
-        if (!uid) return e.reply('未找到绑定的 UID，请先 #小花火扫码绑定', true);
+        if (!uid) return e.reply('未找到绑定的 UID，请先 #米哈游扫码绑定', true);
         const sk = await mhy.getstoken(e, uid);
-        if (!sk) return e.reply(`UID:${uid} 未绑定米游社 SToken，请先 #小花火扫码绑定`, true);
+        if (!sk) return e.reply(`UID:${uid} 未绑定米游社 SToken，请先 #米哈游扫码绑定`, true);
 
         const headers = mhy.getHeaders(e, sk, false);
         headers['x-rpc-client_type'] = 5;
@@ -309,15 +309,15 @@ export class Sign extends plugin {
         // 这里原地等待它结束，而不是像以前那样「留着标记等下一分钟」——
         // 任务不再每分钟轮询，没有「下一分钟」了。
         if (signState.signing || signState.bbsSigning) {
-            logger.mark(`[xhh][bbs_sign] 游戏签到仍在执行，等待其结束后再跑社区签到`);
+            logger.mark(`[HoYoGet][bbs_sign] 游戏签到仍在执行，等待其结束后再跑社区签到`);
             const waited = await waitOtherSignDone();
             if (!waited) {
-                logger.warn('[xhh][bbs_sign] 等待游戏签到超时（10 分钟），本轮社区签到跳过');
+                logger.warn('[HoYoGet][bbs_sign] 等待游戏签到超时（10 分钟），本轮社区签到跳过');
                 return false;
             }
         }
         signState.bbsDoneDay = bbsDay(); // 今日已发起，重启/漂移都不重复跑
-        logger.mark('[xhh][bbs_sign] 开始执行社区签到');
+        logger.mark('[HoYoGet][bbs_sign] 开始执行社区签到');
         signState.bbsSigning = true;
         try {
             let groups = Object.keys(data.bbs_sign || {}).filter(group =>
@@ -503,13 +503,13 @@ function removeCommonElements(arr1, arr2) {
 
 async function render(path, data_, cfg = {}) {
     let tplFile = process.cwd() + '/plugins/HoYoGet-Plugin/resources/' + path + '.html';
-    const img = await new Runtime().render('小花火', path, data_, {
+    const img = await new Runtime().render('米哈游', path, data_, {
         retType: 'base64',
         beforeRender({
             data
         }) {
             /* 样式与本地图标（sign/list.css、xhh_avatar.png、mianju.png 等）全靠 ppath 定位。
-               框架把 HTML 写到 temp/html/小花火/{path}/{saveId}.html，
+               框架把 HTML 写到 temp/html/米哈游/{path}/{saveId}.html，
                从那张 HTML 回到项目根要上跳「path 段数 + 3」层 —— 与 system/render.js 同一套算法。
                此处覆盖了 beforeRender，若不自己算 ppath，模板里的 {{ppath}} 会是空串：
                样式表与本地图片全部 404，页面退化成裸 HTML（头像按原尺寸铺开、图标破图）。 */

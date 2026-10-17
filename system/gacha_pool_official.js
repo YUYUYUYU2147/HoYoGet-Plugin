@@ -269,9 +269,9 @@ class OfficialGachaPool {
           // 1034 = 米游社要求验证码（IP 级限速）：熔断剩余请求，避免连环失败继续加热
           if (/retcode.?[:=]?\s*"?1034/i.test(String(err?.message || err))) {
             riskControl = true;
-            logger.warn(`[xhh][gacha_pool] ${GAME_META[game]?.name || game} 详情接口触发风控(1034)，本次剩余公告用摘要兜底`);
+            logger.warn(`[HoYoGet][gacha_pool] ${GAME_META[game]?.name || game} 详情接口触发风控(1034)，本次剩余公告用摘要兜底`);
           } else {
-            logger.warn(`[xhh][gacha_pool] ${GAME_META[game]?.name || game} 公告UP解析失败:`, record.title, err);
+            logger.warn(`[HoYoGet][gacha_pool] ${GAME_META[game]?.name || game} 公告UP解析失败:`, record.title, err);
           }
           // 详情接口失败时也保留正文文本，避免下游把 contentText 误判为“公告正文为空”
           ret[idx] = {
@@ -368,7 +368,7 @@ class OfficialGachaPool {
         let oldRecords = null;
         try { oldRecords = JSON.parse(old); } catch (_) {}
         if (Array.isArray(oldRecords) && oldRecords.length) {
-          logger.warn(`[xhh][gacha_pool] ${meta.name} 详情接口风控(1034)，使用缓存公告数据`);
+          logger.warn(`[HoYoGet][gacha_pool] ${meta.name} 详情接口风控(1034)，使用缓存公告数据`);
           return { game, records: oldRecords, cache: true, riskControl: true };
         }
         return { game, records, cache: false, riskControl: true };
@@ -397,7 +397,7 @@ class OfficialGachaPool {
               if (extra[0]) records.push(extra[0]);
             }
           } catch (err) {
-            logger.warn(`[xhh][gacha_pool] ${meta.name} 固定公告补拉失败:`, pinned.postId, err.message);
+            logger.warn(`[HoYoGet][gacha_pool] ${meta.name} 固定公告补拉失败:`, pinned.postId, err.message);
           }
         }
         records.sort((a, b) => b.createdAt - a.createdAt);
@@ -411,7 +411,7 @@ class OfficialGachaPool {
           return { game, records: JSON.parse(cache), cache: true, error: err.message };
         } catch (_) {}
       }
-      logger.warn(`[xhh][gacha_pool] ${meta.name} 米游社卡池公告获取失败:`, err);
+      logger.warn(`[HoYoGet][gacha_pool] ${meta.name} 米游社卡池公告获取失败:`, err);
       return { game, records: [], error: err.message || String(err) };
     }
   }

@@ -71,12 +71,12 @@ const zzzServerMap = {
 export class bh3_all_note extends plugin {
   constructor(e) {
     super({
-      name: '[小花火]四游戏体力聚合',
+      name: '[米哈游]四游戏体力聚合',
       dsc: '原神/星铁/绝区零/崩三 体力一键查询',
       event: 'message',
       priority: pluginPriority('bh3_all_note', 100),
       rule: [
-        // “#小花火体力/#四游戏体力”等统一交给 Tl 模板渲染；这里保留一个备用入口。
+        // “#米哈游体力/#四游戏体力”等统一交给 Tl 模板渲染；这里保留一个备用入口。
         { reg: '^#*(四游戏体力备用|米游社体力备用)$', fnc: 'allNote' },
       ],
     });
@@ -186,7 +186,7 @@ export class bh3_all_note extends plugin {
     };
     let buf;
     try {
-      buf = await puppeteer.render('小花火/all_note/all_note', {
+      buf = await puppeteer.render('米哈游/all_note/all_note', {
         ...data,
         sys: { scale: 'style=transform:scale(1)' },
         deviceScaleFactor: 2,

@@ -4,7 +4,7 @@ import fs from 'node:fs';
 // 置于模块顶层 —— 只要本模块被重新加载就会输出一行，无需触发任何指令。
 // 日志之外再落盘一份标记，避免日志被过滤或 console 未被捕获导致误判。
 // 验证通过后删除本段。
-logger.info?.('[xhh][热重载自测] system/render.js 模块已加载');
+logger.info?.('[HoYoGet][热重载自测] system/render.js 模块已加载');
 try { fs.appendFileSync('./plugins/HoYoGet-Plugin/temp/hot_reload.log', `${new Date().toISOString()} render.js 模块加载\n`) } catch (_) { }
 async function render(path, data_, cfg) {
   let tplFile =
@@ -16,7 +16,7 @@ async function render(path, data_, cfg) {
   if (path.includes('bilibili')) {
     data_.emoji = config().emoji;
   }
-  return e.runtime.render('小花火', path, data_, {
+  return e.runtime.render('米哈游', path, data_, {
     retType: cfg.ret ? 'default' : 'base64',
     fullPage: cfg.fullPage !== false,
     beforeRender({ data }) {

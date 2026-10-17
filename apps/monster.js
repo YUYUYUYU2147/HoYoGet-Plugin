@@ -22,7 +22,7 @@ const CMD_REG = /^(?=[\s\S]*(?:怪物|魔物|敌人|BOSS|boss|首领|图鉴|列�
 export class monster extends plugin {
     constructor(e) {
         super({
-            name: '[小花火]怪物图鉴',
+            name: '[米哈游]怪物图鉴',
             dsc: '怪物/BOSS 图鉴查询',
             event: 'message',
             // 优先级需高于 wiki 的通用「xx图鉴」（wiki 用 -99），否则「原神怪物图鉴」会被通用规则先截走
@@ -55,7 +55,7 @@ export class monster extends plugin {
     }
 
     dbg(...args) {
-        if (config().debug) logger.mark('[xhh][怪物图鉴]', ...args);
+        if (config().debug) logger.mark('[HoYoGet][怪物图鉴]', ...args);
     }
 
     async monster(e) {
@@ -93,7 +93,7 @@ export class monster extends plugin {
         try {
             items = await monsterWiki.list(game);
         } catch (err) {
-            logger.error(`[xhh][怪物图鉴] ${game} 数据加载失败: ${err?.message || err}`);
+            logger.error(`[HoYoGet][怪物图鉴] ${game} 数据加载失败: ${err?.message || err}`);
             return e.reply('怪物数据获取失败，请稍后再试。');
         }
         if (!items.length) return e.reply('未获取到该游戏的怪物列表，请稍后再试。');
@@ -159,7 +159,7 @@ export class monster extends plugin {
         try {
             candidates = await monsterWiki.search(game || 'all', keyword, 8);
         } catch (err) {
-            logger.error(`[xhh][怪物图鉴] 搜索失败: ${err?.message || err}`);
+            logger.error(`[HoYoGet][怪物图鉴] 搜索失败: ${err?.message || err}`);
             return e.reply('怪物数据查询失败，请稍后再试。');
         }
 
@@ -190,7 +190,7 @@ export class monster extends plugin {
         try {
             info = await monsterWiki.detail(target.game, target.id);
         } catch (err) {
-            logger.error(`[xhh][怪物图鉴] 详情获取失败: ${err?.message || err}`);
+            logger.error(`[HoYoGet][怪物图鉴] 详情获取失败: ${err?.message || err}`);
             return e.reply('怪物详情获取失败，请稍后再试。');
         }
         if (!info) return e.reply(`没有找到「${target.name}」的详细信息。`);

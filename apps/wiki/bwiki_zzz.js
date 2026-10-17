@@ -75,7 +75,7 @@ export async function fetchZzzBwikiPage(name) {
         lastErr = `风控拦截(HTTP ${r.status})`;
         // 一次风控即触发全局熔断：逐个重试只会互相加剧限流
         blockUntil = Date.now() + BLOCK_MS;
-        logger.debug?.(`[xhh][bwiki_zzz] ${name} 触发限流熔断，3 分钟内 Bwiki 抓取全部跳过，调用方回落原模板`);
+        logger.debug?.(`[HoYoGet][bwiki_zzz] ${name} 触发限流熔断，3 分钟内 Bwiki 抓取全部跳过，调用方回落原模板`);
         return '';
       }
       const html = (await r.json())?.parse?.text?.['*'] || '';
@@ -86,7 +86,7 @@ export async function fetchZzzBwikiPage(name) {
       await sleep(2000 * (i + 1));
     }
   }
-  if (lastErr) logger.debug?.(`[xhh][bwiki_zzz] ${name} 抓取失败：${lastErr}，调用方会回落原模板`);
+  if (lastErr) logger.debug?.(`[HoYoGet][bwiki_zzz] ${name} 抓取失败：${lastErr}，调用方会回落原模板`);
   return '';
 }
 
@@ -673,11 +673,11 @@ export async function fetchZzzBwikiWeapon(name) {
   const isWeaponPage = /音擎效果|音擎图标|音擎特性|基础攻击力/.test(html)
   const isOtherType = /邦布连携技|额外能力|主动技|驱动盘/.test(html)
   if (isOtherType && !isWeaponPage) {
-    logger.debug?.(`[xhh][ZZZ音擎] 「${name}」的 Bwiki 页是邦布/驱动盘页，不是音擎页，不走音擎卡`);
+    logger.debug?.(`[HoYoGet][ZZZ音擎] 「${name}」的 Bwiki 页是邦布/驱动盘页，不是音擎页，不走音擎卡`);
     return null;
   }
   if (html && !isWeaponPage) {
-    logger.debug?.(`[xhh][ZZZ音擎] 「${name}」的 Bwiki 页无音擎特征，判为非音擎`);
+    logger.debug?.(`[HoYoGet][ZZZ音擎] 「${name}」的 Bwiki 页无音擎特征，判为非音擎`);
     return null;
   }
   const d = parseZzzBwikiWeapon(html);
@@ -976,7 +976,7 @@ export async function fetchZzzBwikiBangboo(name) {
     /* 同 fetchZzzBwikiWeapon：词条名跨类型共用，查邦布可能撞上音擎/角色/驱动盘页。
        邦布页必有三个技能类型之一（或初始攻击力），音擎页没有；不齐就别硬解析。 */
     if (!/主动技|额外能力|邦布连携技|邦布图标|初始攻击力/.test(html)) {
-        logger.debug?.(`[xhh][ZZZ邦布] 「${name}」的 Bwiki 页无邦布特征，判为非邦布`);
+        logger.debug?.(`[HoYoGet][ZZZ邦布] 「${name}」的 Bwiki 页无邦布特征，判为非邦布`);
         return null;
     }
     return parseZzzBwikiBangboo(html);

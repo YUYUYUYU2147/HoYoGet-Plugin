@@ -86,7 +86,7 @@ function getMysRating(pref = {}) {
 export class bh3_godwar extends plugin {
   constructor(e) {
     super({
-      name: '[小花火]崩三往世乐土',
+      name: '[米哈游]崩三往世乐土',
       dsc: '崩坏3往世乐土数据',
       event: 'message',
       priority: pluginPriority('bh3_godwar', 100),
@@ -327,7 +327,7 @@ export class bh3_godwar extends plugin {
 
     let buf;
     try {
-      buf = await puppeteer.render('小花火/bh3_godwar/godwar', {
+      buf = await puppeteer.render('米哈游/bh3_godwar/godwar', {
         // {{ppath}} 不会由框架注入（只有 system/render.js 那条路会），
         // 缺了它 CSS/背景图/图标全部 404，页面退化成无样式的裸 HTML。
         // 层数 = 资源目录段数 + 3：小花火/bh3_godwar/godwar 落在 temp/html/下同深度目录。

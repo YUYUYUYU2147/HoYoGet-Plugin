@@ -98,7 +98,7 @@ async function bh3Json(res, what = '米游社接口') {
 export class bh3_gacha extends plugin {
   constructor(e) {
     super({
-      name: '[小花火]崩三抽卡记录',
+      name: '[米哈游]崩三抽卡记录',
       dsc: '崩坏3抽卡记录查询与刷新',
       event: 'message',
       priority: pluginPriority('bh3_gacha', 100),
@@ -240,7 +240,7 @@ export class bh3_gacha extends plugin {
   async showCrossCheck(e) {
     let r;
     try { r = this.crossCheckPoolHistory(); } catch (err) {
-      logger.warn('[xhh][bh3_gacha] 卡池核对失败:', err?.message || err);
+      logger.warn('[HoYoGet][bh3_gacha] 卡池核对失败:', err?.message || err);
       return e.reply(`崩三卡池核对失败：${err?.message || err}`);
     }
     if (!r.files) return e.reply('还没有任何崩三抽卡记录，先用「#刷新抽卡记录」拉一次再来核对。');
@@ -285,7 +285,7 @@ export class bh3_gacha extends plugin {
   async refreshObservation() {
     let roles = {};
     try { roles = (await this.getStarMaps()).char || {}; }
-    catch (err) { logger.warn('[xhh][bh3_gacha] 拉取角色稀有度失败:', err?.message || err); }
+    catch (err) { logger.warn('[HoYoGet][bh3_gacha] 拉取角色稀有度失败:', err?.message || err); }
     if (!Object.keys(roles).length) return ['（观测快照未更新：崩三 wiki 接口不可用）'];
 
     const obs = this.buildObservation(roles);
@@ -298,7 +298,7 @@ export class bh3_gacha extends plugin {
     try {
       fs.writeFileSync(BH3_OBSERVED_PATH, YAML.stringify(obs), 'utf-8');
     } catch (err) {
-      logger.warn('[xhh][bh3_gacha] 观测快照写入失败:', err?.message || err);
+      logger.warn('[HoYoGet][bh3_gacha] 观测快照写入失败:', err?.message || err);
       return [`（观测快照写入失败：${err?.message || err}）`];
     }
     const s = obs.stats;
@@ -410,7 +410,7 @@ export class bh3_gacha extends plugin {
     });
     res = await bh3Json(res, 'genAuthKey');
     if (res?.retcode === 0 && res.data?.authkey) return res.data.authkey;
-    logger.warn('[xhh][bh3_gacha] genAuthKey failed:', JSON.stringify(res));
+    logger.warn('[HoYoGet][bh3_gacha] genAuthKey failed:', JSON.stringify(res));
     return null;
   }
 
@@ -453,7 +453,7 @@ export class bh3_gacha extends plugin {
       const res = await bh3Json(await bh3Fetch(`${GACHA_MENUS_URL}?${params.toString()}`, {
         headers: gachaHeaders(),
       }), 'GetMenus');
-      logger.mark(`[xhh][bh3_gacha] GetMenus raw type=${menuType} response:`, JSON.stringify(res));
+      logger.mark(`[HoYoGet][bh3_gacha] GetMenus raw type=${menuType} response:`, JSON.stringify(res));
       const list = Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.list) ? res.data.list : Array.isArray(res?.data?.menus) ? res.data.menus : [];
       for (const menu of list) {
         const label = menu.label || menu.name || '';
@@ -481,7 +481,7 @@ export class bh3_gacha extends plugin {
       const res = await bh3Json(await bh3Fetch(`${GACHA_MENUS_URL}?${params.toString()}`, {
         headers: gachaHeaders(),
       }), 'GetMenus');
-      logger.mark(`[xhh][bh3_gacha] GetMenus type=${menuType} response:`, JSON.stringify(res));
+      logger.mark(`[HoYoGet][bh3_gacha] GetMenus type=${menuType} response:`, JSON.stringify(res));
       const list = Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.list) ? res.data.list : Array.isArray(res?.data?.menus) ? res.data.menus : [];
       for (const menu of list) {
         const label = menu.label || menu.name || '';
@@ -498,11 +498,11 @@ export class bh3_gacha extends plugin {
     }
     // 池名条目一个都没剩下：退回裸分类（实测 type=1 即吐出补给时间/补给内容记录）
     if (!menus.length && bareCats.length) {
-      logger.mark(`[xhh][bh3_gacha] 未发现补给池名菜单，回退按产出分类拉取: ${bareCats.map(m => `${m.label}(type=${m.type})`).join(' | ')}`);
+      logger.mark(`[HoYoGet][bh3_gacha] 未发现补给池名菜单，回退按产出分类拉取: ${bareCats.map(m => `${m.label}(type=${m.type})`).join(' | ')}`);
       return bareCats;
     }
     if (menus.length) {
-      logger.mark(`[xhh][bh3_gacha] 可用卡池菜单: ${menus.map(m => `${m.label}(type=${m.type},menu=${m.menu_type})`).join(' | ')}`);
+      logger.mark(`[HoYoGet][bh3_gacha] 可用卡池菜单: ${menus.map(m => `${m.label}(type=${m.type},menu=${m.menu_type})`).join(' | ')}`);
     }
     return menus;
   }
@@ -533,7 +533,7 @@ export class bh3_gacha extends plugin {
         // 抛出去交给调用方单独处理这个池，不影响其余池子。
         const captcha = [1034, 10035, 10041].includes(Number(res?.retcode));
         const hint = captcha ? '（米游社要求验证码，authkey 未过期也可能要重新过码）' : '';
-        logger.warn(`[xhh][bh3_gacha] GetUserGacha 失败 type=${gachaType} page=${page} retcode=${res?.retcode}${captcha ? ' 验证码' : ''} message=${res?.message || ''}${hint}`);
+        logger.warn(`[HoYoGet][bh3_gacha] GetUserGacha 失败 type=${gachaType} page=${page} retcode=${res?.retcode}${captcha ? ' 验证码' : ''} message=${res?.message || ''}${hint}`);
         throw new Error(`GetUserGacha retcode=${res?.retcode}${captcha ? '(验证码)' : ''}${res?.message ? ' ' + res.message : ''}`);
       }
       const list = res?.data?.list || [];
@@ -592,7 +592,7 @@ export class bh3_gacha extends plugin {
         }
         if (res?.retcode !== 0) {
           lastError = res?.message || res?.msg || JSON.stringify(res);
-          logger.mark('[xhh][bh3_gacha] self-help record response:', url, JSON.stringify(res));
+          logger.mark('[HoYoGet][bh3_gacha] self-help record response:', url, JSON.stringify(res));
           break;
         }
         ok = true;
@@ -647,7 +647,7 @@ export class bh3_gacha extends plugin {
       lines.push(`${r.time || '未知时间'}  ${parts.join(' / ')}`);
     }
     if (records.length > 30) lines.push(`……仅展示最近30条，其余 ${records.length - 30} 条已省略`);
-    lines.push('from 小花火');
+    lines.push('from 米哈游');
     return sendMsg(e, lines.join('\n'));
   }
 
@@ -782,7 +782,7 @@ export class bh3_gacha extends plugin {
         newRecords = await this.fetchGachaType(uid, authkey, gachaType);
       } catch (err) {
         // 单个池取失败只跳过这个池，不能让整次同步中断
-        logger.warn(`[xhh][bh3_gacha] 「${gachaName}」取数失败：${err?.message || err}`);
+        logger.warn(`[HoYoGet][bh3_gacha] 「${gachaName}」取数失败：${err?.message || err}`);
         failedPools.push(`${gachaName}：${err?.message || err}`);
         continue;
       }
@@ -856,7 +856,7 @@ export class bh3_gacha extends plugin {
       try {
         records = await this.fetchGachaType(uid, authkey, type);
       } catch (err) {
-        logger.warn(`[xhh][bh3_gacha] 探测 type=${type} 失败: ${err?.message || err}`);
+        logger.warn(`[HoYoGet][bh3_gacha] 探测 type=${type} 失败: ${err?.message || err}`);
         continue;
       }
       await sleep(250);
@@ -864,17 +864,17 @@ export class bh3_gacha extends plugin {
       const sample = records.slice(0, 3).map(r => r.content).join(' / ');
       const label = this.guessPoolLabel(records, type);
       if (!label) {
-        logger.mark(`[xhh][bh3_gacha] type=${type} 有 ${records.length} 条记录但无法归类，样本: ${sample}`);
+        logger.mark(`[HoYoGet][bh3_gacha] type=${type} 有 ${records.length} 条记录但无法归类，样本: ${sample}`);
         continue;
       }
       if (exists.has(label)) {
-        logger.mark(`[xhh][bh3_gacha] type=${type} 归类为「${label}」，该池已存在，跳过`);
+        logger.mark(`[HoYoGet][bh3_gacha] type=${type} 归类为「${label}」，该池已存在，跳过`);
         continue;
       }
-      logger.mark(`[xhh][bh3_gacha] 探测到未登记卡池 type=${type} => 「${label}」${records.length} 条，样本: ${sample}`);
+      logger.mark(`[HoYoGet][bh3_gacha] 探测到未登记卡池 type=${type} => 「${label}」${records.length} 条，样本: ${sample}`);
       result.push({ label, type, records });
     }
-    logger.mark(`[xhh][bh3_gacha] 未登记卡池探测完成：命中 ${result.length} 个（菜单已给 ${known.size} 个 type）`);
+    logger.mark(`[HoYoGet][bh3_gacha] 未登记卡池探测完成：命中 ${result.length} 个（菜单已给 ${known.size} 个 type）`);
     return result;
   }
 
@@ -942,7 +942,7 @@ export class bh3_gacha extends plugin {
         .filter(n => n && n.length >= 2 && (n.includes(key) || key.includes(n)))
         .sort((a, b) => b.length - a.length)[0];
       if (hit) return map[hit];
-      logger.debug(`[xhh][bh3_gacha] 协同者图标未命中：${key}（百科 218 频道共 ${Object.keys(map).length} 条）`);
+      logger.debug(`[HoYoGet][bh3_gacha] 协同者图标未命中：${key}（百科 218 频道共 ${Object.keys(map).length} 条）`);
     }
     return '';
   }
@@ -1000,9 +1000,9 @@ export class bh3_gacha extends plugin {
       for (const item of partners?.data?.list?.[0]?.list || []) {
         if (item.icon && item.title) partnerIcon[item.title] = item.icon;
       }
-      logger.mark(`[xhh][bh3_gacha] star maps: char=${Object.keys(char).length}, weapon=${Object.keys(weapon).length}, partner=${Object.keys(partnerIcon).length}`);
+      logger.mark(`[HoYoGet][bh3_gacha] star maps: char=${Object.keys(char).length}, weapon=${Object.keys(weapon).length}, partner=${Object.keys(partnerIcon).length}`);
     } catch (err) {
-      logger.warn?.('[xhh][bh3_gacha] 获取出金星级映射失败:', err);
+      logger.warn?.('[HoYoGet][bh3_gacha] 获取出金星级映射失败:', err);
     }
     starMapCache = { char, weapon, charIcon, weaponIcon, partnerIcon };
     return starMapCache;
@@ -1065,7 +1065,7 @@ export class bh3_gacha extends plugin {
         info.avatarUrl = await this.cacheIcon(`player_${uid}`, info.avatarUrl, 'avatar') || await this.ensureAbsoluteUrl(info.avatarUrl) || info.avatarUrl;
       }
     } catch (err) {
-      logger.warn?.('[xhh][bh3_gacha] 获取玩家头像失败:', err);
+      logger.warn?.('[HoYoGet][bh3_gacha] 获取玩家头像失败:', err);
     }
     return info;
   }
@@ -1095,7 +1095,7 @@ export class bh3_gacha extends plugin {
       const relPath = path.relative(process.cwd(), file);
       return `../../../../../${relPath}`;
     } catch (err) {
-      logger.warn?.('[xhh][bh3_gacha] icon cache failed:', name, err);
+      logger.warn?.('[HoYoGet][bh3_gacha] icon cache failed:', name, err);
       return absUrl;
     }
   }
@@ -1304,7 +1304,7 @@ export class bh3_gacha extends plugin {
     if (!data) return sendMsg(e, `UID${uid} 还没有抽卡记录，请先使用 #刷新抽卡记录`);
     try {
       const player = await this.getPlayerInfo(e, { ...auth, uid });
-      const buf = await puppeteer.render('小花火/bh3_gacha/gacha', {
+      const buf = await puppeteer.render('米哈游/bh3_gacha/gacha', {
         ...data,
         ...player,
         bg: ['bg', 'bg1', 'IMG_20250717_034154'][Math.floor(Math.random() * 3)],
@@ -1325,7 +1325,7 @@ export class bh3_gacha extends plugin {
         return e.reply(seg);
       }
     } catch (err) {
-      logger.error('[xhh][bh3_gacha] render failed:', err);
+      logger.error('[HoYoGet][bh3_gacha] render failed:', err);
     }
     return sendMsg(e, await this.makeSummary(uid));
   }

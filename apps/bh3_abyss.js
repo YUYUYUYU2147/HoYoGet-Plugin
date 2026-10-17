@@ -99,7 +99,7 @@ const ICON_BASE = 'https://api-takumi-static.mihoyo.com';
 // 详细日志：调试模式开启时打印取号/接口轮询/渲染过程，便于排查「查不出来」的原因
 function bh3Dbg(...args) {
   try {
-    if ((yaml?.get?.('./plugins/HoYoGet-Plugin/config/config.yaml') || {}).debug) logger.mark('[xhh][bh3_abyss]', ...args);
+    if ((yaml?.get?.('./plugins/HoYoGet-Plugin/config/config.yaml') || {}).debug) logger.mark('[HoYoGet][bh3_abyss]', ...args);
   } catch (_) {}
 }
 
@@ -144,7 +144,7 @@ function getMysRating(pref = {}) {
 export class bh3_abyss extends plugin {
   constructor(e) {
     super({
-      name: '[小花火]崩三深渊',
+      name: '[米哈游]崩三深渊',
       dsc: '崩坏3深渊战报',
       event: 'message',
       priority: pluginPriority('bh3_abyss', 100),
@@ -231,7 +231,7 @@ async abyss(e) {
   }
 
   async abyssBoss(e) {
-    logger.mark(`[xhh][bh3_abyss] abyssBoss ${ABYSS_BOSS_VERSION} 已加载`);
+    logger.mark(`[HoYoGet][bh3_abyss] abyssBoss ${ABYSS_BOSS_VERSION} 已加载`);
     const { getCurrentAbyssInfoByEvent, formatCurrentAbyssInfo } = await loadAbyssBossModule();
     const info = await getCurrentAbyssInfoByEvent(e);
     if (!info) {
@@ -245,7 +245,7 @@ async abyss(e) {
     // 联动怪物图鉴：能匹配到 Boss 就合并转发（深渊信息 + 图鉴卡），匹配不到就附一行提示
     let codex = null;
     try { codex = await getBh3BossCodex(info.boss); } catch (_) { codex = null; }
-    logger.mark(`[xhh][bh3_abyss] 图鉴联动 boss=${info.boss} codex=${codex === null ? 'null(异常)' : (codex === false ? 'false(未收录)' : 'ok')} icon=${codex && typeof codex === 'object' && codex.icon ? '有' : '无'}`);
+    logger.mark(`[HoYoGet][bh3_abyss] 图鉴联动 boss=${info.boss} codex=${codex === null ? 'null(异常)' : (codex === false ? 'false(未收录)' : 'ok')} icon=${codex && typeof codex === 'object' && codex.icon ? '有' : '无'}`);
 
     if (codex && typeof codex === 'object') {
       const codexText = codex.text + (codex.url ? `\n数据来源：${codex.url}` : '');
@@ -256,17 +256,17 @@ async abyss(e) {
         const b64 = await toBase64Url(iconFile);
         if (b64) { iconFile = b64; iconMode = 'base64'; }
       }
-      logger.mark(`[xhh][bh3_abyss] Boss 图准备: ${iconMode}`);
+      logger.mark(`[HoYoGet][bh3_abyss] Boss 图准备: ${iconMode}`);
       const codexImg = iconFile ? await imageSegment(iconFile) : null;
       let sent = 0;
       const splitSend = async () => {
         await sendMsg(e, abyssText); sent++;
         if (codexImg) {
           try { await sendMsg(e, codexImg); sent++; }
-          catch (err) { logger.warn(`[xhh][bh3_abyss] Boss 图发送失败: ${err?.message || err}`); }
+          catch (err) { logger.warn(`[HoYoGet][bh3_abyss] Boss 图发送失败: ${err?.message || err}`); }
         }
         await sendMsg(e, codexText); sent++;
-        logger.mark(`[xhh][bh3_abyss] 已分条发送 ${sent} 条（含 Boss 图 ${codexImg ? '是' : '否'}）`);
+        logger.mark(`[HoYoGet][bh3_abyss] 已分条发送 ${sent} 条（含 Boss 图 ${codexImg ? '是' : '否'}）`);
         return true;
       };
       try {
@@ -281,26 +281,26 @@ async abyss(e) {
         // makeForwardMsg 在适配器不支持时不会抛错，而是静默返回纯文本：
         // 这时改成分条发送，至少把 Boss 图发出来（否则图只剩 [图片] 占位）
         if (typeof fwd === 'string') {
-          logger.warn('[xhh][bh3_abyss] 合并转发被降级为纯文本（适配器不支持），改为分条发送含 Boss 图');
+          logger.warn('[HoYoGet][bh3_abyss] 合并转发被降级为纯文本（适配器不支持），改为分条发送含 Boss 图');
           return await splitSend();
         }
         await e.reply(fwd);
-        logger.mark(`[xhh][bh3_abyss] 已合并转发（含 Boss 图 ${codexImg ? '是' : '否'}）`);
+        logger.mark(`[HoYoGet][bh3_abyss] 已合并转发（含 Boss 图 ${codexImg ? '是' : '否'}）`);
         return true;
       } catch (err) {
-        logger.warn(`[xhh][bh3_abyss] 合并转发失败，回退分条发送: ${err?.message || err}`);
+        logger.warn(`[HoYoGet][bh3_abyss] 合并转发失败，回退分条发送: ${err?.message || err}`);
         try {
           return await splitSend();
         } catch (err2) {
-          logger.warn(`[xhh][bh3_abyss] 分条发送也失败，退回纯文本: ${err2?.message || err2}`);
+          logger.warn(`[HoYoGet][bh3_abyss] 分条发送也失败，退回纯文本: ${err2?.message || err2}`);
         }
         // 最后兜底：至少把深渊信息和图鉴文字发出去，不能什么都不发
         try {
           await sendMsg(e, `${abyssText}\n${codexText}`);
-          logger.mark('[xhh][bh3_abyss] 已退回纯文本发送');
+          logger.mark('[HoYoGet][bh3_abyss] 已退回纯文本发送');
           return true;
         } catch (err3) {
-          logger.error(`[xhh][bh3_abyss] 纯文本兜底也失败: ${err3?.message || err3}`);
+          logger.error(`[HoYoGet][bh3_abyss] 纯文本兜底也失败: ${err3?.message || err3}`);
           return false;
         }
       }
@@ -451,7 +451,7 @@ async abyss(e) {
     let buf;
     const t0 = Date.now();
     try {
-      buf = await puppeteer.render('小花火/bh3_abyss/abyss', {
+      buf = await puppeteer.render('米哈游/bh3_abyss/abyss', {
         // {{ppath}} 不会由框架注入（只有 system/render.js 那条路会），
         // 缺了它 CSS/背景图/图标全部 404，页面退化成无样式的裸 HTML。
         // 层数 = 资源目录段数 + 3：小花火/bh3_abyss/abyss 落在 temp/html/下同深度目录。

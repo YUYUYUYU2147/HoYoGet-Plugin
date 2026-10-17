@@ -82,7 +82,7 @@ tlpcs: 3
 #查委托是否必须带#号前缀：true开，false关
 wt: false
 
-#是否启用小花火体力组件：true开，false关
+#是否启用体力组件：true开，false关
 Tl: false
 
 #崩坏3扩展中的四游戏体力聚合：true开，false关
@@ -115,7 +115,7 @@ gacha_pool_cron: '0 */30 * * * *'
 #星铁货币战争战绩显示数量：填数字 (取1-3，避免图太长)
 huobi_num: 2
 
-#小花火图鉴是否启用？：true是，false否 (优先级设置在other.yaml文件)
+#图鉴是否启用？：true是，false否 (优先级设置在other.yaml文件)
 wiki: false
 
 #米游社扫码绑定功能：true开，false关

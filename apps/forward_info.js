@@ -134,7 +134,7 @@ async function fetchPostFull(post = {}, gids = 1) {
     const full = res?.data?.post?.post || res?.data?.post || {};
     return { ...post, ...full, images: full.images?.length ? full.images : post.images };
   } catch (err) {
-    logger.warn(`[xhh][前瞻] 获取帖子详情 ${post.post_id} 失败: ${err?.message || err}`);
+    logger.warn(`[HoYoGet][前瞻] 获取帖子详情 ${post.post_id} 失败: ${err?.message || err}`);
     return post;
   }
 }
@@ -165,12 +165,12 @@ function formatPostInfo(post = {}, gameName) {
 export class forward_info extends plugin {
   constructor() {
     super({
-      name: '[小花火]前瞻信息',
+      name: '[米哈游]前瞻信息',
       dsc: '原神/星铁/崩坏3/绝区零版本前瞻信息汇总',
       event: 'message',
       priority: pluginPriority('forward_info', -Infinity),
       rule: [
-        { reg: '^#*(小花火|xhh)(崩三|崩坏三|崩坏3|原神|星铁|绝区零)(前瞻)(信息)?$', fnc: 'forwardInfo' },
+        { reg: '^#*米哈游(崩三|崩坏三|崩坏3|原神|星铁|绝区零)(前瞻)(信息)?$', fnc: 'forwardInfo' },
       ],
     });
   }
@@ -199,7 +199,7 @@ export class forward_info extends plugin {
           candidates.push(post);
         }
       } catch (err) {
-        logger.warn(`[xhh][前瞻] 搜索 ${keyword} 失败: ${err?.message || err}`);
+        logger.warn(`[HoYoGet][前瞻] 搜索 ${keyword} 失败: ${err?.message || err}`);
       }
     }
 
@@ -220,7 +220,7 @@ export class forward_info extends plugin {
       .sort((a, b) => Number(b.created_at || 0) - Number(a.created_at || 0))
       .slice(0, MAX_POSTS);
     if (!picked.length && fallback.length) {
-      logger.mark(`[xhh][前瞻] ${cfg.name} 标题特征未命中，回退到宽筛选`);
+      logger.mark(`[HoYoGet][前瞻] ${cfg.name} 标题特征未命中，回退到宽筛选`);
     }
 
     for (let post of (picked.length ? picked : fallback)) {

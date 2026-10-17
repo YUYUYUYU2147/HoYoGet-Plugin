@@ -80,7 +80,7 @@ function loadCfg() {
       }
     }
   } catch (err) {
-    logger.warn(`[xhh][panel-accel] 配置读取失败，使用默认值：${err?.message || err}`)
+    logger.warn(`[HoYoGet][panel-accel] 配置读取失败，使用默认值：${err?.message || err}`)
   }
   return cfg
 }
@@ -120,10 +120,10 @@ async function fetchAvatarsConcurrently(api, deviceFp, avatarBaseList, cfg) {
         // 避免把 404 之类的普通失败也误判成风控。
         if (!proxyTried && isBlockedErr(msg)) {
           proxyTried = true
-          logger.warn(`[xhh][panel-accel] 检测到风控拦截（${msg.slice(0, 60)}），后续请求由 mhyFetch 自动改走代理${proxyEnabled() ? ` ${proxyBase()}` : '（但代理未启用！）'}`)
+          logger.warn(`[HoYoGet][panel-accel] 检测到风控拦截（${msg.slice(0, 60)}），后续请求由 mhyFetch 自动改走代理${proxyEnabled() ? ` ${proxyBase()}` : '（但代理未启用！）'}`)
         }
         // 单个角色失败不中断整体，与上游的 continue 语义一致
-        logger.debug(`[xhh][panel-accel] 角色 ${item.id} 获取失败：${msg}`)
+        logger.debug(`[HoYoGet][panel-accel] 角色 ${item.id} 获取失败：${msg}`)
       }
       // 限流：并发窗口内错开请求，取代上游每角色固定 3 秒的串行等待
       await new Promise(resolve => setTimeout(resolve, cfg.interval))
@@ -144,7 +144,7 @@ async function fillIconsConcurrently(ZZZAvatarInfo, items) {
 export class zzz_panel_accel extends plugin {
   constructor() {
     super({
-      name: '[小花火/zzz_panel_accel.js]绝区零面板更新加速',
+      name: '[HoYoGet/zzz_panel_accel.js]绝区零面板更新加速',
       dsc: '把 ZZZ-Plugin 面板更新的串行等待改为并发，缩短 %更新面板 耗时',
       event: 'message',
       // 必须早于 ZZZ-Plugin 面板指令（其 priority 取自自身 config 的 panel，默认 70），
@@ -191,7 +191,7 @@ export class zzz_panel_accel extends plugin {
     try {
       mod = await import(path.join(ZZZ_ROOT, 'dist', 'lib', 'avatar.js'))
     } catch (err) {
-      logger.error(`[xhh][panel-accel] 加载 ZZZ-Plugin avatar 模块失败：${err?.message || err}`)
+      logger.error(`[HoYoGet][panel-accel] 加载 ZZZ-Plugin avatar 模块失败：${err?.message || err}`)
       return e.reply('面板加速不可用，请改用 ZZZ-Plugin 的更新指令')
     }
     const { getAvatarBasicList, updatePanelData, mergePanel } = mod
@@ -212,7 +212,7 @@ export class zzz_panel_accel extends plugin {
       if (!ltuid) return e.reply('ltuid 为空，请重新绑定 CK')
       deviceFp = await redis.get(`ZZZ:DEVICE_FP:${ltuid}:FP`)
     } catch (err) {
-      logger.error(`[xhh][panel-accel] 初始化 api 失败：${err?.message || err}`)
+      logger.error(`[HoYoGet][panel-accel] 初始化 api 失败：${err?.message || err}`)
       return e.reply('面板加速初始化失败，请改用 ZZZ-Plugin 的更新指令')
     }
 
@@ -264,10 +264,10 @@ export class zzz_panel_accel extends plugin {
             : raw && typeof raw === 'object'
               ? `${Object.prototype.toString.call(raw)} keys=${Object.keys(raw).join('/') || 'none'}${raw.type ? ` type=${raw.type}` : ''}`
               : String(raw)
-          logger.warn(`[xhh][panel-accel] 面板图返回值未识别（${shape}），仅返回文字`)
+          logger.warn(`[HoYoGet][panel-accel] 面板图返回值未识别（${shape}），仅返回文字`)
         }
       } catch (err) {
-        logger.warn(`[xhh][panel-accel] 面板图渲染失败，仅返回文字：${err?.message || err}`)
+        logger.warn(`[HoYoGet][panel-accel] 面板图渲染失败，仅返回文字：${err?.message || err}`)
       }
 
       // 落盘数据里没有 name 字段（ZZZAvatarInfo 也没有），角色名是 name_mi18n。
@@ -283,7 +283,7 @@ export class zzz_panel_accel extends plugin {
       // 图必须作为数组元素与文字并列发送（system/bili.js 的扫码消息即此写法）。
       return e.reply(img ? [img, ...lines] : lines.join('\n'))
     } catch (err) {
-      logger.error(`[xhh][panel-accel] 面板更新失败：${err?.message || err}`)
+      logger.error(`[HoYoGet][panel-accel] 面板更新失败：${err?.message || err}`)
       return e.reply(`面板更新失败：${err?.message || err}`)
     }
   }
@@ -299,7 +299,7 @@ export class zzz_panel_accel extends plugin {
       if (typeof commonMod.getCk === 'function') return await commonMod.getCk(e)
       return null
     } catch (err) {
-      logger.warn(`[xhh][panel-accel] 取 ck 失败：${err?.message || err}`)
+      logger.warn(`[HoYoGet][panel-accel] 取 ck 失败：${err?.message || err}`)
       return null
     }
   }

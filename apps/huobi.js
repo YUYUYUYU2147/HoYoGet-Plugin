@@ -14,7 +14,7 @@ const getNoteUser = makeGenshinLoader('model/mys/NoteUser.js', ['model/mys/NoteU
 export class hbzz extends plugin {
     constructor(e) {
         super({
-            name: '[小花火]货币战争',
+            name: '[米哈游]货币战争',
             dsc: '',
             event: 'message',
             priority: pluginPriority('huobi', 123),

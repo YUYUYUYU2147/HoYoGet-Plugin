@@ -154,7 +154,7 @@ export async function getRoleProfile(e, uid, game, auth = {}) {
             }
         }
     } catch (err) {
-        logger.debug?.('[xhh][资料] 获取玩家资料失败:', err?.message || err);
+        logger.debug?.('[HoYoGet][资料] 获取玩家资料失败:', err?.message || err);
     } finally {
         e.game = oldGame;
     }

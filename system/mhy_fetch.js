@@ -96,11 +96,11 @@ async function viaProxy(url, obj) {
             return null;
         }
         if (config().debug) {
-            logger.mark(`[xhh][proxy] 直连被拦，已改走代理 ${String(url).slice(0, 80)}`);
+            logger.mark(`[HoYoGet][proxy] 直连被拦，已改走代理 ${String(url).slice(0, 80)}`);
         }
         return makeResponse(resp.ok, resp.status, text);
     } catch (err) {
-        if (config().debug) logger.mark(`[xhh][proxy] 代理请求失败: ${err.message}`);
+        if (config().debug) logger.mark(`[HoYoGet][proxy] 代理请求失败: ${err.message}`);
         return null;
     }
 }

@@ -14,7 +14,7 @@ const name_list = {
 export class video extends plugin {
   constructor(e) {
     super({
-      name: '[小花火]米哈游最新视频',
+      name: '[米哈游]米哈游最新视频',
       dsc: '',
       event: 'message',
       priority: pluginPriority('video', 1),
@@ -27,7 +27,7 @@ export class video extends plugin {
     });
     this.task = {
       cron: '30 0/3 * * * ? ',
-      name: '[小花火]米哈游视频',
+      name: '[米哈游]米哈游视频',
       fnc: () => vid(),
       log: false,
     };

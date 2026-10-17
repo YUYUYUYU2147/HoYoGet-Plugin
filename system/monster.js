@@ -94,7 +94,7 @@ function loadBh3BossAlias() {
     try {
         _bh3BossAliasCache = YAML.parse(fs.readFileSync(BH3_BOSS_NAMES_FILE, 'utf-8')) || {};
     } catch (err) {
-        globalThis.logger?.warn(`[xhh][monster] 崩三Boss别名表读取失败: ${err?.message || err}`);
+        globalThis.logger?.warn(`[HoYoGet][monster] 崩三Boss别名表读取失败: ${err?.message || err}`);
         _bh3BossAliasCache = {};
     }
     return _bh3BossAliasCache;
@@ -246,7 +246,7 @@ async function zzzVersion() {
             const latest = manifest?.zzz?.latest || available[available.length - 1];
             if (latest) return latest;
         } catch (err) {
-            globalThis.logger?.warn(`[xhh][monster] Nanoka manifest 获取失败: ${err?.message || err}`);
+            globalThis.logger?.warn(`[HoYoGet][monster] Nanoka manifest 获取失败: ${err?.message || err}`);
         }
         return '3.3.3+19110104';
     });
@@ -374,7 +374,7 @@ async function bh3EnrichRanks(items) {
         };
         await Promise.all(Array.from({ length: 8 }, () => worker()));
         for (const it of items) bh3ApplyCached(it);
-        globalThis.logger?.mark?.(`[xhh][monster] 崩三敌人等级/属性补全完成：${bh3RankCache.size} 条`);
+        globalThis.logger?.mark?.(`[HoYoGet][monster] 崩三敌人等级/属性补全完成：${bh3RankCache.size} 条`);
     } finally {
         bh3RankEnriching = false;
     }
@@ -521,7 +521,7 @@ async function search(game, keyword, limit = 10) {
                 }
             }
         } catch (err) {
-            globalThis.logger?.warn(`[xhh][monster] bh3 本地列表加载失败: ${err?.message || err}`);
+            globalThis.logger?.warn(`[HoYoGet][monster] bh3 本地列表加载失败: ${err?.message || err}`);
         }
         try {
             for (const v of await bh3Search(kw, limit)) {
@@ -530,7 +530,7 @@ async function search(game, keyword, limit = 10) {
                 seen.add(String(v.id));
             }
         } catch (err) {
-            globalThis.logger?.warn(`[xhh][monster] bh3 搜索接口失败: ${err?.message || err}`);
+            globalThis.logger?.warn(`[HoYoGet][monster] bh3 搜索接口失败: ${err?.message || err}`);
         }
         return out.sort((a, b) => {
             const ae = cleanName(a.name) === q ? 0 : 1;
@@ -548,7 +548,7 @@ async function search(game, keyword, limit = 10) {
         try {
             items = await list(g);
         } catch (err) {
-            globalThis.logger?.warn(`[xhh][monster] ${g} 列表加载失败: ${err?.message || err}`);
+            globalThis.logger?.warn(`[HoYoGet][monster] ${g} 列表加载失败: ${err?.message || err}`);
             continue;
         }
         const hit = items.filter(v => {

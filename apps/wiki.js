@@ -84,7 +84,7 @@ async function miaoModels() {
     _miaoModels = await import('../../miao-plugin/models/index.js');
   } catch (err) {
     _miaoModels = false;
-    if (config().debug) logger.mark(`[xhh] 未加载 miao-plugin 模型，跳过喵喵别名兜底: ${err?.message || err}`);
+    if (config().debug) logger.mark(`[HoYoGet] 未加载 miao-plugin 模型，跳过喵喵别名兜底: ${err?.message || err}`);
   }
   return _miaoModels;
 }
@@ -340,7 +340,7 @@ const SR_PATH_CN = {
 export class Wiki extends plugin {
   constructor(e) {
     super({
-      name: '[小花火]图鉴',
+      name: '[米哈游]图鉴',
       dsc: '图鉴',
       event: 'message',
       priority: pr || -99,
@@ -467,7 +467,7 @@ export class Wiki extends plugin {
     const isBH3 = /崩坏3|崩坏三|崩三|BH3/i.test(e.msg);
     let name = e.msg
       .replace(/^[#%*]*/, '')
-      .replace(/^(?:xhh|小花火)[#%*]*/i, '')
+      .replace(/^米哈游[#%*]*/i, '')
       .replace(/星铁|绝区零|ZZZ|崩坏3|崩坏三|崩三|BH3/gi, '')
       .replace(/(?:故事|剧情)/g, '')
       .trim();
@@ -505,7 +505,7 @@ export class Wiki extends plugin {
        test 模式下「#钟离故事」会直接拿到正式服角色的故事。
        test 模式只出测试服数据，两边不混用。 */
     if (isTestDataMode()) {
-      logger.debug?.('[xhh][图鉴] 测试服数据模式：跳过 Bwiki 角色故事（Bwiki 只有正式服数据）');
+      logger.debug?.('[HoYoGet][图鉴] 测试服数据模式：跳过 Bwiki 角色故事（Bwiki 只有正式服数据）');
       await e.reply(`「${name}」的角色故事在测试服模式下暂不可用。\n`
         + `角色故事目前只有 Bwiki 一个数据源，而 Bwiki 只有正式服数据。\n`
         + `切换正式服模式可用：#切换正式服模式`);
@@ -514,7 +514,7 @@ export class Wiki extends plugin {
     // 星铁走 Bwiki 的角色页（表5 就是角色故事），和原神一样逐条渲染
     if (isSr) {
       const sr = await fetchSrRole(name).catch(err => {
-        logger.debug?.(`[xhh][bwiki_sr] ${name} 故事抓取异常: ${err?.message}`);
+        logger.debug?.(`[HoYoGet][bwiki_sr] ${name} 故事抓取异常: ${err?.message}`);
         return null;
       });
       const stories = sr?.stories || [];
@@ -533,7 +533,7 @@ export class Wiki extends plugin {
     let d = null;
     try { d = await fetchGsRole(name); }
     catch (err) {
-      logger.debug?.(`[xhh][bwiki_gs] ${name} 故事抓取异常: ${err?.message}`);
+      logger.debug?.(`[HoYoGet][bwiki_gs] ${name} 故事抓取异常: ${err?.message}`);
       return false;
     }
     if (!d || !d.stories?.length) {
@@ -595,7 +595,7 @@ export class Wiki extends plugin {
     let name = e.msg
       .replace(/^[#%*]*/, '')
       // 插件前缀（xhh菲欧妮图鉴 / 小花火菲欧妮图鉴）不参与查询名
-      .replace(/^(?:xhh|小花火)[#%*]*/i, '')
+      .replace(/^米哈游[#%*]*/i, '')
       .replace(/星铁|绝区零|ZZZ|崩坏3|崩坏三|崩三|BH3/gi, '')
       .trim();
     name = name.startsWith('图鉴') ? name.replace(/^图鉴/, '') : name.replace(/图鉴$/, '');
@@ -645,7 +645,7 @@ export class Wiki extends plugin {
        也已在上面处理完，不受影响。 */
     const typeTail = /^(.+?)(角色|武器|光锥|遗器|音擎|驱动盘|邦布|圣遗物|圣痕|人偶|协同者)$/.exec(name);
     if (typeTail?.[1]) {
-      logger.debug?.(`[xhh][图鉴] 剥离尾部类型词：${name} → ${typeTail[1]}`);
+      logger.debug?.(`[HoYoGet][图鉴] 剥离尾部类型词：${name} → ${typeTail[1]}`);
       name = typeTail[1];
     }
     // 统一处理角色/武器/遗器查询
@@ -697,7 +697,7 @@ export class Wiki extends plugin {
        因此 test 模式对正式服条目不应触发，只认测试服列表里已有的条目。 */
     const isPureListKeyword = /^(角色|武器|光锥|遗器|音擎|驱动盘|邦布|圣遗物|圣痕|人偶|协同者|大剑|双手剑|单手剑|长枪|长柄武器|弓|弓箭|法器)$/.test(name);
     if (isTestDataMode() && !isPureListKeyword) {
-      logger.debug?.(`[xhh][图鉴] 测试服数据模式：「${name}」不在测试服列表，拒绝出图`);
+      logger.debug?.(`[HoYoGet][图鉴] 测试服数据模式：「${name}」不在测试服列表，拒绝出图`);
       await e.reply(`测试服模式下没有「${name}」的图鉴数据。\n`
         + `测试服列表只收录测试服条目（头像右上角带「预告」标记的）。\n`
         + `切换正式服模式可用：#切换正式服模式`);
@@ -705,7 +705,7 @@ export class Wiki extends plugin {
     }
     if (/角色|武器|大剑|双手剑|单手剑|法器|长枪|弓箭|弓|光锥|圣遗物|遗器|音擎|驱动盘|邦布|圣痕|人偶|协同者/.test(name)) return this.list(e, name, isSr, isZZZ, isBH3);
     // 全部未命中时给出提示，避免静默无响应被当成插件故障
-    if (config().debug) logger.mark(`[xhh] 图鉴未命中: name=「${name}」 isSr=${isSr} isZZZ=${isZZZ} isBH3=${isBH3}`);
+    if (config().debug) logger.mark(`[HoYoGet] 图鉴未命中: name=「${name}」 isSr=${isSr} isZZZ=${isZZZ} isBH3=${isBH3}`);
     if (name.length >= 2) {
       // 以前这里写死建议「绝区零」，崩三的名字（如「乐运天降」）看到这条只会更困惑，
       // 而且后半句「*X图鉴 / #X图鉴」就是把刚敲过的那条命令再抄一遍，没有信息量。
@@ -773,7 +773,7 @@ export class Wiki extends plugin {
           + `测试服模式只使用 nanoka 数据源（nanoka 暂时不可用时不会降级到官方源）。\n`
           + `可稍后重试，或切换正式服模式：#切换正式服模式`
         : `${_name}暂时没有数据，可能是数据源暂时不可用。`);
-      logger.debug?.(`[xhh][图鉴] ${_name} 列表为空（test=${isTestDataMode()}）`);
+      logger.debug?.(`[HoYoGet][图鉴] ${_name} 列表为空（test=${isTestDataMode()}）`);
       return true;
     }
 
@@ -1143,7 +1143,7 @@ export class Wiki extends plugin {
        一合并就把正式服条目全塞回测试服列表里（实测原神武器从 3 条涨到 439 条）。
        test 模式只用 nanoka + manifest.new.*，两种数据不混用。 */
     if (isTestDataMode()) {
-      logger.debug?.('[xhh][图鉴] 测试服数据模式：跳过 Bwiki 合并，列表只用 nanoka 数据');
+      logger.debug?.('[HoYoGet][图鉴] 测试服数据模式：跳过 Bwiki 合并，列表只用 nanoka 数据');
     } else if (!isSr && !isZZZ && !isBH3 && ['js', 'wq', 'syw'].includes(type)) {
       data = await this.mergeGsBwikiRoleIcons(data, type);
     } else if (isSr && !isZZZ && !isBH3 && ['js', 'gz', 'yq'].includes(type)) {
@@ -1309,7 +1309,7 @@ export class Wiki extends plugin {
         return raw;
       }
     } catch (err) {
-      logger.debug?.(`[xhh][wiki] 背景图获取失败: ${err?.message}`);
+      logger.debug?.(`[HoYoGet][wiki] 背景图获取失败: ${err?.message}`);
       return '';
     }
   }
@@ -1358,7 +1358,7 @@ export class Wiki extends plugin {
     try {
       list = await fetcher();
     } catch (err) {
-      logger.debug?.(`[xhh][bwiki_sr] ${label}图鉴抓取异常: ${err?.message}`);
+      logger.debug?.(`[HoYoGet][bwiki_sr] ${label}图鉴抓取异常: ${err?.message}`);
       return data;
     }
     if (!list?.length) return data;
@@ -1404,7 +1404,7 @@ export class Wiki extends plugin {
       });
     }
     const hit = data.filter(i => byName.get(String(i.name || '').trim())?.icon).length;
-    logger.debug?.(`[xhh][bwiki_sr] ${label}列表: Bwiki ${list.length} 条, 覆盖 nanoka ${hit}/${data.length}, 补入 ${merged.length - data.length}`);
+    logger.debug?.(`[HoYoGet][bwiki_sr] ${label}列表: Bwiki ${list.length} 条, 覆盖 nanoka ${hit}/${data.length}, 补入 ${merged.length - data.length}`);
     return merged;
   }
 
@@ -1419,7 +1419,7 @@ export class Wiki extends plugin {
     try {
       list = await fetcher();
     } catch (err) {
-      logger.debug?.(`[xhh][bwiki_gs] ${label}一览抓取异常: ${err?.message}`);
+      logger.debug?.(`[HoYoGet][bwiki_gs] ${label}一览抓取异常: ${err?.message}`);
       return data;
     }
     if (!list?.length) return data;
@@ -1502,7 +1502,7 @@ export class Wiki extends plugin {
     const rankOf = it => (it.ji === '五星' ? 0 : it.ji === '四星' ? 1 : 2);
     merged.sort((a, b) => rankOf(a) - rankOf(b));
     const hit = data.filter(i => byName.has(String(i.name || '').trim()) && byName.get(String(i.name || '').trim()).icon).length;
-    logger.debug?.(`[xhh][bwiki_gs] ${label}列表: Bwiki ${list.length} 条, 覆盖 nanoka ${hit}/${data.length}, 补入 ${extraNames.length}`);
+    logger.debug?.(`[HoYoGet][bwiki_gs] ${label}列表: Bwiki ${list.length} 条, 覆盖 nanoka ${hit}/${data.length}, 补入 ${extraNames.length}`);
     /* 排序按 Bwiki 武器一览页的顺序来 —— **只对武器**（kind === 'wq'）。
        武器一览页的卡片结构本身就分 g5 / g4 两组，页面顺序即「5★ 组在前、组内新→旧」，
        直接照搬没问题。
@@ -1559,7 +1559,7 @@ export class Wiki extends plugin {
           icon: item.icon || ''
         }));
       } catch (err) {
-        globalThis.logger?.warn?.('[xhh][wiki] 获取绝区零官方图标失败:', err);
+        globalThis.logger?.warn?.('[HoYoGet][wiki] 获取绝区零官方图标失败:', err);
         this._zzzObcIconCache[channelId] = [];
       }
     }
@@ -1691,7 +1691,7 @@ export class Wiki extends plugin {
       if (!id) return null;
       return await mys.detail(id, false, true);
     } catch (err) {
-      if (config().debug) logger.mark(`[xhh] ZZZ专属装备获取代理人详情失败: ${roleName} ${err?.message || err}`);
+      if (config().debug) logger.mark(`[HoYoGet] ZZZ专属装备获取代理人详情失败: ${roleName} ${err?.message || err}`);
       return null;
     }
   }
@@ -2253,7 +2253,7 @@ export class Wiki extends plugin {
       // 这里刻意不校验 data.content 的内部结构：详情源被限流时结构同样为空，
       // 早先加了结构判断，结果 雾切之回光 这种确实有页面的条目也被判成无详情。
       if (!data) {
-        logger.debug?.(`[xhh][图鉴] 武器「${wq}」详情获取失败（id=${id}）`);
+        logger.debug?.(`[HoYoGet][图鉴] 武器「${wq}」详情获取失败（id=${id}）`);
         return false;
       }
       // 渲染器是按 Bwiki 页面结构写的，条目缺页时解析会抛异常；
@@ -2274,13 +2274,13 @@ export class Wiki extends plugin {
              「没有找到」。这里改走专门的 nanoka 渲染器。 */
           const done = await this.gs_wq_nanoka_pictures(e, data);
           if (done === false || done == null) {
-            logger.debug?.(`[xhh][图鉴] 武器「${wq}」nanoka 渲染失败`);
+            logger.debug?.(`[HoYoGet][图鉴] 武器「${wq}」nanoka 渲染失败`);
             return false;
           }
         }
         else this.gs_wq_pictures(e, data);
       } catch (err) {
-        logger.error?.(`[xhh][图鉴] 武器「${wq}」详情渲染失败: ${err?.message || err}`);
+        logger.error?.(`[HoYoGet][图鉴] 武器「${wq}」详情渲染失败: ${err?.message || err}`);
         return false;
       }
       return true;
@@ -2290,7 +2290,7 @@ export class Wiki extends plugin {
 
   //角色
   async role(e, name, isSr = false, isZZZ = false, isBH3 = false) {
-    const dbg = (...args) => { if (config().debug) logger.mark('[xhh][图鉴解析]', ...args); };
+    const dbg = (...args) => { if (config().debug) logger.mark('[HoYoGet][图鉴解析]', ...args); };
     if (isZZZ) {
       name = await this.resolveZzzWikiName(name, 43);
       dbg('ZZZ 角色解析:', name);
@@ -2393,16 +2393,16 @@ export class Wiki extends plugin {
     /* 纵深防御：调用方（role）已挡过一次，这里再挡一道。
        Bwiki 是正式服站，本函数不该在 test 模式下被触达。 */
     if (isTestDataMode()) {
-      logger.debug?.(`[xhh][bwiki_gs] 测试服数据模式：拒绝 Bwiki 角色图鉴（${name}）`);
+      logger.debug?.(`[HoYoGet][bwiki_gs] 测试服数据模式：拒绝 Bwiki 角色图鉴（${name}）`);
       return false;
     }
-    const dbg = (...a) => { if (config().debug) logger.mark('[xhh][bwiki_gs]', ...a); };
+    const dbg = (...a) => { if (config().debug) logger.mark('[HoYoGet][bwiki_gs]', ...a); };
     let d = null;
     try {
       d = await fetchGsRole(name);
     } catch (err) {
       // 绝不能让 Bwiki 的异常把整条图鉴指令带崩
-      logger.debug?.(`[xhh][bwiki_gs] ${name} 抓取异常: ${err?.message}`);
+      logger.debug?.(`[HoYoGet][bwiki_gs] ${name} 抓取异常: ${err?.message}`);
       return false;
     }
     if (!d) return false;
@@ -2434,7 +2434,7 @@ export class Wiki extends plugin {
       // 图标再走一次文件页换成原图，缩略图放大是糊的
       view.guide = await resolveGsGuideIcons(parseGsGuide(await fetchGsGuidePage(detail.name)));
     } catch (err) {
-      logger.debug?.(`[xhh][bwiki_gs] ${detail.name} 攻略抓取失败: ${err?.message}`);
+      logger.debug?.(`[HoYoGet][bwiki_gs] ${detail.name} 攻略抓取失败: ${err?.message}`);
       view.guide = null;
     }
     dbg(`${name} → ${detail.name} 技能${detail.skills.length} 命座${detail.constellations.length} ` +
@@ -2442,7 +2442,7 @@ export class Wiki extends plugin {
     try {
       return await render('wiki/gs_role_nk', { ...view, name: detail.name }, { e, ret: true });
     } catch (err) {
-      logger.debug?.(`[xhh][bwiki_gs] ${name} 渲染失败: ${err?.message}`);
+      logger.debug?.(`[HoYoGet][bwiki_gs] ${name} 渲染失败: ${err?.message}`);
       return false;
     }
   }
@@ -2480,13 +2480,13 @@ export class Wiki extends plugin {
            否则技能/属性/命途会被 Bwiki 的正式服数据覆盖，正式服内容就漏进来了。
            这里同样是裸调 fetchSrRole，不经 mys.data()，闸门管不到。 */
         if (isTestDataMode()) {
-            logger.debug?.(`[xhh][图鉴] 测试服数据模式：跳过 Bwiki 合并（${name}），保留 nanoka 视图`);
+            logger.debug?.(`[HoYoGet][图鉴] 测试服数据模式：跳过 Bwiki 合并（${name}），保留 nanoka 视图`);
             return view;
         }
         try {
             const bw = await fetchSrRole(name);
             if (!bw) {
-              logger.debug?.(`[xhh][bwiki_sr] ${name} 无 Bwiki 数据，保留 nanoka`);
+              logger.debug?.(`[HoYoGet][bwiki_sr] ${name} 无 Bwiki 数据，保留 nanoka`);
               return view;
             }
             const merged = { ...view };
@@ -2514,10 +2514,10 @@ export class Wiki extends plugin {
               const g2 = await fetchSrGuide(cid).catch(() => null);
               if (g2?.lightcones?.length || g2?.relics?.length) merged.srGuide = g2;
             }
-            logger.debug?.(`[xhh][bwiki_sr] ${name} 技能${merged.skills?.length} 星魂${merged.ranks?.length} 成长${merged.growth?.length}`);
+            logger.debug?.(`[HoYoGet][bwiki_sr] ${name} 技能${merged.skills?.length} 星魂${merged.ranks?.length} 成长${merged.growth?.length}`);
             return merged;
         } catch (err) {
-            logger.debug?.(`[xhh][bwiki_sr] ${name} 异常，保留 nanoka: ${err?.message}`);
+            logger.debug?.(`[HoYoGet][bwiki_sr] ${name} 异常，保留 nanoka: ${err?.message}`);
             return view;
         }
     }
@@ -2605,7 +2605,7 @@ export class Wiki extends plugin {
   //原神角色
   async gs_role_pictures(e, data) {
     if (!data?.page?.modules?.length) {
-        logger.debug?.(`[xhh][图鉴] 角色详情页结构缺失（page=${data?.page === null ? 'null' : '无'}），跳过该渲染`);
+        logger.debug?.(`[HoYoGet][图鉴] 角色详情页结构缺失（page=${data?.page === null ? 'null' : '无'}），跳过该渲染`);
         return false;
     }
     const modules = data.page.modules;
@@ -2730,7 +2730,7 @@ export class Wiki extends plugin {
     try {
       item = await fetchGsBwikiItem(name, 'wq');
     } catch (err) {
-      logger.debug?.(`[xhh][bwiki_gs] ${name} 武器词条抓取异常: ${err?.message}`);
+      logger.debug?.(`[HoYoGet][bwiki_gs] ${name} 武器词条抓取异常: ${err?.message}`);
       return false;
     }
     if (!item) return false;
@@ -2856,7 +2856,7 @@ export class Wiki extends plugin {
     try {
       detail = await fetchSrBwikiItem(name, type);
     } catch (err) {
-      logger.debug?.(`[xhh][bwiki_sr] ${name} 词条抓取异常: ${err?.message}`);
+      logger.debug?.(`[HoYoGet][bwiki_sr] ${name} 词条抓取异常: ${err?.message}`);
     }
     if (!detail && !meta) return false;
     const view = {
@@ -2879,7 +2879,7 @@ export class Wiki extends plugin {
     try {
       detail = await fetchSrBwikiItem(name, 'yq');
     } catch (err) {
-      logger.debug?.(`[xhh][bwiki_sr] ${name} 遗器词条抓取异常: ${err?.message}`);
+      logger.debug?.(`[HoYoGet][bwiki_sr] ${name} 遗器词条抓取异常: ${err?.message}`);
       return false;
     }
     if (!detail) return false;
@@ -2948,7 +2948,7 @@ export class Wiki extends plugin {
     try {
       d = await fetchZzzBwikiWeapon(name);
     } catch (err) {
-      logger.debug?.(`[xhh][bwiki_zzz] ${name} 音擎词条抓取异常: ${err?.message}`);
+      logger.debug?.(`[HoYoGet][bwiki_zzz] ${name} 音擎词条抓取异常: ${err?.message}`);
       return false;
     }
     if (!d) return false;
@@ -2963,7 +2963,7 @@ export class Wiki extends plugin {
         const hit = (list || []).find(v => key(v.title) === key(name));
         if (hit?.icon) icon = hit.icon;
       } catch (err) {
-        logger.debug?.(`[xhh][bwiki_zzz] ${name} 官方音擎列表匹配失败: ${err?.message}`);
+        logger.debug?.(`[HoYoGet][bwiki_zzz] ${name} 官方音擎列表匹配失败: ${err?.message}`);
       }
     }
     /* 详细面板仅保留最高等级那一行：Bwiki 原表为「初始 / 10 / 20 / … / 60」全量，
@@ -3038,7 +3038,7 @@ export class Wiki extends plugin {
     try {
       d = await fetchZzzBwikiDisc(name);
     } catch (err) {
-      logger.debug?.(`[xhh][bwiki_zzz] ${name} 驱动盘词条抓取异常: ${err?.message}`);
+      logger.debug?.(`[HoYoGet][bwiki_zzz] ${name} 驱动盘词条抓取异常: ${err?.message}`);
     }
     /* Bwiki 抓取失败时**不回退旧模板**：改用 nanoka 数据源取 2/4 件套与描述，
        仍渲染新版卡。nanoka 亦无该数据时，方交由外层回落。 */
@@ -3066,7 +3066,7 @@ export class Wiki extends plugin {
     try {
       card = await fetchZzzRoleCard(name);
     } catch (err) {
-      logger.debug?.(`[xhh][zzz_role] ${name} 角色卡抓取异常: ${err?.message}`);
+      logger.debug?.(`[HoYoGet][zzz_role] ${name} 角色卡抓取异常: ${err?.message}`);
       return false;
     }
     if (!card) return false;
@@ -3082,7 +3082,7 @@ export class Wiki extends plugin {
     try {
       bw = await fetchZzzBwikiBangboo(name);
     } catch (err) {
-      logger.debug?.(`[xhh][bwiki_zzz] ${name} 邦布词条抓取异常: ${err?.message}`);
+      logger.debug?.(`[HoYoGet][bwiki_zzz] ${name} 邦布词条抓取异常: ${err?.message}`);
     }
     let entryId = '';
     let icon = bw?.icon || '';
@@ -3092,7 +3092,7 @@ export class Wiki extends plugin {
       const hit = (list || []).find(v => key(v.title) === key(name));
       if (hit) { entryId = hit.content_id; icon = icon || hit.icon || ''; }
     } catch (err) {
-      logger.debug?.(`[xhh][bwiki_zzz] ${name} 官方邦布列表匹配失败: ${err?.message}`);
+      logger.debug?.(`[HoYoGet][bwiki_zzz] ${name} 官方邦布列表匹配失败: ${err?.message}`);
     }
     if (!bw && !entryId) return false;
     let my = { stats: [], talents: [], teams: [] };
@@ -3110,7 +3110,7 @@ export class Wiki extends plugin {
     try {
       detail = await fetchGsBwikiItem(name, 'syw');
     } catch (err) {
-      logger.debug?.(`[xhh][bwiki_gs] ${name} 圣遗物词条抓取异常: ${err?.message}`);
+      logger.debug?.(`[HoYoGet][bwiki_gs] ${name} 圣遗物词条抓取异常: ${err?.message}`);
       return false;
     }
     if (!detail) return this.gs_syw_fallback_pictures(e, name);
@@ -3163,7 +3163,7 @@ export class Wiki extends plugin {
       const data = await mys.data(name, 'syw', false, false);
       if (Array.isArray(data)) item = data.find(v => v.title === name);
     } catch (err) {
-      logger.debug?.(`[xhh][bwiki_gs] ${name} 圣遗物列表匹配失败: ${err?.message}`);
+      logger.debug?.(`[HoYoGet][bwiki_gs] ${name} 圣遗物列表匹配失败: ${err?.message}`);
       return false;
     }
     if (!item) return false;
@@ -3193,7 +3193,7 @@ export class Wiki extends plugin {
        未捕获异常会把整条消息吞掉，群里表现为「发了图鉴没反应/内容不全）。
        详情取不到就交回调用方走别的渲染路径，不要在这里崩。 */
     if (!data?.page?.modules?.length) {
-        logger.debug?.(`[xhh][图鉴] 武器详情页结构缺失（page=${data?.page === null ? 'null' : '无'}），跳过该渲染`);
+        logger.debug?.(`[HoYoGet][图鉴] 武器详情页结构缺失（page=${data?.page === null ? 'null' : '无'}），跳过该渲染`);
         return false;
     }
     const modules = data.page.modules;
@@ -3537,7 +3537,7 @@ export class Wiki extends plugin {
       if (!id) return null;
       return await mys.detail(id, false, false, true);
     } catch (err) {
-      if (config().debug) logger.mark(`[xhh] BH3专属装备获取角色详情失败: ${roleName} ${err?.message || err}`);
+      if (config().debug) logger.mark(`[HoYoGet] BH3专属装备获取角色详情失败: ${roleName} ${err?.message || err}`);
       return null;
     }
   }
@@ -3618,7 +3618,7 @@ export class Wiki extends plugin {
             const arr = JSON.parse(decodeURIComponent(match[1]));
             if (Array.isArray(arr)) parts.push(...arr);
           } catch (err) {
-            if (config().debug) logger.mark(`[xhh] BH3 wiki模板解析失败: ${title}`);
+            if (config().debug) logger.mark(`[HoYoGet] BH3 wiki模板解析失败: ${title}`);
           }
         }
       }
@@ -3821,7 +3821,7 @@ export class Wiki extends plugin {
   // 崩坏3武器
   async bh3_wq_pictures(e, data, roleName = '') {
     if (!data || !data.content) {
-      if (config().debug) logger.mark('[xhh] BH3武器详情数据为空');
+      if (config().debug) logger.mark('[HoYoGet] BH3武器详情数据为空');
       await e.reply(`未获取到武器详情，请稍后重试。`);
       return false;
     }
@@ -3867,7 +3867,7 @@ export class Wiki extends plugin {
             const arr = JSON.parse(decodeURIComponent(match[1]));
             if (Array.isArray(arr)) parts.push(...arr);
           } catch (err) {
-            if (config().debug) logger.mark(`[xhh] BH3武器模板解析失败: ${title} ${err?.message || err}`);
+            if (config().debug) logger.mark(`[HoYoGet] BH3武器模板解析失败: ${title} ${err?.message || err}`);
           }
         }
       }
@@ -3953,7 +3953,7 @@ export class Wiki extends plugin {
   // 崩坏3圣痕
   async bh3_syw_pictures(e, data, roleName = '') {
     if (!data || !data.content) {
-      if (config().debug) logger.mark('[xhh] BH3圣痕详情数据为空');
+      if (config().debug) logger.mark('[HoYoGet] BH3圣痕详情数据为空');
       await e.reply('未获取到圣痕详情，请稍后重试或使用完整圣痕名称查询。');
       return false;
     }

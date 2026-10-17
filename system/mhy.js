@@ -15,7 +15,7 @@ import { mhyFetch } from './mhy_fetch.js';
     return JSON.parse(text);
   } catch (err) {
     const head = String(text || '').trim().slice(0, 80);
-    logger.mark(`[xhh][mhy] ${label} 返回非 JSON，status=${resp.status} body=${head}`);
+    logger.mark(`[HoYoGet][mhy] ${label} 返回非 JSON，status=${resp.status} body=${head}`);
     return {
       retcode: -1,
       message: head.startsWith('<') ? '米游社返回拦截页，请稍后重试' : '米游社接口返回异常',
@@ -348,12 +348,12 @@ class mhy {
       // getSToken 补齐时返回 [stokenMap, 写出的数据]，文件已落盘
       if (Array.isArray(r)) {
         const n = Object.keys(r[1] || {}).length;
-        logger.mark(`[xhh][sign] 已从逍遥数据补齐 ${qq} 的 xhh 文件（${n} 条）`);
+        logger.mark(`[HoYoGet][sign] 已从逍遥数据补齐 ${qq} 的 xhh 文件（${n} 条）`);
         return { ok: true, filled: n };
       }
       return { ok: false, reason: 'getSToken 未补齐' };
     } catch (err) {
-      logger.error(`[xhh][sign] 补齐 ${qq} 的 xhh 文件失败: ${err.message}`);
+      logger.error(`[HoYoGet][sign] 补齐 ${qq} 的 xhh 文件失败: ${err.message}`);
       return { ok: false, reason: err.message };
     }
   }
