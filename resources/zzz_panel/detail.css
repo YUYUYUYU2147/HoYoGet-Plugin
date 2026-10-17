@@ -166,7 +166,7 @@ body {
 .set-item .own { color: #b0b9c9; font-size: .85em; margin-left: 6px; }
 .set-item .set-desc { color: #c3cad8; font-size: .86em; margin-top: 4px; line-height: 1.5; }
 
-.copyright { margin-top: 20px; text-align: center; color: #9aa3b5; font-size: .78em; }
+.copyright { margin-top: 20px; text-align: center; color: #ff4d4f; font-size: .78em; }
 
 /* —— 伤害计算段 —— */
 .dmg-wrap { padding: 18px 20px 14px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.09); border-radius: 12px; }

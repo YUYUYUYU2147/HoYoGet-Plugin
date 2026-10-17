@@ -950,7 +950,7 @@ export class zzz_panel_list extends plugin {
 
     const detail = normalizeDetail(avatar, uid)
     const charData = detail.charData
-    const footer = `from 米哈游 · UID ${uid} · ${server} · ${formatNow()}`
+    const footer = 'from 米哈游'
     try {
       const img = await render('zzz_panel/detail', { ...detail, footer, bgImage: getPanelBg() }, { e, ret: true })
       return img
@@ -1050,7 +1050,7 @@ export class zzz_panel_list extends plugin {
       ])
     }
     const cur = skills[idx]
-    const footer = `from 米哈游 · UID ${uid} · ${server} · ${formatNow()}`
+    const footer = 'from 米哈游'
     try {
       return await render('zzz_panel/damage', {
         ...detail,
