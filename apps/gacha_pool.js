@@ -1998,6 +1998,12 @@ export class xhh_gacha_pool extends plugin {
         changed = true;
         continue;
       }
+      // 已知联动池的图源这次没取到（公告接口临时失败）时，保留本地已修正的图；
+      // 否则后面的通用搜索会用旧图把正确的联动封面覆盖掉。
+      const collabSpec = SR_COLLAB_IMAGE_POSTS[String(item.ver || '')];
+      if (!collabImage && collabSpec && String(item.imgs?.[0] || '').includes(collabSpec.match)) {
+        continue;
+      }
       const roleImg = this.getSrOfficialPoolImage(item, false, records);
       const weaponImg = this.getSrOfficialPoolImage(item, true, records);
       const existingImgs = (item.imgs || []).filter(Boolean);
