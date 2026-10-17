@@ -462,9 +462,19 @@ function fillZzzIcons(pools) {
 // 故按 cwd 上溯到插件根目录再定位（插件自身运行时亦在仓库根启动，双路径都覆盖）
 // ZZZ-Plugin 的数据在仓库根 data/ 下（插件自身在 plugins/xxx），故按插件根的上一级定位，
 // 不依赖进程 cwd（Yunzai 启动时 cwd 是插件目录，会找不到）
-const ZZZ_PLUGIN_POOL_DIR = path.resolve(PLUGIN_ROOT, '../../data/ZZZ-Plugin/gacha')
-  ? `${process.cwd()}/data/ZZZ-Plugin/gacha`
-  : `${process.cwd()}/../../data/ZZZ-Plugin/gacha`
+// 优先读本插件迁移后的副本，ZZZ-Plugin 原目录仅作兜底
+const ZZZ_PLUGIN_POOL_DIRS = [
+  path.join(PLUGIN_ROOT, 'data', 'zzz_gacha', 'zzz_plugin'),
+  path.join(process.cwd(), 'data', 'ZZZ-Plugin', 'gacha'),
+  path.resolve(PLUGIN_ROOT, '../../data/ZZZ-Plugin/gacha'),
+]
+function zzzPluginPoolFile(uid) {
+  for (const dir of ZZZ_PLUGIN_POOL_DIRS) {
+    const file = path.join(dir, `${uid}.json`)
+    if (fs.existsSync(file)) return file
+  }
+  return path.join(ZZZ_PLUGIN_POOL_DIRS[0], `${uid}.json`)
+}
 const ZZZ_PLUGIN_POOL_MAP = {
   独家频段: 'GachaType_CharacterUp',
   独家重映: 'GachaType_RerunCharacter',
@@ -477,7 +487,7 @@ const ZZZ_PLUGIN_POOL_MAP = {
 const ZZZ_PLUGIN_RANK_MAP = { 4: '5', 3: '4', 2: '3' }
 
 function readZzzPluginRows(uid) {
-  const file = `${ZZZ_PLUGIN_POOL_DIR}/${uid}.json`
+  const file = zzzPluginPoolFile(uid)
   if (!fs.existsSync(file)) return null
   try {
     const data = JSON.parse(fs.readFileSync(file, 'utf8'))
@@ -1249,7 +1259,7 @@ export class zzz_gacha extends plugin {
     if (!uid) return e.reply('请先绑定绝区零账号，或使用【#米哈游绝区零导入四星 <UID>】指定 UID')
     const pluginData = readZzzPluginRows(uid)
     if (!pluginData) {
-      return e.reply(`未找到 ZZZ-Plugin 的抽卡数据（${ZZZ_PLUGIN_POOL_DIR}/${uid}.json）\n请先在 ZZZ-Plugin 里更新一次绝区零抽卡记录`)
+      return e.reply(`未找到逐抽记录（${zzzPluginPoolFile(uid)}）\n请先在 ZZZ-Plugin 里更新一次绝区零抽卡记录，或把记录放到 data/zzz_gacha/zzz_plugin/`)
     }
     const file = getDataFile(uid, auth?.qq || e.user_id)
     const old = readData(file)
