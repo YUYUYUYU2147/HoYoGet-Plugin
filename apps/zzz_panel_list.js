@@ -1,10 +1,9 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-// config 必须一起导入：loadCfg() 要用它读 plugins/HoYoGet-Plugin/config/config.yaml，
-// 只导入 pluginPriority 会让 config() 抛 ReferenceError。
-import { config, pluginPriority, render, yaml } from '#HoYoGet'
+import { pluginPriority, render, yaml } from '#HoYoGet'
 import { damageSkillsAt, getCharRates } from '../system/zzz_skill_rate.js'
+import { getBuffAreas } from '../system/zzz_buff.js'
 
 /**
  * 绝区零面板（xhh 自研）—— 第 2 步：归一化 + 自研渲染。
@@ -123,21 +122,38 @@ function toNum(v) {
  * 敌方面板默认：level=角色等级、1级基础防御力=50（敌防=等级基数）、抗性=-0.2（有弱点）。
  * 仅计算与技能无关的乘区；基础区=技能倍率×攻击力，倍率需角色数据（米游社接口不返回），故不展示。
  */
-function calcDamageAreas(bp, level) {
-  const crit = Math.min(1, toRatio(bp.crit?.final))
-  const critdmg = Math.min(5, toRatio(bp.critdam?.final))
+const hasSetBoost = extra => !!(extra?.applied || []).some(x => x.src === '套装' && x.type === '增伤')
+
+function calcDamageAreas(bp, level, extra = {}) {
+  const crit = Math.min(1, toRatio(bp.crit?.final) + (extra.critRateAdd || 0))
+  const critdmg = Math.min(5, toRatio(bp.critdam?.final) + (extra.critdmgAdd || 0))
   const lv = level && level > 0 ? level : 1
   const getBase = l => Math.floor(0.1551 * Math.min(60, l) ** 2 + 3.141 * Math.min(60, l) + 47.2039)
   const base = getBase(lv)
   const DEF = (50 / 50) * getBase(lv)
-  const penRatio = Math.min(2, toRatio(bp.penratio?.final))
-  const pen = toNum(bp.penvalue?.final)
-  const effectiveDef = Math.max(0, DEF * (1 - penRatio) - pen)
+  const penRatio = Math.min(2, toRatio(bp.penratio?.final) + (extra.penRatioAdd || 0))
+  const pen = toNum(bp.penvalue?.final) + (extra.penValueAdd || 0)
+  // 无视防御与穿透率分属两个乘数：DEF × (1-无视防御) × (1-穿透率) - 穿透值
+  const defIgnore = Math.min(1, extra.defIgnoreAdd || 0)
+  const effectiveDef = Math.max(0, DEF * (1 - defIgnore) * (1 - penRatio) - pen)
   return {
     critical: 1 + crit * critdmg,
-    boost: 1 + toRatio(bp.dmgbonus?.final),
-    vulnerability: 1,
-    resistance: 1 - (-0.2),
+    crit,
+    critdmg,
+    // 增伤区 = 1 + Σ 增益增伤（音擎主动 + 套装被动 + 额外能力 + 影画）
+    //
+    // 面板自带的 dmgbonus（属性伤害加成）**不能再乘一次**：绝区零的属性伤害加成
+    // 只由驱动盘套装被动提供，它就是 sets 里 check:2/4 的那几条，重复计入会翻倍。
+    // 所以只在「没有套装增伤被计入」时才用面板值兜底（例如套装数据未收录时）。
+    // 同理 crit/critdmg/penratio/penvalue 里的增益项：音擎的暴击率与暴伤是常驻被动，
+    // 接口给出的 final 已含（实测 final 的 add 项为 +0.0%），但核心被动的暴伤是
+    // 按技能等级激活的、面板不含，所以核心被动的暴伤要额外计入。
+    boost: hasSetBoost(extra)
+      ? (extra.boost || 1)
+      : (toRatio(bp.dmgbonus?.final) + (extra.boost || 1)),
+    vulnerability: extra.vulnerability || 1,
+    // 抗性区 = 1 - (敌人抗性 - 无视抗性)；默认敌人抗性 -0.2（有弱点）
+    resistance: 1 - (-0.2 - (extra.resIgnoreAdd || 0)),
     defence: Math.min(1, Math.max(0, base / (effectiveDef + base))),
   }
 }
@@ -178,21 +194,24 @@ function skillCat(text) {
   if (/快速支援|招架支援|支援突击|支援/.test(t)) return 'L'
   return ''
 }
-function keyCat(key) {
-  const k = String(key || '').toUpperCase()
-  if (/^AP/.test(k)) return 'AP'
-  if (/^AQ/.test(k)) return 'AQ'
-  if (/^AX/.test(k)) return 'AX'
-  if (/^CF/.test(k)) return 'CF'
-  if (/^EQ/.test(k)) return 'EQ'
-  if (/^RL/.test(k)) return 'RL'
-  if (/^RZ/.test(k)) return 'RZ'
-  if (/^C/.test(k)) return 'C'
-  if (/^E/.test(k)) return 'E'
-  if (/^R/.test(k)) return 'R'
-  if (/^T/.test(k)) return 'T'
-  if (/^L/.test(k)) return 'L'
-  return k
+/**
+ * 从接口原始角色数据拼出增益查询上下文。
+ * 注意各字段的口径：weapon.star 是**精炼**（1~5），rarity 才是稀有度；
+ * 影画数是 avatar.rank；驱动盘套装名在 equip[].equip_suit.name（同名多件即为件数）。
+ */
+function buildBuffContext(avatar, charName) {
+  const w = avatar?.weapon || {}
+  return {
+    charName,
+    charFull: avatar?.full_name_mi18n || '',
+    element: ZELEM_STR[avatar?.element_type] || '',
+    weapon: w?.name || '',
+    refine: Number(w?.star) || 0,
+    suits: (avatar?.equip || []).map(d => d?.equip_suit?.name).filter(Boolean),
+    rank: Number.isFinite(Number(avatar?.rank)) ? Number(avatar.rank) : undefined,
+    // 核心被动的档位值按「核心技等级」代入
+    tLevel: Number(avatar?.skills?.find(s => Number(s?.skill_type) === 5)?.level) || 1,
+  }
 }
 
 function calcDamage(bp, level, avatar, charName) {
@@ -202,14 +221,15 @@ function calcDamage(bp, level, avatar, charName) {
   const rates = damageSkillsAt(charName, 16)
   if (!rates.ok) return { ok: false, error: rates.error }
 
-  const areas = calcDamageAreas(bp, level)
-  const critdmg = Math.min(5, toRatio(bp?.critdam?.final))
-  // 期望区含暴击率，暴击列不含
-  const expectMul = areas.boost * areas.vulnerability * areas.resistance * areas.defence
+  // 增益乘区（音擎/套装/核心被动/额外能力/影画）与技能有关：range 按技能代号过滤，
+  // 所以每个技能单独取一次，见下方循环。
+  const buffBase = buildBuffContext(avatar, charName)
   const table = new Map()
   for (const s of rates.skills) {
     if (!s.name) continue
-    table.set(`${keyCat(s.key)}|${skillCore(s.name)}`, s)
+    // 以「名字里的类别」为准，而不是 key 前缀：个别角色的 key 与名字类别不一致
+    //（如 AXP 对应的名字是「普攻：…」），按 key 分会漏配接口技能。
+    table.set(`${skillCat(s.name)}|${skillCore(s.name)}`, s)
   }
 
   // 接口 skills[]：skill_type 0普攻 1特殊技 2闪避 3连携 5核心 6支援
@@ -225,30 +245,53 @@ function calcDamage(bp, level, avatar, charName) {
       const rate = Number(hit.rates?.[idx] ?? hit.rate)
       if (!Number.isFinite(rate) || rate <= 0) continue
       const base = rate * atk
+      const buff = getBuffAreas({ ...buffBase, key: hit.key, dynLevel: buffBase.tLevel })
+      const areas = calcDamageAreas(bp, level, buff)
+      // 期望区含暴击率（期望值），暴击列不含 —— 两列口径不同，别混用
+      const mul = areas.boost * areas.vulnerability * areas.resistance * areas.defence
       out.push({
         name: title,
         skillType: Number(sk.skill_type),
+        key: hit.key,
         level: skLv,
         rate,
         base: Math.round(base),
-        expect: Math.round(base * areas.critical * expectMul),
-        crit: Math.round(base * (1 + critdmg) * expectMul),
+        boost: Math.round(areas.boost * 1000) / 1000,
+        expect: Math.round(base * areas.critical * mul),
+        crit: Math.round(base * (1 + areas.critdmg) * mul),
+        buffNames: buff.applied.map(x => x.name),
+        buffMiss: buff.missing,
       })
     }
   }
   if (!out.length) return { ok: false, error: '接口技能与倍率表没有交集（该角色可能未收录倍率）' }
 
-  // 按倍率降序：面板上最痛的招式排前面
+  // 按倍率降序：面板上最痛的招式排前面；顶部乘区也要取这个技能，不能取接口顺序第一个
   out.sort((a, b) => b.rate - a.rate)
+  const topBuff = getBuffAreas({ ...buffBase, key: out[0].key, dynLevel: buffBase.tLevel })
+  const areas = calcDamageAreas(bp, level, topBuff)
+  const critdmg = areas.critdmg
   const r2 = (v) => Math.round(v * 1000) / 1000
+  const buffRows = topBuff.applied.map(x => ({ src: x.src, name: x.name, type: x.type, value: `${r2(x.value * 100)}%` }))
+  const buffMiss = [...new Set(out.flatMap(x => x.buffMiss || []))]
   return {
     ok: true,
     atk,
     areas,
     critdmg,
+    buffRows,
+    buffMiss,
+    // 口径说明：写进面板，免得看到数字却不知道它算的是什么
+    notes: [
+      '期望＝1+暴击率×暴伤 的期望值；暴击列按必暴击计，不含暴击率。',
+      '敌方面板按角色等级、1级基础防御50、抗性-0.2（有弱点）估算；未计失衡易伤。',
+      '增伤区只计音擎、套装、核心被动、额外能力、影画；技能自身倍率型增伤（如对某目标增伤50%）未计。',
+      '多段技能只按首段倍率算，未累加后续段数（如强化特殊技的后续段）。',
+      buffMiss.length ? `未收录：${buffMiss.join('、')}` : '',
+    ].filter(Boolean),
     skills: out,
     top: out[0],
-    areasTxt: `暴击${r2(areas.critical)} 增伤${r2(areas.boost)} 易伤${r2(areas.vulnerability)} 抗性${r2(areas.resistance)} 防御${r2(areas.defence)}`,
+    areasTxt: `暴击${r2(areas.critical)} 增伤${r2(areas.boost)} 易伤${r2(areas.vulnerability)} 抗性${r2(areas.resistance)} 防御${r2(areas.defence)}（取倍率最高一招）`,
   }
 }
 
