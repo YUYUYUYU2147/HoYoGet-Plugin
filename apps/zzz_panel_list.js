@@ -210,7 +210,10 @@ function buildCalcDetail(bp, level, one) {
   const critdmg = r(a.critdmg, 4)
   const penRatio = r(Math.min(2, toRatio(bp.penratio?.final) + (one.buff?.penRatioAdd || 0)), 4)
   const penValue = r(toNum(bp.penvalue?.final) + (one.buff?.penValueAdd || 0), 2)
-  const effDef = Math.max(0, enemyBase * (1 - penRatio) - penValue)
+  const defIgnore = r(Math.min(1, one.buff?.defIgnoreAdd || 0), 4)
+  const resIgnore = r(one.buff?.resIgnoreAdd || 0, 4)
+  // 与 calcDamageAreas 保持同一公式：先扣无视防御，再扣穿透率，最后减穿透值
+  const effDef = Math.max(0, enemyBase * (1 - defIgnore) * (1 - penRatio) - penValue)
   return {
     atk,
     // 必须用 baseTotal（含多段追加），否则「等效倍率 × 攻击力」与基础区对不上
@@ -223,10 +226,12 @@ function buildCalcDetail(bp, level, one) {
     boost: r(a.boost, 3),
     vulnerability: r(a.vulnerability, 3),
     resistance: r(a.resistance, 3),
-    resFormula: '1 − (−0.2)',
+    resFormula: resIgnore ? `1 − (−0.2 − ${resIgnore})` : '1 − (−0.2)',
+    resIgnore,
     enemyBase,
     penRatio,
     penValue,
+    defIgnore,
     effDef: Math.round(effDef),
     defArea: r(a.defence, 4),
     defFormula: `${enemyBase} ÷ (${Math.round(effDef)} + ${enemyBase})`,
@@ -333,10 +338,17 @@ function calcDamage(bp, level, avatar, charName) {
         crit *= op.n
         // 总倍率也要跟着乘，否则多段技能的「等效倍率」会少算 x 系数
         baseTotal *= op.n
+        // 已经生成的段也要同步乘，否则「分段拆解」各段之和与总伤害对不上
+        for (const p of parts) {
+          p.rate *= op.n
+          p.base *= op.n
+          p.expect *= op.n
+          p.crit *= op.n
+        }
       }
     }
     seen.delete(key)
-    return { key, name: entry.name, rate, base, baseTotal, areas, buff, expect, crit, adds }
+    return { key, name: entry.name, rate, base, baseTotal, areas, buff, expect, crit, adds, parts }
   }
 
   // 接口 skills[]：skill_type 0普攻 1特殊技 2闪避 3连携 5核心 6支援
@@ -958,9 +970,11 @@ export class zzz_panel_list extends plugin {
     if (!avatar) return e.reply('取到详情响应，但没识别到角色数据')
 
     const detail = normalizeDetail(avatar, uid)
-    const damage = detail.damage
+    const charData = detail.charData
+    // normalizeDetail 返回 { uid, charData }，damage 挂在 charData 上，不在顶层
+    const damage = charData.damage
     if (!damage?.ok) {
-      return e.reply(`「${detail.charData.full_name_mi18n || arg}」暂无伤害计算：${damage?.error || '未知原因'}`)
+      return e.reply(`「${charData.full_name_mi18n || arg}」暂无伤害计算：${damage?.error || '未知原因'}`)
     }
 
     const skills = damage.skills
@@ -969,7 +983,7 @@ export class zzz_panel_list extends plugin {
       return e.reply([
         `序号超出范围，当前共 ${skills.length} 招。`,
         `可用序号：${skills.map((_, i) => i + 1).join('、')}`,
-        `例如：米游社${detail.charData.name_mi18n || arg}伤害${skills.length}`,
+        `例如：米游社${charData.full_name_mi18n || arg}伤害${skills.length}`,
       ])
     }
     const cur = skills[idx]
@@ -981,7 +995,7 @@ export class zzz_panel_list extends plugin {
         cur,
         curIndex: idx,
         uid,
-        command: `米游社${detail.charData.name_mi18n || arg}伤害${idx + 1}`,
+        command: `米游社${charData.full_name_mi18n || arg}伤害${idx + 1}`,
         footer,
       }, { e, ret: true })
     } catch (err) {

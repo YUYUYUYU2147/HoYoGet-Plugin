@@ -15,7 +15,7 @@
       <div class="hd-left">
         <div class="hd-name"><span class="rarity {{c.rarity}}"></span>{{c.full_name_mi18n}}</div>
         <div class="hd-meta">
-          Lv.{{c.level}} · {{c.element_cn}} · {{c.type_cn}} · 影{{c.rank}} · 攻击力 {{cur.calc.atk}}
+          Lv.{{c.level}} · {{c.element_cn}} · {{c.profession}} · 影{{c.rank}} · 攻击力 {{cur.calc.atk}}
           {{if c.weapon}} · {{c.weapon.name}} 精炼{{c.weapon.refine}}{{/if}}
         </div>
       </div>
@@ -42,7 +42,7 @@
         </tr>
         {{/each}}
       </table>
-      <div class="tip">点序号可换招，例如 <b>米游社{{c.name_mi18n}}伤害2</b></div>
+      <div class="tip">点序号可换招，例如 <b>米游社{{c.full_name_mi18n}}伤害2</b></div>
     </div>
 
     <div class="sec-title">{{cur.name}} · 计算过程</div>
@@ -69,7 +69,7 @@
           <tr>
             <td class="n">增伤区</td>
             <td class="r">{{cur.calc.boost}}</td>
-            <td class="n fx">1 + Σ 音擎/套装/额外能力/影画 的增伤</td>
+            <td class="n fx">1 + Σ 音擎/套装/核心被动/额外能力/影画 的增伤（套装未收录时用面板兜底）</td>
           </tr>
           <tr>
             <td class="n">易伤区</td>
@@ -79,13 +79,13 @@
           <tr>
             <td class="n">抗性区</td>
             <td class="r">{{cur.calc.resistance}}</td>
-            <td class="n fx">{{cur.calc.resFormula}}　<span class="dim">按敌人有弱点估算</span></td>
+            <td class="n fx">{{cur.calc.resFormula}}　<span class="dim">按敌人有弱点估算{{if cur.calc.resIgnore}}，含无视抗性 {{cur.calc.resIgnore}}{{/if}}</span></td>
           </tr>
           <tr>
             <td class="n">防御区</td>
             <td class="r">{{cur.calc.defArea}}</td>
             <td class="n fx">{{cur.calc.defFormula}}
-              <span class="dim">敌方基础防御 {{cur.calc.enemyBase}}，穿透率 {{cur.calc.penRatio}}、穿透值 {{cur.calc.penValue}} → 有效防御 {{cur.calc.effDef}}</span>
+              <span class="dim">敌方基础防御 {{cur.calc.enemyBase}}{{if cur.calc.defIgnore}}、无视防御 {{cur.calc.defIgnore}}{{/if}}，穿透率 {{cur.calc.penRatio}}、穿透值 {{cur.calc.penValue}} → 有效防御 {{cur.calc.effDef}}</span>
             </td>
           </tr>
         </table>
