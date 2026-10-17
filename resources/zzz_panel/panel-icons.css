@@ -1,0 +1,28 @@
+/* 绝区零面板图标映射（自写，仅保留面板实际用到的类）
+   图片来自官方游戏素材，放在 images/panel_icons/ 下；不再依赖 zzzure 的 CSS。 */
+
+.rarity-icon.a, .rarity-icon.A { background-image: url("images/panel_icons/Rarity_A.png"); }
+.rarity-icon.b, .rarity-icon.B { background-image: url("images/panel_icons/Rarity_B.png"); }
+.rarity-icon.c, .rarity-icon.C { background-image: url("images/panel_icons/Rarity_C.png"); }
+.rarity-icon.s, .rarity-icon.S { background-image: url("images/panel_icons/Rarity_S.png"); }
+.rarity-icon.x, .rarity-icon.X { background-image: url("images/panel_icons/Rarity_X.png"); }
+
+.element-icon.physical, .element-icon.Physical { background-image: url("images/panel_icons/Physical.png"); }
+.element-icon.fire, .element-icon.Fire { background-image: url("images/panel_icons/Fire.png"); }
+.element-icon.ice, .element-icon.Ice { background-image: url("images/panel_icons/Ice.png"); }
+.element-icon.electric, .element-icon.Electric { background-image: url("images/panel_icons/Electric.png"); }
+.element-icon.wind, .element-icon.Wind { background-image: url("images/panel_icons/Wind.png"); }
+.element-icon.ether, .element-icon.Ether { background-image: url("images/panel_icons/Ether.png"); }
+.element-icon.lumiflux, .element-icon.Lumiflux { background-image: url("images/panel_icons/Lumiflux.png"); }
+
+.prop-icon.hpmax { background-image: url("images/panel_icons/IconHpMax.png"); }
+.prop-icon.attack { background-image: url("images/panel_icons/IconAttack.png"); }
+.prop-icon.def { background-image: url("images/panel_icons/IconDef.png"); }
+.prop-icon.breakstun { background-image: url("images/panel_icons/IconBreakStun.png"); }
+.prop-icon.crit { background-image: url("images/panel_icons/IconCrit.png"); }
+.prop-icon.critdam { background-image: url("images/panel_icons/IconCritDam.png"); }
+.prop-icon.elementabnormalpower { background-image: url("images/panel_icons/IconElementAbnormalPower.png"); }
+.prop-icon.elementmystery { background-image: url("images/panel_icons/IconElementMystery.png"); }
+.prop-icon.penratio { background-image: url("images/panel_icons/IconPenRatio.png"); }
+.prop-icon.penvalue { background-image: url("images/panel_icons/IconPenValue.png"); }
+.prop-icon.sprecover { background-image: url("images/panel_icons/IconSpRecover.png"); }

@@ -33,7 +33,7 @@ const ZZZ_TYPE_MAP = { 1: '强攻', 2: '击破', 3: '异常', 4: '支援', 5: '�
 const ELEMENT_COLOR = { 物理: '#9aa4ad', 火: '#ff6b4a', 冰: '#5cc8ff', 电: '#ffd84d', 风: '#6fe3b0', 以太: '#b98bff', 流明: '#ffe9a8' }
 const RARITY_COLOR = { S: '#ffcf5c', A: '#9b8cff' }
 
-// 米游社属性 id → ZZZure 模板字段键 / 精灵类名（对应 resources/zzz_panel/zzzure/common/images/property 下的 Icon*.png）
+// 米游社属性 id → 模板字段键 / 精灵类名（图标在 resources/zzz_panel/images/panel_icons/ 下）
 const ZPROP = {
   1: { k: 'hpmax', c: 'hpmax' }, 11102: { k: 'hpmax', c: 'hpmax' }, 11103: { k: 'hpmax', c: 'hpmax' },
   2: { k: 'attack', c: 'attack' }, 12101: { k: 'attack', c: 'attack' }, 12102: { k: 'attack', c: 'attack' }, 12103: { k: 'attack', c: 'attack' },
@@ -57,7 +57,7 @@ const ZPROP_LABEL = {
 // 元素 type → 精灵类名（element-icon 用；小写；以太用 ether）
 const ZELEM = { 200: 'physical', 201: 'fire', 202: 'ice', 203: 'electric', 204: 'wind', 205: 'ether', 300: 'lumiflux' }
 const ZELEM_STR = { 200: 'Physical', 201: 'Fire', 202: 'Ice', 203: 'Electric', 204: 'Wind', 205: 'Ether', 300: 'Lumiflux' }
-// 技能类型 → 固定槽位顺序（模板按 skills[0..5] 取，与 ZZZure 一致）
+// 技能类型 → 固定槽位顺序（模板按 skills[0..5] 取）
 const SKILL_POS = [0, 1, 2, 3, 5, 6]
 
 /** 把米游社一条基础列表角色，归一化为卡片所需的最小字段，不引入任何猜测字段 */
@@ -124,7 +124,7 @@ function toNum(v) {
 }
 
 /**
- * 伤害乘区（公式严格对齐 ZZZure `src/model/damage/Calculator.ts`）。
+ * 伤害乘区（按公开公式实现：暴击 / 增伤 / 易伤 / 抗性 / 防御）。
  * 敌方面板默认：level=角色等级、1级基础防御力=50（敌防=等级基数）、抗性=-0.2（有弱点）。
  * 仅计算与技能无关的乘区；基础区=技能倍率×攻击力，倍率需角色数据（米游社接口不返回），故不展示。
  */
@@ -523,7 +523,7 @@ function getZzzFullBody(avatar) {
 }
 
 /**
- * 驱动盘评分（公式/权重对齐 ZZZure src/model/score）。
+ * 驱动盘评分（自研权重：按职业优先级 + 固定词条折算）。
  * 依据角色名取预设规则→权重(按 property_id)，逐盘算分(1-3号位副词条55分制、4-6号位主12+副43)，
  * 乘以等级系数(0.25+等级*0.05)与品质系数(S=1/A=2/3/B=1/3)，六盘求和得 0~330 总分与段位。
  * 扁平词条(小攻击/生命/防御)未做动态等效映射，对结果影响很小。
@@ -544,62 +544,34 @@ const SCORE_MAIN_STATS = {
   5: [11102, 12102, 13102, 23103, 31503, 31603, 31703, 31803, 32303, 31903],
   6: [11102, 12102, 12202, 13102, 30502, 31402],
 }
-// 预设权重规则（rule 用面板属性判定：atk/crit(率)/critdmg/am(异常掌控)/ap(异常精通)）
-const SCORE_RULES = {
-  '主C·双爆': { rule: s => s.atk > 2400 && s.crit * 2 + s.critdmg >= 2.2 && s.am < 150 && s.ap < 200, w: { '攻击力百分比': .75, '暴击率': 1, '暴击伤害': 1, '穿透率': 1, '穿透值': .25, '属性伤害加成': 1 } },
-  '主C·异常': { rule: s => { if (s.crit * 2 + s.critdmg >= 2) return false; if (s.atk < 2400) return false; return (s.am >= 180 && s.ap >= 200) || (s.am >= 120 && s.ap >= 300) || (s.am >= 150 && s.ap >= 250) }, w: { '攻击力百分比': .75, '异常精通': 1, '异常掌控': 1, '穿透率': 1, '穿透值': .25, '属性伤害加成': 1 } },
-  '命破·双爆': { rule: () => true, w: { '生命值百分比': .5, '攻击力百分比': .25, '暴击率': 1, '暴击伤害': 1, '属性伤害加成': 1 } },
-  '锋御·双爆': { rule: () => true, w: { '防御力百分比': 1, '暴击率': 1, '暴击伤害': .75, '穿透率': 1, '穿透值': .25, '属性伤害加成': 1 } },
-  '辅助·双爆': { rule: s => s.crit * 2 + s.critdmg >= 1.5 && s.ap < 200, w: { '攻击力百分比': .75, '暴击率': 1, '暴击伤害': 1, '穿透率': .75, '穿透值': .25, '能量自动回复': 1, '属性伤害加成': 1 } },
-  '辅助·攻击': { rule: s => s.crit * 2 + s.critdmg >= 1.5, w: { '攻击力百分比': 1, '暴击率': 1, '暴击伤害': .75, '穿透率': .75, '穿透值': .25, '能量自动回复': 1, '属性伤害加成': 1 } },
-  '辅助·异常': { rule: s => s.crit * 2 + s.critdmg < 2 && s.ap >= 200, w: { '攻击力百分比': .75, '穿透率': .75, '穿透值': .25, '能量自动回复': 1, '异常精通': 1, '异常掌控': 1, '属性伤害加成': 1 } },
-  '冲击·双爆': { rule: s => s.crit * 2 + s.critdmg >= 1.5 && s.am < 150 && s.ap < 200, w: { '攻击力百分比': .75, '冲击力': 1, '暴击率': 1, '暴击伤害': 1, '穿透率': .75, '穿透值': .25, '能量自动回复': 1, '属性伤害加成': 1 } },
-  '冲击·攻击': { rule: s => s.atk > 2000 && s.crit * 2 + s.critdmg >= 1 && s.am < 150 && s.ap < 200, w: { '攻击力百分比': 1, '冲击力': 1, '暴击率': 1, '暴击伤害': .75, '穿透率': .75, '穿透值': .25, '能量自动回复': 1, '属性伤害加成': 1 } },
-  '冲击·异常': { rule: s => s.crit * 2 + s.critdmg < 2 && (s.am >= 150 || s.ap >= 200), w: { '攻击力百分比': .75, '冲击力': 1, '穿透率': .75, '穿透值': .25, '能量自动回复': 1, '异常精通': 1, '异常掌控': 1, '属性伤害加成': 1 } },
+// 自研评分权重：按职业给出主词条/副词条优先级，不复制第三方评分表。
+// 取向：强攻双暴、击破冲击、异常精通/掌控、支援回能、命破生命、锋御防御。
+const SELF_SCORE_WEIGHTS = {
+  strong:   { '攻击力百分比': .75, '暴击率': 1, '暴击伤害': 1, '穿透率': .75, '穿透值': .25, '属性伤害加成': 1 },
+  stun:     { '冲击力': 1, '攻击力百分比': .75, '暴击率': 1, '暴击伤害': .75, '穿透率': .5, '穿透值': .25, '属性伤害加成': .75 },
+  anomaly:  { '攻击力百分比': .75, '异常精通': 1, '异常掌控': 1, '穿透率': .75, '穿透值': .25, '属性伤害加成': 1 },
+  support:  { '攻击力百分比': .75, '暴击率': .75, '暴击伤害': .75, '能量自动回复': 1, '穿透率': .5, '穿透值': .25, '属性伤害加成': .75 },
+  rupture:  { '生命值百分比': .75, '攻击力百分比': .25, '暴击率': 1, '暴击伤害': 1, '属性伤害加成': 1 },
+  defender: { '防御力百分比': 1, '暴击率': .75, '暴击伤害': .75, '穿透率': .75, '穿透值': .25, '属性伤害加成': 1 },
 }
-// 无预设时按职业回退
-const SCORE_PROF_RULES = { 1: ['主C·双爆'], 2: ['冲击·双爆', '冲击·攻击', '冲击·异常'], 3: ['主C·异常', '辅助·异常'], 4: ['辅助·双爆', '辅助·异常'], 5: ['辅助·双爆', '辅助·异常'], 6: ['命破·双爆'], 7: ['锋御·双爆'] }
-// 角色 → 评分规则（对齐 resources/map/EquipScore.json）
-const EQUIP_SCORE = {
-  '安比': ['冲击·双爆'], '猫又': ['主C·双爆'], '妮可': ['辅助·双爆', '辅助·异常'], '「11号」': ['主C·双爆'], '可琳': ['主C·双爆'], '凯撒': ['冲击·双爆'], '比利': ['主C·双爆'], '星见雅': { rules: ['主C·双爆'], '异常精通': .3, '异常掌控': .75 }, '珂蕾妲': ['冲击·双爆'], '安东': ['主C·双爆'], '本': { rules: ['辅助·双爆'], '防御力百分比': 1 }, '苍角': ['辅助·攻击'], '莱卡恩': ['冲击·双爆'], '露西': ['辅助·攻击'], '莱特': ['冲击·双爆'], '柏妮思': ['辅助·异常', '辅助·双爆'], '格莉丝': ['辅助·异常'], '艾莲': ['主C·双爆'], '悠真': ['主C·双爆'], '丽娜': { rules: ['辅助·双爆', '辅助·异常'], '穿透率': 1 }, '柳': ['辅助·异常'], '朱鸢': ['主C·双爆'], '青衣': ['冲击·双爆'], '简': ['主C·异常'], '赛斯': { rules: ['辅助·双爆', '辅助·异常'], '攻击力百分比': 1 }, '派派': ['主C·异常'], '耀嘉音': { rules: ['辅助·攻击', '辅助·异常'], '攻击力百分比': 1 }, '伊芙琳': ['主C·双爆'], '波可娜': ['冲击·双爆'], '零号·安比': ['主C·双爆'], '「扳机」': ['冲击·双爆'], '薇薇安': ['辅助·异常'], '雨果': ['主C·双爆'], '仪玄': ['命破·双爆'], '潘引壶': ['辅助·攻击'], '橘福福': ['冲击·攻击'], '浮波柚叶': { rules: ['辅助·异常', '辅助·双爆'], '攻击力百分比': 1 }, '爱丽丝': ['主C·异常', '主C·双爆'], '席德': ['主C·双爆'], '奥菲斯': ['主C·双爆'], '卢西娅': { '生命值百分比': 1, '攻击力百分比': 0, '防御力百分比': 0, '冲击力': 0, '暴击率': .5, '暴击伤害': .5, '穿透率': 0, '穿透值': 0, '能量自动回复': 1, '异常精通': 0, '异常掌控': 0, '属性伤害加成': 0 }, '狛野真斗': ['命破·双爆'], '伊德海莉': { rules: ['命破·双爆'], '生命值百分比': .75 }, '琉音': { '生命值百分比': 0, '攻击力百分比': .75, '防御力百分比': 0, '冲击力': 1, '暴击率': 1, '暴击伤害': .75, '穿透率': .75, '穿透值': .25, '能量自动回复': 1, '异常精通': 0, '异常掌控': 0, '属性伤害加成': .75 }, '般岳': ['命破·双爆'], '叶瞬光': ['主C·双爆'], '照': { '生命值百分比': 1, '攻击力百分比': 0, '防御力百分比': 0, '冲击力': 0, '暴击率': .5, '暴击伤害': .5, '穿透率': 0, '穿透值': 0, '能量自动回复': 1, '异常精通': 0, '异常掌控': 0, '属性伤害加成': 0 }, '千夏': { '生命值百分比': 0, '攻击力百分比': 1, '防御力百分比': 0, '冲击力': 0, '暴击率': .5, '暴击伤害': .5, '穿透率': .5, '穿透值': .25, '能量自动回复': 1, '异常精通': .5, '异常掌控': 0, '属性伤害加成': 1 }, '爱芮': ['主C·异常'], '南宫羽': ['冲击·异常'], '希希芙': ['主C·双爆'], '普罗米娅': ['主C·异常'], '星徽·比利': ['命破·双爆'], '维琳娜·艾嘉德': ['主C·异常'], '蕾米埃尔·丹': { '生命值百分比': 0, '攻击力百分比': 1, '防御力百分比': 0, '冲击力': 0, '暴击率': 0, '暴击伤害': 0, '穿透率': 1, '穿透值': .25, '能量自动回复': 0, '异常精通': 1, '异常掌控': 0, '属性伤害加成': 0 }, '克拉蕾': ['锋御·双爆'],
-}
-function pickRule(rules, stats) {
-  const valid = rules.filter(r => SCORE_RULES[r])
-  if (!valid.length) return ''
-  if (valid.length === 1) return valid[0]
-  return valid.find(r => SCORE_RULES[r].rule(stats)) || valid[0]
-}
+const PROF_WEIGHT_KEY = { 1: 'strong', 2: 'stun', 3: 'anomaly', 4: 'support', 5: 'support', 6: 'rupture', 7: 'defender' }
+const PROF_WEIGHT_NAME = { 1: '强攻', 2: '击破', 3: '异常', 4: '支援', 5: '防护', 6: '命破', 7: '锋御' }
+
 /** 取评分权重（按 property_id） */
 function getScoreWeight(charName, stats, profession, elementType, baseProps = {}) {
   const elemId = ELEM_DMG_ID[elementType]
-  const def = EQUIP_SCORE[charName]
-  let ruleName = '默认'
-  const named = {} // 属性名→权重
-  if (Array.isArray(def)) {
-    ruleName = pickRule(def, stats)
-    if (ruleName) Object.assign(named, SCORE_RULES[ruleName].w)
-  } else if (def && def.rules) {
-    ruleName = pickRule(def.rules, stats)
-    if (ruleName) Object.assign(named, SCORE_RULES[ruleName].w)
-    for (const k in def) if (k !== 'rules') named[k] = def[k]
-  } else if (def && Object.keys(def).length) {
-    Object.assign(named, def); ruleName = '自定义'
-  }
-  if (!Object.keys(named).length) {
-    ruleName = pickRule(SCORE_PROF_RULES[profession] || ['主C·双爆'], stats)
-    if (ruleName) Object.assign(named, SCORE_RULES[ruleName].w)
-  }
+  const key = PROF_WEIGHT_KEY[profession] || 'strong'
+  const ruleName = `自研·${PROF_WEIGHT_NAME[profession] || '强攻'}`
+  const named = { ...SELF_SCORE_WEIGHTS[key] }
   const weight = {}
   for (const nm in named) {
     const id = nm === '属性伤害加成' ? elemId : SCORE_PROP_ID[nm]
     if (id != null) weight[id] = named[nm]
   }
-  // 固定攻击/生命/防御也要按角色基础值折算成百分比等效权重。
-  // 公式与社区面板一致：小词条基础值 × 100 / (大词条基础值 × 角色基础值) × 大词条权重。
-  // 少了这一步，固定攻击会被当成 0 权重，有益/有效词条数会比对方少几条。
-  for (const [small, big, key] of [[11103, 11102, 'hpmax'], [12103, 12102, 'attack'], [13103, 13102, 'def']]) {
+  // 固定攻击/生命/防御按角色基础值折算成百分比等效权重。
+  for (const [small, big, keyName] of [[11103, 11102, 'hpmax'], [12103, 12102, 'attack'], [13103, 13102, 'def']]) {
     if (!weight[big]) continue
-    const base = parseFloat(baseProps?.[key]?.base)
+    const base = parseFloat(baseProps?.[keyName]?.base)
     if (!(base > 0)) continue
     weight[small] ??= BASE_VALUE[small] * 100 / (BASE_VALUE[big] * base) * weight[big]
   }
@@ -657,8 +629,8 @@ function calcEquipScore(equip_final, charName, stats, profession, elementType, b
 }
 
 /**
- * 把一条 avatar/info 详情归一化为 ZZZure 面板模板所需的 charData。
- * 模板字段名严格对齐 resources/zzz_panel/zzzure/panel/card.html，
+ * 把一条 avatar/info 详情归一化为面板模板所需的 charData。
+ * 模板字段与 resources/zzz_panel/detail.html 对齐，
  * 不复用其算法（评分用接口分近似；伤害乘区公式取自其 Calculator.ts，按面板属性计算）。
  */
 function normalizeDetail(a, uid) {
@@ -765,7 +737,7 @@ function normalizeDetail(a, uid) {
     .map(s => ({ name: s.name, count: s.count, value: s.value.toFixed(1) + (s.isPct ? '%' : '') }))
     .sort((x, y) => y.count - x.count)
 
-  // 评分：按 ZZZure 权重公式计算（0~330 分制），替换接口分
+  // 评分：按自研权重计算（0~330 分制），替换接口分
   const scoreStats = {
     atk: parseFloat(basic_properties.attack?.final) || 0,
     crit: toRatio(basic_properties.crit?.final),

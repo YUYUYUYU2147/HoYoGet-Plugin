@@ -1,4 +1,4 @@
-/* 绝区零角色面板（深色版式，自控布局；精灵图/字体复用 zzzure/common/style） */
+/* 绝区零角色面板（深色版式，自控布局；图标映射见 panel-icons.css） */
 * { box-sizing: border-box; }
 body {
   position: relative;
@@ -38,7 +38,7 @@ body {
     linear-gradient(165deg, rgba(21,28,43,.48) 0%, rgba(13,18,32,.55) 55%, rgba(11,14,20,.62) 100%);
   border-radius: 16px;
 }
-/* 精灵图基础尺寸（背景图由 zzzure common/style 的 .prop-icon.xxx 等提供） */
+/* 图标基础尺寸（背景图映射见 panel-icons.css） */
 .prop-icon, .element-icon, .rarity-icon { display: inline-block; background-size: contain; background-repeat: no-repeat; background-position: center; vertical-align: middle; flex: none; }
 .prop-icon { width: 1.5em; height: 1.5em; }
 .element-icon { width: 1.6em; height: 1.6em; }
