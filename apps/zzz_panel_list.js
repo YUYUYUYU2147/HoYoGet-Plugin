@@ -460,6 +460,62 @@ function loadCustomPortrait(names) {
   return ''
 }
 
+let zzzPartnerMap = null
+function getZzzSprite(avatar) {
+  if (!zzzPartnerMap) {
+    try {
+      zzzPartnerMap = JSON.parse(fs.readFileSync('./plugins/ZZZ-Plugin/resources/map/PartnerId2Data.json', 'utf8'))
+    } catch {
+      zzzPartnerMap = {}
+    }
+  }
+  const data = zzzPartnerMap || {}
+  const id = String(avatar?.id || '')
+  if (id && data[id]?.sprite_id) return String(data[id].sprite_id)
+  const clean = s => String(s || '').replace(/[「」&·\s]/g, '')
+  const names = [avatar?.name_mi18n, avatar?.full_name_mi18n].filter(Boolean).map(clean)
+  for (const info of Object.values(data)) {
+    const n = clean(info?.name), f = clean(info?.full_name)
+    if (names.includes(n) || names.includes(f)) return String(info.sprite_id || '')
+  }
+  for (const info of Object.values(data)) {
+    const n = clean(info?.name), f = clean(info?.full_name)
+    if (names.some(x => x && (n.startsWith(x) || x.startsWith(n) || f.startsWith(x) || x.startsWith(f)))) {
+      return String(info.sprite_id || '')
+    }
+  }
+  return ''
+}
+
+function localImageDataUri(file) {
+  try {
+    const buf = fs.readFileSync(file)
+    const ext = path.extname(file).slice(1).toLowerCase()
+    const mime = ext === 'jpg' ? 'jpeg' : ext
+    return `data:image/${mime};base64,${buf.toString('base64')}`
+  } catch {
+    return ''
+  }
+}
+
+/**
+ * 官方全身立绘。ZZZ-Plugin 面板用的就是这套 IconRole 全图；
+ * 米游社 record 的 role_vertical_painting_url 实测是 684×356 的宽幅横幅，底边会被裁。
+ */
+function getZzzFullBody(avatar) {
+  const sprite = getZzzSprite(avatar)
+  if (!sprite) return null
+  const local = `./plugins/ZZZ-Plugin/resources/images/nanoka/role/IconRole${sprite}_01.webp`
+  const primary = fs.existsSync(local)
+    ? localImageDataUri(local)
+    : `http://lulush.microgg.cn/ZZZeroUID/resource/role/IconRole${sprite}.png`
+  return {
+    primary,
+    // Lulu 镜像偶尔不可达时回落到 nanoka；再不行由 <img onerror> 回落到接口图
+    fallback: `https://static.nanoka.cc/assets/zzz/IconRole${sprite}_01.webp`,
+  }
+}
+
 /**
  * 驱动盘评分（公式/权重对齐 ZZZure src/model/score）。
  * 依据角色名取预设规则→权重(按 property_id)，逐盘算分(1-3号位副词条55分制、4-6号位主12+副43)，
@@ -730,9 +786,14 @@ function normalizeDetail(a, uid) {
     else stat_rows.push({ label, icon: 'prop', cls: k, base: v.base, add: v.add, final: v.final })
   }
 
+  const apiPortrait = a?.role_vertical_painting_url || a?.role_square_url || ''
+  const fullBody = getZzzFullBody(a)
+  const customPortrait = loadCustomPortrait([a?.name_mi18n, a?.full_name_mi18n])
   const charData = {
     uid: uid || a?.id || '',
-    role_icon: loadCustomPortrait([a?.name_mi18n, a?.full_name_mi18n]) || a?.role_vertical_painting_url || a?.role_square_url || '',
+    // 优先官方全身图；自定义图只在没有官方图时兜底（用户放的裁切壁纸会截断立绘）
+    role_icon: fullBody?.primary || customPortrait || apiPortrait,
+    role_fallback: fullBody?.fallback || apiPortrait,
     skills,
     rarity,
     sub_element_str: subElement,

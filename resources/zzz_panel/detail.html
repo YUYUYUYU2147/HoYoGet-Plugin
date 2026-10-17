@@ -13,7 +13,7 @@
     {{set c = charData}}
 
     <div class="hero">
-      <div class="portrait"><img src="{{c.role_icon}}"></div>
+      <div class="portrait"><img src="{{c.role_icon}}"{{if c.role_fallback}} onerror="this.onerror=null;this.src='{{c.role_fallback}}'"{{/if}}></div>
       <div class="main">
         <div class="title-row">
           <span class="rarity-icon {{c.rarity}}"></span>
