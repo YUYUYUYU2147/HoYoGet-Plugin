@@ -115,7 +115,8 @@ export const supportGuoba = () => {
 
   return ({
   pluginInfo: {
-    name: 'xhh',
+    // 必须与目录名一致：锅巴卸载走 plugins/${name}，写 xhh 会找不到目录
+    name: 'HoYoGet-Plugin',
     title: '米哈游',
     description: '多功能辅助插件，支持米游社签到、B站解析、攻略查询等',
     author: '@dknyxhh',

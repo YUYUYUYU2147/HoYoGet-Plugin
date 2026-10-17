@@ -1449,7 +1449,7 @@ async function BbsSign(e) {
         const mys = e.user.getMysUser('gs');
         if (!mys) return e.reply('未绑定米游社,请发送[扫码绑定]', true, { recallMsg: 60 });
         accounts.push({ stuid: '', ck: mys.ck, device_id: stableDeviceId(mys.ck || e.user_id) });
-        if (!/stoken=/.test(mys.ck || '')) await e.reply('未找到米游社SToken(社区签到只认stoken)，请先[小花火扫码登录]绑定', true, { recallMsg: 60 });
+        if (!/stoken=/.test(mys.ck || '')) await e.reply('未找到米游社SToken(社区签到只认stoken)，请先[米哈游扫码登录]绑定', true, { recallMsg: 60 });
     }
     const { msgs, lines } = await bbsSignCore(e, accounts, `米游社社区${all ? '全部' : ''}签到`);
     return replyBbsResultImage(e, msgs, lines);

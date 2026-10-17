@@ -210,7 +210,7 @@ export class bh3_remind extends plugin {
     if (!e.isMaster) return e.reply('仅主人可操作');
     const cfg = getRemindConfig();
     const groups = normalizeGroups(cfg.groups);
-    if (!groups.length) return e.reply('崩三提醒测试失败：提醒群为空，请先在锅巴填写群号或在群内发送 #小花火开启崩三提醒');
+    if (!groups.length) return e.reply('崩三提醒测试失败：提醒群为空，请先在锅巴填写群号或在群内发送 #米哈游开启崩三提醒');
     const text = `【米哈游崩三提醒测试】\n如果你看到了这条消息，说明提醒群配置和 Bot 发群消息正常。\n当前配置群：${groups.join('、')}`;
     const msg = buildPushMessage(cfg, { key: 'test' }, text);
     const results = [];

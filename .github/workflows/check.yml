@@ -36,5 +36,8 @@ jobs:
       - name: 配置与卡池表自检
         run: node tools/ci/config-check.mjs
 
+      - name: 模板 ppath 检查
+        run: node tools/ci/ppath-check.mjs
+
       - name: 隐私信息扫描
         run: node tools/ci/privacy-scan.mjs

@@ -1,7 +1,7 @@
 {
  "_comment": "绝区零技能倍率数据。数值来源为社区依据官方数值整理的公开数据表（ZZZ-Plugin dist/model/damage/character/*/data.json），非米游社接口返回。仅为数值，不含其计算引擎与评分实现。",
  "_regenerate": "node tools/extract_zzz_skill_rate.mjs（需已安装 ZZZ-Plugin）",
- "generatedAt": "2026-10-17T07:47:54.964Z",
+ "generatedAt": "2026-10-17T08:18:10.582Z",
  "count": 45,
  "skillCount": 382,
  "chars": {
@@ -202,7 +202,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "普攻：落华·崩坠二式",
      "key": "AB2",
      "maxLevel": 16,
      "rates": [
@@ -439,7 +439,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "普攻：协奏狙杀",
      "key": "AXP",
      "maxLevel": 16,
      "rates": [
@@ -462,7 +462,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "普攻：协奏狙杀·冥狱·连射",
      "key": "AXQ0",
      "maxLevel": 16,
      "rates": [
@@ -485,7 +485,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "普攻：协奏狙杀·冥狱",
      "key": "AXQ",
      "maxLevel": 16,
      "rates": [
@@ -752,7 +752,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "普攻：玄墨极阵(满蓄)",
      "key": "AXQ",
      "maxLevel": 16,
      "rates": [
@@ -775,7 +775,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "普攻：青溟震击",
      "key": "AXZ",
      "maxLevel": 16,
      "rates": [
@@ -821,7 +821,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "蓄力普攻：凝云术(满蓄)",
      "key": "EQX",
      "maxLevel": 16,
      "rates": [
@@ -867,7 +867,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化E1：墨痕化形(满蓄或格挡)追加攻击",
      "key": "EQP1Z",
      "maxLevel": 16,
      "rates": [
@@ -936,7 +936,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化E：墨烬影消",
      "key": "EQM",
      "maxLevel": 16,
      "rates": [
@@ -1005,7 +1005,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "终结技：符法千重",
      "key": "RZF",
      "maxLevel": 16,
      "rates": [
@@ -1127,7 +1127,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化特殊技：束裂式·终型(引爆)",
      "key": "EQ0",
      "maxLevel": 16,
      "rates": [
@@ -1150,7 +1150,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化特殊技：束裂式·终型",
      "key": "EQ",
      "maxLevel": 16,
      "rates": [
@@ -1654,7 +1654,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化特殊技：小心裙角",
      "key": "EQ0",
      "maxLevel": 16,
      "rates": [
@@ -1677,7 +1677,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化特殊技：小心裙角",
      "key": "EQ",
      "maxLevel": 16,
      "rates": [
@@ -2029,7 +2029,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "终结技：斩妄开天",
      "key": "RZS",
      "maxLevel": 16,
      "rates": [
@@ -2082,7 +2082,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化E：夹心糖衣炮弹炮击",
      "key": "EQP0",
      "maxLevel": 16,
      "rates": [
@@ -2105,7 +2105,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化E：夹心糖衣炮弹(点按)",
      "key": "EQP",
      "maxLevel": 16,
      "rates": [
@@ -2128,7 +2128,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "连携技：高价以太爆弹炮击",
      "key": "RL0",
      "maxLevel": 16,
      "rates": [
@@ -2151,7 +2151,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "连携技：高价以太爆弹",
      "key": "RL",
      "maxLevel": 16,
      "rates": [
@@ -2174,7 +2174,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "终结技：特制以太榴弹炮击",
      "key": "RZ0",
      "maxLevel": 16,
      "rates": [
@@ -2197,7 +2197,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "终结技：特制以太榴弹",
      "key": "RZ",
      "maxLevel": 16,
      "rates": [
@@ -3014,7 +3014,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "蓄力攻击：二段蓄",
      "key": "AX2",
      "maxLevel": 16,
      "rates": [
@@ -3037,7 +3037,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "蓄力攻击：三段蓄",
      "key": "AX3",
      "maxLevel": 16,
      "rates": [
@@ -3242,7 +3242,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化特殊技：月华流转0",
      "key": "EQ0",
      "maxLevel": 16,
      "rates": [
@@ -3265,7 +3265,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化特殊技：月华流转",
      "key": "EQ",
      "maxLevel": 16,
      "rates": [
@@ -3387,7 +3387,7 @@
    "fullName": "本·比格",
    "skills": [
     {
-     "name": "",
+     "name": "普攻：对账三段",
      "key": "AP3",
      "maxLevel": 16,
      "rates": [
@@ -3433,7 +3433,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化E：到期还拳(格挡反击)",
      "key": "EQG1",
      "maxLevel": 16,
      "rates": [
@@ -3578,7 +3578,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化特殊技：全弹连射",
      "key": "EQ",
      "maxLevel": 16,
      "rates": [
@@ -3677,7 +3677,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "长按普攻0",
      "key": "AX0",
      "maxLevel": 16,
      "rates": [
@@ -3700,7 +3700,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "长按普攻",
      "key": "AX",
      "maxLevel": 16,
      "rates": [
@@ -3769,7 +3769,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化E：持续喷射秒伤",
      "key": "EQP",
      "maxLevel": 16,
      "rates": [
@@ -3815,7 +3815,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化E双份：持续喷射秒伤",
      "key": "EQS",
      "maxLevel": 16,
      "rates": [
@@ -3884,7 +3884,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "核心被动：余烬",
      "key": "TY",
      "maxLevel": 7,
      "rates": [
@@ -4043,7 +4043,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强E：小心蛀牙",
      "key": "EQP",
      "maxLevel": 16,
      "rates": [
@@ -4165,7 +4165,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化特殊技：超规工程清障",
      "key": "EQ",
      "maxLevel": 16,
      "rates": [
@@ -4646,7 +4646,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "特殊技：噬爪·噩梦袭影",
      "key": "EPLP",
      "maxLevel": 16,
      "rates": [
@@ -4669,7 +4669,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "噬爪·噩梦袭影终结一击",
      "key": "EPLZ",
      "maxLevel": 16,
      "rates": [
@@ -5173,7 +5173,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "蓄力普攻：星芒圆舞曲(三蓄)",
      "key": "AX3",
      "maxLevel": 16,
      "rates": [
@@ -5288,7 +5288,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "终结技：星芒终章",
      "key": "RZ",
      "maxLevel": 16,
      "rates": [
@@ -6182,7 +6182,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化特殊技：沸腾熔炉0",
      "key": "EQP0",
      "maxLevel": 16,
      "rates": [
@@ -6205,7 +6205,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化特殊技：沸腾熔炉",
      "key": "EQP",
      "maxLevel": 16,
      "rates": [
@@ -6228,7 +6228,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "连携技：天崩-地裂",
      "key": "RL",
      "maxLevel": 16,
      "rates": [
@@ -6251,7 +6251,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "终结技：锤进地心",
      "key": "RZP",
      "maxLevel": 16,
      "rates": [
@@ -6304,7 +6304,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "普攻：萨霍夫跳0",
      "key": "AX0",
      "maxLevel": 16,
      "rates": [
@@ -6327,7 +6327,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "普攻：萨霍夫跳",
      "key": "AX",
      "maxLevel": 16,
      "rates": [
@@ -6350,7 +6350,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "闪避反击：疾影",
      "key": "CFP",
      "maxLevel": 16,
      "rates": [
@@ -6472,7 +6472,7 @@
    "fullName": "耀嘉音",
    "skills": [
     {
-     "name": "普攻：《随想曲》三段",
+     "name": "6影追加蓄力普攻三段",
      "key": "AP3",
      "maxLevel": 16,
      "rates": [
@@ -6495,7 +6495,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "普攻：间奏/终曲每[震音]",
      "key": "AQ",
      "maxLevel": 16,
      "rates": [
@@ -6518,7 +6518,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "特殊技：《风铃与旧约》",
      "key": "EP",
      "maxLevel": 16,
      "rates": [
@@ -6564,7 +6564,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "天赋追加[震音]",
      "key": "EZ",
      "maxLevel": 16,
      "rates": [
@@ -6587,7 +6587,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "追加[音簇]*3",
      "key": "EY",
      "maxLevel": 16,
      "rates": [
@@ -7130,7 +7130,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "冲刺攻击：冰渊潜袭点按",
      "key": "CCXP",
      "maxLevel": 16,
      "rates": [
@@ -7153,7 +7153,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "冲刺攻击：冰渊潜袭蓄力",
      "key": "CCXX",
      "maxLevel": 16,
      "rates": [
@@ -7344,7 +7344,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化特殊技：扇走蚊虫0",
      "key": "EQ0",
      "maxLevel": 16,
      "rates": [
@@ -7367,7 +7367,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强化特殊技：扇走蚊虫",
      "key": "EQ",
      "maxLevel": 16,
      "rates": [
@@ -8017,7 +8017,7 @@
    "fullName": "赛斯·洛威尔",
    "skills": [
     {
-     "name": "",
+     "name": "蓄力普攻：雷霆击-感电(连续攻击)",
      "key": "AX0",
      "maxLevel": 16,
      "rates": [
@@ -8040,7 +8040,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "蓄力普攻：雷霆击-感电",
      "key": "AX",
      "maxLevel": 16,
      "rates": [
@@ -8162,7 +8162,7 @@
    "fullName": "雨果·维拉德",
    "skills": [
     {
-     "name": "",
+     "name": "普攻：暗渊四重奏四段·斩击",
      "key": "AP4Z",
      "maxLevel": 16,
      "rates": [
@@ -8185,7 +8185,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "普攻：暗渊四重奏四段",
      "key": "AP4P",
      "maxLevel": 16,
      "rates": [
@@ -8208,7 +8208,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "普攻：暗渊四重奏四段(蓄力)",
      "key": "AP4X",
      "maxLevel": 16,
      "rates": [
@@ -8231,7 +8231,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "普攻：暗渊协奏曲·斩击",
      "key": "AQZ",
      "maxLevel": 16,
      "rates": [
@@ -8254,7 +8254,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "普攻：暗渊协奏曲",
      "key": "AQP",
      "maxLevel": 16,
      "rates": [
@@ -8277,7 +8277,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "普攻：暗渊协奏曲(蓄力)",
      "key": "AQX",
      "maxLevel": 16,
      "rates": [
@@ -8323,7 +8323,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "闪避反击：诡影·斩(蓄力)",
      "key": "CFX",
      "maxLevel": 16,
      "rates": [
@@ -8346,7 +8346,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "强E：魂狩·惩戒",
      "key": "EQP",
      "maxLevel": 16,
      "rates": [
@@ -8510,7 +8510,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "特殊技：苍光0",
      "key": "EPC0",
      "maxLevel": 16,
      "rates": [
@@ -8533,7 +8533,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "特殊技：苍光",
      "key": "EPC",
      "maxLevel": 16,
      "rates": [
@@ -8556,7 +8556,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "特殊技：雷殛",
      "key": "EPL",
      "maxLevel": 16,
      "rates": [
@@ -8678,7 +8678,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "亲卫队小猪：抄家伙！(弹弓)",
      "key": "AZCD",
      "maxLevel": 16,
      "rates": [
@@ -8701,7 +8701,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "亲卫队小猪：回旋挥击！",
      "key": "AZH",
      "maxLevel": 16,
      "rates": [
@@ -8793,7 +8793,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "连携技：大满贯！",
      "key": "RL",
      "maxLevel": 16,
      "rates": [
@@ -8816,7 +8816,7 @@
      ]
     },
     {
-     "name": "",
+     "name": "终结技：再见全垒打！",
      "key": "RZ",
      "maxLevel": 16,
      "rates": [

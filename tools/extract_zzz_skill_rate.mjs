@@ -35,7 +35,9 @@ const OUT = path.join(ROOT, 'system', 'default', 'zzz_skill_rate.json')
 /** calc.js 里形如 { name: '普攻：星仪序曲五段', type: 'AP5' } 的条目 */
 function parseCalcSkills(calcSrc) {
   const out = []
-  const re = /\{\s*name:\s*'([^']+)'\s*,\s*type:\s*'([^']+)'\s*\}/g
+  // 不能要求 name/type 后立刻跟 `}`：calc.js 里带 after/isMain 的多行条目
+  // （如 AX3、RZ）会在 type 之后还有别的字段，旧正则会漏掉这些技能名。
+  const re = /\{\s*name:\s*'([^']+)'\s*,\s*type:\s*'([^']+)'/g
   let m
   while ((m = re.exec(calcSrc))) out.push({ name: m[1].trim(), key: m[2].trim() })
   return out

@@ -231,8 +231,10 @@ export class xhh_gacha_pool extends plugin {
     // 崩三：框架不认 !，需要自己剥掉符号并补游戏名。
     // accept 阶段一旦返回 'return' 就不再走 rule（见 lib/plugins/loader.js），
     // 所以这里必须**直接调用 handler**，不能指望补全后交给 rule。
-    if (/^!\s*(卡池|补给)$/.test(msg)) {
-      e.msg = `#崩三${msg.replace(/^!\s*/, '')}`;
+    // 游戏名可省略，也可显式写崩三：!卡池 / !崩三卡池 / !崩三补给
+    if (/^!\s*(?:崩三|崩坏3|崩坏三|BH3)?\s*(卡池|补给)$/i.test(msg)) {
+      const suffix = msg.replace(/^!\s*/, '').replace(/^(?:崩三|崩坏3|崩坏三|BH3)\s*/i, '');
+      e.msg = `#崩三${suffix}`;
       await this.bh3CurrentPool(e);
       return true;
     }

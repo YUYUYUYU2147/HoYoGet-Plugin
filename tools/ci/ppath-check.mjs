@@ -92,7 +92,7 @@ if (problems.length) {
   console.error('ppath 检查未通过：')
   for (const p of problems) console.error('  ✗ ' + p)
   console.error(`\n共 ${problems.length} 处。ppath 不会被框架注入，必须自己传，例如：`)
-  console.error("  ppath: '../../../../../plugins/xhh/resources/',")
+  console.error("  ppath: '../../../../../plugins/HoYoGet-Plugin/resources/',")
   process.exit(1)
 }
 

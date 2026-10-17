@@ -27,7 +27,7 @@ export function loadSkillRateTable() {
   try {
     cache = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8')) || { chars: {} }
   } catch (err) {
-    logger.warn?.('[xhh][zzz_skill_rate] 读本地倍率表失败：', err?.message || err)
+    logger.warn?.('[HoYoGet][zzz_skill_rate] 读本地倍率表失败：', err?.message || err)
     cache = { chars: {} }
   }
   return cache
