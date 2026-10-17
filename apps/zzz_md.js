@@ -60,9 +60,10 @@ export class zzz extends plugin {
 
         let res = await api(e, data);
 
-        data = res.data
+        data = res?.data
 
-        if (!data.tickets) return logger.mark(`UID${uid},未找到母带数据`)
+        // 接口失败时 res.data 可能为 undefined，直接读 .tickets 会抛 TypeError
+        if (!data?.tickets) return logger.mark('未找到母带数据')
 
         let fldp = 0, fl = 0, jmmd = 0, md = 0, bb = 0, level = '未知', name = '未知'
         let sk = await mhy.getstoken(e, uid);

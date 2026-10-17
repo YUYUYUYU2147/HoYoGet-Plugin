@@ -1,2 +1,2 @@
-import MysSRApi, { randomString, generateSeed } from '../../xhh/system/checkCode/sr.js'
+import MysSRApi, { randomString, generateSeed } from '../../HoYoGet-Plugin/system/checkCode/sr.js'
 export { MysSRApi as default, randomString, generateSeed }
