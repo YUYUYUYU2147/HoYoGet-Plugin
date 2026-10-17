@@ -97,6 +97,23 @@ function getPlayerBadge(e, gamePlayer = null) {
   return { playerName: gameName || qqName, playerAvatar: gameAvatar || qqAvatar }
 }
 
+/** 从本插件 Stoken 里找 ZZZ 条目：优先当前 UID，其次 nap_cn 条目，最后第一条带 ck 的 */
+function findZzzStokenEntry(qq, uid = '') {
+  const file = `./plugins/HoYoGet-Plugin/data/Stoken/${qq}.yaml`
+  if (!fs.existsSync(file)) return null
+  try {
+    const data = yaml.get(file) || {}
+    if (uid && data[uid]?.ck_stoken) return [String(uid), data[uid]]
+    const entries = Object.entries(data).filter(([, v]) => v?.ck_stoken)
+    return entries.find(([, v]) => String(v?.game_biz || '').includes('nap'))
+      || entries.find(([, v]) => /prod_|cn_/.test(String(v?.region || '')))
+      || entries[0]
+      || null
+  } catch {
+    return null
+  }
+}
+
 // 面板随机背景：默认用 yppp 的随机二次元图；配置成空字符串可恢复纯黑底
 const DEFAULT_PANEL_BG = 'https://api.yppp.net/api.php'
 function getPanelBg() {
@@ -876,10 +893,10 @@ export class zzz_panel_list extends plugin {
   }
 
   async panelList(e) {
-    const uid = e.user?.getUid?.('zzz')
+    const uid = this.getZzzUid(e)
     if (!uid) return e.reply('请先绑定绝区零账号')
 
-    const ck = await this.getCk(e)
+    const ck = await this.getCk(e, uid)
     if (!ck || !Object.values(ck).some(item => item?.ck)) {
       return e.reply('尚未绑定 cookie，请先绑定 cookie 或 #扫码登录')
     }
@@ -929,10 +946,10 @@ export class zzz_panel_list extends plugin {
     const arg = (m && m[1] ? m[1] : '').trim()
     if (!arg) return this.panelDetailHelp(e)
 
-    const uid = e.user?.getUid?.('zzz')
+    const uid = this.getZzzUid(e)
     if (!uid) return e.reply('请先绑定绝区零账号')
 
-    const ck = await this.getCk(e)
+    const ck = await this.getCk(e, uid)
     if (!ck || !Object.values(ck).some(item => item?.ck)) {
       return e.reply('尚未绑定 cookie，请先绑定 cookie 或 #扫码登录')
     }
@@ -1016,10 +1033,10 @@ export class zzz_panel_list extends plugin {
     const arg = (m[1] || '').trim()
     if (!arg) return this.panelDetailHelp(e)
 
-    const uid = e.user?.getUid?.('zzz')
+    const uid = this.getZzzUid(e)
     if (!uid) return e.reply('请先绑定绝区零账号')
 
-    const ck = await this.getCk(e)
+    const ck = await this.getCk(e, uid)
     if (!ck || !Object.values(ck).some(item => item?.ck)) {
       return e.reply('尚未绑定 cookie，请先绑定 cookie 或 #扫码登录')
     }
@@ -1153,15 +1170,66 @@ export class zzz_panel_list extends plugin {
     return null
   }
 
-  /** 取 ck：复用 ZZZ-Plugin 的 getCk，它自行处理 stoken 前缀与 User 实例 */
-  async getCk(e) {
+  /** UID：优先 genshin User，缺失时从本插件 Stoken 兜底 */
+  getZzzUid(e) {
+    const uid = e.user?.getUid?.('zzz')
+    if (uid) return uid
+    const hit = findZzzStokenEntry(e.user_id)
+    return hit ? (hit[1]?.uid || hit[0]) : null
+  }
+
+  /**
+   * 取 ck：ZZZ-Plugin -> 本插件 Stoken -> genshin NoteUser，依次兜底。
+   * 这样即使 ZZZ-Plugin 被删除，面板仍能用迁移过来的 CK 取数。
+   */
+  async getCk(e, uid = this.getZzzUid(e)) {
+    // 1) ZZZ-Plugin（完整 CK 最稳）
     try {
       const { getCk } = await import(path.join(ZZZ_ROOT, 'dist', 'lib', 'common.js'))
-      return await getCk(e)
+      const ck = await getCk(e)
+      if (ck && Object.values(ck).some(item => item?.ck)) return ck
+    } catch { /* 没装 ZZZ-Plugin 就继续 */ }
+
+    // 2) 本插件 data/Stoken（迁移过来的 CK）
+    const hit = findZzzStokenEntry(e.user_id, uid)
+    const stokenCk = hit ? (() => {
+      const [key, entry] = hit
+      return {
+        default: {
+          ck: entry.ck_stoken,
+          uid: String(entry.uid || key),
+          ltuid: String(entry.stuid || ''),
+          device_id: entry.device_id || entry.device || '',
+        },
+      }
+    })() : null
+    // 完整 cookie 优先；只有 stoken 的条目先留给 genshin，失败后再兜底
+    if (stokenCk && /cookie_token=/.test(stokenCk.default.ck)) return stokenCk
+
+    // 3) genshin NoteUser
+    try {
+      const { loadGenshinModule } = await import('../system/genshin_loader.js')
+      const NoteUser = await loadGenshinModule('model/mys/NoteUser.js', ['model/mys/NoteUser.js'])
+      const user = await NoteUser?.create?.(e)
+      const mys = user?.getMysUser?.('zzz')
+      if (mys?.ck) {
+        return {
+          default: {
+            ck: mys.ck,
+            uid: String(uid || mys.uid || ''),
+            ltuid: String(mys.ltuid || ''),
+            device_id: mys.device || '',
+          },
+        }
+      }
     } catch (err) {
-      logger.warn?.(`[HoYoGet][zzz_panel] 读取 ck 失败：${err?.message || err}`)
-      return false
+      logger.debug?.(`[HoYoGet][zzz_panel] genshin NoteUser 兜底失败：${err?.message || err}`)
     }
+
+    // 4) 最后再用 Stoken（可能只有 stuid/stoken）
+    if (stokenCk) return stokenCk
+    logger.warn?.('[HoYoGet][zzz_panel] 没有可用 CK（ZZZ-Plugin / Stoken / genshin 均失败）')
+    return false
   }
 
   /**
