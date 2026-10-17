@@ -289,7 +289,11 @@ async function zzzGet(e, uid, ck, type, query, extraHeaders = {}, retried = fals
     ? 'https://api-takumi.mihoyo.com/binding/api/getUserGameRolesByCookie'
     : type === 'index'
       ? 'https://api-takumi-record.mihoyo.com/event/game_record_zzz/api/zzz/index'
-      : type === 'info'
+      : type === 'challenge'
+        ? 'https://api-takumi-record.mihoyo.com/event/game_record_zzz/api/zzz/hadal_info_v2'
+        : type === 'deadly'
+          ? 'https://api-takumi-record.mihoyo.com/event/game_record_zzz/api/zzz/hadal_mem_detail_v2'
+          : type === 'info'
         ? 'https://api-takumi-record.mihoyo.com/event/game_record_zzz/api/zzz/avatar/info'
         : 'https://api-takumi-record.mihoyo.com/event/game_record_zzz/api/zzz/avatar/basic'
   const url = `${base}?${query}`
@@ -1125,6 +1129,17 @@ const ORIGINAL_REG = /^(?:米游社|#?绝区零)原图$/
 const PANEL_UPLOAD_REG = /^(?:米游社|%|#?绝区零)?(?:上传|添加)(.+?)(?:角色|面板)图$/
 const PANEL_IMAGES_REG = /^(?:米游社|%|#?绝区零)?(?:获取|查看)(.+?)(?:角色|面板)图\s*(\d*)$/
 const PANEL_DELETE_IMG_REG = /^(?:米游社|%|#?绝区零)?删除(.+?)(?:角色|面板)图(.+)$/
+const REMIND_PREFIX = '^(?:米游社|%|#?绝区零)?'
+const REMIND_ON_REG = new RegExp(`${REMIND_PREFIX}(开启|关闭)挑战提醒$`)
+const REMIND_GLOBAL_ON_REG = new RegExp(`${REMIND_PREFIX}(开启|启用|关闭|禁用)全局挑战提醒$`)
+const REMIND_ABYSS_REG = new RegExp(`${REMIND_PREFIX}设置(全局)?(?:式舆防卫战|式舆|深渊|防卫战|防卫)阈值\\s*(\\d+)$`)
+const REMIND_DEADLY_REG = new RegExp(`${REMIND_PREFIX}设置(全局)?(?:危局强袭战|危局|强袭|强袭战)阈值\\s*(\\d+)$`)
+const REMIND_STATUS_REG = new RegExp(`${REMIND_PREFIX}查询挑战状态$`)
+const REMIND_MY_TIME_REG = new RegExp(`${REMIND_PREFIX}设置个人提醒时间\\s*(每日\\d+时(?:(\\d+)分)?|每周.\\d+时(?:(\\d+)分)?)$`)
+const REMIND_MY_VIEW_REG = new RegExp(`${REMIND_PREFIX}个人提醒(状态|时间)$`)
+const REMIND_MY_DEL_REG = new RegExp(`${REMIND_PREFIX}(重置|删除|取消)个人提醒时间$`)
+const REMIND_GLOBAL_TIME_REG = new RegExp(`${REMIND_PREFIX}设置全局提醒时间\\s*(每日\\d+时(?:(\\d+)分)?|每周.\\d+时(?:(\\d+)分)?)$`)
+const REMIND_GLOBAL_VIEW_REG = new RegExp(`${REMIND_PREFIX}全局提醒时间$`)
 
 export class zzz_panel_list extends plugin {
   constructor() {
@@ -1144,8 +1159,26 @@ export class zzz_panel_list extends plugin {
         { reg: PANEL_UPLOAD_REG.source, fnc: 'panelUploadImages' },
         { reg: PANEL_IMAGES_REG.source, fnc: 'panelImageList' },
         { reg: PANEL_DELETE_IMG_REG.source, fnc: 'panelDeleteImages' },
+        { reg: REMIND_ON_REG.source, fnc: 'zzzRemindToggle' },
+        { reg: REMIND_GLOBAL_ON_REG.source, fnc: 'zzzRemindGlobalToggle' },
+        { reg: REMIND_ABYSS_REG.source, fnc: 'zzzRemindAbyssThreshold' },
+        { reg: REMIND_DEADLY_REG.source, fnc: 'zzzRemindDeadlyThreshold' },
+        { reg: REMIND_STATUS_REG.source, fnc: 'zzzRemindStatus' },
+        { reg: REMIND_MY_TIME_REG.source, fnc: 'zzzRemindSetMyTime' },
+        { reg: REMIND_MY_VIEW_REG.source, fnc: 'zzzRemindViewMyTime' },
+        { reg: REMIND_MY_DEL_REG.source, fnc: 'zzzRemindDeleteMyTime' },
+        { reg: REMIND_GLOBAL_TIME_REG.source, fnc: 'zzzRemindSetGlobalTime' },
+        { reg: REMIND_GLOBAL_VIEW_REG.source, fnc: 'zzzRemindViewGlobalTime' },
       ],
     })
+    const remind = config()
+    if (remind.zzz_remind_enable) {
+      this.task = {
+        name: 'HoYoGet绝区零挑战提醒',
+        cron: '0 */10 * * * ?',
+        fnc: () => this.runZzzRemindTask(),
+      }
+    }
   }
 
   async panelList(e) {
@@ -1588,6 +1621,273 @@ export class zzz_panel_list extends plugin {
   }
 
   /** UID：优先 genshin User，缺失时从本插件 Stoken 兜底 */
+  zzzRemindDefaults() {
+    const cfg = config() || {}
+    return {
+      enable: cfg.zzz_remind_enable !== false,
+      globalRemindTime: cfg.zzz_remind_time || '每日20时',
+      abyssCheckLevel: Number(cfg.zzz_remind_abyss_level ?? 5),
+      deadlyStars: Number(cfg.zzz_remind_deadly_stars ?? 6),
+    }
+  }
+
+  async zzzRemindUserConfig(userId) {
+    try {
+      const raw = await redis.hGet('ZZZ:REMIND:USER_CONFIGS', String(userId))
+      return raw ? JSON.parse(raw) : null
+    } catch { return null }
+  }
+
+  async zzzRemindSaveUserConfig(userId, value) {
+    try { await redis.hSet('ZZZ:REMIND:USER_CONFIGS', String(userId), JSON.stringify(value)) } catch { /* Redis 不可用就只影响本次 */ }
+  }
+
+  zzzRemindParseTime(message = '') {
+    const m = String(message).match(/提醒时间\s*(每日\d+时(?:(\d+)分)?|每周.\d+时(?:(\d+)分)?)/)
+    if (!m) return { remindTime: '', error: '时间格式错误' }
+    const remindTime = m[1]
+    const minute = Number(m[2]) || Number(m[3]) || 0
+    if (!(minute % 10 === 0 && minute >= 0 && minute < 60)) return { remindTime: '', error: '分钟必须为整十分钟' }
+    return { remindTime, error: '' }
+  }
+
+  zzzRemindTimeMatch(remindTime, date = new Date()) {
+    if (!remindTime) return false
+    const hour = date.getHours(), minute = date.getMinutes()
+    if (remindTime.includes('每日')) {
+      const m = remindTime.match(/每日(\d+)时(?:(\d+)分)?/)
+      return !!m && hour === Number(m[1]) && minute === (m[2] ? Number(m[2]) : 0)
+    }
+    if (remindTime.includes('每周')) {
+      const dayMap = { 日: 0, 天: 0, 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6 }
+      const m = remindTime.match(/每周(.)(\d+)时(?:(\d+)分)?/)
+      return !!m && date.getDay() === dayMap[m[1]] && hour === Number(m[2]) && minute === (m[3] ? Number(m[3]) : 0)
+    }
+    return false
+  }
+
+  zzzRemindRemaining({ year, month, day, hour = 0, minute = 0, second = 0 }) {
+    const target = new Date(year, month - 1, day, hour, minute, second)
+    const diff = target.getTime() - Date.now()
+    if (diff <= 0) return { days: 0, hours: 0 }
+    const total = Math.floor(diff / 3600000)
+    return { days: Math.floor(total / 24), hours: total % 24 }
+  }
+
+  async zzzRemindFetch(e, uid, ck, type) {
+    const server = await this.pickServer(uid, ck)
+    if (!server) throw new Error('未能判断服务器分区')
+    if (type === 'challenge') {
+      return zzzGet(e, uid, ck, 'challenge', `lang=zh-cn&role_id=${uid}&server=${server}&schedule_type=1`)
+    }
+    return zzzGet(e, uid, ck, 'deadly', `lang=zh-cn&uid=${uid}&region=${server}&schedule_type=1`)
+  }
+
+  async zzzRemindCheckUser(userId, userConfig, showAll = false, contextE = null) {
+    const def = this.zzzRemindDefaults()
+    let abyssCheckLevel = Number(userConfig?.abyssCheckLevel ?? def.abyssCheckLevel)
+    if (abyssCheckLevel > 6) abyssCheckLevel = 5
+    const deadlyStars = Number(userConfig?.deadlyStars ?? def.deadlyStars)
+    if (abyssCheckLevel === 0 && deadlyStars === 0 && !showAll) return []
+    const e = contextE || this.e
+    const uid = this.getZzzUid(e)
+    if (!uid) return ['未绑定绝区零账号']
+    const ck = await this.getCk(e, uid)
+    if (!ck || !Object.values(ck).some(item => item?.ck)) return ['尚未绑定 cookie']
+    const messages = []
+    if (showAll || abyssCheckLevel > 0) {
+      try {
+        const raw = await this.zzzRemindFetch(e, uid, ck, 'challenge')
+        const data = raw?.hadal_info_v2
+        if (!data) {
+          messages.push('式舆防卫战S评级: 0/5')
+        } else {
+          const fifth = data.brief?.rating || ''
+          const floors = ['first', 'second', 'third', 'fourth']
+          let sCount = fifth.startsWith('S') ? 1 : 0
+          for (const floor of floors) if (data[`${floor}_layer_detail`]?.rating === 'S') sCount++
+          if (abyssCheckLevel === 0) {
+            if (showAll) {
+              messages.push(`式舆防卫战S评级: ${sCount}/5`)
+              messages.push(`第五层评价: ${fifth || '无'}`)
+            }
+          } else if (abyssCheckLevel < 6) {
+            const ok = sCount >= abyssCheckLevel ? ' ✓' : ''
+            if (showAll || sCount < abyssCheckLevel) {
+              messages.push(`式舆防卫战S评级: ${sCount}/5${ok}`)
+              if (fifth) messages.push(`第五层评价: ${fifth}`)
+            }
+          } else {
+            const ok = fifth === 'S+' ? ' ✓' : ''
+            if (showAll || sCount < 5 || fifth !== 'S+') {
+              messages.push(`式舆防卫战S评级: ${sCount}/5${ok}`)
+              messages.push(`第五层评价: ${fifth || '无'}${ok}`)
+            }
+          }
+          if (data.hadal_begin_time && data.hadal_end_time) {
+            const b = data.hadal_begin_time, en = data.hadal_end_time
+            const left = this.zzzRemindRemaining(en)
+            messages.push(`统计周期：${b.year}/${b.month}/${b.day} - ${en.year}/${en.month}/${en.day}`)
+            messages.push(`刷新剩余: ${left.days}天${left.hours}小时`)
+          }
+        }
+      } catch (err) {
+        messages.push(`式舆防卫战查询失败: ${err?.message || err}`)
+      }
+    }
+    if (showAll || deadlyStars > 0) {
+      try {
+        const raw = await this.zzzRemindFetch(e, uid, ck, 'deadly')
+        if (!raw || !raw.has_data) {
+          messages.push('危局强袭战星数: 0/9')
+        } else {
+          const total = Number(raw.total_star || 0)
+          const ok = total >= deadlyStars ? ' ✓' : ''
+          if (showAll || (deadlyStars > 0 && total < deadlyStars)) {
+            messages.push(`危局强袭战星数: ${total}/9${deadlyStars > 0 ? ok : ''}`)
+          }
+          if (raw.start_time && raw.end_time) {
+            const s = raw.start_time, en = raw.end_time
+            const left = this.zzzRemindRemaining(en)
+            messages.push(`统计周期：${s.year}/${s.month}/${s.day} - ${en.year}/${en.month}/${en.day}`)
+            messages.push(`刷新剩余: ${left.days}天${left.hours}小时`)
+          }
+        }
+      } catch (err) {
+        messages.push(`危局强袭战查询失败: ${err?.message || err}`)
+      }
+    }
+    return messages
+  }
+
+  async zzzRemindToggle(e) {
+    const def = this.zzzRemindDefaults()
+    if (!def.enable) return e.reply('当前未启用挑战提醒功能')
+    if (typeof Bot !== 'undefined' && Bot.fl && !Bot.fl.get(e.user_id)) return e.reply('请先添加 Bot 好友后重试')
+    const enable = /开启挑战提醒$/.test(e.msg)
+    const uid = this.getZzzUid(e)
+    if (enable && !uid) return e.reply('未绑定绝区零账号，请先绑定')
+    let cfg = await this.zzzRemindUserConfig(e.user_id)
+    if (!cfg) cfg = { enable: false, abyssCheckLevel: def.abyssCheckLevel, deadlyStars: def.deadlyStars }
+    if (cfg.enable === enable) return e.reply(enable ? '提醒已开启，请勿重复操作' : '提醒功能尚未开启')
+    cfg.enable = enable
+    await this.zzzRemindSaveUserConfig(e.user_id, cfg)
+    const abyss = cfg.abyssCheckLevel === 0 ? '式舆不提醒' : `防卫战S层数<${Math.min(5, cfg.abyssCheckLevel)}${cfg.abyssCheckLevel === 6 ? '或第五层<S+' : ''}`
+    const deadly = cfg.deadlyStars === 0 ? '危局不提醒' : `危局<${cfg.deadlyStars}星`
+    return e.reply(`提醒功能已${enable ? '开启' : '关闭'}${enable ? `，将在${cfg.remindTime || def.globalRemindTime}提醒：${abyss}，${deadly}` : ''}`)
+  }
+
+  async zzzRemindGlobalToggle(e) {
+    if (!e.isMaster) return e.reply('仅限主人设置')
+    const enable = /(开启|启用)全局挑战提醒$/.test(e.msg)
+    yaml.setValue('./plugins/HoYoGet-Plugin/config/config.yaml', 'zzz_remind_enable', enable)
+    return e.reply(`全局挑战提醒已${enable ? '启用' : '禁用'}${enable ? '（定时任务需重启后注册）' : '（重启后完全停止）'}`)
+  }
+
+  async zzzRemindAbyssThreshold(e) {
+    const isGlobal = String(e.msg).includes('全局')
+    if (isGlobal && !e.isMaster) return e.reply('仅限主人设置')
+    const m = String(e.msg).match(REMIND_ABYSS_REG)
+    const n = Number(m?.[2])
+    if (!Number.isInteger(n) || n < 0 || n > 6) return e.reply('防卫战阈值必须在 0~6 之间，0 为不提醒')
+    if (isGlobal) {
+      yaml.setValue('./plugins/HoYoGet-Plugin/config/config.yaml', 'zzz_remind_abyss_level', n)
+    } else {
+      const def = this.zzzRemindDefaults()
+      let cfg = await this.zzzRemindUserConfig(e.user_id) || { enable: false, abyssCheckLevel: def.abyssCheckLevel, deadlyStars: def.deadlyStars }
+      cfg.abyssCheckLevel = n
+      await this.zzzRemindSaveUserConfig(e.user_id, cfg)
+    }
+    return e.reply(`${isGlobal ? '全局默认' : ''}式舆提醒${n === 0 ? '已关闭' : `阈值设为 S 层数<${Math.min(5, n)}${n === 6 ? '或第五层<S+' : ''}`}`)
+  }
+
+  async zzzRemindDeadlyThreshold(e) {
+    const isGlobal = String(e.msg).includes('全局')
+    if (isGlobal && !e.isMaster) return e.reply('仅限主人设置')
+    const m = String(e.msg).match(REMIND_DEADLY_REG)
+    const n = Number(m?.[2])
+    if (!Number.isInteger(n) || n < 0 || n > 9) return e.reply('危局阈值必须在 0~9 之间，0 为不提醒')
+    if (isGlobal) {
+      yaml.setValue('./plugins/HoYoGet-Plugin/config/config.yaml', 'zzz_remind_deadly_stars', n)
+    } else {
+      const def = this.zzzRemindDefaults()
+      let cfg = await this.zzzRemindUserConfig(e.user_id) || { enable: false, abyssCheckLevel: def.abyssCheckLevel, deadlyStars: def.deadlyStars }
+      cfg.deadlyStars = n
+      await this.zzzRemindSaveUserConfig(e.user_id, cfg)
+    }
+    return e.reply(`${isGlobal ? '全局默认' : ''}危局提醒${n === 0 ? '已关闭' : `阈值设为 <${n} 星`}`)
+  }
+
+  async zzzRemindStatus(e) {
+    const uid = this.getZzzUid(e)
+    if (!uid) return e.reply('未绑定绝区零账号')
+    const def = this.zzzRemindDefaults()
+    const cfg = await this.zzzRemindUserConfig(e.user_id) || { enable: false, abyssCheckLevel: def.abyssCheckLevel, deadlyStars: def.deadlyStars }
+    await e.reply('正在查询，请稍候...')
+    const messages = await this.zzzRemindCheckUser(e.user_id, cfg, true, e)
+    return e.reply(messages.length ? messages.join('\n') : '查询失败，请稍后再试')
+  }
+
+  async zzzRemindSetMyTime(e) {
+    const { remindTime, error } = this.zzzRemindParseTime(e.msg)
+    if (!remindTime) return e.reply(error || '时间格式错误')
+    const def = this.zzzRemindDefaults()
+    let cfg = await this.zzzRemindUserConfig(e.user_id) || { enable: false, abyssCheckLevel: def.abyssCheckLevel, deadlyStars: def.deadlyStars }
+    cfg.remindTime = remindTime
+    await this.zzzRemindSaveUserConfig(e.user_id, cfg)
+    return e.reply(`个人提醒时间已设为：${remindTime}`)
+  }
+
+  async zzzRemindViewMyTime(e) {
+    const cfg = await this.zzzRemindUserConfig(e.user_id)
+    const def = this.zzzRemindDefaults()
+    if (!cfg?.remindTime) return e.reply(`未设置个人提醒时间，使用全局默认：${def.globalRemindTime}`)
+    return e.reply(`个人提醒时间：${cfg.remindTime}`)
+  }
+
+  async zzzRemindDeleteMyTime(e) {
+    const cfg = await this.zzzRemindUserConfig(e.user_id)
+    if (!cfg?.remindTime) return e.reply('未设置个人提醒时间')
+    delete cfg.remindTime
+    await this.zzzRemindSaveUserConfig(e.user_id, cfg)
+    return e.reply('已恢复使用全局提醒时间')
+  }
+
+  async zzzRemindSetGlobalTime(e) {
+    if (!e.isMaster) return e.reply('仅限主人设置')
+    const { remindTime, error } = this.zzzRemindParseTime(e.msg)
+    if (!remindTime) return e.reply(error || '时间格式错误')
+    yaml.setValue('./plugins/HoYoGet-Plugin/config/config.yaml', 'zzz_remind_time', remindTime)
+    return e.reply(`全局提醒时间已设为：${remindTime}`)
+  }
+
+  async zzzRemindViewGlobalTime(e) {
+    return e.reply(`全局提醒时间：${this.zzzRemindDefaults().globalRemindTime}`)
+  }
+
+  async runZzzRemindTask() {
+    const def = this.zzzRemindDefaults()
+    if (!def.enable) return
+    let configs = {}
+    try { configs = await redis.hGetAll('ZZZ:REMIND:USER_CONFIGS') } catch { return }
+    if (!configs || !Object.keys(configs).length) return
+    const now = new Date()
+    for (const [userId, raw] of Object.entries(configs)) {
+      let cfg
+      try { cfg = JSON.parse(raw) } catch { continue }
+      if (!cfg?.enable) continue
+      if (typeof Bot === 'undefined' || !Bot.fl?.get(Number(userId))) continue
+      const remindTime = cfg.remindTime || def.globalRemindTime
+      if (!this.zzzRemindTimeMatch(remindTime, now)) continue
+      const mock = { user_id: Number(userId), game: 'zzz', reply: () => {} }
+      const messages = await this.zzzRemindCheckUser(userId, cfg, false, mock)
+      if (!messages.length) continue
+      await Bot.pickFriend(Number(userId)).sendMsg(`【式舆/危局挑战提醒】\n${messages.join('\n')}`).catch(err => {
+        logger.error?.(`[HoYoGet][zzz_remind] 推送失败：${err?.message || err}`)
+      })
+    }
+  }
+
   getZzzUid(e) {
     const uid = e.user?.getUid?.('zzz')
     if (uid) return uid

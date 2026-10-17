@@ -54,6 +54,28 @@ class yaml {
     }
   }
 
+  /** 修改已有键并保留注释/排版（与 setMissing 同一套 parseDocument） */
+  setValue(path, keyname, value) {
+    let read;
+    try {
+      read = fs.readFileSync(path, 'utf-8');
+    } catch (err) {
+      logger.error(err);
+      return false;
+    }
+    try {
+      const doc = YAML.parseDocument(read);
+      doc.setIn(keyname.split('.'), value);
+      const out = doc.toString();
+      if (out === read) return false;
+      fs.writeFileSync(path, out, 'utf-8');
+      return true;
+    } catch (err) {
+      logger.error(err);
+      return false;
+    }
+  }
+
   set(path, keyname, value) {
     let read;
     try {
