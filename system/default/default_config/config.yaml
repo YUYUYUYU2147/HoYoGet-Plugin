@@ -76,14 +76,8 @@ gs_bg: true
 # 随机图接口地址，留空则用默认的 api.yppp.net
 gs_bg_api: 'https://api.yppp.net/api.php'
 
-#塔罗牌开关：true开，false关
-tlp: false
 
-#塔罗牌每天上限次数：填数字（单位：次）
-tlpcs: 3
 
-#查委托是否必须带#号前缀：true开，false关
-wt: false
 
 #是否启用体力组件：true开，false关
 Tl: false
@@ -115,8 +109,6 @@ bh3_logs: true
 #原来写死在代码里、每天 05:30 跑一轮，那一轮撞上风控就得再等 24 小时。
 gacha_pool_cron: '0 */30 * * * *'
 
-#星铁货币战争战绩显示数量：填数字 (取1-3，避免图太长)
-huobi_num: 2
 
 #图鉴是否启用？：true是，false否 (优先级设置在other.yaml文件)
 wiki: false
@@ -345,11 +337,8 @@ video_priority: 1
 voice_priority: 15
 update_priority: 10
 config_priority: 15
-tlp_priority: 15
 help_priority: 100
 picture_priority: 1234
-npc_wt_priority: 1234
-huobi_priority: 123
 role_combat_priority: 100
 zzz_md_priority: 100
 currency_balance_priority: 100

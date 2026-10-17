@@ -89,13 +89,6 @@ async function api(e, data = {}) {
                 }),
             },
         },
-        //货币战争
-        huobi: {
-            url: `https://api-takumi-record.mihoyo.com/game_record/app/hkrpg/api/grid_fight?server=${server}&role_id=${uid}`,
-            obj: {
-                method: 'GET',
-            }
-        },
         //绝区零母带
         zzz_md: {
             url: `https://api-takumi-record.mihoyo.com/event/game_record_zzz/api/zzz/cur_gacha_detail?uid=${uid}&region=${server}`,

@@ -57,7 +57,6 @@ function readDefaultCfg() {
  */
 export const MODULES = {
   tl: { key: 'Tl', label: '体力查询' },
-  tlp: { key: 'tlp', label: '塔罗牌' },
   wiki: { key: 'wiki', label: '图鉴' },
   gs_logs: { key: 'gs_logs', label: '原神历史卡池' },
   sr_logs: { key: 'sr_logs', label: '星铁历史卡池' },

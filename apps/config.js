@@ -25,12 +25,12 @@ export class Config extends plugin {
           permission: 'master',
         },
         {
-          reg: `^#*米哈游设置(塔罗牌|自动更新|b站|B站|哔哩哔哩|bili|bilibili)?(开启|关闭)((查)?委托前缀)?$`,
+          reg: `^#*米哈游设置(自动更新|b站|B站|哔哩哔哩|bili|bilibili)?(开启|关闭)$`,
           fnc: 'f2',
           permission: 'master',
         },
         {
-          reg: `^#*米哈游设置((塔罗牌(每日)?次数)|((图片)?渲染(精度)?)|自动视频)(\\d+)$`,
+          reg: `^#*米哈游设置(((图片)?渲染(精度)?)|自动视频)(\\d+)$`,
           fnc: 'f3',
           permission: 'master',
         },
@@ -54,8 +54,6 @@ export class Config extends plugin {
   async f2(e) {
     const CLEAN_REGEX = /#|米哈游|设置/g;
     const TYPE_MAP = {
-      塔罗牌: 'tlp',
-      委托前缀: 'wt',
       'b站|B站|哔哩哔哩|bili|bilibili': 'bilibili',
       自动更新: 'update',
     };
@@ -79,11 +77,10 @@ export class Config extends plugin {
 
   async f3(e) {
     let num = e.msg.replace(
-      /#|米哈游设置|米哈游设置|渲染|精度|图片|塔罗牌|自动视频|次数|每日/g,
+      /#|米哈游设置|渲染|精度|图片|自动视频|次数/g,
       ''
     );
-    if (e.msg.includes('塔罗牌')) await yaml.set(path, 'tlpcs', Number(num));
-    else if (e.msg.includes('渲染')) await yaml.set(path, 'img_quality', Number(num));
+    if (e.msg.includes('渲染')) await yaml.set(path, 'img_quality', Number(num));
     else if (e.msg.includes('自动视频')) await yaml.set(path, 'dow_size', Number(num));
     this.sz(e);
   }
@@ -171,9 +168,6 @@ export class Config extends plugin {
     msg.push(
       [
         '--------米哈游设置状态--------',
-        `塔罗牌：${data.tlp ? '已开启' : '已关闭'}`,
-        `塔罗牌每日次数：${data.tlpcs}次`,
-        `查委托必须带#前缀：${data.wt ? '已开启' : '已关闭'}`,
         `b站相关功能：${data.bilibili ? '已开启' : '已关闭'}`,
         `b站视频小于多少MB自动下载：${data.dow_size}MB`,
         `凌晨3:30自动更新米哈游：${data.update ? '已开启' : '已关闭'}`,
@@ -189,32 +183,21 @@ export class Config extends plugin {
     }
     let msg_ = [
       '--------设置指令列表--------',
-      '1.塔罗牌：',
-      '米哈游设置塔罗牌开启',
-      '米哈游设置塔罗牌关闭\n',
-
-      '2.塔罗牌每日次数：',
-      '米哈游设置塔罗牌次数(+数字)\n',
-
-      '4.查委托是否必须带#前缀：',
-      '开启委托前缀',
-      '关闭委托前缀\n',
-
-      '5.b站相关功能：',
+      '1.b站相关功能：',
       '米哈游设置b站开启',
       '米哈游设置b站关闭\n',
 
-      '6.b站视频小于多少MB自动下载：',
+      '2.b站视频小于多少MB自动下载：',
       '米哈游设置自动视频(+数字(最大99))\n',
 
-      '7.米哈游自动更新：',
+      '3.米哈游自动更新：',
       '米哈游设置自动更新开启',
       '米哈游设置自动更新关闭\n',
 
-      '8.图片渲染精度：',
+      '4.图片渲染精度：',
       '米哈游设置渲染(+数字)\n',
 
-      '9.米哈游视频播报群号：',
+      '5.米哈游视频播报群号：',
       '添加播报群(+群号)',
       '删除播报群(+群号)\n',
 
