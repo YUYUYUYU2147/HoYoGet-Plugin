@@ -87,12 +87,14 @@ function formatNow() {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
 }
 
-/** 面板左上角的玩家头像/昵称：优先群名片，其次昵称，最后 QQ 号 */
-function getPlayerBadge(e) {
+/** 面板左上角：优先游戏内昵称/头像，拿不到再回落群名片/QQ 头像 */
+function getPlayerBadge(e, gamePlayer = null) {
   const qq = e?.user_id || e?.sender?.user_id || ''
-  const name = e?.sender?.card || e?.sender?.nickname || e?.friend?.nickname || e?.user?.nickname || (qq ? String(qq) : '')
-  const avatar = e?.sender?.avatar || (qq ? `https://q1.qlogo.cn/g?b=qq&s=100&nk=${qq}` : '')
-  return { playerName: name, playerAvatar: avatar }
+  const qqName = e?.sender?.card || e?.sender?.nickname || e?.friend?.nickname || e?.user?.nickname || (qq ? String(qq) : '')
+  const qqAvatar = e?.sender?.avatar || (qq ? `https://q1.qlogo.cn/g?b=qq&s=100&nk=${qq}` : '')
+  const gameName = gamePlayer?.nickname || gamePlayer?.game_name || ''
+  const gameAvatar = gamePlayer?.avatar || gamePlayer?.game_avatar || gamePlayer?.gameAvatar || ''
+  return { playerName: gameName || qqName, playerAvatar: gameAvatar || qqAvatar }
 }
 
 // 面板随机背景：默认用 yppp 的随机二次元图；配置成空字符串可恢复纯黑底
@@ -970,7 +972,9 @@ export class zzz_panel_list extends plugin {
     const charData = detail.charData
     const footer = 'from 米哈游'
     try {
-      const img = await render('zzz_panel/detail', { ...detail, footer, bgImage: getPanelBg(), ...getPlayerBadge(e) }, { e, ret: true })
+      let gamePlayer = null
+      try { gamePlayer = await this.fetchPlayer(e, uid, ck) } catch { /* 取不到游戏昵称就回落 QQ */ }
+      const img = await render('zzz_panel/detail', { ...detail, footer, bgImage: getPanelBg(), ...getPlayerBadge(e, gamePlayer) }, { e, ret: true })
       return img
     } catch (err) {
       logger.error?.(`[HoYoGet][zzz_panel] 详情渲染失败：${err?.message || err}`)
@@ -1084,6 +1088,30 @@ export class zzz_panel_list extends plugin {
       logger.error?.(`[HoYoGet][zzz_panel] 伤害详情渲染失败：${err?.message || err}`)
       return e.reply(`「${cur.name}」详细计算渲染失败：${err?.message || err}`)
     }
+  }
+
+  /** 取游戏内玩家昵称/头像；接口失败时回落迁移过来的本地 player 数据 */
+  async fetchPlayer(e, uid, ck) {
+    try {
+      const apiMod = await import(path.join(ZZZ_ROOT, 'dist', 'lib', 'mysapi.js'))
+      const MysZZZApi = apiMod.default
+      const api = new MysZZZApi(uid, ck, { handler: e?.runtime?.handler || {}, e })
+      const data = await api.getFinalData('zzzUser')
+      const player = data?.list?.find(p => String(p.game_uid) === String(uid)) || data?.list?.[0]
+      if (player?.nickname) return player
+    } catch (err) {
+      logger.debug?.(`[HoYoGet][zzz_panel] 游戏玩家信息获取失败，回落本地/QQ：${err?.message || err}`)
+    }
+    for (const file of [
+      `./plugins/HoYoGet-Plugin/data/zzz_gacha/zzz_plugin/player/${uid}.json`,
+      `./plugins/ZZZ-Plugin/data/player/${uid}.json`,
+    ]) {
+      try {
+        const j = JSON.parse(fs.readFileSync(file, 'utf8'))
+        if (j?.nickname) return { nickname: j.nickname, avatar: j.gameAvatar || j.avatar || '' }
+      } catch { /* 试下一个 */ }
+    }
+    return null
   }
 
   /** 取单角色详情接口 avatar/info，原样返回 data（契约同 fetchRaw） */

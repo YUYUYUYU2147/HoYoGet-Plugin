@@ -23,6 +23,7 @@ const ZZZ = path.join(YZ, 'plugins', 'ZZZ-Plugin')
 const DB_FILE = path.join(YZ, 'data', 'db', 'data.db')
 const STOKEN_DIR = path.join(HOYO, 'data', 'Stoken')
 const GACHA_OUT = path.join(HOYO, 'data', 'zzz_gacha', 'zzz_plugin')
+const PLAYER_OUT = path.join(GACHA_OUT, 'player')
 const LEDGER_DIR = path.join(HOYO, 'data', 'CurrencyLedger', 'zzz')
 
 const ZZZ_ACTION_NAME = {
@@ -107,6 +108,15 @@ function migrateGacha() {
   return { copied: files.length, total: files.length }
 }
 
+function migratePlayer() {
+  const dir = path.join(ZZZ, 'data', 'player')
+  if (!fs.existsSync(dir)) return 0
+  fs.mkdirSync(PLAYER_OUT, { recursive: true })
+  const files = fs.readdirSync(dir).filter(f => f.endsWith('.json'))
+  for (const f of files) fs.copyFileSync(path.join(dir, f), path.join(PLAYER_OUT, f))
+  return files.length
+}
+
 function migrateMonthly(authByUid) {
   const dir = path.join(ZZZ, 'data', 'monthly')
   if (!fs.existsSync(dir)) return { months: 0, uids: 0, skipped: 0 }
@@ -166,6 +176,7 @@ for (const uid of byUid.keys()) {
   else stokenUpdated++
 }
 const gacha = migrateGacha()
+const player = migratePlayer()
 const monthly = migrateMonthly(byUid)
 for (const f of fs.existsSync(path.join(ZZZ, 'data', 'gacha')) ? fs.readdirSync(path.join(ZZZ, 'data', 'gacha')) : []) {
   if (!f.endsWith('.json')) continue
@@ -175,5 +186,6 @@ for (const f of fs.existsSync(path.join(ZZZ, 'data', 'gacha')) ? fs.readdirSync(
 console.log('迁移完成：')
 console.log(`  Stoken：新增 ${stokenNew} 条，更新 ${stokenUpdated} 条`)
 console.log(`  逐抽记录：复制 ${gacha.copied}/${gacha.total} 个文件`)
+console.log(`  玩家昵称/头像：复制 ${player} 个文件`)
 console.log(`  菲林月报：合并 ${monthly.months} 个月份，涉及 ${monthly.uids} 个账号，跳过 ${monthly.skipped} 个`)
 console.log(`  没有可用 CK 的抽卡 UID：${noAuth} 个（只复制了记录，未写入 Stoken）`)

@@ -1,3 +1,4 @@
+@font-face { font-family: 'Unifont'; src: url('../font/unifont.otf') format('opentype'); font-display: swap; }
 /* 绝区零角色面板（深色版式，自控布局；图标映射见 panel-icons.css） */
 * { box-sizing: border-box; }
 body {
@@ -5,7 +6,7 @@ body {
   margin: 0;
   width: 1000px;
   font-size: 15px;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft YaHei", "PingFang SC", "Noto Sans SC", "Unifont", sans-serif;
   color: #e7ebf3;
   background: #0b0e14;
   -webkit-font-smoothing: antialiased;

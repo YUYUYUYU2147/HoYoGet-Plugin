@@ -1,3 +1,4 @@
+@font-face { font-family: 'Unifont'; src: url('../font/unifont.otf') format('opentype'); font-display: swap; }
 * {
   margin: 0;
   padding: 0;
@@ -10,7 +11,7 @@
 body {
   width: 1100px;
   background: #14161f;
-  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Unifont", sans-serif;
   color: #e8eaf0;
 }
 
