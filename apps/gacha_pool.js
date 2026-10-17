@@ -1903,12 +1903,12 @@ export class xhh_gacha_pool extends plugin {
       index: String(ver) === '联动2.0' ? -1 : 0
     } : null);
     if (!spec) return '';
-    // 有特征串就按特征串挑那张图，挑不到再退回下标，避免官方改帖顺序后取错图
+    // 有特征串就按特征串挑那张图。已知联动池的特征串没命中时直接放弃，
+    // 绝不退回下标猜图 —— 下标会随官方改帖顺序漂移，猜错就会把联动2.0写成1.0的封面。
     const pickImage = images => {
       if (!images.length) return '';
       if (spec.match) {
-        const hit = images.find(url => String(url).includes(spec.match));
-        if (hit) return hit;
+        return images.find(url => String(url).includes(spec.match)) || '';
       }
       return images[spec.index < 0 ? images.length - 1 : spec.index] || '';
     };
