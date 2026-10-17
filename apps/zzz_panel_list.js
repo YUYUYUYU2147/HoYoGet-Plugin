@@ -27,6 +27,7 @@ const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 const ZZZ_ROOT = path.join(process.cwd(), 'plugins', 'ZZZ-Plugin')
 const OUT_DIR = path.join(PLUGIN_ROOT, 'data', 'zzz_panel')
 const RECORDS_DIR = path.join(OUT_DIR, 'records')
+const EXTREME_PRESET_FILE = path.join(PLUGIN_ROOT, 'system', 'default', 'zzz_extreme.yaml')
 
 // 属性 / 职业 中文映射，与 system/mys.js 的 zzz_element_map / zzz_type_map 保持一致
 //（属产品形态，非角色数值表，数值表一律现取、不搬）。
@@ -1468,6 +1469,18 @@ export class zzz_panel_list extends plugin {
     return e.reply([`成功删除ID为${ok.join(',') || '无'}的图片`, fail.length ? `删除失败ID为${fail.join(',')}` : '无失败ID'].join('\n'))
   }
 
+  loadExtremePreset(role) {
+    try {
+      const data = yaml.get(EXTREME_PRESET_FILE) || {}
+      const norm = v => String(v || '').replace(/[\s·・\-—_「」『』《》【】\[\]（）()]/g, '').toLowerCase()
+      const want = norm(role)
+      for (const [name, preset] of Object.entries(data)) {
+        if (norm(name) === want) return preset
+      }
+    } catch { /* 没有预设文件就走自动权重 */ }
+    return null
+  }
+
   /** 找一份该角色的面板记录：本地优先，过渡期兼容 ZZZ-Plugin 的 data/panel */
   findExtremeRecord(e, role) {
     const norm = v => String(v || '').replace(/[\s·・\-—_「」『』《》【】\[\]（）()]/g, '').toLowerCase()
@@ -1506,7 +1519,7 @@ export class zzz_panel_list extends plugin {
   }
 
   /** 理论极限：6 命、技能 16/核心 7、音擎满精满突破、六盘满级 S 且副词条满强化 */
-  applyExtremePanel(a) {
+  applyExtremePanel(a, preset = null) {
     const out = JSON.parse(JSON.stringify(a || {}))
     const baseProps = {}
     for (const p of out.properties || []) {
@@ -1575,7 +1588,8 @@ export class zzz_panel_list extends plugin {
       const oldMain = Number(eq.main_properties?.[0]?.property_id || 0)
       const allowed = (SCORE_MAIN_STATS[slot] || []).filter(id => Number(weight[id] || 0) > 0)
       allowed.sort((x, y) => Number(weight[y] || 0) - Number(weight[x] || 0))
-      const mainId = allowed[0] || oldMain
+      const presetMain = Number(preset?.drive_main?.[slot] ?? preset?.drive_main?.[String(slot)] ?? 0)
+      const mainId = presetMain || allowed[0] || oldMain
       const mainBase = MAIN_MAX_VALUE[mainId]
         || eq.main_properties?.[0]?.base
         || `${SUB_BASE_VALUE[mainId] || 0}`
@@ -1635,7 +1649,8 @@ export class zzz_panel_list extends plugin {
     const base = this.findExtremeRecord(e, role)
     if (!base) return e.reply(`暂无【${role}】面板记录，请先发一次「米游社${role}面板」`)
     try {
-      const raw = this.applyExtremePanel(base)
+      const preset = this.loadExtremePreset(role)
+      const raw = this.applyExtremePanel(base, preset)
       const detail = normalizeDetail(raw, '100000000')
       const img = await render('zzz_panel/detail', {
         ...detail,

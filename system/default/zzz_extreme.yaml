@@ -1,0 +1,379 @@
+# 绝区零极限面板预设（自动生成，可手工修正）
+# 只含角色 ID、推荐音擎 ID、4~6 号位主词条，不含 UID/QQ/Cookie。
+# 生成命令：node tools/gen_zzz_extreme_presets.mjs
+「11号」:
+  char_id: 1041
+  weapon_id: 14104
+  drive_main:
+    "4": 21103
+    "5": 31603
+    "6": 12102
+「扳机」:
+  char_id: 1361
+  weapon_id: 13006
+  drive_main:
+    "4": 21103
+    "5": 31803
+    "6": 12202
+「席德」:
+  char_id: 1461
+  weapon_id: 14146
+  drive_main:
+    "4": 21103
+    "5": 31803
+    "6": 12102
+艾莲:
+  char_id: 1191
+  weapon_id: 14119
+  drive_main:
+    "4": 21103
+    "5": 31703
+    "6": 12102
+爱丽丝:
+  char_id: 1401
+  weapon_id: 14140
+  drive_main:
+    "4": 31203
+    "5": 31503
+    "6": 31402
+爱芮:
+  char_id: 1501
+  weapon_id: 14133
+  drive_main:
+    "4": 31203
+    "5": 31903
+    "6": 31402
+安比:
+  char_id: 1011
+  weapon_id: 13101
+  drive_main:
+    "4": 21103
+    "5": 31803
+    "6": 12202
+安东:
+  char_id: 1111
+  weapon_id: 13111
+  drive_main:
+    "4": 21103
+    "5": 31803
+    "6": 12102
+奥菲丝&「鬼火」:
+  char_id: 1301
+  weapon_id: 13015
+  drive_main:
+    "4": 21103
+    "5": 31603
+    "6": 12102
+柏妮思:
+  char_id: 1171
+  weapon_id: 13128
+  drive_main:
+    "4": 31203
+    "5": 31603
+    "6": 31402
+本:
+  char_id: 1121
+  weapon_id: 13112
+  drive_main:
+    "4": 21103
+    "5": 31603
+    "6": 13102
+比利:
+  char_id: 1081
+  weapon_id: 13108
+  drive_main:
+    "4": 21103
+    "5": 31503
+    "6": 12102
+波可娜:
+  char_id: 1351
+  weapon_id: 13135
+  drive_main:
+    "4": 21103
+    "5": 31503
+    "6": 12202
+苍角:
+  char_id: 1131
+  weapon_id: 13115
+  drive_main:
+    "4": 21103
+    "5": 31703
+    "6": 30502
+格莉丝:
+  char_id: 1181
+  weapon_id: 14118
+  drive_main:
+    "4": 31203
+    "5": 31803
+    "6": 31402
+简:
+  char_id: 1261
+  weapon_id: 14126
+  drive_main:
+    "4": 31203
+    "5": 31503
+    "6": 31402
+橘福福:
+  char_id: 1391
+  weapon_id: 13005
+  drive_main:
+    "4": 21103
+    "5": 31603
+    "6": 12202
+凯撒:
+  char_id: 1071
+  weapon_id: 13016
+  drive_main:
+    "4": 21103
+    "5": 31503
+    "6": 13102
+珂蕾妲:
+  char_id: 1101
+  drive_main:
+    "4": 21103
+    "5": 31603
+    "6": 12202
+可琳:
+  char_id: 1061
+  weapon_id: 13106
+  drive_main:
+    "4": 21103
+    "5": 31503
+    "6": 12102
+莱卡恩:
+  char_id: 1141
+  weapon_id: 14114
+  drive_main:
+    "4": 21103
+    "5": 31703
+    "6": 12202
+莱特:
+  char_id: 1161
+  weapon_id: 14116
+  drive_main:
+    "4": 21103
+    "5": 31603
+    "6": 12202
+丽娜:
+  char_id: 1211
+  weapon_id: 13115
+  drive_main:
+    "4": 21103
+    "5": 31803
+    "6": 30502
+零号·安比:
+  char_id: 1381
+  weapon_id: 14138
+  drive_main:
+    "4": 21103
+    "5": 31803
+    "6": 12102
+琉音:
+  char_id: 1481
+  weapon_id: 13005
+  drive_main:
+    "4": 21103
+    "5": 31503
+    "6": 12202
+柳:
+  char_id: 1221
+  weapon_id: 14122
+  drive_main:
+    "4": 31203
+    "5": 31803
+    "6": 31402
+卢西娅:
+  char_id: 1451
+  weapon_id: 13115
+  drive_main:
+    "4": 21103
+    "5": 31903
+    "6": 30502
+露西:
+  char_id: 1151
+  weapon_id: 13113
+  drive_main:
+    "4": 21103
+    "5": 31603
+    "6": 30502
+猫又:
+  char_id: 1021
+  drive_main:
+    "4": 21103
+    "5": 31503
+    "6": 12102
+南宫羽:
+  char_id: 1511
+  weapon_id: 14151
+  drive_main:
+    "4": 21103
+    "5": 31903
+    "6": 12202
+妮可:
+  char_id: 1031
+  weapon_id: 13103
+  drive_main:
+    "4": 21103
+    "5": 31903
+    "6": 30502
+派派:
+  char_id: 1281
+  weapon_id: 13128
+  drive_main:
+    "4": 31203
+    "5": 31503
+    "6": 31402
+潘引壶:
+  char_id: 1421
+  weapon_id: 13142
+  drive_main:
+    "4": 21103
+    "5": 31503
+    "6": 13102
+佩洛伊斯:
+  char_id: 1551
+  weapon_id: 14155
+  drive_main:
+    "4": 21103
+    "5": 31903
+    "6": 12102
+普罗米娅:
+  char_id: 1541
+  weapon_id: 14154
+  drive_main:
+    "4": 31203
+    "5": 31703
+    "6": 31402
+千夏:
+  char_id: 1491
+  weapon_id: 13115
+  drive_main:
+    "4": 21103
+    "5": 31503
+    "6": 30502
+青衣:
+  char_id: 1251
+  weapon_id: 13006
+  drive_main:
+    "4": 21103
+    "5": 31803
+    "6": 12202
+赛斯:
+  char_id: 1271
+  weapon_id: 13127
+  drive_main:
+    "4": 21103
+    "5": 31803
+    "6": 13102
+薇薇安:
+  char_id: 1331
+  weapon_id: 14133
+  drive_main:
+    "4": 31203
+    "5": 31903
+    "6": 31402
+维琳娜:
+  char_id: 1561
+  weapon_id: 13008
+  drive_main:
+    "4": 31203
+    "5": 32303
+    "6": 31402
+希希芙:
+  char_id: 1521
+  weapon_id: 13111
+  drive_main:
+    "4": 21103
+    "5": 31803
+    "6": 12102
+星徽·比利:
+  char_id: 1531
+  weapon_id: 14153
+  drive_main:
+    "4": 21103
+    "5": 31503
+    "6": 11102
+雅:
+  char_id: 1091
+  weapon_id: 14109
+  drive_main:
+    "4": 31203
+    "5": 31703
+    "6": 31402
+耀嘉音:
+  char_id: 1311
+  weapon_id: 13115
+  drive_main:
+    "4": 21103
+    "5": 31903
+    "6": 30502
+叶瞬光:
+  char_id: 1431
+  weapon_id: 14143
+  drive_main:
+    "4": 21103
+    "5": 31503
+    "6": 12102
+伊德海莉:
+  char_id: 1051
+  weapon_id: 14105
+  drive_main:
+    "4": 21103
+    "5": 31703
+    "6": 11102
+伊芙琳:
+  char_id: 1321
+  weapon_id: 14132
+  drive_main:
+    "4": 21103
+    "5": 31603
+    "6": 12102
+仪玄:
+  char_id: 1371
+  weapon_id: 14137
+  drive_main:
+    "4": 21103
+    "5": 31903
+    "6": 11102
+悠真:
+  char_id: 1201
+  weapon_id: 14120
+  drive_main:
+    "4": 21103
+    "5": 31803
+    "6": 12102
+柚叶:
+  char_id: 1411
+  weapon_id: 13115
+  drive_main:
+    "4": 21103
+    "5": 31503
+    "6": 30502
+雨果:
+  char_id: 1291
+  weapon_id: 14129
+  drive_main:
+    "4": 21103
+    "5": 31703
+    "6": 12102
+照:
+  char_id: 1341
+  weapon_id: 14134
+  drive_main:
+    "4": 21103
+    "5": 31703
+    "6": 13102
+真斗:
+  char_id: 1441
+  weapon_id: 13144
+  drive_main:
+    "4": 21103
+    "5": 31603
+    "6": 11102
+朱鸢:
+  char_id: 1241
+  weapon_id: 13015
+  drive_main:
+    "4": 21103
+    "5": 31903
+    "6": 12102
