@@ -1,9 +1,11 @@
+import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { api, config, mhy, pluginPriority, render, yaml } from '#HoYoGet'
+import { config, mhy, pluginPriority, render, yaml } from '#HoYoGet'
 import { damageSkillsAt, getCharRates } from '../system/zzz_skill_rate.js'
 import { getBuffAreas } from '../system/zzz_buff.js'
+import { mhyFetch } from '../system/mhy_fetch.js'
 
 /**
  * 绝区零面板（xhh 自研）—— 第 2 步：归一化 + 自研渲染。
@@ -102,6 +104,57 @@ function ckStringOf(ck) {
   if (typeof ck === 'string') return ck
   const hit = Object.values(ck || {}).find(item => item?.ck)
   return hit?.ck || ''
+}
+
+/** 按 ZZZ-Plugin 的口径生成 record 接口请求头（4x salt + query 参与 DS） */
+function zzzHeaders(e, ck, query = '') {
+  const fpFile = `./plugins/HoYoGet-Plugin/data/fp/${e?.user_id}.yaml`
+  let fp = {}
+  if (fs.existsSync(fpFile)) {
+    try { fp = yaml.get(fpFile) || {} } catch { fp = {} }
+  }
+  const t = Math.round(Date.now() / 1000)
+  const r = Math.floor(Math.random() * 900000 + 100000)
+  const salt = 'xV8v4Qu54lUKrEYFZkJhB8cuOh9Asafs'
+  const DS = crypto.createHash('md5').update(`salt=${salt}&t=${t}&r=${r}&b=&q=${query}`).digest('hex')
+  const headers = {
+    'x-rpc-app_version': '2.73.1',
+    'x-rpc-client_type': '5',
+    'x-rpc-device_id': String(fp.device_id || mhy.getDeviceGuid()).toUpperCase(),
+    'User-Agent': 'Mozilla/5.0 (Linux; Android 12; XQ-AT52 Build/58.2.A.7.93; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/100.0.4896.88 Mobile Safari/537.36 miHoYoBBS/2.73.1',
+    Origin: 'https://webstatic.mihoyo.com',
+    'X-Requested-With': 'com.mihoyo.hyperion',
+    Referer: 'https://webstatic.mihoyo.com/',
+    Accept: 'application/json, text/plain, */*',
+    DS: `${t},${r},${DS}`,
+    Cookie: ck || '',
+  }
+  if (fp.fp) headers['x-rpc-device_fp'] = fp.fp
+  return headers
+}
+
+/** 直接请求 ZZZ record 接口：返回 data，失败抛带 retcode/message 的错误，便于面板显示真实原因 */
+async function zzzGet(e, uid, ck, type, query) {
+  const base = type === 'user'
+    ? 'https://api-takumi.mihoyo.com/binding/api/getUserGameRolesByCookie'
+    : type === 'info'
+      ? 'https://api-takumi-record.mihoyo.com/event/game_record_zzz/api/zzz/avatar/info'
+      : 'https://api-takumi-record.mihoyo.com/event/game_record_zzz/api/zzz/avatar/basic'
+  const url = `${base}?${query}`
+  const headers = zzzHeaders(e, ckStringOf(ck), query)
+  const resp = await mhyFetch(url, { method: 'GET', headers })
+  const text = await resp.text()
+  let json
+  try { json = JSON.parse(text) } catch {
+    throw new Error(`接口返回非 JSON（HTTP ${resp.status}，可能被风控拦截）`)
+  }
+  if (Number(json?.retcode) !== 0) {
+    const code = Number(json?.retcode)
+    if ([1034, 10035, 10041].includes(code)) throw new Error(`米游社验证码/风控（${code}），请先完成过码再试`)
+    if ([-100, -101, -111, 10001].includes(code)) throw new Error(`CK 失效或未登录（${code}），请刷新 CK / 重新扫码`)
+    throw new Error(`接口返回 ${code}：${json?.message || '未知错误'}`)
+  }
+  return json.data
 }
 
 /** 从本插件 Stoken 里找 ZZZ 条目：优先当前 UID，其次 nap_cn 条目，最后第一条带 ck 的 */
@@ -1117,14 +1170,10 @@ export class zzz_panel_list extends plugin {
   /** 取游戏内玩家昵称/头像；接口失败时回落迁移过来的本地 player 数据 */
   async fetchPlayer(e, uid, ck) {
     try {
-      const res = await api(e, {
-        uid,
-        game: 'zzz',
-        type: 'zzz_user',
-        headers: mhy.getHeaders(e, ckStringOf(ck)),
-        silent: true,
-      })
-      const player = res?.data?.list?.find(p => String(p.game_uid) === String(uid)) || res?.data?.list?.[0]
+      const server = mhy.getServer(uid, 'zzz')
+      const query = `game_biz=nap_cn&region=${server}&game_uid=${uid}`
+      const data = await zzzGet(e, uid, ck, 'user', query)
+      const player = data?.list?.find(p => String(p.game_uid) === String(uid)) || data?.list?.[0]
       if (player?.nickname) return player
     } catch (err) {
       logger.debug?.(`[HoYoGet][zzz_panel] 游戏玩家信息获取失败，回落本地/QQ：${err?.message || err}`)
@@ -1144,19 +1193,11 @@ export class zzz_panel_list extends plugin {
   /** 取单角色详情接口 avatar/info，原样返回 data（契约同 fetchRaw） */
   async fetchDetail(e, uid, ck, id) {
     try {
-      const res = await api(e, {
-        uid,
-        game: 'zzz',
-        type: 'zzz_avatar_info',
-        id_list: [id],
-        headers: mhy.getHeaders(e, ckStringOf(ck)),
-        silent: true,
-      })
-      if (!res?.data) {
-        const msg = typeof res === 'string' ? res : (res?.message || '接口未返回数据')
-        return { __error: `单角色详情获取失败：${msg}。若遇验证码请先完成过码再试。` }
-      }
-      return { data: res.data }
+      const server = mhy.getServer(uid, 'zzz')
+      const query = `lang=zh-cn&role_id=${uid}&server=${server}&need_wiki=false&id_list[]=${id}`
+      const data = await zzzGet(e, uid, ck, 'info', query)
+      if (!data) return { __error: '单角色详情为空，请稍后重试' }
+      return { data }
     } catch (err) {
       logger.error?.(`[HoYoGet][zzz_panel] 详情取数失败：${err?.message || err}`)
       return { __error: `详情取数失败：${err?.message || err}` }
@@ -1257,19 +1298,10 @@ export class zzz_panel_list extends plugin {
    */
   async fetchRaw(e, uid, server, ck) {
     try {
-      const res = await api(e, {
-        uid,
-        server,
-        game: 'zzz',
-        type: 'zzz_avatar_list',
-        headers: mhy.getHeaders(e, ckStringOf(ck)),
-        silent: true,
-      })
-      if (!res?.data) {
-        const msg = typeof res === 'string' ? res : (res?.message || '接口未返回数据')
-        return { __error: `取数失败：${msg}。若遇验证码请先完成过码再试。` }
-      }
-      return { retcode: 0, data: res.data, __fp: true }
+      const query = `lang=zh-cn&role_id=${uid}&server=${server}`
+      const data = await zzzGet(e, uid, ck, 'list', query)
+      if (!data) return { __error: '接口未返回数据，请稍后重试' }
+      return { retcode: 0, data, __fp: true }
     } catch (err) {
       logger.error?.(`[HoYoGet][zzz_panel] 取数失败：${err?.message || err}`)
       return { __error: `取数失败：${err?.message || err}` }
