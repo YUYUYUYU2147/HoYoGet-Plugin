@@ -195,6 +195,47 @@ function skillCat(text) {
   return ''
 }
 /**
+ * 把一个技能的乘区拆成「怎么算出来的」，供「XX伤害N」指令的详细计算页展示。
+ *
+ * 只给构成、不重新算一遍 —— 数值仍来自 calcDamageAreas，保证详细页与面板上的
+ * 数字永远一致（同一公式写两遍迟早会对不上）。
+ */
+function buildCalcDetail(bp, level, one) {
+  const r = (v, n = 4) => Math.round(v * 10 ** n) / 10 ** n
+  const a = one.areas
+  const lv = level && level > 0 ? level : 1
+  const enemyBase = Math.floor(0.1551 * Math.min(60, lv) ** 2 + 3.141 * Math.min(60, lv) + 47.2039)
+  const atk = parseFloat(bp?.attack?.final) || 0
+  const critRate = r(a.crit, 4)
+  const critdmg = r(a.critdmg, 4)
+  const penRatio = r(Math.min(2, toRatio(bp.penratio?.final) + (one.buff?.penRatioAdd || 0)), 4)
+  const penValue = r(toNum(bp.penvalue?.final) + (one.buff?.penValueAdd || 0), 2)
+  const effDef = Math.max(0, enemyBase * (1 - penRatio) - penValue)
+  return {
+    atk,
+    // 必须用 baseTotal（含多段追加），否则「等效倍率 × 攻击力」与基础区对不上
+    rate: r(one.baseTotal / (atk || 1), 3),
+    base: Math.round(one.baseTotal),
+    critRate,
+    critdmg,
+    critArea: r(a.critical, 3),
+    critFormula: `1 + ${critRate} × ${critdmg}`,
+    boost: r(a.boost, 3),
+    vulnerability: r(a.vulnerability, 3),
+    resistance: r(a.resistance, 3),
+    resFormula: '1 − (−0.2)',
+    enemyBase,
+    penRatio,
+    penValue,
+    effDef: Math.round(effDef),
+    defArea: r(a.defence, 4),
+    defFormula: `${enemyBase} ÷ (${Math.round(effDef)} + ${enemyBase})`,
+    expect: Math.round(one.expect),
+    crit: Math.round(one.crit),
+  }
+}
+
+/**
  * 从接口原始角色数据拼出增益查询上下文。
  * 注意各字段的口径：weapon.star 是**精炼**（1~5），rarity 才是稀有度；
  * 影画数是 avatar.rank；驱动盘套装名在 equip[].equip_suit.name（同名多件即为件数）。
@@ -276,6 +317,7 @@ function calcDamage(bp, level, avatar, charName) {
     let expect = base * areas.critical * mul
     let crit = base * (1 + areas.critdmg) * mul
     const adds = []
+    const parts = [{ key, name: entry.name, rate, base, expect, crit, areas, buff, dyn: depth > 0 }]
     let baseTotal = base
     for (const op of entry.ops || []) {
       if (op.op === 'add') {
@@ -285,6 +327,7 @@ function calcDamage(bp, level, avatar, charName) {
         crit += sub.crit
         baseTotal += sub.baseTotal
         adds.push(op.key)
+        parts.push(...sub.parts)
       } else if (op.op === 'x' && Number.isFinite(op.n)) {
         expect *= op.n
         crit *= op.n
@@ -322,6 +365,28 @@ function calcDamage(bp, level, avatar, charName) {
         expect: Math.round(one1.expect),
         crit: Math.round(one1.crit),
         adds: one1.adds,
+        // 分段明细：多段技能要能看清「每一段各打多少、各自套了什么乘区」
+        parts: one1.parts.map(pp => ({
+          name: pp.name || pp.key,
+          key: pp.key,
+          dyn: !!pp.dyn,
+          rate: Math.round(pp.rate * 1000) / 1000,
+          base: Math.round(pp.base),
+          expect: Math.round(pp.expect),
+          crit: Math.round(pp.crit),
+          boost: Math.round(pp.areas.boost * 1000) / 1000,
+          critArea: Math.round(pp.areas.critical * 1000) / 1000,
+          defArea: Math.round(pp.areas.defence * 10000) / 10000,
+        })),
+        // 计算过程用：把每个乘区连同它的构成一起给出，模板才能「算出数字」而不只是显示数字
+        calc: buildCalcDetail(bp, level, one1),
+        // 这一招实际生效的增益（含来源），详细计算页要按招展示 —— 不同招吃到的增益不一样
+        buffList: one1.buff.applied.map(x => ({
+          src: x.src,
+          name: x.name,
+          type: x.type,
+          value: `${Math.round(x.value * 1000) / 10}%`,
+        })),
         buffNames: one1.buff.applied.map(x => x.name),
         buffMiss: one1.buff.missing,
       })
@@ -692,6 +757,8 @@ const CMD_REG = /^\s*米游社\s*(更新|刷新)\s*(全部)?\s*面板$/
 // 详情新格式：米游社<名字>面板（如 米游社南宫羽面板）；保留旧「米游社面板 <名字>」兼容。
 // 负向预查 (?!更新|刷新) 避免与「米游社更新面板 / 米游社刷新面板」抢。
 const DETAIL_REG = /^米游社(?!更新|刷新)(.+?)面板$/
+// 米游社<角色>伤害[序号]：序号省略时默认取伤害最高那一招
+const DAMAGE_REG = /^米游社(?!更新|刷新)(.+?)伤害\s*(\d*)$/
 const DETAIL_REG_OLD = /^米游社面板\s+(.+)$/
 const HELP_REG = /^米游社面板$/
 
@@ -705,6 +772,7 @@ export class zzz_panel_list extends plugin {
       priority: pluginPriority('zzz_panel_list', -100),
       rule: [
         { reg: CMD_REG.source, fnc: 'panelList' },
+        { reg: DAMAGE_REG.source, fnc: 'panelDamage' },
         { reg: DETAIL_REG.source, fnc: 'panelDetail' },
         { reg: DETAIL_REG_OLD.source, fnc: 'panelDetail' },
         { reg: HELP_REG.source, fnc: 'panelDetailHelp' },
@@ -829,7 +897,97 @@ export class zzz_panel_list extends plugin {
       '示例：米游社南宫羽面板',
       '　　　米游社3面板',
       '（序号看「米游社更新面板」列表从左到右第几个）',
+      '',
+      '看某一招的详细计算：米游社<角色>伤害<招数>',
+      '示例：米游社艾莲伤害3',
+      '　　　米游社艾莲伤害（不带序号＝伤害最高那招）',
     ])
+  }
+
+  /**
+   * 「米游社<角色>伤害[序号]」—— 某一招的详细计算过程。
+   *
+   * 序号对应伤害统计表里的行号（与面板上「伤害计算」表的排序一致：期望伤害降序），
+   * 省略序号默认第一招（伤害最高的那招）。
+   * 面板只能给结果，这个指令把「怎么算出来的」逐项摊开：基础区 → 各乘区 → 最终值，
+   * 多段技能还会拆出每一段各自的倍率与乘区。
+   */
+  async panelDamage(e) {
+    const msg = String(e.msg || '')
+    const m = msg.match(DAMAGE_REG)
+    if (!m) return false
+    const arg = (m[1] || '').trim()
+    if (!arg) return this.panelDetailHelp(e)
+
+    const uid = e.user?.getUid?.('zzz')
+    if (!uid) return e.reply('请先绑定绝区零账号')
+
+    const ck = await this.getCk(e)
+    if (!ck || !Object.values(ck).some(item => item?.ck)) {
+      return e.reply('尚未绑定 cookie，请先绑定 cookie 或 #扫码登录')
+    }
+    const server = await this.pickServer(uid, ck)
+    if (!server) return e.reply('未能判断服务器分区（官服 prod_gf_cn / 渠道 prod_qd_cn），请确认绑定信息')
+
+    const raw = await this.fetchRaw(e, uid, server, ck)
+    if (raw?.__error) return e.reply(raw.__error)
+
+    const list = this.pickList(raw?.data)
+    if (!Array.isArray(list) || !list.length) {
+      return e.reply('未能取到角色列表，请稍后再试')
+    }
+
+    // 与面板指令同一套解析：纯数字=列表序号，否则按名字模糊匹配
+    let target = null
+    if (/^\d+$/.test(arg)) {
+      target = list[parseInt(arg, 10) - 1]
+    } else {
+      const lower = arg.toLowerCase()
+      target = list.find(it => (it.name_mi18n || '').toLowerCase().includes(lower))
+        || list.find(it => (it.full_name_mi18n || '').toLowerCase().includes(lower))
+        || list.find(it => (it.name_mi18n || '').toLowerCase().includes(lower.slice(0, 1)))
+    }
+    if (!target || target.id == null) {
+      const names = list.slice(0, 12).map((it, i) => `${i + 1}.${it.name_mi18n || it.full_name_mi18n}`).join('  ')
+      return e.reply(`没找到「${arg}」。可用序号或名字，例如：\n米游社南宫羽伤害3\n米游社3伤害\n部分角色：${names}`)
+    }
+
+    const info = await this.fetchDetail(e, uid, ck, target.id)
+    if (info?.__error) return e.reply(info.__error)
+    const avatar = this.pickInfo(info?.data)
+    if (!avatar) return e.reply('取到详情响应，但没识别到角色数据')
+
+    const detail = normalizeDetail(avatar, uid)
+    const damage = detail.damage
+    if (!damage?.ok) {
+      return e.reply(`「${detail.charData.full_name_mi18n || arg}」暂无伤害计算：${damage?.error || '未知原因'}`)
+    }
+
+    const skills = damage.skills
+    let idx = m[2] ? parseInt(m[2], 10) - 1 : 0
+    if (!(idx >= 0) || idx >= skills.length) {
+      return e.reply([
+        `序号超出范围，当前共 ${skills.length} 招。`,
+        `可用序号：${skills.map((_, i) => i + 1).join('、')}`,
+        `例如：米游社${detail.charData.name_mi18n || arg}伤害${skills.length}`,
+      ])
+    }
+    const cur = skills[idx]
+    const footer = `from 米哈游 · UID ${uid} · ${server} · ${formatNow()}`
+    try {
+      return await render('zzz_panel/damage', {
+        ...detail,
+        skills,
+        cur,
+        curIndex: idx,
+        uid,
+        command: `米游社${detail.charData.name_mi18n || arg}伤害${idx + 1}`,
+        footer,
+      }, { e, ret: true })
+    } catch (err) {
+      logger.error?.(`[HoYoGet][zzz_panel] 伤害详情渲染失败：${err?.message || err}`)
+      return e.reply(`「${cur.name}」详细计算渲染失败：${err?.message || err}`)
+    }
   }
 
   /** 取单角色详情接口 avatar/info，原样返回 data（契约同 fetchRaw） */

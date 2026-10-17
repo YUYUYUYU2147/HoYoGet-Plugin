@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZZZ Damage</title>
+  <link rel="stylesheet" type="text/css" href="{{ppath}}zzz_panel/zzzure/common/style/index.css">
+  <link rel="stylesheet" type="text/css" href="{{ppath}}zzz_panel/damage.css">
+</head>
+<body {{sys.scale}}>
+  <div class="container" id="container">
+    {{set c = charData}}
+    <div class="head">
+      <div class="hd-left">
+        <div class="hd-name"><span class="rarity {{c.rarity}}"></span>{{c.full_name_mi18n}}</div>
+        <div class="hd-meta">
+          Lv.{{c.level}} · {{c.element_cn}} · {{c.type_cn}} · 影{{c.rank}} · 攻击力 {{cur.calc.atk}}
+          {{if c.weapon}} · {{c.weapon.name}} 精炼{{c.weapon.refine}}{{/if}}
+        </div>
+      </div>
+      <div class="hd-cmd">{{command}}</div>
+    </div>
+
+    <div class="sec-title">伤害统计</div>
+    <div class="wrap">
+      <table class="tbl">
+        <tr>
+          <th class="n">#</th>
+          <th class="n">技能</th>
+          <th class="r">等效倍率</th>
+          <th class="r">期望</th>
+          <th class="r">暴击</th>
+        </tr>
+        {{each skills s, i}}
+        <tr class="{{i === curIndex ? 'cur' : ''}}">
+          <td class="n idx">{{i + 1}}</td>
+          <td class="n">{{s.name}} <i>Lv{{s.level}}</i>{{if s.adds.length}}<u>多段</u>{{/if}}</td>
+          <td class="r">{{s.totalRate}}</td>
+          <td class="r">{{s.expect}}</td>
+          <td class="r">{{s.crit}}</td>
+        </tr>
+        {{/each}}
+      </table>
+      <div class="tip">点序号可换招，例如 <b>米游社{{c.name_mi18n}}伤害2</b></div>
+    </div>
+
+    <div class="sec-title">{{cur.name}} · 计算过程</div>
+    <div class="wrap">
+      <div class="step">
+        <div class="st-t">① 基础区</div>
+        <div class="st-b">
+          等效倍率 <b>{{cur.totalRate}}</b> × 攻击力 <b>{{cur.calc.atk}}</b> = <b class="hl">{{cur.calc.base}}</b>
+          {{if cur.parts.length > 1}}
+          <span class="note">（等效倍率含多段追加，见下方分段拆解）</span>
+          {{/if}}
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="st-t">② 乘区</div>
+        <table class="tbl area">
+          <tr><th class="n">乘区</th><th class="r">数值</th><th class="n">怎么来的</th></tr>
+          <tr>
+            <td class="n">暴击区</td>
+            <td class="r">{{cur.calc.critArea}}</td>
+            <td class="n fx">{{cur.calc.critFormula}}　<span class="dim">暴击率 {{cur.calc.critRate}} × 暴伤 {{cur.calc.critdmg}}；期望值口径</span></td>
+          </tr>
+          <tr>
+            <td class="n">增伤区</td>
+            <td class="r">{{cur.calc.boost}}</td>
+            <td class="n fx">1 + Σ 音擎/套装/额外能力/影画 的增伤</td>
+          </tr>
+          <tr>
+            <td class="n">易伤区</td>
+            <td class="r">{{cur.calc.vulnerability}}</td>
+            <td class="n fx">1 + Σ 易伤</td>
+          </tr>
+          <tr>
+            <td class="n">抗性区</td>
+            <td class="r">{{cur.calc.resistance}}</td>
+            <td class="n fx">{{cur.calc.resFormula}}　<span class="dim">按敌人有弱点估算</span></td>
+          </tr>
+          <tr>
+            <td class="n">防御区</td>
+            <td class="r">{{cur.calc.defArea}}</td>
+            <td class="n fx">{{cur.calc.defFormula}}
+              <span class="dim">敌方基础防御 {{cur.calc.enemyBase}}，穿透率 {{cur.calc.penRatio}}、穿透值 {{cur.calc.penValue}} → 有效防御 {{cur.calc.effDef}}</span>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="step">
+        <div class="st-t">③ 结果</div>
+        <div class="st-b">
+          <div class="res">
+            期望伤害
+            <span class="fx">{{cur.calc.base}} × {{cur.calc.critArea}} × {{cur.calc.boost}} × {{cur.calc.vulnerability}} × {{cur.calc.resistance}} × {{cur.calc.defArea}}</span>
+            = <b class="hl">{{cur.calc.expect}}</b>
+          </div>
+          <div class="res">
+            暴击伤害
+            <span class="fx">{{cur.calc.base}} × (1 + {{cur.calc.critdmg}}) × {{cur.calc.boost}} × {{cur.calc.vulnerability}} × {{cur.calc.resistance}} × {{cur.calc.defArea}}</span>
+            = <b class="hl gold">{{cur.calc.crit}}</b>
+          </div>
+          <div class="dim tiny">暴击列按必暴击算，不含暴击率；期望列是 1+暴击率×暴伤 的期望值</div>
+        </div>
+      </div>
+    </div>
+
+    {{if cur.parts.length > 1}}
+    <div class="sec-title">分段拆解</div>
+    <div class="wrap">
+      <table class="tbl">
+        <tr><th class="n">出伤段</th><th class="r">倍率</th><th class="r">基础区</th><th class="r">增伤区</th><th class="r">暴击区</th><th class="r">防御区</th><th class="r">期望</th><th class="r">暴击</th></tr>
+        {{each cur.parts p}}
+        <tr>
+          <td class="n">{{p.name}}{{if p.dyn}}<u>追加段</u>{{/if}}</td>
+          <td class="r">{{p.rate}}</td>
+          <td class="r">{{p.base}}</td>
+          <td class="r">{{p.boost}}</td>
+          <td class="r">{{p.critArea}}</td>
+          <td class="r">{{p.defArea}}</td>
+          <td class="r">{{p.expect}}</td>
+          <td class="r">{{p.crit}}</td>
+        </tr>
+        {{/each}}
+      </table>
+      <div class="dim tiny">各段按各自技能等级取倍率，并分别套用各自生效的增益 —— 追加段的 range 可能落在别的增益生效范围内</div>
+    </div>
+    {{/if}}
+
+    {{if cur.buffList.length}}
+    <div class="sec-title">这一招计入的增益</div>
+    <div class="wrap">
+      <table class="tbl buff">
+        <tr><th class="n">来源</th><th class="n">名称</th><th class="n">类型</th><th class="r">数值</th></tr>
+        {{each cur.buffList b}}
+        <tr>
+          <td class="n">{{b.src}}</td>
+          <td class="n">{{b.name}}</td>
+          <td class="n">{{b.type}}</td>
+          <td class="r">{{b.value}}</td>
+        </tr>
+        {{/each}}
+      </table>
+    </div>
+    {{/if}}
+
+    <div class="notes">
+      {{each c.damage.notes n}}<div>· {{n}}</div>{{/each}}
+    </div>
+
+    <div class="copyright">{{footer}}</div>
+  </div>
+</body>
+
+</html>

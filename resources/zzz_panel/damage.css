@@ -1,0 +1,48 @@
+/* 绝区零 · 单招伤害计算过程页
+   配色与 detail.css 一致（同一套面板观感），此处只补本页独有的块 */
+body { margin: 0; padding: 14px; }
+.container { width: 480px; font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif; color: #dfe4ef; background: #10131c; border-radius: 14px; padding: 16px 18px; box-sizing: border-box; }
+
+.head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, .1); }
+.hd-name { display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 700; }
+.hd-name .rarity { width: 8px; height: 18px; border-radius: 3px; background: #9b8cff; }
+.hd-name .rarity.S { background: #ffcf5c; }
+.hd-meta { margin-top: 6px; font-size: 12px; color: #8b93a7; line-height: 1.7; }
+.hd-cmd { flex-shrink: 0; padding: 4px 9px; font-size: 12px; color: #7cf3d0; background: rgba(124, 243, 208, .1); border: 1px solid rgba(124, 243, 208, .25); border-radius: 6px; }
+
+.sec-title { margin: 16px 0 8px; padding-left: 9px; font-size: 14px; font-weight: 700; color: #cfd6e6; border-left: 3px solid #ffcf5c; }
+.wrap { padding: 12px 14px; background: rgba(255, 255, 255, .04); border: 1px solid rgba(255, 255, 255, .09); border-radius: 12px; }
+
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl th { font-weight: 500; font-size: 11px; color: #7c8496; padding: 3px 7px; text-align: left; }
+.tbl td { padding: 5px 7px; border-top: 1px solid rgba(255, 255, 255, .05); color: #e8ecf5; }
+.tbl th.r, .tbl td.r { text-align: right; font-variant-numeric: tabular-nums; }
+.tbl td.n { width: auto; }
+.tbl .idx { width: 28px; color: #6b7386; }
+.tbl td.n i { font-style: normal; font-size: 11px; color: #6b7386; margin-left: 3px; }
+.tbl td.n u { text-decoration: none; margin-left: 5px; padding: 1px 5px; font-size: 10px; color: #ffcf5c; background: rgba(255, 207, 92, .12); border-radius: 4px; }
+/* 选中的那招：左侧竖条 + 底色，让人一眼看到「现在算的是哪一招」 */
+.tbl tr.cur td { background: rgba(124, 243, 208, .1); color: #fff; }
+.tbl tr.cur td.idx { box-shadow: inset 2px 0 0 #7cf3d0; color: #7cf3d0; }
+
+.tip { margin-top: 8px; font-size: 11px; color: #6b7386; }
+.tip b { color: #7cf3d0; font-weight: 500; }
+
+.step { padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, .07); }
+.step:first-child { border-top: none; padding-top: 0; }
+.st-t { margin-bottom: 7px; font-size: 13px; font-weight: 700; color: #f5c96b; }
+.st-b { font-size: 13px; line-height: 1.9; color: #dfe4ef; }
+.st-b b { font-weight: 700; }
+.hl { color: #ffcf5c; }
+.hl.gold { color: #ffd97a; }
+.note { font-size: 11px; color: #6b7386; }
+.dim { color: #8b93a7; font-size: 11px; }
+.tiny { font-size: 10px; line-height: 1.7; }
+
+.tbl.area td.fx { font-size: 11px; color: #a7b0c2; }
+.res { margin-bottom: 6px; font-size: 13px; }
+.res .fx { display: block; font-size: 11px; color: #8b93a7; font-variant-numeric: tabular-nums; margin: 2px 0 3px; }
+
+.tbl.buff td.n { width: auto; color: #b9c2d6; }
+.notes { margin-top: 12px; font-size: 11px; line-height: 1.8; color: #6b7386; }
+.copyright { margin-top: 16px; text-align: center; color: #6b7386; font-size: 11px; }
