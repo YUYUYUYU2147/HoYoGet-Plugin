@@ -162,48 +162,48 @@ function bh3VersionStart(version = '') {
 export class xhh_gacha_pool extends plugin {
   constructor(e) {
     super({
-      name: '[小花火]全游戏卡池',
+      name: '[米哈游]全游戏卡池',
       dsc: '原神/星铁/绝区零/崩三卡池查询',
       event: 'message',
       // Yunzai 的优先级数值越小越先执行；卡池命令容易被 gs_logs/mora 等宽泛规则抢走，
       // 这里放到极前面，先让统一卡池图片接管；未命中的再交给历史卡池兜底。
-      priority: pluginPriority('gacha_pool', -1000000000),
+      priority: pluginPriority('gacha_pool', -9999999999),
       rule: [
         // 最常用的原神当前卡池放最前，使用最简单正则，避免被通用“xx卡池”规则误判。
-        { reg: '^#?(?:xhh)?原神卡池$', fnc: 'gsCurrentPool' },
-        { reg: '^#?(?:xhh)?原神(当前|本期|当期)卡池$', fnc: 'gsCurrentPool' },
-        { reg: '^#*(?:xhh)?(小花火)?(崩三|崩坏3|崩坏三|BH3)(当前|本期|当期)?(卡池|补给)$', fnc: 'bh3CurrentPool' },
-        { reg: '^#*(?:xhh)?(小花火)?(崩三|崩坏3|崩坏三|BH3)v?(\\d+\\.\\d+)(上半|下半)?(卡池|补给)$', fnc: 'bh3VersionPool' },
-        { reg: '^#*(?:xhh)?(小花火)?(崩三|崩坏3|崩坏三|BH3)(卡池|补给)(统计|记录|历史|全)$', fnc: 'bh3AllPool' },
+        { reg: '^#?(?:米哈游)?原神卡池$', fnc: 'gsCurrentPool' },
+        { reg: '^#?(?:米哈游)?原神(当前|本期|当期)卡池$', fnc: 'gsCurrentPool' },
+        { reg: '^#*(?:米哈游)?(崩三|崩坏3|崩坏三|BH3)(当前|本期|当期)?(卡池|补给)$', fnc: 'bh3CurrentPool' },
+        { reg: '^#*(?:米哈游)?(崩三|崩坏3|崩坏三|BH3)v?(\\d+\\.\\d+)(上半|下半)?(卡池|补给)$', fnc: 'bh3VersionPool' },
+        { reg: '^#*(?:米哈游)?(崩三|崩坏3|崩坏三|BH3)(卡池|补给)(统计|记录|历史|全)$', fnc: 'bh3AllPool' },
         // 「崩三历史卡池 / 崩三全部卡池」：历史/全部 在前的新叫法，与绝区零「绝区零历史卡池」保持一致
-        { reg: '^#*(?:xhh)?(小花火)?(崩三|崩坏3|崩坏三|BH3)(历史|全部|统计|记录)(卡池|补给)$', fnc: 'bh3AllPool' },
+        { reg: '^#*(?:米哈游)?(崩三|崩坏3|崩坏三|BH3)(历史|全部|统计|记录)(卡池|补给)$', fnc: 'bh3AllPool' },
         // 原神卡池
-        { reg: '^[#＃井]*(?:xhh)?\\s*(?:小花火)?\\s*原神\\s*(?:当前|本期|当期)?\\s*卡池$', fnc: 'gsCurrentPool' },
-        { reg: '^[#＃井]*(?:xhh)?\\s*(?:小花火)?\\s*原神\\s*v?(\\d+\\.\\d+)\\s*(上半|下半)?\\s*卡池$', fnc: 'gsVersionPool' },
-        { reg: '^#*(?:xhh)?(小花火)?原神(统计|记录|历史|全部|全|时间轴)卡池$', fnc: 'gsAllPool' },
-        { reg: '^#*(?:xhh)?(小花火)?原神(?!官方|米游社)(.+)卡池$', fnc: 'gsNameHistory' },
-        { reg: '^#*(?:xhh)?(小花火)?原神(卡池)(统计|记录|历史|全)$', fnc: 'gsAllPool' },
+        { reg: '^[#＃井]*(?:米哈游)?\\s*(?:米哈游)?\\s*原神\\s*(?:当前|本期|当期)?\\s*卡池$', fnc: 'gsCurrentPool' },
+        { reg: '^[#＃井]*(?:米哈游)?\\s*(?:米哈游)?\\s*原神\\s*v?(\\d+\\.\\d+)\\s*(上半|下半)?\\s*卡池$', fnc: 'gsVersionPool' },
+        { reg: '^#*(?:米哈游)?原神(统计|记录|历史|全部|全|时间轴)卡池$', fnc: 'gsAllPool' },
+        { reg: '^#*(?:米哈游)?原神(?!官方|米游社)(.+)卡池$', fnc: 'gsNameHistory' },
+        { reg: '^#*(?:米哈游)?原神(卡池)(统计|记录|历史|全)$', fnc: 'gsAllPool' },
         // 星铁卡池
-        { reg: '^#*(?:xhh)?(小花火)?(星铁|崩铁|星穹铁道)(当前|本期|当期)?(卡池|跃迁)$', fnc: 'srCurrentPool' },
-        { reg: '^#*(?:xhh)?(小花火)?(星铁|崩铁|星穹铁道)v?(\\d+\\.\\d+)(上半|下半)?(卡池|跃迁)$', fnc: 'srVersionPool' },
-        { reg: '^#*(?:xhh)?(小花火)?(星铁|崩铁|星穹铁道)(统计|记录|历史|全部|全|时间轴)(卡池|跃迁)$', fnc: 'srAllPool' },
-        { reg: '^#*(?:xhh)?(小花火)?(星铁|崩铁|星穹铁道)(?!v?\\d+\\.\\d+)(?!官方|米游社)(.+)(卡池|跃迁)$', fnc: 'srNameHistory' },
+        { reg: '^#*(?:米哈游)?(星铁|崩铁|星穹铁道)(当前|本期|当期)?(卡池|跃迁)$', fnc: 'srCurrentPool' },
+        { reg: '^#*(?:米哈游)?(星铁|崩铁|星穹铁道)v?(\\d+\\.\\d+)(上半|下半)?(卡池|跃迁)$', fnc: 'srVersionPool' },
+        { reg: '^#*(?:米哈游)?(星铁|崩铁|星穹铁道)(统计|记录|历史|全部|全|时间轴)(卡池|跃迁)$', fnc: 'srAllPool' },
+        { reg: '^#*(?:米哈游)?(星铁|崩铁|星穹铁道)(?!v?\\d+\\.\\d+)(?!官方|米游社)(.+)(卡池|跃迁)$', fnc: 'srNameHistory' },
         // 官方/米游社卡池必须在 bh3NameHistory 之前，否则"崩三官方卡池"会被误判为角色名
         // 强制刷新：绕过风控冷却，用来确认米游社是否已解除风控
-        { reg: '^#*(?:xhh)?(小花火)?(强制|立即)(更新|刷新)卡池(数据)?$', fnc: 'refreshOfficialPools' },
-        { reg: '^#*(?:xhh)?(小花火)?((原神|星铁|崩铁|星穹铁道|绝区零|ZZZ|崩三|崩坏3|崩坏三|BH3))?(米游社|官方)?(更新|刷新)卡池(数据)?$', fnc: 'refreshOfficialPools' },
-        { reg: '^#*(?:xhh)?(小花火)?(全游戏|全部|所有)?(当前|本期|当期)卡池$', fnc: 'allCurrentPool' },
-        { reg: '^#*(?:xhh)?(小花火)?(原神|星铁|崩铁|星穹铁道|绝区零|ZZZ|崩三|崩坏3|崩坏三|BH3)?(米游社|官方)(当前|本期|当期)?卡池$', fnc: 'officialCurrentPool' },
-        { reg: '^#*(?:xhh)?(小花火)?(原神|星铁|崩铁|星穹铁道|绝区零|ZZZ|崩三|崩坏3|崩坏三|BH3)(\\d+\\.\\d+)(米游社|官方)卡池$', fnc: 'officialVersionPool' },
-        { reg: '^#*(?:xhh)?(小花火)?(崩三|崩坏3|崩坏三|BH3)(?!v?\\d+\\.\\d+)(?!官方|米游社)(.+)(卡池|补给)$', fnc: 'bh3NameHistory' },
-        { reg: '^#*(?:xhh)?(小花火)?(绝区零|ZZZ)(当前|本期|当期)?卡池$', fnc: 'zzzCurrentPool' },
-        { reg: '^#*(?:xhh)?(小花火)?(绝区零|ZZZ)v?(\\d+\\.\\d+)(上半|下半)?卡池$', fnc: 'zzzVersionPool' },
-        { reg: '^#*(?:xhh)?(小花火)?(绝区零|ZZZ)(统计|记录|历史|全部|全|时间轴)卡池$', fnc: 'zzzAllPool' },
-        { reg: '^#*(?:xhh)?(小花火)?(绝区零|ZZZ)(?!v?\\d+\\.\\d+)(.+)卡池$', fnc: 'zzzNameHistory' },
-        { reg: '^#*(?:xhh)?(小花火)?(绝区零|ZZZ)(.+)(卡池|复刻)(统计|记录|历史)$', fnc: 'zzzNameHistory' },
-        { reg: '^#*(?:xhh)?(小花火)?(绝区零|ZZZ)(卡池|复刻)(统计|记录|历史)$', fnc: 'zzzAllPool' },
+        { reg: '^#*(?:米哈游)?(强制|立即)(更新|刷新)卡池(数据)?$', fnc: 'refreshOfficialPools' },
+        { reg: '^#*(?:米哈游)?((原神|星铁|崩铁|星穹铁道|绝区零|ZZZ|崩三|崩坏3|崩坏三|BH3))?(米游社|官方)?(更新|刷新)卡池(数据)?$', fnc: 'refreshOfficialPools' },
+        { reg: '^#*(?:米哈游)?(全游戏|全部|所有)?(当前|本期|当期)卡池$', fnc: 'allCurrentPool' },
+        { reg: '^#*(?:米哈游)?(原神|星铁|崩铁|星穹铁道|绝区零|ZZZ|崩三|崩坏3|崩坏三|BH3)?(米游社|官方)(当前|本期|当期)?卡池$', fnc: 'officialCurrentPool' },
+        { reg: '^#*(?:米哈游)?(原神|星铁|崩铁|星穹铁道|绝区零|ZZZ|崩三|崩坏3|崩坏三|BH3)(\\d+\\.\\d+)(米游社|官方)卡池$', fnc: 'officialVersionPool' },
+        { reg: '^#*(?:米哈游)?(崩三|崩坏3|崩坏三|BH3)(?!v?\\d+\\.\\d+)(?!官方|米游社)(.+)(卡池|补给)$', fnc: 'bh3NameHistory' },
+        { reg: '^#*(?:米哈游)?(绝区零|ZZZ)(当前|本期|当期)?卡池$', fnc: 'zzzCurrentPool' },
+        { reg: '^#*(?:米哈游)?(绝区零|ZZZ)v?(\\d+\\.\\d+)(上半|下半)?卡池$', fnc: 'zzzVersionPool' },
+        { reg: '^#*(?:米哈游)?(绝区零|ZZZ)(统计|记录|历史|全部|全|时间轴)卡池$', fnc: 'zzzAllPool' },
+        { reg: '^#*(?:米哈游)?(绝区零|ZZZ)(?!v?\\d+\\.\\d+)(.+)卡池$', fnc: 'zzzNameHistory' },
+        { reg: '^#*(?:米哈游)?(绝区零|ZZZ)(.+)(卡池|复刻)(统计|记录|历史)$', fnc: 'zzzNameHistory' },
+        { reg: '^#*(?:米哈游)?(绝区零|ZZZ)(卡池|复刻)(统计|记录|历史)$', fnc: 'zzzAllPool' },
         // 类似"雷神卡池/德莉莎卡池/白厄卡池"的用法：依次查绝区零、崩三、星铁、原神
-        { reg: '^(?!#*(?:xhh)?(?:小花火)?(?:原神|星铁|崩铁|崩三|崩坏3|崩坏三|BH3|绝区零|ZZZ))#*(?:xhh)?(小花火)?([\u4e00-\u9fa5A-Za-z0-9·・•!！「」『』（）()]{1,16})(卡池|复刻)(统计|记录|历史)?$', fnc: 'genericNameHistory' }
+        { reg: '^(?!#*(?:米哈游)?(?:米哈游)?(?:原神|星铁|崩铁|崩三|崩坏3|崩坏三|BH3|绝区零|ZZZ))#*(?:米哈游)?([\u4e00-\u9fa5A-Za-z0-9·・•!！「」『』（）()]{1,16})(卡池|复刻)(统计|记录|历史)?$', fnc: 'genericNameHistory' }
       ]
     });
 // 跑「#刷新卡池」的等价逻辑（不回复消息，只打日志）。
@@ -215,10 +215,36 @@ export class xhh_gacha_pool extends plugin {
     const cfg = config() || {};
     this.task = {
       cron: String(cfg.gacha_pool_cron || '0 */30 * * * *').trim() || '0 */30 * * *',
-      name: '[小花火]全游戏卡池数据自动刷新',
+      name: '[米哈游]全游戏卡池数据自动刷新',
       fnc: () => this.autoRefreshPools(),
       log: true
     };
+  }
+
+  /**
+   * 符号前缀 → 完整命令。返回 true 表示已接管（调用方应 return 'return'）。
+   *
+   * 只处理「命令很短、只有卡池/补给这类词」的情况，把符号补全成带游戏名的
+   * 完整命令，后续交给既有 rule 匹配。带其它内容的指令不碰，避免误伤。
+   */
+  async dispatchBySymbolPrefix(e, msg) {
+    // 崩三：框架不认 !，需要自己剥掉符号并补游戏名。
+    // accept 阶段一旦返回 'return' 就不再走 rule（见 lib/plugins/loader.js），
+    // 所以这里必须**直接调用 handler**，不能指望补全后交给 rule。
+    if (/^!\s*(卡池|补给)$/.test(msg)) {
+      e.msg = `#崩三${msg.replace(/^!\s*/, '')}`;
+      await this.bh3CurrentPool(e);
+      return true;
+    }
+    // 原神裸词：#卡池 / #补给 —— 游戏名省略即默认原神
+    if (/^#\s*(卡池|补给)$/.test(msg)) {
+      e.msg = `#原神${msg.replace(/^#\s*/, '')}`;
+      await this.gsCurrentPool(e);
+      return true;
+    }
+    // 星铁 / 绝区零：框架已把符号改写成带游戏名的完整命令（#星铁卡池 / #绝区零卡池），
+    // 这里交回 false 让流程继续 —— 它们的 priority 已足够靠前，由各自 rule 处理。
+    return false;
   }
 
   async accept(e) {
@@ -226,15 +252,31 @@ export class xhh_gacha_pool extends plugin {
       .replace(/[\u0000-\u001f\u007f\u200b-\u200f\ufeff]/g, '')
       .replace(/[＃井]/g, '#')
       .replace(/\s+/g, '');
+    // —— 符号前缀分发 ——
+    //
+    // 设计：符号决定游戏，游戏名可省。
+    //   #卡池 / #原神卡池 → 原神      （# 框架不处理，原样送来）
+    //   !卡池 / !崩三卡池 → 崩三      （! 框架没有这条规则，也是原样送来）
+    //   *卡池            → 星铁      （框架 srReg 已改写成「#星铁卡池」，带游戏名）
+    //   %卡池            → 绝区零    （框架 zzzReg 已改写成「#绝区零卡池」，带游戏名）
+    //
+    // 星铁与绝区零之所以不用自己处理前缀：框架在所有插件之前就做了归一化
+    // （lib/plugins/loader.js），并把 e.game 设好，这里只需读 e.game。
+    //
+    // accept 阶段一旦返回 'return' 就不再进入 rule（见 lib/plugins/loader.js），
+    // 所以这里对需要补全的两类**直接调用既有 handler**，不复制业务逻辑。
+    const dispatched = await this.dispatchBySymbolPrefix(e, msg);
+    if (dispatched) return 'return';
+
     // 有些插件/适配器会在规则前抢“原神卡池”，这里用 accept 兜底优先接管当前卡池。
-    if (/^(?:[#＃井]*\s*)?(?:小花火)?\s*原神\s*(?:当前|本期|当期)?\s*卡池$/.test(msg)) {
+    if (/^(?:[#＃井]*\s*)?(?:米哈游)?\s*原神\s*(?:当前|本期|当期)?\s*卡池$/.test(msg)) {
       e.msg = msg;
       await this.gsCurrentPool(e);
       return 'return';
     }
     // 兜底优先接管“原神官方卡池/星铁官方卡池”等指定游戏官方卡池。
     // 部分环境下进入 rule 后 e.msg 可能只剩“#官方卡池”，这里在 accept 阶段保留完整命令。
-    if (/^#*(?:小花火)?(?:原神|星铁|崩铁|星穹铁道|绝区零|ZZZ|崩三|崩坏3|崩坏三|BH3)(?:米游社|官方)(?:当前|本期|当期)?卡池$/i.test(msg)) {
+    if (/^#*(?:米哈游)?(?:原神|星铁|崩铁|星穹铁道|绝区零|ZZZ|崩三|崩坏3|崩坏三|BH3)(?:米游社|官方)(?:当前|本期|当期)?卡池$/i.test(msg)) {
       e.msg = msg;
       await this.officialCurrentPool(e);
       return 'return';
@@ -405,7 +447,7 @@ export class xhh_gacha_pool extends plugin {
       if (Array.isArray(data?.pools)) return data.pools;
       return [];
     } catch (err) {
-      logger.warn('[xhh][gacha_pool] 绝区零本地卡池YAML加载失败:', err);
+      logger.warn('[HoYoGet][gacha_pool] 绝区零本地卡池YAML加载失败:', err);
       return [];
     }
   }
@@ -515,7 +557,7 @@ export class xhh_gacha_pool extends plugin {
       const raw = await fetch(`${ZZZ_RAW_BASE}${meta.zzz}`, { signal: AbortSignal.timeout(8000) }).then(r => r.json());
       return this.normalizeZzzCurrentPools(raw, history);
     } catch (err) {
-      logger.warn('[xhh][gacha_pool] 绝区零当前卡池附加数据获取失败:', err);
+      logger.warn('[HoYoGet][gacha_pool] 绝区零当前卡池附加数据获取失败:', err);
       return [];
     }
   }
@@ -549,7 +591,7 @@ export class xhh_gacha_pool extends plugin {
     } catch (err) {
       const cache = await redis.get(ZZZ_CACHE_KEY);
       if (cache) return this.mergeZzzLocalPools(JSON.parse(cache));
-      logger.error('[xhh][gacha_pool] 绝区零卡池数据获取失败:', err);
+      logger.error('[HoYoGet][gacha_pool] 绝区零卡池数据获取失败:', err);
       const local = this.mergeZzzLocalPools([]);
       return local.length ? local : null;
     }
@@ -664,7 +706,7 @@ export class xhh_gacha_pool extends plugin {
       // 把几十个池子都算成"当前"）时会把页面撑到几万像素，
       // puppeteer 截图会直接报 "jpeg cannot exceed 65535 pixels on a side" 而整条指令失败。
       if (data.cards.length > 20) {
-        logger.warn(`[xhh][gacha_pool] ${data.title || data.game || '卡池'} 卡片数 ${data.cards.length} 超过 20，已截断`);
+        logger.warn(`[HoYoGet][gacha_pool] ${data.title || data.game || '卡池'} 卡片数 ${data.cards.length} 超过 20，已截断`);
         data.cards = data.cards.slice(0, 20);
       }
       data.cards.forEach((card, i) => {
@@ -801,7 +843,7 @@ export class xhh_gacha_pool extends plugin {
     try {
       return await e.reply(msg);
     } catch (err) {
-      logger.warn('[xhh][gacha_pool] 图片消息发送失败，改为纯文本发送:', err);
+      logger.warn('[HoYoGet][gacha_pool] 图片消息发送失败，改为纯文本发送:', err);
       if (Array.isArray(msg)) {
         const textOnly = msg
           .filter(v => !(v?.type === 'image' || v?.type === 'node'))
@@ -910,7 +952,7 @@ export class xhh_gacha_pool extends plugin {
       .sort((a, b) => b.number - a.number)[0];
     if (latest.number > this.currentVersionNumber('sr')) {
       this.setCurrentVersion('sr', latest.version);
-      logger.mark(`[xhh][gacha_pool] 根据当前星铁卡池自动推进版本：v${this.currentVersionByGame('sr')}`);
+      logger.mark(`[HoYoGet][gacha_pool] 根据当前星铁卡池自动推进版本：v${this.currentVersionByGame('sr')}`);
     }
     return this.currentVersionByGame('sr');
   }
@@ -1105,7 +1147,7 @@ export class xhh_gacha_pool extends plugin {
         }
       }
     } catch (err) {
-      logger.warn('[xhh][gacha_pool] 原神四星公告自动解析失败，回退硬编码:', err?.message || err);
+      logger.warn('[HoYoGet][gacha_pool] 原神四星公告自动解析失败，回退硬编码:', err?.message || err);
     }
     // 2) 已知版本硬编码兜底
     const HARDCODED = {
@@ -1259,7 +1301,7 @@ export class xhh_gacha_pool extends plugin {
       names = filtered.length ? filtered : allow;
     }
     const splash = this.getCardSplashByGame('绝区零', names);
-    if (!splash && names.length) logger.mark('[xhh][gacha_pool] 绝区零顶部立绘未取到，候选:', names.join('/'));
+    if (!splash && names.length) logger.mark('[HoYoGet][gacha_pool] 绝区零顶部立绘未取到，候选:', names.join('/'));
     return splash || fallback;
   }
 
@@ -1290,9 +1332,9 @@ export class xhh_gacha_pool extends plugin {
   async officialCurrentPool(e) {
     const msg = this.eventText(e).replace(/[\u0000-\u001f\u007f\u200b-\u200f\ufeff]/g, '').replace(/[＃井]/g, '#').replace(/\s+/g, '');
     // 明确指定游戏时必须按单游戏查，避免“#原神官方卡池”被当成“官方卡池”汇总。
-    const gameLabel = msg.match(/(?:#|小花火)*(原神|星铁|崩铁|星穹铁道|绝区零|ZZZ|崩三|崩坏3|崩坏三|BH3)(?:米游社|官方)/i)?.[1] || '';
+    const gameLabel = msg.match(/(?:#|米哈游)*(原神|星铁|崩铁|星穹铁道|绝区零|ZZZ|崩三|崩坏3|崩坏三|BH3)(?:米游社|官方)/i)?.[1] || '';
     const game = this.detectOfficialGame(msg) || officialPool.resolveGame(gameLabel) || officialPool.resolveGame(msg) || officialPool.resolveGame(e.msg);
-    logger.mark('[xhh][gacha_pool] 官方卡池识别:', msg, '=>', game || 'all');
+    logger.mark('[HoYoGet][gacha_pool] 官方卡池识别:', msg, '=>', game || 'all');
     if (!game) {
       const results = await officialPool.fetchAll();
       const resultOf = key => results.find(r => r.game === key) || { records: [] };
@@ -1352,7 +1394,7 @@ export class xhh_gacha_pool extends plugin {
 
       if (!cards.length) return e.reply('暂未从米游社官方公告匹配到卡池/补给信息。');
       // 排查用：打印每张卡最终使用的封面链接，确认封面来源（公告图 / 本地立绘 / 无图）
-      logger.mark('[xhh][gacha_pool] 汇总卡池封面:', '\n  ' + cards.map(c => `${c.title} => ${c.img || '(无图)'}${c.imgFallback ? ' [Fallback]' : ''}`).join('\n  '));
+      logger.mark('[HoYoGet][gacha_pool] 汇总卡池封面:', '\n  ' + cards.map(c => `${c.title} => ${c.img || '(无图)'}${c.imgFallback ? ' [Fallback]' : ''}`).join('\n  '));
       return this.renderPoolImage(e, {
         game: '米游社',
         title: '官方当前卡池',
@@ -1365,7 +1407,7 @@ export class xhh_gacha_pool extends plugin {
     }
     const meta = officialPool.games[game];
     this.currentVersionForRecords(game, (await officialPool.fetch(game)).records || []);
-    logger.mark(`[xhh][gacha_pool] 命中${meta.name}官方卡池:`, e.msg);
+    logger.mark(`[HoYoGet][gacha_pool] 命中${meta.name}官方卡池:`, e.msg);
     // 星铁 4.4 起一条公告里同时包含多角色、多光锥，通用公告解析容易混排或漏项。
     // 指定“星铁米游社/官方卡池”时优先用按官方公告整理后的本地结构化表。
     if (game === 'sr') {
@@ -1443,7 +1485,7 @@ export class xhh_gacha_pool extends plugin {
     const game = officialPool.resolveGame(gameLabel);
     if (!game) return false;
     const meta = officialPool.games[game];
-    logger.mark(`[xhh][gacha_pool] 命中${meta.name}v${version}官方卡池:`, e.msg);
+    logger.mark(`[HoYoGet][gacha_pool] 命中${meta.name}v${version}官方卡池:`, e.msg);
     // 原神版本官方卡池同样优先本地结构化卡池表，保证 5 星/4 星稳定展示（与星铁一致）。
     if (game === 'gs') {
       const localCards = await this.loadGsLocalCards(version);
@@ -1541,13 +1583,13 @@ export class xhh_gacha_pool extends plugin {
     try {
       const cooling = Number(await redis.get(POOL_RISK_KEY)) || 0;
       if (cooling) {
-        logger.mark(`[${new Date().toLocaleString('zh-CN', { hour12: false })}][xhh][gacha_pool] 米游社风控冷却中（累计撞码 ${cooling} 次，剩余 ${fmtRemain((await redis.ttl(POOL_RISK_KEY)) * 1000)}），跳过本次自动刷新`);
+        logger.mark(`[${new Date().toLocaleString('zh-CN', { hour12: false })}][HoYoGet][gacha_pool] 米游社风控冷却中（累计撞码 ${cooling} 次，剩余 ${fmtRemain((await redis.ttl(POOL_RISK_KEY)) * 1000)}），跳过本次自动刷新`);
         return;
       }
     } catch (_) {}
     const gapRemain = await this.poolMinGapRemain();
     if (gapRemain > 0) {
-      logger.mark(`[${new Date().toLocaleString('zh-CN', { hour12: false })}][xhh][gacha_pool] 距上次刷新不足 ${POOL_MIN_GAP_MS / 60000} 分钟（还需 ${fmtRemain(gapRemain)}），跳过本次自动刷新`);
+      logger.mark(`[${new Date().toLocaleString('zh-CN', { hour12: false })}][HoYoGet][gacha_pool] 距上次刷新不足 ${POOL_MIN_GAP_MS / 60000} 分钟（还需 ${fmtRemain(gapRemain)}），跳过本次自动刷新`);
       return;
     }
     await this.poolMarkRefreshStart();
@@ -1559,21 +1601,21 @@ export class xhh_gacha_pool extends plugin {
       const results = await officialPool.refreshAll();
       if (results.some(r => r.riskControl)) {
         const { strikes, seconds } = await this.poolEnterCooldown();
-        logger.warn(`[${new Date().toLocaleString('zh-CN', { hour12: false })}][xhh][gacha_pool] 自动刷新命中米游社风控(1034)，已跳过本地卡池库同步；累计撞码 ${strikes} 次，冷却 ${fmtRemain(seconds * 1000)}`);
+        logger.warn(`[${new Date().toLocaleString('zh-CN', { hour12: false })}][HoYoGet][gacha_pool] 自动刷新命中米游社风控(1034)，已跳过本地卡池库同步；累计撞码 ${strikes} 次，冷却 ${fmtRemain(seconds * 1000)}`);
         await this.fillBh3TimesOnRisk(results);
         return;
       }
       await this.poolClearCooldown();
       const lines = await this.syncLocalPoolsFromOfficial(results);
-      logger.mark(`[xhh][gacha_pool] 卡池自动刷新完成：${results.map(r => `${r.game} ${r.records.length} 条`).join('，')}` +
+      logger.mark(`[HoYoGet][gacha_pool] 卡池自动刷新完成：${results.map(r => `${r.game} ${r.records.length} 条`).join('，')}` +
         (lines.length ? ` | ${lines.join(' | ')}` : ''));
     } catch (err) {
-      logger.error('[xhh][gacha_pool] 卡池自动刷新失败:', err);
+      logger.error('[HoYoGet][gacha_pool] 卡池自动刷新失败:', err);
     }
   }
 
   async refreshOfficialPools(e) {
-    logger.mark('[xhh][gacha_pool] 刷新米游社官方卡池数据:', e.msg);
+    logger.mark('[HoYoGet][gacha_pool] 刷新米游社官方卡池数据:', e.msg);
     // 冷却期内默认拒绝刷新，但主人或「强制刷新」可绕过冷却去验证是否已解除。
     // 最小间隔不绕过：实测 09-01 十七次刷新挤在两小时半内把 IP 推到 1034（当日 120 次），
     // 而 cron 每 30 分钟均匀一次长期为 0 —— 触发因素是密度，无限绕过就是雪崩的源头。
@@ -1613,15 +1655,15 @@ export class xhh_gacha_pool extends plugin {
         const { mihoyoClearRisk } = await import('../system/manual_geetest.js');
         const res = await mihoyoClearRisk(e, '卡池刷新风控验证');
         if (res?.ok) {
-          logger.mark('[xhh][gacha_pool] 手动过码成功，重试一次卡池刷新');
+          logger.mark('[HoYoGet][gacha_pool] 手动过码成功，重试一次卡池刷新');
           await this.sleepMs(3000);
           results = await officialPool.refreshAll();
         } else {
-          logger.warn(`[xhh][gacha_pool] 手动过码未完成：${res?.reason || '未知原因'}`);
+          logger.warn(`[HoYoGet][gacha_pool] 手动过码未完成：${res?.reason || '未知原因'}`);
           try { await e.reply(`手动验证未完成（${res?.reason || '超时'}），将退回缓存数据。`, true, { recallMsg: 300 }); } catch (_) {}
         }
       } catch (err) {
-        logger.warn(`[xhh][gacha_pool] 手动过码流程异常：${err?.message || err}`);
+        logger.warn(`[HoYoGet][gacha_pool] 手动过码流程异常：${err?.message || err}`);
       }
     }
 
@@ -1670,7 +1712,7 @@ export class xhh_gacha_pool extends plugin {
       if (obsNote?.length) parts.push(`\n\n【崩三卡池观测】\n${obsNote.join('\n')}`);
       return parts.join('');
     } catch (err) {
-      logger.warn('[xhh][gacha_pool] 崩三抽卡记录刷新失败（不影响官方卡池刷新结果）:', err?.message || err);
+      logger.warn('[HoYoGet][gacha_pool] 崩三抽卡记录刷新失败（不影响官方卡池刷新结果）:', err?.message || err);
       return `\n\n【崩三抽卡记录】刷新失败：${err?.message || err}（官方卡池数据已正常刷新）`;
     }
   }
@@ -1764,7 +1806,7 @@ export class xhh_gacha_pool extends plugin {
         if (!out.length && imgs.length) out = [imgs[0]];
       }
     } catch (err) {
-      logger.warn(`[xhh][gacha_pool] 米游社取图失败（${game}/${keyword}）:`, err);
+      logger.warn(`[HoYoGet][gacha_pool] 米游社取图失败（${game}/${keyword}）:`, err);
     }
     MYS_COVER_CACHE.set(key, out);
     return out;
@@ -1797,7 +1839,7 @@ export class xhh_gacha_pool extends plugin {
         MYS_COVER_CACHE.set(key, collabImage);
         return collabImage;
       }
-      logger.warn(`[xhh][gacha_pool] ${verRaw} 指定的公告帖取图失败，回退搜索打分`);
+      logger.warn(`[HoYoGet][gacha_pool] ${verRaw} 指定的公告帖取图失败，回退搜索打分`);
     }
     const exactKeywords = upNames.flatMap(name => SR_POOL_IMAGE_KEYWORDS[String(name || '')] || []);
     const keywords = imageSpec?.keyword ? [imageSpec.keyword] : (exactKeywords.length ? exactKeywords : (isCollab
@@ -1809,7 +1851,7 @@ export class xhh_gacha_pool extends plugin {
       try {
         list = await this.mysSearchPosts(MYS_OFFICIAL_UID.sr, kw);
       } catch (err) {
-        logger.warn(`[xhh][gacha_pool] 星铁封面搜索失败（${kw}）:`, err);
+        logger.warn(`[HoYoGet][gacha_pool] 星铁封面搜索失败（${kw}）:`, err);
         continue;
       }
       let best = null;
@@ -1890,7 +1932,7 @@ export class xhh_gacha_pool extends plugin {
       const images = [...new Set(detailImages.length ? detailImages : fromContent)];
       return pickImage(images);
     } catch (err) {
-      logger.warn(`[xhh][gacha_pool] 星铁${ver}联动公告取图失败（${spec.postId}）：`, err?.message || err);
+      logger.warn(`[HoYoGet][gacha_pool] 星铁${ver}联动公告取图失败（${spec.postId}）：`, err?.message || err);
       return '';
     }
   }
@@ -1910,7 +1952,7 @@ export class xhh_gacha_pool extends plugin {
     ordered.forEach((item, i) => {
       const next = `联动${(i + 1).toFixed(1)}`;
       if (item.ver !== next) {
-        logger.mark(`[xhh][gacha_pool] 联动编号按时间校正：${item.ver} → ${next}（${(item.js_five || []).join('/')}，${String(item.time).split('~')[0]?.trim()}）`);
+        logger.mark(`[HoYoGet][gacha_pool] 联动编号按时间校正：${item.ver} → ${next}（${(item.js_five || []).join('/')}，${String(item.time).split('~')[0]?.trim()}）`);
         item.ver = next;
       }
     });
@@ -2003,7 +2045,7 @@ export class xhh_gacha_pool extends plugin {
       this.safeWritePoolYaml(SR_POOL_HISTORY_YAML_PATH, history, '星铁补图');
       return true;
     } catch (err) {
-      logger.error('[xhh][gacha_pool] sr_logs.yaml 背景图补写失败:', err);
+      logger.error('[HoYoGet][gacha_pool] sr_logs.yaml 背景图补写失败:', err);
       return false;
     }
   }
@@ -2097,10 +2139,10 @@ export class xhh_gacha_pool extends plugin {
         // 联动池长期开放（结束时间最远），不能算「最新版本」；排除后再取最新。
         const latest = local.find(v => !/^联动/.test(String(v?.ver || ''))) || local[0];
         await this.syncSrImagesFromOfficial(records); // 仍尝试用官方公告补背景图
-        logger.mark(`[xhh][gacha_pool] 星铁 Bwiki 同步明细：新增 ${added} / 修正 ${updated}`);
+        logger.mark(`[HoYoGet][gacha_pool] 星铁 Bwiki 同步明细：新增 ${added} / 修正 ${updated}`);
         return `星穹铁道：本地库已同步 Bwiki 跃迁（最新 v${latest?.ver || ''}）`;
       } catch (err) {
-        logger.warn('[xhh][gacha_pool] 星铁 Bwiki 合并失败，卡池数据保持现状:', err);
+        logger.warn('[HoYoGet][gacha_pool] 星铁 Bwiki 合并失败，卡池数据保持现状:', err);
       }
     }
     // 卡池数据只认 wiki（Bwiki）：Bwiki 抓不到时不用米游社公告写条目/时间/UP，仅用公告补封面。
@@ -2177,12 +2219,12 @@ export class xhh_gacha_pool extends plugin {
         const latestNum = Number(String(latest.ver || '').replace(/[^0-9.]/g, ''));
         if (latestNum) this.setCurrentVersion('gs', latestNum);
         this.safeWritePoolYaml(GS_POOL_HISTORY_YAML_PATH, data, '原神卡池库');
-        logger.mark(`[xhh][gacha_pool] 原神 Bwiki 同步明细：新增 ${added} / 修正 ${updated}`);
+        logger.mark(`[HoYoGet][gacha_pool] 原神 Bwiki 同步明细：新增 ${added} / 修正 ${updated}`);
         // 封面统一走米游社：数据以 Bwiki 为准，图片仍用官方公告封面补录
         await this.syncGsImagesFromOfficial(records);
         return `原神：本地库已同步 Bwiki 往期祈愿（最新 v${latest?.ver || ''}）`;
       } catch (err) {
-        logger.warn('[xhh][gacha_pool] 原神 Bwiki 合并失败，卡池数据保持现状:', err);
+        logger.warn('[HoYoGet][gacha_pool] 原神 Bwiki 合并失败，卡池数据保持现状:', err);
       }
     }
     // 卡池数据只认 wiki（Bwiki）：Bwiki 抓不到时不用米游社公告写条目/时间/UP，仅用公告补封面。
@@ -2260,10 +2302,10 @@ export class xhh_gacha_pool extends plugin {
       data.imgs = this.sortGsImgsByVersion({ ...(data.imgs || {}), [key]: list });
       data.imgs_src = { ...(data.imgs_src || {}), [key]: this.gsPoolSignature(pools) };
       this.safeWritePoolYaml(GS_POOL_HISTORY_YAML_PATH, data, '原神卡池库');
-      logger.mark(`[xhh][gacha_pool] 原神 ${key} 已用米游社公告补封面 ${list.length} 张${stale ? '（覆盖旧封面）' : ''}`);
+      logger.mark(`[HoYoGet][gacha_pool] 原神 ${key} 已用米游社公告补封面 ${list.length} 张${stale ? '（覆盖旧封面）' : ''}`);
       return true;
     } catch (err) {
-      logger.warn('[xhh][gacha_pool] 原神封面补录失败:', err?.message || err);
+      logger.warn('[HoYoGet][gacha_pool] 原神封面补录失败:', err?.message || err);
       return false;
     }
   }
@@ -2296,10 +2338,10 @@ export class xhh_gacha_pool extends plugin {
       data.imgs = this.sortGsImgsByVersion({ ...(data.imgs || {}), [key]: list });
       data.imgs_src = { ...(data.imgs_src || {}), [key]: this.gsPoolSignature(pools) };
       this.safeWritePoolYaml(GS_POOL_HISTORY_YAML_PATH, data, '原神卡池库');
-      logger.mark(`[xhh][gacha_pool] 原神 ${key} 列表无祈愿公告，已用搜索接口补封面 ${list.length} 张${stale ? '（覆盖旧封面）' : ''}`);
+      logger.mark(`[HoYoGet][gacha_pool] 原神 ${key} 列表无祈愿公告，已用搜索接口补封面 ${list.length} 张${stale ? '（覆盖旧封面）' : ''}`);
       return true;
     } catch (err) {
-      logger.warn('[xhh][gacha_pool] 原神搜索补封面失败:', err?.message || err);
+      logger.warn('[HoYoGet][gacha_pool] 原神搜索补封面失败:', err?.message || err);
       return false;
     }
   }
@@ -2328,7 +2370,7 @@ export class xhh_gacha_pool extends plugin {
       fs.writeFileSync(GS_POOL_HISTORY_YAML_PATH, YAML.stringify({ date: nextDate, imgs: data.imgs || {}, imgs_src: data.imgs_src || {} }), 'utf-8');
       return `原神：已修正 v${version}${phase} 预录时间（${version}版本更新后生效，当前仍为 v${this.currentVersionByGame('gs')}）`;
     } catch (err) {
-      logger.error('[xhh][gacha_pool] gslogs.yaml 预录时间修正失败:', err);
+      logger.error('[HoYoGet][gacha_pool] gslogs.yaml 预录时间修正失败:', err);
       return note;
     }
   }
@@ -2354,7 +2396,7 @@ export class xhh_gacha_pool extends plugin {
       }
       return null;
     } catch (err) {
-      logger.warn('[xhh][gacha_pool] 绝区零 Bwiki 调频抓取失败:', err);
+      logger.warn('[HoYoGet][gacha_pool] 绝区零 Bwiki 调频抓取失败:', err);
       return null;
     }
   }
@@ -2459,16 +2501,16 @@ export class xhh_gacha_pool extends plugin {
         try {
           this.safeWritePoolYaml(ZZZ_POOL_HISTORY_YAML_PATH, merged, '绝区零 Bwiki 同步');
         } catch (err) {
-          logger.warn('[xhh][gacha_pool] 绝区零本地库写入失败:', err);
+          logger.warn('[HoYoGet][gacha_pool] 绝区零本地库写入失败:', err);
         }
-        logger.mark(`[xhh][gacha_pool] 绝区零 Bwiki 同步明细：新增 ${added} / 修正 ${updated}` +
+        logger.mark(`[HoYoGet][gacha_pool] 绝区零 Bwiki 同步明细：新增 ${added} / 修正 ${updated}` +
           (samples.length ? `（示例：${samples.join('；')}）` : ''));
         return `绝区零：本地库已同步 Bwiki 调频（最新 v${latest.version}）`;
       }
       // 卡池数据只认 wiki（Bwiki）：抓不到时保持本地库现状，不再写第三方（蜘蛛）缓存数据
       return '绝区零：Bwiki 抓取失败，卡池数据保持现状';
     } catch (err) {
-      logger.warn('[xhh][gacha_pool] 绝区零同步失败:', err);
+      logger.warn('[HoYoGet][gacha_pool] 绝区零同步失败:', err);
       return '绝区零：同步失败，下次查询时自动重建';
     }
   }
@@ -2569,7 +2611,7 @@ export class xhh_gacha_pool extends plugin {
       }
       return null;
     } catch (err) {
-      logger.warn('[xhh][gacha_pool] 星铁 Bwiki 跃迁抓取失败:', err);
+      logger.warn('[HoYoGet][gacha_pool] 星铁 Bwiki 跃迁抓取失败:', err);
       return null;
     }
   }
@@ -2587,7 +2629,7 @@ export class xhh_gacha_pool extends plugin {
       }
       return null;
     } catch (err) {
-      logger.warn('[xhh][gacha_pool] 原神 Bwiki 往期祈愿抓取失败:', err);
+      logger.warn('[HoYoGet][gacha_pool] 原神 Bwiki 往期祈愿抓取失败:', err);
       return null;
     }
   }
@@ -2598,7 +2640,7 @@ export class xhh_gacha_pool extends plugin {
   // 解析不到时退回公告发布时间(createdAt)作为开启时间、按单版本约 3 周补齐结束时间，从而能把新版本真正写进本地库。
   // 仍只在能定位到开始时间+主UP时才写入，且不改写已有版本数据，避免破坏当前卡池识别。
   async syncBh3LocalFromOfficial(records = []) {
-    logger.mark(`[xhh][gacha_pool] 崩三版本更新时间表: ${JSON.stringify(readBh3VersionStartMap())}`);
+    logger.mark(`[HoYoGet][gacha_pool] 崩三版本更新时间表: ${JSON.stringify(readBh3VersionStartMap())}`);
     // 当前版本号跟随版本更新时间表：到了更新时间就自动推进（如 9.1 于 09-24 06:00 上线后自动变 9.1）
     for (const v of Object.keys(readBh3VersionStartMap()).map(Number).filter(n => !Number.isNaN(n))) {
       const ts = bh3VersionStart(v);
@@ -2652,7 +2694,7 @@ export class xhh_gacha_pool extends plugin {
       if (bogus.length) {
         history.pools = (history.pools || []).filter(p => !bogus.includes(p));
         bh3Maintenance += bogus.length;
-        logger.mark(`[xhh][gacha_pool] 崩三本地库清理脏版本：${bogus.map(p => `v${p.version}`).join('、')}`);
+        logger.mark(`[HoYoGet][gacha_pool] 崩三本地库清理脏版本：${bogus.map(p => `v${p.version}`).join('、')}`);
       }
     }
     // 每个补给自己的开放时间：正文优先，拿不到就用米游社「瞬间搜索」按 UP 名取公告正文
@@ -2662,10 +2704,10 @@ export class xhh_gacha_pool extends plugin {
       const r = await this.fillBh3PoolTimes(history, records);
       if (r.times || r.covers) {
         bh3Maintenance += r.times + r.covers;
-        logger.mark(`[xhh][gacha_pool] 崩三补给信息已补录：开放时间 ${r.times} 条、封面 ${r.covers} 张`);
+        logger.mark(`[HoYoGet][gacha_pool] 崩三补给信息已补录：开放时间 ${r.times} 条、封面 ${r.covers} 张`);
       }
     } catch (err) {
-      logger.error('[xhh][gacha_pool] bh3 开放时间补录失败:', err);
+      logger.error('[HoYoGet][gacha_pool] bh3 开放时间补录失败:', err);
     }
     // 存量归位：已错位到新版本的旧补给，按「自身开放时间」挪回正确版本。
     // 只认补给自己的开放时间，或公告正文里解析出的开放时间；
@@ -2697,7 +2739,7 @@ export class xhh_gacha_pool extends plugin {
       }
       if (moved.length) {
         bh3Maintenance += moved.length;
-        logger.mark(`[xhh][gacha_pool] 崩三存量补给按开放时间归位：${moved.join('、')}`);
+        logger.mark(`[HoYoGet][gacha_pool] 崩三存量补给按开放时间归位：${moved.join('、')}`);
       }
     }
     // 剔除混进来的「【公告】/【活动】」条目：那是「七日登录领补给卡」这类活动公告，不是卡池
@@ -2710,7 +2752,7 @@ export class xhh_gacha_pool extends plugin {
       }
       if (dropped) {
         bh3Maintenance += dropped;
-        logger.mark(`[xhh][gacha_pool] 崩三本地库剔除 ${dropped} 条非补给公告条目`);
+        logger.mark(`[HoYoGet][gacha_pool] 崩三本地库剔除 ${dropped} 条非补给公告条目`);
       }
     }
     // 同名补给去重：同一补给被误并进了新版本时会两个版本各留一份（如 9.0 末期补给又出现在 9.1）。
@@ -2753,7 +2795,7 @@ export class xhh_gacha_pool extends plugin {
             if (empty && dup.p[k] !== undefined) keep.p[k] = dup.p[k];
           }
           dedup++;
-          logger.mark(`[xhh][gacha_pool] 崩三同名补给去重：v${dup.vp.version}「${dup.p.s || dup.p.name}」并入 v${keep.vp.version}`);
+          logger.mark(`[HoYoGet][gacha_pool] 崩三同名补给去重：v${dup.vp.version}「${dup.p.s || dup.p.name}」并入 v${keep.vp.version}`);
         }
       }
       if (dedup) bh3Maintenance += dedup;
@@ -2777,9 +2819,9 @@ export class xhh_gacha_pool extends plugin {
           }
         }
       }
-      if (coverAdded) logger.mark(`[xhh][gacha_pool] 崩三补给封面已补录 ${coverAdded} 张`);
+      if (coverAdded) logger.mark(`[HoYoGet][gacha_pool] 崩三补给封面已补录 ${coverAdded} 张`);
     } catch (err) {
-      logger.error('[xhh][gacha_pool] bh3 封面补录失败:', err);
+      logger.error('[HoYoGet][gacha_pool] bh3 封面补录失败:', err);
     }
     bh3Maintenance += coverAdded;
     // 清理历史误写的 target（如把「跃升武装」这种补给类型当成角色名写进来的）
@@ -2796,7 +2838,7 @@ export class xhh_gacha_pool extends plugin {
       }
       if (cleaned) {
         bh3Maintenance += cleaned;
-        logger.mark(`[xhh][gacha_pool] 崩三清理 ${cleaned} 处错误 target`);
+        logger.mark(`[HoYoGet][gacha_pool] 崩三清理 ${cleaned} 处错误 target`);
       }
     }
     // 修正历史误判的类型：「位面武器·XX」是第二部女武神的名号前缀（S级角色），
@@ -2813,7 +2855,7 @@ export class xhh_gacha_pool extends plugin {
       }
       if (fixed) {
         bh3Maintenance += fixed;
-        logger.mark(`[xhh][gacha_pool] 崩三修正 ${fixed} 条「位面武器·」角色补给的类型（weapon→char）`);
+        logger.mark(`[HoYoGet][gacha_pool] 崩三修正 ${fixed} 条「位面武器·」角色补给的类型（weapon→char）`);
       }
     }
     // 清理/归一化/归位/封面补录此前都只改内存，若本次没有新版本要写就会提前 return，
@@ -2826,9 +2868,9 @@ export class xhh_gacha_pool extends plugin {
           updated: new Date().toISOString().slice(0, 10),
           pools: history.pools
         }), 'utf-8');
-        logger.mark(`[xhh][gacha_pool] 崩三本地库维护已落盘（${bh3Maintenance} 处：清理/归一化/归位/封面）`);
+        logger.mark(`[HoYoGet][gacha_pool] 崩三本地库维护已落盘（${bh3Maintenance} 处：清理/归一化/归位/封面）`);
       } catch (err) {
-        logger.error('[xhh][gacha_pool] bh3 维护落盘失败:', err);
+        logger.error('[HoYoGet][gacha_pool] bh3 维护落盘失败:', err);
       }
     }
     const numberedVers = (history?.pools || [])
@@ -2840,7 +2882,7 @@ export class xhh_gacha_pool extends plugin {
     const maxEntryPools = (history?.pools || []).find(p => Number(p.version) === maxYamlVer)?.pools || [];
     const knownS = new Set(maxEntryPools.map(p => String(p.s || '').toLowerCase()).filter(Boolean));
     if (!Array.isArray(records) || !records.length) {
-      logger.mark(`[xhh][gacha_pool] 崩三同步明细：无新增${coverAdded ? `，已补录 ${coverAdded} 张封面` : ''}`);
+      logger.mark(`[HoYoGet][gacha_pool] 崩三同步明细：无新增${coverAdded ? `，已补录 ${coverAdded} 张封面` : ''}`);
       return `崩坏3：本地库已同步 官方补给（最新 v${Number(maxYamlVer).toFixed(1)}）`;
     }
     const byVer = new Map();
@@ -2888,24 +2930,24 @@ export class xhh_gacha_pool extends plugin {
           maxEntry.start = rebuilt.start;
           maxEntry.end = rebuilt.end;
           const movedPools = this.reassignBh3PoolsByTime(history);
-          if (movedPools.length) logger.mark(`[xhh][gacha_pool] 崩三补给按时间归位：${movedPools.join('、')}`);
+          if (movedPools.length) logger.mark(`[HoYoGet][gacha_pool] 崩三补给按时间归位：${movedPools.join('、')}`);
           try {
             fs.writeFileSync(BH3_POOL_HISTORY_YAML_PATH, YAML.stringify({
               ...(data || {}),
               updated: new Date().toISOString().slice(0, 10),
               pools: history.pools
             }), 'utf-8');
-            logger.mark(`[xhh][gacha_pool] 崩三同步明细：修复 ${rebuilt.pools.length} 条旧数据`);
+            logger.mark(`[HoYoGet][gacha_pool] 崩三同步明细：修复 ${rebuilt.pools.length} 条旧数据`);
             return `崩坏3：本地库已同步 官方补给（最新 v${Number(maxYamlVer).toFixed(1)}）`;
           } catch (err) {
-            logger.error('[xhh][gacha_pool] bh3 旧数据修复写入失败:', err);
+            logger.error('[HoYoGet][gacha_pool] bh3 旧数据修复写入失败:', err);
           }
         }
       }
     }
     // 崩三公告标题不带版本号、UP 又都在库里 → 说明确实没有新补给，不要报「解析不出 UP」
     if (!byVer.size && !orphans.length) {
-      logger.mark(`[xhh][gacha_pool] 崩三同步明细：无新增（官方 ${records.length} 条公告均已在库）`);
+      logger.mark(`[HoYoGet][gacha_pool] 崩三同步明细：无新增（官方 ${records.length} 条公告均已在库）`);
       return `崩坏3：本地库已同步 官方补给（最新 v${Number(maxYamlVer).toFixed(1)}）`;
     }
     const newGroups = [];
@@ -2954,17 +2996,17 @@ export class xhh_gacha_pool extends plugin {
         }
         if (addTotal) {
           const movedPools = this.reassignBh3PoolsByTime(history);
-          if (movedPools.length) logger.mark(`[xhh][gacha_pool] 崩三补给按时间归位：${movedPools.join('、')}`);
+          if (movedPools.length) logger.mark(`[HoYoGet][gacha_pool] 崩三补给按时间归位：${movedPools.join('、')}`);
           try {
             fs.writeFileSync(BH3_POOL_HISTORY_YAML_PATH, YAML.stringify({
               ...(data || {}),
               updated: new Date().toISOString().slice(0, 10),
               pools: history.pools
             }), 'utf-8');
-            logger.mark(`[xhh][gacha_pool] 崩三同步明细：并入 ${addTotal} 条新补给（${addedNames.slice(0, 3).join('、')}）`);
+            logger.mark(`[HoYoGet][gacha_pool] 崩三同步明细：并入 ${addTotal} 条新补给（${addedNames.slice(0, 3).join('、')}）`);
             return `崩坏3：本地库已同步 官方补给（最新 v${Number(maxYamlVer).toFixed(1)}）`;
           } catch (err) {
-            logger.error('[xhh][gacha_pool] bh3 并入新补给写入失败:', err);
+            logger.error('[HoYoGet][gacha_pool] bh3 并入新补给写入失败:', err);
           }
         }
         return `崩坏3：本地库已同步 官方补给（最新 v${Number(maxYamlVer).toFixed(1)}）`;
@@ -2988,16 +3030,16 @@ export class xhh_gacha_pool extends plugin {
               updated: new Date().toISOString().slice(0, 10),
               pools: restPools
             }), 'utf-8');
-            logger.mark(`[xhh][gacha_pool] 崩三同步明细：v${r.version} 结束时间已对齐为 ${r.to}`);
+            logger.mark(`[HoYoGet][gacha_pool] 崩三同步明细：v${r.version} 结束时间已对齐为 ${r.to}`);
             return `崩坏3：本地库已同步 官方补给（最新 v${Number(nextVer).toFixed(1)}）`;
           } catch (err) {
-            logger.error('[xhh][gacha_pool] bh3 结束时间对齐写入失败:', err);
+            logger.error('[HoYoGet][gacha_pool] bh3 结束时间对齐写入失败:', err);
           }
         }
       }
       const vs = skipped.map(v => `v${v}`).join('、');
       // 打样本日志，便于定位是「版本没识别」还是「UP 没解析」
-      logger.mark(`[xhh][gacha_pool] 崩三同步未命中（当前库最大 v${maxVerEntry.raw}）：` +
+      logger.mark(`[HoYoGet][gacha_pool] 崩三同步未命中（当前库最大 v${maxVerEntry.raw}）：` +
         (records || []).slice(0, 8).map(r => `[v${r.version || '-'}|UP:${(r.up?.s || []).join('/') || '无'}] ${r.title || ''}`).join(' || '));
       return `崩坏3：检测到官方新补给，但公告未解析出 UP（${vs}），暂不自动写入；请手动补充 bh3_gacha_pool_history.yaml`;
     }
@@ -3020,7 +3062,7 @@ export class xhh_gacha_pool extends plugin {
         if (r) aligned.push(`v${r.version} 结束时间 ${r.from.slice(5, 16)} → ${r.to.slice(5, 16)}`);
       }
       const movedPools = this.reassignBh3PoolsByTime(history);
-      if (movedPools.length) logger.mark(`[xhh][gacha_pool] 崩三补给按时间归位：${movedPools.join('、')}`);
+      if (movedPools.length) logger.mark(`[HoYoGet][gacha_pool] 崩三补给按时间归位：${movedPools.join('、')}`);
       const next = {
         ...(data || {}),
         version: data?.version || '1.0',
@@ -3029,12 +3071,12 @@ export class xhh_gacha_pool extends plugin {
         pools: [...newGroups, ...restPools]
       };
       fs.writeFileSync(BH3_POOL_HISTORY_YAML_PATH, YAML.stringify(next), 'utf-8');
-      logger.mark(`[xhh][gacha_pool] 崩三同步明细：新增 v${newGroups.map(g => g.version).join('、v')}（${newGroups.map(g => `${g.start.slice(5, 16)}~${g.end.slice(5, 16)}`).join('、')}）` +
+      logger.mark(`[HoYoGet][gacha_pool] 崩三同步明细：新增 v${newGroups.map(g => g.version).join('、v')}（${newGroups.map(g => `${g.start.slice(5, 16)}~${g.end.slice(5, 16)}`).join('、')}）` +
         (aligned.length ? `；${aligned.join('、')}` : '') +
         (skipped.length ? `；v${skipped.join('、')} 因缺少 UP 未写入` : ''));
       return `崩坏3：本地库已同步 官方补给（最新 v${Number(newGroups.map(g => Number(g.version)).sort((a, b) => b - a)[0]).toFixed(1)}）`;
     } catch (err) {
-      logger.error('[xhh][gacha_pool] bh3 yaml 自动同步写入失败:', err);
+      logger.error('[HoYoGet][gacha_pool] bh3 yaml 自动同步写入失败:', err);
       return '';
     }
   }
@@ -3106,11 +3148,11 @@ export class xhh_gacha_pool extends plugin {
       } catch (_) {}
       if (Object.keys(found).length) {
         writeBh3VersionStarts(found);
-        logger.mark(`[xhh][gacha_pool] 崩三版本更新时间已自动更新: ${JSON.stringify(found)}`);
+        logger.mark(`[HoYoGet][gacha_pool] 崩三版本更新时间已自动更新: ${JSON.stringify(found)}`);
       }
       return found;
     } catch (err) {
-      logger.warn('[xhh][gacha_pool] 崩三版本更新时间自动抓取失败:', err?.message || err);
+      logger.warn('[HoYoGet][gacha_pool] 崩三版本更新时间自动抓取失败:', err?.message || err);
       return null;
     }
   }
@@ -3410,7 +3452,7 @@ export class xhh_gacha_pool extends plugin {
           if (l) lines.push(l);
         }
       } catch (err) {
-        logger.error(`[xhh][gacha_pool] 本地卡池库自动同步失败(${game}):`, err);
+        logger.error(`[HoYoGet][gacha_pool] 本地卡池库自动同步失败(${game}):`, err);
       }
     }
     // 通用：从官方公告自动推导各游戏当前版本（不回落）
@@ -3550,7 +3592,7 @@ ${r.summary || ''}`;
   }
 
   async zzzCurrentPool(e) {
-    logger.mark('[xhh][gacha_pool] 命中绝区零当前卡池:', e.msg);
+    logger.mark('[HoYoGet][gacha_pool] 命中绝区零当前卡池:', e.msg);
     // 优先使用本地当前时间段数据，避免米游社公告按版本筛选时把 3.0上半/下半混在一起。
     const zzzOfficial = await officialPool.fetch('zzz');
     const data = await this.fetchZzzPools();
@@ -3559,7 +3601,7 @@ ${r.summary || ''}`;
       {
         const latest = [...data].sort((a, b) => this.poolEndStamp(b) - this.poolEndStamp(a))[0];
         logger.mark(
-          `[xhh][gacha_pool] 绝区零卡池库共 ${data.length} 条，最新一期 ${latest?.version || '-'} ` +
+          `[HoYoGet][gacha_pool] 绝区零卡池库共 ${data.length} 条，最新一期 ${latest?.version || '-'} ` +
           `(${latest?.timer || '-'}，结束 ${latest?.endTime || '解析失败'})`,
         );
       }
@@ -3579,12 +3621,12 @@ ${r.summary || ''}`;
       }
       if (pools.length) {
         logger.mark(
-          `[xhh][gacha_pool] 绝区零当前期命中 ${pools.length} 个池子：` +
+          `[HoYoGet][gacha_pool] 绝区零当前期命中 ${pools.length} 个池子：` +
           pools.map(p => `${p.version || '?'}/${p.s || p.title || '?'}`).join('、'),
         );
         // 兜底：单张图最多 20 张卡，避免异常数据把图片撑到上万像素导致渲染失败
         if (pools.length > 20) {
-          logger.warn(`[xhh][gacha_pool] 绝区零当前期匹配到 ${pools.length} 个池子，已截断为 20 个`);
+          logger.warn(`[HoYoGet][gacha_pool] 绝区零当前期匹配到 ${pools.length} 个池子，已截断为 20 个`);
           pools.length = 20;
         }
         const sample = pools[0];
@@ -3624,7 +3666,7 @@ ${r.summary || ''}`;
         ? records.filter(r => String(r.version || '').startsWith(verFilter))
         : records.slice(0, 4);
       if (!useRecords.length) {
-        logger.mark('[xhh][gacha_pool] 绝区零官方公告未解析到当前版本记录，改用本地卡池数据兜底');
+        logger.mark('[HoYoGet][gacha_pool] 绝区零官方公告未解析到当前版本记录，改用本地卡池数据兜底');
       } else {
       const rawCards = useRecords.map((r, i) => {
         const card = this.officialCard(r, '绝区零');
@@ -3721,7 +3763,7 @@ ${r.summary || ''}`;
 
   async zzzVersionPool(e) {
     if (!config().zzz_logs) return false;
-    logger.mark('[xhh][gacha_pool] 命中绝区零版本卡池:', e.msg);
+    logger.mark('[HoYoGet][gacha_pool] 命中绝区零版本卡池:', e.msg);
     const data = await this.fetchZzzPools();
     if (!data) return e.reply('绝区零卡池数据获取失败，请稍后再试。');
     const m = e.msg.match(/(?:绝区零|ZZZ)v?(\d+\.\d+)(上半|下半)?卡池/);
@@ -3747,8 +3789,8 @@ ${r.summary || ''}`;
 
   async zzzNameHistory(e) {
     if (!config().zzz_logs) return false;
-    logger.mark('[xhh][gacha_pool] 命中绝区零名称卡池:', e.msg);
-    const name = e.msg.replace(/^#*(?:xhh)?(小花火)?(绝区零|ZZZ)/, '').replace(/(卡池|复刻)(统计|记录|历史)$/, '').replace(/卡池$/, '').trim();
+    logger.mark('[HoYoGet][gacha_pool] 命中绝区零名称卡池:', e.msg);
+    const name = e.msg.replace(/^#*(?:米哈游)?(绝区零|ZZZ)/, '').replace(/(卡池|复刻)(统计|记录|历史)$/, '').replace(/卡池$/, '').trim();
     return this.replyZzzNameHistory(e, name, false);
   }
 
@@ -3758,11 +3800,11 @@ ${r.summary || ''}`;
       .replace(/[＃井]/g, '#')
       .replace(/\s+/g, '');
     // 兜底：如果“原神卡池/#原神卡池”被通用规则误吞，直接转到当前卡池。
-    if (/^(?:[#＃井]*\s*)?(?:小花火)?\s*原神\s*(?:当前|本期|当期)?\s*卡池$/.test(normalized)) {
+    if (/^(?:[#＃井]*\s*)?(?:米哈游)?\s*原神\s*(?:当前|本期|当期)?\s*卡池$/.test(normalized)) {
       e.msg = normalized;
       return this.gsCurrentPool(e);
     }
-    const name = normalized.replace(/^#*(?:xhh)?(小花火)?/, '').replace(/(卡池|复刻)(统计|记录|历史)?$/, '').trim();
+    const name = normalized.replace(/^#*(?:米哈游)?/, '').replace(/(卡池|复刻)(统计|记录|历史)?$/, '').trim();
     const cnName = name.replace(/[^\u4e00-\u9fa5]/g, '');
     // 兜底中的兜底：如果通用名称规则已经把“#原神卡池”吃进来了，name 会变成“原神”。
     // 这时不要继续查历史名称，直接转当前卡池。
@@ -3778,7 +3820,7 @@ ${r.summary || ''}`;
       || /[，,。！？?、；;：:…]/.test(name)
       || /^(为啥|为什么|怎么|居然|可惜|没有|是不是|如果|但是|不过|然后|还有|我想|我看|你看|帮我)/.test(cnName)
     )) return false;
-    logger.mark('[xhh][gacha_pool] 尝试通用名称卡池:', name);
+    logger.mark('[HoYoGet][gacha_pool] 尝试通用名称卡池:', name);
     // 先查绝区零
     const zzzResult = await this.replyZzzNameHistory(e, name, true);
     if (zzzResult !== false) return zzzResult;
@@ -4210,7 +4252,7 @@ ${r.summary || ''}`;
 
   async zzzAllPool(e) {
     if (!config().zzz_logs) return false;
-    logger.mark('[xhh][gacha_pool] 命中绝区零全卡池:', e.msg);
+    logger.mark('[HoYoGet][gacha_pool] 命中绝区零全卡池:', e.msg);
     const data = await this.fetchZzzPools();
     if (!data) return e.reply('绝区零卡池数据获取失败，请稍后再试。');
     const versions = [...new Set(data.map(p => p.version?.replace(/(上半|下半)$/g, '')).filter(Boolean))].reverse();
@@ -4261,7 +4303,7 @@ ${r.summary || ''}`;
       try {
         return await e.reply(await makeForwardMsg(e, chunks, title));
       } catch (err) {
-        logger.warn?.(`[xhh][gacha_pool] ${title} 单条转发失败，改用安全分批:`, err?.message || err);
+        logger.warn?.(`[HoYoGet][gacha_pool] ${title} 单条转发失败，改用安全分批:`, err?.message || err);
       }
     }
     const batches = this.packPoolBatches(chunks);
@@ -4271,7 +4313,7 @@ ${r.summary || ''}`;
       try {
         await e.reply(await makeForwardMsg(e, batch, label));
       } catch (err) {
-        logger.warn?.(`[xhh][gacha_pool] ${label} 转发失败，尝试对半拆分:`, err?.message || err);
+        logger.warn?.(`[HoYoGet][gacha_pool] ${label} 转发失败，尝试对半拆分:`, err?.message || err);
         // 单批失败多半是协议端限流，先等一下再降级，避免连续重试被进一步限流
         await this.sleepMs(600);
         await this.sendForwardSplit(e, batch, label);
@@ -4315,7 +4357,7 @@ ${r.summary || ''}`;
       try {
         return await e.reply(await makeForwardMsg(e, chunks, title));
       } catch (err) {
-        logger.warn?.(`[xhh][gacha_pool] ${title} 拆分后转发仍失败，退化纯文本:`, err?.message || err);
+        logger.warn?.(`[HoYoGet][gacha_pool] ${title} 拆分后转发仍失败，退化纯文本:`, err?.message || err);
         return this.sendChunksAsText(e, chunks, title);
       }
     }
@@ -4332,7 +4374,7 @@ ${r.summary || ''}`;
         await e.reply(text.slice(i, i + 2000));
         await this.sleepMs(400);
       } catch (err) {
-        logger.warn?.(`[xhh][gacha_pool] ${title} 纯文本分段发送失败:`, err?.message || err);
+        logger.warn?.(`[HoYoGet][gacha_pool] ${title} 纯文本分段发送失败:`, err?.message || err);
         return;
       }
     }
@@ -4340,7 +4382,7 @@ ${r.summary || ''}`;
 
   async srAllPool(e) {
     if (!config().sr_logs) return false;
-    logger.mark('[xhh][gacha_pool] 命中星铁全卡池:', e.msg);
+    logger.mark('[HoYoGet][gacha_pool] 命中星铁全卡池:', e.msg);
     const srOfficial = await officialPool.fetch('sr');
     const cards = await this.loadSrLocalCards('', srOfficial.records || [], true);
     if (!cards.length) return e.reply('星铁卡池数据获取失败，请稍后再试。');
@@ -4350,7 +4392,7 @@ ${r.summary || ''}`;
   }
 
   async srCurrentPool(e) {
-    logger.mark('[xhh][gacha_pool] 命中星铁当前卡池:', e.msg);
+    logger.mark('[HoYoGet][gacha_pool] 命中星铁当前卡池:', e.msg);
     // 优先走本地结构化卡池表，但仍使用“当前卡池”统一卡片样式，和原神/绝区零/崩三保持一致。
     const srOfficial = await officialPool.fetch('sr');
     const localCards = await this.loadSrLocalCards('current', srOfficial.records || []);
@@ -4408,7 +4450,7 @@ ${r.summary || ''}`;
 
   async srVersionPool(e) {
     if (!config().sr_logs) return false;
-    logger.mark('[xhh][gacha_pool] 命中星铁版本卡池:', e.msg);
+    logger.mark('[HoYoGet][gacha_pool] 命中星铁版本卡池:', e.msg);
     const m = e.msg.match(/(?:星铁|崩铁|星穹铁道)v?(\d+\.\d+)(上半|下半)?(?:卡池|跃迁)/);
     if (!m) return false;
     const [, version, phase] = m;
@@ -4462,8 +4504,8 @@ ${r.summary || ''}`;
 
   async srNameHistory(e) {
     if (!config().sr_logs) return false;
-    logger.mark('[xhh][gacha_pool] 命中星铁名称卡池:', e.msg);
-    const name = e.msg.replace(/^#*(?:xhh)?(小花火)?(星铁|崩铁|星穹铁道)/, '').replace(/(卡池|跃迁)$/, '').trim();
+    logger.mark('[HoYoGet][gacha_pool] 命中星铁名称卡池:', e.msg);
+    const name = e.msg.replace(/^#*(?:米哈游)?(星铁|崩铁|星穹铁道)/, '').replace(/(卡池|跃迁)$/, '').trim();
     if (!name) return false;
     return this.replySrNameHistory(e, name, false);
   }
@@ -4761,14 +4803,14 @@ ${r.summary || ''}`;
     try {
       const isArr = Array.isArray(data);
       if (!data || typeof data !== 'object' || (isArr && !data.length)) {
-        logger.error(`[xhh][gacha_pool] 拒绝写入空的卡池库（${label}）：${path}`);
+        logger.error(`[HoYoGet][gacha_pool] 拒绝写入空的卡池库（${label}）：${path}`);
         return false;
       }
       const before = this.loadYamlDoc(path);
       if (isArr) {
         if (Array.isArray(before) && before.length && data.length < before.length) {
           logger.error(
-            `[xhh][gacha_pool] 拒绝写入条目数锐减的卡池库（${label}）：` +
+            `[HoYoGet][gacha_pool] 拒绝写入条目数锐减的卡池库（${label}）：` +
             `${before.length} → ${data.length}，已跳过。请检查数据源或用 git checkout 恢复。`,
           );
           return false;
@@ -4776,13 +4818,13 @@ ${r.summary || ''}`;
       } else {
         // 对象型（原神库）：结构必须一致，且 date / imgs 的键数不许减少
         if (!before || typeof before !== 'object' || Array.isArray(before)) {
-          logger.error(`[xhh][gacha_pool] 卡池库结构与新数据不一致，拒绝写入（${label}）：${path}`);
+          logger.error(`[HoYoGet][gacha_pool] 卡池库结构与新数据不一致，拒绝写入（${label}）：${path}`);
           return false;
         }
         const beforeKeys = Object.keys(before);
         const newKeys = Object.keys(data);
         if (newKeys.length < beforeKeys.length) {
-          logger.error(`[xhh][gacha_pool] 拒绝写入顶层键减少的卡池库（${label}）：${beforeKeys} → ${newKeys}`);
+          logger.error(`[HoYoGet][gacha_pool] 拒绝写入顶层键减少的卡池库（${label}）：${beforeKeys} → ${newKeys}`);
           return false;
         }
         for (const k of ['date', 'imgs']) {
@@ -4790,18 +4832,18 @@ ${r.summary || ''}`;
             const bn = Object.keys(before[k]).length;
             const nn = Object.keys(data[k]).length;
             if (nn < bn) {
-              logger.error(`[xhh][gacha_pool] 拒绝写入 ${k} 键数减少的卡池库（${label}）：${bn} → ${nn}`);
+              logger.error(`[HoYoGet][gacha_pool] 拒绝写入 ${k} 键数减少的卡池库（${label}）：${bn} → ${nn}`);
               return false;
             }
           } else if (before[k] && !data[k]) {
-            logger.error(`[xhh][gacha_pool] 拒绝写入丢失 ${k} 字段的卡池库（${label}）`);
+            logger.error(`[HoYoGet][gacha_pool] 拒绝写入丢失 ${k} 字段的卡池库（${label}）`);
             return false;
           }
         }
       }
       const text = YAML.stringify(data);
       if (!text || !text.trim()) {
-        logger.error(`[xhh][gacha_pool] 序列化结果为空，拒绝写入（${label}）`);
+        logger.error(`[HoYoGet][gacha_pool] 序列化结果为空，拒绝写入（${label}）`);
         return false;
       }
       if (fs.existsSync(path)) {
@@ -4812,7 +4854,7 @@ ${r.summary || ''}`;
       fs.writeFileSync(path, text, 'utf-8');
       return true;
     } catch (err) {
-      logger.error(`[xhh][gacha_pool] 卡池库写入失败（${label}）:`, err);
+      logger.error(`[HoYoGet][gacha_pool] 卡池库写入失败（${label}）:`, err);
       return false;
     }
   }
@@ -5068,7 +5110,7 @@ ${r.summary || ''}`;
   }
 
   async gsCurrentPool(e) {
-    logger.mark('[xhh][gacha_pool] 命中原神当前卡池:', e.msg);
+    logger.mark('[HoYoGet][gacha_pool] 命中原神当前卡池:', e.msg);
     // 当前卡池优先走本地结构化数据，避免米游社公告缓存/公告顺序导致 #原神卡池 显示过期信息。
     const localCards = await this.loadGsLocalCards('current');
     if (localCards.length) {
@@ -5143,7 +5185,7 @@ ${r.summary || ''}`;
   }
 
   async gsVersionPool(e) {
-    logger.mark('[xhh][gacha_pool] 命中原神版本卡池:', e.msg);
+    logger.mark('[HoYoGet][gacha_pool] 命中原神版本卡池:', e.msg);
     const m = e.msg.match(/原神v?(\d+\.\d+)(上半|下半)?卡池/);
     if (!m) return false;
     const [, version, phase] = m;
@@ -5207,8 +5249,8 @@ ${r.summary || ''}`;
   }
 
   async gsNameHistory(e) {
-    logger.mark('[xhh][gacha_pool] 命中原神名称卡池:', e.msg);
-    const name = e.msg.replace(/^#*(?:xhh)?(小花火)?原神/, '').replace(/卡池$/, '').trim();
+    logger.mark('[HoYoGet][gacha_pool] 命中原神名称卡池:', e.msg);
+    const name = e.msg.replace(/^#*(?:米哈游)?原神/, '').replace(/卡池$/, '').trim();
     if (!name) return false;
     return this.replyGsNameHistory(e, name, false);
   }
@@ -5466,7 +5508,7 @@ ${r.summary || ''}`;
         if (this.gsPoolFourStarCount(item.names) > this.gsPoolFourStarCount(prev.names)) best.set(item.ver, item);
       }
       // 排查用：打印 imgs 库内实际键名与查询键，定位「有图但取不到」的键不匹配问题
-      logger.mark('[xhh][gacha_pool] 当前卡池 imgs 匹配:',
+      logger.mark('[HoYoGet][gacha_pool] 当前卡池 imgs 匹配:',
         [...best.values()].map(v => `【${v.ver}】=> ${(data.imgs?.[`【${v.ver}】`] || []).length} 张`).join(', '),
         '| 库内 imgs 键:', Object.keys(data.imgs || {}).join(', ') || '(空)');
       for (const item of best.values()) this.setCurrentVersion('gs', item.ver);
@@ -5563,7 +5605,7 @@ ${r.summary || ''}`;
   }
 
   async gsAllPool(e) {
-    logger.mark('[xhh][gacha_pool] 命中原神全卡池:', e.msg);
+    logger.mark('[HoYoGet][gacha_pool] 命中原神全卡池:', e.msg);
     // 全量历史条目多，长图渲染易超限失败，统一改为文字转发（与绝区零全卡池一致）。
     let cards = await this.loadGsLocalCards('', true);
     let source = '';
@@ -5594,13 +5636,13 @@ ${r.summary || ''}`;
         if (cover) card.img = cover;
       }
     } catch (err) {
-      logger.warn?.('[xhh][gacha_pool] 崩三官方补给封面匹配失败:', err);
+      logger.warn?.('[HoYoGet][gacha_pool] 崩三官方补给封面匹配失败:', err);
     }
     return cards;
   }
 
   async bh3CurrentPool(e) {
-    logger.mark('[xhh][gacha_pool] 命中崩三补给菜单:', e.msg);
+    logger.mark('[HoYoGet][gacha_pool] 命中崩三补给菜单:', e.msg);
     const local = await this.loadBh3CurrentPools();
     if (local.length) {
       this.setCurrentVersion('bh3', local[0]?.version);
@@ -5650,7 +5692,7 @@ ${r.summary || ''}`;
       }
       return this.sanitizeBh3PoolHistory(data);
     } catch (err) {
-      logger.warn('[xhh][gacha_pool] 崩三历史卡池数据加载失败:', err);
+      logger.warn('[HoYoGet][gacha_pool] 崩三历史卡池数据加载失败:', err);
       return null;
     }
   }
@@ -5808,7 +5850,7 @@ ${r.summary || ''}`;
       try { await redis.set(cacheKey, JSON.stringify(out), { EX: 12 * 3600 }); } catch (_) {}
       return out;
     } catch (err) {
-      logger.warn(`[xhh][gacha_pool] 米游社瞬间搜索失败(${kw}):`, err?.message || err);
+      logger.warn(`[HoYoGet][gacha_pool] 米游社瞬间搜索失败(${kw}):`, err?.message || err);
       return [];
     }
   }
@@ -5916,7 +5958,7 @@ ${r.summary || ''}`;
       }
     }
     if (missing) {
-      logger.mark(`[xhh][gacha_pool] 崩三 ${missing} 个补给暂用版本窗口（公告正文里没定位到唯一一段开放时间）`);
+      logger.mark(`[HoYoGet][gacha_pool] 崩三 ${missing} 个补给暂用版本窗口（公告正文里没定位到唯一一段开放时间）`);
     }
     return { times, covers };
   }
@@ -5936,10 +5978,10 @@ ${r.summary || ''}`;
         updated: new Date().toISOString().slice(0, 10),
         pools: data.pools
       }), 'utf-8');
-      logger.mark(`[xhh][gacha_pool] 风控期间补录崩三补给信息：开放时间 ${times} 条、封面 ${covers} 张`);
+      logger.mark(`[HoYoGet][gacha_pool] 风控期间补录崩三补给信息：开放时间 ${times} 条、封面 ${covers} 张`);
       return `\n崩坏3：风控期间仍补录了 ${times} 条开放时间、${covers} 张封面`;
     } catch (err) {
-      logger.warn('[xhh][gacha_pool] 风控期间崩三补给信息补录失败:', err?.message || err);
+      logger.warn('[HoYoGet][gacha_pool] 风控期间崩三补给信息补录失败:', err?.message || err);
       return '';
     }
   }
@@ -6016,7 +6058,7 @@ ${r.summary || ''}`;
 
   async bh3VersionPool(e) {
     if (!config().bh3_logs) return false;
-    logger.mark('[xhh][gacha_pool] 命中崩三版本卡池:', e.msg);
+    logger.mark('[HoYoGet][gacha_pool] 命中崩三版本卡池:', e.msg);
     const data = await this.loadBh3PoolHistory();
     if (!data?.pools?.length) return e.reply('崩三历史卡池数据暂不可用。');
     const m = e.msg.match(/(?:崩三|崩坏3|崩坏三|BH3)v?(\d+\.\d+)(上半|下半)?(卡池|补给)/);
@@ -6043,8 +6085,8 @@ ${r.summary || ''}`;
 
   async bh3NameHistory(e) {
     if (!config().bh3_logs) return false;
-    logger.mark('[xhh][gacha_pool] 命中崩三名称卡池:', e.msg);
-    const name = e.msg.replace(/^#*(?:xhh)?(小花火)?(崩三|崩坏3|崩坏三|BH3)/, '').replace(/(卡池|补给)$/, '').trim();
+    logger.mark('[HoYoGet][gacha_pool] 命中崩三名称卡池:', e.msg);
+    const name = e.msg.replace(/^#*(?:米哈游)?(崩三|崩坏3|崩坏三|BH3)/, '').replace(/(卡池|补给)$/, '').trim();
     if (!name) return false;
     return this.replyBh3NameHistory(e, name, false);
   }
@@ -6197,7 +6239,7 @@ ${r.summary || ''}`;
         content.avatar_url
       ]);
     } catch (err) {
-      logger.warn?.('[xhh][gacha_pool] 崩三角色立绘获取失败:', name, err);
+      logger.warn?.('[HoYoGet][gacha_pool] 崩三角色立绘获取失败:', name, err);
       return '';
     }
   }
@@ -6284,11 +6326,11 @@ ${r.summary || ''}`;
           if (item?.title && item?.icon) maps.stigmataIcon[item.title] = item.icon;
         }
       } catch (err) {
-        logger.warn?.('[xhh][gacha_pool] 崩三圣痕图标映射获取失败:', err);
+        logger.warn?.('[HoYoGet][gacha_pool] 崩三圣痕图标映射获取失败:', err);
       }
       return maps;
     } catch (err) {
-      logger.warn?.('[xhh][gacha_pool] 崩三Wiki图标映射获取失败:', err);
+      logger.warn?.('[HoYoGet][gacha_pool] 崩三Wiki图标映射获取失败:', err);
       return { charIcon: {}, weaponIcon: {}, stigmataIcon: {} };
     }
   }
@@ -6342,7 +6384,7 @@ ${r.summary || ''}`;
           }
           return fallbackHit.url;
         } catch (err) {
-          logger.warn?.('[xhh][gacha_pool] 崩三卡池图标缓存失败:', name, err);
+          logger.warn?.('[HoYoGet][gacha_pool] 崩三卡池图标缓存失败:', name, err);
           return fallbackHit.url;
         }
       }
@@ -6382,7 +6424,7 @@ ${r.summary || ''}`;
 
   async bh3AllPool(e) {
     if (!config().bh3_logs) return false;
-    logger.mark('[xhh][gacha_pool] 命中崩三全卡池:', e.msg);
+    logger.mark('[HoYoGet][gacha_pool] 命中崩三全卡池:', e.msg);
     const data = await this.loadBh3PoolHistory();
     if (!data?.pools?.length) return e.reply('崩三历史卡池数据暂不可用。');
     // 按版本号倒序（最新在前）：库里的条目顺序是历史累积的，不能直接反转文件顺序
@@ -6413,7 +6455,7 @@ ${r.summary || ''}`;
   }
 
   async bh3PoolUnsupported(e) {
-    logger.mark('[xhh][gacha_pool] 命中崩三卡池兜底:', e.msg);
+    logger.mark('[HoYoGet][gacha_pool] 命中崩三卡池兜底:', e.msg);
     return e.reply(`崩坏3当前版本已标记为 ${this.currentVersionByGame('bh3')}。\n支持查询：\n#崩三卡池 / #崩三补给 - 查看当前可用补给菜单\n#崩三v8.9卡池 / #崩三v8.9上半卡池 - 查看指定版本补给\n#德丽莎卡池 / #琪亚娜补给 - 查看角色历史补给\n#崩三卡池历史 / #崩三补给全 - 查看全版本记录`);
   }
 }
