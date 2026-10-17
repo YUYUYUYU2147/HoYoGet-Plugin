@@ -158,3 +158,4 @@ body {
 .dmg-buffs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .dmg-buff { padding: 3px 8px; font-size: 11px; color: #b9c2d6; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); border-radius: 6px; }
 .dmg-notes { margin-top: 10px; font-size: 11px; line-height: 1.7; color: #6b7386; }
+.dmg-table td.n u { text-decoration: none; margin-left: 5px; padding: 1px 5px; font-size: 10px; color: #ffcf5c; background: rgba(255,207,92,.12); border-radius: 4px; }

@@ -226,10 +226,74 @@ function calcDamage(bp, level, avatar, charName) {
   const buffBase = buildBuffContext(avatar, charName)
   const table = new Map()
   for (const s of rates.skills) {
-    if (!s.name) continue
+    if (!s.name || s.isHide) continue
     // 以「名字里的类别」为准，而不是 key 前缀：个别角色的 key 与名字类别不一致
     //（如 AXP 对应的名字是「普攻：…」），按 key 分会漏配接口技能。
+    // 隐藏子段不参与主技能匹配：它只应通过 ops.add 并入主段，否则同名时会顶掉主段。
     table.set(`${skillCat(s.name)}|${skillCore(s.name)}`, s)
+  }
+
+  // 技能键 → 倍率条目（含多段组合 ops），用于按 key 追加子段伤害
+  const byKey = new Map(rates.skills.map(x => [x.key, x]))
+
+  /**
+   * 单个技能键的完整伤害。
+   *
+   * 多段技能（ops）按源表的 after 语义处理：
+   *   {op:'add',key}  这一招的伤害**加上** key 那一招的完整伤害，
+   *                    子段有自己的倍率**和自己的乘区**（子段的 range 可能落在
+   *                    别的增益生效范围内，所以不能拿主段的增伤区去套）
+   *   {op:'x',n}      整条伤害乘 n
+   * 子段取自己的技能等级：按子段键的首字母反查技能类别
+   * （A普攻 E特殊技 C闪避 R连携 T核心 L支援），等级从接口 skills[] 里取。
+   */
+  const typeOfBase = { A: 0, E: 1, C: 2, R: 3, T: 5, L: 6 }
+  const levelOfType = {}
+  for (const sk of avatar?.skills || []) levelOfType[Number(sk.skill_type)] = Number(sk.level) || 1
+  const rateAt = (entry, lv) => {
+    const idx = Math.max(1, Math.min(lv, entry.rates?.length || 16)) - 1
+    return Number(entry.rates?.[idx])
+  }
+  const seen = new Set()
+  const one = (key, depth = 0) => {
+    const entry = byKey.get(key)
+    if (!entry || depth > 3) return null
+    // 子段可能被多个主段引用，缓存避免重复展开（并防止自引用死循环）
+    if (seen.has(key)) return null
+    seen.add(key)
+    const lv = levelOfType[typeOfBase[String(key)[0].toUpperCase()]] || 1
+    const rate = rateAt(entry, lv)
+    if (!Number.isFinite(rate) || rate <= 0) {
+      // 提前返回也要把 key 从 seen 里移除，否则后续同键子段会被误判成循环引用
+      seen.delete(key)
+      return null
+    }
+    const buff = getBuffAreas({ ...buffBase, key, dynLevel: buffBase.tLevel })
+    const areas = calcDamageAreas(bp, level, buff)
+    const base = rate * atk
+    const mul = areas.boost * areas.vulnerability * areas.resistance * areas.defence
+    // 期望列含暴击率（期望值），暴击列不含 —— 两列口径不同，别混用
+    let expect = base * areas.critical * mul
+    let crit = base * (1 + areas.critdmg) * mul
+    const adds = []
+    let baseTotal = base
+    for (const op of entry.ops || []) {
+      if (op.op === 'add') {
+        const sub = one(op.key, depth + 1)
+        if (!sub) continue
+        expect += sub.expect
+        crit += sub.crit
+        baseTotal += sub.baseTotal
+        adds.push(op.key)
+      } else if (op.op === 'x' && Number.isFinite(op.n)) {
+        expect *= op.n
+        crit *= op.n
+        // 总倍率也要跟着乘，否则多段技能的「等效倍率」会少算 x 系数
+        baseTotal *= op.n
+      }
+    }
+    seen.delete(key)
+    return { key, name: entry.name, rate, base, baseTotal, areas, buff, expect, crit, adds }
   }
 
   // 接口 skills[]：skill_type 0普攻 1特殊技 2闪避 3连携 5核心 6支援
@@ -241,33 +305,32 @@ function calcDamage(bp, level, avatar, charName) {
       if (!title) continue
       const hit = table.get(`${skillCat(title)}|${skillCore(title)}`)
       if (!hit) continue                      // 倍率表没有这个技能（如新角色未收录）
-      const idx = Math.max(1, Math.min(skLv, hit.rateList?.length || 16)) - 1
-      const rate = Number(hit.rates?.[idx] ?? hit.rate)
-      if (!Number.isFinite(rate) || rate <= 0) continue
-      const base = rate * atk
-      const buff = getBuffAreas({ ...buffBase, key: hit.key, dynLevel: buffBase.tLevel })
-      const areas = calcDamageAreas(bp, level, buff)
-      // 期望区含暴击率（期望值），暴击列不含 —— 两列口径不同，别混用
-      const mul = areas.boost * areas.vulnerability * areas.resistance * areas.defence
+      if (hit.isHide) continue                // 隐藏子段（如回旋斩击）只作为主段的一部分，不单列
+      const one1 = one(hit.key)
+      if (!one1) continue
       out.push({
         name: title,
         skillType: Number(sk.skill_type),
         key: hit.key,
         level: skLv,
-        rate,
-        base: Math.round(base),
-        boost: Math.round(areas.boost * 1000) / 1000,
-        expect: Math.round(base * areas.critical * mul),
-        crit: Math.round(base * (1 + areas.critdmg) * mul),
-        buffNames: buff.applied.map(x => x.name),
-        buffMiss: buff.missing,
+        rate: one1.rate,
+        // 展示用的「等效倍率」= 这一招实际打出的总倍率（含追加段），否则
+        // 多段技能只显示首段倍率会让人以为算错了
+        totalRate: Math.round((one1.baseTotal / atk) * 1000) / 1000,
+        base: Math.round(one1.baseTotal),
+        boost: Math.round(one1.areas.boost * 1000) / 1000,
+        expect: Math.round(one1.expect),
+        crit: Math.round(one1.crit),
+        adds: one1.adds,
+        buffNames: one1.buff.applied.map(x => x.name),
+        buffMiss: one1.buff.missing,
       })
     }
   }
   if (!out.length) return { ok: false, error: '接口技能与倍率表没有交集（该角色可能未收录倍率）' }
 
-  // 按倍率降序：面板上最痛的招式排前面；顶部乘区也要取这个技能，不能取接口顺序第一个
-  out.sort((a, b) => b.rate - a.rate)
+  // 按总伤害降序：面板上最痛的招式排前面；顶部乘区也要取这个技能，不能取接口顺序第一个
+  out.sort((a, b) => (b.expect - a.expect))
   const topBuff = getBuffAreas({ ...buffBase, key: out[0].key, dynLevel: buffBase.tLevel })
   const areas = calcDamageAreas(bp, level, topBuff)
   const critdmg = areas.critdmg
@@ -286,7 +349,7 @@ function calcDamage(bp, level, avatar, charName) {
       '期望＝1+暴击率×暴伤 的期望值；暴击列按必暴击计，不含暴击率。',
       '敌方面板按角色等级、1级基础防御50、抗性-0.2（有弱点）估算；未计失衡易伤。',
       '增伤区只计音擎、套装、核心被动、额外能力、影画；技能自身倍率型增伤（如对某目标增伤50%）未计。',
-      '多段技能只按首段倍率算，未累加后续段数（如强化特殊技的后续段）。',
+      '等效倍率含多段追加（如蓄力攻击＝蓄力段＋回旋斩击）；各段按各自技能等级代入，并分别套用各自生效的增益。',
       buffMiss.length ? `未收录：${buffMiss.join('、')}` : '',
     ].filter(Boolean),
     skills: out,
@@ -753,7 +816,7 @@ export class zzz_panel_list extends plugin {
       return e.reply([
         `【${charData.full_name_mi18n}】Lv${charData.level} ${charData.rarity} 影${charData.rank}`,
         charData.weapon ? `专武：${charData.weapon.name} Lv${charData.weapon.level}` : '（无专武数据）',
-        `原始数据已落盘 data/zzz_panel/avatar_info.json`,
+        `详情渲染失败：${err?.message || err}`,
       ])
     }
   }

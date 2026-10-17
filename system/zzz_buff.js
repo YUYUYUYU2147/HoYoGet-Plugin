@@ -68,6 +68,7 @@ function elementOk(buff, element) {
  * rank 未知（接口没给）时一律不计入，避免把没抽到的影画算进去。
  */
 function rankOk(buff, rank) {
+  if (buff.src !== '影画') return true
   const m = /^\s*(\d+)\s*影/.exec(buff.name || '')
   if (!m) return true
   if (!Number.isFinite(Number(rank))) return false

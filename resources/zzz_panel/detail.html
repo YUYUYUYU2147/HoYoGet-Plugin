@@ -159,9 +159,9 @@
         <div class="dmg-atk">攻击力 <b>{{c.damage.atk}}</b></div>
       </div>
       <table class="dmg-table">
-        <tr><th class="n">技能</th><th class="r">倍率</th><th class="r">增伤区</th><th class="r">期望</th><th class="r">暴击</th></tr>
+        <tr><th class="n">技能</th><th class="r">等效倍率</th><th class="r">增伤区</th><th class="r">期望</th><th class="r">暴击</th></tr>
         {{each c.damage.skills d}}
-        <tr><td class="n">{{d.name}} <i>Lv{{d.level}}</i></td><td class="r">{{d.rate}}</td><td class="r">{{d.boost}}</td><td class="r">{{d.expect}}</td><td class="r crit">{{d.crit}}</td></tr>
+        <tr><td class="n">{{d.name}} <i>Lv{{d.level}}</i>{{if d.adds.length}}<u>多段</u>{{/if}}</td><td class="r">{{d.totalRate}}</td><td class="r">{{d.boost}}</td><td class="r">{{d.expect}}</td><td class="r crit">{{d.crit}}</td></tr>
         {{/each}}
       </table>
       {{if c.damage.buffRows}}

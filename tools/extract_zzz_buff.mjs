@@ -142,7 +142,7 @@ const out = {
   _comment: '绝区零增益数据。数值来源为社区依据官方数值整理的公开数据表（ZZZ-Plugin dist/model/damage/*），非米游社接口返回。仅为数值，不含其计算引擎。重生成：node tools/extract_zzz_buff.mjs',
   _valueKinds: {
     number: '固定值',
-    array: '音擎精炼 1~5 档（数组下标 0 = 精炼 1）',
+    array: '音擎精炼 1~5 档（下标 0 = 精炼 1）；角色核心被动为技能等级 1~7 档',
     dyn: '随技能等级变化的档位，数值见 chars[x].levels[类别]，等级由接口按实际技能等级代入',
   },
   _source: {

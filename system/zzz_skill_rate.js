@@ -89,7 +89,13 @@ export function damageSkillsAt(charNameOrId, skillLevel = 16) {
       rate: Number(s.rates[Math.min(lv, s.rates.length) - 1]),
       // 同时带出整张表，便于调用方按各自等级再取一次
       rates: s.rates,
-      rateList: s.rates
+      rateList: s.rates,
+      // 多段技能的组合关系（{op:'add',key} 追加子段伤害、{op:'x',n} 整条乘系数）
+      // 与 isHide（隐藏子段，只作为主段一部分、不单独列行）必须原样透出：
+      // 少了它们，多段技能只会按首段倍率算，直接低估一大截。
+      ops: s.ops || [],
+      isHide: !!s.isHide,
+      isMain: !!s.isMain
     }))
   return { ok: true, char, skillLevel: lv, skills }
 }
