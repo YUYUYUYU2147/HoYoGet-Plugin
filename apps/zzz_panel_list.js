@@ -594,6 +594,14 @@ function getScoreWeight(charName, stats, profession, elementType) {
   }
   return { ruleName, weight }
 }
+/** 单个驱动盘的段位：沿用 ZZZ-Plugin 的 48/40/36 分界，压缩成 A/SSS/ACE/MAX 四档 */
+function discGrade(score) {
+  if (score >= 48) return 'MAX'
+  if (score >= 40) return 'ACE'
+  if (score >= 36) return 'SSS'
+  return 'A'
+}
+
 /** 计算驱动盘总分与段位；另返回每个盘评分 discScores 与有益/有效词条数 */
 function calcEquipScore(equip_final, charName, stats, profession, elementType) {
   const { ruleName, weight } = getScoreWeight(charName, stats, profession, elementType)
@@ -755,7 +763,10 @@ function normalizeDetail(a, uid) {
   const scoreRes = calcEquipScore(equip_final, a?.name_mi18n || '', scoreStats, a?.avatar_profession, a?.element_type)
   const rating = scoreRes.rating
   const equip_score = scoreRes.score
-  equip_final.forEach((eq, i) => { eq.score = scoreRes.discScores[i] ?? 0 })
+  equip_final.forEach((eq, i) => {
+    eq.score = scoreRes.discScores[i] ?? 0
+    eq.grade = discGrade(eq.score)
+  })
   const validCount = a?.equip_plan_info?.valid_property_cnt
     ?? discsRaw.reduce((s, d) => s + (d.properties || []).filter(p => p.valid).length, 0)
 
