@@ -1,6 +1,8 @@
 /* 绝区零 · 单招伤害计算过程页
    配色与 detail.css 一致（同一套面板观感），此处只补本页独有的块 */
-body { position: relative; margin: 0; padding: 14px; background: #0b0e14; text-shadow: 0 1px 2px rgba(0,0,0,.55); }
+/* body 宽度必须和 #container 一致：渲染器只截 #container，
+   如果 body 保持视口宽度，背景图会按更宽的 body 铺，截出来就只剩左半边。 */
+body { position: relative; margin: 0; padding: 0; width: 480px; background: #0b0e14; text-shadow: 0 1px 2px rgba(0,0,0,.55); }
 /* 随机背景图铺在内容后面，上面压一层深色渐变保证文字可读 */
 .panel-bg { position: absolute; inset: 0; z-index: 0; background-size: cover; background-position: center; background-repeat: no-repeat; }
 .panel-bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(4,7,13,.24), rgba(4,7,13,.52)); }
