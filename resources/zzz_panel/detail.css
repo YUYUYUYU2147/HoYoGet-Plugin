@@ -47,10 +47,8 @@ body {
 /* ============ 头部：立绘 + 属性 ============ */
 .hero { display: flex; gap: 20px; }
 .hero .portrait {
-  width: 340px; min-width: 340px; border-radius: 14px; overflow: hidden;
-  /* 立绘是透明底全身图，容器不要再垫黑底，否则左上角看起来还是黑框 */
-  background: transparent; border: 1px solid rgba(255,255,255,.10);
-  box-shadow: 0 8px 30px rgba(0,0,0,.35);
+  /* 立绘是透明底全身图，不画边框/阴影/圆角，直接融进背景 */
+  width: 340px; min-width: 340px;
   align-self: stretch;
 }
 .hero .portrait img { width: 100%; height: 100%; object-fit: contain; display: block; }
