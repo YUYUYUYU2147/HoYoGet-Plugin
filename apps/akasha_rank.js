@@ -28,11 +28,39 @@ const CACHE_TTL = 6 * 3600 * 1000   // 分类（角色→方案）缓存 6 小�
    · 全球 <角色> [方案] / 全球排名 <角色> —— 更短的写法
    · akasha / 阿卡夏 <角色> [方案]      —— 英文名与中文译名（阿卡夏 / 阿克夏）都收 */
 const AKASHA_REG = /^#?(?:米哈游)?\s*(?:akasha|阿卡夏|阿克夏)\s*(.*)$/i
-const AKASHA_CN_REG = /^#?(?:米哈游)?\s*(.+?)\s*全球排名$/
+/* 负向预查排除「我的」：否则「#我的全球排名」会被当成角色名「我的」 */
+const AKASHA_CN_REG = /^#?(?:米哈游)?\s*(?!我的\s*$|全球\s*$)(.+?)\s*全球排名$/
 const AKASHA_SHORT_REG = /^#?(?:米哈游)?\s*全球(?:排名)?\s+(.+)$/
 /* 查「我自己的排名」：名次数据在 getCalculationsForUser 里，
    与上面那几个「看榜单前 N 名」的指令是完全不同的数据源。 */
-const AKASHA_ME_REG = /^#?(?:米哈游)?\s*(?:我的)?全球(?:排名?|名次)?\s*$/
+/* 可带 UID：#我的全球排名 123456789 */
+const AKASHA_ME_REG = /^#?(?:米哈游)?\s*(?:我的)?全球(?:排名?|名次)?(?:\s+\d{9,10})?\s*$/
+
+/**
+ * 从 Yunzai 的 Users 表读该用户的「原神 UID」（games.gs.uid）。
+ * 喵喵插件绑定的也是这一份数据，所以两种绑定方式都能命中。
+ */
+async function readBoundGsUid(e) {
+  const qq = String(e?.user_id || e?.sender?.user_id || '').trim()
+  if (!qq) return ''
+  const dbFile = path.join(process.cwd(), 'data', 'db', 'data.db')
+  if (!fs.existsSync(dbFile)) return ''
+  try {
+    const sqlite3 = (await import('sqlite3')).default
+    const row = await new Promise(resolve => {
+      const db = new sqlite3.Database(dbFile, sqlite3.OPEN_READONLY, err => (err ? resolve(null) : null))
+      db.get('select games from Users where id = ?', [qq], (err2, r) => {
+        db.close(() => {})
+        resolve(err2 ? null : r)
+      })
+    })
+    if (!row?.games) return ''
+    const uid = String(JSON.parse(row.games)?.gs?.uid || '').trim()
+    return /^[1-9]\d{8,9}$/.test(uid) ? uid : ''
+  } catch (_) {
+    return ''
+  }
+}
 
 /** 角色 id → 中文名（用 CN_ALIAS 反查；查不到就退回英文名） */
 const ID_TO_CN = { 10000002: '神里绫华', 10000003: '琴', 10000006: '丽莎', 10000007: '荧',
@@ -167,11 +195,13 @@ export class akasha_rank extends plugin {
       dsc: '原神角色练度全球排名（Akasha System）',
       event: 'message',
       priority: pluginPriority('akasha', -41000),
+      /* 规则按「具体 → 宽泛」排列：ME 必须排在 CN/SHORT 前面，
+         否则「#我的全球排名」会被 CN 的 (.+?) 当成角色名「我的」抓走。 */
       rule: [
+        { reg: AKASHA_ME_REG.source, fnc: 'myRank' },
         { reg: AKASHA_REG.source, fnc: 'akasha' },
         { reg: AKASHA_CN_REG.source, fnc: 'akasha' },
         { reg: AKASHA_SHORT_REG.source, fnc: 'akasha' },
-        { reg: AKASHA_ME_REG.source, fnc: 'myRank' },
       ],
     })
   }
@@ -278,11 +308,17 @@ export class akasha_rank extends plugin {
     const inMsg = String(e.msg || '').match(/\b([1-9]\d{8,9})\b/)
     if (inMsg) uid = inMsg[1]
     if (!uid) uid = String(e.uid || '').trim()
-    // 喵喵插件绑定的 UID（动态 import，缺失时不影响功能）
+    /* 没写在消息里就从已绑定的账号取。
+       优先读 Yunzai 自己的 Users 表（games.gs.uid，与喵喵共用同一份绑定），
+       这样不依赖喵喵插件是否安装；读不到再退回喵喵的 MysApi。
+       不用 getTargetUid()：它未绑定时会自己 e.reply 一条提示并置 e._replyNeedUid，
+       与这里的回复重复。 */
+    if (!uid) uid = await readBoundGsUid(e)
     if (!uid) {
       try {
-        const { getTargetUid } = await import('../../miao-plugin/apps/profile/ProfileCommon.js')
-        uid = (await getTargetUid(e)) || ''
+        const { MysApi } = await import('../../miao-plugin/models/index.js')
+        const user = await MysApi.initUser(e)
+        if (user?.uid) uid = String(user.uid)
       } catch (_) { /* 没装喵喵或接口变了就跳过 */ }
     }
     if (!/^[1-9]\d{8,9}$/.test(uid)) {
