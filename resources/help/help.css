@@ -3,6 +3,8 @@
 @font-face { font-family: 'RareCJK'; src: url('../font/unifont.otf'); }
 @font-face { font-family: 'HelpSans'; src: url('../font/NotoSansCJKsc-Regular.ttf'); }
 @font-face { font-family: 'HelpMicroHei'; src: url('../font/wqy-microhei.ttc'); }
+/* 粗体标题字：印品鸿蒙体。Noto Regular 在米黄底上偏细，读起来发虚 */
+@font-face { font-family: 'HelpBold'; src: url('../font/粗.ttf'); }
 * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; transform-origin: 0 0; }
 
 /* ───────────── 主题变量 ─────────────
@@ -137,7 +139,7 @@ body {
   top: -8px;
   width: 178px;
   height: 168px;
-  background: url('../Tl/imgs/米哈游.png') no-repeat right bottom / contain;
+  background: url('../help/sparkle.png') no-repeat right bottom / contain;
   filter: drop-shadow(0 12px 20px rgba(74, 98, 140, .26));
   opacity: .96;
   transform: rotate(3deg);
