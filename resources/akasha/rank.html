@@ -41,9 +41,9 @@
             </div>
 
             <div class="build">
-              <span class="cons">C{{r.cons}}</span>
+              <span class="cons">{{r.consText}}</span>
               {{if r.weapon.name}}
-              <span class="weapon rarity-{{r.weapon.rarity}}">{{r.weapon.name}}{{if r.weapon.refinement}} R{{r.weapon.refinement}}{{/if}}</span>
+              <span class="weapon rarity-{{r.weapon.rarity}}">{{r.weapon.name}}{{if r.weapon.refineText}} {{r.weapon.refineText}}{{/if}}</span>
               {{/if}}
             </div>
 

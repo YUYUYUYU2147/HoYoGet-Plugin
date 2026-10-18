@@ -202,3 +202,13 @@ body {
   display: block;
   background: rgba(255, 255, 255, .06);
 }
+
+.legend-tip {
+  margin-top: -4px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(211, 188, 142, .10);
+  border-left: 3px solid rgba(211, 188, 142, .55);
+  color: rgba(231, 235, 243, .62);
+  line-height: 1.6;
+}

@@ -87,6 +87,22 @@ const ID_TO_CN = { 10000002: '神里绫华', 10000003: '琴', 10000006: '丽莎'
 
 const characterName = (id, fallback = '') => ID_TO_CN[id] || fallback || String(id)
 
+/** 精炼中文：R1 → 一阶，R5 → 满精 */
+const refineText = n => {
+  const v = Number(n) || 0
+  if (!v) return ''
+  if (v >= 5) return '满精'
+  return `${['', '一', '二', '三', '四'][v]}阶`
+}
+
+/** 命座中文：C0 → 零命，C6 → 满命（原神称「命之座」，社区口语「几命」） */
+const consText = n => {
+  const v = Number(n) || 0
+  if (v >= 6) return '满命'
+  const CN = ['零命', '一命', '二命', '三命', '四命', '五命']
+  return CN[v] || `${v}命`
+}
+
 /** 中英文角色名归一：去掉空格/标点，统一小写 */
 const norm = s => String(s || '').toLowerCase().replace(/[\s\-_.·'"'']/g, '')
 
@@ -171,10 +187,12 @@ function viewEntry(e, idx) {
     damage: Number(calc.result) || 0,
     result: formatNum(calc.result),
     cons: e?.constellation ?? 0,
+    consText: consText(e?.constellation),
     weapon: {
       name: e?.weapon?.name || '',
       rarity: e?.weapon?.rarity || '',
       refinement: e?.weapon?.refinement ?? '',
+      refineText: refineText(e?.weapon?.refinement),
     },
     talents: e?.talentsLevelMap || {},
     lastUpdate: e?.lastBuildUpdate ? new Date(e.lastBuildUpdate).toLocaleDateString('zh-CN') : '',
@@ -356,6 +374,7 @@ export class akasha_rank extends plugin {
             result: formatNum(fit.result),
             weapon: fit.weapon?.name || r.weapon?.name || '',
             cons: r.constellation ?? 0,
+            consText: consText(r.constellation),
           }
         })
         .filter(Boolean)

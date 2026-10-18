@@ -21,6 +21,10 @@
         <span class="sep">·</span>
         <span>数据来源 akasha.cv</span>
       </div>
+      <div class="legend legend-tip">
+        仅统计游戏内「角色展柜」公开的角色（最多 8 个）。想看到更多排名，
+        请在游戏里把常练的角色摆上展柜，再到 akasha.cv 更新一次。
+      </div>
 
       <div class="list myrank">
         {{each rows r i}}
@@ -34,7 +38,7 @@
           <div class="player">
             <div class="nick">{{r.name}}</div>
             <div class="meta">
-              <span>C{{r.cons}}</span>
+              <span>{{r.consText}}</span>
               <span>{{r.weapon}}</span>
             </div>
           </div>
