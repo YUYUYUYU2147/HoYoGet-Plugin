@@ -53,6 +53,17 @@ const ZPROP = {
   315: { k: 'dmgbonus', c: 'dmgbonus' }, 316: { k: 'dmgbonus', c: 'dmgbonus' },
   317: { k: 'dmgbonus', c: 'dmgbonus' }, 318: { k: 'dmgbonus', c: 'dmgbonus' },
   319: { k: 'dmgbonus', c: 'dmgbonus' }, 323: { k: 'dmgbonus', c: 'dmgbonus' },
+  // ZZZ-Plugin 的面板缓存里属性用的是短代码（111/121/131/201/211/…），
+  // 米游社接口是长代码（11102/12102/…），两套都要认，否则读别人的面板会取不到攻击力。
+  111: { k: 'hpmax', c: 'hpmax' },
+  121: { k: 'attack', c: 'attack' },
+  131: { k: 'def', c: 'def' },
+  201: { k: 'crit', c: 'crit' },
+  211: { k: 'critdam', c: 'critdam' },
+  231: { k: 'penratio', c: 'penratio' },
+  305: { k: 'sprecover', c: 'sprecover' },
+  312: { k: 'elementmystery', c: 'elementmystery' },
+  314: { k: 'elementabnormalpower', c: 'elementabnormalpower' },
 }
 // 字段键 → 中文标签（属性行显示名）
 const ZPROP_LABEL = {
@@ -547,7 +558,32 @@ function buildBuffContext(avatar, charName) {
   }
 }
 
-function calcDamage(bp, level, avatar, charName) {
+/**
+ * 接口 properties[] → 伤害计算用的 basic_properties（按字段键索引）。
+ * 伤害加成单独挂在 dmgbonus 下，方便模板取到具体元素名。
+ * 面板详情与面板排名共用这一份，避免两处口径漂移。
+ */
+export function buildBasicProperties(a) {
+  const basic_properties = {}
+  for (const p of (a?.properties || [])) {
+    const m = ZPROP[p.property_id]
+    if (!m || m.k === 'dmgbonus') continue
+    const base = p.base || ''
+    const add = (p.add !== undefined && p.add !== '' && p.add !== '0') ? p.add : ''
+    const final = (p.final !== undefined && p.final !== '') ? p.final : (base || '')
+    basic_properties[m.k] = { base, add, final }
+  }
+  const dmg = (a?.properties || []).find(p => (ZPROP[p.property_id] || {}).k === 'dmgbonus')
+  if (dmg) {
+    const base = dmg.base || ''
+    const add = (dmg.add !== undefined && dmg.add !== '' && dmg.add !== '0') ? dmg.add : ''
+    const final = (dmg.final !== undefined && dmg.final !== '') ? dmg.final : (base || '')
+    basic_properties.dmgbonus = { property_name: dmg.property_name || '伤害加成', property_id: dmg.property_id, base, add, final }
+  }
+  return basic_properties
+}
+
+export function calcDamage(bp, level, avatar, charName) {
   const atk = parseFloat(bp?.attack?.final) || 0
   if (!atk) return { ok: false, error: '面板攻击力为 0，无法计算' }
 
@@ -639,13 +675,30 @@ function calcDamage(bp, level, avatar, charName) {
   }
 
   // 接口 skills[]：skill_type 0普攻 1特殊技 2闪避 3连携 5核心 6支援
+  // 接口 skills[].items 只在米游社详情接口有；ZZZ-Plugin 的缓存面板 items 是空数组。
+  // 那种情况下按 skill_type 从倍率表里挑一个代表招式（同类别取倍率最高的非隐藏段），
+  // 保证「别人的面板」也能算出伤害，而不是整行显示「-」。
+  const CAT_OF_TYPE = { 0: ['AP', 'AQ', 'AX'], 1: ['EQ', 'E'], 2: ['C', 'CF', 'CA'], 3: ['RL', 'RZ'], 5: ['T'], 6: ['L'] }
+  const bestOfType = (type) => {
+    const cats = CAT_OF_TYPE[type]
+    if (!cats) return null
+    let best = null
+    for (const s of rates.skills) {
+      if (s.isHide || !cats.includes(skillCat(s.name))) continue
+      if (!best || (s.rate || 0) > (best.rate || 0)) best = s
+    }
+    return best
+  }
+
   const out = []
   for (const sk of avatar?.skills || []) {
     const skLv = Number(sk.level) || 1
-    for (const item of sk.items || []) {
+    const items = (sk.items || []).filter(v => String(v?.title || '').trim())
+    const fallback = items.length ? null : bestOfType(Number(sk.skill_type))
+    for (const item of items.length ? items : (fallback ? [{ title: fallback.name }] : [])) {
       const title = String(item?.title || '').trim()
       if (!title) continue
-      const hit = table.get(`${skillCat(title)}|${skillCore(title)}`)
+      const hit = fallback || table.get(`${skillCat(title)}|${skillCore(title)}`)
       if (!hit) continue                      // 倍率表没有这个技能（如新角色未收录）
       if (hit.isHide) continue                // 隐藏子段（如回旋斩击）只作为主段的一部分，不单列
       const one1 = one(hit.key)
@@ -1181,23 +1234,8 @@ function normalizeDetail(a, uid) {
     })),
   } : null
 
-  // 角色基础属性 → basic_properties（按字段键；伤害加成单独处理以挂元素图标）
-  const basic_properties = {}
-  for (const p of (a?.properties || [])) {
-    const m = ZPROP[p.property_id]
-    if (!m || m.k === 'dmgbonus') continue
-    const base = p.base || ''
-    const add = (p.add !== undefined && p.add !== '' && p.add !== '0') ? p.add : ''
-    const final = (p.final !== undefined && p.final !== '') ? p.final : (base || '')
-    basic_properties[m.k] = { base, add, final }
-  }
-  const dmg = (a?.properties || []).find(p => (ZPROP[p.property_id] || {}).k === 'dmgbonus')
-  if (dmg) {
-    const base = dmg.base || ''
-    const add = (dmg.add !== undefined && dmg.add !== '' && dmg.add !== '0') ? dmg.add : ''
-    const final = (dmg.final !== undefined && dmg.final !== '') ? dmg.final : (base || '')
-    basic_properties.dmgbonus = { property_name: dmg.property_name || '伤害加成', property_id: dmg.property_id, base, add, final }
-  }
+  // 角色基础属性 → basic_properties（与面板排名共用同一份构造）
+  const basic_properties = buildBasicProperties(a)
 
   // 技能：按固定槽位顺序产出，模板按 skills[0..5] 取
   const skills = SKILL_POS.map(t => {

@@ -1,0 +1,291 @@
+body {
+  width: 1440px;
+  margin: 0;
+  background: #120821;
+  font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+}
+
+.rank-page {
+  margin: 0;
+  padding: 54px 26px 26px;
+  min-height: 650px;
+  color: #f8f7ff;
+  background:
+    radial-gradient(circle at 52% 4%, rgba(143, 86, 255, .46), transparent 28%),
+    radial-gradient(circle at 12% 92%, rgba(255, 100, 231, .25), transparent 34%),
+    linear-gradient(160deg, #1b073a 0%, #32105f 48%, #120821 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.rank-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(0deg, rgba(255,255,255,.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  opacity: .35;
+}
+
+.rank-page::after {
+  content: '';
+  position: absolute;
+  inset: -20% -10%;
+  background: radial-gradient(circle, rgba(255,255,255,.9) 1px, transparent 2px);
+  background-size: 110px 90px;
+  opacity: .18;
+  transform: rotate(-8deg);
+}
+
+.page-title, .desc-card, .record-list, .page-footer { position: relative; z-index: 1; }
+
+.page-title {
+  font-size: 54px;
+  line-height: 1;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 2px;
+  text-shadow: 0 4px 0 rgba(0,0,0,.28), 0 0 20px rgba(255,255,255,.25);
+  margin: 0 0 34px 8px;
+}
+
+.desc-card {
+  margin: 0 0 12px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(12, 16, 26, .78);
+  border: 1px solid rgba(224, 239, 255, .55);
+  box-shadow: 0 10px 26px rgba(0,0,0,.32), inset 0 0 0 1px rgba(255,255,255,.04);
+}
+
+.desc-title {
+  height: 58px;
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  font-size: 25px;
+  font-weight: 900;
+  color: #e8d18e;
+  background: rgba(18, 24, 35, .88);
+  border-bottom: 1px solid rgba(255,255,255,.12);
+}
+
+.desc-lines {
+  padding: 20px 42px 22px;
+  font-size: 20px;
+  line-height: 1.65;
+  color: rgba(255,255,255,.92);
+}
+
+.dot {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  margin: 0 12px 0 4px;
+  border-radius: 50%;
+  vertical-align: -3px;
+  box-shadow: 0 0 12px currentColor;
+}
+.dot.red { background: #ff4b42; color: #ff4b42; }
+.dot.yellow { background: #ffc244; color: #ffc244; }
+
+.record-list { display: flex; flex-direction: column; gap: 10px; }
+
+.record {
+  min-height: 142px;
+  display: grid;
+  /* 5 列固定 + 1 列自适应：右侧评分区跨两行，音擎与驱动盘挤在第二行 */
+  /* stats 与 detail 各自定宽：都用 1fr 时 stats 的 5 个格子会把 detail 挤到 0 */
+  grid-template-columns: 60px 72px 300px 366px 300px 226px;
+  grid-template-rows: 62px 62px;
+  grid-template-areas:
+    "rank avatar user stats stats score"
+    "rank avatar skills detail detail score";
+  gap: 8px 12px;
+  align-items: center;
+  padding: 12px 18px;
+  border-radius: 18px;
+  background: linear-gradient(90deg, rgba(255,255,255,.20), rgba(255,255,255,.11));
+  border: 1px solid rgba(255,255,255,.2);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.16), 0 5px 16px rgba(0,0,0,.22);
+}
+
+.record.rank-1 { background: linear-gradient(90deg, rgba(255, 228, 107, .32), rgba(255,255,255,.13)); }
+
+.rank-tag {
+  grid-area: rank;
+  height: 38px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 900;
+  color: #fff;
+  background: linear-gradient(180deg, #ff5d68, #d92635);
+  text-shadow: 0 2px 0 rgba(0,0,0,.25);
+}
+
+.avatar-wrap {
+  grid-area: avatar;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(255,255,255,.18);
+  border: 2px solid rgba(255,255,255,.72);
+}
+.avatar-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.user-block { grid-area: user; min-width: 0; overflow: hidden; }
+/* 昵称独占一行，影画/等级挪到第二行与 UID 同排：一行塞三样必定把昵称挤到省略 */
+.nickname-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.nickname {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 25px;
+  font-weight: 900;
+  color: #fff4b0;
+  letter-spacing: -0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cons {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border-radius: 8px;
+  font-size: 15px;
+  line-height: 1.2;
+  font-weight: 900;
+  color: #201235;
+  background: linear-gradient(180deg, #fff5a8, #e8bd3c);
+  box-shadow: 0 2px 0 rgba(0,0,0,.22);
+}
+.lv {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.2;
+  font-weight: 800;
+  color: #e6dcff;
+  background: rgba(255,255,255,.16);
+  border: 1px solid rgba(255,255,255,.24);
+}
+.meta-line { display: flex; align-items: center; gap: 7px; margin-top: 3px; min-width: 0; }
+.uid { font-size: 19px; font-weight: 800; color: rgba(255,255,255,.9); white-space: nowrap; }
+
+.stat-strip { grid-area: stats; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 9px; }
+.stat { min-width: 0; padding: 8px 10px; border-radius: 12px; background: rgba(20,18,31,.48); border: 1px solid rgba(255,255,255,.1); }
+.stat-name { display: block; font-size: 14px; color: rgba(255,255,255,.62); }
+.stat-value { display: block; margin-top: 1px; font-size: 20px; font-weight: 900; white-space: nowrap; color: #fff; }
+
+.score-box {
+  grid-area: score;
+  height: 112px;
+  padding-left: 14px;
+  border-left: 1px solid rgba(255,255,255,.22);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  /* 列宽有限，任何一行都不允许撑出边框 */
+  min-width: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.score-label { font-size: 14px; color: rgba(255,255,255,.62); }
+.score { margin-top: 1px; font-size: 30px; line-height: 1.05; font-weight: 900; color: #fff; white-space: nowrap; }
+/* 期望伤害：数值与占比各占一行，避免并排时被挤到框外 */
+.damage-line { display: flex; flex-direction: column; align-items: flex-start; gap: 0; margin-top: 4px; min-width: 0; }
+.damage-value { font-size: 17px; font-weight: 900; color: #ff9a76; white-space: nowrap; line-height: 1.15; }
+.damage-percent { font-size: 13px; font-weight: 800; color: rgba(255,255,255,.62); white-space: nowrap; line-height: 1.2; }
+.drive-line { display: flex; align-items: center; gap: 5px; margin-top: 4px; min-width: 0; }
+.drive-rating { font-size: 13px; font-weight: 900; padding: 0 5px; border-radius: 5px; line-height: 16px; background: rgba(255,255,255,.14); color: rgba(255,255,255,.8); }
+.drive-value { font-size: 13px; font-weight: 800; color: rgba(255,255,255,.72); }
+.drive-rating.MAX, .drive-rating.ACE { color: #ff5d68; background: rgba(255,93,104,.16); }
+.drive-rating.SSS, .drive-rating.SS { color: #ffcf5c; background: rgba(255,207,92,.16); }
+.drive-rating.S { color: #6fe3b0; background: rgba(111,227,176,.16); }
+
+.skill-list { grid-area: skills; display: flex; gap: 7px; align-items: center; }
+.skill {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 900;
+  color: #151026;
+  background: linear-gradient(180deg, #fff7b5, #f1c94e);
+  box-shadow: 0 2px 0 rgba(0,0,0,.25);
+}
+
+.detail-row { grid-area: detail; display: flex; align-items: center; gap: 10px; min-width: 0; }
+
+.weapon-box {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 58px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: rgba(38,27,50,.58);
+  border: 1px solid rgba(255,255,255,.12);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.weapon-icon { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; background: rgba(255,255,255,.12); flex: none; }
+.weapon-text { min-width: 0; flex: 1; }
+.weapon-name { font-size: 19px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 精炼/等级/skill 信息宁可换行也不能截断：截断后「Lv.6…」会让人以为等级是 6 */
+.weapon-sub {
+  margin-top: 2px;
+  font-size: 14px;
+  line-height: 1.25;
+  color: #82ffb5;
+  font-weight: 800;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.equip-list { display: flex; gap: 5px; align-items: center; flex: none; }
+.equip {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  position: relative;
+  overflow: hidden;
+  background: rgba(255,255,255,.13);
+  border: 1px solid rgba(255,255,255,.2);
+}
+.equip img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.equip span {
+  position: absolute;
+  right: 1px;
+  bottom: 0;
+  min-width: 14px;
+  height: 14px;
+  border-radius: 6px 0 0 0;
+  background: rgba(0,0,0,.62);
+  color: #fff;
+  font-size: 10px;
+  line-height: 14px;
+  text-align: center;
+  font-weight: 900;
+}
+
+.page-footer {
+  margin-top: 18px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 800;
+  font-style: italic;
+  color: #ff4d4f;
+}

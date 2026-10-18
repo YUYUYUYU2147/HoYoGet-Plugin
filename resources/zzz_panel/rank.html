@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}zzz_panel/rank.css" />
+  </head>
+  <body>
+    <div class="rank-page">
+      <div class="page-title">{{title}}</div>
+
+      <div class="desc-card">
+        <div class="desc-title">排名说明</div>
+        <div class="desc-lines">
+          <div><span class="dot red"></span>综合练度排名：按期望伤害占比 × 60 + 驱动盘评分占比 × 40 排序</div>
+          <div><span class="dot yellow"></span>范围：<b>{{scopeLabel}}</b> · 共 {{count}} 人参与排名，展示前 {{records.length}} 名</div>
+          <div><span class="dot yellow"></span>发送「%面板排名范围」切换本群 / 全部；未更新面板不参与排名</div>
+        </div>
+      </div>
+
+      <div class="record-list">
+        {{each records r}}
+        <div class="record rank-{{r.rank}}">
+          <div class="rank-tag">{{if r.rank === 1}}最强{{else}}#{{r.rank}}{{/if}}</div>
+
+          <div class="avatar-wrap">
+            {{if r.icon}}<img src="{{r.icon}}" />{{/if}}
+          </div>
+
+          <div class="user-block">
+            <div class="nickname-line">
+              <span class="nickname">{{r.nickname}}</span>
+            </div>
+            <div class="meta-line">
+              <span class="uid">UID {{r.uid}}</span>
+              <span class="cons">影画{{r.cons}}</span>
+              <span class="lv">Lv{{r.level}}</span>
+            </div>
+          </div>
+
+          <div class="stat-strip">
+            {{each r.stats s}}
+            <div class="stat">
+              <span class="stat-name">{{s.name}}</span>
+              <span class="stat-value">{{s.value}}</span>
+            </div>
+            {{/each}}
+          </div>
+
+          <div class="score-box">
+            <div class="score-label">综合</div>
+            <div class="score">{{r.compositeScore}}</div>
+            <div class="damage-line">
+              <span class="damage-value">{{r.damage}}</span>
+              <span class="damage-percent">{{r.damagePercent}}%</span>
+            </div>
+            <div class="drive-line">
+              <span class="drive-rating {{r.rating}}">{{r.rating}}</span>
+              <span class="drive-value">{{r.score}}分</span>
+            </div>
+          </div>
+
+          <div class="skill-list">
+            {{each r.skills lv}}
+            <div class="skill">{{lv}}</div>
+            {{/each}}
+          </div>
+
+          <div class="detail-row">
+            <div class="weapon-box">
+              {{if r.weapon.icon}}<img class="weapon-icon" src="{{r.weapon.icon}}" />{{/if}}
+              <div class="weapon-text">
+                <div class="weapon-name">{{r.weapon.name || '未记录音擎'}}</div>
+                <div class="weapon-sub">{{r.weapon.rarity}} {{if r.weapon.star}}精{{r.weapon.star}}{{/if}} {{if r.weapon.level}}Lv.{{r.weapon.level}}{{/if}}{{if r.damageSkill}} ｜{{r.damageSkill}}{{/if}}</div>
+              </div>
+            </div>
+
+            <div class="equip-list">
+              {{each r.equips eq}}
+              <div class="equip" title="{{eq.name}}">
+                {{if eq.icon}}<img src="{{eq.icon}}" />{{/if}}
+                <span>{{eq.slot}}</span>
+              </div>
+              {{/each}}
+            </div>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+
+      <div class="page-footer">from 米哈游</div>
+    </div>
+  </body>
+</html>
