@@ -190,3 +190,15 @@ body {
   background: #d3bc8e;
 }
 .board-meta .count { font-size: 12px; color: rgba(231, 235, 243, .45); }
+
+/* 「我的全球排名」行：多一列头像 */
+/* 我的排名：名次 / 头像 / 角色 / 方案 / 全球名次 */
+.myrank .row { grid-template-columns: 50px 58px 1fr 300px 200px; }
+.row .avatar img {
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  object-fit: cover;
+  display: block;
+  background: rgba(255, 255, 255, .06);
+}

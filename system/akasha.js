@@ -103,4 +103,27 @@ async function fetchStygianLeaderboard(version, { size = 20, page = 1, uid = '' 
   return { list: Array.isArray(j?.data) ? j.data : [] }
 }
 
-export { AKASHA_ORIGIN, AKASHA_UA, akashaRequest, listCategories, fetchLeaderboard, listStygianSchedules, fetchStygianLeaderboard }
+/**
+ * 某个 UID 的全部角色计算结果（含全球排名）。
+ *
+ * 这是「查我自己排第几」的唯一途径：`/api/leaderboards` 的 uids 参数被服务端忽略、
+ * 而且只返回前 50，拿不到个人名次；`getCalculationsForUser` 则直接给出每个角色的
+ * `calculations.fit.ranking` 与 `outOf`（如 14 / 232338）。
+ */
+async function getUserCalculations(uid) {
+  const j = await akashaRequest(`getCalculationsForUser/${uid}`)
+  return Array.isArray(j?.data) ? j.data : []
+}
+
+/** 某个 UID 的账号信息（昵称、等级、服务器、拥有的角色等） */
+async function getUserProfile(uid) {
+  const j = await akashaRequest(`user/${uid}`)
+  return j?.data || null
+}
+
+export {
+  AKASHA_ORIGIN, AKASHA_UA, akashaRequest,
+  listCategories, fetchLeaderboard,
+  listStygianSchedules, fetchStygianLeaderboard,
+  getUserCalculations, getUserProfile,
+}

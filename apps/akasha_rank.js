@@ -2,7 +2,10 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { pluginPriority, render, config } from '#HoYoGet'
-import { listCategories, fetchLeaderboard, listStygianSchedules, fetchStygianLeaderboard } from '../system/akasha.js'
+import {
+  listCategories, fetchLeaderboard, listStygianSchedules, fetchStygianLeaderboard,
+  getUserCalculations, getUserProfile,
+} from '../system/akasha.js'
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const CACHE_FILE = path.join(PLUGIN_ROOT, 'temp', 'akasha_categories.json')
@@ -27,6 +30,34 @@ const CACHE_TTL = 6 * 3600 * 1000   // 分类（角色→方案）缓存 6 小�
 const AKASHA_REG = /^#?(?:米哈游)?\s*(?:akasha|阿卡夏|阿克夏)\s*(.*)$/i
 const AKASHA_CN_REG = /^#?(?:米哈游)?\s*(.+?)\s*全球排名$/
 const AKASHA_SHORT_REG = /^#?(?:米哈游)?\s*全球(?:排名)?\s+(.+)$/
+/* 查「我自己的排名」：名次数据在 getCalculationsForUser 里，
+   与上面那几个「看榜单前 N 名」的指令是完全不同的数据源。 */
+const AKASHA_ME_REG = /^#?(?:米哈游)?\s*(?:我的)?全球(?:排名?|名次)?\s*$/
+
+/** 角色 id → 中文名（用 CN_ALIAS 反查；查不到就退回英文名） */
+const ID_TO_CN = { 10000002: '神里绫华', 10000003: '琴', 10000006: '丽莎', 10000007: '荧',
+  10000016: '迪卢克', 10000021: '安柏', 10000022: '温迪', 10000023: '香菱', 10000024: '北斗',
+  10000025: '行秋', 10000026: '魈', 10000027: '凝光', 10000029: '可莉', 10000030: '钟离',
+  10000031: '菲谢尔', 10000032: '班尼特', 10000034: '诺艾尔', 10000035: '七七', 10000036: '重云',
+  10000037: '甘雨', 10000038: '阿贝多', 10000039: '迪奥娜', 10000041: '莫娜', 10000042: '刻晴',
+  10000043: '砂糖', 10000044: '辛焱', 10000045: '罗莎莉亚', 10000046: '胡桃', 10000047: '枫原万叶',
+  10000048: '烟绯', 10000049: '宵宫', 10000050: '托马', 10000051: '优菈', 10000052: '雷电将军',
+  10000053: '早柚', 10000054: '珊瑚宫心海', 10000055: '五郎', 10000056: '九条裟罗', 10000057: '荒泷一斗',
+  10000058: '八重神子', 10000059: '鹿野院平藏', 10000060: '夜兰', 10000061: '绮良良',
+  10000062: '埃洛伊', 10000063: '申鹤', 10000064: '云堇', 10000065: '久岐忍', 10000066: '神里绫人',
+  10000067: '柯莱', 10000068: '多莉', 10000069: '提纳里', 10000070: '妮露', 10000071: '赛诺',
+  10000072: '坎蒂丝', 10000073: '纳西妲', 10000074: '莱依拉', 10000075: '流浪者', 10000076: '珐露珊',
+  10000077: '瑶瑶', 10000078: '艾尔海森', 10000079: '迪希雅', 10000080: '米卡', 10000081: '卡维',
+  10000082: '白术', 10000083: '琳妮特', 10000084: '林尼', 10000085: '菲米尼', 10000086: '莱欧斯利',
+  10000087: '那维莱特', 10000088: '夏洛蒂', 10000089: '芙宁娜', 10000090: '夏沃蕾',
+  10000091: '娜维娅', 10000092: '神里绫华', 10000093: '闲云', 10000094: '嘉明', 10000095: '千织',
+  10000096: '阿蕾奇诺', 10000097: '希格雯', 10000098: '克洛琳德', 10000099: '艾梅莉埃',
+  10000101: '基尼奇', 10000102: '玛拉妮', 10000103: '卡齐娜', 10000104: '希诺宁',
+  10000105: '恰斯卡', 10000106: '玛薇卡', 10000107: '茜特菈莉', 10000108: '蓝砚',
+  10000109: '梦见月瑞希', 10000110: '瓦蕾莎', 10000111: '伊安珊', 10000112: '爱可菲',
+  10000113: '丝柯克', 10000114: '塔利雅', 10000115: '伊涅芙', 10000116: '菲林斯' }
+
+const characterName = (id, fallback = '') => ID_TO_CN[id] || fallback || String(id)
 
 /** 中英文角色名归一：去掉空格/标点，统一小写 */
 const norm = s => String(s || '').toLowerCase().replace(/[\s\-_.·'"'']/g, '')
@@ -140,6 +171,7 @@ export class akasha_rank extends plugin {
         { reg: AKASHA_REG.source, fnc: 'akasha' },
         { reg: AKASHA_CN_REG.source, fnc: 'akasha' },
         { reg: AKASHA_SHORT_REG.source, fnc: 'akasha' },
+        { reg: AKASHA_ME_REG.source, fnc: 'myRank' },
       ],
     })
   }
@@ -232,6 +264,80 @@ export class akasha_rank extends plugin {
     } catch (err) {
       logger.error?.(`[HoYoGet][akasha] 查询失败: ${err?.message || err}`)
       return e.reply(`Akasha 查询失败：${err?.message || err}`)
+    }
+  }
+
+  /**
+   * 「#我的全球排名」：查自己的每个角色在 Akasha 上的名次。
+   *
+   * UID 来源依次为：消息里直接写的 UID → e.uid → 喵喵插件绑定的原神 UID。
+   * 名次来自 getCalculationsForUser（不受「榜单只返回前 50」的限制）。
+   */
+  async myRank(e) {
+    let uid = ''
+    const inMsg = String(e.msg || '').match(/\b([1-9]\d{8,9})\b/)
+    if (inMsg) uid = inMsg[1]
+    if (!uid) uid = String(e.uid || '').trim()
+    // 喵喵插件绑定的 UID（动态 import，缺失时不影响功能）
+    if (!uid) {
+      try {
+        const { getTargetUid } = await import('../../miao-plugin/apps/profile/ProfileCommon.js')
+        uid = (await getTargetUid(e)) || ''
+      } catch (_) { /* 没装喵喵或接口变了就跳过 */ }
+    }
+    if (!/^[1-9]\d{8,9}$/.test(uid)) {
+      return e.reply([
+        '没能确定要查询的原神 UID。',
+        '可以这样用：',
+        '  #我的全球排名 123456789   （直接带 UID）',
+        '  或先绑定：#绑定123456789',
+      ].join('\n'))
+    }
+
+    try {
+      const [list, profile] = await Promise.all([
+        getUserCalculations(uid),
+        getUserProfile(uid).catch(() => null),
+      ])
+      if (!list.length) {
+        return e.reply(`Akasha 上没有 UID ${uid} 的数据。\n请先在 akasha.cv 更新一次展柜（角色详情需在游戏内公开）。`)
+      }
+
+      // 只保留有排名数据的角色，按百分位排序（名次/总数越小越靠前）
+      const rows = list
+        .map(r => {
+          const fit = r?.calculations?.fit
+          if (!fit?.ranking) return null
+          const rank = Number(fit.ranking) || 0
+          const outOf = Number(fit.outOf) || 0
+          return {
+            name: characterName(r.characterId),
+            icon: r.icon || '',
+            rank,
+            outOf,
+            percent: outOf ? rank / outOf * 100 : 0,
+            planName: fit.name || '',
+            result: formatNum(fit.result),
+            weapon: fit.weapon?.name || r.weapon?.name || '',
+            cons: r.constellation ?? 0,
+          }
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.percent - b.percent)
+
+      if (!rows.length) return e.reply(`UID ${uid} 在 Akasha 上暂无可用的排名数据（角色可能未进任何榜单）。`)
+
+      const img = await render('akasha/myrank', {
+        uid,
+        nickname: profile?.account?.nickname || '',
+        level: profile?.account?.level || '',
+        region: profile?.account?.region || '',
+        rows,
+      }, { e, ret: true })
+      return img
+    } catch (err) {
+      logger.error?.(`[HoYoGet][akasha] 查我的排名失败: ${err?.message || err}`)
+      return e.reply(`查询失败：${err?.message || err}`)
     }
   }
 
