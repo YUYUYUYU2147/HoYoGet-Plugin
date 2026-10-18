@@ -20,11 +20,13 @@ const CACHE_TTL = 6 * 3600 * 1000   // 分类（角色→方案）缓存 6 小�
  *   akasha 角色列表          收录了哪些角色
  *   akasha 幽境 [期数]       幽境危战全球榜（省略期数取最新一期）
  */
-/* 两种写法都收：
-   · akasha <角色> [方案]        —— 英文风格
-   · #<角色>全球排名 / <角色>全球排名 —— 中文习惯，与绝区零的 %<角色>面板排名 对齐 */
+/* 多种写法都收（akasha 不好打，中文写法是主入口）：
+   · #<角色>全球排名 / <角色>全球排名   —— 与绝区零的 %<角色>面板排名 对齐
+   · 全球 <角色> [方案] / 全球排名 <角色> —— 更短的写法
+   · akasha <角色> [方案]               —— 英文风格，保留兼容 */
 const AKASHA_REG = /^(?:#?米哈游)?\s*akasha\s*(.*)$/i
 const AKASHA_CN_REG = /^#?(?:米哈游)?\s*(.+?)\s*全球排名$/
+const AKASHA_SHORT_REG = /^#?(?:米哈游)?\s*全球(?:排名)?\s+(.+)$/
 
 /** 中英文角色名归一：去掉空格/标点，统一小写 */
 const norm = s => String(s || '').toLowerCase().replace(/[\s\-_.·'"'']/g, '')
@@ -137,17 +139,21 @@ export class akasha_rank extends plugin {
       rule: [
         { reg: AKASHA_REG.source, fnc: 'akasha' },
         { reg: AKASHA_CN_REG.source, fnc: 'akasha' },
+        { reg: AKASHA_SHORT_REG.source, fnc: 'akasha' },
       ],
     })
   }
 
   async akasha(e) {
     const raw = String(e.msg || '')
-    // 中文写法「#胡桃全球排名」→ 转成内部参数
+    // 中文写法 → 转成内部参数
     const cn = raw.match(AKASHA_CN_REG)
+    const short = raw.match(AKASHA_SHORT_REG)
     let arg = cn
       ? cn[1].trim()
-      : String(raw.match(AKASHA_REG)?.[1] || '').trim()
+      : short
+        ? short[1].trim()
+        : String(raw.match(AKASHA_REG)?.[1] || '').trim()
     // 「#原神全球排名」等同于不带参数的 akasha（出帮助 + 用法）
     if (/^(原神|genshin)$/i.test(arg)) arg = ''
     if (!arg) {
