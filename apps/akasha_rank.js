@@ -167,8 +167,10 @@ export class akasha_rank extends plugin {
       if (!hit) {
         return e.reply(`akasha 里没有找到「${roleRaw}」。\n可发「akasha 角色列表」查看收录范围。`)
       }
+      /* 不指定方案时把该角色的**全部方案**都拉出来（每个方案是一个独立榜单）。
+         指定方案才只出那一个。方案数最多 6 个（神里绫华），并发拉取。 */
       const planKey = rest.join(' ')
-      let cat = hit.categories[0]
+      let cats = hit.categories
       if (planKey) {
         const k = norm(planKey)
         const found = hit.categories.find(c => norm(c.name).includes(k) || norm(c.short) === k)
@@ -179,20 +181,31 @@ export class akasha_rank extends plugin {
             ...hit.categories.map(c => `  ${c.name}（${c.short}）`),
           ].join('\n'))
         }
-        cat = found
+        cats = [found]
       }
 
-      // 3) 拉榜单
-      const { list } = await fetchLeaderboard(cat, { size: 20 })
-      if (!list.length) return e.reply(`「${hit.name}」的「${cat.name}」暂无榜单数据。`)
+      // 并发拉取每个方案的榜单
+      const boards = await Promise.all(cats.map(async c => {
+        try {
+          const { list } = await fetchLeaderboard(c, { size: 20 })
+          return { cat: c, rows: list.map(viewEntry) }
+        } catch (err) {
+          logger.warn?.(`[HoYoGet][akasha] 方案「${c.name}」拉取失败：${err?.message || err}`)
+          return { cat: c, rows: [] }
+        }
+      }))
+      const usable = boards.filter(b => b.rows.length)
+      if (!usable.length) return e.reply(`「${hit.name}」暂无榜单数据。`)
 
-      const rows = list.map(viewEntry)
       const img = await render('akasha/rank', {
         roleName: hit.name,
-        planName: cat.name,
-        planShort: cat.short,
-        playerCount: cat.count || 0,
-        rows,
+        boards: usable.map(b => ({
+          planName: b.cat.name,
+          planShort: b.cat.short,
+          playerCount: b.cat.count || 0,
+          rows: b.rows,
+        })),
+        planCount: usable.length,
       }, { e, ret: true })
       return img
     } catch (err) {
