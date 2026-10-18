@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}hoyo_panel/list.css" />
+  </head>
+  <body class="game-{{game}}">
+    <div class="page">
+      <div class="head">
+        <div class="head-left">
+          <div class="title">{{gameCn}} · 角色面板</div>
+          <div class="subtitle">UID {{uid}}{{if nickname}} · {{nickname}}{{/if}}{{if level}} · 冒险等级 {{level}}{{/if}}</div>
+        </div>
+        <div class="head-right">
+          <div class="stat-pill">
+            <span class="pill-value">{{total}}</span>
+            <span class="pill-label">已展示</span>
+          </div>
+          {{if avgScore}}
+          <div class="stat-pill">
+            <span class="pill-value">{{avgScore}}</span>
+            <span class="pill-label">平均评分</span>
+          </div>
+          {{/if}}
+        </div>
+      </div>
+
+      <div class="grid">
+        {{each chars c}}
+        <div class="card star{{c.star}}">
+          <div class="card-top">
+            <div class="avatar" style="background-image:url('{{_miao_path}}{{c.face}}')">
+              <span class="star-tag">{{c.star}}★</span>
+              {{if c.cons > 0}}<span class="cons-tag">{{c.cons}}命</span>{{/if}}
+            </div>
+            <div class="name-row">
+              <span class="char-name">{{c.abbr}}</span>
+              <span class="lv">Lv{{c.level}}</span>
+            </div>
+          </div>
+
+          {{if c.weapon}}
+          <div class="weapon-row">
+            {{if c.weapon.icon}}<img class="wq-icon" src="{{_miao_path}}{{c.weapon.icon}}" onerror="this.style.display='none'">{{/if}}
+            <div class="wq-text">
+              <div class="wq-name">{{c.weapon.name}}</div>
+              <div class="wq-sub">{{c.weapon.star}}★ Lv{{c.weapon.level}}{{if c.weapon.refine}} 精{{c.weapon.refine}}{{/if}}</div>
+            </div>
+          </div>
+          {{/if}}
+
+          {{if c.attrs.length}}
+          <div class="attr-row">
+            {{each c.attrs a}}
+            <span class="attr">
+              <span class="attr-k">{{a.k}}</span>
+              <span class="attr-v">{{a.v}}</span>
+            </span>
+            {{/each}}
+          </div>
+          {{/if}}
+
+          {{if c.talent.length}}
+          <div class="talent-row">
+            {{each c.talent t}}
+            <span class="talent">{{t}}</span>
+            {{/each}}
+          </div>
+          {{/if}}
+
+          {{if c.artisScore !== ''}}
+          <div class="score-row">
+            <span class="score-value">{{c.artisScore}}</span>
+            <span class="score-grade {{c.artisMark}}">{{c.artisMark}}</span>
+          </div>
+          {{/if}}
+        </div>
+        {{/each}}
+      </div>
+
+      <div class="footer">from 米哈游 · 版式参考 miao-plugin</div>
+    </div>
+  </body>
+</html>
