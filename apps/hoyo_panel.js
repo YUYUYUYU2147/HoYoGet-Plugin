@@ -29,6 +29,8 @@ const GAME_CONF = {
 
 const PANEL_REG = /^#?(?:米哈游)?\s*(原神|星铁|崩铁|gs|sr)\s*面板(?:\s+(\d{9}))?$/i
 const PANEL_LIST_REG = /^#?(?:米哈游)?\s*(原神|星铁|崩铁|gs|sr)\s*面板列表$/i
+/* 更新面板：#米哈游原神更新面板 / #米哈游星铁更新面板 [UID] */
+const PANEL_REFRESH_REG = /^#?(?:米哈游)?\s*(原神|星铁|崩铁|gs|sr)\s*(?:更新|刷新)(?:全部)?面板(?:\s+(\d{9}))?$/i
 
 /** 从 Users 表读该用户的某个游戏 UID */
 async function readBoundUid(e, game) {
@@ -135,10 +137,59 @@ export class hoyo_panel extends plugin {
       event: 'message',
       priority: pluginPriority('hoyo_panel', -42000),
       rule: [
+        { reg: PANEL_REFRESH_REG.source, fnc: 'refreshPanel' },
         { reg: PANEL_REG.source, fnc: 'panel' },
         { reg: PANEL_LIST_REG.source, fnc: 'panel' },
       ],
     })
+  }
+
+  /** 「#米哈游原神更新面板」：拉取最新面板后直接出总览图 */
+  async refreshPanel(e) {
+    const m = String(e.msg || '').match(PANEL_REFRESH_REG)
+    if (!m) return false
+    const key = String(m[1] || '').toLowerCase()
+    const game = ['星铁', '崩铁', 'sr'].includes(key) ? 'sr' : 'gs'
+    const conf = GAME_CONF[game]
+    e.isSr = game === 'sr'
+
+    const miao = await loadMiao()
+    if (!miao) {
+      return e.reply('需要先安装 miao-plugin 才能更新面板（本功能复用它抓取的面板）。')
+    }
+
+    let uid = m[2] || ''
+    if (!uid) uid = await readBoundUid(e, game)
+    if (!uid) {
+      return e.reply([
+        `没能确定要更新的${conf.cn} UID。`,
+        `可以这样用：#米哈游${conf.cn}更新面板 123456789`,
+        `或先绑定：${conf.prefix}123456789`,
+      ].join('\n'))
+    }
+
+    try {
+      await e.reply(`正在更新 ${uid} 的${conf.cn}面板，请稍候…`)
+
+      const player = new miao.Player(uid, game)
+      // miao 的 ProfileAvatar.refreshProfile 依赖 player.e（取 ck、回报提示）
+      player.e = e
+      await player.refresh({ profile: true })
+
+      if (!player.hasProfile) {
+        return e.reply([
+          `更新失败：没拿到 ${uid} 的${conf.cn}面板数据。`,
+          '请确认角色已在游戏内「角色展柜」中展示，并开启「显示角色详情」，',
+          '设置完成后等 5 分钟再试。',
+        ].join('\n'))
+      }
+
+      // 数据已刷新，直接走总览渲染
+      return this.renderPanel(e, game, uid, miao, true)
+    } catch (err) {
+      logger.error?.(`[HoYoGet][hoyo_panel] 更新面板失败: ${err?.message || err}`)
+      return e.reply(`更新面板失败：${err?.message || err}`)
+    }
   }
 
   async panel(e) {
@@ -170,16 +221,28 @@ export class hoyo_panel extends plugin {
       const player = new miao.Player(uid, game)
       if (!player.hasProfile) {
         // 本地没有面板缓存，尝试刷新一次
+        player.e = e
         await player.refresh({ profile: true })
       }
       if (!player.hasProfile) {
         return e.reply([
           `本地暂无 ${uid} 的${conf.cn}面板数据。`,
           '请先在游戏内把角色放进「角色展柜」并开启显示详情，然后：',
-          `  ${game === 'sr' ? '*' : '#'}更新面板`,
+          `  #米哈游${conf.cn}更新面板`,
         ].join('\n'))
       }
+      return this.renderPanel(e, game, uid, miao, false, player)
+    } catch (err) {
+      logger.error?.(`[HoYoGet][hoyo_panel] 面板渲染失败: ${err?.message || err}`)
+      return e.reply(`面板获取失败：${err?.message || err}`)
+    }
+  }
 
+  /** 把 player 的面板渲染成总览图（panel 与 refreshPanel 共用） */
+  async renderPanel(e, game, uid, miao, isRefresh, prePlayer = null) {
+    const conf = GAME_CONF[game]
+    try {
+      const player = prePlayer || new miao.Player(uid, game)
       /* 逐角色取，单个坏数据不能拖垮整张面板：
          miao 的 Player.getProfiles() 内部会对每个 avatar 调 setAvatar，
          某些残缺记录（如 artis 结构缺字段）会抛错并中断整个遍历。 */
