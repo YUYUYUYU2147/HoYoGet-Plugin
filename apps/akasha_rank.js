@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { pluginPriority, render, config } from '#HoYoGet'
 import {
   listCategories, fetchLeaderboard, listStygianSchedules, fetchStygianLeaderboard,
-  getUserCalculations, getUserProfile,
+  fetchStygianRankOfUser, getUserCalculations, getUserProfile,
 } from '../system/akasha.js'
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -35,6 +35,8 @@ const AKASHA_SHORT_REG = /^#?(?:米哈游)?\s*全球(?:排名)?\s+(.+)$/
    与上面那几个「看榜单前 N 名」的指令是完全不同的数据源。 */
 /* 可带 UID：#我的全球排名 123456789 */
 const AKASHA_ME_REG = /^#?(?:米哈游)?\s*(?:我的)?全球(?:排名?|名次)?(?:\s+\d{9,10})?\s*$/
+/* 我的幽境排名：#我的幽境排名 / 幽境排名 / my幽境 */
+const AKASHA_MY_STYGIAN_REG = /^#?(?:米哈游)?\s*(?:我的)?幽境(?:排名|名次|成绩)(?:\s+\d{1,2}\.\d)?(?:\s+\d{9,10})?\s*$/
 
 /**
  * 从 Yunzai 的 Users 表读该用户的「原神 UID」（games.gs.uid）。
@@ -60,6 +62,28 @@ async function readBoundGsUid(e) {
   } catch (_) {
     return ''
   }
+}
+
+/**
+ * 解析要查询的原神 UID。
+ * 顺序：消息里的 9~10 位数字 → e.uid → Users 表 games.gs.uid → 喵喵的 MysApi。
+ * 不用 miao 的 getTargetUid()：它未绑定时会自己 reply 提示并置 e._replyNeedUid，
+ * 与本插件的回复重复。
+ */
+async function resolveGsUid(e) {
+  let uid = ''
+  const inMsg = String(e?.msg || '').match(/\b([1-9]\d{8,9})\b/)
+  if (inMsg) uid = inMsg[1]
+  if (!uid) uid = String(e?.uid || '').trim()
+  if (!uid) uid = await readBoundGsUid(e)
+  if (!uid) {
+    try {
+      const { MysApi } = await import('../../miao-plugin/models/index.js')
+      const user = await MysApi.initUser(e)
+      if (user?.uid) uid = String(user.uid)
+    } catch (_) { /* 没装喵喵或接口变了就跳过 */ }
+  }
+  return /^[1-9]\d{8,9}$/.test(uid) ? uid : ''
 }
 
 /** 角色 id → 中文名（用 CN_ALIAS 反查；查不到就退回英文名） */
@@ -135,6 +159,9 @@ function cnPlanName(name = '') {
     .replace(/\s+/g, ' ')
     .trim()
 }
+
+/** 幽境危战难度档位（与游戏内一致） */
+const STYGIAN_DIFFICULTY = ['未挑战', '普通', '进阶', '困难', '险恶', '无畏', '绝境']
 
 /** 精炼中文：R1 → 一阶，R5 → 满精 */
 const refineText = n => {
@@ -266,6 +293,7 @@ export class akasha_rank extends plugin {
          否则「#我的全球排名」会被 CN 的 (.+?) 当成角色名「我的」抓走。 */
       rule: [
         { reg: AKASHA_ME_REG.source, fnc: 'myRank' },
+        { reg: AKASHA_MY_STYGIAN_REG.source, fnc: 'myStygianRank' },
         { reg: AKASHA_REG.source, fnc: 'akasha' },
         { reg: AKASHA_CN_REG.source, fnc: 'akasha' },
         { reg: AKASHA_SHORT_REG.source, fnc: 'akasha' },
@@ -371,24 +399,8 @@ export class akasha_rank extends plugin {
    * 名次来自 getCalculationsForUser（不受「榜单只返回前 50」的限制）。
    */
   async myRank(e) {
-    let uid = ''
-    const inMsg = String(e.msg || '').match(/\b([1-9]\d{8,9})\b/)
-    if (inMsg) uid = inMsg[1]
-    if (!uid) uid = String(e.uid || '').trim()
-    /* 没写在消息里就从已绑定的账号取。
-       优先读 Yunzai 自己的 Users 表（games.gs.uid，与喵喵共用同一份绑定），
-       这样不依赖喵喵插件是否安装；读不到再退回喵喵的 MysApi。
-       不用 getTargetUid()：它未绑定时会自己 e.reply 一条提示并置 e._replyNeedUid，
-       与这里的回复重复。 */
-    if (!uid) uid = await readBoundGsUid(e)
+    const uid = await resolveGsUid(e)
     if (!uid) {
-      try {
-        const { MysApi } = await import('../../miao-plugin/models/index.js')
-        const user = await MysApi.initUser(e)
-        if (user?.uid) uid = String(user.uid)
-      } catch (_) { /* 没装喵喵或接口变了就跳过 */ }
-    }
-    if (!/^[1-9]\d{8,9}$/.test(uid)) {
       return e.reply([
         '没能确定要查询的原神 UID。',
         '可以这样用：',
@@ -443,6 +455,72 @@ export class akasha_rank extends plugin {
       return img
     } catch (err) {
       logger.error?.(`[HoYoGet][akasha] 查我的排名失败: ${err?.message || err}`)
+      return e.reply(`查询失败：${err?.message || err}`)
+    }
+  }
+
+  /**
+   * 「#我的幽境排名」：查自己在幽境危战里的全球名次。
+   *
+   * 与角色榜不同，幽境榜的接口**支持 uid 过滤**（角色榜的 uids 参数被服务端忽略），
+   * 所以能直接拿到任意名次；返回的 index 就是全球排名。
+   */
+  async myStygianRank(e) {
+    const uid = await resolveGsUid(e)
+    if (!uid) {
+      return e.reply([
+        '没能确定要查询的原神 UID。',
+        '可以这样用：',
+        '  #我的幽境排名 123456789',
+        '  或先绑定：#绑定123456789',
+      ].join('\n'))
+    }
+
+    try {
+      const schedules = await listStygianSchedules()
+      if (!schedules.length) return e.reply('Akasha 暂未收录幽境危战榜单。')
+
+      // 消息里可带版本号（如「#我的幽境排名 7.0」），否则取最新一期
+      const ver = String(e.msg || '').match(/\b(\d{1,2}\.\d)\b/)?.[1]
+      let board = schedules[0]
+      if (ver) {
+        const hit = schedules.find(s => String(s.version) === ver)
+        if (!hit) {
+          return e.reply([
+            `没有找到幽境期数「${ver}」。`,
+            '可选期数（最近 8 期）：',
+            ...schedules.slice(0, 8).map(s => `  ${s.version}（期号 ${s.scheduleId}）`),
+          ].join('\n'))
+        }
+        board = hit
+      }
+
+      const res = await fetchStygianRankOfUser(board.version, uid)
+      if (!res) {
+        return e.reply([
+          `UID ${uid} 在幽境危战 ${board.version} 期没有查到成绩。`,
+          '可能原因：这一期没有打，或者没在小程序里上传过成绩。',
+        ].join('\n'))
+      }
+      if (res.flagged) {
+        return e.reply(`UID ${uid} 在幽境 ${board.version} 期的成绩被 Akasha 标记，暂不计入排名。`)
+      }
+
+      const img = await render('akasha/mystygian', {
+        uid,
+        version: board.version,
+        scheduleId: board.scheduleId,
+        sampleText: formatNum(board.count || 0),
+        rank: res.rank,
+        scoreText: formatNum(res.score),
+        difficultyText: STYGIAN_DIFFICULTY[res.difficulty] || String(res.difficulty),
+        seconds: res.seconds,
+        nickname: res.nickname,
+        region: res.region,
+      }, { e, ret: true })
+      return img
+    } catch (err) {
+      logger.error?.(`[HoYoGet][akasha] 查我的幽境排名失败: ${err?.message || err}`)
       return e.reply(`查询失败：${err?.message || err}`)
     }
   }

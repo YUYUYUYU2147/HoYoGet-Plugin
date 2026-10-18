@@ -96,11 +96,32 @@ async function fetchStygianLeaderboard(version, { size = 20, page = 1, uid = '' 
     order: '-1',
     size: String(size),
     page: String(page),
-    filter: '',
+    // 传了 uid 时加上排除标记成绩的过滤，与网站 UID 搜索一致
+    filter: uid ? '[susLevel]1[all]1' : '',
   })
   if (uid) qs.set('uid', String(uid))
   const j = await akashaRequest(`leaderboards/stygian?${qs}`)
   return { list: Array.isArray(j?.data) ? j.data : [] }
+}
+
+/**
+ * 某个 UID 在一期幽境危战里的成绩与全球名次。
+ * 幽境榜的 `index` 字段就是全球排名（与角色榜的 ranking 不同）。
+ * 未上榜（没打或没上传）返回 null。
+ */
+async function fetchStygianRankOfUser(version, uid) {
+  const { list } = await fetchStygianLeaderboard(version, { size: 1, uid })
+  const row = list.find(v => String(v.uid) === String(uid))
+  if (!row) return null
+  return {
+    rank: Number(row.index) || 0,
+    score: Number(row.stygianScore) || 0,
+    difficulty: Number(row.stygianIndex) || 0,
+    seconds: Number(row.stygianSeconds) || 0,
+    flagged: !!row.isCheating || Number(row.susLevel) > 0,
+    nickname: row.owner?.nickname || '',
+    region: row.owner?.region || '',
+  }
 }
 
 /**
@@ -124,6 +145,6 @@ async function getUserProfile(uid) {
 export {
   AKASHA_ORIGIN, AKASHA_UA, akashaRequest,
   listCategories, fetchLeaderboard,
-  listStygianSchedules, fetchStygianLeaderboard,
+  listStygianSchedules, fetchStygianLeaderboard, fetchStygianRankOfUser,
   getUserCalculations, getUserProfile,
 }

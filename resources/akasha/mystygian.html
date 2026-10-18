@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}akasha/rank.css" />
+  </head>
+  <body>
+    <div class="page mystygian">
+      <div class="head">
+        <div class="head-left">
+          <div class="title">我的幽境排名</div>
+          <div class="subtitle">UID {{uid}}{{if nickname}} · {{nickname}}{{/if}}{{if region}} · {{region}}{{/if}}</div>
+        </div>
+        <div class="head-right">
+          <div class="badge">AKASHA</div>
+          <div class="count">第 {{version}} 期 · {{sampleText}} 份成绩</div>
+        </div>
+      </div>
+
+      <div class="hero">
+        <div class="hero-label">全球排名</div>
+        <div class="hero-rank">第 {{rank}} 名</div>
+        <div class="hero-sub">共 {{sampleText}} 份有效成绩</div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat">
+          <div class="stat-value">{{scoreText}}</div>
+          <div class="stat-label">幽境得分</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">{{difficultyText}}</div>
+          <div class="stat-label">难度</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">{{seconds}} 秒</div>
+          <div class="stat-label">通关用时</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">期号 {{scheduleId}}</div>
+          <div class="stat-label">榜单编号</div>
+        </div>
+      </div>
+
+      <div class="legend legend-tip">
+        幽境危战成绩需要在游戏内挑战后，通过米游社或相关工具同步到 Akasha 才会收录。
+      </div>
+
+      <div class="footer">from 米哈游 · Akasha System</div>
+    </div>
+  </body>
+</html>
