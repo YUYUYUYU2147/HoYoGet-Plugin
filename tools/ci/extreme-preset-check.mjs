@@ -58,6 +58,10 @@ const MAIN_OK = new Set([11102, 12102, 13102, 12202, 20103, 21103, 23103, 30502,
  * 只查全局 MAIN_OK 会放过「6 号盘写暴击伤害」这种游戏里出不来的配置。
  */
 const MAIN_BY_SLOT = {
+  // 1/2/3 号固定主词条：1 生命、2 攻击、3 防御，每盘在百分比/固定值二选一
+  1: new Set([11102, 11103]),
+  2: new Set([12102, 12103]),
+  3: new Set([13102, 13103]),
   4: new Set([11102, 12102, 13102, 20103, 21103, 31203]),
   5: new Set([11102, 12102, 13102, 23103, 31503, 31603, 31703, 31803, 32303, 31903]),
   6: new Set([11102, 12102, 12202, 13102, 30502, 31402]),
@@ -129,6 +133,11 @@ for (const [name, p] of Object.entries(presets)) {
     if (!v) { problems.push(`${name}：drive_main 缺 ${slot} 号位主词条`); continue }
     if (!MAIN_OK.has(v)) problems.push(`${name}：${slot} 号位主词条 ${v} 不合法`)
     else if (!MAIN_BY_SLOT[slot]?.has(v)) problems.push(`${name}：${slot} 号位主词条 ${v} 不在该号位的可选池里`)
+  }
+  // 1/2/3 号位可以不写（自动取该号位的默认主词条），写了就必须合法
+  for (const slot of [1, 2, 3]) {
+    const v = dm[slot]
+    if (v && !MAIN_BY_SLOT[slot]?.has(v)) problems.push(`${name}：${slot} 号位主词条 ${v} 不在该号位的可选池里`)
   }
   // 5) 副词条布局每盘 9 档，且不含该盘主词条
   const sl = p.sub_layout || {}

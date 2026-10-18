@@ -1126,11 +1126,21 @@ const MAIN_NAME = {
 // 可能的副词条 id（用于理论最大词条）。31402 异常掌控可作副词条（异常职业），
 // 31203/31402 排在 23203 前，保证异常职业补位时先取精通/掌控。
 const SUB_STAT_IDS = [11102, 11103, 12102, 12103, 13102, 13103, 20103, 21103, 31203, 31402, 23203]
-// 4/5/6 号位主词条候选
+// 4/5/6 号位主词条候选（评分用：只列对评分有意义的那几项）
 const SCORE_MAIN_STATS = {
   4: [11102, 12102, 13102, 20103, 21103, 31203],
   5: [11102, 12102, 13102, 23103, 31503, 31603, 31703, 31803, 32303, 31903],
   6: [11102, 12102, 12202, 13102, 30502, 31402],
+}
+// 极限面板/主词条校验用的**游戏实际**主词条池。
+// 1/2/3 号位的主词条是固定的：1 号只能出生命、2 号只能出攻击、3 号只能出防御，
+// 每盘在「百分比版」与「固定值版」里二选一（不是三选一）。
+// 不补进表里的话，极限面板会造出「没有主词条」的空盘。
+const MAIN_STAT_POOL = {
+  1: [11102, 11103],
+  2: [12102, 12103],
+  3: [13102, 13103],
+  ...SCORE_MAIN_STATS,
 }
 // 自研评分权重：按职业给出主词条/副词条优先级，不复制第三方评分表。
 // 取向：强攻双暴、击破冲击、异常精通/掌控、支援回能、命破生命、锋御防御。
@@ -2015,7 +2025,11 @@ export class zzz_panel_list extends plugin {
     const mainIds = oldEquip.map(eq => {
       const slot = Number(eq.equipment_type || oldEquip.indexOf(eq) + 1)
       const oldMain = Number(eq.main_properties?.[0]?.property_id || 0)
-      const allowed = (SCORE_MAIN_STATS[slot] || []).filter(id => Number(weight[id] || 0) > 0)
+      /* 1/2/3 号盘的主词条是固定的（1 生命 / 2 攻击 / 3 防御），必须出一项，
+         不能按权重过滤掉——强攻角色生命/防御权重为 0，过滤后就成了空盘。
+         4/5/6 号盘按权重挑最优，权重为 0 的项不参与。 */
+      const pool = MAIN_STAT_POOL[slot] || []
+      const allowed = slot < 4 ? pool.slice() : pool.filter(id => Number(weight[id] || 0) > 0)
       allowed.sort((x, y) => Number(weight[y] || 0) - Number(weight[x] || 0))
       const presetMain = Number(preset?.drive_main?.[slot] ?? preset?.drive_main?.[String(slot)] ?? 0)
       // 主词条 = 预设（理论最优，人工策展）> 权重自动 > 当前装备。
@@ -2024,9 +2038,9 @@ export class zzz_panel_list extends plugin {
       // 预设 drive_main 就是这套「最优知识」的载体，auto 权重只在预设缺条目时兜底。
       // 但预设必须先过「该槽位合法主词条」校验：6 号盘只有生命/攻击/防御/冲击/回能/异常掌控，
       // 写个暴击伤害上去（21103）游戏里根本出不来，直接采信会凭空多出一条不存在的词条。
-      // 1/2/3 号盘不受 SCORE_MAIN_STATS 约束（它们固定是生命/攻击/防御，且分百分比与固定值两版），
-      // 叶瞬光这类「补固定值」的预设要保留，只在 4/5/6 号盘上做校验。
-      const presetMainValid = slot < 4 || SCORE_MAIN_STATS[slot]?.includes(presetMain) ? presetMain : 0
+      // 1/2/3 号盘的主词条池见 MAIN_STAT_POOL（固定是生命/攻击/防御，分百分比与固定值两版），
+      // 叶瞬光这类「补固定值」的预设要保留。
+      const presetMainValid = MAIN_STAT_POOL[slot]?.includes(presetMain) ? presetMain : 0
       let mainId = presetMainValid || allowed[0] || oldMain
       // 双爆防溢出：非盘暴击（基础+被动+影画+武器副词条）加暴击主词条已破 100% 时，
       // 4 号位改用暴伤主词条，暴击率缺口留给副词条按预算补。
