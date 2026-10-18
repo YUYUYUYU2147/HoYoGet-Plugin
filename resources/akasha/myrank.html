@@ -35,22 +35,19 @@
             {{if r.icon}}<img src="{{r.icon}}" onerror="this.style.visibility='hidden'">{{/if}}
           </div>
 
-          <div class="player">
-            <div class="nick">{{r.name}}</div>
-            <div class="meta">
-              <span>{{r.consText}}</span>
-              <span class="dmg-inline">{{r.result}}</span>
-            </div>
+          <div class="char-cell">
+            <span class="nick">{{r.name}}</span>
+            <span class="cons-chip">{{r.consText}}</span>
           </div>
 
-          <div class="build">
-            <span class="weapon">{{r.planName}}</span>
-          </div>
+          <div class="plan-cell">{{r.planName}}</div>
 
-          <div class="score">
-            <div class="dmg">第 {{r.rank}} 名</div>
-            <div class="dmg-label">共 {{r.outOf}} 人</div>
-            <div class="dmg-beat">超过 {{r.beatPercent}}%</div>
+          <div class="dmg-cell">{{r.result}}</div>
+
+          <div class="score-cell">
+            <span class="dmg">第 {{r.rank}} 名</span>
+            <span class="dmg-total">/ 共 {{r.outOf}} 人</span>
+            <span class="dmg-beat">超过 {{r.beatPercent}}%</span>
           </div>
         </div>
         {{/each}}
