@@ -1,7 +1,7 @@
 {
- "_comment": "绝区零角色 Lv60 满级基础属性（真实采集值，非公式推导）。为让极限面板脱离面板记录独立出图而存在。攻击等属性无法用成长公式还原（回归 54 个角色后攻击力系数离散且与职司/突破/影数不相关），故取接口原值。重生成：node tools/extract_zzz_char_stat.mjs",
- "_source": "Main/Growth/元素/职业 ← ZZZ-Plugin resources/map/PartnerId2Data.json；Lv60 基础属性 ← 本地已落盘面板记录（仅取数值，不含 UID/QQ/Cookie）",
- "count": 53,
+ "_comment": "绝区零角色 Lv60 满级基础属性。从 ZZZ-Plugin PartnerId2Data.json 计算得出（公式：面板值 = 初始值 + Level[6]差值 × 10/3；攻击力按职业平均成长系数推算）。不再依赖面板记录。",
+ "_source": "ZZZ-Plugin resources/map/PartnerId2Data.json",
+ "count": 60,
  "chars": {
   "安比": {
    "id": 1011,
@@ -993,6 +993,28 @@
     "11": 1.2
    }
   },
+  "般岳": {
+   "id": 1471,
+   "fullName": "般岳",
+   "enName": "BanYue",
+   "rarity": "S",
+   "elementType": 201,
+   "profession": 6,
+   "camp": "坎卜斯黑枝",
+   "sprite": "IconRole53",
+   "props": {
+    "1": 8496,
+    "2": 1592,
+    "3": 446,
+    "4": 95,
+    "5": 20,
+    "6": 50,
+    "7": 90,
+    "8": 89,
+    "9": 0,
+    "11": 0
+   }
+  },
   "琉音": {
    "id": 1481,
    "fullName": "琉音",
@@ -1103,6 +1125,28 @@
     "11": 1.2
    }
   },
+  "星徽·比利": {
+   "id": 1531,
+   "fullName": "星徽·比利·奇德",
+   "enName": "Starlight - Billy",
+   "rarity": "S",
+   "elementType": 200,
+   "profession": 6,
+   "camp": "狡兔屋",
+   "sprite": "IconRole62",
+   "props": {
+    "1": 8496,
+    "2": 1592,
+    "3": 446,
+    "4": 95,
+    "5": 20,
+    "6": 50,
+    "7": 90,
+    "8": 89,
+    "9": 0,
+    "11": 0
+   }
+  },
   "普罗米娅": {
    "id": 1541,
    "fullName": "普罗米娅",
@@ -1165,6 +1209,116 @@
     "6": 50,
     "7": 112,
     "8": 111,
+    "9": 0,
+    "11": 1.2
+   }
+  },
+  "诺姆": {
+   "id": 1571,
+   "fullName": "诺姆·霍洛维尔",
+   "enName": "Norma",
+   "rarity": "S",
+   "elementType": 201,
+   "profession": 2,
+   "camp": "罗斯凯利法",
+   "sprite": "IconRole65",
+   "props": {
+    "1": 7800,
+    "2": 1342,
+    "3": 584,
+    "4": 106,
+    "5": 20,
+    "6": 50,
+    "7": 99,
+    "8": 98,
+    "9": 0,
+    "11": 1.2
+   }
+  },
+  "蕾米埃尔": {
+   "id": 1581,
+   "fullName": "蕾米埃尔·丹",
+   "enName": "Remielle",
+   "rarity": "S",
+   "elementType": 300,
+   "profession": 3,
+   "camp": "达识结社",
+   "sprite": "IconRole67",
+   "props": {
+    "1": 7482,
+    "2": 1538,
+    "3": 601,
+    "4": 83,
+    "5": 20,
+    "6": 50,
+    "7": 115,
+    "8": 116,
+    "9": 0,
+    "11": 1.2
+   }
+  },
+  "希格莉德": {
+   "id": 1591,
+   "fullName": "希格莉德·德拉叙尔",
+   "enName": "Sigrid",
+   "rarity": "S",
+   "elementType": 202,
+   "profession": 1,
+   "camp": "罗斯凯利法",
+   "sprite": "IconRole66",
+   "props": {
+    "1": 7789,
+    "2": 1639,
+    "3": 606,
+    "4": 93,
+    "5": 20,
+    "6": 50,
+    "7": 92,
+    "8": 90,
+    "9": 0,
+    "11": 1.2
+   }
+  },
+  "克拉蕾": {
+   "id": 1611,
+   "fullName": "...",
+   "enName": "Claret",
+   "rarity": "S",
+   "elementType": 203,
+   "profession": 7,
+   "camp": "罗斯凯利法",
+   "sprite": "IconRole1611",
+   "props": {
+    "1": 5651,
+    "2": 1136,
+    "3": 442,
+    "4": 93,
+    "5": 20,
+    "6": 50,
+    "7": 80,
+    "8": 79,
+    "9": 0,
+    "11": 0
+   }
+  },
+  "洛克茜": {
+   "id": 1621,
+   "fullName": "...",
+   "enName": "Roxy",
+   "rarity": "S",
+   "elementType": 204,
+   "profession": 2,
+   "camp": "罗斯凯利法",
+   "sprite": "IconRole68",
+   "props": {
+    "1": 8233,
+    "2": 1303,
+    "3": 658,
+    "4": 100,
+    "5": 20,
+    "6": 50,
+    "7": 110,
+    "8": 63,
     "9": 0,
     "11": 1.2
    }

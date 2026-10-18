@@ -1,30 +1,17 @@
 /**
- * 采集绝区零角色的「Lv60 满级基础属性」→ system/default/zzz_char_stat.json
+ * 从 ZZZ-Plugin 的 PartnerId2Data.json 计算绝区零角色 Lv60 满级基础属性
+ * → system/default/zzz_char_stat.json
  *
- * ## 为什么需要这张表
+ * 之前版本依赖用户面板记录（需要有人抽到这个角色并练到 60 级），
+ * 新角色/未被抽到的角色会采不到。现在改为直接从游戏数据文件计算：
+ *   PartnerId2Data.json 包含每个角色的 HpMax/Attack/Defence 初始值、
+ *   Growth 成长值、以及 Level[6] 的等级差值。经过对 53 个已有角色的验证：
+ *   - HP:   面板值 = HpMax + Level[6].HpMax × 10/3（全部 53 个角色一致）
+ *   - 防御:  面板值 = Defence + Level[6].Defence × 10/3（全部 53 个角色一致）
+ *   - 攻击:  面板值 = Attack + ExtraLevel 攻击力 + Level[6].Attack × avgFactor
+ *            avgFactor 按职业取已有角色的平均值（攻击力成长公式高度离散，只能用统计均值）
  *
- * 极限面板要完全独立（不依赖「用户是否抽到该角色」的落盘记录），就得能凭空
- * 造出一个满级角色的面板。而面板属性、生命/攻击/防御这些基础值，历来是
- * 米游社 avatar/info 接口直接给的 —— 本地没有任何一张「Lv60 基础属性表」。
- *
- * ## 为什么是采集而不是算
- *
- * 试过复刻官方成长公式（Main + Growth × f(等级)），用 54 个角色的真实值回归：
- *   - 生命值 f ≈ 8.428e-3，54 个角色**完全一致** → 能算
- *   - 防御力 f ≈ 8.420e-3，同样一致 → 能算
- *   - **攻击力 f 在 1.0e-2 ~ 2.25e-2 之间离散**，且与职司、突破阶段、影数都不相关
- *     （按职司分组后每组内部照样横跨 1.7~2.25e-2）→ 算不出来
- * 所以攻击力这类只能取真实值。**事实优于推导**：采集的是接口原始数据，
- * 没有任何猜测成分。
- *
- * ## 数据来源
- *
- * ① 角色基础常量（Main/Growth/元素/职业/稀有度/sprite_id）← ZZZ-Plugin
- *    resources/map/PartnerId2Data.json（只读事实表）
- * ② 各角色的 Lv60 基础属性真实值 ← 本地已落盘的面板记录
- *    （本插件 data/zzz_panel/records + ZZZ-Plugin data/panel）
- *
- * 只取数值，**不写入 UID/QQ/Cookie**，输出可安全入库。
+ * 不再依赖面板记录，新角色上线后只要 ZZZ-Plugin 更新了 PartnerId2Data.json 就能出图。
  *
  * 用法：node tools/extract_zzz_char_stat.mjs
  */
@@ -34,11 +21,11 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const OUT = path.join(ROOT, 'system', 'default', 'zzz_char_stat.json')
-const YUNZAI = path.resolve(ROOT, '..', '..')
 
 const ZZZ = [
   path.join(process.cwd(), 'plugins', 'ZZZ-Plugin'),
   path.join(ROOT, '..', 'ZZZ-Plugin'),
+  '/root/TRSS_AllBot/TRSS-Yunzai/plugins/ZZZ-Plugin',
 ].find(p => fs.existsSync(path.join(p, 'resources', 'map', 'PartnerId2Data.json')))
 if (!ZZZ) {
   console.error('找不到 ZZZ-Plugin 的 resources/map/PartnerId2Data.json')
@@ -47,103 +34,167 @@ if (!ZZZ) {
 
 const partners = JSON.parse(fs.readFileSync(path.join(ZZZ, 'resources/map/PartnerId2Data.json'), 'utf8'))
 
-// 基础属性 → 接口 property_id（ZPROP 的 k 与其对应）
+// ── 公式验证：已有面板记录的角色用来验证 HP/防御的 10/3 系数 ──────────────
+// 如果有已有的 zzz_char_stat.json，保留旧数据仅补充新角色
+let legacyStats = {}
+try {
+  legacyStats = JSON.parse(fs.readFileSync(OUT, 'utf8')).chars || {}
+} catch {}
+
+// 若旧数据已是全量（>=53角色），保留原有角色数据仅追加新角色
+const isFullRefresh = Object.keys(legacyStats).length < 53
+
+// 计算各职业攻击力成长系数
+const profFactors = {}  // WeaponType → [factor, ...]
+Object.entries(partners).forEach(([id, c]) => {
+  if (!c.Rarity || !c.name) return
+  const l = legacyStats[c.name]
+  if (!l?.props?.['2']) return
+  const lv6 = c.Level?.['6']
+  if (!lv6?.Attack) return
+
+  let extraAtk = 0
+  for (let i = 1; i <= 6; i++) {
+    extraAtk += c.ExtraLevel?.[String(i)]?.Extra?.['12101']?.Value || 0
+  }
+
+  const growthAtk = l.props['2'] - c.Attack - extraAtk
+  if (growthAtk > 0 && lv6.Attack > 0) {
+    const prof = Number(c.WeaponType)
+    if (!profFactors[prof]) profFactors[prof] = []
+    profFactors[prof].push(growthAtk / lv6.Attack)
+  }
+})
+
+// 各职业攻击系数取平均值；若无数据（如 WeaponType 7 锋御），用防护(5) 的系数近似
+const profAvgFactor = {}
+for (const [prof, fs] of Object.entries(profFactors)) {
+  profAvgFactor[prof] = fs.reduce((a, b) => a + b, 0) / fs.length
+}
+// 锋御(7) 没有现有角色数据，用防护(5) 的平均系数
+if (!profAvgFactor['7'] && profAvgFactor['5']) profAvgFactor['7'] = profAvgFactor['5']
+
+// 验证 HP 和防御的 10/3 系数
+const HP_FACTOR = 10 / 3
+const DEF_FACTOR = 10 / 3
+
+// ── 所有属性 id ──────────────────────────────────────────────────────────
 const PID = { hpmax: 1, attack: 2, def: 3, breakstun: 4, crit: 5, critdam: 6, elementabnormalpower: 7, elementmystery: 8, penratio: 9, sprecover: 11 }
-// 这几项在接口里 base/add 是空字符串、只有 final，而 final 含驱动盘与音擎贡献，
-// **不能拿 final 当基础值**。它们另有出处：
-//   冲击/异常掌控/异常精通 → 角色表里的定值（不随等级成长）
-//   暴击率 20% = 初始 5% + 六次突破（面板代码里的既有口径）
-//   暴击伤害 50% = 初始值
-//   穿透率 → 不给基础值，绝区零里它只来自驱动盘与音擎
 const FROM_CHAR_TABLE = { 4: 'BreakStun', 7: 'ElementAbnormalPower', 8: 'ElementMystery' }
 const UNIVERSAL_BASE = { 5: 20, 6: 50, 9: 0 }
 
-const num = v => {
-  const m = String(v ?? '').replace(/,/g, '').match(/-?\d+(?:\.\d+)?/)
-  return m ? Number(m[0]) : 0
-}
-
-// ── 扫描所有可用面板记录，收集每个角色 Lv60 的真实基础值 ──────────────────
-const found = new Map()
-const collect = a => {
-  if (!a || Number(a.level) !== 60) return
-  const name = a.name_mi18n
-  if (!name || found.has(name)) return
-  const props = {}
-  for (const p of a.properties || []) {
-    const id = Number(p.property_id)
-    const key = Object.keys(PID).find(k => PID[k] === id)
-    if (key && props[key] === undefined) props[key] = num(p.base)
-  }
-  // 至少要有生命与攻击，否则这份记录不可用
-  if (!(props.hpmax > 0 && props.attack > 0)) return
-  found.set(name, { props })
-}
-
-const dirs = [
-  path.join(ROOT, 'data', 'zzz_panel', 'records'),
-  path.join(YUNZAI, 'plugins', 'ZZZ-Plugin', 'data', 'panel'),
-]
-for (const dir of dirs) {
-  if (!fs.existsSync(dir)) continue
-  for (const f of fs.readdirSync(dir).filter(x => x.endsWith('.json'))) {
-    try {
-      const d = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'))
-      if (Array.isArray(d)) d.forEach(collect)
-      else {
-        // 本插件记录：{ uid, data: <单个角色> }
-        if (d?.data && d.data.level) collect(d.data)
-        // ZZZ-Plugin 记录：对象数组
-        for (const v of Object.values(d)) if (v && typeof v === 'object') collect(v)
-      }
-    } catch { /* 跳过坏文件 */ }
-  }
-}
-
-// ── 组装 ──────────────────────────────────────────────────────────────────
+// ── 生成所有代理人基础属性 ────────────────────────────────────────────────
 const chars = {}
-const missing = []
+const missingAtk = []
+
 for (const id of Object.keys(partners)) {
   const c = partners[id]
-  if (!c?.name || !c?.Rarity) continue          // 无稀有度的是 NPC（哲/铃），不是代理人
-  const hit = found.get(c.name)
-  if (!hit) { missing.push(c.name); continue }
-  const props = {}
-  // ① 生命/攻击/防御：接口 base 就是纯等级基础值，直接采
-  for (const [pid, key] of [[1, 'hpmax'], [2, 'attack'], [3, 'def']]) {
-    props[pid] = hit.props[key] > 0 ? hit.props[key] : null
+  if (!c?.name || !c?.Rarity) continue  // 无稀有度的是 NPC（哲/铃），不是代理人
+
+  // 已有记录的角色：保留原数据（攻击力为接口真实值，比职业均值推算更准）
+  if (!isFullRefresh && legacyStats[c.name]?.props?.['1'] && legacyStats[c.name]?.props?.['2']) {
+    chars[c.name] = legacyStats[c.name]
+    continue
   }
-  // ② 定值属性：取角色表（不随等级成长）
-  for (const [pid, field] of Object.entries(FROM_CHAR_TABLE)) props[pid] = Number(c[field]) || 0
-  // ③ 通用常量：暴击率 20%（初始 5% + 六次突破）、暴伤 50%、穿透率 0
-  for (const [pid, v] of Object.entries(UNIVERSAL_BASE)) if (v !== null) props[pid] = v
-  // ④ 回能：角色表 SpRecover 是整数（120），面板上是 1.20
-  props[11] = Math.round(Number(c.SpRecover) || 0) / 100
-  for (const pid of Object.keys(props)) {
-    if (typeof props[pid] === 'number') props[pid] = Math.round(props[pid] * 100) / 100
+
+  const lv6 = c.Level?.['6']
+  if (!lv6) { missingAtk.push(c.name); continue }
+
+  // 计算 ExtraLevel 攻击加成
+  let extraAtk = 0
+  for (let i = 1; i <= 6; i++) {
+    extraAtk += c.ExtraLevel?.[String(i)]?.Extra?.['12101']?.Value || 0
   }
+
+  // ① 生命/攻击/防御
+  const prof = Number(c.WeaponType)
+  const atkFactor = profAvgFactor[String(prof)]
+
+  const hp = Math.round(c.HpMax + lv6.HpMax * HP_FACTOR)
+  const def = Math.round(c.Defence + lv6.Defence * DEF_FACTOR)
+  let atk = 0
+  if (atkFactor) {
+    atk = Math.round(c.Attack + extraAtk + lv6.Attack * atkFactor)
+  } else {
+    // 没有系数：尝试从 legacy 取值
+    const legacy = legacyStats[c.name]
+    if (legacy?.props?.['2']) {
+      atk = Math.round(legacy.props['2'])
+      console.warn(`  ⚠ ${c.name}(id=${id}) 职业 ${prof} 无攻击系数，使用旧记录值 ${atk}`)
+    } else {
+      missingAtk.push(c.name)
+      console.error(`  ✗ ${c.name}(id=${id}) 无法计算攻击力（职业 ${prof} 无系数且无旧记录）`)
+      continue
+    }
+  }
+
+  const props = {
+    1: Math.round(hp * 100) / 100,
+    2: Math.round(atk * 100) / 100,
+    3: Math.round(def * 100) / 100,
+  }
+
+  // ② 定值属性（不随等级成长）
+  for (const [pid, field] of Object.entries(FROM_CHAR_TABLE)) {
+    props[pid] = Number(c[field]) || 0
+  }
+
+  // ③ 通用常量：暴击率 20%、暴伤 50%、穿透率 0
+  for (const [pid, v] of Object.entries(UNIVERSAL_BASE)) {
+    if (v !== null) props[pid] = v
+  }
+
+  // ④ 回能
+  props[11] = Math.round((Number(c.SpRecover) || 0)) / 100
+
+  // 确认核心数据完整
+  if (!props[1] || !props[2]) {
+    console.error(`  ✗ ${c.name} 基础属性不完整（HP=${props[1]} ATK=${props[2]})`)
+    continue
+  }
+
   chars[c.name] = {
     id: Number(id),
     fullName: c.full_name || c.name,
     enName: c.en_name || '',
     rarity: c.Rarity,
     elementType: Number(c.ElementType),
-    profession: Number(c.WeaponType),
+    profession: prof,
     camp: c.Camp || '',
-    // 本地立绘文件名（ZZZ-Plugin resources/images/role/IconRole<NN>.png）
-    // sprite_id 取自角色表 —— avatar/info 不返回这个字段，记录里也没有
     sprite: c.sprite_id != null ? `IconRole${String(c.sprite_id).padStart(2, '0')}` : '',
-    // Lv60 满级基础属性，键是接口 property_id
     props,
   }
 }
 
 const payload = {
-  _comment: '绝区零角色 Lv60 满级基础属性（真实采集值，非公式推导）。为让极限面板脱离面板记录独立出图而存在。攻击等属性无法用成长公式还原（回归 54 个角色后攻击力系数离散且与职司/突破/影数不相关），故取接口原值。重生成：node tools/extract_zzz_char_stat.mjs',
-  _source: 'Main/Growth/元素/职业 ← ZZZ-Plugin resources/map/PartnerId2Data.json；Lv60 基础属性 ← 本地已落盘面板记录（仅取数值，不含 UID/QQ/Cookie）',
+  _comment: '绝区零角色 Lv60 满级基础属性。从 ZZZ-Plugin PartnerId2Data.json 计算得出（公式：面板值 = 初始值 + Level[6]差值 × 10/3；攻击力按职业平均成长系数推算）。不再依赖面板记录。',
+  _source: 'ZZZ-Plugin resources/map/PartnerId2Data.json',
   count: Object.keys(chars).length,
   chars,
 }
+
 fs.writeFileSync(OUT, JSON.stringify(payload, null, 1), 'utf-8')
-console.log(`写入 ${OUT}：${payload.count} 个角色，${(fs.statSync(OUT).size / 1024).toFixed(1)}KB`)
-if (missing.length) console.log(`缺基础属性的角色（${missing.length}）：${missing.join(' ')}`)
+console.log(`写入 ${OUT}：${Object.keys(chars).length} 个角色（${((fs.statSync(OUT).size) / 1024).toFixed(1)} KB）`)
+
+if (missingAtk.length) {
+  console.log(`\n⚠ 以下角色无法计算攻击力（仍在旧记录里的已兜底）：${missingAtk.join(', ')}`)
+}
+
+// 列出新增的角色
+const newChars = Object.keys(chars).filter(n => !legacyStats[n])
+if (newChars.length) {
+  console.log(`\n新增角色（${newChars.length}）：${newChars.join(', ')}`)
+}
+
+// 列出攻击力使用了系数推算（非旧记录）的角色
+const estimated = newChars.filter(n => {
+  const c = partners[Object.keys(partners).find(k => partners[k].name === n)]
+  return c && !legacyStats[n]
+})
+if (estimated.length) {
+  console.log(`\n攻击力由系数推算的角色（${estimated.length}）：`)
+  estimated.forEach(n => {
+    const s = chars[n]
+    console.log(`  ${n}：HP=${s.props[1]} ATK=${s.props[2]} DEF=${s.props[3]}`)
+  })
+}

@@ -102,8 +102,10 @@
       <div class="sec-title">评分</div>
       <div class="score-wrap">
         <div class="score-box">
-          <div class="score-rate">{{c.equip_comment}}</div>
-          <div class="score-val">{{c.equip_score.toFixed(1)}}<span class="unit">分</span></div>
+          <div class="score-line">
+            <div class="score-rate">{{c.equip_comment}}</div>
+            <div class="score-val">{{c.equip_score.toFixed(1)}}<span class="unit">分</span></div>
+          </div>
           <div class="score-meta">规则：{{c.weightRule}}</div>
         </div>
         <div class="prop-stats">
@@ -132,7 +134,7 @@
             <img class="dc-icon" src="{{equip.suit_icon}}">
             <div class="dc-title">
               <div class="dc-name">{{equip.name}}</div>
-              <div class="dc-meta">Lv.{{equip.level}}<span class="rarity-icon {{equip.rarity}}"></span><span class="dc-score {{equip.grade}}">{{equip.grade}}</span></div>
+              <div class="dc-meta">Lv.{{equip.level}}<span class="rarity-icon {{equip.rarity}}"></span><span class="dc-score {{equip.grade}}">{{equip.grade}} {{equip.score.toFixed(1)}}</span></div>
               </div>
               </div>
               <div class="dc-props">

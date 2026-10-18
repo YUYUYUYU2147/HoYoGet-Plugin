@@ -16,8 +16,8 @@ async function render(path, data_, cfg) {
   if (path.includes('bilibili')) {
     data_.emoji = config().emoji;
   }
-  return e.runtime.render('米哈游', path, data_, {
-    retType: cfg.ret ? 'default' : 'base64',
+  const img = await e.runtime.render('米哈游', path, data_, {
+    retType: 'base64',
     fullPage: cfg.fullPage !== false,
     beforeRender({ data }) {
       // 本地图标（wiki/imgs/*.png）的相对路径必须按实际落盘深度算，不能写死：
@@ -42,5 +42,12 @@ async function render(path, data_, cfg) {
       };
     },
   });
+  // ret:true 时由 render 统一用 base64 自发送；调用方不要再 e.reply，否则会重复发送。
+  // 发送成功则返回 e.reply 的结果（含 message_id，供 %原图 等缓存用），失败/未发送才返回 base64。
+  if (cfg.ret && e) {
+    const sent = await e.reply(img);
+    return sent ?? img;
+  }
+  return img;
 }
 export default render;

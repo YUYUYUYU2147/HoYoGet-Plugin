@@ -120,12 +120,13 @@ body {
 
 /* ============ 评分 ============ */
 .score-box { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; background: linear-gradient(100deg, rgba(245,201,107,.12), rgba(255,127,168,.06)); border: 1px solid rgba(245,201,107,.3); border-radius: 14px; padding: 14px 22px; }
+.score-box { width: auto; min-width: 200px; flex: none; }
+.score-box .score-line { display: flex; align-items: baseline; gap: 10px; white-space: nowrap; }
 .score-box .score-rate { font-size: 1.7em; font-weight: 900; color: #ff7fa8; line-height: 1; }
 .score-box .score-val { font-size: 2.3em; font-weight: 900; color: #f5c96b; line-height: 1.15; }
 .score-box .score-val .unit { font-size: .45em; color: #cfd6e6; margin-left: 5px; font-weight: 700; }
-.score-box .score-meta { color: #c0c8d6; font-size: .85em; }
+.score-box .score-meta { color: #c0c8d6; font-size: .85em; width: 100%; text-align: center; }
 .score-wrap { display: flex; gap: 16px; align-items: stretch; }
-.score-box { width: 200px; flex: none; }
 .prop-stats { flex: 1; min-width: 0; display: grid; grid-template-rows: repeat(3, auto); grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px 16px; align-content: center; }
 .ps-item { display: flex; align-items: center; gap: 7px; font-size: .92em; }
 .ps-count { min-width: 2em; height: 2em; padding: 0 .35em; border-radius: 6px; background: rgba(245, 201, 107, .16); border: 1px solid rgba(245, 201, 107, .35); color: #f5c96b; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
