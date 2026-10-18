@@ -136,6 +136,19 @@ async function getUserCalculations(uid) {
   return Array.isArray(j?.data) ? j.data : []
 }
 
+/**
+ * 某个 UID 在 Akasha 上展示的圣遗物（按暴击值降序）。
+ *
+ * Akasha 不做圣遗物全球排名，只提供每个圣遗物的 `critValue`
+ * （暴击值 = 暴击率×2 + 暴击伤害，社区通用的泛用质量指标）。
+ * 因此这里只能做「自己的圣遗物排行」，不是全球榜。
+ */
+async function getArtifactsByUid(uid) {
+  const j = await akashaRequest(`artifactsByUid/${uid}`)
+  const list = Array.isArray(j?.data) ? j.data : []
+  return list.slice().sort((a, b) => (Number(b.critValue) || 0) - (Number(a.critValue) || 0))
+}
+
 /** 某个 UID 的账号信息（昵称、等级、服务器、拥有的角色等） */
 async function getUserProfile(uid) {
   const j = await akashaRequest(`user/${uid}`)
@@ -146,5 +159,5 @@ export {
   AKASHA_ORIGIN, AKASHA_UA, akashaRequest,
   listCategories, fetchLeaderboard,
   listStygianSchedules, fetchStygianLeaderboard, fetchStygianRankOfUser,
-  getUserCalculations, getUserProfile,
+  getUserCalculations, getUserProfile, getArtifactsByUid,
 }

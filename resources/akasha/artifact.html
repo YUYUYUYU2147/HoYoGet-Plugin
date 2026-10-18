@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}akasha/rank.css" />
+  </head>
+  <body>
+    <div class="page artifact">
+      <div class="head">
+        <div class="head-left">
+          <div class="title">我的圣遗物排行</div>
+          <div class="subtitle">UID {{uid}} · 按暴击值排序</div>
+        </div>
+        <div class="head-right">
+          <div class="badge">AKASHA</div>
+          <div class="count">共 {{total}} 件</div>
+        </div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat">
+          <div class="stat-value">{{bestValue}}</div>
+          <div class="stat-label">最高暴击值</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">{{avg}}</div>
+          <div class="stat-label">平均暴击值</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">{{shown}} / {{total}}</div>
+          <div class="stat-label">展示 / 总数</div>
+        </div>
+      </div>
+
+      <div class="legend legend-tip">
+        暴击值 = 暴击率 × 2 + 暴击伤害，是通用的圣遗物质量参考。
+        Akasha 不提供圣遗物全球排名，这里是按你自己的圣遗物排序。
+      </div>
+
+      <div class="list">
+        {{each rows r}}
+        <div class="art-row {{if r.rank === 1}}top1{{else if r.rank === 2}}top2{{else if r.rank === 3}}top3{{/if}}">
+          <div class="rank">{{r.rank}}</div>
+
+          <div class="art-icon">
+            {{if r.icon}}<img src="{{r.icon}}" onerror="this.style.visibility='hidden'">{{/if}}
+            <span class="art-stars">{{r.stars}}★</span>
+          </div>
+
+          <div class="art-info">
+            <div class="art-name">{{r.name}}</div>
+            <div class="art-set">{{r.set}} · {{r.slot}}</div>
+          </div>
+
+          <div class="art-main">
+            <span class="main-name">{{r.mainStat}}</span>
+            <span class="main-value">{{r.mainValue}}</span>
+          </div>
+
+          <div class="art-subs">
+            {{each r.substats s}}
+            <span class="sub-chip">{{s.name}} {{s.value}}</span>
+            {{/each}}
+          </div>
+
+          <div class="art-cv">
+            <div class="cv-value">{{r.critValue}}</div>
+            <div class="cv-label">暴击值</div>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+
+      <div class="footer">from 米哈游 · Akasha System</div>
+    </div>
+  </body>
+</html>

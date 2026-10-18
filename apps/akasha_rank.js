@@ -37,6 +37,8 @@ const AKASHA_SHORT_REG = /^#?(?:米哈游)?\s*全球(?:排名)?\s+(.+)$/
 const AKASHA_ME_REG = /^#?(?:米哈游)?\s*(?:我的)?全球(?:排名?|名次)?(?:\s+\d{9,10})?\s*$/
 /* 我的幽境排名：#我的幽境排名 / 幽境排名 / my幽境 */
 const AKASHA_MY_STYGIAN_REG = /^#?(?:米哈游)?\s*(?:我的)?幽境(?:排名|名次|成绩)(?:\s+\d{1,2}\.\d)?(?:\s+\d{9,10})?\s*$/
+/* 我的圣遗物排行（Akasha 无全球圣遗物榜，只按暴击值排自己的） */
+const AKASHA_ARTIFACT_REG = /^#?(?:米哈游)?\s*(?:我的)?圣遗物(?:排名|排行|评分|榜)(?:\s+\d{9,10})?\s*$/
 
 /**
  * 从 Yunzai 的 Users 表读该用户的「原神 UID」（games.gs.uid）。
@@ -158,6 +160,33 @@ function cnPlanName(name = '') {
     .replace(/([\u4e00-\u9fa5])\s+(?=[\u4e00-\u9fa5])/g, '$1')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+/** 圣遗物部位（enka 的 equipType） */
+const SLOT_CN = {
+  EQUIP_BRACER: '生之花', EQUIP_NECKLACE: '死之羽',
+  EQUIP_SHOES: '时之沙', EQUIP_RING: '空之杯',
+  EQUIP_ONSET: '理之冠',
+}
+
+/** enka 属性键 → 中文 */
+const STAT_CN = {
+  'Flat HP': '生命值', 'HP%': '生命值%', 'Flat ATK': '攻击力', 'ATK%': '攻击力%',
+  'Flat DEF': '防御力', 'DEF%': '防御力%',
+  'Crit RATE': '暴击率', 'Crit DMG': '暴击伤害',
+  'Energy Recharge': '充能效率', 'Elemental Mastery': '元素精通',
+  'Healing Bonus': '治疗加成', 'Physical DMG Bonus': '物理伤害',
+  'Pyro DMG Bonus': '火伤', 'Hydro DMG Bonus': '水伤', 'Cryo DMG Bonus': '冰伤',
+  'Electro DMG Bonus': '雷伤', 'Anemo DMG Bonus': '风伤', 'Geo DMG Bonus': '岩伤',
+  'Dendro DMG Bonus': '草伤',
+}
+const cnStat = k => STAT_CN[k] || k || ''
+
+/** 属性值格式化：百分比类加 %，其余取整 */
+function formatStatValue(key = '', v) {
+  const n = Number(v)
+  if (!Number.isFinite(n)) return ''
+  return /%|Bonus|Recharge|RATE|DMG/.test(key) ? `${n.toFixed(1)}%` : String(Math.round(n))
 }
 
 /** 幽境危战难度档位（与游戏内一致） */
@@ -294,6 +323,7 @@ export class akasha_rank extends plugin {
       rule: [
         { reg: AKASHA_ME_REG.source, fnc: 'myRank' },
         { reg: AKASHA_MY_STYGIAN_REG.source, fnc: 'myStygianRank' },
+        { reg: AKASHA_ARTIFACT_REG.source, fnc: 'myArtifactRank' },
         { reg: AKASHA_REG.source, fnc: 'akasha' },
         { reg: AKASHA_CN_REG.source, fnc: 'akasha' },
         { reg: AKASHA_SHORT_REG.source, fnc: 'akasha' },
@@ -521,6 +551,74 @@ export class akasha_rank extends plugin {
       return img
     } catch (err) {
       logger.error?.(`[HoYoGet][akasha] 查我的幽境排名失败: ${err?.message || err}`)
+      return e.reply(`查询失败：${err?.message || err}`)
+    }
+  }
+
+  /**
+   * 「#我的圣遗物排行」：把自己在 Akasha 上展示的圣遗物按暴击值排序。
+   *
+   * Akasha 没有圣遗物全球榜，只给每个圣遗物的 critValue
+   * （暴击率×2 + 暴击伤害）。所以这是**个人排行**，不是全球排名。
+   */
+  async myArtifactRank(e) {
+    const uid = await resolveGsUid(e)
+    if (!uid) {
+      return e.reply([
+        '没能确定要查询的原神 UID。',
+        '可以这样用：',
+        '  #我的圣遗物排行 123456789',
+        '  或先绑定：#绑定123456789',
+      ].join('\n'))
+    }
+
+    try {
+      const list = await getArtifactsByUid(uid)
+      if (!list.length) {
+        return e.reply([
+          `Akasha 上没有 UID ${uid} 的圣遗物数据。`,
+          '圣遗物需要在游戏内公开后，通过 Akasha 的浏览器扩展或站点同步才会收录。',
+        ].join('\n'))
+      }
+
+      const rows = list.slice(0, 20).map((a, i) => {
+        const subs = a.substats || {}
+        // 暴击率×2 + 暴击伤害 与接口给的 critValue 应一致，这里自己算一份用于展示
+        const cr = Number(subs['Crit RATE'] || 0)
+        const cd = Number(subs['Crit DMG'] || 0)
+        return {
+          rank: i + 1,
+          name: a.name || '',
+          set: a.setName || '',
+          icon: a.icon || '',
+          slot: SLOT_CN[a.equipType] || a.equipType || '',
+          stars: a.stars || 0,
+          level: a.level ?? 0,
+          critValue: Math.round(Number(a.critValue) || 0),
+          critRate: cr ? cr.toFixed(1) : '',
+          critDmg: cd ? cd.toFixed(1) : '',
+          mainStat: cnStat(a.mainStatKey),
+          mainValue: formatStatValue(a.mainStatKey, a.mainStatValue),
+          substats: Object.entries(subs)
+            .filter(([k]) => !/^(Crit RATE|Crit DMG)$/.test(k))
+            .map(([k, v]) => ({ name: cnStat(k), value: formatStatValue(k, v) })),
+        }
+      })
+
+      const avg = rows.length ? (rows.reduce((s, r) => s + r.critValue, 0) / rows.length).toFixed(1) : '0'
+      const best = rows[0] || null
+
+      const img = await render('akasha/artifact', {
+        uid,
+        total: list.length,
+        shown: rows.length,
+        avg,
+        bestValue: best?.critValue || 0,
+        rows,
+      }, { e, ret: true })
+      return img
+    } catch (err) {
+      logger.error?.(`[HoYoGet][akasha] 圣遗物排行失败: ${err?.message || err}`)
       return e.reply(`查询失败：${err?.message || err}`)
     }
   }
