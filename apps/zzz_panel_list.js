@@ -1276,6 +1276,16 @@ export class zzz_panel_list extends plugin {
         count: cards.length,
         time: formatNow(),
       }, { e, ret: true })
+      // 补全失败仍出图，但要说清这张图缺什么，否则用户看到「音擎没图标、
+      // 伤害计算整段没了」只会以为功能坏了
+      if (partial && !filled.ok) {
+        await e.reply([
+          `【${role}】用的是精简面板记录，缺图标与技能明细：`,
+          '· 音擎 / 驱动盘图标为空',
+          '· 伤害计算需要 skills[].items 里的技能名，精简记录里是空的',
+          '发一次「米游社' + role + '面板」即可补全，之后本条记录会被更新。',
+        ])
+      }
       return img
     } catch (err) {
       logger.error?.(`[HoYoGet][zzz_panel] 渲染失败：${err?.message || err}`)
@@ -1569,6 +1579,52 @@ export class zzz_panel_list extends plugin {
     return null
   }
 
+  /**
+   * 记录是否「残缺」—— 落盘记录分两种：
+   *   - 本插件 data/zzz_panel/records：接口原始响应，icon 有 URL、skills[].items 有中文名
+   *   - ZZZ-Plugin data/panel：它自己剥掉了图片 URL 与技能明细（icon 是空字符串、items 是空数组）
+   * 后者直接出图就会得到「音擎/驱动盘没图标 + 伤害计算整段消失」的面板，
+   * 因为 calcDamage 靠 skills[].items 里的技能中文名去倍率表匹配，一个都匹配不上。
+   */
+  isRecordPartial(a) {
+    if (!a) return true
+    if (!a?.weapon?.icon) return true
+    if ((a?.equip || []).some(d => !d?.icon)) return true
+    if ((a?.skills || []).some(s => !(s?.items || []).length)) return true
+    return false
+  }
+
+  /**
+   * 拿完整的角色数据补上残缺记录：直接调 avatar/info。
+   * 补到就顺手把记录更新回本地，下次不用再补；补不到就按残缺记录出图，
+   * 并在回复里说明缺哪部分（比出半张图再让用户自己猜要好）。
+   */
+  async completeRecord(e, a) {
+    if (!this.isRecordPartial(a)) return { avatar: a, ok: true }
+    const uid = this.getZzzUid(e)
+    if (!uid || a?.id == null) return { avatar: a, ok: false }
+    try {
+      const ck = await this.getCk(e)
+      if (!ck || !Object.values(ck).some(item => item?.ck)) return { avatar: a, ok: false }
+      const info = await this.fetchDetail(e, uid, ck, a.id)
+      if (info?.__error) return { avatar: a, ok: false }
+      const fresh = this.pickInfo(info?.data)
+      if (!fresh) return { avatar: a, ok: false }
+      try {
+        const file = path.join(RECORDS_DIR, `${uid}_${a.name_mi18n || a.id}.json`)
+        fs.mkdirSync(RECORDS_DIR, { recursive: true })
+        fs.writeFileSync(file, JSON.stringify({
+          uid: String(uid), data: fresh,
+          player: null, updatedAt: formatNow(),
+        }, null, 1), 'utf-8')
+      } catch { /* 落盘失败不影响本次出图 */ }
+      return { avatar: fresh, ok: true }
+    } catch (err) {
+      logger.warn?.(`[HoYoGet][zzz_panel] 补全角色数据失败（${a?.name_mi18n || a?.id}）：${err?.message || err}`)
+      return { avatar: a, ok: false }
+    }
+  }
+
   /** 理论极限：6 命、技能 16/核心 7、音擎满精满突破、六盘满级 S 且副词条满强化 */
   applyExtremePanel(a, preset = null) {
     const out = JSON.parse(JSON.stringify(a || {}))
@@ -1850,8 +1906,12 @@ export class zzz_panel_list extends plugin {
     //（findExtremeRecord 按 name_mi18n 全等匹配，面板详情落盘过即可命中）
     const role = this.resolvePanelRole(m?.[1] || '') || (m?.[1] || '')
     if (!role) return e.reply('未找到对应角色')
-    const base = this.findExtremeRecord(e, role)
+    let base = this.findExtremeRecord(e, role)
     if (!base) return e.reply(`暂无【${role}】面板记录，请先发一次「米游社${role}面板」`)
+    // 落盘记录可能是 ZZZ-Plugin 的精简版（无图标、无技能明细），先尝试实时补全
+    const partial = this.isRecordPartial(base)
+    const filled = await this.completeRecord(e, base)
+    base = filled.avatar || base
     const preset = this.loadExtremePreset(role)
     if (!preset) {
       return e.reply([
