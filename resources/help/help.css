@@ -66,17 +66,32 @@ body.theme-zzz {
   --g-grid: rgba(240,225,74,.14);
   --g-radius: 6px;
   /* 不用「主」艺术字：它的笔画细、在荧光底上发虚；绝区零用无衬线黑体更贴游戏 UI */
-  --g-title-font: 'HelpSans','HelpMicroHei','Noto Sans CJK SC','Microsoft YaHei',sans-serif;
+  /* 用 HelpBold（印品鸿蒙体）：Noto Regular 没有粗体字重，font-weight:900 只会触发
+     浏览器伪粗体 —— 笔画被横向挤粗，边缘发虚，在荧光底上尤其明显。 */
+  --g-title-font: 'HelpBold','HelpSans','Microsoft YaHei',sans-serif;
 }
 /* 绝区零卡片里的文字要反过来：深底亮字 */
 body.theme-zzz .head_box .id_text {
-  font-weight: 900;
-  letter-spacing: 2px;
-  text-shadow: 0 2px 0 rgba(255,255,255,.35);
+  font-family: 'HelpBold','HelpSans','Microsoft YaHei',sans-serif;
+  font-weight: 400;
+  font-size: 50px;
+  letter-spacing: 3px;
+  color: #14131a;
+  text-shadow: 0 2px 0 rgba(255,255,255,.32);
 }
-body.theme-zzz .title .text { color: #f7f4d8; font-family: 'HelpSans','HelpMicroHei','Noto Sans CJK SC','Microsoft YaHei',sans-serif; font-weight: 700; }
+body.theme-zzz .head_box .day_text {
+  /* 基类 day_text 用的是「宋」衬线体，笔画极细，在荧光黄底上几乎看不清；
+     其它三个主题都单独覆盖过字体，绝区零这条之前漏了。 */
+  font-family: 'HelpBold','HelpSans','Microsoft YaHei',sans-serif;
+  font-weight: 400;
+  font-size: 21px;
+  letter-spacing: 1px;
+  color: #14131a;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .55);
+}
+body.theme-zzz .title .text { color: #f7f4d8; font-family: 'HelpBold','HelpSans','Microsoft YaHei',sans-serif; font-weight: 400; }
 body.theme-zzz .title .dec { color: rgba(247,244,216,.86); text-shadow: none; font-weight: 500; }
-body.theme-zzz .tab_lable { color: #14131a; font-family: 'HelpSans','HelpMicroHei','Microsoft YaHei',sans-serif; font-weight: 900; }
+body.theme-zzz .tab_lable { color: #14131a; font-family: 'HelpBold','HelpSans','Microsoft YaHei',sans-serif; font-weight: 400; }
 body.theme-zzz .data_box { backdrop-filter: none; border-color: rgba(240,225,74,.26); }
 body.theme-zzz .list .item,
 body.theme-zzz .list .item_ { border-color: rgba(240,225,74,.18); }
@@ -90,6 +105,336 @@ body.theme-zzz .container::after {
 }
 body.theme-zzz .head_box { box-shadow: 0 0 0 3px rgba(20,19,26,.9), 0 18px 40px rgba(0,0,0,.5); }
 body.theme-zzz .head_box::after { display: none; }
+
+/* ───────────── 原神：金 + 深蓝，大圆角，菱形纹（提瓦特羊皮卷） ───────────── */
+body.theme-genshin {
+  --g-primary: #d3bc8e;
+  --g-secondary: #4a5b7c;
+  --g-title: #3a4a63;
+  --g-text: #6b6657;
+  --g-card: rgba(252, 249, 240, .93);
+  --g-item: #fffdf7;
+  --g-border: rgba(211, 188, 142, .42);
+  --g-shadow: rgba(150, 130, 95, .17);
+  --g-head-a: #3f4f6b;
+  --g-head-b: #55688c;
+  --g-head-text: #f5ecd8;
+  --g-head-sub: #35435c;
+  --g-head-sub-bg: rgba(252, 249, 240, .94);
+  --g-label-a: #b89f6d;
+  --g-label-b: #d3bc8e;
+  --g-strip-a: #d3bc8e;
+  --g-strip-b: #e6d7b4;
+  --g-strip-c: #4a5b7c;
+  --g-strip-d: #7a8ba8;
+  --g-accent: #8a7343;
+  --g-base-a: #fdfaf0;
+  --g-base-b: #f6efdd;
+  --g-grid: rgba(190, 170, 130, .16);
+  --g-radius: 26px;
+  --g-title-font: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+}
+body.theme-genshin .head_box .id_text {
+  font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+  font-weight: 400;
+  font-size: 50px;
+  letter-spacing: 4px;
+  color: #f7efdc;
+  -webkit-text-stroke: 1px rgba(40, 52, 74, .55);
+  text-shadow: 0 1px 0 rgba(40, 52, 74, .35);
+}
+body.theme-genshin .head_box .day_text {
+  font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+  font-weight: 400;
+  font-size: 21px;
+  color: #35435c;
+  border-radius: 8px;
+}
+body.theme-genshin .title .text { color: #3a4a63; font-family: 'HelpBold','HelpSans','Microsoft YaHei',sans-serif; font-weight: 400; }
+body.theme-genshin .title .dec { color: #6b6657; font-family: 'HelpMicroHei','HelpSans','Microsoft YaHei',sans-serif; text-shadow: none; }
+body.theme-genshin .tab_lable {
+  font-family: 'HelpBold','HelpSans','Microsoft YaHei',sans-serif;
+  font-weight: 400;
+  border-radius: 8px;
+  letter-spacing: 2px;
+}
+body.theme-genshin .data_box { backdrop-filter: none; }
+/* 菱形装饰：四角各一枚金色小菱形，呼应提瓦特纹样 */
+body.theme-genshin .data_box::after {
+  content: '';
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  width: 9px;
+  height: 9px;
+  background: #d3bc8e;
+  transform: rotate(45deg);
+  opacity: .55;
+}
+body.theme-genshin .logo { color: #8a7343; font-family: 'HelpBold','HelpSans','Microsoft YaHei',sans-serif; font-size: 18px; letter-spacing: 2px; }
+
+/* ───────────── 星铁：银蓝 + 深空黑，斜切角，星轨细线 ───────────── */
+body.theme-starrail {
+  --g-primary: #7fd4ff;
+  --g-secondary: #b8a8ff;
+  --g-title: #2a5f8a;
+  --g-text: #5d6b7d;
+  --g-card: rgba(248, 252, 255, .93);
+  --g-item: #fdfeff;
+  --g-border: rgba(127, 212, 255, .40);
+  --g-shadow: rgba(80, 130, 170, .16);
+  --g-head-a: #0e1626;
+  --g-head-b: #1d3654;
+  --g-head-text: #d9f0ff;
+  --g-head-sub: #7fd4ff;
+  --g-head-sub-bg: rgba(14, 22, 38, .82);
+  --g-label-a: #3b7fae;
+  --g-label-b: #7fd4ff;
+  --g-strip-a: #7fd4ff;
+  --g-strip-b: #b8e6ff;
+  --g-strip-c: #b8a8ff;
+  --g-strip-d: #d8cfff;
+  --g-accent: #4d90bd;
+  --g-base-a: #f7fbff;
+  --g-base-b: #eaf4fc;
+  --g-grid: rgba(127, 176, 212, .16);
+  --g-radius: 10px;
+  --g-title-font: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+}
+/* 斜切角：左上 / 右下各切一刀，星铁 UI 的招牌形状 */
+body.theme-starrail .head_box {
+  clip-path: polygon(0 0, calc(100% - 26px) 0, 100% 26px, 100% 100%, 26px 100%, 0 calc(100% - 26px));
+}
+body.theme-starrail .head_box .id_text {
+  font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+  font-weight: 400;
+  font-size: 50px;
+  letter-spacing: 5px;
+  color: #e8f6ff;
+  text-shadow: 0 0 18px rgba(127, 212, 255, .45);
+}
+body.theme-starrail .head_box .day_text {
+  font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+  font-weight: 400;
+  font-size: 21px;
+  color: #7fd4ff;
+  border-radius: 6px;
+}
+body.theme-starrail .title .text { color: #2a5f8a; font-family: 'HelpBold','HelpSans','Microsoft YaHei',sans-serif; font-weight: 400; }
+body.theme-starrail .title .dec { color: #5d6b7d; font-family: 'HelpMicroHei','HelpSans','Microsoft YaHei',sans-serif; text-shadow: none; }
+body.theme-starrail .tab_lable {
+  font-family: 'HelpBold','HelpSans','Microsoft YaHei',sans-serif;
+  font-weight: 400;
+  border-radius: 6px;
+  letter-spacing: 2px;
+}
+body.theme-starrail .data_box { backdrop-filter: none; }
+body.theme-starrail .logo { color: #4d90bd; font-family: 'HelpBold','HelpSans','Microsoft YaHei',sans-serif; font-size: 18px; letter-spacing: 2px; }
+
+/* ───────────── 崩坏3：白粉 + 深紫，柔光晕 ───────────── */
+body.theme-honkai3 {
+  --g-primary: #ff8fb1;
+  --g-secondary: #a98bff;
+  --g-title: #6b3f6d;
+  --g-text: #6f6274;
+  --g-card: rgba(253, 248, 252, .93);
+  --g-item: #fffbfe;
+  --g-border: rgba(255, 143, 177, .38);
+  --g-shadow: rgba(160, 110, 160, .16);
+  --g-head-a: #3a2350;
+  --g-head-b: #5b3a78;
+  --g-head-text: #ffe6f0;
+  --g-head-sub: #6b3f6d;
+  --g-head-sub-bg: rgba(255, 248, 252, .94);
+  --g-label-a: #c2668c;
+  --g-label-b: #ff8fb1;
+  --g-strip-a: #ff8fb1;
+  --g-strip-b: #ffc4d6;
+  --g-strip-c: #a98bff;
+  --g-strip-d: #cfc0ff;
+  --g-accent: #b05a80;
+  --g-base-a: #fefafd;
+  --g-base-b: #f8eef6;
+  --g-grid: rgba(200, 150, 190, .16);
+  --g-radius: 20px;
+  --g-title-font: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+}
+body.theme-honkai3 .head_box .id_text {
+  font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+  font-weight: 400;
+  font-size: 50px;
+  letter-spacing: 4px;
+  color: #ffe6f0;
+  text-shadow: 0 0 20px rgba(255, 143, 177, .50), 0 2px 0 rgba(60, 30, 70, .45);
+}
+body.theme-honkai3 .head_box .day_text {
+  font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+  font-weight: 400;
+  font-size: 21px;
+  color: #6b3f6d;
+}
+body.theme-honkai3 .title .text { color: #6b3f6d; font-family: 'HelpBold','HelpSans','Microsoft YaHei',sans-serif; font-weight: 400; }
+body.theme-honkai3 .title .dec { color: #6f6274; font-family: 'HelpMicroHei','HelpSans','Microsoft YaHei',sans-serif; text-shadow: none; }
+body.theme-honkai3 .tab_lable {
+  font-family: 'HelpBold','HelpSans','Microsoft YaHei',sans-serif;
+  font-weight: 400;
+  letter-spacing: 1px;
+}
+body.theme-honkai3 .data_box { backdrop-filter: none; }
+/* 柔光晕：封面右下角一团粉色光，对应崩三的圣痕光效 */
+body.theme-honkai3 .head_box::after {
+  background: radial-gradient(circle, rgba(255, 143, 177, .45), transparent 66%);
+}
+body.theme-honkai3 .logo { color: #b05a80; font-family: 'HelpBold','HelpSans','Microsoft YaHei',sans-serif; font-size: 18px; letter-spacing: 2px; }
+
+/* ───────────── B站：品牌粉 #FB7299 + 白底，圆角胶囊（B站 App 观感） ───────────── */
+body.theme-bilibili {
+  --g-primary: #fb7299;
+  --g-secondary: #00a1d6;
+  --g-title: #d9406e;
+  --g-text: #6d7278;
+  --g-card: rgba(255, 255, 255, .95);
+  --g-item: #fff;
+  --g-border: rgba(251, 114, 153, .26);
+  --g-shadow: rgba(251, 114, 153, .14);
+  --g-head-a: #fb7299;
+  --g-head-b: #ff9db8;
+  --g-head-text: #fff;
+  --g-head-sub: #ffffff;
+  --g-head-sub-bg: rgba(255, 255, 255, .22);
+  --g-label-a: #fb7299;
+  --g-label-b: #ff9db8;
+  --g-strip-a: #fb7299;
+  --g-strip-b: #ffb3c8;
+  --g-strip-c: #00a1d6;
+  --g-strip-d: #7fd0ef;
+  --g-accent: #fb7299;
+  --g-base-a: #fffafc;
+  --g-base-b: #fff2f6;
+  --g-grid: rgba(251, 114, 153, .10);
+  --g-radius: 22px;
+  --g-title-font: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+}
+/* B站封面：纯粉渐变 + 白色播放键水印 */
+body.theme-bilibili .head_box {
+  background: linear-gradient(118deg, #fb7299 0%, #f96793 52%, #e85585 100%);
+  box-shadow: 0 16px 34px rgba(251, 114, 153, .30), inset 0 1px 0 rgba(255, 255, 255, .45);
+}
+/* B站封面 Logo：白色电视框 + 播放三角，纯 CSS 绘制（不依赖图片资源） */
+body.theme-bilibili .head_box::before {
+  right: 44px;
+  top: 50%;
+  width: 116px;
+  height: 82px;
+  margin-top: -41px;
+  opacity: 1;
+  transform: none;
+  filter: drop-shadow(0 4px 10px rgba(180, 50, 90, .30));
+  /* 电视外框：圆角白边 */
+  background:
+    /* 播放三角 */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpolygon points='34,26 74,50 34,74' fill='%23fb7299'/%3E%3C/svg%3E") no-repeat center 52% / 46px 46px,
+    #fff;
+  border-radius: 18px;
+  box-shadow: inset 0 0 0 4px #fff, 0 0 0 4px rgba(251, 114, 153, .22);
+}
+/* 电视上方的小天线（B站 logo 特征） */
+body.theme-bilibili .head_box::after {
+  right: 82px;
+  bottom: auto;
+  top: calc(50% - 52px);
+  width: 26px;
+  height: 26px;
+  border-radius: 0;
+  background: none;
+  border-left: 5px solid #fff;
+  border-top: 5px solid #fff;
+  transform: rotate(45deg);
+  opacity: .9;
+}
+body.theme-bilibili .head_box .id_text {
+  font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+  font-weight: 400;
+  font-size: 50px;
+  letter-spacing: 4px;
+  color: #fff;
+  -webkit-text-stroke: 1px rgba(200, 60, 100, .35);
+  text-shadow: 0 2px 8px rgba(180, 50, 90, .28);
+}
+body.theme-bilibili .head_box .day_text {
+  font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+  font-weight: 400;
+  font-size: 21px;
+  color: #fff;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35);
+}
+body.theme-bilibili .title .text { color: #d9406e; font-family: 'HelpBold','HelpSans','Microsoft YaHei',sans-serif; font-weight: 400; }
+body.theme-bilibili .title .dec { color: #6d7278; font-family: 'HelpMicroHei','HelpSans','Microsoft YaHei',sans-serif; text-shadow: none; }
+body.theme-bilibili .data_box { backdrop-filter: none; }
+body.theme-bilibili .tab_lable {
+  font-family: 'HelpBold','HelpSans','Microsoft YaHei',sans-serif;
+  font-weight: 400;
+  border-radius: 999px;
+  letter-spacing: 1px;
+}
+body.theme-bilibili .list .item,
+body.theme-bilibili .list .item_ { border-radius: 14px; }
+body.theme-bilibili .logo { color: #fb7299; font-family: 'HelpBold','HelpSans','Microsoft YaHei',sans-serif; font-size: 18px; letter-spacing: 2px; }
+
+/* ───────────── 分游戏页右上角：换成各自游戏的 logo ─────────────
+   基类的 .head_box::before 是 sparkle.png（小花火立绘），只该给总览页用。
+   分游戏页用该游戏的官方字标，并按主题色做轻微投影。
+   尺寸按各自宽高比算，高度统一 96px。 */
+body.theme-genshin .head_box::before {
+  right: 40px;
+  top: 50%;
+  width: 122px;
+  height: 96px;
+  margin-top: -48px;
+  background: url('../help/games/genshin-logo.png') no-repeat right bottom / contain;
+  transform: none;
+  opacity: 1;
+  filter: drop-shadow(0 4px 10px rgba(40, 52, 74, .32));
+}
+body.theme-starrail .head_box::before {
+  right: 44px;
+  top: 50%;
+  width: 175px;
+  height: 96px;
+  margin-top: -48px;
+  background: url('../help/games/sr-logo.png') no-repeat right bottom / contain;
+  transform: none;
+  opacity: 1;
+  filter: drop-shadow(0 4px 12px rgba(127, 212, 255, .38));
+}
+body.theme-honkai3 .head_box::before {
+  right: 40px;
+  top: 50%;
+  width: 161px;
+  height: 96px;
+  margin-top: -48px;
+  background: url('../help/games/bh3-logo.png') no-repeat right bottom / contain;
+  transform: none;
+  opacity: 1;
+  filter: drop-shadow(0 4px 12px rgba(255, 143, 177, .40));
+}
+body.theme-zzz .head_box::before {
+  right: 40px;
+  top: 50%;
+  width: 90px;
+  height: 96px;
+  margin-top: -48px;
+  background: url('../help/games/zzz-logo.png') no-repeat right bottom / contain;
+  transform: none;
+  opacity: 1;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, .45));
+}
+/* 分游戏页的标题区留出右侧 logo 空间 */
+body.theme-genshin .head_box,
+body.theme-starrail .head_box,
+body.theme-honkai3 .head_box,
+body.theme-zzz .head_box { padding-right: 240px; }
 
 body {
   width: 1180px;

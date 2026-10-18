@@ -14,6 +14,10 @@ const GAME_HELP_ALIASES = {
 /* 各游戏的帮助主题：模板里落成 <body class="theme-xxx">，由 help.css 决定配色与纹理。
    没有单独主题时用 default（通用蓝白）。新增主题只需在这里加一条 + 在 css 里补
    一组 --g-* 变量，不用改模板。 */
+/* 账号 / 签到 / 系统维护类指令：四个游戏完全通用，只保留在总览与完整帮助。
+   注意别把「游戏玩法」误伤进来：这里只收与账号体系、签到、CK/设备维护相关的词。 */
+const ACCOUNT_SYSTEM_RE = /签到|扫码绑定|删除stoken|刷新cookie|刷新ck|清理无效绑定|清理失效绑定|代签到|过码|设备|自动签到|签到名单|绑定列表|CK情况|cookie|ck情况|体力推送|数据模式|切换正式服|切换测试服|语音缓存|刷新卡池数据|更新卡池数据|资源预估|预估|盘点|速报|前瞻信息|原石余额|星琼余额|设置余额|米哈游 前缀/
+
 const GAME_THEME = {
   原神: 'genshin',
   星铁: 'starrail',
@@ -28,6 +32,7 @@ const THEME_HEAD = {
   starrail: { title: '星穹铁道', sub: '命令帮助 · 星穹列车手册' },
   zzz: { title: '绝区零', sub: '命令帮助 · 绳网终端' },
   honkai3: { title: '崩坏3', sub: '命令帮助 · 休伯利安舰务' },
+  bilibili: { title: '哔哩哔哩', sub: '命令帮助 · B站功能' },
   default: { title: '米哈游插件', sub: '命令帮助 · 指令速查' },
 };
 
@@ -63,23 +68,47 @@ export class help extends plugin {
       let data = Array.isArray(raw) ? raw : (raw.list || raw.data || []);
       if (game) {
         const aliases = GAME_HELP_ALIASES[game];
-        const shared = /体力|扫码绑定|删除stoken|签到|官方当前卡池|刷新卡池数据|资源预估|余额|卡池时间|xx语音|xx图鉴/;
+        /* 「全游戏通用」的命令：标题里通常同时列出多个游戏名（体力、签到、扫码绑定等），
+           判定看的是「这条命令是否与具体游戏无关」，而不是模糊关键词命中——
+           早先用的 shared 正则带 `体力|签到`，会把「原神体力 / 星铁体力 / 绝区零体力 / 崩三体力」
+           这类**跨游戏并列**的条目混进单游戏帮助里。 */
+        const GAME_WORD = /(原神|星铁|崩铁|绝区零|崩三|崩坏3|崩坏三)/
+        const isCrossGame = text => {
+          const words = new Set(text.match(new RegExp(GAME_WORD.source, 'g')) || [])
+          return words.size >= 2   // 同时提到两个及以上游戏 = 跨游戏通用命令
+        }
+        const isCurrentGame = text => aliases.some(a => text.includes(a))
+        /* 与具体游戏无关的分组整组剔除：
+           · 主人专用命令 / 设备命令 —— 权限类，不属于任何游戏
+           · bilibili命令      —— B站功能，与游戏无关（以前没排除，崩三/原神帮助里
+             会混进十几条 B站指令）
+           卡池计时器 / 怪物图鉴 这类分组里既有跨游戏条目、也有单游戏条目，
+           不能整组剔除，交给下面的逐条过滤处理。 */
+        const GAME_AGNOSTIC_GROUPS = new Set(['主人专用命令', '设备命令', 'bilibili命令'])
         data = data.filter(group => {
-          if (group.group === '主人专用命令' || group.group === '设备命令') return false;
-          if (game === '原神' || game === '星铁' || game === '崩铁') {
-            return group.group === '原神/星铁';
-          }
-          return group.group === '崩坏3';
-        });
+          if (GAME_AGNOSTIC_GROUPS.has(group.group)) return false
+          if (group.group === '崩坏3') return GAME_HELP_ALIASES['崩坏3'].includes(game) || game === '崩三'
+          if (group.group === '原神/星铁') return !['崩三', '崩坏3'].includes(game)
+          return true
+        })
         data = data.map(group => ({
           ...group,
           list: group.list.filter(item => {
-            const text = `${item.title} ${item.desc}`;
-            const mentionsOtherGame = /(原神|星铁|绝区零|崩三|崩坏3|崩坏三)/.test(text)
-              && !aliases.some(alias => text.includes(alias));
-            return !mentionsOtherGame && (aliases.some(alias => text.includes(alias)) || shared.test(text));
+            const text = `${item.title} ${item.desc}`
+            /* 跨游戏并列的命令（标题里出现两个及以上游戏名，如
+               「#原神UP总览 / #星铁UP总览 / #绝区零UP总览 / #崩三UP总览」）
+               只在总览里出现，单游戏帮助一律不收 —— 否则每个游戏的帮助都会
+               带上另外三个游戏的同名指令。 */
+            if (isCrossGame(text)) return false
+            // 提到别的游戏、但没提本游戏：排除
+            if (GAME_WORD.test(text) && !isCurrentGame(text)) return false
+            /* 账号 / 签到 / 系统维护类指令：对四个游戏完全一样，属于插件级功能，
+               不该出现在任何单个游戏的帮助里（只在总览与完整帮助里出现）。
+               判据是命令本身在描述「账号与系统」，而不是某个游戏的玩法内容。 */
+            if (ACCOUNT_SYSTEM_RE.test(text)) return false
+            return true
           })
-        })).filter(group => group.list.length);
+        })).filter(group => group.list.length)
       } else if (isDetail) {
         const type = command.match(/^(卡池|图鉴|攻略|B站|b站)帮助$/)?.[1] || '';
         const matchers = {
@@ -90,7 +119,9 @@ export class help extends plugin {
           b站: /./,
         };
         if (type === 'B站' || type === 'b站') {
-          data = data.filter(group => group.group === 'bilibili命令');
+          data = data.filter(group => group.group === 'bilibili命令').map(group => ({
+            ...group, group: 'B站功能',
+          }));
         } else if (matchers[type]) {
           data = data.map(group => ({
             ...group,
@@ -102,7 +133,9 @@ export class help extends plugin {
         return e.reply('帮助内容为空，可在线查看：' + HELP_URL, true, { recallMsg: 60 });
       }
       // au 为主人时才展示「主人专用指令」分组
-      const theme = game ? (GAME_THEME[game] || 'default') : 'default'
+      // 「B站帮助」是独立的主题（B站粉），不属于任何游戏
+      const isBiliHelp = /^(?:B站|b站)帮助$/.test(command)
+      const theme = isBiliHelp ? 'bilibili' : (game ? (GAME_THEME[game] || 'default') : 'default')
       const head = THEME_HEAD[theme] || THEME_HEAD.default
       const img = await render('help/help', {
         data,
