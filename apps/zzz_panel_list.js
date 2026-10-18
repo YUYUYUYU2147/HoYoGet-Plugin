@@ -797,6 +797,31 @@ const CUSTOM_PORTRAIT_DIRS = [
  * 所以宁可存事实也不猜公式。详见 tools/extract_zzz_char_stat.mjs 的注释。
  */
 
+/**
+ * 练度分：与 ZZZ-Plugin 的 proficiency_score 同口径。
+ *   base = 稀有度分（S=5 / A=4 / B=3）
+ *   score = 驱动盘总分×2
+ *         + Σ(技能等级 × base)
+ *         + 角色等级×2
+ *         + 影画 × base × 2
+ *         + 音擎等级×2 + 精炼 × 2 × 音擎 base
+ * 单列出来是为了「%练度」和排名页能用同一套算法，不各写一份。
+ */
+function calcProficiency(a, equipScore) {
+  const base = a?.rarity === 'S' ? 5 : a?.rarity === 'A' ? 4 : 3
+  let score = (Number(equipScore) || 0) * 2
+  for (const sk of a?.skills || []) score += (Number(sk.level) || 0) * base
+  score += (Number(a?.level) || 0) * 2
+  score += (Number(a?.rank) || 0) * base * 2
+  const w = a?.weapon
+  if (w) {
+    const wBase = w.rarity === 'S' ? 5 : w.rarity === 'A' ? 4 : 3
+    score += (Number(w.level) || 0) * 2
+    score += (Number(w.star) || 0) * 2 * wBase
+  }
+  return Math.round(score * 10) / 10
+}
+
 /** 4 件套按角色属性选、2 件套按职业选的兜底规则；预设里写了 set_id / set2_id 就用预设的 */
 const EXTREME_SET_4PC = { 200: 32600, 201: 32200, 202: 32500, 203: 32400, 204: 33900, 205: 34000, 300: 32500 }
 const EXTREME_SET_2PC_BY_PROF = { 1: 32700, 2: 33200, 3: 31300, 4: 33400, 5: 33100, 6: 33100, 7: 32700 }
@@ -1431,6 +1456,8 @@ const PANEL_UPLOAD_REG = /^(?:米游社|%|#?绝区零)?(?:上传|添加)(.+?)(?:
 const PANEL_IMAGES_REG = /^(?:米游社|%|#?绝区零)?(?:获取|查看)(.+?)(?:角色|面板)图\s*(\d*)$/
 const PANEL_DELETE_IMG_REG = /^(?:米游社|%|#?绝区零)?删除(.+?)(?:角色|面板)图(.+)$/
 const EXTREME_REG = /^(?:米游社|%|#?绝区零)?(.+?)极限面板$/
+// 练度统计：%练度 / 米游社练度 / 绝区零练度统计（对齐 ZZZ-Plugin 的 %zzz练度）
+const PROFICIENCY_REG = /^(?:米游社|%|#?绝区零)?练度(统计)?$/
 const REMIND_PREFIX = '^(?:米游社|%|#?绝区零)?'
 const REMIND_ON_REG = new RegExp(`${REMIND_PREFIX}(开启|关闭)挑战提醒$`)
 const REMIND_GLOBAL_ON_REG = new RegExp(`${REMIND_PREFIX}(开启|启用|关闭|禁用)全局挑战提醒$`)
@@ -1455,6 +1482,7 @@ export class zzz_panel_list extends plugin {
         // EXTREME 必须排在 DETAIL 之前：「米游社X极限面板」同时命中两者，
         // DETAIL 是超集匹配，放行后会被 detail 抢答成普通面板
         { reg: EXTREME_REG.source, fnc: 'panelExtreme' },
+        { reg: PROFICIENCY_REG.source, fnc: 'panelProficiency' },
         { reg: CMD_REG.source, fnc: 'panelList' },
         { reg: DAMAGE_REG.source, fnc: 'panelDamage' },
         { reg: DETAIL_REG.source, fnc: 'panelDetail' },
@@ -2245,6 +2273,106 @@ export class zzz_panel_list extends plugin {
     } catch (err) {
       logger.error?.(`[HoYoGet][zzz_panel] 极限面板渲染失败：${err?.message || err}`)
       return e.reply(`极限面板生成失败：${err?.message || err}`)
+    }
+  }
+
+  /**
+   * 「%练度」：当前账号全部代理人的练度统计。
+   * 拉一次 avatar/basic 列表，逐角色用本地静态表算驱动盘评分，再按练度分降序。
+   * 口径与 ZZZ-Plugin 的 %zzz练度 一致（见 calcProficiency）。
+   */
+  async panelProficiency(e) {
+    const uid = this.getZzzUid(e)
+    if (!uid) return e.reply('请先绑定绝区零账号')
+
+    const ck = await this.getCk(e, uid)
+    if (!ck || !Object.values(ck).some(item => item?.ck)) {
+      return e.reply('尚未绑定 cookie，请先绑定 cookie 或 #扫码登录')
+    }
+    const server = await this.pickServer(uid, ck)
+    if (!server) return e.reply('未能判断服务器分区（官服 prod_gf_cn / 渠道 prod_qd_cn），请确认绑定信息')
+
+    const raw = await this.fetchRaw(e, uid, server, ck)
+    if (raw?.__error) return e.reply(raw.__error)
+
+    const list = this.pickList(raw?.data)
+    if (!Array.isArray(list) || !list.length) return e.reply('没取到代理人列表，请稍后重试或先执行「米游社更新面板」')
+
+    // 逐角色算驱动盘评分 → 练度分
+    const rows = list.map(it => {
+      const bp = buildBasicProperties(it)
+      const equip = (it.equip || []).map(d => ({
+        slot: d.equipment_type ?? 0,
+        level: d.level ?? 0,
+        rarity: d.rarity || 'A',
+        main_properties: (d.main_properties || []).map(p => ({ pid: p.property_id })),
+        properties: (d.properties || []).map(p => ({ pid: p.property_id, count: p.level ?? 0 })),
+      }))
+      const scoreStats = {
+        atk: parseFloat(bp.attack?.final) || 0,
+        crit: toRatio(bp.crit?.final),
+        critdmg: toRatio(bp.critdam?.final),
+        am: parseFloat(bp.elementabnormalpower?.final) || 0,
+        ap: parseFloat(bp.elementmystery?.final) || 0,
+      }
+      const scoreRes = calcEquipScore(equip, it.name_mi18n || '', scoreStats, it.avatar_profession, it.element_type, bp)
+      return {
+        name: it.name_mi18n || it.full_name_mi18n || '',
+        icon: it.role_square_url || it.role_square_avatar_url || it.skin_list?.find(s2 => s2.unlocked)?.skin_square_url || '',
+        rarity: it.rarity || 'A',
+        level: it.level ?? 0,
+        rank: it.rank ?? 0,
+        skills: buildSkillLevels(it),
+        weapon: {
+          name: it.weapon?.name || '',
+          icon: it.weapon?.icon || '',
+          rarity: it.weapon?.rarity || '',
+          level: it.weapon?.level ?? 0,
+          star: it.weapon?.star ?? 0,
+        },
+        hasWeapon: !!it.weapon,
+        equipScore: scoreRes.score,
+        equipRating: scoreRes.rating,
+        proficiency: calcProficiency(it, scoreRes.score),
+        sssDiscs: (scoreRes.discScores || []).filter(v => ['SSS', 'ACE', 'MAX'].includes(discGrade(v))).length,
+      }
+    })
+
+    rows.sort((a, b) => b.proficiency - a.proficiency)
+    rows.forEach((r, i) => { r.rankIndex = i + 1 })
+
+    const weaponCount = rows.filter(r => r.hasWeapon).length
+    const sWeaponCount = rows.filter(r => r.hasWeapon && r.weapon.rarity === 'S').length
+    const general = {
+      total: rows.length,
+      SCount: rows.filter(r => r.rarity === 'S').length,
+      SWeaponRate: weaponCount ? (sWeaponCount / weaponCount) * 100 : 0,
+      highRank: rows.filter(r => r.rank > 4).length,
+      sssDiscs: rows.reduce((acc, r) => acc + r.sssDiscs, 0),
+    }
+
+    let playerName = ''
+    let playerAvatar = ''
+    try {
+      const p = await this.fetchPlayer(e, uid, ck)
+      playerName = p?.nickname || ''
+      playerAvatar = p?.avatar || ''
+    } catch { /* 玩家信息拿不到不影响出图 */ }
+
+    try {
+      const img = await render('zzz_panel/proficiency', {
+        uid,
+        general,
+        rows,
+        bgImage: getPanelBg(),
+        playerName,
+        playerAvatar,
+      }, { e, ret: true })
+      return img
+    } catch (err) {
+      logger.error?.(`[HoYoGet][zzz_panel] 练度统计渲染失败：${err?.message || err}`)
+      const lines = rows.slice(0, 30).map(r => `#${r.rankIndex} ${r.name} 练度 ${r.proficiency} 驱动 ${r.equipRating} ${r.equipScore.toFixed(1)}分`)
+      return e.reply(['练度统计（渲染失败，文字兜底）：', ...lines].join('\n'))
     }
   }
 

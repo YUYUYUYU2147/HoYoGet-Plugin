@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}zzz_panel/proficiency.css" />
+  </head>
+  <body>
+    <div class="prof-page">
+      {{if bgImage}}<div class="panel-bg" style="background-image:url('{{bgImage}}')"></div>{{/if}}
+
+      <div class="head">
+        <div class="head-player">
+          {{if playerAvatar}}<img class="head-avatar" src="{{playerAvatar}}" onerror="this.style.display='none'">{{/if}}
+          <div class="head-text">
+            <div class="head-title">练度统计</div>
+            <div class="head-sub">{{if playerName}}{{playerName}} · {{/if}}UID {{uid}} · 共 {{general.total}} 名代理人</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="summary">
+        <div class="sum-item">
+          <div class="sum-value">{{general.SCount}}<span class="sum-total">/{{general.total}}</span></div>
+          <div class="sum-label">S级代理人</div>
+        </div>
+        <div class="sum-item">
+          <div class="sum-value">{{general.SWeaponRate.toFixed(1)}}<span class="sum-unit">%</span></div>
+          <div class="sum-label">S级音擎率</div>
+        </div>
+        <div class="sum-item">
+          <div class="sum-value">{{general.highRank}}<span class="sum-total">/{{general.total}}</span></div>
+          <div class="sum-label">高影代理人</div>
+        </div>
+        <div class="sum-item">
+          <div class="sum-value">{{general.sssDiscs}}</div>
+          <div class="sum-label">SSS+ 驱动盘</div>
+        </div>
+      </div>
+
+      <div class="list">
+        {{each rows r}}
+        <div class="row rarity-{{r.rarity}}">
+          <div class="row-rank">{{r.rankIndex}}</div>
+
+          <div class="row-avatar">
+            {{if r.icon}}<img src="{{r.icon}}" onerror="this.style.visibility='hidden'">{{/if}}
+            <span class="row-rarity">{{r.rarity}}</span>
+          </div>
+
+          <div class="row-info">
+            <div class="row-name">{{r.name}}</div>
+            <div class="row-meta">
+              <span class="meta-chip">影{{r.rank}}</span>
+              <span class="meta-chip">Lv{{r.level}}</span>
+              <span class="meta-equip {{r.equipRating}}">{{r.equipRating}} {{r.equipScore.toFixed(1)}}</span>
+            </div>
+          </div>
+
+          <div class="row-skills">
+            {{each r.skills lv}}
+            <span class="skill">{{lv}}</span>
+            {{/each}}
+          </div>
+
+          <div class="row-weapon">
+            {{if r.hasWeapon}}
+            {{if r.weapon.icon}}<img class="wq-icon" src="{{r.weapon.icon}}" onerror="this.style.display='none'">{{/if}}
+            <div class="wq-text">
+              <div class="wq-name">{{r.weapon.name}}</div>
+              <div class="wq-sub">{{r.weapon.rarity}} {{if r.weapon.star}}精{{r.weapon.star}}{{/if}} Lv{{r.weapon.level}}</div>
+            </div>
+            {{else}}
+            <div class="wq-empty">未装备音擎</div>
+            {{/if}}
+          </div>
+
+          <div class="row-score">
+            <div class="score-value">{{r.proficiency}}</div>
+            <div class="score-label">练度</div>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+
+      <div class="footer">from 米哈游</div>
+    </div>
+  </body>
+</html>
