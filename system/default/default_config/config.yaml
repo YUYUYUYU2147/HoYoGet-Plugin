@@ -342,7 +342,7 @@ video_priority: 1
 voice_priority: 15
 update_priority: 10
 config_priority: 15
-help_priority: 100
+help_priority: 60
 picture_priority: 1234
 role_combat_priority: 100
 zzz_md_priority: 100

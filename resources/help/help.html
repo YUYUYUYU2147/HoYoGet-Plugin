@@ -6,12 +6,11 @@
     <link rel="shortcut icon" href="#" />
   </head>
 
-  <body {{sys.scale}}>
+  <body class="theme-{{theme}}" {{sys.scale}}>
     <div class="container" id="container">
       <div class="head_box">
-        <div class="id_text">米哈游插件</div>
-        <p class="day_text">命令帮助 · 指令速查</p>
-        <!-- <img class="genshin_logo" src="{{pluResPath}}help/.png"/> -->
+        <div class="id_text">{{headTitle}}</div>
+        <p class="day_text">{{headSub}}</p>
       </div>
       {{each data val}}
       <div class="data_box">

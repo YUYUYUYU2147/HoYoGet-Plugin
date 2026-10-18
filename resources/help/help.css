@@ -4,9 +4,88 @@
 @font-face { font-family: 'HelpSans'; src: url('../font/NotoSansCJKsc-Regular.ttf'); }
 @font-face { font-family: 'HelpMicroHei'; src: url('../font/wqy-microhei.ttc'); }
 * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; transform-origin: 0 0; }
+
+/* ───────────── 主题变量 ─────────────
+   每个游戏一套 token，版式骨架完全共用，只换配色/纹理/字形。
+   新增游戏：复制一段 .theme-xxx，改 --g-* 即可，模板不用动。 */
+body {
+  /* 默认：通用蓝白（总览页 / #米哈游帮助） */
+  --g-primary: #75cfff;
+  --g-secondary: #ff91bd;
+  --g-title: #4a76a4;
+  --g-text: #64798c;
+  --g-card: rgba(255,255,255,.68);
+  --g-item: rgba(255,255,255,.86);
+  --g-border: rgba(156,206,235,.28);
+  --g-shadow: rgba(88,145,190,.18);
+  --g-head-a: rgba(255,130,179,.92);
+  --g-head-b: rgba(113,199,255,.9);
+  --g-head-text: #fff;
+  --g-head-sub: #5f7890;
+  --g-head-sub-bg: rgba(255,255,255,.72);
+  --g-label-a: #ff91bd;
+  --g-label-b: #75cfff;
+  --g-strip-a: #ffd66b;
+  --g-strip-b: #ff91bd;
+  --g-strip-c: #75cfff;
+  --g-strip-d: #91f0d0;
+  --g-accent: #e6796d;
+  --g-base-a: rgba(248,253,255,.86);
+  --g-base-b: rgba(232,246,255,.82);
+  --g-grid: rgba(112,171,214,.22);
+  --g-radius: 26px;
+  --g-title-font: '主','宋';
+}
+
+/* 绝区零：荧光黄 + 深黑 + 街机扫描线。参考游戏内绳网终端的电视雪花与防撞条 */
+body.theme-zzz {
+  --g-primary: #f0e14a;
+  --g-secondary: #ff5a5f;
+  --g-title: #14131a;
+  --g-text: #4a4750;
+  --g-card: rgba(20,19,26,.88);
+  --g-item: rgba(28,27,36,.94);
+  --g-border: rgba(240,225,74,.34);
+  --g-shadow: rgba(0,0,0,.42);
+  --g-head-a: #f0e14a;
+  --g-head-b: #ff5a5f;
+  --g-head-text: #14131a;
+  --g-head-sub: #14131a;
+  --g-head-sub-bg: rgba(255,255,255,.78);
+  --g-label-a: #f0e14a;
+  --g-label-b: #ff5a5f;
+  --g-strip-a: #f0e14a;
+  --g-strip-b: #ff5a5f;
+  --g-strip-c: #f0e14a;
+  --g-strip-d: #ff5a5f;
+  --g-accent: #f0e14a;
+  --g-base-a: rgba(10,10,14,.96);
+  --g-base-b: rgba(20,19,26,.98);
+  --g-grid: rgba(240,225,74,.14);
+  --g-radius: 6px;
+  --g-title-font: '主','HelpSans','Microsoft YaHei',sans-serif;
+}
+/* 绝区零卡片里的文字要反过来：深底亮字 */
+body.theme-zzz .title .text { color: #f7f4d8; }
+body.theme-zzz .title .dec { color: rgba(247,244,216,.68); text-shadow: none; }
+body.theme-zzz .tab_lable { color: #14131a; }
+body.theme-zzz .data_box { backdrop-filter: none; border-color: rgba(240,225,74,.26); }
+body.theme-zzz .list .item,
+body.theme-zzz .list .item_ { border-color: rgba(240,225,74,.18); }
+/* 扫描线：一条条横向细线，压到极低透明度，只在深底上隐约可见 */
+body.theme-zzz .container::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(255,255,255,.045) 0 1px, transparent 1px 4px);
+}
+body.theme-zzz .head_box { box-shadow: 0 0 0 3px rgba(20,19,26,.9), 0 18px 40px rgba(0,0,0,.5); }
+body.theme-zzz .head_box::after { display: none; }
+
 body {
   width: 1180px;
-  color: #5f7890;
+  color: var(--g-text);
   font-family: '宋','RareCJK','Microsoft YaHei',sans-serif;
   font-size: 21px;
   transform-origin: 0 0;
@@ -19,7 +98,7 @@ body {
   background-image:
     radial-gradient(circle at 88% 4%, rgba(255,154,197,.38), transparent 24%),
     radial-gradient(circle at 8% 18%, rgba(129,210,255,.42), transparent 24%),
-    linear-gradient(145deg, rgba(248,253,255,.86), rgba(232,246,255,.82)),
+    linear-gradient(145deg, var(--g-base-a), var(--g-base-b)),
     url('../srlogs/imgs/bg.jpg');
   background-size: auto, auto, auto, 520px auto;
   background-position: center top;
@@ -29,7 +108,7 @@ body {
   position: absolute;
   inset: 0;
   opacity: .18;
-  background-image: linear-gradient(rgba(112,171,214,.22) 1px, transparent 1px), linear-gradient(90deg, rgba(112,171,214,.22) 1px, transparent 1px);
+  background-image: linear-gradient(var(--g-grid) 1px, transparent 1px), linear-gradient(90deg, var(--g-grid) 1px, transparent 1px);
   background-size: 34px 34px;
   transform: rotate(-4deg) scale(1.18);
   pointer-events: none;
@@ -40,10 +119,10 @@ body {
   min-height: 128px;
   padding: 24px 34px;
   overflow: hidden;
-  border-radius: 28px;
-  color: #fff;
-  background: linear-gradient(135deg, rgba(255,130,179,.92), rgba(113,199,255,.9));
-  box-shadow: 0 18px 40px rgba(88,145,190,.28), inset 0 1px 0 rgba(255,255,255,.55);
+  border-radius: var(--g-radius);
+  color: var(--g-head-text);
+  background: linear-gradient(135deg, var(--g-head-a), var(--g-head-b));
+  box-shadow: 0 18px 40px var(--g-shadow), inset 0 1px 0 rgba(255,255,255,.55);
 }
 .head_box::before {
   content: '';
@@ -70,7 +149,7 @@ body {
 .head_box .id_text {
   position: relative;
   z-index: 1;
-  font-family: '主','宋';
+  font-family: var(--g-title-font);
   font-size: 44px;
   line-height: 1.1;
   text-shadow: 0 5px 18px rgba(71,91,130,.28);
@@ -82,10 +161,10 @@ body {
   margin-top: 16px;
   padding: 8px 18px;
   border-radius: 999px;
-  color: #5f7890;
+  color: var(--g-head-sub);
   font-size: 20px;
   font-weight: 900;
-  background: rgba(255,255,255,.72);
+  background: var(--g-head-sub-bg);
   box-shadow: inset 0 0 0 1px rgba(255,255,255,.72);
 }
 .data_box {
@@ -93,10 +172,10 @@ body {
   z-index: 1;
   margin-top: 22px;
   padding: 24px 16px 14px;
-  border-radius: 26px;
-  background: rgba(255,255,255,.68);
-  box-shadow: 0 13px 30px rgba(88,145,190,.18), inset 0 1px 0 rgba(255,255,255,.86);
-  border: 1px solid rgba(255,255,255,.72);
+  border-radius: var(--g-radius);
+  background: var(--g-card);
+  box-shadow: 0 13px 30px var(--g-shadow), inset 0 1px 0 rgba(255,255,255,.86);
+  border: 1px solid var(--g-border);
   backdrop-filter: blur(4px);
 }
 .tab_lable {
@@ -107,11 +186,11 @@ body {
   padding: 7px 18px 8px;
   border-radius: 999px;
   color: #fff;
-  font-family: '主','宋';
+  font-family: var(--g-title-font);
   font-size: 22px;
   letter-spacing: .5px;
-  background: linear-gradient(135deg, #ff91bd, #75cfff);
-  box-shadow: 0 8px 18px rgba(105,161,205,.25);
+  background: linear-gradient(135deg, var(--g-label-a), var(--g-label-b));
+  box-shadow: 0 8px 18px var(--g-shadow);
   text-align: center;
   z-index: 2;
 }
@@ -130,10 +209,10 @@ body {
   margin: 0;
   padding: 10px 12px 9px 16px;
   overflow: hidden;
-  border-radius: 15px;
-  background: linear-gradient(135deg, rgba(255,255,255,.86), rgba(244,252,255,.68));
-  border: 1px solid rgba(156,206,235,.28);
-  box-shadow: 0 8px 18px rgba(88,145,190,.10), inset 0 1px 0 rgba(255,255,255,.9);
+  border-radius: calc(var(--g-radius) * .58);
+  background: var(--g-item);
+  border: 1px solid var(--g-border);
+  box-shadow: 0 8px 18px var(--g-shadow), inset 0 1px 0 rgba(255,255,255,.9);
 }
 .list .item::before,
 .list .item_::before {
@@ -143,14 +222,14 @@ body {
   top: 0;
   width: 6px;
   height: 100%;
-  background: linear-gradient(#ff91bd, #75cfff);
+  background: linear-gradient(var(--g-label-a), var(--g-label-b));
 }
-.list .item:nth-child(3n+1)::before { background: linear-gradient(#ffd66b, #ff91bd); }
-.list .item:nth-child(3n+2)::before { background: linear-gradient(#75cfff, #91f0d0); }
+.list .item:nth-child(3n+1)::before { background: linear-gradient(var(--g-strip-a), var(--g-strip-b)); }
+.list .item:nth-child(3n+2)::before { background: linear-gradient(var(--g-strip-c), var(--g-strip-d)); }
 .title { margin-left: 0; line-height: 1.25; min-width: 0; }
 .title .text {
-  font-family: '主','宋','RareCJK';
-  color: #4a76a4;
+  font-family: var(--g-title-font),'RareCJK';
+  color: var(--g-title);
   font-size: 21px;
   font-weight: 900;
   letter-spacing: .2px;
@@ -158,7 +237,7 @@ body {
 }
 .title .dec {
   margin-top: 6px;
-  color: #64798c;
+  color: var(--g-text);
   font-family: 'HelpSans','HelpMicroHei','Noto Sans CJK SC','Microsoft YaHei',sans-serif;
   font-size: 17px;
   font-weight: 500;
@@ -176,7 +255,7 @@ body {
   z-index: 1;
   margin-top: 18px;
   padding: 10px 0 2px;
-  color: #e6796d;
+  color: var(--g-accent);
   font-family: '宋','RareCJK';
   font-size: 15px;
   text-align: center;

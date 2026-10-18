@@ -11,6 +11,25 @@ const GAME_HELP_ALIASES = {
   崩三: ['崩三', '崩坏3', '崩坏三'],
   崩坏3: ['崩三', '崩坏3', '崩坏三'],
 };
+/* 各游戏的帮助主题：模板里落成 <body class="theme-xxx">，由 help.css 决定配色与纹理。
+   没有单独主题时用 default（通用蓝白）。新增主题只需在这里加一条 + 在 css 里补
+   一组 --g-* 变量，不用改模板。 */
+const GAME_THEME = {
+  原神: 'genshin',
+  星铁: 'starrail',
+  崩铁: 'starrail',
+  绝区零: 'zzz',
+  崩三: 'honkai3',
+  崩坏3: 'honkai3',
+};
+/* 帮助页顶部标题/副标题：分游戏出图时换成游戏名，比「米哈游插件」更有指向性 */
+const THEME_HEAD = {
+  genshin: { title: '原神', sub: '命令帮助 · 提瓦特指南' },
+  starrail: { title: '星穹铁道', sub: '命令帮助 · 星穹列车手册' },
+  zzz: { title: '绝区零', sub: '命令帮助 · 绳网终端' },
+  honkai3: { title: '崩坏3', sub: '命令帮助 · 休伯利安舰务' },
+  default: { title: '米哈游插件', sub: '命令帮助 · 指令速查' },
+};
 
 export class help extends plugin {
   constructor(e) {
@@ -83,7 +102,15 @@ export class help extends plugin {
         return e.reply('帮助内容为空，可在线查看：' + HELP_URL, true, { recallMsg: 60 });
       }
       // au 为主人时才展示「主人专用指令」分组
-      const img = await render('help/help', { data, au: !!e.isMaster }, { e, pct: 1 });
+      const theme = game ? (GAME_THEME[game] || 'default') : 'default'
+      const head = THEME_HEAD[theme] || THEME_HEAD.default
+      const img = await render('help/help', {
+        data,
+        au: !!e.isMaster,
+        theme,
+        headTitle: head.title,
+        headSub: head.sub,
+      }, { e, pct: 1 });
       return e.reply(img);
     } catch (err) {
       logger.warn(`[HoYoGet][help] 帮助图渲染失败: ${err?.message || err}`);
