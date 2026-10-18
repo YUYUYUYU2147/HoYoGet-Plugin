@@ -1,100 +1,67 @@
 /**
- * Akasha System 数据访问层（原神角色练度全球榜）
+ * Akasha System 数据访问层
  *
- * 站点 https://akasha.cv 前面有 Cloudflare 的 JS 挑战：
- *   · 任何纯 HTTP 客户端（fetch / axios / curl）都会拿到 403「Just a moment...」
- *   · 抓下来的 cf_clearance 与 UA / IP / TLS 指纹绑定，换个客户端立刻失效
- * 所以只能开一个真实 Chromium 页面，让浏览器自己过挑战，再在页面上下文里
- * 用同源 fetch 调它的接口（见 withPage / callApi）。
+ * 站点 https://akasha.cv 前面挂着 Cloudflare。实测**不需要浏览器**：
+ * 只要把 User-Agent 伪装成 GsCore / GenshinUID（社区爬虫的常规标识），
+ * 普通 fetch 就能直接拿到 JSON，不带这个 UA 才会被 403「Just a moment...」拦下来。
+ * （这个 UA 来自社区已有的 Akasha 集成实现，属于对方服务默认放行的标识。）
  *
- * 接口（从前端 bundle 与真实请求里确认）：
- *   GET /api/v2/leaderboards/categories?characterId=<id>
- *       → 该角色全部配装方案，每项含 name / short / count / characterId
+ * 接口：
+ *   GET /api/v2/leaderboards/categories[?characterId=][&variant=stygian]
+ *       · 不传 id：全部角色的配装方案（每项含 characterName / short / count）
+ *       · variant=stygian：幽境危战各期榜单目录
  *   GET /api/leaderboards?sort=calculation.result&order=-1&size=20&page=1
- *       &filter=&uids=&p=&fromId=&li=&variant=<short>&calculationId=<characterId>02
- *       → 该方案的全球榜（按计算伤害降序，calculation.result）
- *
- * 性能：启动浏览器 + 过 CF 约 2.5~3s，之后每次查询约 1.4s。
- * 浏览器实例按需创建、用完即关，不做常驻 —— 常驻会和面板渲染抢内存。
+ *       &filter=&uids=&p=&fromId=&li=&variant=<short>&calculationId=<cid>02
+ *       · 角色配装的全球榜
+ *   GET /api/leaderboards/stygian?version=<x_y>&sort=stygianScore&order=-1
+ *       &size=1&page=1&filter=
+ *       · 幽境危战全球榜（按分数排序，可用 uid= 过滤单个人）
  */
 
 const AKASHA_ORIGIN = 'https://akasha.cv'
-const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+const AKASHA_UA = 'GsCore / GenshinUID / 6.2.0'
 
-/** 打开一个已过 Cloudflare 的页面，交给 fn 使用，结束后关闭浏览器 */
-async function withPage(fn, { timeout = 60000 } = {}) {
-  let browser = null
-  try {
-    const puppeteer = (await import('puppeteer')).default
-    browser = await puppeteer.launch({
-      headless: 'new',
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-blink-features=AutomationControlled',
-        '--disable-gpu',
-      ],
-    })
-    const page = await browser.newPage()
-    await page.setUserAgent(UA)
-    await page.setViewport({ width: 1280, height: 800 })
-    // 首页体积小、是纯前端，用它过挑战最快
-    await page.goto(`${AKASHA_ORIGIN}/`, { waitUntil: 'domcontentloaded', timeout })
-    // CF 挑战通过后 cf_clearance 才落盘，稍等一下再发业务请求
-    await new Promise(r => setTimeout(r, 2500))
-    return await fn(page)
-  } finally {
-    try { await browser?.close() } catch (_) { /* 关闭失败不影响结果 */ }
+/** 统一的 akasha 请求；返回解析后的 JSON */
+async function akashaRequest(route, { timeout = 15000 } = {}) {
+  const url = new URL(route, `${AKASHA_ORIGIN}/api/`)
+  const res = await fetch(url, {
+    signal: AbortSignal.timeout(timeout),
+    headers: {
+      'User-Agent': AKASHA_UA,
+      'Accept-Language': 'en-US,en;q=0.9',
+      Accept: 'application/json',
+    },
+  })
+  if (!res.ok) {
+    const hint = res.status === 403 ? '（站点验证拦截，请稍后重试）' : ''
+    throw new Error(`Akasha HTTP ${res.status}${hint}`)
   }
-}
-
-/** 在页面上下文里发同源请求（带 CF 会话），返回解析后的 JSON */
-async function callApi(page, path) {
-  const res = await page.evaluate(async url => {
-    try {
-      const r = await fetch(url, { headers: { Authorization: 'Bearer ' } })
-      const text = await r.text()
-      let json = null
-      try { json = JSON.parse(text) } catch (_) { /* 非 JSON 说明又被挑战了 */ }
-      return { status: r.status, json, text: json ? '' : text.slice(0, 200) }
-    } catch (err) {
-      return { status: 0, json: null, text: String(err?.message || err) }
-    }
-  }, path)
-  if (!res.json) {
-    const msg = /Just a moment|challenge/i.test(res.text || '')
-      ? 'Cloudflare 挑战未通过（稍后重试）'
-      : `接口返回异常（HTTP ${res.status}）：${res.text || '空响应'}`
-    throw new Error(msg)
-  }
-  return res.json
+  const j = await res.json()
+  if (!j || (!('data' in j) && !('totalRows' in j))) throw new Error('Akasha 返回格式错误')
+  return j
 }
 
 /**
  * 配装方案列表。
- * characterId 传空/不传时返回**全部角色**的方案（一次约 300KB），
- * 用它建「角色名 → characterId」映射并缓存，避免逐个角色请求。
+ * characterId 传空/不传时返回**全部角色**的方案，用它建「角色名 → characterId」映射。
  */
-async function listCategories(page, characterId = null) {
+async function listCategories(characterId = null) {
   const qs = characterId ? `?characterId=${characterId}` : ''
-  const j = await callApi(page, `/api/v2/leaderboards/categories${qs}`)
+  const j = await akashaRequest(`v2/leaderboards/categories${qs}`)
   return Array.isArray(j?.data) ? j.data : []
 }
 
 /**
- * 某方案的全球榜。
- * @param {object} page
- * @param {object} cat   categories 里的一项（需 characterId / short）
- * @param {object} opt   { size, page }
+ * 某配装的全球榜。
+ * @param {object} cat  categories 里的一项（需 characterId / short）
  */
-async function fetchLeaderboard(page, cat, { size = 20, page: pageNo = 1 } = {}) {
-  const cid = cat.characterId
-  const calcId = `${cid}02`   // 默认计算方案：角色 id + 02
+async function fetchLeaderboard(cat, { size = 20, page = 1 } = {}) {
+  const calcId = `${cat.characterId}02`   // 默认计算方案：角色 id + 02
   const qs = [
     'sort=calculation.result',
     'order=-1',
     `size=${size}`,
-    `page=${pageNo}`,
+    `page=${page}`,
     'filter=',
     'uids=',
     'p=',
@@ -103,11 +70,29 @@ async function fetchLeaderboard(page, cat, { size = 20, page: pageNo = 1 } = {})
     `variant=${encodeURIComponent(cat.short || '')}`,
     `calculationId=${calcId}`,
   ].join('&')
-  const j = await callApi(page, `/api/leaderboards?${qs}`)
-  return {
-    // 这个接口不返 totalRows（只有 totalRowsHash），总数由调用方按「返回条数 < size」判断是否到底
-    list: Array.isArray(j?.data) ? j.data : [],
-  }
+  const j = await akashaRequest(`leaderboards?${qs}`)
+  return { list: Array.isArray(j?.data) ? j.data : [] }
 }
 
-export { AKASHA_ORIGIN, UA, withPage, callApi, listCategories, fetchLeaderboard }
+/** 幽境危战各期榜单目录（按新增时间倒序） */
+async function listStygianSchedules() {
+  const j = await akashaRequest('v2/leaderboards/categories?variant=stygian&sort=addDate&order=-1')
+  return Array.isArray(j?.data) ? j.data : []
+}
+
+/** 幽境危战某期的全球榜 */
+async function fetchStygianLeaderboard(version, { size = 20, page = 1, uid = '' } = {}) {
+  const qs = new URLSearchParams({
+    version: String(version).replace('.', '_'),
+    sort: 'stygianScore',
+    order: '-1',
+    size: String(size),
+    page: String(page),
+    filter: '',
+  })
+  if (uid) qs.set('uid', String(uid))
+  const j = await akashaRequest(`leaderboards/stygian?${qs}`)
+  return { list: Array.isArray(j?.data) ? j.data : [] }
+}
+
+export { AKASHA_ORIGIN, AKASHA_UA, akashaRequest, listCategories, fetchLeaderboard, listStygianSchedules, fetchStygianLeaderboard }

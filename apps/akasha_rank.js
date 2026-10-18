@@ -2,24 +2,23 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { pluginPriority, render, config } from '#HoYoGet'
-import { withPage, listCategories, fetchLeaderboard } from '../system/akasha.js'
+import { listCategories, fetchLeaderboard, listStygianSchedules, fetchStygianLeaderboard } from '../system/akasha.js'
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const CACHE_FILE = path.join(PLUGIN_ROOT, 'temp', 'akasha_categories.json')
 const CACHE_TTL = 6 * 3600 * 1000   // 分类（角色→方案）缓存 6 小时
 
 /**
- * Akasha System 原神全球练度榜。
+ * Akasha System 全球榜。
  *
- * 数据源特性：站点过 Cloudflare 挑战只能靠真实浏览器，所以一次请求要开一次
- * Chromium（约 2.5s 起步）。为了不让用户干等，这里做了两层缓存：
- *   · 角色→方案 的分类表缓存 6 小时（体积小、变化慢）
- *   · 实际榜单不缓存（用户要看的是当下排名）
+ * 数据源只需要伪装 UA（GsCore / GenshinUID），无需浏览器，单次请求 1 秒内。
+ * 角色→方案的分类表变化慢，缓存 6 小时；榜单本身不缓存（用户要看当下排名）。
  *
  * 指令：
- *   akasha <角色>            查看该角色默认方案的全球榜
+ *   akasha <角色>            角色配装的全球榜（默认方案）
  *   akasha <角色> <方案名>   指定方案（如 akasha 胡桃 蒸发）
- *   akasha 角色列表          查看收录了哪些角色
+ *   akasha 角色列表          收录了哪些角色
+ *   akasha 幽境 [期数]       幽境危战全球榜（省略期数取最新一期）
  */
 const AKASHA_REG = /^(?:#?米哈游)?\s*akasha\s*(.*)$/i
 
@@ -152,83 +151,127 @@ export class akasha_rank extends plugin {
     }
 
     if (/^(角色列表|列表|list)$/i.test(arg)) return this.listRoles(e)
+    if (/^幽境(危战)?/.test(arg)) return this.stygian(e, arg)
 
     try {
-      return await withPage(async page => {
-        // 1) 分类表（缓存）
-        let all = readCache()
-        if (!all) {
-          all = await listCategories(page, null)
-          writeCache(all)
-        }
+      // 1) 分类表（缓存）
+      let all = readCache()
+      if (!all) {
+        all = await listCategories()
+        writeCache(all)
+      }
 
-        // 2) 定位角色与方案
-        const [roleRaw, ...rest] = arg.split(/\s+/)
-        const hit = pickCategories(all, roleRaw)
-        if (!hit) {
-          return e.reply(`akasha 里没有找到「${roleRaw}」。\n可发「akasha 角色列表」查看收录范围。`)
+      // 2) 定位角色与方案
+      const [roleRaw, ...rest] = arg.split(/\s+/)
+      const hit = pickCategories(all, roleRaw)
+      if (!hit) {
+        return e.reply(`akasha 里没有找到「${roleRaw}」。\n可发「akasha 角色列表」查看收录范围。`)
+      }
+      const planKey = rest.join(' ')
+      let cat = hit.categories[0]
+      if (planKey) {
+        const k = norm(planKey)
+        const found = hit.categories.find(c => norm(c.name).includes(k) || norm(c.short) === k)
+        if (!found) {
+          return e.reply([
+            `「${hit.name}」没有匹配到方案「${planKey}」。`,
+            '可选方案：',
+            ...hit.categories.map(c => `  ${c.name}（${c.short}）`),
+          ].join('\n'))
         }
-        const planKey = rest.join(' ')
-        let cat = hit.categories[0]
-        if (planKey) {
-          const k = norm(planKey)
-          const found = hit.categories.find(c => norm(c.name).includes(k) || norm(c.short) === k)
-          if (!found) {
-            return e.reply([
-              `「${hit.name}」没有匹配到方案「${planKey}」。`,
-              '可选方案：',
-              ...hit.categories.map(c => `  ${c.name}（${c.short}）`),
-            ].join('\n'))
-          }
-          cat = found
-        }
+        cat = found
+      }
 
-        // 3) 拉榜单
-        const { list } = await fetchLeaderboard(page, cat, { size: 20 })
-        if (!list.length) return e.reply(`「${hit.name}」的「${cat.name}」暂无榜单数据。`)
+      // 3) 拉榜单
+      const { list } = await fetchLeaderboard(cat, { size: 20 })
+      if (!list.length) return e.reply(`「${hit.name}」的「${cat.name}」暂无榜单数据。`)
 
-        const rows = list.map(viewEntry)
-        const img = await render('akasha/rank', {
-          roleName: hit.name,
-          planName: cat.name,
-          planShort: cat.short,
-          playerCount: cat.count || 0,
-          rows,
-        }, { e, ret: true })
-        return img
-      })
+      const rows = list.map(viewEntry)
+      const img = await render('akasha/rank', {
+        roleName: hit.name,
+        planName: cat.name,
+        planShort: cat.short,
+        playerCount: cat.count || 0,
+        rows,
+      }, { e, ret: true })
+      return img
     } catch (err) {
       logger.error?.(`[HoYoGet][akasha] 查询失败: ${err?.message || err}`)
-      return e.reply(`Akasha 查询失败：${err?.message || err}\n（站点有 Cloudflare 验证，偶尔会超时，稍后重试）`)
+      return e.reply(`Akasha 查询失败：${err?.message || err}`)
     }
   }
 
   /** 收录角色一览（按玩家数降序，取前 40） */
   async listRoles(e) {
     try {
-      return await withPage(async page => {
-        let all = readCache()
-        if (!all) {
-          all = await listCategories(page, null)
-          writeCache(all)
-        }
-        const byRole = new Map()
-        for (const c of all) {
-          const cur = byRole.get(c.characterName) || { name: c.characterName, plans: 0, count: 0, element: c.element, rarity: c.rarity }
-          cur.plans += 1
-          cur.count = Math.max(cur.count, c.count || 0)
-          byRole.set(c.characterName, cur)
-        }
-        const rows = [...byRole.values()].sort((a, b) => b.count - a.count).slice(0, 40)
-        return e.reply([
-          `Akasha 收录角色（共 ${byRole.size} 位，按玩家数排序前 ${rows.length}）：`,
-          ...rows.map((r, i) => `${String(i + 1).padStart(2, ' ')}. ${r.name}  ${formatNum(r.count)} 人 · ${r.plans} 套方案`),
-          '',
-          '用 akasha <角色> 查看某个角色的榜单',
-        ].join('\n'))
-      })
+      let all = readCache()
+      if (!all) {
+        all = await listCategories()
+        writeCache(all)
+      }
+      const byRole = new Map()
+      for (const c of all) {
+        const cur = byRole.get(c.characterName) || { name: c.characterName, plans: 0, count: 0 }
+        cur.plans += 1
+        cur.count = Math.max(cur.count, c.count || 0)
+        byRole.set(c.characterName, cur)
+      }
+      const rows = [...byRole.values()].sort((a, b) => b.count - a.count).slice(0, 40)
+      return e.reply([
+        `Akasha 收录角色（共 ${byRole.size} 位，按玩家数排序前 ${rows.length}）：`,
+        ...rows.map((r, i) => `${String(i + 1).padStart(2, ' ')}. ${r.name}  ${formatNum(r.count)} 人 · ${r.plans} 套方案`),
+        '',
+        '用 akasha <角色> 查看某个角色的榜单',
+      ].join('\n'))
     } catch (err) {
       return e.reply(`获取角色列表失败：${err?.message || err}`)
+    }
+  }
+
+  /** 幽境危战全球榜（akasha 的 stygian 榜单） */
+  async stygian(e, arg) {
+    try {
+      const schedules = await listStygianSchedules()
+      if (!schedules.length) return e.reply('Akasha 暂未收录幽境危战榜单。')
+
+      // 参数可以是版本号（如 5.3）或期号；省略取最新一期
+      const key = String(arg).replace(/^幽境(危战)?/, '').trim()
+      let board = schedules[0]
+      if (key) {
+        const hit = schedules.find(s => String(s.version) === key || String(s.scheduleId) === key)
+        if (!hit) {
+          return e.reply([
+            `没有找到幽境期数「${key}」。`,
+            '可选期数（最近 8 期）：',
+            ...schedules.slice(0, 8).map(s => `  ${s.version}（期号 ${s.scheduleId}，样本 ${formatNum(s.count)}）`),
+          ].join('\n'))
+        }
+        board = hit
+      }
+
+      const { list } = await fetchStygianLeaderboard(board.version, { size: 20 })
+      if (!list.length) return e.reply(`幽境 ${board.version} 暂无榜单数据。`)
+
+      const rows = list.map((e2, i) => ({
+        ...viewEntry(e2, i),
+        score: Number(e2?.stygianScore) || 0,
+        scoreText: formatNum(e2?.stygianScore),
+        seconds: Number(e2?.stygianSeconds) || 0,
+        difficulty: Number(e2?.stygianIndex) || 0,
+        flagged: !!e2?.isCheating || Number(e2?.susLevel) > 0,
+      }))
+
+      const img = await render('akasha/stygian', {
+        version: board.version,
+        scheduleId: board.scheduleId,
+        sampleCount: board.count || 0,
+        sampleText: formatNum(board.count),
+        rows,
+      }, { e, ret: true })
+      return img
+    } catch (err) {
+      logger.error?.(`[HoYoGet][akasha] 幽境查询失败: ${err?.message || err}`)
+      return e.reply(`幽境全球榜查询失败：${err?.message || err}`)
     }
   }
 }

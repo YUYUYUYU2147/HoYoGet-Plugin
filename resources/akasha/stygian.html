@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}akasha/rank.css" />
+  </head>
+  <body>
+    <div class="page">
+      <div class="head">
+        <div class="head-left">
+          <div class="title">幽境危战</div>
+          <div class="subtitle">Version {{version}} · 期号 {{scheduleId}}</div>
+        </div>
+        <div class="head-right">
+          <div class="badge">AKASHA</div>
+          <div class="count">{{sampleText}} 份有效成绩</div>
+        </div>
+      </div>
+
+      <div class="legend">
+        <span>按幽境得分排序（分数越高越靠前）</span>
+        <span class="sep">·</span>
+        <span>数据来源 akasha.cv</span>
+      </div>
+
+      <div class="list">
+        {{each rows r}}
+        <div class="row {{if r.rank === 1}}top1{{else if r.rank === 2}}top2{{else if r.rank === 3}}top3{{/if}}">
+          <div class="rank">{{r.rank}}</div>
+
+          <div class="player">
+            <div class="nick">{{r.nickname}}{{if r.flagged}} <span class="flag">已标记</span>{{/if}}</div>
+            <div class="meta">
+              <span class="uid">UID {{r.uid}}</span>
+              <span class="region">{{r.region}}</span>
+              <span class="ar">AR{{r.ar}}</span>
+            </div>
+          </div>
+
+          <div class="build">
+            <span class="cons">难度 {{r.difficulty}}</span>
+            <span class="weapon">用时 {{r.seconds}} 秒</span>
+          </div>
+
+          <div class="score">
+            <div class="dmg">{{r.scoreText}}</div>
+            <div class="dmg-label">幽境得分</div>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+
+      <div class="footer">from 米哈游 · Akasha System</div>
+    </div>
+  </body>
+</html>
