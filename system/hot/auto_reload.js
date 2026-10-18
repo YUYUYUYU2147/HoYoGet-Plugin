@@ -82,7 +82,15 @@ export function startAutoReload({ apps = {}, files = [], root = '', logger } = {
                 try {
                     const url = new URL(`./apps/${file}`, root).href + `?t=${Date.now()}`
                     const mod = await import(url)
-                    const NewC = mod?.[Object.keys(mod)[0]]
+                    /* 不能取「第一个导出」：app 文件现在会导出工具函数
+                       （如 zzz_panel_list.js 导出 buildBasicProperties / calcDamage 给排名页复用），
+                       按顺序取第一个会拿到函数而不是插件类，patchClass 拷了个寂寞，
+                       还可能把函数属性写到旧类上。这里按「原型继承自全局 plugin」识别真正的插件类，
+                       与 index.js 的注册逻辑保持同一判据。 */
+                    const base = globalThis.plugin
+                    const NewC = typeof base === 'function'
+                        ? Object.values(mod || {}).find(v => typeof v === 'function' && v.prototype instanceof base)
+                        : null
                     if (typeof NewC !== 'function') continue
                     if (patchClass(oldC, NewC)) changed++
                 } catch (err) {
