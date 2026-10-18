@@ -87,6 +87,55 @@ const ID_TO_CN = { 10000002: '神里绫华', 10000003: '琴', 10000006: '丽莎'
 
 const characterName = (id, fallback = '') => ID_TO_CN[id] || fallback || String(id)
 
+/**
+ * akasha 的方案名是英文（如 "Melt Combo, Avg DMG"），接口不提供中文。
+ * 这里按「术语 → 中文」逐词替换，剩下的英文原样保留。
+ * 覆盖率靠 akasha 的实际用词统计得出（Combo/Team/Vape/Melt 等出现频率最高）。
+ */
+const PLAN_TERMS = [
+  // 反应
+  [/Avg DMG|Average DMG/gi, '平均伤害'],
+  [/Lunar-Bloom/gi, '月绽放'], [/Lunar-Charged/gi, '月感电'], [/Lunar-Crystallize/gi, '月结晶'],
+  [/Stellar-Conduct/gi, '星导'], [/Moonsign/gi, '月兆'],
+  [/Melt/gi, '融化'], [/Vape|Vaporize/gi, '蒸发'], [/Overload/gi, '超载'],
+  [/Aggravate/gi, '激化'], [/Spread/gi, '蔓激化'], [/Hyperbloom/gi, '超绽放'],
+  [/Quickbloom/gi, '激绽'], [/Bloom/gi, '绽放'], [/Burgeon/gi, '烈绽放'],
+  [/Freeze|Frozen/gi, '冻结'], [/Superconduct/gi, '超导'], [/Electro-Charged/gi, '感电'],
+  [/Shatter/gi, '碎冰'], [/Crystallize/gi, '结晶'], [/Swirl/gi, '扩散'],
+
+  // 队伍/打法
+  [/Premium Team/gi, '高配队'], [/Basic Team/gi, '基础队'], [/Hyper Team/gi, '强化队'],
+  [/Team/gi, '队'], [/Combo/gi, '连招'], [/Rotation/gi, '循环'],
+  [/On-Field|On Field/gi, '站场'], [/Off-Field|Off Field/gi, '后台'],
+  [/Main DPS/gi, '主C'], [/Sub DPS|Sub-DPS/gi, '副C'], [/DPS/gi, '输出'],
+  [/Skill/gi, '战技'], [/Burst/gi, '爆发'], [/Normal Attack/gi, '普攻'],
+  [/Charged Attack/gi, '重击'], [/Plunge/gi, '下落'], [/EQ/gi, '战技+爆发'],
+  [/Basic/gi, '基础'], [/Premium/gi, '高配'], [/Hyper/gi, '强化'],
+  // 数量/构成
+  [/Triple/gi, '三'], [/Double/gi, '双'], [/Single/gi, '单'], [/Mono/gi, '纯色'],
+  // 元素
+  [/Pyro/gi, '火'], [/Hydro/gi, '水'], [/Cryo/gi, '冰'], [/Electro/gi, '雷'],
+  [/Anemo/gi, '风'], [/Geo/gi, '岩'], [/Dendro/gi, '草'],
+  // 场景
+  [/vs Boss/gi, '对单'], [/Boss/gi, '首领'], [/AoE/gi, '对群'],
+  [/Single Target/gi, '单体'], [/Unbuffed/gi, '无buff'], [/Full Buffs?/gi, '满buff'],
+  [/Max Stacks?/gi, '满层'], [/with/gi, '配'], [/without/gi, '不带'],
+  [/No Buffs?/gi, '无buff'], [/Balance/gi, '平衡'], [/Formula/gi, '公式'],
+  [/Energy Recharge|ER/gi, '充能'],
+]
+
+/** 把英文方案名翻成中文；不认识的部分保留原文 */
+function cnPlanName(name = '') {
+  let out = String(name)
+  for (const [re, cn] of PLAN_TERMS) out = out.replace(re, cn)
+  return out
+    .replace(/\s*,\s*/g, ' · ')          // 逗号变分隔点
+    // 两个中文字符之间的空格去掉：「融化 连招」→「融化连招」
+    .replace(/([\u4e00-\u9fa5])\s+(?=[\u4e00-\u9fa5])/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 /** 精炼中文：R1 → 一阶，R5 → 满精 */
 const refineText = n => {
   const v = Number(n) || 0
@@ -301,7 +350,7 @@ export class akasha_rank extends plugin {
       const img = await render('akasha/rank', {
         roleName: hit.name,
         boards: usable.map(b => ({
-          planName: b.cat.name,
+          planName: cnPlanName(b.cat.name),
           planShort: b.cat.short,
           playerCount: b.cat.count || 0,
           rows: b.rows,
@@ -370,7 +419,7 @@ export class akasha_rank extends plugin {
             rank,
             outOf,
             percent: outOf ? rank / outOf * 100 : 0,
-            planName: fit.name || '',
+            planName: cnPlanName(fit.name || ''),
             result: formatNum(fit.result),
             weapon: fit.weapon?.name || r.weapon?.name || '',
             cons: r.constellation ?? 0,

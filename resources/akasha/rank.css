@@ -212,3 +212,10 @@ body {
   color: rgba(231, 235, 243, .62);
   line-height: 1.6;
 }
+
+/* 「我的排名」行内的期望伤害 */
+.dmg-inline {
+  color: #ff9a76 !important;
+  font-weight: 900;
+  background: rgba(255, 154, 118, .12) !important;
+}
