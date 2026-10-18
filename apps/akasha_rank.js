@@ -8,6 +8,21 @@ import {
 } from '../system/akasha.js'
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const ARTIFACT_CN_FILE = path.join(PLUGIN_ROOT, 'system', 'default', 'gs_artifact_cn.json')
+
+/** 圣遗物英文名 → 中文（akasha 只给英文，无 id 可自动对照，靠这份手工表） */
+let ARTIFACT_CN = null
+function artifactCn() {
+  if (ARTIFACT_CN) return ARTIFACT_CN
+  try {
+    ARTIFACT_CN = JSON.parse(fs.readFileSync(ARTIFACT_CN_FILE, 'utf8'))
+  } catch (_) {
+    ARTIFACT_CN = { sets: {}, pieces: {} }
+  }
+  return ARTIFACT_CN
+}
+const cnSetName = en => artifactCn().sets?.[en] || en || ''
+const cnPieceName = en => artifactCn().pieces?.[en] || en || ''
 const CACHE_FILE = path.join(PLUGIN_ROOT, 'temp', 'akasha_categories.json')
 const CACHE_TTL = 6 * 3600 * 1000   // 分类（角色→方案）缓存 6 小时
 
@@ -588,8 +603,8 @@ export class akasha_rank extends plugin {
         const cd = Number(subs['Crit DMG'] || 0)
         return {
           rank: i + 1,
-          name: a.name || '',
-          set: a.setName || '',
+          name: cnPieceName(a.name) || a.name || '',
+          set: cnSetName(a.setName) || a.setName || '',
           icon: a.icon || '',
           slot: SLOT_CN[a.equipType] || a.equipType || '',
           stars: a.stars || 0,
