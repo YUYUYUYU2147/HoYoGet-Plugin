@@ -50,6 +50,18 @@ const agents = Object.keys(partners)
 // 合法主词条（与 apps/zzz_panel_list.js 的 MAIN_MAX_VALUE 同集合）
 const MAIN_OK = new Set([11102, 12102, 13102, 12202, 20103, 21103, 23103, 30502, 31203, 31402,
   31503, 31603, 31703, 31803, 31903, 32303])
+/**
+ * 按号位区分的合法主词条（驱动盘的主词条池是分槽位的）：
+ *   4 号：生命%/攻击%/防御%/暴击率/暴击伤害/异常精通
+ *   5 号：生命%/攻击%/防御%/穿透率/各属性伤害加成
+ *   6 号：生命%/攻击%/防御%/冲击力/能量自动回复/异常掌控
+ * 只查全局 MAIN_OK 会放过「6 号盘写暴击伤害」这种游戏里出不来的配置。
+ */
+const MAIN_BY_SLOT = {
+  4: new Set([11102, 12102, 13102, 20103, 21103, 31203]),
+  5: new Set([11102, 12102, 13102, 23103, 31503, 31603, 31703, 31803, 32303, 31903]),
+  6: new Set([11102, 12102, 12202, 13102, 30502, 31402]),
+}
 // 合法副词条（驱动盘上真的能出的）
 const SUB_OK = new Set([11102, 11103, 12102, 12103, 13102, 13103, 20103, 21103, 23203, 31203, 31402])
 
@@ -116,6 +128,7 @@ for (const [name, p] of Object.entries(presets)) {
     const v = dm[slot]
     if (!v) { problems.push(`${name}：drive_main 缺 ${slot} 号位主词条`); continue }
     if (!MAIN_OK.has(v)) problems.push(`${name}：${slot} 号位主词条 ${v} 不合法`)
+    else if (!MAIN_BY_SLOT[slot]?.has(v)) problems.push(`${name}：${slot} 号位主词条 ${v} 不在该号位的可选池里`)
   }
   // 5) 副词条布局每盘 9 档，且不含该盘主词条
   const sl = p.sub_layout || {}

@@ -2022,7 +2022,12 @@ export class zzz_panel_list extends plugin {
       // 极限面板的定义就是理论最优：玩家当前戴的主词条再差也不该抄进来
       // （如玩家 5 号位用了穿透，但该角色 4pc冰伤套下理论最优是冰伤主）。
       // 预设 drive_main 就是这套「最优知识」的载体，auto 权重只在预设缺条目时兜底。
-      let mainId = presetMain || allowed[0] || oldMain
+      // 但预设必须先过「该槽位合法主词条」校验：6 号盘只有生命/攻击/防御/冲击/回能/异常掌控，
+      // 写个暴击伤害上去（21103）游戏里根本出不来，直接采信会凭空多出一条不存在的词条。
+      // 1/2/3 号盘不受 SCORE_MAIN_STATS 约束（它们固定是生命/攻击/防御，且分百分比与固定值两版），
+      // 叶瞬光这类「补固定值」的预设要保留，只在 4/5/6 号盘上做校验。
+      const presetMainValid = slot < 4 || SCORE_MAIN_STATS[slot]?.includes(presetMain) ? presetMain : 0
+      let mainId = presetMainValid || allowed[0] || oldMain
       // 双爆防溢出：非盘暴击（基础+被动+影画+武器副词条）加暴击主词条已破 100% 时，
       // 4 号位改用暴伤主词条，暴击率缺口留给副词条按预算补。
       // 例：非盘暴击 79.4% + 暴击主 24% = 103.4% 溢出 → 改暴伤主 48%，副词条补暴击到 ~100%。
