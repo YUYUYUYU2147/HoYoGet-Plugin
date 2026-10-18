@@ -419,6 +419,8 @@ export class akasha_rank extends plugin {
             rank,
             outOf,
             percent: outOf ? rank / outOf * 100 : 0,
+            // 「超过多少人」= 100 − 百分位；名次 1 时就是 99.9%
+            beatPercent: outOf ? Math.max(0, (1 - rank / outOf) * 100).toFixed(1) : '0.0',
             planName: cnPlanName(fit.name || ''),
             result: formatNum(fit.result),
             weapon: fit.weapon?.name || r.weapon?.name || '',

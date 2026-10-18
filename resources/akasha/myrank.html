@@ -48,8 +48,9 @@
           </div>
 
           <div class="score">
-            <div class="dmg">#{{r.rank}}</div>
-            <div class="dmg-label">/ {{r.outOf}} · 前 {{r.percent.toFixed(1)}}%</div>
+            <div class="dmg">第 {{r.rank}} 名</div>
+            <div class="dmg-label">共 {{r.outOf}} 人</div>
+            <div class="dmg-beat">超过 {{r.beatPercent}}%</div>
           </div>
         </div>
         {{/each}}
