@@ -392,27 +392,6 @@ function stripTags(s) {
     .trim()
 }
 
-/** 从米游社 wiki 音擎数据取指定精炼档位的被动描述。
- *  avatar 接口的 weapon.talent_content 只按当期精炼档填数值（精1 面板就是精1 文案），
- *  极限面板把音擎顶成满精后文案数值还是旧的 —— 这里按档位拉 wiki 文案（content.talents
- *  为 {1..5: {name, desc}}，与 system/wiki.js 音擎图鉴同源）。失败返回空串，调用方保留原文案。 */
-async function zzzWeaponTalentDesc(name, refine) {
-  try {
-    if (!name || !(Number(refine) > 1)) return ''
-    const ret = await mys.data(name, 'wq', false, true)
-    const id = Array.isArray(ret)
-      ? (ret.find(v => v?.title === name)?.id || ret[0]?.id)
-      : ret?.id
-    if (!id) return ''
-    const data = await mys.detail(id, false, true)
-    const talents = data?.content?.talents || {}
-    const t = talents[refine] || talents[String(refine)] || {}
-    return t?.desc ? stripTags(t.desc) : ''
-  } catch {
-    return ''
-  }
-}
-
 /** 百分比字符串 → 小数（"9.8%"→0.098；无数值→0） */
 function toRatio(v) {
   const n = parseFloat(v)
@@ -748,6 +727,216 @@ const CUSTOM_PORTRAIT_DIRS = [
   path.join(PLUGIN_ROOT, 'resources', 'zzz_panel', 'images', 'panel'),
   './plugins/ZZZ-Plugin/resources/images/panel',
 ]
+
+/* ───────────────────────── 极限面板：合成底稿（不依赖任何面板记录） ─────────────────────────
+ *
+ * 极限面板的定义是「理论最优」，它不该取决于「这个人抽没抽到这个角色」。
+ * 所以这里完全用本地静态表凭空造一个满级角色：
+ *   基础属性  ← system/default/zzz_char_stat.json（真实采集的 Lv60 基础值）
+ *   音擎/套装 ← system/default/zzz_item_stat.json（音擎与套装公开事实）
+ *   技能明细 ← system/default/zzz_skill_rate.json（技能中文名 + 各等级倍率）
+ *   配装     ← system/default/zzz_extreme.yaml（逐角色策展的音擎/主词条/副词条布局）
+ *
+ * 为什么基础属性是「采集」而不是「算」：官方成长公式里攻击力那一项复刻不出来
+ * （回归 54 个角色真实值，隐含系数在 1.0e-2~2.25e-2 离散，且与职司/突破/影数不相关），
+ * 所以宁可存事实也不猜公式。详见 tools/extract_zzz_char_stat.mjs 的注释。
+ */
+
+/** 4 件套按角色属性选、2 件套按职业选的兜底规则；预设里写了 set_id / set2_id 就用预设的 */
+const EXTREME_SET_4PC = { 200: 32600, 201: 32200, 202: 32500, 203: 32400, 204: 33900, 205: 34000, 300: 32500 }
+const EXTREME_SET_2PC_BY_PROF = { 1: 32700, 2: 33200, 3: 31300, 4: 33400, 5: 33100, 6: 33100, 7: 32700 }
+
+let CHAR_STAT = null
+let ITEM_STAT = null
+const loadJsonCached = (file, slot) => {
+  const box = slot === 'char' ? 'CHAR_STAT' : 'ITEM_STAT'
+  if (box === 'CHAR_STAT' && CHAR_STAT) return CHAR_STAT
+  if (box === 'ITEM_STAT' && ITEM_STAT) return ITEM_STAT
+  let data = null
+  try { data = JSON.parse(fs.readFileSync(file, 'utf8')) } catch { data = null }
+  if (box === 'CHAR_STAT') CHAR_STAT = data
+  else ITEM_STAT = data
+  return data
+}
+const charStatTable = () => loadJsonCached(path.join(PLUGIN_ROOT, 'system', 'default', 'zzz_char_stat.json'), 'char')
+const itemStatTable = () => loadJsonCached(path.join(PLUGIN_ROOT, 'system', 'default', 'zzz_item_stat.json'), 'item')
+
+/** ZZZ-Plugin 本地图标目录（音擎/套装/立绘的图本体在那儿，未安装则返回 ''） */
+const zzzAssetDir = kind => {
+  for (const root of [path.join(process.cwd(), 'plugins', 'ZZZ-Plugin'), path.join(PLUGIN_ROOT, '..', 'ZZZ-Plugin')]) {
+    const dir = path.join(root, 'resources', 'images', kind)
+    if (fs.existsSync(dir)) return dir
+  }
+  return ''
+}
+const zzzAssetDataUri = (kind, file) => {
+  if (!file) return ''
+  const dir = zzzAssetDir(kind)
+  if (!dir) return ''
+  for (const ext of ['.png', '.webp', '.jpg']) {
+    const full = path.join(dir, file + ext)
+    if (!fs.existsSync(full)) continue
+    try {
+      const buf = fs.readFileSync(full)
+      const mime = ext === '.jpg' ? 'jpeg' : ext.slice(1)
+      return `data:image/${mime};base64,${buf.toString('base64')}`
+    } catch { return '' }
+  }
+  return ''
+}
+
+// 音擎满级副词条上限（与 applyExtremePanel 里的 WEAPON_SUB_MAX 同一份口径）
+const WQ_SUB_MAX = { 111: [1, 0.3], 11102: [1, 0.3], 121: [2, 0.3], 12102: [2, 0.3], 131: [3, 0.48], 13102: [3, 0.48], 201: [5, 24], 211: [6, 48], 231: [9, 24] }
+
+/**
+ * 合成一个「满级 6 命」的极限底稿。返回 {ok, avatar} 或 {ok:false, error}。
+ *
+ * 关键点：properties 的 final 只放「Lv60 基础属性 + 满精音擎的主副词条」，
+ * 驱动盘**一件都不放**（before=0），让 applyExtremePanel 去算「盘内增量」——
+ * 这样 delta 语义和「拿真实记录改装备」时完全一致，两条路径不会分叉。
+ */
+function buildExtremeBase(role, preset) {
+  const norm = v => String(v || '').replace(/[\s·・\-—_「」『』《》【】\[\]（）()]/g, '').toLowerCase()
+  const want = norm(role)
+
+  const statTable = charStatTable()
+  const itemTable = itemStatTable()
+  if (!statTable) return { ok: false, error: '缺少 system/default/zzz_char_stat.json（角色基础属性表）' }
+  if (!itemTable) return { ok: false, error: '缺少 system/default/zzz_item_stat.json（音擎与套装表）' }
+
+  const statKey = Object.keys(statTable.chars || {}).find(k => norm(k) === want)
+  if (!statKey) {
+    return { ok: false, error: `基础属性表里没有「${role}」（该角色的 Lv60 基础值尚未采集，见 tools/extract_zzz_char_stat.mjs）` }
+  }
+  const st = statTable.chars[statKey]
+
+  const wq = itemTable.weapons?.[String(preset.weapon_id)]
+  if (!wq) return { ok: false, error: `音擎表里没有 id=${preset.weapon_id}` }
+
+  // 4+2 套装：预设优先，否则按属性/职业兜底
+  const suit4 = String(preset.set_id || EXTREME_SET_4PC[st.elementType] || 32500)
+  const suit2 = String(preset.set2_id || EXTREME_SET_2PC_BY_PROF[st.profession] || 32700)
+  const suit4Info = itemTable.suits?.[suit4]
+  const suit2Info = itemTable.suits?.[suit2]
+
+  // 面板属性：Lv60 基础值 + 满精音擎主副词条（驱动盘留空，交给 applyExtremePanel 算增量）
+  const props = {}
+  for (const pid of [1, 2, 3, 4, 5, 6, 7, 8, 9, 11]) {
+    const v = st.props?.[pid]
+    if (typeof v === 'number') props[pid] = v
+  }
+  if (!props[1] || !props[2]) return { ok: false, error: `「${role}」的基础属性不完整` }
+  // 音擎副词条按满精上限计入终值（之后 applyExtremePanel 的 weaponSubDelta 就是 0，不会重复加）
+  const subMax = WQ_SUB_MAX[wq.sub?.pid]
+  if (subMax) {
+    const [pid, val] = subMax
+    if (typeof val === 'number' && val > 1) props[pid] = (props[pid] || 0) + val
+    else if (typeof val === 'number' && props[pid] != null) props[pid] = props[pid] * (1 + val)
+  }
+  // 音擎主词条若是基础攻击/防御/生命，会直接进面板终值
+  if (wq.main?.pid === 12101 && wq.main?.value) props[2] = (props[2] || 0) + wq.main.value
+  if (wq.main?.pid === 13101 && wq.main?.value) props[3] = (props[3] || 0) + wq.main.value
+
+  const properties = Object.entries(props).map(([pid, v]) => ({
+    property_id: Number(pid),
+    property_name: (MAIN_NAME[Number(pid)] || ''),
+    base: String(Math.round(v * 100) / 100),
+    add: '0',
+    final: String(Math.round(v * 100) / 100),
+  }))
+
+  // 驱动盘：只放槽位与套装，词条全空 —— applyExtremePanel 会按预设布局重新发牌
+  const suitsCycle = [suit4, suit4, suit4, suit4, suit2, suit2]
+  const equip = suitsCycle.map((sid, i) => ({
+    id: Number(sid) * 10 + i + 1,
+    name: `${itemTable.suits?.[sid]?.name || sid}[${i + 1}]`,
+    level: 15,
+    rarity: 'S',
+    equipment_type: i + 1,
+    icon: zzzAssetDataUri('suit', itemTable.suits?.[sid]?.sprite),
+    equip_suit: {
+      suit_id: Number(sid),
+      name: itemTable.suits?.[sid]?.name || '',
+      own: sid === suit4 ? 4 : 2,
+      desc1: itemTable.suits?.[sid]?.desc2 || '',
+      desc2: itemTable.suits?.[sid]?.desc4 || '',
+    },
+    main_properties: [],
+    properties: [],
+  }))
+
+  // 音擎：满级满精，被动文案取精炼 5 档
+  const weapon = {
+    id: Number(preset.weapon_id),
+    name: wq.name,
+    rarity: 'S',
+    star: 5,
+    level: 60,
+    break_level: 5,
+    profession: Number(st.profession),
+    icon: zzzAssetDataUri('weapon', wq.sprite),
+    talent_title: '',
+    talent_content: wq.talents?.['5'] || wq.talents?.['1'] || '',
+    main_properties: wq.main ? [{ property_id: wq.main.pid, property_name: wq.main.name, base: String(wq.main.value) }] : [],
+    properties: wq.sub ? [{ property_id: wq.sub.pid, property_name: wq.sub.name, base: String(wq.sub.value) }] : [],
+  }
+
+  // 技能：中文名取倍率表（伤害计算靠它匹配），等级按极限口径（普通 16 / 核心 7）
+  // getCharRates 返回 { ok, char }，技能在 char.skills 下（不是顶层 skills）
+  const rateInfo = getCharRates(statKey)
+  const itemsByType = new Map()
+  if (rateInfo?.ok) {
+    for (const sk of rateInfo.char?.skills || []) {
+      if (!sk.name) continue
+      // skillCat 的返回值 → 接口 skill_type：
+      //   0 普攻 / 1 特殊技 / 2 闪避 / 3 连携（含终结技）/ 5 核心 / 6 支援
+      // 连携技与终结技在接口里同属 skill_type 3（cat 分别是 RL 与 RZ），都要接住。
+      // 分类为空的（倍率表里那种「无名强化分支」）直接跳过 —— 塞进普攻组会污染伤害计算。
+      const cat = skillCat(sk.name)
+      let t = null
+      if (cat === 'T') t = 5
+      else if (cat === 'L') t = 6
+      else if (cat === 'R' || cat === 'RL' || cat === 'RZ') t = 3
+      else if (cat === 'E' || cat === 'EQ') t = 1
+      else if (cat === 'AP' || cat === 'AQ' || cat === 'AX') t = 0
+      else if (cat === 'C' || cat === 'CF' || cat === 'CA') t = 2
+      if (t == null) continue
+      if (!itemsByType.has(t)) itemsByType.set(t, [])
+      itemsByType.get(t).push({ title: sk.name, icon: '' })
+    }
+  }
+  const skills = [0, 1, 2, 3, 5, 6].map(t => ({
+    skill_type: t,
+    level: t === 5 ? 7 : 16,
+    items: itemsByType.get(t) || [],
+  }))
+
+  const roleIcon = zzzAssetDataUri('role', st.sprite)
+
+  return {
+    ok: true,
+    avatar: {
+      id: st.id,
+      name_mi18n: statKey,
+      full_name_mi18n: st.fullName || statKey,
+      rarity: st.rarity,
+      element_type: st.elementType,
+      avatar_profession: st.profession,
+      level: 60,
+      rank: 6,
+      camp_name_mi18n: st.camp || '',
+      properties,
+      equip,
+      weapon,
+      skills,
+      role_icon: roleIcon,
+      role_vertical_painting_url: '',
+      role_square_url: '',
+      // 合成标记：面板底部据此说明数据来源，避免让人以为是真实账号数据
+      __synthetic: true,
+    },
+  }
+}
 
 /**
  * 读取自定义面板图，返回 data URI；无则返回 ''。
@@ -1276,16 +1465,6 @@ export class zzz_panel_list extends plugin {
         count: cards.length,
         time: formatNow(),
       }, { e, ret: true })
-      // 补全失败仍出图，但要说清这张图缺什么，否则用户看到「音擎没图标、
-      // 伤害计算整段没了」只会以为功能坏了
-      if (partial && !filled.ok) {
-        await e.reply([
-          `【${role}】用的是精简面板记录，缺图标与技能明细：`,
-          '· 音擎 / 驱动盘图标为空',
-          '· 伤害计算需要 skills[].items 里的技能名，精简记录里是空的',
-          '发一次「米游社' + role + '面板」即可补全，之后本条记录会被更新。',
-        ])
-      }
       return img
     } catch (err) {
       logger.error?.(`[HoYoGet][zzz_panel] 渲染失败：${err?.message || err}`)
@@ -1579,52 +1758,6 @@ export class zzz_panel_list extends plugin {
     return null
   }
 
-  /**
-   * 记录是否「残缺」—— 落盘记录分两种：
-   *   - 本插件 data/zzz_panel/records：接口原始响应，icon 有 URL、skills[].items 有中文名
-   *   - ZZZ-Plugin data/panel：它自己剥掉了图片 URL 与技能明细（icon 是空字符串、items 是空数组）
-   * 后者直接出图就会得到「音擎/驱动盘没图标 + 伤害计算整段消失」的面板，
-   * 因为 calcDamage 靠 skills[].items 里的技能中文名去倍率表匹配，一个都匹配不上。
-   */
-  isRecordPartial(a) {
-    if (!a) return true
-    if (!a?.weapon?.icon) return true
-    if ((a?.equip || []).some(d => !d?.icon)) return true
-    if ((a?.skills || []).some(s => !(s?.items || []).length)) return true
-    return false
-  }
-
-  /**
-   * 拿完整的角色数据补上残缺记录：直接调 avatar/info。
-   * 补到就顺手把记录更新回本地，下次不用再补；补不到就按残缺记录出图，
-   * 并在回复里说明缺哪部分（比出半张图再让用户自己猜要好）。
-   */
-  async completeRecord(e, a) {
-    if (!this.isRecordPartial(a)) return { avatar: a, ok: true }
-    const uid = this.getZzzUid(e)
-    if (!uid || a?.id == null) return { avatar: a, ok: false }
-    try {
-      const ck = await this.getCk(e)
-      if (!ck || !Object.values(ck).some(item => item?.ck)) return { avatar: a, ok: false }
-      const info = await this.fetchDetail(e, uid, ck, a.id)
-      if (info?.__error) return { avatar: a, ok: false }
-      const fresh = this.pickInfo(info?.data)
-      if (!fresh) return { avatar: a, ok: false }
-      try {
-        const file = path.join(RECORDS_DIR, `${uid}_${a.name_mi18n || a.id}.json`)
-        fs.mkdirSync(RECORDS_DIR, { recursive: true })
-        fs.writeFileSync(file, JSON.stringify({
-          uid: String(uid), data: fresh,
-          player: null, updatedAt: formatNow(),
-        }, null, 1), 'utf-8')
-      } catch { /* 落盘失败不影响本次出图 */ }
-      return { avatar: fresh, ok: true }
-    } catch (err) {
-      logger.warn?.(`[HoYoGet][zzz_panel] 补全角色数据失败（${a?.name_mi18n || a?.id}）：${err?.message || err}`)
-      return { avatar: a, ok: false }
-    }
-  }
-
   /** 理论极限：6 命、技能 16/核心 7、音擎满精满突破、六盘满级 S 且副词条满强化 */
   applyExtremePanel(a, preset = null) {
     const out = JSON.parse(JSON.stringify(a || {}))
@@ -1906,12 +2039,6 @@ export class zzz_panel_list extends plugin {
     //（findExtremeRecord 按 name_mi18n 全等匹配，面板详情落盘过即可命中）
     const role = this.resolvePanelRole(m?.[1] || '') || (m?.[1] || '')
     if (!role) return e.reply('未找到对应角色')
-    let base = this.findExtremeRecord(e, role)
-    if (!base) return e.reply(`暂无【${role}】面板记录，请先发一次「米游社${role}面板」`)
-    // 落盘记录可能是 ZZZ-Plugin 的精简版（无图标、无技能明细），先尝试实时补全
-    const partial = this.isRecordPartial(base)
-    const filled = await this.completeRecord(e, base)
-    base = filled.avatar || base
     const preset = this.loadExtremePreset(role)
     if (!preset) {
       return e.reply([
@@ -1920,14 +2047,17 @@ export class zzz_panel_list extends plugin {
         '补完该角色条目后即可使用：需要 char_id / weapon_id / drive_main(4,5,6) / sub_layout。',
       ])
     }
+    // 完全独立：不读任何面板记录，用本地静态表凭空合成满级底稿。
+    // 因此「这个角色我没抽到」也能出图 —— 极限面板要的是理论最优，不是账号现状。
+    const built = buildExtremeBase(role, preset)
+    if (!built.ok) {
+      return e.reply([
+        `【${role}】无法生成极限面板：${built.error}`,
+        '极限面板完全由本地静态表合成，不再依赖面板记录。',
+      ])
+    }
     try {
-      const raw = this.applyExtremePanel(base, preset)
-      // 极限音擎满精文案：avatar 接口的 talent_content 按当期精炼档填数（精1 记录就是精1 文案），
-      // applyExtremePanel 只顶了 star=5 没换文案 —— 从 wiki 取满精描述替换，取不到保留原文案。
-      if (raw?.weapon?.name) {
-        const refineDesc = await zzzWeaponTalentDesc(raw.weapon.name, Number(raw.weapon.star) || 5)
-        if (refineDesc) raw.weapon.talent_content = refineDesc
-      }
+      const raw = this.applyExtremePanel(built.avatar, preset)
       const detail = normalizeDetail(raw, '100000000')
       const img = await render('zzz_panel/detail', {
         ...detail,
