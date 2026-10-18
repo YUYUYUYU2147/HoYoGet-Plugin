@@ -53,10 +53,18 @@ async function listCategories(characterId = null) {
 
 /**
  * 某配装的全球榜。
- * @param {object} cat  categories 里的一项（需 characterId / short）
+ *
+ * 关键：`calculationId` **不能**用 `characterId + '02'` 拼 —— 那只是角色的默认方案，
+ * 同一角色的多套配装会全部撞到同一个 ID 上（拉回来一模一样的数据）。
+ * 真正的方案 ID 在 `cat.weapons[].calculationId` 里（每个武器档位一个），
+ * 与网站 URL 的 `/leaderboards/<calculationId>/<variant>` 一一对应。
+ *
+ * variant 取该武器档位的 defaultVariant（如 180er），没有就用 cat.short 的小写。
  */
 async function fetchLeaderboard(cat, { size = 20, page = 1 } = {}) {
-  const calcId = `${cat.characterId}02`   // 默认计算方案：角色 id + 02
+  const w = (cat.weapons || [])[0] || {}
+  const calcId = w.calculationId || `${cat.characterId}02`
+  const variant = w.defaultVariant || String(cat.short || '').toLowerCase()
   const qs = [
     'sort=calculation.result',
     'order=-1',
@@ -67,7 +75,7 @@ async function fetchLeaderboard(cat, { size = 20, page = 1 } = {}) {
     'p=',
     'fromId=',
     'li=',
-    `variant=${encodeURIComponent(cat.short || '')}`,
+    `variant=${encodeURIComponent(variant)}`,
     `calculationId=${calcId}`,
   ].join('&')
   const j = await akashaRequest(`leaderboards?${qs}`)
