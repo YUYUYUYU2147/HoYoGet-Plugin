@@ -160,25 +160,21 @@ export class zzz_panel_accel extends plugin {
     })
   }
 
-  /** 在 accept 阶段接管：ZZZ-Plugin 的规则同样是「(更新|刷新)…面板」，普通 rule 抢不过它 */
+  /** 在 accept 阶段接管：只触发米游社面板列表，不走 ZZZ-Plugin 更新 */
   async accept(e) {
     const msg = String(e?.msg || '').replace(/\s+/g, '')
     if (!ACCEL_RE.test(msg)) return
-    const cfg = loadCfg()
-    if (!cfg.enabled) return
     if (!fs.existsSync(path.join(ZZZ_ROOT, 'dist', 'lib', 'mysapi.js'))) {
-      return e.reply('未检测到 ZZZ-Plugin，跳过面板加速')
+      return e.reply('未检测到 ZZZ-Plugin，跳过面板列表')
     }
     e.msg = msg
-    await this.runFastUpdate(e, cfg)
+    await this.triggerMysPanel(e)
     return 'return'
   }
 
   async fastUpdate() {
-    // accept 阶段已统一处理，这里仅兜底（rule 命中时）
-    const cfg = loadCfg()
-    if (!cfg.enabled) return false
-    return await this.runFastUpdate(this.e, cfg)
+    // accept 阶段已处理，此处仅兜底
+    return 'return'
   }
 
   /** 与 ZZZ-Plugin 面板更新同流程，但请求与头像两段都并发 */
@@ -279,6 +275,12 @@ export class zzz_panel_accel extends plugin {
         `共 ${formatted.length} 个角色，新增 ${newCount} 个，耗时 ${elapsed} 秒`,
         newItems.length ? '新角色：' + newItems.map(nameOf).join('、') : ''
       ].filter(Boolean)
+
+      // 更新完成后自动调用米游社面板列表（不阻塞后续回复）
+      this.triggerMysPanel(e).catch(err => {
+        logger.debug(`[HoYoGet][panel-accel] 米游社面板列表调用失败（不影响主流程）：${err?.message || err}`)
+      })
+
       // segment 是对象：和文字一起 join('\n') 只会得到一行 "[object Object]"，
       // 图必须作为数组元素与文字并列发送（system/bili.js 的扫码消息即此写法）。
       return e.reply(img ? [img, ...lines] : lines.join('\n'))
@@ -286,6 +288,17 @@ export class zzz_panel_accel extends plugin {
       logger.error(`[HoYoGet][panel-accel] 面板更新失败：${err?.message || err}`)
       return e.reply(`面板更新失败：${err?.message || err}`)
     }
+  }
+
+  /**
+   * 更新完成后自动调用米游社面板列表（zzz_panel_list.js 的 panelList）。
+   * 使用 HoYoGet-Plugin 自己的渲染，不依赖 ZZZ-Plugin。
+   */
+  async triggerMysPanel(e) {
+    const { zzz_panel_list } = await import('./zzz_panel_list.js')
+    const app = new zzz_panel_list()
+    app.e = e
+    await app.panelList(e)
   }
 
   /**

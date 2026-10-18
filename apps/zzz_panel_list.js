@@ -89,8 +89,10 @@ function normalizeAvatar(item) {
     rarity,
     rarityColor: RARITY_COLOR[rarity] || '#9b8cff',
     element,
+    elementEn: ZELEM_STR[item?.element_type] || '',
     elementColor: ELEMENT_COLOR[element] || '#888',
     type,
+    typeCn: ZZZ_TYPE_MAP[item?.avatar_profession] || '',
     camp: item?.camp_name_mi18n || '',
     rank: item?.rank ?? 0,
     icon: item?.role_square_url || item?.hollow_icon_path || item?.group_icon_path || '',
@@ -839,7 +841,7 @@ const zzzAssetDataUri = (kind, file) => {
 }
 
 // 音擎满级副词条上限（与 applyExtremePanel 里的 WEAPON_SUB_MAX 同一份口径）
-const WQ_SUB_MAX = { 111: [1, 0.3], 11102: [1, 0.3], 121: [2, 0.3], 12102: [2, 0.3], 131: [3, 0.48], 13102: [3, 0.48], 201: [5, 24], 211: [6, 48], 231: [9, 24] }
+const WQ_SUB_MAX = { 111: [1, 0.3], 11102: [1, 0.3], 121: [2, 0.3], 12102: [2, 0.3], 131: [3, 0.48], 13102: [3, 0.48], 201: [5, 24], 20103: [5, 24], 211: [6, 48], 21103: [6, 48], 231: [9, 24], 23103: [9, 24] }
 
 /**
  * 合成一个「满级 6 命」的极限底稿。返回 {ok, avatar} 或 {ok:false, error}。
@@ -881,13 +883,22 @@ function buildExtremeBase(role, preset) {
   if (!props[1] || !props[2]) return { ok: false, error: `「${role}」的基础属性不完整` }
   // 音擎副词条按满精上限计入终值（之后 applyExtremePanel 的 weaponSubDelta 就是 0，不会重复加）
   const subMax = WQ_SUB_MAX[wq.sub?.pid]
-  if (subMax) {
-    const [pid, val] = subMax
-    if (typeof val === 'number' && val > 1) props[pid] = (props[pid] || 0) + val
-    else if (typeof val === 'number' && props[pid] != null) props[pid] = props[pid] * (1 + val)
+  if (subMax && wq.sub?.value) {
+    const [pid] = subMax
+    const subVal = [20103, 21103, 23203, 23103].includes(wq.sub.pid) ? wq.sub.value / 40
+      : [11102, 12102, 13102].includes(wq.sub.pid) ? wq.sub.value / 4000
+      : wq.sub.value / 100
+    if (typeof subVal === 'number' && subVal > 1) props[pid] = (props[pid] || 0) + subVal
+    else if (typeof subVal === 'number' && props[pid] != null) props[pid] = props[pid] * (1 + subVal)
   }
-  // 音擎主词条若是基础攻击/防御/生命，会直接进面板终值
-  if (wq.main?.pid === 12101 && wq.main?.value) props[2] = (props[2] || 0) + wq.main.value
+  // 音擎主词条若是基础攻击/防御/生命，会直接进面板终值（用满级值）
+  // 满级基础攻击力 = Lv1 value × factor（S 级各档已验证）
+  const WQ_ATK_MAX = { S_40: 594, S_46: 684, S_48: 713, S_50: 742, A_40: 594, A_42: 624, B_32: 475 }
+  if (wq.main?.pid === 12101 && wq.main?.value) {
+    const atkKey = `${wq.rarity}_${wq.main.value}`
+    const atkMax = WQ_ATK_MAX[atkKey] || (wq.main.value * 14.85 | 0)
+    props[2] = (props[2] || 0) + atkMax
+  }
   if (wq.main?.pid === 13101 && wq.main?.value) props[3] = (props[3] || 0) + wq.main.value
 
   const properties = Object.entries(props).map(([pid, v]) => ({
@@ -930,8 +941,15 @@ function buildExtremeBase(role, preset) {
     icon: zzzAssetDataUri('weapon', wq.sprite),
     talent_title: '',
     talent_content: wq.talents?.['5'] || wq.talents?.['1'] || '',
-    main_properties: wq.main ? [{ property_id: wq.main.pid, property_name: wq.main.name, base: String(wq.main.value) }] : [],
-    properties: wq.sub ? [{ property_id: wq.sub.pid, property_name: wq.sub.name, base: String(wq.sub.value) }] : [],
+    main_properties: wq.main ? [{ property_id: wq.main.pid, property_name: wq.main.name, base: String(wq.main.pid === 12101 ? (WQ_ATK_MAX[`${wq.rarity}_${wq.main.value}`] || wq.main.value) : wq.main.value) }] : [],
+    // 副词条：原始存储值（暴击/暴伤/穿透值是 ×40 的整数）需格式化输出
+    properties: wq.sub ? [{
+      property_id: wq.sub.pid,
+      property_name: wq.sub.name,
+      base: [20103, 21103, 23203, 23103].includes(wq.sub.pid)
+        ? String(Math.round(wq.sub.value / 40)) + '%'
+        : String(wq.sub.value),
+    }] : [],
   }
 
   // 技能：中文名取倍率表（伤害计算靠它匹配），等级按极限口径（普通 16 / 核心 7）
@@ -1096,6 +1114,7 @@ const MAIN_MAX_VALUE = {
   20103: '24%', 21103: '48%', 23103: '24%', 23203: '24',
   30502: '60%', 31203: '92', 31402: '30%',
   31503: '30%', 31603: '30%', 31703: '30%', 31803: '30%', 31903: '30%', 32303: '30%',
+  11103: '2200', 12103: '316', 13103: '225',
 }
 const MAIN_NAME = {
   11102: '生命值百分比', 11103: '生命值', 12102: '攻击力百分比', 12103: '攻击力',
@@ -1234,7 +1253,7 @@ function normalizeDetail(a, uid) {
     })),
   } : null
 
-  // 角色基础属性 → basic_properties（与面板排名共用同一份构造）
+  // 角色基础属性 → basic_properties（按字段键；伤害加成单独处理以挂元素图标）
   const basic_properties = buildBasicProperties(a)
 
   // 技能：按固定槽位顺序产出，模板按 skills[0..5] 取
@@ -1494,7 +1513,94 @@ export class zzz_panel_list extends plugin {
     }
 
     // 归一化后交模板渲染（自研，不复用 ZZZ-Plugin 模板）
-    const cards = list.map(it => normalizeAvatar(it))
+    let cards = list.map(it => normalizeAvatar(it))
+
+    // 尝试从 ZZZ-Plugin 已落盘数据加载评分，用于排序与展示
+    const uidRecords = new Map()
+    try {
+      const zzzPanelDir = path.join(ZZZ_ROOT, 'data', 'panel')
+      if (fs.existsSync(zzzPanelDir)) {
+        for (const f of fs.readdirSync(zzzPanelDir).filter(f => f.endsWith('.json'))) {
+          try {
+            const list = JSON.parse(fs.readFileSync(path.join(zzzPanelDir, f), 'utf8'))
+            if (!Array.isArray(list)) continue
+            for (const a of list) {
+              const name = a?.name_mi18n || a?.full_name_mi18n || ''
+              if (!name || uidRecords.has(name)) continue
+              const equip = (a?.equip || []).map(d => ({
+                slot: d.equipment_type ?? 0,
+                level: d.level ?? 0,
+                rarity: d.rarity || 'A',
+                main_properties: (d.main_properties || []).map(p => ({ pid: p.property_id })),
+                properties: (d.properties || []).map(p => ({
+                  pid: p.property_id,
+                  count: p.level ?? 0,
+                })),
+              }))
+              const basic_properties = {}
+              for (const p of (a?.properties || [])) {
+                const m = ZPROP[p.property_id]
+                if (m && m.k !== 'dmgbonus') {
+                  const final = (p.final !== undefined && p.final !== '' && p.final !== '0') ? p.final : p.base
+                  basic_properties[m.k] = { base: p.base || '', final }
+                }
+              }
+              const scoreStats = {
+                atk: parseFloat(basic_properties.attack?.final) || 0,
+                crit: toRatio(basic_properties.crit?.final),
+                critdmg: toRatio(basic_properties.critdam?.final),
+                am: parseFloat(basic_properties.elementabnormalpower?.final) || 0,
+                ap: parseFloat(basic_properties.elementmystery?.final) || 0,
+              }
+              const scoreRes = calcEquipScore(equip, name, scoreStats, a?.avatar_profession, a?.element_type, basic_properties)
+              uidRecords.set(name, { score: scoreRes.score, rating: scoreRes.rating, ruleName: scoreRes.ruleName })
+            }
+          } catch { /* 跳过损坏文件 */ }
+        }
+      }
+    } catch { /* panel 目录不存在 */ }
+
+    // 给每个卡片注入评分（有记录则显示，无记录标记暂无）
+    cards = cards.map(c => {
+      const rec = uidRecords.get(c.name)
+      return { ...c, equip_score: rec?.score ?? null, equip_rating: rec?.rating ?? null }
+    })
+
+    // 获取全角色上线时间排序表
+    let ordMap = null
+    try {
+      const allRoles = await mys.zzz_data('', 'js')
+      if (Array.isArray(allRoles)) {
+        ordMap = new Map()
+        for (const r of allRoles) {
+          if (r.name && r._ord != null) ordMap.set(r.name, r._ord)
+        }
+      }
+    } catch { /* 拿不到排序表退化成稀有度+评分排序 */ }
+
+    // 按稀有度(S→A)分组，同组内按上线时间从新到旧（_ord升序），
+    // 无上线时间记录的按评分降序兜底
+    cards.sort((a, b) => {
+      // 稀有度排序：S 在前，A 在后
+      if (a.rarity !== b.rarity) return a.rarity === 'S' ? -1 : 1
+      // 同稀有度：有 _ord 的按 _ord 升序（值越小越新）
+      const oa = ordMap?.get(a.name)
+      const ob = ordMap?.get(b.name)
+      if (oa != null && ob != null) return oa - ob
+      if (oa != null) return -1
+      if (ob != null) return 1
+      // 都无 _ord，按评分降序兜底
+      if (a.equip_score != null && b.equip_score != null) return b.equip_score - a.equip_score
+      if (a.equip_score != null) return -1
+      if (b.equip_score != null) return 1
+      return 0
+    })
+
+    // 不再注入排名序号，等以后有群排名数据再加
+    // 统计有评分的角色数
+    const scoredCount = cards.filter(c => c.equip_score != null).length
+    let gamePlayer = null
+    try { gamePlayer = await this.fetchPlayer(e, uid, ck) } catch {}
     try {
       const img = await render('zzz_panel/list', {
         cards,
@@ -1502,12 +1608,14 @@ export class zzz_panel_list extends plugin {
         server,
         count: cards.length,
         time: formatNow(),
+        bgImage: getPanelBg(),
+        ...getPlayerBadge(e, gamePlayer),
       }, { e, ret: true })
       return img
     } catch (err) {
       logger.error?.(`[HoYoGet][zzz_panel] 渲染失败：${err?.message || err}`)
       // 渲染失败兜底：回退成文字列表，至少把数据给到
-      const lines = cards.slice(0, 30).map(c => `${c.name} Lv${c.level} ${c.rarity} ${c.element}/${c.type} 影${c.rank}`)
+      const lines = cards.slice(0, 30).map(c => `${c.name} Lv${c.level} ${c.rarity} ${c.element}/${c.type} 影${c.rank}${c.equip_score != null ? ` ${c.equip_score.toFixed(1)}分` : ' 暂无评分'}`)
       return e.reply([
         `面板渲染失败，文字兜底（共 ${cards.length} 名代理人）：`,
         ...lines,
@@ -2034,7 +2142,13 @@ export class zzz_panel_list extends plugin {
         valid: true,
         system_id: Math.trunc(id / 100),
         add: count - 1,
-      }))
+      })).sort((a, b) => {
+        // 百分比类（02 结尾 / 战斗属性 03 结尾）排在前，固定值小词条（11103/12103/13103）排在后
+        const aPct = a.property_id % 10 === 2 || [20103, 21103, 23103, 23203].includes(a.property_id)
+        const bPct = b.property_id % 10 === 2 || [20103, 21103, 23103, 23203].includes(b.property_id)
+        if (aPct !== bPct) return aPct ? -1 : 1
+        return a.property_id - b.property_id
+      })
       return {
         ...eq,
         level: 15,
@@ -2043,6 +2157,8 @@ export class zzz_panel_list extends plugin {
           property_name: MAIN_NAME[mainId] || String(mainId),
           property_id: mainId,
           base: mainBase,
+          classname: (ZPROP[mainId] || {}).c || 'attack',
+          short_name: MAIN_NAME[mainId] || String(mainId),
           level: 1,
           valid: false,
           system_id: 0,
@@ -2136,8 +2252,8 @@ export class zzz_panel_list extends plugin {
   async panelDetailHelp(e) {
     return e.reply([
       '绝区零·单角色面板',
-      '用法：米游社<角色名或序号>面板',
-      '示例：米游社南宫羽面板 / %南宫羽面板',
+      '用法：%<角色名或序号>面板 或 米游社<角色名或序号>面板',
+      '示例：%南宫羽面板 或 米游社南宫羽面板',
       '　　　米游社3面板',
       '（序号看「米游社更新面板」列表从左到右第几个）',
       '',

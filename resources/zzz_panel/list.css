@@ -1,147 +1,225 @@
-@font-face { font-family: 'Unifont'; src: url('../font/unifont.otf') format('opentype'); font-display: swap; unicode-range: U+3400-4DBF, U+20000-2FA1F; }
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+body {
+  position: relative;
+  width: 720px;
+  background: #14161f;
+  font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  color: #e8eaf0;
+  text-shadow: 0 1px 3px rgba(0,0,0,.6);
 }
 
-/* body 必须显式定宽：渲染器按 body 盒子宽度截图，只给 .wrap 定宽会让
-   body 保持视口宽度，内容右侧被裁掉（只剩左边一列多）。与 zzz_gacha/stat.css
-   的 body{width:1200px} 同一约定。 */
-body {
-  width: 1100px;
-  background: #14161f;
-  font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif, "Unifont";
-  color: #e8eaf0;
+body::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: rgba(4,7,13,.45);
+  pointer-events: none;
+}
+
+.panel-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.panel-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(4,7,13,.24), rgba(4,7,13,.68));
 }
 
 .wrap {
-  width: 1100px;
-  padding: 28px 28px 16px;
-  background: linear-gradient(160deg, #1b1e2b, #14161f);
+  position: relative;
+  z-index: 1;
+  width: 720px;
+  padding: 24px 20px 16px;
 }
 
-.head {
-  margin-bottom: 20px;
+.head-box {
+  margin-bottom: 16px;
+}
+
+.player-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   border-left: 4px solid #ff6b4a;
   padding-left: 14px;
 }
 
-.title {
-  font-size: 30px;
+.player-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid #ffcf5c;
+  flex-shrink: 0;
+}
+
+.player-info .title {
+  font-size: 22px;
   font-weight: 800;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
 }
 
-.sub {
-  font-size: 15px;
+.player-info .player-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffcf5c;
+  margin-top: 2px;
+}
+
+.player-info .label {
+  font-size: 13px;
   color: #9aa0b0;
-  margin-top: 6px;
+  margin-top: 2px;
 }
 
-.grid {
+.label-tip {
+  font-size: 13px;
+  color: #7a8098;
+  margin-top: 8px;
+  padding-left: 14px;
+}
+
+.label-tip span {
+  color: #ff6b4a;
+  font-weight: 600;
+}
+
+.cont {
+  border-radius: 10px;
+  padding: 10px 0;
+}
+
+.char-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
+  padding: 6px 10px;
 }
 
-.card {
-  width: 158px;
-  background: #232738;
-  border: 2px solid #888;
-  border-radius: 12px;
-  padding: 10px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
-}
-
-.avawrap {
+.char-item {
+  margin: 6px 0;
+  width: 85px;
+  text-align: center;
   position: relative;
 }
 
-.ava {
-  width: 136px;
-  height: 136px;
-  border-radius: 10px;
-  object-fit: cover;
-  background: #2c3146;
+.char-icon {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 1px 1px 3px 0 #000;
+  overflow: visible;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.char-icon .img {
+  width: 100%;
+  height: 100%;
+  background-size: auto 100%;
+  background-position: top center;
   display: block;
+  border-radius: 50%;
+  box-sizing: border-box;
 }
 
-.rar {
+.star5 .img {
+  border: 2px solid #ffcf5c !important;
+}
+
+.star4 .img {
+  border: 2px solid #9b8cff !important;
+}
+
+.cons-tag {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  font-size: 14px;
-  font-weight: 800;
-  color: #1a1a1a;
-  padding: 1px 8px;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: #ff8a6a;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 0 6px;
   border-radius: 8px;
+  line-height: 16px;
+  white-space: nowrap;
+  z-index: 1;
 }
 
-.name {
-  font-size: 17px;
+.lv-tag {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: rgba(0, 0, 0, 0.85);
+  color: #cdd3e6;
+  font-size: 10px;
   font-weight: 700;
-  margin: 8px 0 6px;
+  padding: 0 5px;
+  border-radius: 8px;
+  line-height: 15px;
+  white-space: nowrap;
+  z-index: 1;
+}
+
+.char-item .name {
+  margin-top: 6px;
+  display: block;
+  font-size: 13px;
+  color: #fff;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  padding: 0 2px;
 }
 
-.line {
+.char-icons {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 13px;
+  justify-content: center;
+  gap: 3px;
+  margin-top: 2px;
+  height: 18px;
 }
 
-.lv {
-  background: #3a4058;
-  color: #cdd3e6;
-  padding: 1px 7px;
-  border-radius: 7px;
-  white-space: nowrap;
+.char-icons .type-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
-.el {
-  color: #14161f;
+.score-tag {
+  display: block;
+  margin-top: 1px;
+  font-size: 10px;
   font-weight: 700;
-  padding: 1px 7px;
-  border-radius: 7px;
-  white-space: nowrap;
-}
-
-.tp {
-  background: #2c3146;
-  color: #b9c0d4;
-  padding: 1px 7px;
-  border-radius: 7px;
-  white-space: nowrap;
-}
-
-.foot {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  color: #8b91a6;
-  margin-top: 7px;
-}
-
-.rk {
   color: #ffcf5c;
-  font-weight: 700;
+  line-height: 16px;
+  transform: scale(0.9);
 }
 
-.cmp {
-  max-width: 92px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.score-tag.no-score {
+  color: #6a7090;
+  font-weight: 400;
+  transform: scale(0.85);
 }
 
-.logo {
-  margin-top: 18px;
+.cont-footer {
+  display: flex;
+  justify-content: center;
+  padding: 8px;
+  margin-top: 6px;
   font-size: 12px;
   color: #ff4d4f;
-  text-align: right;
+  border-radius: 0 0 10px 10px;
 }
