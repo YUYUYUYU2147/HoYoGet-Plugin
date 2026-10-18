@@ -39,5 +39,8 @@ jobs:
       - name: 模板 ppath 检查
         run: node tools/ci/ppath-check.mjs
 
+      - name: 极限面板预设检查
+        run: node tools/ci/extreme-preset-check.mjs
+
       - name: 隐私信息扫描
         run: node tools/ci/privacy-scan.mjs

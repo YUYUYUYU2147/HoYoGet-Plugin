@@ -2,7 +2,7 @@ import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { config, mhy, pluginPriority, render, yaml, makeForwardMsg } from '#HoYoGet'
+import { config, mhy, pluginPriority, render, yaml, makeForwardMsg, mys } from '#HoYoGet'
 import { damageSkillsAt, getCharRates } from '../system/zzz_skill_rate.js'
 import { getBuffAreas } from '../system/zzz_buff.js'
 import { mhyFetch } from '../system/mhy_fetch.js'
@@ -390,6 +390,27 @@ function stripTags(s) {
     .replace(/\r?\n/g, ' ')
     .replace(/\s{2,}/g, ' ')
     .trim()
+}
+
+/** 从米游社 wiki 音擎数据取指定精炼档位的被动描述。
+ *  avatar 接口的 weapon.talent_content 只按当期精炼档填数值（精1 面板就是精1 文案），
+ *  极限面板把音擎顶成满精后文案数值还是旧的 —— 这里按档位拉 wiki 文案（content.talents
+ *  为 {1..5: {name, desc}}，与 system/wiki.js 音擎图鉴同源）。失败返回空串，调用方保留原文案。 */
+async function zzzWeaponTalentDesc(name, refine) {
+  try {
+    if (!name || !(Number(refine) > 1)) return ''
+    const ret = await mys.data(name, 'wq', false, true)
+    const id = Array.isArray(ret)
+      ? (ret.find(v => v?.title === name)?.id || ret[0]?.id)
+      : ret?.id
+    if (!id) return ''
+    const data = await mys.detail(id, false, true)
+    const talents = data?.content?.talents || {}
+    const t = talents[refine] || talents[String(refine)] || {}
+    return t?.desc ? stripTags(t.desc) : ''
+  } catch {
+    return ''
+  }
 }
 
 /** 百分比字符串 → 小数（"9.8%"→0.098；无数值→0） */
@@ -841,8 +862,9 @@ const MAIN_NAME = {
   31203: '异常精通', 31402: '异常掌控', 31503: '物理伤害加成', 31603: '火属性伤害加成',
   31703: '冰属性伤害加成', 31803: '电属性伤害加成', 31903: '以太伤害加成', 32303: '风属性伤害加成',
 }
-// 可能的副词条 id（用于理论最大词条）
-const SUB_STAT_IDS = [11102, 11103, 12102, 12103, 13102, 13103, 20103, 21103, 23203, 31203]
+// 可能的副词条 id（用于理论最大词条）。31402 异常掌控可作副词条（异常职业），
+// 31203/31402 排在 23203 前，保证异常职业补位时先取精通/掌控。
+const SUB_STAT_IDS = [11102, 11103, 12102, 12103, 13102, 13103, 20103, 21103, 31203, 31402, 23203]
 // 4/5/6 号位主词条候选
 const SCORE_MAIN_STATS = {
   4: [11102, 12102, 13102, 20103, 21103, 31203],
@@ -851,15 +873,18 @@ const SCORE_MAIN_STATS = {
 }
 // 自研评分权重：按职业给出主词条/副词条优先级，不复制第三方评分表。
 // 取向：强攻双暴、击破冲击、异常精通/掌控、支援回能、命破生命、锋御防御。
+// 注意：副词条只存在「穿透值(23203)」，「穿透率(23103)」仅作 5 号位主词条，不进权重。
 const SELF_SCORE_WEIGHTS = {
-  strong:   { '攻击力百分比': .75, '暴击率': 1, '暴击伤害': 1, '穿透率': 1, '穿透值': .25, '属性伤害加成': 1 },
-  stun:     { '冲击力': 1, '攻击力百分比': .75, '暴击率': 1, '暴击伤害': .75, '穿透率': .5, '穿透值': .25, '属性伤害加成': .75 },
-  anomaly:  { '攻击力百分比': .75, '异常精通': 1, '异常掌控': 1, '穿透率': .75, '穿透值': .25, '属性伤害加成': 1 },
-  support:  { '攻击力百分比': .75, '暴击率': .75, '暴击伤害': .75, '能量自动回复': 1, '穿透率': .5, '穿透值': .25, '属性伤害加成': .75 },
-  rupture:  { '生命值百分比': .75, '攻击力百分比': .25, '暴击率': 1, '暴击伤害': 1, '属性伤害加成': 1 },
-  defender: { '防御力百分比': 1, '暴击率': .75, '暴击伤害': .75, '穿透率': .75, '穿透值': .25, '属性伤害加成': 1 },
+  strong:   { '攻击力百分比': .75, '暴击率': 1, '暴击伤害': 1, '穿透值': 1, '属性伤害加成': 1 },
+  stun:     { '冲击力': 1, '攻击力百分比': .75, '暴击率': 1, '暴击伤害': .75, '穿透值': .5, '属性伤害加成': .75 },
+  anomaly:  { '攻击力百分比': .75, '异常精通': 1, '异常掌控': 1, '穿透值': .75, '属性伤害加成': 1 },
+  support:  { '攻击力百分比': .75, '暴击率': .75, '暴击伤害': .75, '能量自动回复': 1, '穿透值': .5, '属性伤害加成': .75 },
+  rupture:  { '生命值百分比': .75, '攻击力百分比': .25, '暴击率': 1, '暴击伤害': 1, '属性伤害加成': 1, '冲击力': .5, '防御力百分比': .25 },
+  defender: { '防御力百分比': 1, '暴击率': .75, '暴击伤害': .75, '穿透值': .75, '属性伤害加成': 1 },
 }
-const PROF_WEIGHT_KEY = { 1: 'strong', 2: 'stun', 3: 'anomaly', 4: 'support', 5: 'support', 6: 'rupture', 7: 'defender' }
+// prof5「防护」走 defender 权重：防护角色（凯撒/本/赛斯/潘引壶/照）主词条是防御%/生命%，
+// 此前被映射到 support（暴击/攻击/能量）导致副词条优先级完全错位。
+const PROF_WEIGHT_KEY = { 1: 'strong', 2: 'stun', 3: 'anomaly', 4: 'support', 5: 'defender', 6: 'rupture', 7: 'defender' }
 const PROF_WEIGHT_NAME = { 1: '强攻', 2: '击破', 3: '异常', 4: '支援', 5: '防护', 6: '命破', 7: '锋御' }
 
 /** 取评分权重（按 property_id） */
@@ -1169,6 +1194,9 @@ export class zzz_panel_list extends plugin {
       // 必须压过 miao-plugin 的米游社面板与 ZZZ-Plugin 面板，否则规则抢不过它们
       priority: pluginPriority('zzz_panel_list', -100),
       rule: [
+        // EXTREME 必须排在 DETAIL 之前：「米游社X极限面板」同时命中两者，
+        // DETAIL 是超集匹配，放行后会被 detail 抢答成普通面板
+        { reg: EXTREME_REG.source, fnc: 'panelExtreme' },
         { reg: CMD_REG.source, fnc: 'panelList' },
         { reg: DAMAGE_REG.source, fnc: 'panelDamage' },
         { reg: DETAIL_REG.source, fnc: 'panelDetail' },
@@ -1177,7 +1205,6 @@ export class zzz_panel_list extends plugin {
         { reg: ORIGINAL_REG.source, fnc: 'panelOriginal' },
         { reg: PANEL_UPLOAD_REG.source, fnc: 'panelUploadImages' },
         { reg: PANEL_IMAGES_REG.source, fnc: 'panelImageList' },
-        { reg: EXTREME_REG.source, fnc: 'panelExtreme' },
         { reg: PANEL_DELETE_IMG_REG.source, fnc: 'panelDeleteImages' },
         { reg: REMIND_ON_REG.source, fnc: 'zzzRemindToggle' },
         { reg: REMIND_GLOBAL_ON_REG.source, fnc: 'zzzRemindGlobalToggle' },
@@ -1208,9 +1235,8 @@ export class zzz_panel_list extends plugin {
   async accept(e) {
     const msg = String(e?.msg || '')
     if (!EXTREME_REG.test(msg)) return false
-    const m = msg.match(EXTREME_REG)
-    const role = this.resolvePanelRole(m?.[1] || '')
-    if (!role) return false
+    // 只要命中极限面板就截胡，不因 resolvePanelRole 解析不出角色而放行
+    //（放行会被 DETAIL_REG 的首字模糊匹配抢答成普通面板）
     this.e = e
     await this.panelExtreme(e)
     return 'return'
@@ -1318,7 +1344,10 @@ export class zzz_panel_list extends plugin {
       // 落盘原始面板，供极限面板/排名复用（不依赖 ZZZ-Plugin 的 data/panel）
       try {
         fs.mkdirSync(RECORDS_DIR, { recursive: true })
-        fs.writeFileSync(path.join(RECORDS_DIR, `${uid}.json`), JSON.stringify({
+        // 每角色一个记录文件（<uid>_<角色名>.json）：查新角色不再覆盖旧角色记录，
+        // findExtremeRecord 会遍历目录按 name_mi18n 匹配，天然兼容
+        const recRole = String(avatar?.name_mi18n || target?.name_mi18n || 'unknown').replace(/[\\/:*?"<>|\s·・]/g, '') || 'unknown'
+        fs.writeFileSync(path.join(RECORDS_DIR, `${uid}_${recRole}.json`), JSON.stringify({
           uid,
           data: avatar,
           player: gamePlayer || null,
@@ -1328,7 +1357,7 @@ export class zzz_panel_list extends plugin {
         logger.debug?.(`[HoYoGet][zzz_panel] 面板记录落盘失败：${err?.message || err}`)
       }
       const img = await render('zzz_panel/detail', { ...detail, footer, bgImage: getPanelBg(), ...getPlayerBadge(e, gamePlayer) }, { e, ret: true })
-      const sent = await e.reply(img)
+      const sent = img // render(ret:true) 已自动 e.reply 发送，此处仅保留引用供下方缓存使用
       // 缓存面板用的角色原图，供「%原图」直接取回
       const roleIcon = detail.charData?.role_icon
       if (roleIcon) {
@@ -1471,6 +1500,13 @@ export class zzz_panel_list extends plugin {
     return e.reply([`成功删除ID为${ok.join(',') || '无'}的图片`, fail.length ? `删除失败ID为${fail.join(',')}` : '无失败ID'].join('\n'))
   }
 
+  /**
+   * 取某角色的极限面板预设。**没有预设就返回 null，由调用方明确报「未配置」**。
+   *
+   * 以前这里是「找不到就用职业默认值兜底」，但极限面板的语义是理论最优：
+   * 兜底出来的是一张「看着完整、实则每盘少两档词条」的面板，比明确报错更糟。
+   * 漏配的角色由 tools/ci/extreme-preset-check.mjs 在 CI 里报出来。
+   */
   loadExtremePreset(role) {
     try {
       const data = yaml.get(EXTREME_PRESET_FILE) || {}
@@ -1479,7 +1515,9 @@ export class zzz_panel_list extends plugin {
       for (const [name, preset] of Object.entries(data)) {
         if (norm(name) === want) return preset
       }
-    } catch { /* 没有预设文件就走自动权重 */ }
+    } catch (err) {
+      logger.error?.(`[HoYoGet][zzz_panel] 读极限面板预设失败：${err?.message || err}`)
+    }
     return null
   }
 
@@ -1550,7 +1588,9 @@ export class zzz_panel_list extends plugin {
       const m = String(v ?? '').replace(/,/g, '').match(/-?\d+(?:\.\d+)?/)
       return m ? Number(m[0]) : 0
     }
-    const pct = id => [5, 6, 7, 8, 9].includes(Number(id)) || (Number(id) >= 315 && Number(id) <= 323)
+    const PCT_IDS = [11102, 12102, 13102, 12202, 20103, 21103, 23103]
+    const pct = id => [5, 6, 7, 8, 9].includes(Number(id)) || PCT_IDS.includes(Number(id))
+      || (Number(id) >= 315 && Number(id) <= 323) || (Number(id) >= 31503 && Number(id) <= 32303)
     const fmt = (id, value) => pct(id) ? `${value.toFixed(1)}%` : (Number(id) === 11 ? value.toFixed(2) : `${Math.round(value)}`)
     const toChar = id => {
       id = Number(id)
@@ -1572,7 +1612,12 @@ export class zzz_panel_list extends plugin {
       const map = {}
       const add = (id, value) => { if (id != null) map[id] = (map[id] || 0) + value }
       for (const eq of equips || []) {
-        for (const p of [...(eq.main_properties || []), ...(eq.properties || [])]) {
+        // 副词条数组若重复列出主词条会导致预算基数虚高（暴击溢出），按主词条 id 去重
+        const mainPid = Number(eq.main_properties?.[0]?.property_id || 0)
+        for (const p of [
+          ...(eq.main_properties || []),
+          ...(eq.properties || []).filter(x => Number(x.property_id) !== mainPid),
+        ]) {
           const id = Number(p.property_id), value = num(p.base)
           if (!value) continue
           const cid = toChar(id)
@@ -1596,29 +1641,172 @@ export class zzz_panel_list extends plugin {
       out.skills = out.skills.map(v => ({ ...v, level: Number(v.skill_type) === 5 ? 7 : 16 }))
     }
     if (out.weapon) out.weapon = { ...out.weapon, level: 60, star: 5, break_level: 5, rarity: 'S' }
-    out.equip = oldEquip.map((eq, idx) => {
-      const slot = Number(eq.equipment_type || idx + 1)
+    /* —— 音擎满级的副词条增量 ——
+       面板终值里的音擎副词条是按记录当时的武器等级算的（如艾莲深海访客 L50 暴击 15.4%，
+       武器副词条本身已加载在面板终值上，不能再整条重复加）。极限面板把音擎顶到 5★ L60，
+       满级与记录值之差必须补进面板属性：艾莲 15.4→24 = +8.6 → 非盘暴击恰为 52.0，
+       暴击预算 = 48 = 20 档整，正好 100%——即「100−40−12」手算模型的正确落地。 */
+    const WEAPON_SUB_MAX = {
+      111: 30, 11102: 30,   // 生命值%
+      121: 30, 12102: 30,   // 攻击力%
+      131: 48, 13102: 48,   // 防御力%
+      201: 24, 20103: 24,   // 暴击率
+      211: 48, 21103: 48,   // 暴击伤害
+      231: 24, 23103: 24,   // 穿透率
+    }
+    const WEAPON_SUB_CHAR = {
+      111: 1, 11102: 1, 121: 2, 12102: 2, 131: 3, 13102: 3,
+      201: 5, 20103: 5, 211: 6, 21103: 6, 231: 9, 23103: 9,
+    }
+    const weaponSubDelta = {}
+    for (const p of out.weapon?.properties || []) {
+      const pid = Number(p.property_id)
+      const max = WEAPON_SUB_MAX[pid]
+      if (!max) continue
+      const cur = num(p.base ?? p.final ?? p.value)
+      if (cur > 0 && max > cur) weaponSubDelta[WEAPON_SUB_CHAR[pid]] = max - cur
+    }
+    /* —— 双爆全局预算 ——
+       先算「去掉旧盘贡献后的暴击率」+ 新主词条暴击，得出到 100% 的缺口，
+       暴击率副词条只补缺口（≤6 档/盘），剩余档位全部投给暴伤等词条。
+       铁律（用户定）：盘内暴击总额 ≤ 48%——4 号位暴击主 24 时副词条暴击 ≤ 24%（10 档），
+       与「补到 100」的缺口取小。 */
+    const critProp = (out.properties || []).find(p => (ZPROP[p.property_id] || {}).k === 'crit')
+    // before：旧六盘的词条贡献和（键为 toChar 后的属性代号，暴击率 = 5）
+    // 非盘暴击 = 面板终值 − 旧盘贡献 + 音擎满级副词条增量（武器副词条已含在终值里，只补成长量）
+    const critNoDisc = critProp
+      ? num(critProp.final) - Number(before[5] || 0) + Number(weaponSubDelta[5] || 0)
+      : Number(weaponSubDelta[5] || 0)
+    const mainIds = oldEquip.map(eq => {
+      const slot = Number(eq.equipment_type || oldEquip.indexOf(eq) + 1)
       const oldMain = Number(eq.main_properties?.[0]?.property_id || 0)
       const allowed = (SCORE_MAIN_STATS[slot] || []).filter(id => Number(weight[id] || 0) > 0)
       allowed.sort((x, y) => Number(weight[y] || 0) - Number(weight[x] || 0))
       const presetMain = Number(preset?.drive_main?.[slot] ?? preset?.drive_main?.[String(slot)] ?? 0)
-      const mainId = presetMain || allowed[0] || oldMain
+      // 主词条 = 预设（理论最优，人工策展）> 权重自动 > 当前装备。
+      // 极限面板的定义就是理论最优：玩家当前戴的主词条再差也不该抄进来
+      // （如玩家 5 号位用了穿透，但该角色 4pc冰伤套下理论最优是冰伤主）。
+      // 预设 drive_main 就是这套「最优知识」的载体，auto 权重只在预设缺条目时兜底。
+      let mainId = presetMain || allowed[0] || oldMain
+      // 双爆防溢出：非盘暴击（基础+被动+影画+武器副词条）加暴击主词条已破 100% 时，
+      // 4 号位改用暴伤主词条，暴击率缺口留给副词条按预算补。
+      // 例：非盘暴击 79.4% + 暴击主 24% = 103.4% 溢出 → 改暴伤主 48%，副词条补暴击到 ~100%。
+      if (mainId === 20103 && critNoDisc + 24 > 100
+        && allowed.includes(21103) && Number(weight[21103] || 0) > 0) {
+        mainId = 21103
+      }
+      return mainId
+    })
+    // 暴击副词条预算（档）：
+    // 预设 crit_sub（该角色盘内暴击副词条上限 %）优先——面板常驻暴击达标时盘内只补少量暴击、
+    // 其余全暴伤（艾莲：武器 24 + 突破 15 + 初始 5 ≈ 49 面板，盘内只给 4.8% = 2 档）。
+    // 无该预设时回落通用规则：min(补到 100 的缺口, 盘内总额 48% − 主词条暴击)。
+    const presetCritSub = Number(preset?.crit_sub || 0)
+    const mainCritTotal = (mainIds || []).filter(id => id === 20103).length * 24
+    let critLeft = Number(weight[20103] || 0) > 0
+      ? (presetCritSub > 0
+          ? Math.floor(presetCritSub / 2.4 + 1e-6)
+          : Math.min(
+              Math.max(0, Math.floor((100 - critNoDisc - mainCritTotal) / 2.4 + 1e-6)),
+              Math.max(0, Math.floor((48 - mainCritTotal) / 2.4 + 1e-6)),
+            ))
+      : 0
+    out.equip = oldEquip.map((eq, idx) => {
+      const oldMain = Number(eq.main_properties?.[0]?.property_id || 0)
+      const mainId = mainIds[idx] || oldMain
       const mainBase = MAIN_MAX_VALUE[mainId]
         || eq.main_properties?.[0]?.base
         || `${SUB_BASE_VALUE[mainId] || 0}`
-      const cand = SUB_STAT_IDS
-        .filter(id => id !== mainId && Number(weight[id] || 0) > 0)
-        .sort((x, y) => Number(weight[y] || 0) - Number(weight[x] || 0) || x - y)
-        .slice(0, 4)
-      const counts = cand.map((_, i) => i === 0 ? 6 : 1)
-      const props = cand.map((id, i) => ({
+      /* 副词条分配（游戏规则：满级 S 盘必有 4 条副词条、共 9 档 = 4 初始 + 5 强化、单条至多 6 档）：
+         ① 暴击率只按全局预算拿档（≤6，铺到 100% 即止，绝不超预算）
+         ② 先凑满 4 条副词条：暴伤 + 权重最高词条各 1 档起底，权重词条不足 4 条时用其余副词条补位
+         ③ 剩余档位「有效词条全中暴伤」（暴伤至多 6 档），满后按档少者优先补
+         副词条不与主词条重复（同游戏规则）。 */
+      const taken = []
+      let left = 9
+      const w = id => Number(weight[id] || 0)
+      const grab = (id, n) => {
+        const k = Math.min(n, left)
+        if (k <= 0) return 0
+        const t = taken.find(v => v.id === id)
+        if (t) t.count += k
+        else taken.push({ id, count: k })
+        left -= k
+        return k
+      }
+      // 预设 crit_sub 模式：暴击副词条只落在暴伤主盘（4 号位），其余盘零暴击副词、全中暴伤；
+      // 通用模式：除暴击主盘外各盘按预算拿档。
+      const critOnThisDisc = presetCritSub > 0 ? mainId === 21103 : mainId !== 20103
+      /* 预设 sub_layout：角色策展的副词条布局，精确到每盘每条几个档（用户定稿）。
+         other = 1/2/3/5/6 号盘；main4 = 4 号（暴伤主）盘，未单列 main4 时回落 other。
+         例·艾莲：other = 暴伤×6 + 大攻击 + 小攻击 + 穿透率；main4 = 暴击×2 + 大攻击×2 + 小攻击×2 + 穿透率×3。
+         有布局时完全按布局发牌，不再走下面的权重自动分配；没发满的档走通用「全中暴伤」循环。 */
+      const layoutKey = mainId === 21103 ? 'main4' : 'other'
+      // 只认预设里的逐角色布局。职业兜底（PROF_SUB_LAYOUT）已移除：极限面板的定义是
+      // 理论最优，职业级规则只能给「大致合理」的副词条，与其出一张看着完整、
+      // 实则每盘少两档的面板，不如明确报「该角色未配置」。
+      const rawLayout = preset?.sub_layout?.[layoutKey]
+        || (layoutKey === 'main4' ? preset?.sub_layout?.other : null)
+      const layout = Array.isArray(rawLayout)
+        ? rawLayout.map(it => [
+            Number(Array.isArray(it) ? it[0] : it?.id),
+            Number(Array.isArray(it) ? it[1] : it?.rolls) || 0,
+          ]).filter(([id, n]) => id > 0 && n > 0 && id !== mainId)
+        : []
+      if (layout.length) {
+        for (const [id, n] of layout) {
+          if (left <= 0) break
+          grab(id, n)
+        }
+      } else {
+      if (critOnThisDisc && critLeft > 0 && w(20103) > 0) {
+        critLeft -= grab(20103, Math.min(critLeft, 6))
+      }
+      if (mainId !== 21103 && w(21103) > 0) grab(21103, 1)
+      // 补位顺序：先权重 > 0 的有益词条；不足 4 条时按 攻击力>生命%>防御%>生命 兜底。
+      // 20103（暴击率）一律排除——它只允许从上面 ① 的全局预算拿档，
+      // 否则预算耗尽后这里会当普通词条再塞档，暴击率重新溢出（103.4% 事故根因）。
+      const FILLER_ORDER = [12103, 11102, 13103, 11103]
+      for (const ids of [SUB_STAT_IDS, FILLER_ORDER]) {
+        for (const id of ids) {
+          if (taken.length >= 4 || left <= 0) break
+          if (id === mainId || id === 20103 || taken.some(t => t.id === id)) continue
+          if (ids === SUB_STAT_IDS && w(id) <= 0) continue
+          grab(id, 1)
+        }
+        if (taken.length >= 4 || left <= 0) break
+      }
+      }
+      // 保 4 条副词条：布局/权重分配后不足 4 条（如 2 号盘主词条是攻击力、布局里的
+      // 小攻击与主词条重复被规则跳过）时按权重池补齐。
+      // 布局模式放行暴击率兜底（布局无预算概念，量 ≤1 档 2.4%，且是强攻盘的第 2 优有益词条）；
+      // 通用模式仍排除 20103——暴击只走 ① 的预算步骤，防 103.4% 溢出回归。
+      while (taken.length < 4 && left > 0) {
+        const cand = SUB_STAT_IDS.find(id => id !== mainId
+          && !taken.some(t => t.id === id) && w(id) > 0
+          && (id !== 20103 || layout.length > 0))
+        if (!cand) break
+        grab(cand, 1)
+      }
+      while (left > 0) {
+        const cd = taken.find(t => t.id === 21103)
+        if (mainId !== 21103 && w(21103) > 0 && (!cd || cd.count < 6)) {
+          grab(21103, 1)
+          continue
+        }
+        const pool = SUB_STAT_IDS.filter(id => id !== mainId && id !== 20103 && w(id) > 0)
+        if (!pool.length) break
+        pool.sort((x, y) => ((taken.find(t => t.id === x)?.count || 0) - (taken.find(t => t.id === y)?.count || 0)) || x - y)
+        grab(pool[0], 1)
+      }
+      const props = taken.map(({ id, count }) => ({
         property_name: MAIN_NAME[id] || String(id),
         property_id: id,
-        base: fmt(id, (SUB_BASE_VALUE[id] || 0) * counts[i]),
-        level: counts[i],
+        base: fmt(id, (SUB_BASE_VALUE[id] || 0) * count),
+        level: count,
         valid: true,
         system_id: Math.trunc(id / 100),
-        add: counts[i] - 1,
+        add: count - 1,
       }))
       return {
         ...eq,
@@ -1645,7 +1833,8 @@ export class zzz_panel_list extends plugin {
     }
     out.properties = (out.properties || []).map(p => {
       const id = Number(p.property_id)
-      const d = delta[id]
+      // 总增量 = 盘内新旧差 + 音擎满级副词条成长量（暴击等属性同样走这里）
+      const d = Number(delta[id] || 0) + Number(weaponSubDelta[id] || 0)
       if (!d) return p
       const final = num(p.final) + d
       const add = num(p.add) + d
@@ -1657,13 +1846,28 @@ export class zzz_panel_list extends plugin {
   /** 「%艾莲极限面板」：理论最高值面板 */
   async panelExtreme(e) {
     const m = String(e.msg || '').match(EXTREME_REG)
-    const role = this.resolvePanelRole(m?.[1] || '')
+    // resolvePanelRole 依赖立绘目录/别名表，解析不出时回退用指令原始名查记录
+    //（findExtremeRecord 按 name_mi18n 全等匹配，面板详情落盘过即可命中）
+    const role = this.resolvePanelRole(m?.[1] || '') || (m?.[1] || '')
     if (!role) return e.reply('未找到对应角色')
     const base = this.findExtremeRecord(e, role)
     if (!base) return e.reply(`暂无【${role}】面板记录，请先发一次「米游社${role}面板」`)
+    const preset = this.loadExtremePreset(role)
+    if (!preset) {
+      return e.reply([
+        `【${role}】未配置极限面板预设。`,
+        '极限面板是逐角色人工策展的（system/default/zzz_extreme.yaml），不再按职业自动推导。',
+        '补完该角色条目后即可使用：需要 char_id / weapon_id / drive_main(4,5,6) / sub_layout。',
+      ])
+    }
     try {
-      const preset = this.loadExtremePreset(role)
       const raw = this.applyExtremePanel(base, preset)
+      // 极限音擎满精文案：avatar 接口的 talent_content 按当期精炼档填数（精1 记录就是精1 文案），
+      // applyExtremePanel 只顶了 star=5 没换文案 —— 从 wiki 取满精描述替换，取不到保留原文案。
+      if (raw?.weapon?.name) {
+        const refineDesc = await zzzWeaponTalentDesc(raw.weapon.name, Number(raw.weapon.star) || 5)
+        if (refineDesc) raw.weapon.talent_content = refineDesc
+      }
       const detail = normalizeDetail(raw, '100000000')
       const img = await render('zzz_panel/detail', {
         ...detail,
@@ -1672,7 +1876,7 @@ export class zzz_panel_list extends plugin {
         playerName: '理论极限',
         playerAvatar: '',
       }, { e, ret: true })
-      return e.reply(img)
+      return img
     } catch (err) {
       logger.error?.(`[HoYoGet][zzz_panel] 极限面板渲染失败：${err?.message || err}`)
       return e.reply(`极限面板生成失败：${err?.message || err}`)
@@ -1791,7 +1995,7 @@ export class zzz_panel_list extends plugin {
     const cur = skills[idx]
     const footer = 'from 米哈游'
     try {
-      return await render('zzz_panel/damage', {
+      const img = await render('zzz_panel/damage', {
         ...detail,
         skills,
         cur,
@@ -1801,6 +2005,7 @@ export class zzz_panel_list extends plugin {
         footer,
         bgImage: getPanelBg(),
       }, { e, ret: true })
+      return img
     } catch (err) {
       logger.error?.(`[HoYoGet][zzz_panel] 伤害详情渲染失败：${err?.message || err}`)
       return e.reply(`「${cur.name}」详细计算渲染失败：${err?.message || err}`)
