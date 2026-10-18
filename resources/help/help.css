@@ -63,12 +63,18 @@ body.theme-zzz {
   --g-base-b: rgba(20,19,26,.98);
   --g-grid: rgba(240,225,74,.14);
   --g-radius: 6px;
-  --g-title-font: '主','HelpSans','Microsoft YaHei',sans-serif;
+  /* 不用「主」艺术字：它的笔画细、在荧光底上发虚；绝区零用无衬线黑体更贴游戏 UI */
+  --g-title-font: 'HelpSans','HelpMicroHei','Noto Sans CJK SC','Microsoft YaHei',sans-serif;
 }
 /* 绝区零卡片里的文字要反过来：深底亮字 */
-body.theme-zzz .title .text { color: #f7f4d8; }
-body.theme-zzz .title .dec { color: rgba(247,244,216,.68); text-shadow: none; }
-body.theme-zzz .tab_lable { color: #14131a; }
+body.theme-zzz .head_box .id_text {
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-shadow: 0 2px 0 rgba(255,255,255,.35);
+}
+body.theme-zzz .title .text { color: #f7f4d8; font-family: 'HelpSans','HelpMicroHei','Noto Sans CJK SC','Microsoft YaHei',sans-serif; font-weight: 700; }
+body.theme-zzz .title .dec { color: rgba(247,244,216,.86); text-shadow: none; font-weight: 500; }
+body.theme-zzz .tab_lable { color: #14131a; font-family: 'HelpSans','HelpMicroHei','Microsoft YaHei',sans-serif; font-weight: 900; }
 body.theme-zzz .data_box { backdrop-filter: none; border-color: rgba(240,225,74,.26); }
 body.theme-zzz .list .item,
 body.theme-zzz .list .item_ { border-color: rgba(240,225,74,.18); }
