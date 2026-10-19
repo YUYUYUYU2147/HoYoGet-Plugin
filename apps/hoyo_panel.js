@@ -150,9 +150,19 @@ function flattenProfile(profile, Character) {
   const weapon = profile.weapon
   const talent = profile.talent || {}
 
-  // 圣遗物 / 遗器的总评分与段位（miao 的 ArtisMark 已经算好）
-  const artisMark = artis?.markClass || ''
-  const artisScore = artis?._mark != null ? Math.round(artis._mark * 10) / 10 : ''
+  /* 圣遗物 / 遗器的总评分与段位。
+     ⚠ profile.artis 上只有原始单件，markClass / _mark 要等 ArtisMark 算过才有值
+     （面板总览这条路径不会自动算），所以主动调 getArtisMark(true)。
+     _mark 已经是 0-100 的分数，不要再乘 10。 */
+  let artisMark = artis?.markClass || ''
+  let artisScore = artis?._mark != null ? Math.round(Number(artis._mark) * 10) / 10 : ''
+  if (!artisMark || !artisScore) {
+    try {
+      const detail = profile?.getArtisMark?.(true)
+      if (detail?.markClass) artisMark = detail.markClass
+      if (detail?._mark != null) artisScore = Math.round(Number(detail._mark) * 10) / 10
+    } catch (_) { /* 算不出就留空，不影响其它字段 */ }
+  }
 
   return {
     id: char?.id || '',
@@ -331,11 +341,41 @@ function propIcon(p) {
   return { icon: '', iconMiao: false }
 }
 
-/** 圣遗物 / 遗器：miao 的 Artis 实例里真正的数组在 .artis，少数版本直接是数组 */
+/**
+ * 圣遗物 / 遗器：取「带评级」的详情。
+ *
+ * miao 的 Avatar.artis 是个 Artis 实例，真正的单件放在 `artis.artis` 里、
+ * 而且是 **对象**（部位 1..5 → 单件），单件上**没有** mark / markClass。
+ * 评级与单件分数只有 `avatar.getArtisMark(true)` 才会算出来（内部走 ArtisMark），
+ * 所以这里优先用它；拿不到时再退回原始对象，至少能显示名字/主副词条。
+ */
 function artisList(profile) {
+  try {
+    const detail = profile?.getArtisMark?.(true)
+    const items = detail?.artis
+    if (items && typeof items === 'object') {
+      const arr = Object.keys(items)
+        .sort((a, b) => Number(a) - Number(b))
+        .map(k => items[k])
+        .filter(Boolean)
+      if (arr.length) {
+        /* 把总评挂在数组上，flattenCharDetail 取总分时直接读这里 */
+        arr.markClass = detail.markClass || ''
+        arr.totalMark = Number(detail._mark) || 0
+        return arr
+      }
+    }
+  } catch (_) { /* 计算失败时走下面的兜底 */ }
+
   const a = profile?.artis
   if (Array.isArray(a)) return a
   if (Array.isArray(a?.artis)) return a.artis
+  if (a?.artis && typeof a.artis === 'object') {
+    return Object.keys(a.artis)
+      .sort((x, y) => Number(x) - Number(y))
+      .map(k => a.artis[k])
+      .filter(item => item && (item.name || item.id))
+  }
   if (Array.isArray(a?.list)) return a.list
   return []
 }
@@ -354,10 +394,11 @@ function flattenArtis(list, game) {
       stars: Array.from({ length: Math.min(5, Number(item?.star) || 5) }, () => 0),
       set: item?.set?.name || item?.setName || (typeof item?.set === 'string' ? item.set : ''),
       icon: stripSlash(item?.img || item?.imgs?.icon || item?.set?.imgs?.icon || ''),
-      /* markClass 原样保留给卡片描边用；markKey/tier 供徽章配色与显示 */
+      /* markClass 原样保留给卡片描边用；markKey/tier 供徽章配色与显示。
+         miao 的 _mark 是 0-100 的分数（getArtisMark 已对齐），不要再乘 10。 */
       markClass: item?.markClass || '',
       markKey: markKeyOf(item?.markClass),
-      mark: markTierOf(item?.markClass, item?._mark != null ? item._mark * 10 : null),
+      mark: markTierOf(item?.markClass, item?._mark),
       score: item?._mark != null ? (Math.round(item._mark * 10) / 10).toFixed(1) : '',
       main: mains.slice(0, 1).map(p => ({ key: propKey(p), label: propLabel(p, game), value: propText(p), ...propIcon(p) })).filter(x => x.label && x.value),
       subs: subs.slice(0, 4).map(p => {
@@ -392,7 +433,9 @@ function detailAttrRows(profile, game) {
     if (v == null || v === '') return null
     const n = Number(v)
     if (!Number.isFinite(n)) return null
-    const text = pctKeys.has(k) ? `${(n * 100).toFixed(1)}%` : String(Math.round(n))
+    /* miao 的 attr 百分比字段已经是「百分数」（暴击率 59.44 表示 59.44%），
+       直接拼 % 即可；旧代码再乘 100 会变成 5944%。 */
+    const text = pctKeys.has(k) ? `${n.toFixed(1)}%` : String(Math.round(n))
     return { key: k, label, value: text, ...propIcon({ key: k }) }
   }).filter(Boolean)
 }
@@ -555,7 +598,12 @@ function flattenCharDetail(profile, Character, game, meta = {}) {
   const wMain = weaponMains.slice(0, 2).map(p => ({ label: propLabel(p, game), value: propText(p) })).filter(x => x.label && x.value)
 
   const attrs = detailAttrRows(profile, game)
-  const score = profile?.artis?._mark != null ? (Math.round(profile.artis._mark * 10) / 10).toFixed(1) : ''
+  const score = (() => {
+    const total = Number(artis.totalMark)
+    if (Number.isFinite(total) && total > 0) return (Math.round(total * 10) / 10).toFixed(1)
+    const raw = profile?.artis?._mark
+    return raw != null ? (Math.round(Number(raw) * 10) / 10).toFixed(1) : ''
+  })()
 
   /* 面板背景：优先角色专属图 `profile/normal-character/<角色名>.webp`，
      没有则退到元素背景 `common/bg/bg-<元素>.webp`；星铁统一 bg-sr。
@@ -608,7 +656,7 @@ function flattenCharDetail(profile, Character, game, meta = {}) {
     artis: equip,
     sets: setSummary(equip),
     talents: detailTalents(profile, game, imgs),
-    artisOverall: buildArtisOverall(equip, score, profile?.artis?.markClass || ''),
+    artisOverall: buildArtisOverall(equip, score, artis.markClass || profile?.artis?.markClass || ''),
     score,
     scoreClass: profile?.artis?.markClass || '',
   }
@@ -1228,6 +1276,9 @@ export class hoyo_panel extends plugin {
   async buildGroupRank(e, game, miao, uid, pairs) {
     const groupId = e?.group_id
     if (!groupId || !miao?.ProfileRank) return null
+    /* miao 的 ProfileRank 依赖框架注入的全局 redis / Cfg；
+       在非完整运行环境（或它内部报错）时直接跳过，不能拖垮整张图。 */
+    if (typeof redis === 'undefined') return null
     try {
       const rank = await miao.ProfileRank.create({ groupId, uid, qq: e.user_id }, game)
       const cfg = await miao.ProfileRank.getGroupCfg(groupId, game)
