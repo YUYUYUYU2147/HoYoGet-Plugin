@@ -5,6 +5,9 @@ import { pluginPriority, render, config } from '#HoYoGet'
 import {
   listCategories, fetchLeaderboard, listStygianSchedules, fetchStygianLeaderboard,
   fetchStygianRankOfUser, getUserCalculations, getUserProfile,
+  /* 圣遗物排行（myArtifactRank）要用，之前漏了这个导入，导致
+     「我的圣遗物排名」报 getArtifactsByUid is not defined */
+  getArtifactsByUid,
 } from '../system/akasha.js'
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
