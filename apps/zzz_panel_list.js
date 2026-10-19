@@ -414,6 +414,25 @@ async function zzzGet(e, uid, ck, type, query, extraHeaders = {}, retried = fals
       }
       throw new Error(`米游社验证码（${code}），自动过码未通过，请稍后重试或手动完成验证`)
     }
+    /* CK 过期：先试着自己用 Stoken 换一张新票再重试一次，
+       换不出来才让用户重新扫码。retried 参数避免无限递归。 */
+    if ([-100, -101, -111, 10001].includes(code) && !retried) {
+      const fresh = await refreshCkByStoken(e?.user_id, uid)
+      /* refreshCkByStoken 返回的是裸 CK 字符串，但 zzzGet 全程按「CK 对象表」处理
+         （pickCkItem / ckStringOf 都要 { key: {ck, uid, ltuid} }），
+         这里必须包成同样形状，否则下一轮会报「找不到 UID 对应的 CK」。 */
+      if (fresh) {
+        const freshTable = {
+          default: {
+            ck: fresh,
+            uid: String(uid),
+            ltuid: (String(fresh).match(/ltuid=(\d+)/) || [])[1]
+              || (String(fresh).match(/stuid=(\d+)/) || [])[1] || '',
+          },
+        }
+        return await zzzGet(e, uid, freshTable, type, query, extraHeaders, true)
+      }
+    }
     if ([-100, -101, -111, 10001].includes(code)) throw new Error(`CK 失效或未登录（${code}），请刷新 CK / 重新扫码`)
     throw new Error(`接口返回 ${code}：${json?.message || '未知错误'}`)
   }
@@ -421,6 +440,52 @@ async function zzzGet(e, uid, ck, type, query, extraHeaders = {}, retried = fals
 }
 
 /** 从本插件 Stoken 里找 ZZZ 条目：优先当前 UID，其次 nap_cn 条目，最后第一条带 ck 的 */
+/**
+ * 用 Stoken 换新的 cookie_token。
+ *
+ * 米游社的凭据分两种：stoken 长期有效、cookie_token 短期（约 1 天）过期。
+ * 所以 CK 报 -100 时，只要本机还留着 stoken，就能把 cookie_token 重新换出来，
+ * 不必让用户重新扫码。
+ *
+ * 返回新 CK 字符串；没有 stoken 或换取失败时返回 null。
+ */
+async function refreshCkByStoken(qq, uid = '') {
+  const hit = findZzzStokenEntry(qq, uid)
+  if (!hit) return null
+  const entry = hit[1] || {}
+  const raw = String(entry.ck_stoken || '')
+  const stoken = (raw.match(/stoken=([^;]+)/) || [])[1]
+  const stuid = (raw.match(/stuid=(\d+)/) || [])[1] || String(entry.stuid || '')
+  if (!stoken || !stuid) return null
+  try {
+    const headers = { 'User-Agent': 'Mozilla/5.0', Cookie: raw }
+    const [cookieRes, ltokenRes] = await Promise.all([
+      mhyFetch(`https://api-takumi.mihoyo.com/auth/api/getCookieAccountInfoBySToken?stoken=${encodeURIComponent(stoken)}&uid=${encodeURIComponent(stuid)}`, { headers }).then(r => r.json()),
+      mhyFetch('https://passport-api.mihoyo.com/account/auth/api/getLTokenBySToken', { headers }).then(r => r.json()).catch(() => ({})),
+    ])
+    const cookieToken = cookieRes?.data?.cookie_token
+    if (!cookieToken) return null
+    const ltoken = ltokenRes?.data?.ltoken || entry.ltoken || ''
+    const ck = ltoken
+      ? `ltoken=${ltoken};ltuid=${stuid};cookie_token=${cookieToken};account_id=${stuid};`
+      : `stuid=${stuid};stoken=${stoken};cookie_token=${cookieToken};account_id=${stuid};`
+    /* 回写 MysUsers，下次就不用再换一次 */
+    try {
+      const sqlite3 = (await import('sqlite3')).default
+      const db = new sqlite3.Database(YUNZAI_DB)
+      await new Promise((resolve, reject) => {
+        db.run('update MysUsers set ck = ?, updatedAt = datetime(\'now\') where ltuid = ?', [ck, String(stuid)], err => (err ? reject(err) : resolve()))
+      })
+      db.close(() => {})
+    } catch (_) { /* 回写失败不影响本次使用 */ }
+    logger.mark?.(`[HoYoGet][zzz_panel] 已用 Stoken 刷新 CK（ltuid=${stuid}）`)
+    return ck
+  } catch (err) {
+    logger.debug?.(`[HoYoGet][zzz_panel] Stoken 刷新失败：${err?.message || err}`)
+    return null
+  }
+}
+
 function findZzzStokenEntry(qq, uid = '') {
   const file = `./plugins/HoYoGet-Plugin/data/Stoken/${qq}.yaml`
   if (!fs.existsSync(file)) return null
@@ -2706,21 +2771,46 @@ export class zzz_panel_list extends plugin {
     } catch { /* 没有 NoteData 就继续走接口 */ }
     // index 的 role 也带游戏内头像；getUserGameRolesByCookie 只有昵称
     try {
-      const data = await zzzGet(e, uid, ck, 'index', `lang=zh-cn&role_id=${uid}&server=${server}`)
+      let data
+      try {
+        data = await zzzGet(e, uid, ck, 'index', `lang=zh-cn&role_id=${uid}&server=${server}`)
+      } catch (err) {
+        /* CK 过期（-100）时用 Stoken 换一个新的再试一次：
+           多数用户本机留着 data/Stoken/<QQ>.yaml，不必重新扫码。 */
+        if (!/-100|CK 失效/.test(String(err?.message || ''))) throw err
+        const fresh = await refreshCkByStoken(e?.user_id, uid)
+        if (!fresh) throw err
+        data = await zzzGet(e, uid, fresh, 'index', `lang=zh-cn&role_id=${uid}&server=${server}`)
+      }
       /* 实测 index 返回的字段：
            data.cur_head_icon_url  玩家当前头像（顶层，不在 role 里）
            data.stats              含 nickname 等基础信息？—— 昵称优先从 role 取
          之前只读 data.role.avatar，实际 role 不存在/无该字段，导致头像恒为空。 */
+      /* index 只稳定提供头像（data.cur_head_icon_url），
+         实测没有昵称（stats 里是活跃天数/绳网等级之类）。
+         昵称改由后面的「绑定角色列表」接口补，两者拼一起返回。 */
       const headIcon = data?.cur_head_icon_url || ''
-      const role = data?.role || data?.role_basic_info || data?.stats || {}
+      const role = data?.role || data?.role_basic_info || {}
       const nickname = role.nickname || data?.nickname || ''
-      if (nickname) {
+      /* 头像与昵称来自不同接口：
+           index → cur_head_icon_url（头像）
+           user  → nickname（昵称）
+         缺哪个补哪个，两个都没有才继续往下回落。 */
+      let finalNick = nickname
+      if (!finalNick) {
+        try {
+          const q = `game_biz=nap_cn&region=${server}&game_uid=${uid}`
+          const u = await zzzGet(e, uid, ck, 'user', q)
+          const pl = u?.list?.find(p => String(p.game_uid) === String(uid)) || u?.list?.[0]
+          if (pl?.nickname) finalNick = pl.nickname
+        } catch (_) { /* 补昵称失败不影响头像 */ }
+      }
+      if (finalNick || headIcon) {
         return {
-          nickname,
+          nickname: finalNick || '',
           avatar: headIcon || role.avatar || role.avatar_url || role.icon || '',
         }
       }
-      if (headIcon) return { nickname: '', avatar: headIcon }
     } catch (err) {
       logger.debug?.(`[HoYoGet][zzz_panel] index 玩家信息获取失败：${err?.message || err}`)
     }
