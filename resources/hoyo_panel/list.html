@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}hoyo_panel/list.css" />
+  </head>
+  <body class="game-{{game}}">
+    <div class="page">
+      <div class="head">
+        <div class="head-left">
+          <div class="title">{{gameCn}}</div>
+          <div class="subtitle">{{if nickname}}{{nickname}} · {{/if}}UID {{uid}}{{if level}} · AR{{level}}{{/if}}</div>
+        </div>
+        <div class="head-right">
+          <div class="stat-pill">
+            <span class="pill-value">{{total}}</span>
+            <span class="pill-label">已展示</span>
+          </div>
+          {{if avgScore}}
+          <div class="stat-pill">
+            <span class="pill-value">{{avgScore}}</span>
+            <span class="pill-label">平均评分</span>
+          </div>
+          {{/if}}
+        </div>
+      </div>
+
+      <div class="grid">
+        {{each chars c}}
+        <div class="cell star{{c.star}}">
+          <div class="avatar-wrap">
+            <div class="avatar" style="background-image:url('{{_miao_path}}{{c.face}}')"></div>
+            {{if c.cons > 0}}<span class="cons-badge c{{c.cons}}">{{c.cons}}</span>{{/if}}
+            <span class="lv-badge">{{c.level}}</span>
+          </div>
+          <div class="cell-name">{{c.abbr}}</div>
+        </div>
+        {{/each}}
+      </div>
+
+      <div class="footer">from 米哈游</div>
+    </div>
+  </body>
+</html>

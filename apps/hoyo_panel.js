@@ -368,10 +368,15 @@ export class hoyo_panel extends plugin {
       const maxScore = Math.max(...chars.map(c => c.artisScore || 0), 0)
 
       const info = player.getInfo?.() || {}
+      /* _miao_path 由框架只给 miao-plugin 自身提供，本插件拿不到；
+         这里按渲染器的实际落盘深度自己算：模板存于
+         temp/html/米哈游/hoyo_panel/list/，回退到项目根要 5 层。 */
+      const miaoResPath = '../../../../..' + '/plugins/miao-plugin/resources/'
       const img = await render('hoyo_panel/list', {
         game,
         gameCn: conf.cn,
         uid,
+        _miao_path: miaoResPath,
         nickname: info.nickname || info.name || '',
         level: info.level || '',
         chars,
