@@ -849,6 +849,40 @@ body.elem-physical { --elem-line: rgba(207, 216, 227, .9); --elem-glow: rgba(180
   align-items: start;
 }
 
+/* 星铁有 6 件遗器：武器单独占满一行（横向排布），遗器正好 3 个一行、排两行，
+   否则最后一件会孤零零掉到第三行。 */
+body.game-sr .weapon {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  grid-template-areas:
+    "head props"
+    "passive passive";
+  column-gap: 18px;
+  row-gap: 9px;
+  align-items: start;
+  padding: 10px 14px 11px;
+}
+body.game-sr .wq-head { grid-area: head; }
+body.game-sr .wq-icon { width: 54px; height: 54px; border-radius: 10px; }
+body.game-sr .wq-props {
+  grid-area: props;
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px 26px;
+  align-content: start;
+}
+body.game-sr .wq-prop { gap: 6px; }
+body.game-sr .wq-prop-label { flex: 0 1 auto; }
+body.game-sr .wq-passive {
+  grid-area: passive;
+  margin-top: 0;
+  padding-top: 8px;
+}
+
 .art {
   position: relative;
   padding: 8px 9px 7px;
