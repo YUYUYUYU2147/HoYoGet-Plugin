@@ -629,6 +629,83 @@ function bigNum(v) {
   return String(Math.round(n))
 }
 
+/* ───────────── 伤害条目中文化 ─────────────
+ * akasha 的条目名是社区英文（Soumetsu Cutting、Hyouka、Prism Shot），接口没有中文。
+ * 这里不依赖外部词表，而是用 miao 的中文天赋数据做对照：
+ *   · type 是 E / Q 时，先查该角色的 E / Q 天赋中文名（如「神里流·霜灭」）
+ *   · 再用英文里的关键词匹配 miao 的「技能表项」名（切割伤害 / 绽放伤害）
+ *   · 匹配不到就退回「天赋名 · 类型」，仍然比「技能3」可读
+ * 其余通用词（Normal Attack / Avg DMG / Vape 等）走 DMG_TERMS 逐词替换。
+ */
+const DMG_TABLE_HINT = [
+  // [英文关键词, 表项名里应出现的中文]
+  [/cutting|slash|sweep/i, '切割'],
+  [/bloom/i, '绽放'],
+  [/press/i, '点按'],
+  [/hold/i, '长按'],
+  [/low\s*hp|low-hp/i, '低血量'],
+  [/heal/i, '治疗'],
+  [/continuous|tick/i, '持续'],
+  [/entry|enter|field/i, '领域'],
+  [/explosion|burst/i, '爆发'],
+]
+
+/**
+ * 取某角色某类型（a/e/q）的中文天赋名与表项名。
+ * miao 的角色目录按中文名存放，读不到就返回 null（不影响出图）。
+ */
+const TALENT_CN_CACHE = new Map()
+function talentCn(charName, slot) {
+  const key = `${charName}|${slot}`
+  if (TALENT_CN_CACHE.has(key)) return TALENT_CN_CACHE.get(key)
+  let out = null
+  try {
+    const file = path.join(PLUGIN_ROOT, '..', 'miao-plugin', 'resources', 'meta-gs', 'character', String(charName || ''), 'data.json')
+    const data = JSON.parse(fs.readFileSync(file, 'utf8'))
+    const talent = data?.talent?.[slot]
+    if (talent?.name) {
+      out = {
+        name: talent.name,
+        tables: (talent.tables || []).map(t => String(t?.name || '')).filter(Boolean),
+      }
+    }
+  } catch (_) {
+    out = null
+  }
+  TALENT_CN_CACHE.set(key, out)
+  return out
+}
+
+/** 把 akasha 的英文条目名映射成「天赋名 · 表项名」 */
+function cnDmgEntry(raw, type, charName) {
+  const text = String(raw || '')
+  const code = String(type || '').toUpperCase()
+  /* 反应 / 元素类条目（Overloaded DMG、Vape Pyro Swirl DMG）没有对应天赋，
+     交给下面的通用词替换，别硬套「风压剑」这类天赋名。 */
+  if (/Overloaded|Swirl|Vape|Vaporize|Aggravate|Spread|Hyperbloom|Burgeon|Superconduct|Electro-Charged|Shatter|Frozen|Lunar-Charged|Lunar-Bloom|Lunar-Crystallize/i.test(text)) return ''
+  const slot = code.startsWith('N') || code === 'A' || code === 'CA' ? 'a'
+    : code.startsWith('E') || code === 'SSC' || code === 'LC' || code === 'LB' || code === 'LCR' ? 'e'
+      : code.startsWith('Q') ? 'q'
+        : ''
+  const talent = slot ? talentCn(charName, slot) : null
+  if (!talent) return ''
+  /* 表项：按关键词找最贴近的一项（切割/绽放/持续…） */
+  const hint = DMG_TABLE_HINT.find(([re]) => re.test(text))
+  let table = ''
+  if (hint) table = talent.tables.find(name => name.includes(hint[1])) || ''
+  if (!table) table = talent.tables.find(name => /伤害|治疗/.test(name)) || ''
+  if (!table) return talent.name
+  /* 「技能伤害 / 爆发伤害」这类通用表项不额外拼接，只留天赋名 */
+  if (/^(技能|普攻|重击|下坠|爆发|领域)伤害$/.test(table)) return talent.name
+  /* 普攻要区分段数：只有明确写了 N2/N3 才算具体段数，默认不拼「一段」 */
+  if (slot === 'a') {
+    if (!/^N[2-9]/.test(code)) return talent.name
+  }
+  /* 表项名自带「伤害」时压掉，避免「霜灭 · 切割伤害」读起来啰嗦 */
+  const short = table.replace(/伤害$/, '').replace(/治疗量$/, '')
+  return short && short !== talent.name ? `${talent.name} · ${short}` : talent.name
+}
+
 /** 伤害条目英文 → 中文（akasha 只给英文） */
 const DMG_TERMS = [
   [/\bNormal Attack\b/g, '普通攻击'],
@@ -647,6 +724,27 @@ const DMG_TERMS = [
   [/\bHealing\b/g, '治疗'],
   [/\bCombo\b/gi, '连招'],
   [/\bTeam\b/gi, '队伍'],
+  /* 反应类条目：akasha 直接给反应名，没有技能前缀 */
+  [/\bVape\b/gi, '蒸发'],
+  [/\bVaporize\b/gi, '蒸发'],
+  [/\bOverloaded\b/gi, '超载'],
+  [/\bSwirl\b/gi, '扩散'],
+  [/\bAggravate\b/gi, '激化'],
+  [/\bSpread\b/gi, '蔓激化'],
+  [/\bHyperbloom\b/gi, '超绽放'],
+  [/\bBurgeon\b/gi, '烈绽放'],
+  [/\bBloom\b/gi, '绽放'],
+  [/\bSuperconduct\b/gi, '超导'],
+  [/\bElectro-Charged\b/gi, '感电'],
+  [/\bShatter\b/gi, '碎冰'],
+  [/\bFreeze\b/gi, '冻结'],
+  [/\bPyro\b/gi, '火'],
+  [/\bHydro\b/gi, '水'],
+  [/\bCryo\b/gi, '冰'],
+  [/\bElectro\b/gi, '雷'],
+  [/\bAnemo\b/gi, '风'],
+  [/\bGeo\b/gi, '岩'],
+  [/\bDendro\b/gi, '草'],
 ]
 const cnDmgName = s => DMG_TERMS.reduce((text, [re, to]) => text.replace(re, to), String(s || ''))
 
@@ -656,14 +754,22 @@ const cnDmgName = s => DMG_TERMS.reduce((text, [re, to]) => text.replace(re, to)
  * 退回「技能N」占位，避免表格里出现看不懂的单词。
  * 括号内是配装/Buff 备注（TTDS & VV up、30%），与条目本身无关，一并去掉。
  */
-function cleanDmgName(raw, index) {
+function cleanDmgName(raw, index, type = '', charName = '') {
+  const mapped = cnDmgEntry(raw, type, charName)
+  if (mapped) return mapped
   const text = cnDmgName(raw)
     .replace(/\([^)]*\)/g, '')
     .replace(/期望伤害|伤害|治疗|连招|队伍/g, '')
     .replace(/[,，、:：%]/g, '')
     .replace(/\s+/g, '')
     .trim()
-  return /[A-Za-z]/.test(text) || !text ? `技能${index + 1}` : text
+  /* 仍有英文说明是专有技能名（如 Gravity Interference），
+     用「类型 + 序号」兜底，比裸的「技能N」更能说明是哪一类。 */
+  if (/[A-Za-z]/.test(text) || !text) {
+    const tag = dmgTypeTag(type)
+    return tag && tag !== '伤害' ? `${tag} · 第 ${index + 1} 项` : `技能${index + 1}`
+  }
+  return text
 }
 
 /**
@@ -683,6 +789,9 @@ const DMG_TAG = [
   [/^LC$/i, '月感电'],
   [/^LB$/i, '月绽放'],
   [/^C\d/, '命座'],
+  [/^O$/, '超载'],
+  [/^S$/, '扩散'],
+  [/^B$/, '绽放'],
 ]
 function dmgTypeTag(type) {
   const code = String(type || '').trim()
@@ -760,7 +869,7 @@ async function randomBgUrl() {
   }
 }
 
-async function akashaForChar(charId, uid) {
+async function akashaForChar(charId, uid, charName = '') {
   try {
     const all = await akashaCategories()
     const cats = all.filter(c => String(c?.characterId) === String(charId))
@@ -799,7 +908,7 @@ async function akashaForChar(charId, uid) {
        表格右侧展示 value×quantity 的整轮期望，次数单独占一列。 */
     const detail = (fit?.calculation?.additional || []).slice(0, 6).map((d, i) => {
       const qty = Number(d?.quantity) || 1
-      const name = cleanDmgName(d?.name, i)
+      const name = cleanDmgName(d?.name, i, d?.type, charName)
       /* 普攻段数（type 形如 N3-Infused）比「技能3」更能说明是哪一招 */
       const seg = /^N(\d)/i.exec(String(d?.type || ''))
       return {
@@ -830,6 +939,9 @@ async function akashaForChar(charId, uid) {
     return null
   }
 }
+
+/* 供自测脚本调用（不改运行行为） */
+export const __test = { cnDmgEntry, cleanDmgName, talentCn }
 
 export class hoyo_panel extends plugin {
   constructor() {
@@ -1058,7 +1170,7 @@ export class hoyo_panel extends plugin {
 
       /* Akasha 只有原神有榜；随机背景与它并行请求，两者失败都不影响面板 */
       const [akasha, randomBg] = await Promise.all([
-        game === 'gs' && hit?.char?.id ? akashaForChar(hit.char.id, uid) : Promise.resolve(null),
+        game === 'gs' && hit?.char?.id ? akashaForChar(hit.char.id, uid, hit?.char?.name || '') : Promise.resolve(null),
         randomBgUrl(),
       ])
 
