@@ -242,16 +242,17 @@ export class hoyo_panel extends plugin {
     try {
       await e.reply(`正在更新 ${uid} 的${conf.cn}面板，请稍候…`)
 
-      /* 与 miao 的 ProfileList.doRefresh 完全对齐：
-         · isfromMys —— miao 用 `/米游社|mys/.test(e.msg)` 判断走不走米游社，
-           我们的指令是「米哈游原神面板」，不含「米游社」，不加这个标记
-           fromMys 就是 false，会跑去第三方面板服务而不是米游社。
-         · e._mys    —— ProfileReq 直接读 player.e._mys.getCharacter()
-         · force=2   —— 无视缓存 */
+      /* 关键：**不能**强制走米游社。
+         Serv.getServ(uid, game, fromMys) 里 fromMys=true 会直接返回 mysPanel，
+         米游社一旦风控就彻底失败、没有降级；fromMys=false 才会按配置选
+         enka / mgg / 等第三方面板服务 —— 喵喵自己的 #更新面板 能出图，
+         正是因为它走的是后者（日志里「账号异常」之后仍然出了图）。
+         所以这里保持 isfromMys=false，让 miao 自己挑服务。 */
+      const player = new miao.Player(uid, game)
       player.e = e
       e.uid = uid
       e.game = game
-      e.isfromMys = true
+      e.isfromMys = false
       const mys = await miao.MysApi.init(e, 'cookie')
       if (!mys) {
         return e.reply([
@@ -259,7 +260,7 @@ export class hoyo_panel extends plugin {
           '请先发送 #米哈游扫码绑定 绑定账号，或 #刷新ck 刷新失效的 Cookie。',
         ].join('\n'))
       }
-      const refreshed = await player.refreshProfile(2, true)
+      const refreshed = await player.refreshProfile(2, false)
       if (refreshed === false || refreshed === undefined) {
         logger.warn?.(`[HoYoGet][hoyo_panel] ${uid} 面板未刷新（返回 ${refreshed}）`)
         return
@@ -270,6 +271,7 @@ export class hoyo_panel extends plugin {
         logger.warn?.(`[HoYoGet][hoyo_panel] ${uid} 刷新后仍无面板数据`)
         return
       }
+      logger.mark?.(`[HoYoGet][hoyo_panel] ${uid} 刷新完成，开始渲染（avatars=${Object.keys(fresh._avatars || {}).length}）`)
       return this.renderPanel(e, game, uid, miao, true, fresh)
     } catch (err) {
       logger.error?.(`[HoYoGet][hoyo_panel] 更新面板失败: ${err?.message || err}`)
@@ -306,16 +308,14 @@ export class hoyo_panel extends plugin {
     try {
       const player = new miao.Player(uid, game)
       if (!player.hasProfile) {
-        /* 本地没有面板缓存，尝试刷新一次。
-           和 refreshPanel 一样需要 isfromMys + e._mys：
-           miao 用 `/米游社|mys/` 判断走米游社还是第三方面板服务，
-           本插件指令名不含「米游社」，不显式置 true 会走错服务。 */
+        // 本地没有面板缓存，尝试刷新一次（保持 isfromMys=false 走第三方服务，
+        // 理由见 refreshPanel 里的注释）
         player.e = e
         e.uid = uid
         e.game = game
-        e.isfromMys = true
+        e.isfromMys = false
         const mys = await miao.MysApi.init(e, 'cookie')
-        if (mys) await player.refreshProfile(2, true)
+        if (mys) await player.refreshProfile(2, false)
       }
       if (!player.hasProfile) {
         logger.warn?.(`[HoYoGet][hoyo_panel] ${uid} 本地无面板：avatars=${Object.keys(player._avatars || {}).length}，文件=${player._file}`)
