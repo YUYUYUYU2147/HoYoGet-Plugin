@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { pluginPriority, render } from '#HoYoGet'
-import { listCategories, fetchLeaderboard, getUserCalculations } from '../system/akasha.js'
+import { listCategories, fetchLeaderboard, getUserCalculations, getDamageDistribution } from '../system/akasha.js'
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const YUNZAI_DB = path.join(process.cwd(), 'data', 'db', 'data.db')
@@ -1068,9 +1068,25 @@ async function akashaForChar(charId, uid, charName = '') {
 
     const mine = (calcs || []).find(r => String(r?.characterId) === String(charId))
     const fit = mine?.calculations?.fit || null
-    /* 分技能明细：`value` 是单次命中期望伤害，`quantity` 是一轮循环的次数，
+
+    /* 分技能明细：`getCalculationsForUser` 的 fit 只有总分，明细要去
+       `/api/damageDistribution/<calculationId>/<uid>/<md5>` 拿（站点伤害页同款），
+       再按 calculationId 对上本人的那一项。失败就隐藏表格，不影响其他模块。 */
+    let additional = Array.isArray(fit?.calculation?.additional) ? fit.calculation.additional : null
+    if (!additional && fit?.calculationId && fit?.md5) {
+      try {
+        const dist = await getDamageDistribution(fit.calculationId, uid, fit.md5)
+        const hit = dist.find(x => String(x?.id) === String(fit.calculationId))
+          || dist.find(x => Math.abs(Number(x?.result) - Number(fit.result)) < 1)
+        if (Array.isArray(hit?.additional)) additional = hit.additional
+      } catch (err) {
+        logger.debug?.(`[HoYoGet][hoyo_panel] akasha 伤害明细获取失败：${err?.message || err}`)
+      }
+    }
+
+    /* `value` 是单次命中期望伤害，`quantity` 是一轮循环的次数，
        表格右侧展示 value×quantity 的整轮期望，次数单独占一列。 */
-    const detail = (fit?.calculation?.additional || []).slice(0, 6).map((d, i) => {
+    const detail = (additional || []).slice(0, 6).map((d, i) => {
       const qty = Number(d?.quantity) || 1
       const name = cleanDmgName(d?.name, i, d?.type, charName)
       /* 普攻段数（type 形如 N3-Infused）比「技能3」更能说明是哪一招 */

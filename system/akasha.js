@@ -137,6 +137,19 @@ async function getUserCalculations(uid) {
 }
 
 /**
+ * 某 UID 在指定配装下的伤害明细。
+ *
+ * `getCalculationsForUser` 只给总分（`fit.result`），没有分技能明细；
+ * 站点前端的伤害页走的是这个接口：`/api/damageDistribution/<calculationId>/<uid>/<md5>`，
+ * 返回该 UID 在该角色上的**全部**配装（每项含 `additional` 分技能明细）。
+ * 调用方按 `fit.calculationId` 挑出对应那一项即可。
+ */
+async function getDamageDistribution(calculationId, uid, md5) {
+  const j = await akashaRequest(`damageDistribution/${calculationId}/${uid}/${md5}`)
+  return Array.isArray(j?.data) ? j.data : []
+}
+
+/**
  * 某个 UID 在 Akasha 上展示的圣遗物（按暴击值降序）。
  *
  * Akasha 不做圣遗物全球排名，只提供每个圣遗物的 `critValue`
@@ -160,4 +173,5 @@ export {
   listCategories, fetchLeaderboard,
   listStygianSchedules, fetchStygianLeaderboard, fetchStygianRankOfUser,
   getUserCalculations, getUserProfile, getArtifactsByUid,
+  getDamageDistribution,
 }
