@@ -235,6 +235,65 @@ async function getRelics() {
   return map
 }
 
+/* 套装 / 音擎图标：榜单行要显示驱动盘与音擎的小图，只能从工坊名称表拿。
+   与 getRelics/getWeapons 分开缓存，避免把「id → 名字」的既有调用方改成对象。 */
+const metaCache = { relics: null, relicsAt: 0, weapons: null, weaponsAt: 0 }
+
+async function getRelicMeta() {
+  if (metaCache.relics && fresh(metaCache.relicsAt)) return metaCache.relics
+  const map = new Map()
+  try {
+    const data = await request('/api/v1/relic/list', { limit: 500 })
+    for (const row of (Array.isArray(data?.rows) ? data.rows : [])) {
+      const id = String(row?.set_id ?? '')
+      if (!id) continue
+      map.set(id, {
+        name: row?.name_simple || row?.name || '',
+        icon: row?.avatar || row?.avatar_s || '',
+      })
+    }
+  } catch (_) {
+    /* 图标缺失不影响榜单本体，静默降级 */
+  }
+  metaCache.relics = map
+  metaCache.relicsAt = Date.now()
+  return map
+}
+
+async function getWeaponMeta() {
+  if (metaCache.weapons && fresh(metaCache.weaponsAt)) return metaCache.weapons
+  const map = new Map()
+  try {
+    const data = await request('/api/v1/weapon/list', { limit: 500 })
+    for (const row of (Array.isArray(data?.rows) ? data.rows : [])) {
+      const id = String(row?.item_id ?? '')
+      if (!id) continue
+      map.set(id, {
+        name: row?.nick_name || '',
+        icon: row?.avatar || row?.avatar2 || '',
+      })
+    }
+  } catch (_) {
+    /* 同上 */
+  }
+  metaCache.weapons = map
+  metaCache.weaponsAt = Date.now()
+  return map
+}
+
+/** set_info「32700_2__32800_2」→ 每件驱动盘的套装图标，按件数展开（同套装重复同一图标） */
+function buildDiscIcons(setInfo, relicMeta) {
+  const out = []
+  for (const part of String(setInfo || '').split('__')) {
+    const [id, count] = String(part || '').split('_')
+    const meta = relicMeta?.get(String(id || ''))
+    if (!meta) continue
+    const n = Number(count) || 0
+    for (let i = 0; i < n && out.length < 6; i++) out.push({ icon: meta.icon, name: meta.name })
+  }
+  return out
+}
+
 async function resolveRole(input) {
   const keyword = String(input || '').trim()
   if (!keyword) return null
@@ -502,16 +561,15 @@ async function buildRoleRank(arg, opts = {}) {
     }
     throw err
   }
-  let rows = Array.isArray(data?.rows) ? data.rows : []
+  const rows = Array.isArray(data?.rows) ? data.rows : []
   if (!rows.length) {
     return { error: `暂无符合条件的记录（该角色可能未开放统计）。`, subtitle }
   }
 
-  /* 全服名次 = 接口返回顺序（工坊按驱动总分降序给出，序号即名次）。
-     必须在按群成员过滤**之前**记下来，否则本群范围下名次会从 1 重新排，
-     和工坊总榜对不上。
-     注意 row.rank 不是名次，它是**影画**（0~6），单独放 constellation。 */
-  const fullRank = new Map(rows.map((row, i) => [String(row?.uid ?? ''), i + 1]))
+  /* 全服名次 = 接口返回顺序（工坊按驱动总分降序返回，第 1 条就是第 1 名）。
+     必须先记下来：本群范围会过滤掉非群成员，过滤后下标就不是全服位次了。
+     注意不能用 row.rank —— 那是「影画数」（0~6），不是名次。 */
+  let ranked = rows.map((row, i) => ({ row, fullRank: i + 1 }))
 
   /* 本群范围：工坊返回的是完整 UID（不打码），所以能直接和群成员绑定 UID 求交集。
      交集为空时说明群里没人把这个角色上传到工坊角色柜，明确说明而不是显示空榜。 */
@@ -525,9 +583,9 @@ async function buildRoleRank(arg, opts = {}) {
         subtitle,
       }
     }
-    rows = rows.filter(row => members.has(String(row?.uid ?? '')))
+    ranked = ranked.filter(({ row }) => members.has(String(row?.uid ?? '')))
     scopeText = `本群（${members.size} 人有绑定）`
-    if (!rows.length) {
+    if (!ranked.length) {
       return {
         error: `本群没有成员把「${role.nick_name}」上传到工坊角色柜，因此没有本群排名。\n可发送「%面板排名范围」切换到全服查看工坊总榜。`,
         subtitle,
@@ -535,14 +593,12 @@ async function buildRoleRank(arg, opts = {}) {
     }
   }
 
-  const list = rows.slice(0, count).map((row, index) => ({
+  const list = ranked.slice(0, count).map(({ row, fullRank }, index) => ({
     rank: index + 1,
-    globalRank: fullRank.get(String(row?.uid ?? '')) || index + 1,
-    /* 接口的 rank 字段是影画数（实测 0~6，同一 UID 在详情接口里也是这个值），
-       不是名次；以前当成名次再配 `|| index + 1` 兜底，导致影画 0 的人退化成序号，
-       出现「#3 / #5 / #10」这种既重复又乱序的列。 */
-    constellation: Number(row?.rank ?? 0) || 0,
-    constellationText: `影画${Number(row?.rank ?? 0) || 0}`,
+    globalRank: fullRank,
+    /* 接口的 rank 是影画数（0~6），不是名次；单列出来展示，避免再被当成名次用 */
+    constellation: Number(row?.rank) || 0,
+    constellationText: Number(row?.rank) ? `影画${Number(row.rank)}` : '',
     uid: String(row?.uid ?? ''),
     nickname: row?.user_case?.nick_name || '',
     level: Number(row?.level ?? 0) || 0,
@@ -553,23 +609,53 @@ async function buildRoleRank(arg, opts = {}) {
     damage: 0,
     damageText: '-',
     damageSkill: '',
+    /* 面板属性与配装图标：榜单接口只有总分，逐人拉详情才能拿到，见下方 */
+    stats: null,
+    discIcons: [],
+    setText: '',
+    weaponIcon: '',
+    weaponName: '',
   }))
 
-  /* 伤害：排行接口只有驱动总分，要算伤害得逐人拉 /user_role/ranking 拿词条。
-     一次请求 1~2 秒，为控制耗时只给前 10 名算，其余显示「-」。
-     失败（未上传/接口异常）不影响整张榜单。 */
-  const damageLimit = Math.min(list.length, 10)
-  await Promise.all(list.slice(0, damageLimit).map(async row => {
+  /* 详情：排行接口只有驱动总分，属性、驱动盘套装、音擎都得逐人拉 /user_role/ranking。
+     单次请求 1~2 秒，因此设上限（默认 10 行、最多 15 行），其余行只显示总分；
+     单个玩家失败不影响整张榜单。 */
+  const detailLimit = Math.min(list.length, 15)
+  const [relicMeta, weaponMeta] = await Promise.all([getRelicMeta(), getWeaponMeta()])
+  await Promise.all(list.slice(0, detailLimit).map(async row => {
     try {
       const params = { uid: row.uid, type: 'ranking', refresh: false, item_id: role.item_id }
       const detail = await signedPost('/api/v1/user_role/ranking', params)
       const target = (detail?.roles || []).find(r => String(r?.item_id) === String(role.item_id))
       if (!target) return
+
+      /* 套装图标：set_info 形如「32700_2__32800_2」，按件数展开成 4+2 枚 */
+      row.discIcons = buildDiscIcons(target?.set_info, relicMeta)
+      row.setText = [...new Set(row.discIcons.map(d => d.name).filter(Boolean))].join(' + ')
+
+      /* 音擎图标：详情里的 weapon_id 就是工坊音擎表的 item_id */
+      const wqId = String(target?.weapon_id || target?.item_json?.Weapon?.Id || '')
+      const wqMeta = weaponMeta.get(wqId)
+      if (wqMeta) {
+        row.weaponIcon = wqMeta.icon
+        row.weaponName = wqMeta.name
+      }
+
       /* role 是 buildRoleRank 里 resolveRole 得到的工坊角色对象，
          nick_name 才是中文名（target.name 是 null）。 */
       const panel = await calcWorkshopPanel(target, role.nick_name)
-          if (!panel) return
+      if (!panel) return
       const bp = buildBasicProperties(panel)
+      const pick = (key) => bp?.[key]?.final || '-'
+      row.stats = {
+        atk: pick('attack'),
+        crit: pick('crit'),
+        critdam: pick('critdam'),
+        pen: pick('penratio'),
+        dmg: pick('dmgbonus'),
+        abnormal: pick('elementabnormalpower'),
+      }
+
       const dmg = calcPanelDamage(bp, panel.level, panel, role.nick_name)
       if (!dmg?.ok) return
       row.damage = Number(dmg.top?.expect) || 0
@@ -597,6 +683,8 @@ async function buildRoleRank(arg, opts = {}) {
     scopeText,
     isGroup: scope === 'group',
     total: Number(data?.total) || rows.length,
+    /* 模板里要写「仅前 N 名展示」，N 与实际拉取详情的人数保持一致 */
+    detailLimit,
     list,
   }
 }
@@ -856,6 +944,9 @@ async function panelFromFinal(item, roleName) {
       { property_id: 6, base: text(6), final: text(6) },
       { property_id: 9, base: text(9), final: text(9) },
       { property_id: 232, base: text(232), final: text(232) },
+      /* 7 = 异常掌控：旧通道会输出，新通道（mi）此前漏了这一项，
+         榜单的「异常掌控」列与新通道面板都会读到空值。 */
+      { property_id: 7, base: text(7), final: text(7) },
       { property_id: 8, base: text(8), final: text(8) },
       { property_id: 11, base: text(11), final: text(11) },
       { property_id: 317, base: text(317), final: text(317) },
@@ -1193,7 +1284,7 @@ export class zzz_workshop extends plugin {
 
   async roleRank(e) {
     try {
-      /* 范围跟随「%面板排名范围」的开关，与本地面板排名共用同一份状态。
+      /* 范围跟随「%面板排名范围」的开关，与本地面板排名共用同一份状态（按群持久化，重启不丢）。
          本群范围需要群成员绑定 UID，拿不到成员列表时回落全服。 */
       const wantGroup = getRankScope(e) === 'group'
       const memberUids = wantGroup ? await getGroupMemberUids(e) : null

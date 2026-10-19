@@ -1,203 +1,261 @@
 body {
   width: 1080px;
   margin: 0;
-  background: #efe9f5;
+  background: #1b0f2c;
   font-family: 'HelpSans', 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', sans-serif;
 }
 
 .page {
   width: 1080px;
-  padding: 26px 28px 20px;
+  padding: 26px 26px 18px;
   box-sizing: border-box;
   background:
-    radial-gradient(760px 320px at 88% -4%, rgba(196, 140, 255, .38), transparent 62%),
-    radial-gradient(620px 300px at 4% 96%, rgba(255, 168, 220, .34), transparent 60%),
-    linear-gradient(165deg, #f7f2ff 0%, #f0e7fb 48%, #eae0f7 100%);
-  color: #2d2440;
+    radial-gradient(720px 300px at 86% -6%, rgba(150, 92, 255, .42), transparent 62%),
+    radial-gradient(620px 280px at 2% 102%, rgba(84, 60, 190, .38), transparent 60%),
+    linear-gradient(168deg, #2c1a4c 0%, #241540 46%, #1a0f2c 100%);
+  color: #e9dfff;
 }
 
 /* ───── 顶栏 ───── */
 .head {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
-  padding: 18px 24px;
-  border-radius: 18px;
-  background: linear-gradient(120deg, rgba(255,255,255,.92), rgba(250,244,255,.86));
-  border: 1px solid rgba(200, 170, 235, .55);
-  box-shadow: 0 10px 26px rgba(140, 100, 190, .16);
+  padding: 0 6px 14px;
+  border-bottom: 1px solid rgba(168, 132, 240, .22);
 }
 
 .title {
   font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
-  font-size: 34px;
-  letter-spacing: 2px;
-  color: #3d2a5c;
+  font-size: 38px;
   line-height: 1.1;
+  letter-spacing: 2px;
+  color: #f3ebff;
+  text-shadow: 0 2px 12px rgba(160, 110, 255, .45);
 }
 .title-sub {
-  font-size: 20px;
-  letter-spacing: 1px;
-  color: #8a6fb5;
+  margin-left: 10px;
+  font-size: 21px;
+  letter-spacing: 2px;
+  color: #b18cec;
 }
+
 .subtitle {
-  margin-top: 7px;
+  margin-top: 8px;
   font-size: 13px;
-  color: #8b7fa4;
+  color: #9a86bd;
 }
 
 .scope {
-  padding: 5px 16px;
+  padding: 6px 18px;
   border-radius: 999px;
   font-size: 14px;
   font-weight: 900;
+  letter-spacing: 1px;
 }
-.scope.group { color: #1f8f68; background: rgba(90, 220, 170, .22); border: 1px solid rgba(60, 190, 140, .4); }
-.scope.all { color: #5a44a8; background: rgba(150, 120, 255, .18); border: 1px solid rgba(150, 120, 255, .38); }
+.scope.group { color: #7ff0c4; background: rgba(64, 214, 158, .16); border: 1px solid rgba(64, 214, 158, .45); }
+.scope.all { color: #c9a8ff; background: rgba(150, 112, 255, .18); border: 1px solid rgba(160, 120, 255, .45); }
 
-/* ───── 卡片列表 ───── */
-.list { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
-
-.card {
-  display: flex;
-  align-items: stretch;
-  gap: 18px;
-  padding: 14px 20px;
-  border-radius: 20px;
-  background: linear-gradient(105deg, rgba(255,255,255,.95), rgba(250,245,255,.9));
-  border: 1px solid rgba(205, 180, 235, .55);
-  box-shadow: 0 8px 20px rgba(140, 100, 190, .12);
+/* ───── 排名说明 ───── */
+.rules {
+  margin-top: 14px;
+  padding: 12px 18px 13px;
+  border-radius: 14px;
+  background: rgba(122, 84, 200, .16);
+  border: 1px solid rgba(160, 124, 235, .28);
 }
-
-/* 前三名：粉紫渐变 + 描边 */
-.card.top1 {
-  background: linear-gradient(105deg, #ffe9f4, #efe0ff 55%, #e6dcff);
-  border-color: rgba(214, 140, 200, .65);
-  box-shadow: 0 10px 24px rgba(190, 120, 200, .22);
-}
-.card.top2 { background: linear-gradient(105deg, #f3f0ff, #ebe4fb); border-color: rgba(150, 140, 220, .5); }
-.card.top3 { background: linear-gradient(105deg, #fff3e8, #f6e9ff); border-color: rgba(220, 165, 130, .5); }
-
-/* ───── 左：名次 + 头像 + 名字 ───── */
-.card-left {
-  width: 190px;
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  position: relative;
-}
-
-.rank-badge {
-  position: absolute;
-  left: 0;
-  top: 2px;
-  min-width: 34px;
-  padding: 0 8px;
-  border-radius: 10px;
-  font-size: 18px;
+.rules-title {
+  font-size: 13px;
   font-weight: 900;
-  line-height: 26px;
-  text-align: center;
-  color: #fff;
-  background: linear-gradient(180deg, #b98ce8, #8f66c9);
-  box-shadow: 0 3px 8px rgba(140, 90, 190, .3);
+  letter-spacing: 1px;
+  color: #d8c2ff;
+  margin-bottom: 6px;
 }
-.top1 .rank-badge { background: linear-gradient(180deg, #ff9ac8, #e0578f); }
-.top2 .rank-badge { background: linear-gradient(180deg, #b7a8f0, #8375cc); }
-.top3 .rank-badge { background: linear-gradient(180deg, #ffbb8a, #e08b52); }
+.rule {
+  position: relative;
+  padding-left: 14px;
+  font-size: 12px;
+  line-height: 1.85;
+  color: #a795c6;
+}
+.rule::before {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 9px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #8f6be0;
+}
+
+/* ───── 表头 ───── */
+.thead,
+.row {
+  display: grid;
+  grid-template-columns: 54px 336px repeat(6, 1fr) 166px;
+  align-items: center;
+  gap: 6px;
+}
+
+.thead {
+  margin-top: 16px;
+  padding: 0 14px 8px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #9c86c2;
+}
+.thead .th { text-align: center; }
+.thead .th.c-rank { text-align: left; }
+.thead .th.c-user { text-align: left; padding-left: 4px; }
+.thead .th.c-score { text-align: right; }
+
+/* ───── 行 ───── */
+.rows { display: flex; flex-direction: column; gap: 7px; }
+
+.row {
+  padding: 9px 14px;
+  border-radius: 14px;
+  background: linear-gradient(100deg, rgba(126, 88, 208, .22), rgba(96, 66, 170, .14));
+  border: 1px solid rgba(150, 116, 226, .2);
+}
+
+/* 前三名：金色描边 + 稍亮底色 */
+.row.top1 {
+  background: linear-gradient(100deg, rgba(255, 206, 120, .2), rgba(140, 96, 220, .16));
+  border-color: rgba(255, 208, 122, .55);
+  box-shadow: 0 0 22px rgba(255, 196, 92, .16);
+}
+.row.top2 { border-color: rgba(198, 208, 255, .45); background: linear-gradient(100deg, rgba(160, 176, 240, .16), rgba(120, 90, 200, .14)); }
+.row.top3 { border-color: rgba(255, 168, 122, .45); background: linear-gradient(100deg, rgba(220, 148, 110, .16), rgba(120, 90, 200, .14)); }
+
+.c-rank {
+  font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+  font-size: 19px;
+  font-weight: 900;
+  color: #b795f0;
+}
+.top1 .c-rank { color: #ffd070; }
+.top2 .c-rank { color: #cfd8ff; }
+.top3 .c-rank { color: #ffb27a; }
+
+/* ───── 左：头像 + UID + 配装 ───── */
+.c-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
 
 .avatar {
-  width: 82px;
-  height: 82px;
+  width: 54px;
+  height: 54px;
+  flex: none;
   border-radius: 50%;
-  background: #efe6fa center top / cover no-repeat;
-  border: 3px solid #fff;
-  box-shadow: 0 4px 12px rgba(150, 110, 200, .22);
   overflow: hidden;
+  background: rgba(255, 255, 255, .1) center / cover no-repeat;
+  border: 2px solid rgba(255, 255, 255, .55);
+  box-shadow: 0 3px 10px rgba(20, 8, 40, .45);
 }
 .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-.avatar-name {
-  margin-top: 9px;
-  max-width: 100%;
-  font-size: 16px;
-  font-weight: 900;
-  color: #3d2a5c;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.avatar-sub {
-  margin-top: 3px;
-  font-size: 11px;
-  color: #9a8db2;
-}
+.uinfo { min-width: 0; }
 
-/* ───── 右：分数 + 明细 ───── */
-.card-right {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 12px;
-  padding-left: 18px;
-  border-left: 1px dashed rgba(180, 155, 215, .55);
-}
+.uline { display: flex; align-items: center; gap: 6px; }
 
-.score-row { display: flex; align-items: baseline; gap: 10px; }
-.score-main {
-  font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
-  font-size: 40px;
-  line-height: 1;
-  color: #7b4fd0;
-  letter-spacing: 1px;
-}
-.top1 .score-main { color: #d64f8e; }
-.score-unit {
-  font-size: 13px;
-  font-weight: 800;
-  color: #9a8db2;
-}
-
-.detail-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-}
-.detail-item .damage { color: #d64f8e; }
-.detail-item .d-sub { margin-left: 4px; font-size: 10px; opacity: .65; white-space: nowrap; }
-.detail-item {
-  padding: 8px 12px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, .72);
-  border: 1px solid rgba(205, 185, 235, .6);
-}
-.d-label {
-  display: block;
-  font-size: 11px;
-  color: #9a8db2;
-}
-.d-value {
-  display: block;
-  margin-top: 2px;
+.uid {
   font-size: 15px;
   font-weight: 900;
-  color: #4b3670;
+  letter-spacing: .5px;
+  color: #f0e7ff;
+}
+
+.chip {
+  padding: 1px 7px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 15px;
+  white-space: nowrap;
+}
+.chip.con { color: #ffe6a3; background: rgba(255, 205, 110, .16); border: 1px solid rgba(255, 205, 110, .45); }
+.chip.lv { color: #b9d8ff; background: rgba(120, 180, 255, .14); border: 1px solid rgba(120, 180, 255, .4); }
+
+.nick {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #a893c9;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.gear {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 4px;
+  height: 19px;
+  overflow: hidden;
+}
+.gicon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .12);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .2);
+  flex: none;
+}
+.gicon.wq { border-radius: 5px; }
+.setname {
+  margin-left: 4px;
+  font-size: 10px;
+  color: #9c8abb;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ───── 中：六列数值 ───── */
+.c-stat {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 900;
+  color: #efe6ff;
+  white-space: nowrap;
+}
+.c-stat.empty { color: #6b5c88; font-weight: 700; }
+
+/* ───── 右：总分 / 期望 / 全服名次 ───── */
+.c-score { text-align: right; }
+
+.score {
+  font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+  font-size: 24px;
+  line-height: 1.05;
+  letter-spacing: .5px;
+  color: #ffd98a;
+}
+.top1 .score { color: #ffdf9e; }
+
+.score-sub {
+  margin-top: 1px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #b19ad4;
+  white-space: nowrap;
+}
+.score-sub.dim { color: #836fa6; }
 
 /* ───── 页脚 ───── */
 .footer {
-  margin-top: 16px;
+  margin-top: 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   font-size: 12px;
   font-weight: 800;
-  color: #9a8db2;
+  color: #8d7aab;
 }
-.footer .src { color: #b3a6c9; font-weight: 700; }
+.footer .src { color: #75638f; font-weight: 700; }
