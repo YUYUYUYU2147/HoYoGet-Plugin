@@ -13,197 +13,211 @@
   <div class="container" id="container">
     {{set c = charData}}
 
-    <div class="hero">
-      <div class="portrait">
-        <img src="{{c.role_icon}}"{{if c.role_fallback}} onerror="this.onerror=null;this.src='{{c.role_fallback}}'"{{/if}}>
-        {{if playerName || playerAvatar}}
-        <div class="player-badge">
-          {{if playerAvatar}}<img class="player-avatar" src="{{playerAvatar}}" onerror="this.style.display='none'">{{/if}}
-          {{if playerName}}<span class="player-name">{{playerName}}</span>{{/if}}
-        </div>
-        {{/if}}
-      </div>
-      <div class="main">
-        <div class="title-row">
-          <span class="rarity-icon {{c.rarity}}"></span>
-          <span class="name">{{c.full_name_mi18n}}</span>
-          <span class="element-icon {{c.sub_element_str}}"></span>
-          <div class="skills-top">
-            <div class="sk"><img src="{{ppath}}zzz_panel/images/panel_icons/skills/basic.webp"><span class="sk-lv">{{c.skills[0].level}}</span></div>
-            <div class="sk"><img src="{{ppath}}zzz_panel/images/panel_icons/skills/special.webp"><span class="sk-lv">{{c.skills[1].level}}</span></div>
-            <div class="sk"><img src="{{ppath}}zzz_panel/images/panel_icons/skills/dodge.webp"><span class="sk-lv">{{c.skills[2].level}}</span></div>
-            <div class="sk"><img src="{{ppath}}zzz_panel/images/panel_icons/skills/chain.webp"><span class="sk-lv">{{c.skills[3].level}}</span></div>
-            <div class="sk"><img src="{{ppath}}zzz_panel/images/panel_icons/skills/core.webp"><span class="sk-lv">{{c.skills[4].level}}</span></div>
-            <div class="sk"><img src="{{ppath}}zzz_panel/images/panel_icons/skills/assist.webp"><span class="sk-lv">{{c.skills[5].level}}</span></div>
+    <!-- 左右两列：左列 立绘+属性 / 音擎 / 驱动盘，右列 技能 / 评分 / 套装 / 伤害 -->
+    <div class="layout">
+      <div class="col-left">
+        <div class="hero">
+          <div class="portrait">
+            <img src="{{c.role_icon}}"{{if c.role_fallback}} onerror="this.onerror=null;this.src='{{c.role_fallback}}'"{{/if}}>
+            {{if playerName || playerAvatar}}
+            <div class="player-badge">
+              {{if playerAvatar}}<img class="player-avatar" src="{{playerAvatar}}" onerror="this.style.display='none'">{{/if}}
+              {{if playerName}}<span class="player-name">{{playerName}}</span>{{/if}}
+            </div>
+            {{/if}}
+          </div>
+          <div class="main">
+            <div class="title-row">
+              <span class="rarity-icon {{c.rarity}}"></span>
+              <span class="name">{{c.full_name_mi18n}}</span>
+              <span class="element-icon {{c.sub_element_str}}"></span>
+            </div>
+            <div class="chips">
+              <span class="chip gold">Lv.{{c.level}}</span>
+              <span class="chip">{{c.profession}}</span>
+              <span class="chip">{{c.element_cn}}</span>
+              <span class="chip">影{{c.rank}}</span>
+            </div>
+            <div class="uid">UID {{uid}}</div>
+            <div class="stats">
+              {{each c.stat_rows r}}
+              <div class="row">
+                {{if r.icon == 'element'}}
+                <span class="element-icon {{r.cls}}"></span>
+                {{else}}
+                <span class="prop-icon {{r.cls}}"></span>
+                {{/if}}
+                <span class="label">{{r.label}}</span>
+                {{if r.base}}<span class="mid">{{r.base}}{{if r.add}}<span class="add">+{{r.add}}</span>{{/if}}</span>{{/if}}
+                <span class="final">{{r.final}}</span>
+              </div>
+              {{/each}}
+            </div>
           </div>
         </div>
-        <div class="chips">
-          <span class="chip gold">Lv.{{c.level}}</span>
-          <span class="chip">{{c.profession}}</span>
-          <span class="chip">{{c.element_cn}}</span>
-          <span class="chip">影{{c.rank}}</span>
+
+        {{if c.weapon}}
+        <div class="section">
+          <div class="sec-title">音擎</div>
+          <div class="weapon-card">
+            <img class="wicon" src="{{c.weapon.square_icon}}">
+            <div class="winfo">
+              <div class="wname"><span class="rarity-icon {{c.weapon.rarity}}"></span>{{c.weapon.name}}</div>
+              <div class="wmeta">Lv.{{c.weapon.level}} · 精炼 {{c.weapon.refine}}</div>
+              <div class="wprops">
+                <!-- 主词条一行、副词条一行：音擎主词条只有 1 条，副词条 3~4 条，
+                     原来用两列 grid 混排会出现「1 条 + 3 条」参差、右侧大片空白 -->
+                <div class="wp-line">
+                  {{each c.weapon.main_properties prop}}
+                  <span class="wp main"><i class="wp-tag">主</i><span class="prop-icon {{prop.classname}}"></span>{{prop.property_name}} {{prop.base}}</span>
+                  {{/each}}
+                </div>
+                <!-- 副词条可能为空（接口没给全），整行不输出：
+                     否则 .wp-line + .wp-line 的分隔虚线会孤零零挂在主词条下面 -->
+                {{if c.weapon.properties.length}}
+                <div class="wp-line">
+                  {{each c.weapon.properties prop}}
+                  <span class="wp"><i class="wp-tag">副</i><span class="prop-icon {{prop.classname}}"></span>{{prop.property_name}} {{prop.base}}</span>
+                  {{/each}}
+                </div>
+                {{/if}}
+              </div>
+              {{if c.weapon.talent}}
+              <div class="wtalent">
+                <div class="wt-title">◆ {{c.weapon.talent_title}}</div>
+                <div class="wt-desc">{{c.weapon.talent}}</div>
+              </div>
+              {{/if}}
+            </div>
+          </div>
         </div>
-        <div class="uid">UID {{uid}}</div>
-        <div class="stats">
-          {{each c.stat_rows r}}
-          <div class="row">
-            {{if r.icon == 'element'}}
-            <span class="element-icon {{r.cls}}"></span>
-            {{else}}
-            <span class="prop-icon {{r.cls}}"></span>
-            {{/if}}
-            <span class="label">{{r.label}}</span>
-            {{if r.base}}<span class="mid">{{r.base}}{{if r.add}}<span class="add">+{{r.add}}</span>{{/if}}</span>{{/if}}
-            <span class="final">{{r.final}}</span>
+        {{/if}}
+
+        <div class="section">
+          <div class="sec-title">驱动盘</div>
+          <div class="disc-grid">
+            {{each c.equip_final equip}}
+            <div class="disc-card rarity{{equip.rarity}}">
+              <div class="dc-head">
+                <img class="dc-icon" src="{{equip.suit_icon}}">
+                <div class="dc-title">
+                  <div class="dc-name">{{equip.name}}</div>
+                  <div class="dc-meta">Lv.{{equip.level}}<span class="rarity-icon {{equip.rarity}}"></span><span class="dc-score {{equip.grade}}">{{equip.grade}} {{equip.score.toFixed(1)}}</span></div>
+                </div>
+              </div>
+              <div class="dc-props">
+                {{each equip.main_properties prop}}
+                <div class="dp main"><span class="prop-icon {{prop.classname}}"></span><span class="dp-name">{{prop.short_name}}</span><span class="dp-val">{{prop.base}}</span></div>
+                {{/each}}
+                {{each equip.properties prop}}
+                <div class="dp {{prop.base_score ? 'on' : ''}}">
+                  <span class="prop-icon {{prop.classname}}"></span>
+                  <span class="dp-name">{{prop.property_name}}</span>
+                  {{if prop.hit}}<span class="dp-hit">+{{prop.hit}}</span>{{/if}}
+                  <span class="dp-val">{{prop.base}}</span>
+                </div>
+                {{/each}}
+              </div>
+            </div>
+            {{/each}}
+          </div>
+        </div>
+      </div>
+
+      <div class="col-right">
+        {{set skNames = ['普攻', '特殊技', '闪避', '连携技', '核心技', '支援技']}}
+        {{set skIcons = ['basic', 'special', 'dodge', 'chain', 'core', 'assist']}}
+        <div class="skills-card">
+          {{each c.skills sk i}}
+          <div class="skb">
+            <img src="{{ppath}}zzz_panel/images/panel_icons/skills/{{skIcons[i]}}.webp">
+            <div class="skb-meta">
+              <span class="skb-name">{{skNames[i]}}</span>
+              <span class="skb-lv">Lv.{{sk.level}}</span>
+            </div>
           </div>
           {{/each}}
         </div>
-      </div>
-    </div>
 
-    {{if c.weapon}}
-    <div class="section">
-      <div class="sec-title">音擎</div>
-      <div class="weapon-card">
-        <img class="wicon" src="{{c.weapon.square_icon}}">
-        <div class="winfo">
-          <div class="wname"><span class="rarity-icon {{c.weapon.rarity}}"></span>{{c.weapon.name}}</div>
-          <div class="wmeta">Lv.{{c.weapon.level}} · 精炼 {{c.weapon.refine}}</div>
-          <div class="wprops">
-            <!-- 主词条一行、副词条一行：音擎主词条只有 1 条，副词条 3~4 条，
-                 原来用两列 grid 混排会出现「1 条 + 3 条」参差、右侧大片空白 -->
-            <div class="wp-line">
-              {{each c.weapon.main_properties prop}}
-              <span class="wp main"><i class="wp-tag">主</i><span class="prop-icon {{prop.classname}}"></span>{{prop.property_name}} {{prop.base}}</span>
+        <div class="section">
+          <div class="sec-title">评分</div>
+          <div class="score-wrap">
+            <div class="score-box">
+              <div class="score-line">
+                <div class="score-rate">{{c.equip_comment}}</div>
+                <div class="score-val">{{c.equip_score.toFixed(1)}}<span class="unit">分</span></div>
+              </div>
+              <div class="score-meta">规则：{{c.weightRule}}</div>
+            </div>
+            <div class="prop-stats">
+              {{each c.propertyStats stat}}
+              <div class="ps-item">
+                <span class="ps-count">{{stat.count}}</span>
+                <span class="ps-name">{{stat.name}}</span>
+                <span class="ps-val">{{stat.value}}</span>
+              </div>
               {{/each}}
             </div>
-            <!-- 副词条可能为空（接口没给全），整行不输出：
-                 否则 .wp-line + .wp-line 的分隔虚线会孤零零挂在主词条下面 -->
-            {{if c.weapon.properties.length}}
-            <div class="wp-line">
-              {{each c.weapon.properties prop}}
-              <span class="wp"><i class="wp-tag">副</i><span class="prop-icon {{prop.classname}}"></span>{{prop.property_name}} {{prop.base}}</span>
+          </div>
+          <div class="useful-bar">
+            <span>有益词条数：<b>{{c.usefulCount}}</b></span>
+            <span class="useful-sep">·</span>
+            <span class="useful-effective">有效词条数：<b>{{c.effectiveCount}}</b></span>
+          </div>
+        </div>
+
+        {{if c.sets.length}}
+        <div class="section">
+          <div class="sec-title">套装效果</div>
+          <div class="sets-wrap">
+            <div class="set-ring">
+              {{if c.weapon}}<img class="wep" src="{{c.weapon.square_icon}}">{{/if}}
+              {{each c.equip_final equip i}}<img class="disc d{{i}}" src="{{equip.suit_icon}}">{{/each}}
+            </div>
+            <div class="sets-text">
+              {{each c.sets st}}
+              <div class="set-item">
+                <div class="set-meta"><b>{{st.name}}</b><span class="own">{{st.own}} 件套</span></div>
+                <div class="set-desc">{{st.desc1}}</div>
+                {{if st.desc2}}<div class="set-desc">{{st.desc2}}</div>{{/if}}
+              </div>
               {{/each}}
+            </div>
+          </div>
+        </div>
+        {{/if}}
+
+        <div class="section">
+          <div class="sec-title">伤害计算</div>
+          {{if c.damageAvailable}}
+          <div class="dmg-wrap">
+            <div class="dmg-head">
+              <div class="dmg-mul">综合乘区<b>{{c.damage.areasTxt}}</b></div>
+              <div class="dmg-atk">攻击力 <b>{{c.damage.atk}}</b></div>
+            </div>
+            <table class="dmg-table">
+              <tr><th class="idx">#</th><th class="n">技能</th><th class="r">等效倍率</th><th class="r">增伤区</th><th class="r">期望</th><th class="r">暴击</th></tr>
+              {{each c.damage.skills d i}}
+              <tr><td class="idx">{{i + 1}}</td><td class="n">{{d.name}} <i>Lv{{d.level}}</i>{{if d.adds.length}}<u>多段</u>{{/if}}</td><td class="r">{{d.totalRate}}</td><td class="r">{{d.boost}}</td><td class="r">{{d.expect}}</td><td class="r crit">{{d.crit}}</td></tr>
+              {{/each}}
+            </table>
+            <div class="dmg-sub">看详细计算：米游社{{c.full_name_mi18n}}伤害1 / 2 / 3 …（序号见左列）</div>
+            {{if c.damage.buffRows}}
+            <div class="dmg-sub">已计入增益（以「{{c.damage.skills[0].name}}」为准）</div>
+            <div class="dmg-buffs">
+              {{each c.damage.buffRows b}}<span class="dmg-buff">{{b.src}}·{{b.name}} {{b.type}} {{b.value}}</span>{{/each}}
             </div>
             {{/if}}
+            <div class="dmg-notes">
+              {{each c.damage.notes n}}<div>· {{n}}</div>{{/each}}
+            </div>
           </div>
-          {{if c.weapon.talent}}
-          <div class="wtalent">
-            <div class="wt-title">◆ {{c.weapon.talent_title}}</div>
-            <div class="wt-desc">{{c.weapon.talent}}</div>
-          </div>
+          {{else}}
+          <div class="dmg-none">该角色暂无技能倍率数据（{{c.damage.error}}）</div>
           {{/if}}
         </div>
       </div>
     </div>
-    {{/if}}
-
-    <div class="section">
-      <div class="sec-title">评分</div>
-      <div class="score-wrap">
-        <div class="score-box">
-          <div class="score-line">
-            <div class="score-rate">{{c.equip_comment}}</div>
-            <div class="score-val">{{c.equip_score.toFixed(1)}}<span class="unit">分</span></div>
-          </div>
-          <div class="score-meta">规则：{{c.weightRule}}</div>
-        </div>
-        <div class="prop-stats">
-          {{each c.propertyStats stat}}
-          <div class="ps-item">
-            <span class="ps-count">{{stat.count}}</span>
-            <span class="ps-name">{{stat.name}}</span>
-            <span class="ps-val">{{stat.value}}</span>
-          </div>
-          {{/each}}
-        </div>
-      </div>
-      <div class="useful-bar">
-        <span>有益词条数：<b>{{c.usefulCount}}</b></span>
-        <span class="useful-sep">·</span>
-        <span class="useful-effective">有效词条数：<b>{{c.effectiveCount}}</b></span>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="sec-title">驱动盘</div>
-      <div class="disc-grid">
-        {{each c.equip_final equip}}
-        <div class="disc-card rarity{{equip.rarity}}">
-          <div class="dc-head">
-            <img class="dc-icon" src="{{equip.suit_icon}}">
-            <div class="dc-title">
-              <div class="dc-name">{{equip.name}}</div>
-              <div class="dc-meta">Lv.{{equip.level}}<span class="rarity-icon {{equip.rarity}}"></span><span class="dc-score {{equip.grade}}">{{equip.grade}} {{equip.score.toFixed(1)}}</span></div>
-              </div>
-              </div>
-              <div class="dc-props">
-              {{each equip.main_properties prop}}
-              <div class="dp main"><span class="prop-icon {{prop.classname}}"></span><span class="dp-name">{{prop.short_name}}</span><span class="dp-val">{{prop.base}}</span></div>
-              {{/each}}
-              {{each equip.properties prop}}
-              <div class="dp {{prop.base_score ? 'on' : ''}}">
-              <span class="prop-icon {{prop.classname}}"></span>
-              <span class="dp-name">{{prop.property_name}}</span>
-              {{if prop.hit}}<span class="dp-hit">+{{prop.hit}}</span>{{/if}}
-              <span class="dp-val">{{prop.base}}</span>
-              </div>
-              {{/each}}
-          </div>
-        </div>
-        {{/each}}
-      </div>
-    </div>
-
-    {{if c.sets.length}}
-    <div class="section">
-      <div class="sec-title">套装效果</div>
-      <div class="sets-wrap">
-        <div class="set-ring">
-          {{if c.weapon}}<img class="wep" src="{{c.weapon.square_icon}}">{{/if}}
-          {{each c.equip_final equip i}}<img class="disc d{{i}}" src="{{equip.suit_icon}}">{{/each}}
-        </div>
-        <div class="sets-text">
-          {{each c.sets st}}
-          <div class="set-item">
-            <div class="set-meta"><b>{{st.name}}</b><span class="own">{{st.own}} 件套</span></div>
-            <div class="set-desc">{{st.desc1}}</div>
-            {{if st.desc2}}<div class="set-desc">{{st.desc2}}</div>{{/if}}
-          </div>
-          {{/each}}
-        </div>
-      </div>
-    </div>
-    {{/if}}
-
-    {{if c.damageAvailable}}
-    <div class="sec-title">伤害计算</div>
-    <div class="dmg-wrap">
-      <div class="dmg-head">
-        <div class="dmg-mul">综合乘区<b>{{c.damage.areasTxt}}</b></div>
-        <div class="dmg-atk">攻击力 <b>{{c.damage.atk}}</b></div>
-      </div>
-      <table class="dmg-table">
-        <tr><th class="idx">#</th><th class="n">技能</th><th class="r">等效倍率</th><th class="r">增伤区</th><th class="r">期望</th><th class="r">暴击</th></tr>
-        {{each c.damage.skills d i}}
-        <tr><td class="idx">{{i + 1}}</td><td class="n">{{d.name}} <i>Lv{{d.level}}</i>{{if d.adds.length}}<u>多段</u>{{/if}}</td><td class="r">{{d.totalRate}}</td><td class="r">{{d.boost}}</td><td class="r">{{d.expect}}</td><td class="r crit">{{d.crit}}</td></tr>
-        {{/each}}
-      </table>
-      <div class="dmg-sub">看详细计算：米游社{{c.full_name_mi18n}}伤害1 / 2 / 3 …（序号见左列）</div>
-      {{if c.damage.buffRows}}
-      <div class="dmg-sub">已计入增益（以「{{c.damage.skills[0].name}}」为准）</div>
-      <div class="dmg-buffs">
-        {{each c.damage.buffRows b}}<span class="dmg-buff">{{b.src}}·{{b.name}} {{b.type}} {{b.value}}</span>{{/each}}
-      </div>
-      {{/if}}
-      <div class="dmg-notes">
-        {{each c.damage.notes n}}<div>· {{n}}</div>{{/each}}
-      </div>
-    </div>
-    {{else}}
-    <div class="sec-title">伤害计算</div>
-    <div class="dmg-none">该角色暂无技能倍率数据（{{c.damage.error}}）</div>
-    {{/if}}
 
     <div class="copyright">{{footer}}</div>
   </div>
