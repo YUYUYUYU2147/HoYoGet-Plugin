@@ -6,6 +6,13 @@
 ## 未发布
 更新日期2026年10月19日
 
+### 2026-10-20
+
+| 类型 | 内容 | 怎么用 |
+| --- | --- | --- |
+| 新功能 | **面板详情可选 Apple 风格** —— 新增 `panel_style: apple`：卡片改为半透明深灰 + 背景模糊 + 1px 高光边，文字走系统灰阶，彩色只给数据与评级；立绘与氛围背景保留。默认 `dark`（现有暗色霓虹）不受影响 | `config/config.yaml` 设 `panel_style: apple`，重启生效 |
+| 修复 | **面板详情的伤害计算表整块消失** —— 旧代码读 `fit.calculation.additional`，而 `getCalculationsForUser` 只返回总分。现改走站点伤害页同款 `/api/damageDistribution/<配装id>/<uid>/<md5>`，按 `calculationId` 对上本人配装后取分技能明细 | `#米哈游原神面板 <角色>` |
+
 ### 2026-10-19
 
 | 类型 | 内容 | 怎么用 |

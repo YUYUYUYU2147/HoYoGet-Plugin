@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { pluginPriority, render } from '#HoYoGet'
+import { config, pluginPriority, render } from '#HoYoGet'
 import { listCategories, fetchLeaderboard, getUserCalculations, getDamageDistribution } from '../system/akasha.js'
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -1368,6 +1368,9 @@ export class hoyo_panel extends plugin {
         randomBgUrl(),
       ])
 
+      /* panel_style: dark（默认暗色霓虹）/ apple（深色玻璃，见 detail-apple.css） */
+      const style = String(config()?.panel_style || 'dark').trim().toLowerCase()
+
       return await render('hoyo_panel/detail', {
         ...data,
         gameCn: conf.cn,
@@ -1375,6 +1378,7 @@ export class hoyo_panel extends plugin {
         avatarId: hitId,
         akasha,
         randomBg,
+        appleStyle: style === 'apple',
       }, { e, ret: true })
     } catch (err) {
       logger.error?.(`[HoYoGet][hoyo_panel] 角色面板渲染失败: ${err?.message || err}`)

@@ -1,0 +1,246 @@
+/* ─────────────────────────────────────────────────────────────
+ * Apple 风格预览层（叠在 detail.css 之后加载，只覆盖观感不改结构）
+ *
+ * 走的是 macOS / Apple TV 深色「玻璃」路线：
+ * 保留立绘与氛围背景，卡片改为半透明深灰 + 模糊 + 1px 高光边，
+ * 文字用系统灰阶，彩色只给数据、评级与状态。
+ * ───────────────────────────────────────────────────────────── */
+
+:root {
+  --ap-text: #f5f5f7;
+  --ap-sub: #a1a1a6;
+  --ap-mute: #98989d;
+  --ap-line: rgba(255, 255, 255, .09);
+  --ap-glass: rgba(28, 28, 30, .52);
+  --ap-glass-hi: rgba(255, 255, 255, .12);
+  --ap-blue: #0a84ff;
+  --ap-orange: #ff9f0a;
+  --ap-yellow: #ffd60a;
+  --ap-green: #30d158;
+  --ap-red: #ff453a;
+  --ap-purple: #bf5af2;
+  --ap-shadow: 0 1px 1px rgba(0, 0, 0, .2), 0 10px 30px rgba(0, 0, 0, .35);
+}
+
+body {
+  width: 1160px;
+  background: #000;
+  color: var(--ap-text);
+  font-family: "SF Pro Text", -apple-system, "Helvetica Neue", "Noto Sans SC", "PingFang SC", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.card { padding: 20px 20px 14px; }
+/* 立绘背景保留并稍微提亮，别被玻璃卡压没 */
+.bg-layer.bg-char { opacity: .86; }
+.bg-layer.bg-random { opacity: .5; }
+
+/* ───── 立绘卡 ───── */
+.hero {
+  border: none;
+  border-radius: 28px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .08), 0 24px 60px rgba(0, 0, 0, .55);
+}
+.hero-fade {
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, .32) 0%, rgba(0, 0, 0, .02) 46%, transparent 62%),
+    linear-gradient(180deg, rgba(0, 0, 0, .38) 0%, transparent 28%),
+    linear-gradient(0deg, rgba(0, 0, 0, .55) 0%, transparent 36%);
+}
+
+.cname {
+  font-size: 38px;
+  font-weight: 700;
+  letter-spacing: -.6px;
+  color: #fff;
+  text-shadow: 0 1px 20px rgba(0, 0, 0, .4);
+}
+.cmeta .lv { color: rgba(255, 255, 255, .72); font-weight: 500; letter-spacing: .2px; }
+.cmeta .cons {
+  color: #fff;
+  background: rgba(255, 255, 255, .16);
+  border-color: rgba(255, 255, 255, .22);
+  backdrop-filter: blur(12px);
+  font-weight: 600;
+}
+.uid { color: rgba(255, 255, 255, .6); font-weight: 500; letter-spacing: .3px; }
+
+/* 命座：玻璃圆片 */
+.cons-item {
+  border: 1px solid rgba(255, 255, 255, .38);
+  background: rgba(255, 255, 255, .12);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .3);
+}
+.cons-item.off {
+  filter: grayscale(1);
+  opacity: .34;
+  border-color: rgba(255, 255, 255, .2);
+  box-shadow: none;
+}
+
+/* 属性面板：深色磨砂浮层 */
+.hero .attrs {
+  top: 82px;
+  right: 12px;
+  bottom: 12px;
+  width: 238px;
+  padding: 10px 12px;
+  border-radius: 20px;
+  background: rgba(28, 28, 30, .46);
+  backdrop-filter: blur(30px) saturate(160%);
+  -webkit-backdrop-filter: blur(30px) saturate(160%);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .1) inset, 0 10px 30px rgba(0, 0, 0, .35);
+}
+.attr { background: transparent; border-radius: 10px; padding: 5px 8px; }
+.attr:nth-child(odd) { background: transparent; }
+.attr + .attr { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07); }
+.a-label { color: var(--ap-mute); font-weight: 500; font-size: 12.5px; }
+.a-value {
+  color: var(--ap-text);
+  font-weight: 600;
+  font-size: 18px;
+  letter-spacing: -.3px;
+  font-variant-numeric: tabular-nums;
+}
+.aicon { filter: none; opacity: .95; }
+
+/* ───── 通用玻璃卡 ───── */
+.weapon, .art, .radar-wrap, .overall,
+.akasha .ak-rank, .akasha .ak-detail, .akasha .ak-board {
+  background: var(--ap-glass);
+  border: 1px solid var(--ap-line);
+  border-radius: 20px;
+  box-shadow: var(--ap-shadow), inset 0 1px 0 rgba(255, 255, 255, .06);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+}
+.talent {
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+/* ───── 武器 ───── */
+.wq-name { color: var(--ap-text); font-weight: 600; font-size: 14px; letter-spacing: -.2px; }
+.wq-meta { color: var(--ap-mute); font-weight: 500; }
+.wq-refine { color: var(--ap-blue); }
+.wq-prop { color: var(--ap-sub); }
+.wq-prop-value { color: var(--ap-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.wq-props, .wq-passive { border-color: rgba(255, 255, 255, .08); }
+.wq-passive-name { color: var(--ap-text); font-weight: 600; }
+.wq-passive-desc { color: var(--ap-sub); line-height: 1.55; }
+
+/* ───── 圣遗物 ───── */
+.art-top { color: var(--ap-mute); font-weight: 500; }
+.art-score { color: var(--ap-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.art-name { color: var(--ap-text); font-weight: 600; }
+.art-main { margin-top: 6px; }
+.main-prop { color: var(--ap-text); font-weight: 600; }
+.mp-value { color: var(--ap-blue); }
+.art-subs { border-top: 1px solid rgba(255, 255, 255, .08); }
+.art-set { color: var(--ap-mute); font-weight: 500; }
+
+.sub { border-radius: 8px; }
+.sub.sub-on {
+  background: rgba(10, 132, 255, .16);
+  box-shadow: inset 2px 0 0 var(--ap-blue);
+}
+.sub.sub-on .s-label { color: var(--ap-text); font-weight: 600; }
+.sub.sub-on .s-value { color: #fff; }
+.sub:not(.sub-on) { opacity: .42; }
+.sub:not(.sub-on) .s-label { color: var(--ap-sub); }
+.sub:not(.sub-on) .s-value { color: var(--ap-sub); }
+.sub-bar { display: none; }
+.sub-roll {
+  background: rgba(255, 255, 255, .1);
+  color: var(--ap-mute);
+  border-radius: 6px;
+  font-weight: 600;
+}
+.sub.sub-on .sub-roll { background: var(--ap-blue); color: #fff; box-shadow: none; }
+.s-label { color: var(--ap-sub); }
+.s-value { color: var(--ap-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.picon { filter: none; opacity: .95; }
+
+/* 评级：系统色文字，卡片不描彩边 */
+.art.MAX, .art.ACE, .art.SSS, .art.SS, .art.S, .art.A,
+.art.ace, .art.sss, .art.mark-ace, .art.mark-sss,
+.art.ss, .art.mark-ss, .art.s, .art.mark-s { border-color: var(--ap-line); }
+.art.MAX .art-score, .art.ACE .art-score { color: var(--ap-red); }
+.art.SSS .art-score { color: var(--ap-orange); }
+.art.SS .art-score { color: var(--ap-green); }
+.art.S .art-score { color: var(--ap-purple); }
+.art.A .art-score { color: var(--ap-blue); }
+
+.badge-mark.t7 .bm-text, .badge-mark.t8 .bm-text { color: var(--ap-red); }
+.badge-mark.t5 .bm-text, .badge-mark.t6 .bm-text { color: var(--ap-orange); }
+.badge-mark.t3 .bm-text, .badge-mark.t4 .bm-text { color: var(--ap-purple); }
+.badge-mark.t0 .bm-text, .badge-mark.t1 .bm-text, .badge-mark.t2 .bm-text { color: var(--ap-mute); }
+
+/* ───── 雷达 / 天赋 ───── */
+.rg { stroke: rgba(255, 255, 255, .13); }
+.rs { stroke: rgba(255, 255, 255, .1); }
+.rv { fill: rgba(10, 132, 255, .24); stroke: var(--ap-blue); stroke-width: 1.8; }
+.rl { fill: var(--ap-sub); font-weight: 500; }
+.t-name { color: #e5e5ea; font-weight: 500; }
+.t-lv { color: var(--ap-blue); font-weight: 700; }
+
+/* ───── 总评 ───── */
+.ov-head { color: var(--ap-mute); letter-spacing: 1.4px; }
+.ov-score {
+  color: var(--ap-text);
+  font-weight: 700;
+  letter-spacing: -1.6px;
+  font-variant-numeric: tabular-nums;
+}
+.ov-unit { color: var(--ap-mute); }
+.ov-valid { color: var(--ap-sub); }
+.ov-valid b { color: #fff; }
+.ov-sep { color: rgba(255, 255, 255, .2); }
+.ov-eff-label { color: var(--ap-mute); }
+.ov-eff-tag { color: var(--ap-mute); }
+.ov-stat { background: rgba(255, 255, 255, .07); border-color: transparent; }
+.ov-stat .os-r { color: var(--ap-blue); }
+.ov-stat .os-k { color: #c7c7cc; }
+.ov-stat .os-v { color: var(--ap-yellow); }
+
+/* ───── Akasha ───── */
+.ak-title { color: var(--ap-mute); letter-spacing: 1.4px; }
+.ak-no { color: var(--ap-text); font-weight: 700; letter-spacing: -1px; }
+.ak-of { color: var(--ap-mute); }
+.ak-beat { color: var(--ap-green); }
+.ak-dmg-num { color: var(--ap-blue); }
+.ak-plan, .ak-none { color: var(--ap-sub); }
+.ak-tname { color: #e5e5ea; font-weight: 500; }
+.ak-tcons { color: var(--ap-mute); }
+.ak-tava { border-color: rgba(255, 255, 255, .2); background: rgba(255, 255, 255, .06); }
+
+.ak-dhead { border-bottom: 1px solid rgba(255, 255, 255, .1); }
+.ak-dico { background: var(--ap-blue); color: #fff; box-shadow: none; border-radius: 6px; }
+.ak-dtitle { color: var(--ap-text); font-weight: 600; letter-spacing: 0; }
+.ak-dbadge { background: rgba(255, 255, 255, .08); color: var(--ap-mute); }
+.ak-dhint { color: var(--ap-mute); }
+.ak-dcols { color: var(--ap-mute); border-bottom: 1px solid rgba(255, 255, 255, .08); }
+.ak-drow:nth-child(even) { background: rgba(255, 255, 255, .04); }
+.ak-dtag { background: rgba(10, 132, 255, .2); color: #6cb6ff; font-weight: 600; }
+.ak-dname { color: #d1d1d6; }
+.ak-dq { color: var(--ap-mute); }
+.ak-dval { color: var(--ap-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.ak-dfoot { color: var(--ap-mute); border-top: 1px solid rgba(255, 255, 255, .08); }
+
+.ak-rk { color: var(--ap-mute); }
+.ak-nick { color: #d1d1d6; font-weight: 400; }
+.ak-wq { color: var(--ap-mute); }
+.ak-rdmg { color: var(--ap-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ───── 页脚 ───── */
+.set-pill {
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .12);
+  color: var(--ap-text);
+  font-weight: 500;
+  box-shadow: none;
+}
+.src { color: var(--ap-mute); font-weight: 400; }
