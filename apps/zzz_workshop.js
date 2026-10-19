@@ -65,6 +65,34 @@ async function getGroupMemberUids(e) {
   }
 }
 
+/**
+ * UID → QQ 映射（只包含本机有绑定的）。
+ * 本群榜要显示游戏内头像/昵称，必须先由 UID 找到对应的 QQ，
+ * 再借该 QQ 的 CK 调 index 接口。全服榜上的陌生人不在表里，取不到。
+ */
+async function getUidToQqMap() {
+  const map = new Map()
+  if (!fs.existsSync(YUNZAI_DB)) return map
+  try {
+    const sqlite3 = (await import('sqlite3')).default
+    const rows = await new Promise((resolve) => {
+      const db = new sqlite3.Database(YUNZAI_DB, sqlite3.OPEN_READONLY, err => (err ? resolve([]) : null))
+      db.all('select id, games from Users', (err2, list) => {
+        db.close(() => {})
+        resolve(err2 ? [] : list || [])
+      })
+    })
+    for (const row of rows) {
+      try {
+        const games = JSON.parse(row.games || '{}')
+        const uid = String(games?.zzz?.uid || '').trim()
+        if (/^\d{8,9}$/.test(uid)) map.set(uid, String(row.id))
+      } catch (_) { /* 单行解析失败跳过 */ }
+    }
+  } catch (_) { /* 数据库不可用时返回空表，调用方回落工坊昵称 */ }
+  return map
+}
+
 const API_HOST = 'https://api.zzzmap.com'
 const REQUEST_TIMEOUT = 12000
 const CACHE_TTL = 6 * 3600 * 1000
@@ -631,6 +659,13 @@ async function buildRoleRank(arg, opts = {}) {
      单个玩家失败不影响整张榜单。 */
   const detailLimit = Math.min(list.length, 15)
   const [relicMeta, weaponMeta] = await Promise.all([getRelicMeta(), getWeaponMeta()])
+
+  /* 本群榜：额外取游戏内昵称与头像。
+     全服榜不做 —— 榜上是陌生人，本机没有他们的 CK，取不到；
+     而且每人要多打一次 index 接口，15 行就是 15 次请求，风控压力太大。 */
+  const wantGameProfile = scope === 'group' && !!opts.handler
+  const uidToQq = wantGameProfile ? await getUidToQqMap() : new Map()
+
   await Promise.all(list.slice(0, detailLimit).map(async row => {
     try {
       const params = { uid: row.uid, type: 'ranking', refresh: false, item_id: role.item_id }
@@ -652,6 +687,25 @@ async function buildRoleRank(arg, opts = {}) {
 
       /* role 是 buildRoleRank 里 resolveRole 得到的工坊角色对象，
          nick_name 才是中文名（target.name 是 null）。 */
+      /* 游戏内昵称 / 头像：仅本群榜，且该 UID 在本机有绑定。
+         fetchPlayer 内部有多级回落（NoteData → index → 绑定列表 → 本地玩家文件），
+         失败就保持工坊昵称与角色立绘，不影响整行渲染。 */
+      if (wantGameProfile) {
+        const qq = uidToQq.get(String(row.uid))
+        if (qq) {
+          try {
+            const ck = await opts.handler.getCk({ user_id: Number(qq), game: 'zzz', reply: () => {} }, row.uid)
+            if (ck && Object.values(ck).some(item => item?.ck)) {
+              const player = await opts.handler.fetchPlayer(
+                { user_id: Number(qq), game: 'zzz', reply: () => {} }, row.uid, ck,
+              )
+              if (player?.nickname) row.nickname = player.nickname
+              if (player?.avatar) row.avatar = player.avatar
+            }
+          } catch (_) { /* 取不到就保留工坊昵称 */ }
+        }
+      }
+
       const panel = await calcWorkshopPanel(target, role.nick_name)
       if (!panel) return
       const bp = buildBasicProperties(panel)
@@ -1318,7 +1372,8 @@ export class zzz_workshop extends plugin {
           if (hit) { arg = [hit[1], hit[2]].filter(Boolean).join(' '); break }
         }
       }
-      const res = await buildRoleRank(arg, { scope, memberUids })
+      /* handler 传进去：本群榜要靠它调 fetchPlayer 取游戏内昵称/头像 */
+      const res = await buildRoleRank(arg, { scope, memberUids, handler: this })
       // 无数据/无本群样本时返回 { error }，直接回文字
       if (res?.error) return e.reply(res.error)
       try {

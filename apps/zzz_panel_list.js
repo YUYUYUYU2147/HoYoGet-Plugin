@@ -2691,13 +2691,20 @@ export class zzz_panel_list extends plugin {
     // index 的 role 也带游戏内头像；getUserGameRolesByCookie 只有昵称
     try {
       const data = await zzzGet(e, uid, ck, 'index', `lang=zh-cn&role_id=${uid}&server=${server}`)
-      const role = data?.role || data?.role_basic_info || {}
-      if (role.nickname) {
+      /* 实测 index 返回的字段：
+           data.cur_head_icon_url  玩家当前头像（顶层，不在 role 里）
+           data.stats              含 nickname 等基础信息？—— 昵称优先从 role 取
+         之前只读 data.role.avatar，实际 role 不存在/无该字段，导致头像恒为空。 */
+      const headIcon = data?.cur_head_icon_url || ''
+      const role = data?.role || data?.role_basic_info || data?.stats || {}
+      const nickname = role.nickname || data?.nickname || ''
+      if (nickname) {
         return {
-          nickname: role.nickname,
-          avatar: role.avatar || role.avatar_url || role.icon || '',
+          nickname,
+          avatar: headIcon || role.avatar || role.avatar_url || role.icon || '',
         }
       }
+      if (headIcon) return { nickname: '', avatar: headIcon }
     } catch (err) {
       logger.debug?.(`[HoYoGet][zzz_panel] index 玩家信息获取失败：${err?.message || err}`)
     }
