@@ -231,7 +231,13 @@ export class zzz_panel_rank extends plugin {
       name: '[米哈游]绝区层面板排名',
       dsc: '绝区零角色面板排名（跨用户，基于本地已保存面板数据）',
       event: 'message',
-      priority: pluginPriority('zzz_panel_rank', -40000),
+      /* 必须高于 ZZZ-Plugin（-30000）。
+         Yunzai 先把所有插件的 accept 按优先级跑一遍，命中即 return、事件就此结束，
+         所以 accept 的执行顺序完全由 priority 决定。
+         本插件在「范围=本群」时靠 accept 接管「%雅排名」；若优先级低于 ZZZ-Plugin，
+         它会先把这个指令当成自己的面板排名接走，这里根本轮不到。
+         zzz_workshop(5000) 仍然在最前面，范围=全部时由它接管，两边不冲突。 */
+      priority: pluginPriority('zzz_panel_rank', -20000),
       rule: [
         { reg: PANEL_RANK_REG.source, fnc: 'panelRank' },
         { reg: RANK_SCOPE_CMD.source, fnc: 'toggleRankScope' },
@@ -254,6 +260,10 @@ export class zzz_panel_rank extends plugin {
          全部 → 工坊练度榜（交给 zzz_workshop 的 accept）
        这是为了两个入口语义一致：设成全部时，%雅排名 和 %雅全服排名 看同一个榜。 */
     if (getRankScope(e) !== 'group') return false
+    /* 已经是「xx面板排名」的不用再接：accept 内部会把消息改写成这个形态，
+       若被再次分发到 accept，SHORT_RANK_REG 会把它取成「雅面板」，
+       导致角色名多出两个字。 */
+    if (/面板排名$/.test(msg)) return false
     const m = msg.match(SHORT_RANK_REG)
     if (!m) return false
     if (/(?:全服|本群|工坊)$/.test(m[1])) return false
