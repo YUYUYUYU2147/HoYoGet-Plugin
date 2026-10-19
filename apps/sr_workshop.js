@@ -64,7 +64,16 @@ const srReg = (body, { avoid = '' } = {}) => {
      同时排除别的游戏标记：`*绝区零配装` 之类是绝区零的写法，不能算星铁。 */
   const blocked = ['绝区零', 'zzz', '原神', '崩坏3', '崩坏三', avoid].filter(Boolean).join('|')
   const lead = String.raw`(?:(?!` + blocked + String.raw`).)*?`
-  return new RegExp(`^(?:${head}(?:${body})${SR_ARG}|${star}(${lead})(?:${body})${SR_ARG})$`, 'i')
+  /* 三个分支：
+       ① 游戏名 + 榜单词      星铁遗器排名 流萤 / #星铁配装 黄泉
+       ② 游戏名 + 角色名 + 榜单词  #星铁流萤遗器排名（喵喵的 profileRank 也吃这种，必须抢在前面）
+       ③ * + 角色名? + 榜单词   *流萤遗器排名 / *遗器排名 流萤 */
+  return new RegExp(
+    `^(?:${head}(?:${body})${SR_ARG}` +
+    `|${head}(${lead})(?:${body})${SR_ARG}` +
+    `|${star}(${lead})(?:${body})${SR_ARG})$`,
+    'i',
+  )
 }
 
 const RE_SR_RANK = srReg(String.raw`(?:遗器)?(?:练度)?排名`, { avoid: '伤害' })
@@ -82,13 +91,21 @@ const RE_SR_HELP = srReg(String.raw`榜单帮助`)
 function srArgs(reg, msg) {
   const hit = reg?.exec(String(msg || ''))
   if (!hit) return ''
-  /* 两个分支共用 3 个捕获组：
-       游戏名分支 → 1 = 参数、2/3 = undefined
-       `*` 分支  → 1 = undefined、2 = 角色名、3 = 参数 */
-  if (hit[2] !== undefined) {
-    return [String(hit[2] || '').trim(), String(hit[3] || '').trim()].filter(Boolean).join(' ')
+  /* 三个分支的捕获组在结果里的位置并不固定（取决于前面的分支是否参与匹配），
+     统一按「最后一个有定义的组是参数，前面那个是角色名」处理：
+       ① 游戏名 + 榜单词          → 只有一组（参数）
+       ② 游戏名 + 角色名 + 榜单词  → 角色名、参数
+       ③ * 标记                   → 角色名、参数（角色名可为空） */
+  const defined = []
+  for (let i = 1; i < hit.length; i++) {
+    if (hit[i] !== undefined) defined.push(i)
   }
-  return String(hit[1] || '').trim()
+  if (!defined.length) return ''
+  const argIndex = defined[defined.length - 1]
+  const roleIndex = defined.length > 1 ? defined[defined.length - 2] : -1
+  const role = roleIndex > 0 ? String(hit[roleIndex] || '').trim() : ''
+  const rest = String(hit[argIndex] || '').trim()
+  return [role, rest].filter(Boolean).join(' ')
 }
 
 /**
@@ -968,9 +985,12 @@ export class sr_workshop extends plugin {
       dsc: '星穹铁道工坊遗器 / 伤害排名、配装统计、队伍推荐、欧非榜、玩家练度',
       event: 'message',
       /* ⚠ 数值越小越先执行（框架用 lodash.orderBy asc 排序）。
-         比绝区零工坊(-36000) 再小 1：星铁入口语义独立，但同样要抢在
-         ZZZ-Plugin(-30000) 之前，否则「%星铁练度排名」会被它当成绝区零面板排名。 */
-      priority: pluginPriority('sr_workshop', -36001),
+         必须比这些更小（更负），否则会被它们先接走：
+           miao-plugin profileRank   50      #星铁流萤遗器排名 会被当成群面板排名
+           ZZZ-Plugin                -30000  %星铁练度排名 会被当成绝区零面板排名
+           zzz_workshop              -36000  绝区零工坊短式规则
+         取 -37000，留出余量；可用配置 sr_workshop_priority 覆盖。 */
+      priority: pluginPriority('sr_workshop', -37000),
       rule: [
         // 练度排名必须排在练度详情之前，否则「%星铁练度排名」会被详情规则截走
         { reg: RE_SR_RANK, fnc: 'srRank' },

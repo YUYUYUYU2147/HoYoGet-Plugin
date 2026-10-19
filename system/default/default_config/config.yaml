@@ -28,10 +28,10 @@ zzz_panel_accel_interval: 400
 # ⚠ 数值越小越先执行：框架用 orderBy(priority, asc) 排 accept 队列，
 #    accept 命中即 return 结束事件，后面的插件轮不到。
 # 因此要抢在 ZZZ-Plugin(-30000) 之前，必须比 -30000 更小（更负）。
-#   sr_workshop    -36001  星铁工坊榜单（%星铁… 全部指令）
+#   sr_workshop    -37000  星铁工坊榜单（*星铁… 全部指令，先于喵喵 50 与 ZZZ-Plugin -30000）
 #   zzz_workshop   -36000  工坊练度榜（范围=全部时接管 %<角色>排名）
 #   zzz_panel_rank -35000  本地面板排名（范围=本群时接管）
-sr_workshop_priority: -36001
+sr_workshop_priority: -37000
 zzz_workshop_priority: -36000
 zzz_panel_rank_priority: -35000
 zzz_bulk_update_interval: 2000
