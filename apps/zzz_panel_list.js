@@ -183,11 +183,21 @@ async function fetchZzzDeviceFp(ck, uid = '') {
     appInstallTimeDiff: 1740498108042, packageVersion: '2.35.0',
     gyroscope: '-0.22601996x-0.09453133x0.09040799', batteryStatus: 88, hasKeyboard: 0, board,
   }
+  /* 不要再写死别人的设备值：
+       device_id 必须是完整 UUID 形态（短串会被判异常设备 → 1034/10041），
+       设备间还要稳定，换一次就换一个设备风险分。用账号 CK 派生一个固定 UUID。 */
+  const seed = String(ckStringOf(ck, uid) || uid || deviceInfo)
+  const stableId = (() => {
+    const hex = crypto.createHash('md5').update(seed).digest('hex')
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+  })()
   const body = {
     app_name: 'bbs_cn',
-    bbs_device_id: uuid,
-    device_fp: '38d805c20d53d',
-    device_id: 'cc57c40f763ae4cc',
+    bbs_device_id: stableId,
+    /* getFp 请求里的 device_fp 只是种子值，真实指纹由响应返回；
+       与 system/mhy.js 保持一致，避免两条路径申请出不同风格的指纹。 */
+    device_fp: '38d7f0aac0ab7',
+    device_id: stableId,
     ext_fields: JSON.stringify(ext),
     platform: '2',
     seed_id: uuid,
@@ -205,8 +215,8 @@ async function fetchZzzDeviceFp(ck, uid = '') {
     }).then(r => r.json())
     const fp = res?.data?.device_fp || ''
     if (!fp) logger.warn?.(`[HoYoGet][zzz_panel] getFp 失败：retcode=${res?.retcode} ${res?.message || ''}`)
-    /* 必须回传「申请指纹时用的那个 device_id」：body 里是 'cc57c40f763ae4cc'，
-       原来返回的是随机 uuid，请求头与指纹对不上，一样 10041。 */
+    /* 必须回传「申请指纹时用的那个 device_id」：原来返回的是随机 uuid，
+       请求头与指纹对不上，一样 10041。 */
     return { fp, device_id: body.device_id }
   } catch (err) {
     logger.warn?.(`[HoYoGet][zzz_panel] getFp 异常：${err?.message || err}`)

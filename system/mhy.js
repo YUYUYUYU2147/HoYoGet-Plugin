@@ -64,13 +64,14 @@ class mhy {
     const { deviceName, deviceModel, oaid, deviceFingerprint, deviceBoard, androidVersion } = info;
     const device_ = deviceFingerprint.split('/')[0];
     if (!oaid || oaid.includes('error') || /^0+$/.test(oaid)) return e.reply('设备oaid获取失败，你的设备不支持获取');
-    /* 米游社是按「device_fp ↔ device_id」成对校验的：getFp 时提交的 device_id，
-       之后每次业务请求的 x-rpc-device_id 必须是同一个值。
-       原先 body 用 oaid、header 却用 getDeviceGuid() 现生成的随机 GUID，
-       存档里也存这个随机值，等于拿 A 的指纹配 B 的设备号，绑定成功也照样 10041。
-       另外 device_id 需要是 16 位十六进制（米游社口径），oaid 是 64 位，直接用也会被拒，
-       所以取 md5(oaid) 前 16 位：同一台设备恒定，格式也对。 */
-    const deviceId = md5(String(oaid)).slice(0, 16);
+    /* device_id 必须满足两点，缺一不可：
+       ① 形态是完整 UUID（8-4-4-4-12）
+          米游社把短串（16 位 hex）和裸 oaid（64 位）都判成「异常设备」，
+          社区 signIn 的表现是所有版块统一返回 1034。见 system/sign.js 的 stableDeviceId。
+       ② 同一台设备恒定，且 getFp 与后续所有业务请求用同一个值
+          指纹是按 device_id 申请并绑定的，换值就等于拿 A 的指纹配 B 的设备号。
+       所以用 md5(oaid) 铺满 32 位 hex，再按 UUID 分段。 */
+    const deviceId = this.stableDeviceId(oaid);
     let body = {
       device_id: deviceId,
       seed_id: this.randomString(16),
@@ -462,6 +463,18 @@ class mhy {
       logger.error(`[HoYoGet][sign] 补齐 ${qq} 的 xhh 文件失败: ${err.message}`);
       return { ok: false, reason: err.message };
     }
+  }
+
+  /**
+   * 由种子派生稳定 UUID（8-4-4-4-12）。
+   * 与 system/sign.js 的 stableDeviceId 保持同一算法：
+   * 过码清的是「设备」风险分，重签必须用同一 device_id 才放行；
+   * 同时形态必须是完整 UUID，短串会被判成异常设备（1034）。
+   */
+  stableDeviceId(seed) {
+    /* md5() 直接返回 32 位小写 hex 字符串，无需再转码 */
+    const hex = md5(String(seed));
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
   }
 
   getDeviceGuid() {
