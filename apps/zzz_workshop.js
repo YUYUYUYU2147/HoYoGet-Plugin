@@ -624,6 +624,12 @@ async function panelFromRaw(item, roleName, role) {
 
   const lv6 = p.Level?.['6'] || {}
   const scale = 10 / 3
+  /* Level[6] 已含突破，攻击/生命/防御直接用；
+     但 ElementMystery / ElementAbnormalPower / BreakStun 等是**裸值**，
+     突破加成在 ExtraLevel[6].Extra 里（Value 已是累积值，不是增量）。
+     星见雅实测：148 + 90 = 238，再接驱动盘 18 → 256，与工坊 final 一致。 */
+  const extra = p.ExtraLevel?.['6']?.Extra || {}
+  const extraOf = (prop) => Number(extra?.[String(prop)]?.Value) || 0
   const charAtk = Number(p.Attack || 0) + Number(lv6.Attack || 0) * scale
   const charHp = Number(p.HpMax || 0) + Number(lv6.HpMax || 0) * scale
   const charDef = Number(p.Defence || 0) + Number(lv6.Defence || 0) * scale
@@ -632,13 +638,14 @@ async function panelFromRaw(item, roleName, role) {
     hp: charHp,
     atk: charAtk,
     def: charDef,
-    breakstun: Number(p.BreakStun) || 93,
-    crit: (Number(p.Crit) || 500) / 100,
-    critdam: (Number(p.CritDamage) || 5000) / 100,
-    penratio: (Number(p.PenRate) || 0) / 100,
-    penvalue: 0,
-    mastery: Number(p.ElementMystery) || 0,
-    recharge: (Number(p.SpRecover) || 120) / 100,
+    breakstun: (Number(p.BreakStun) || 93) + extraOf(12201),
+    crit: ((Number(p.Crit) || 500) + extraOf(20101)) / 100,
+    critdam: ((Number(p.CritDamage) || 5000) + extraOf(21101)) / 100,
+    penratio: ((Number(p.PenRate) || 0) + extraOf(23201)) / 100,
+    penvalue: extraOf(23203),
+    mastery: (Number(p.ElementMystery) || 0) + extraOf(31201),
+    abnormal: (Number(p.ElementAbnormalPower) || 0) + extraOf(31401),
+    recharge: ((Number(p.SpRecover) || 120) + extraOf(30501)) / 100,
     dmgbonus: 0,
   }
   /* 百分比词条单独累计，最后乘到基础值上（只在生命/攻击/防御上生效） */

@@ -899,10 +899,17 @@ function buildExtremeBase(role, preset) {
   const suit4Info = itemTable.suits?.[suit4]
   const suit2Info = itemTable.suits?.[suit2]
 
-  // 面板属性：Lv60 基础值 + 满精音擎主副词条（驱动盘留空，交给 applyExtremePanel 算增量）
+  /* 面板属性：Lv60 基础值 + 满精音擎主副词条（驱动盘留空，交给 applyExtremePanel 算增量）。
+     读的是 base（角色裸值，不含音擎与驱动盘）——下面会单独加音擎主词条，
+     若这里读含专武的 legacy 就会重复计算。 */
   const props = {}
+  const pidMap = {
+    1: st.base?.hp, 2: st.base?.atk, 3: st.base?.def, 4: st.base?.impact,
+    5: st.base?.crit, 6: st.base?.critDmg, 7: st.base?.anomalyMastery,
+    8: st.base?.anomalyProficiency, 9: st.base?.penRatio, 11: st.base?.energyRegen,
+  }
   for (const pid of [1, 2, 3, 4, 5, 6, 7, 8, 9, 11]) {
-    const v = st.props?.[pid]
+    const v = pidMap[pid]
     if (typeof v === 'number') props[pid] = v
   }
   if (!props[1] || !props[2]) return { ok: false, error: `「${role}」的基础属性不完整` }

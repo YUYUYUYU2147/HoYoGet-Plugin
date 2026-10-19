@@ -1,6 +1,7 @@
 {
- "_comment": "绝区零角色 Lv60 满级基础属性。从 ZZZ-Plugin PartnerId2Data.json 计算得出（公式：面板值 = 初始值 + Level[6]差值 × 10/3；攻击力按职业平均成长系数推算）。不再依赖面板记录。",
- "_source": "ZZZ-Plugin resources/map/PartnerId2Data.json",
+ "_comment": "绝区零角色 Lv60 基础属性。base 为角色裸值（不含音擎/驱动盘/影画），extra 为突破累积加成，sigWeapon 仅供展示，legacy.atkWithSig 仅兼容旧调用。",
+ "_source": "ZZZ-Plugin resources/map/PartnerId2Data.json（纯公式，无拟合）",
+ "_formula": "atk/hp/def = 初始值 + Level[6] × 10/3；extra 取 ExtraLevel[6].Extra[*].Value",
  "count": 60,
  "chars": {
   "安比": {
@@ -12,17 +13,37 @@
    "profession": 2,
    "camp": "狡兔屋",
    "sprite": "IconRole01",
-   "props": {
-    "1": 7500,
-    "2": 1282,
-    "3": 612,
-    "4": 118,
-    "5": 20,
-    "6": 50,
-    "7": 94,
-    "8": 93,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 658.33,
+    "hp": 7499.67,
+    "def": 612.33,
+    "impact": 118,
+    "anomalyMastery": 94,
+    "anomalyProficiency": 93,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 18,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "13101",
+    "name": "德玛拉电池II型",
+    "atk": 624
+   },
+   "legacy": {
+    "atkWithSig": 1282.33
    }
   },
   "猫又": {
@@ -34,17 +55,37 @@
    "profession": 1,
    "camp": "狡兔屋",
    "sprite": "IconRole11",
-   "props": {
-    "1": 7560,
-    "2": 1594,
-    "3": 587,
-    "4": 92,
-    "5": 20,
-    "6": 50,
-    "7": 97,
-    "8": 96,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 911,
+    "hp": 7561.33,
+    "def": 587,
+    "impact": 92,
+    "anomalyMastery": 97,
+    "anomalyProficiency": 96,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 14.4,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14102",
+    "name": "钢铁肉垫",
+    "atk": 683
+   },
+   "legacy": {
+    "atkWithSig": 1594
    }
   },
   "妮可": {
@@ -56,17 +97,37 @@
    "profession": 4,
    "camp": "狡兔屋",
    "sprite": "IconRole12",
-   "props": {
-    "1": 8145,
-    "2": 1273,
-    "3": 622,
-    "4": 88,
-    "5": 20,
-    "6": 50,
-    "7": 90,
-    "8": 93,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 649.67,
+    "hp": 8145,
+    "def": 623.33,
+    "impact": 88,
+    "anomalyMastery": 90,
+    "anomalyProficiency": 93,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0.36
+   },
+   "displayWeapon": {
+    "itemId": "13103",
+    "name": "聚宝箱",
+    "atk": 624
+   },
+   "legacy": {
+    "atkWithSig": 1273.67
    }
   },
   "「11号」": {
@@ -78,17 +139,37 @@
    "profession": 1,
    "camp": "新艾利都防卫军",
    "sprite": "IconRole05",
-   "props": {
-    "1": 7673,
-    "2": 1572,
-    "3": 612,
-    "4": 93,
-    "5": 20,
-    "6": 50,
-    "7": 94,
-    "8": 93,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 888,
+    "hp": 7673.67,
+    "def": 612.33,
+    "impact": 93,
+    "anomalyMastery": 94,
+    "anomalyProficiency": 93,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 14.4,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14104",
+    "name": "硫磺石",
+    "atk": 683
+   },
+   "legacy": {
+    "atkWithSig": 1571
    }
   },
   "伊德海莉": {
@@ -100,17 +181,37 @@
    "profession": 6,
    "camp": "怪啖屋",
    "sprite": "IconRole52",
-   "props": {
-    "1": 8497,
-    "2": 1453,
-    "3": 448,
-    "4": 95,
-    "5": 20,
-    "6": 50,
-    "7": 87,
-    "8": 90,
-    "9": 0,
-    "11": 0
+   "base": {
+    "atk": 860.67,
+    "hp": 8496.33,
+    "def": 449.33,
+    "impact": 95,
+    "anomalyMastery": 87,
+    "anomalyProficiency": 90,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 14.4,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14105",
+    "name": "海妖摇篮",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1573.67
    }
   },
   "可琳": {
@@ -122,17 +223,37 @@
    "profession": 1,
    "camp": "维多利亚家政",
    "sprite": "IconRole09",
-   "props": {
-    "1": 6976,
-    "2": 1431,
-    "3": 604,
-    "4": 93,
-    "5": 20,
-    "6": 50,
-    "7": 93,
-    "8": 96,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 806,
+    "hp": 6977.67,
+    "def": 605.67,
+    "impact": 93,
+    "anomalyMastery": 93,
+    "anomalyProficiency": 96,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 28.8,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14001",
+    "name": "加农转子",
+    "atk": 594
+   },
+   "legacy": {
+    "atkWithSig": 1400
    }
   },
   "凯撒": {
@@ -144,17 +265,37 @@
    "profession": 5,
    "camp": "卡吕冬之子",
    "sprite": "IconRole25",
-   "props": {
-    "1": 9526,
-    "2": 1424,
-    "3": 753,
-    "4": 105,
-    "5": 20,
-    "6": 50,
-    "7": 87,
-    "8": 90,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 731,
+    "hp": 9526,
+    "def": 754.33,
+    "impact": 105,
+    "anomalyMastery": 87,
+    "anomalyProficiency": 90,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 18,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14107",
+    "name": "奔袭獠牙",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1444
    }
   },
   "比利": {
@@ -166,17 +307,37 @@
    "profession": 1,
    "camp": "狡兔屋",
    "sprite": "IconRole10",
-   "props": {
-    "1": 6907,
-    "2": 1411,
-    "3": 606,
-    "4": 91,
-    "5": 20,
-    "6": 50,
-    "7": 92,
-    "8": 91,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 786.33,
+    "hp": 6908.33,
+    "def": 605.67,
+    "impact": 91,
+    "anomalyMastery": 92,
+    "anomalyProficiency": 91,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 14.4,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "13004",
+    "name": "星徽引擎",
+    "atk": 594
+   },
+   "legacy": {
+    "atkWithSig": 1380.33
    }
   },
   "雅": {
@@ -188,17 +349,37 @@
    "profession": 3,
    "camp": "对空洞特别行动部第六课",
    "sprite": "IconRole13",
-   "props": {
-    "1": 7673,
-    "2": 1623,
-    "3": 606,
-    "4": 86,
-    "5": 20,
-    "6": 50,
-    "7": 116,
-    "8": 148,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 880.33,
+    "hp": 7673.67,
+    "def": 605.67,
+    "impact": 86,
+    "anomalyMastery": 116,
+    "anomalyProficiency": 148,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 90,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14109",
+    "name": "霰落星殿",
+    "atk": 743
+   },
+   "legacy": {
+    "atkWithSig": 1623.33
    }
   },
   "珂蕾妲": {
@@ -210,17 +391,37 @@
    "profession": 2,
    "camp": "白祇重工",
    "sprite": "IconRole14",
-   "props": {
-    "1": 8127,
-    "2": 1419,
-    "3": 594,
-    "4": 116,
-    "5": 20,
-    "6": 50,
-    "7": 97,
-    "8": 96,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 736,
+    "hp": 8126.33,
+    "def": 594.67,
+    "impact": 116,
+    "anomalyMastery": 97,
+    "anomalyProficiency": 96,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 18,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14110",
+    "name": "燃狱齿轮",
+    "atk": 683
+   },
+   "legacy": {
+    "atkWithSig": 1419
    }
   },
   "安东": {
@@ -232,17 +433,37 @@
    "profession": 1,
    "camp": "白祇重工",
    "sprite": "IconRole15",
-   "props": {
-    "1": 7219,
-    "2": 1415,
-    "3": 622,
-    "4": 95,
-    "5": 20,
-    "6": 50,
-    "7": 86,
-    "8": 90,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 790.67,
+    "hp": 7220,
+    "def": 623.33,
+    "impact": 95,
+    "anomalyMastery": 86,
+    "anomalyProficiency": 90,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 14.4,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "13111",
+    "name": "旋钻机-赤轴",
+    "atk": 624
+   },
+   "legacy": {
+    "atkWithSig": 1414.67
    }
   },
   "本": {
@@ -254,17 +475,37 @@
    "profession": 5,
    "camp": "白祇重工",
    "sprite": "IconRole16",
-   "props": {
-    "1": 8577,
-    "2": 1277,
-    "3": 724,
-    "4": 95,
-    "5": 20,
-    "6": 50,
-    "7": 86,
-    "8": 90,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 654,
+    "hp": 8576.67,
+    "def": 724.67,
+    "impact": 95,
+    "anomalyMastery": 86,
+    "anomalyProficiency": 90,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0.36
+   },
+   "displayWeapon": {
+    "itemId": "13011",
+    "name": "春日融融",
+    "atk": 594
+   },
+   "legacy": {
+    "atkWithSig": 1248
    }
   },
   "苍角": {
@@ -276,17 +517,37 @@
    "profession": 4,
    "camp": "对空洞特别行动部第六课",
    "sprite": "IconRole17",
-   "props": {
-    "1": 8025,
-    "2": 1289,
-    "3": 597,
-    "4": 86,
-    "5": 20,
-    "6": 50,
-    "7": 93,
-    "8": 96,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 666,
+    "hp": 8025,
+    "def": 598,
+    "impact": 86,
+    "anomalyMastery": 93,
+    "anomalyProficiency": 96,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0.36
+   },
+   "displayWeapon": {
+    "itemId": "13113",
+    "name": "含羞恶面",
+    "atk": 624
+   },
+   "legacy": {
+    "atkWithSig": 1290
    }
   },
   "莱卡恩": {
@@ -298,17 +559,37 @@
    "profession": 2,
    "camp": "维多利亚家政",
    "sprite": "IconRole18",
-   "props": {
-    "1": 8416,
-    "2": 728,
-    "3": 606,
-    "4": 119,
-    "5": 20,
-    "6": 50,
-    "7": 91,
-    "8": 90,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 728.33,
+    "hp": 8417,
+    "def": 605.67,
+    "impact": 119,
+    "anomalyMastery": 91,
+    "anomalyProficiency": 90,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 18,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14114",
+    "name": "拘缚者",
+    "atk": 683
+   },
+   "legacy": {
+    "atkWithSig": 1411.33
    }
   },
   "露西": {
@@ -320,17 +601,37 @@
    "profession": 4,
    "camp": "卡吕冬之子",
    "sprite": "IconRole27",
-   "props": {
-    "1": 8025,
-    "2": 1282,
-    "3": 612,
-    "4": 86,
-    "5": 20,
-    "6": 50,
-    "7": 94,
-    "8": 93,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 658.33,
+    "hp": 8025,
+    "def": 612.33,
+    "impact": 86,
+    "anomalyMastery": 94,
+    "anomalyProficiency": 93,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0.36
+   },
+   "displayWeapon": {
+    "itemId": "13002",
+    "name": "时光切片",
+    "atk": 594
+   },
+   "legacy": {
+    "atkWithSig": 1252.33
    }
   },
   "莱特": {
@@ -342,17 +643,37 @@
    "profession": 2,
    "camp": "卡吕冬之子",
    "sprite": "IconRole26",
-   "props": {
-    "1": 8253,
-    "2": 1510,
-    "3": 612,
-    "4": 119,
-    "5": 20,
-    "6": 50,
-    "7": 91,
-    "8": 90,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 899,
+    "hp": 7873.67,
+    "def": 612.33,
+    "impact": 119,
+    "anomalyMastery": 91,
+    "anomalyProficiency": 90,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 18,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14116",
+    "name": "焰心桂冠",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1612
    }
   },
   "柏妮思": {
@@ -364,17 +685,37 @@
    "profession": 3,
    "camp": "卡吕冬之子",
    "sprite": "IconRole32",
-   "props": {
-    "1": 7368,
-    "2": 1576,
-    "3": 600,
-    "4": 83,
-    "5": 20,
-    "6": 50,
-    "7": 118,
-    "8": 120,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 864,
+    "hp": 7368.67,
+    "def": 601.33,
+    "impact": 83,
+    "anomalyMastery": 118,
+    "anomalyProficiency": 120,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0.36
+   },
+   "displayWeapon": {
+    "itemId": "14117",
+    "name": "灼心摇壶",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1577
    }
   },
   "格莉丝": {
@@ -386,17 +727,37 @@
    "profession": 3,
    "camp": "白祇重工",
    "sprite": "IconRole20",
-   "props": {
-    "1": 7482,
-    "2": 1419,
-    "3": 600,
-    "4": 83,
-    "5": 20,
-    "6": 50,
-    "7": 115,
-    "8": 116,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 825.67,
+    "hp": 7482,
+    "def": 601.33,
+    "impact": 83,
+    "anomalyMastery": 115,
+    "anomalyProficiency": 116,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 36,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14118",
+    "name": "嵌合编译器",
+    "atk": 683
+   },
+   "legacy": {
+    "atkWithSig": 1508.67
    }
   },
   "艾莲": {
@@ -408,17 +769,37 @@
    "profession": 1,
    "camp": "维多利亚家政",
    "sprite": "IconRole21",
-   "props": {
-    "1": 7673,
-    "2": 1651,
-    "3": 606,
-    "4": 93,
-    "5": 20,
-    "6": 50,
-    "7": 94,
-    "8": 93,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 938.33,
+    "hp": 7673.67,
+    "def": 605.67,
+    "impact": 93,
+    "anomalyMastery": 94,
+    "anomalyProficiency": 93,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 14.4,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14119",
+    "name": "深海访客",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1651.33
    }
   },
   "悠真": {
@@ -430,17 +811,37 @@
    "profession": 1,
    "camp": "对空洞特别行动部第六课",
    "sprite": "IconRole35",
-   "props": {
-    "1": 7405,
-    "2": 1509,
-    "3": 600,
-    "4": 90,
-    "5": 20,
-    "6": 50,
-    "7": 80,
-    "8": 95,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 915.33,
+    "hp": 7405,
+    "def": 601.33,
+    "impact": 90,
+    "anomalyMastery": 80,
+    "anomalyProficiency": 95,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 14.4,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14120",
+    "name": "残心青囊",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1628.33
    }
   },
   "丽娜": {
@@ -452,17 +853,37 @@
    "profession": 4,
    "camp": "维多利亚家政",
    "sprite": "IconRole22",
-   "props": {
-    "1": 8609,
-    "2": 1401,
-    "3": 600,
-    "4": 83,
-    "5": 20,
-    "6": 50,
-    "7": 93,
-    "8": 92,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 716.33,
+    "hp": 8608.67,
+    "def": 601.33,
+    "impact": 83,
+    "anomalyMastery": 93,
+    "anomalyProficiency": 92,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14121",
+    "name": "啜泣摇篮",
+    "atk": 683
+   },
+   "legacy": {
+    "atkWithSig": 1399.33
    }
   },
   "柳": {
@@ -474,17 +895,37 @@
    "profession": 3,
    "camp": "对空洞特别行动部第六课",
    "sprite": "IconRole31",
-   "props": {
-    "1": 7788,
-    "2": 1466,
-    "3": 612,
-    "4": 86,
-    "5": 20,
-    "6": 50,
-    "7": 112,
-    "8": 114,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 872.67,
+    "hp": 7789.33,
+    "def": 612.33,
+    "impact": 86,
+    "anomalyMastery": 112,
+    "anomalyProficiency": 114,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 36,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14122",
+    "name": "时流贤者",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1585.67
    }
   },
   "朱鸢": {
@@ -496,17 +937,37 @@
    "profession": 1,
    "camp": "新艾利都治安局",
    "sprite": "IconRole23",
-   "props": {
-    "1": 7482,
-    "2": 1632,
-    "3": 600,
-    "4": 90,
-    "5": 20,
-    "6": 50,
-    "7": 93,
-    "8": 92,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 918.67,
+    "hp": 7482,
+    "def": 601.33,
+    "impact": 90,
+    "anomalyMastery": 93,
+    "anomalyProficiency": 92,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 28.8,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14124",
+    "name": "防暴者VI型",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1631.67
    }
   },
   "青衣": {
@@ -518,17 +979,37 @@
    "profession": 2,
    "camp": "新艾利都治安局",
    "sprite": "IconRole29",
-   "props": {
-    "1": 8250,
-    "2": 1471,
-    "3": 612,
-    "4": 118,
-    "5": 20,
-    "6": 50,
-    "7": 94,
-    "8": 93,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 759,
+    "hp": 8249.67,
+    "def": 612.33,
+    "impact": 118,
+    "anomalyMastery": 94,
+    "anomalyProficiency": 93,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 18,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14125",
+    "name": "玉壶青冰",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1472
    }
   },
   "简": {
@@ -540,17 +1021,37 @@
    "profession": 3,
    "camp": "新艾利都治安局",
    "sprite": "IconRole24",
-   "props": {
-    "1": 7788,
-    "2": 1593,
-    "3": 606,
-    "4": 86,
-    "5": 20,
-    "6": 50,
-    "7": 112,
-    "8": 114,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 880.33,
+    "hp": 7789.33,
+    "def": 605.67,
+    "impact": 86,
+    "anomalyMastery": 112,
+    "anomalyProficiency": 114,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 36,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14126",
+    "name": "淬锋钳刺",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1593.33
    }
   },
   "赛斯": {
@@ -562,17 +1063,37 @@
    "profession": 5,
    "camp": "新艾利都治安局",
    "sprite": "IconRole30",
-   "props": {
-    "1": 8701,
-    "2": 1267,
-    "3": 746,
-    "4": 94,
-    "5": 20,
-    "6": 50,
-    "7": 86,
-    "8": 90,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 643,
+    "hp": 8702.33,
+    "def": 746.67,
+    "impact": 94,
+    "anomalyMastery": 86,
+    "anomalyProficiency": 90,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0.36
+   },
+   "displayWeapon": {
+    "itemId": "13127",
+    "name": "维序者-特化型",
+    "atk": 624
+   },
+   "legacy": {
+    "atkWithSig": 1267
    }
   },
   "派派": {
@@ -584,17 +1105,37 @@
    "profession": 3,
    "camp": "卡吕冬之子",
    "sprite": "IconRole28",
-   "props": {
-    "1": 6976,
-    "2": 1382,
-    "3": 612,
-    "4": 86,
-    "5": 20,
-    "6": 50,
-    "7": 116,
-    "8": 118,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 759,
+    "hp": 6977.67,
+    "def": 612.33,
+    "impact": 86,
+    "anomalyMastery": 116,
+    "anomalyProficiency": 118,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0.36
+   },
+   "displayWeapon": {
+    "itemId": "13008",
+    "name": "双生泣星",
+    "atk": 594
+   },
+   "legacy": {
+    "atkWithSig": 1353
    }
   },
   "雨果": {
@@ -606,17 +1147,37 @@
    "profession": 1,
    "camp": "反舌鸟",
    "sprite": "IconRole42",
-   "props": {
-    "1": 7940,
-    "2": 1632,
-    "3": 616,
-    "4": 95,
-    "5": 20,
-    "6": 50,
-    "7": 86,
-    "8": 90,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 918.67,
+    "hp": 7941.33,
+    "def": 616.67,
+    "impact": 95,
+    "anomalyMastery": 86,
+    "anomalyProficiency": 90,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 14.4,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14129",
+    "name": "千面日陨",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1631.67
    }
   },
   "奥菲丝&「鬼火」": {
@@ -628,17 +1189,37 @@
    "profession": 1,
    "camp": "新艾利都防卫军",
    "sprite": "IconRole49",
-   "props": {
-    "1": 7788,
-    "2": 1642,
-    "3": 612,
-    "4": 93,
-    "5": 20,
-    "6": 50,
-    "7": 92,
-    "8": 90,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 930.67,
+    "hp": 7789.33,
+    "def": 612.33,
+    "impact": 93,
+    "anomalyMastery": 92,
+    "anomalyProficiency": 90,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0.36
+   },
+   "displayWeapon": {
+    "itemId": "14130",
+    "name": "嚣枪喧焰",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1643.67
    }
   },
   "耀嘉音": {
@@ -650,17 +1231,37 @@
    "profession": 4,
    "camp": "天琴座",
    "sprite": "IconRole36",
-   "props": {
-    "1": 8609,
-    "2": 1339,
-    "3": 600,
-    "4": 83,
-    "5": 20,
-    "6": 50,
-    "7": 93,
-    "8": 92,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 716.33,
+    "hp": 8608.67,
+    "def": 601.33,
+    "impact": 83,
+    "anomalyMastery": 93,
+    "anomalyProficiency": 92,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0.36
+   },
+   "displayWeapon": {
+    "itemId": "14131",
+    "name": "玲珑妆匣",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1429.33
    }
   },
   "伊芙琳": {
@@ -672,17 +1273,37 @@
    "profession": 1,
    "camp": "天琴座",
    "sprite": "IconRole37",
-   "props": {
-    "1": 7788,
-    "2": 1642,
-    "3": 612,
-    "4": 93,
-    "5": 20,
-    "6": 50,
-    "7": 92,
-    "8": 90,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 930.67,
+    "hp": 7789.33,
+    "def": 612.33,
+    "impact": 93,
+    "anomalyMastery": 92,
+    "anomalyProficiency": 90,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 14.4,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14132",
+    "name": "心弦夜响",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1643.67
    }
   },
   "薇薇安": {
@@ -694,17 +1315,37 @@
    "profession": 3,
    "camp": "反舌鸟",
    "sprite": "IconRole41",
-   "props": {
-    "1": 7673,
-    "2": 1593,
-    "3": 606,
-    "4": 86,
-    "5": 20,
-    "6": 50,
-    "7": 108,
-    "8": 118,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 880.33,
+    "hp": 7673.67,
+    "def": 605.67,
+    "impact": 86,
+    "anomalyMastery": 108,
+    "anomalyProficiency": 118,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 36,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14133",
+    "name": "飞鸟星梦",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1593.33
    }
   },
   "照": {
@@ -716,17 +1357,37 @@
    "profession": 5,
    "camp": "坎卜斯黑枝",
    "sprite": "IconRole56",
-   "props": {
-    "1": 9117,
-    "2": 1478,
-    "3": 701,
-    "4": 93,
-    "5": 20,
-    "6": 50,
-    "7": 93,
-    "8": 96,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 766.67,
+    "hp": 9116.33,
+    "def": 702.67,
+    "impact": 93,
+    "anomalyMastery": 93,
+    "anomalyProficiency": 96,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14134",
+    "name": "半糖雪兔",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1479.67
    }
   },
   "波可娜": {
@@ -738,17 +1399,37 @@
    "profession": 2,
    "camp": "卡吕冬之子",
    "sprite": "IconRole38",
-   "props": {
-    "1": 7612,
-    "2": 1289,
-    "3": 606,
-    "4": 118,
-    "5": 20,
-    "6": 50,
-    "7": 92,
-    "8": 90,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 666,
+    "hp": 7612,
+    "def": 605.67,
+    "impact": 118,
+    "anomalyMastery": 92,
+    "anomalyProficiency": 90,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 18,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "13135",
+    "name": "裁纸刀",
+    "atk": 624
+   },
+   "legacy": {
+    "atkWithSig": 1290
    }
   },
   "「扳机」": {
@@ -760,17 +1441,37 @@
    "profession": 2,
    "camp": "新艾利都防卫军",
    "sprite": "IconRole39",
-   "props": {
-    "1": 7923,
-    "2": 1344,
-    "3": 600,
-    "4": 113,
-    "5": 20,
-    "6": 50,
-    "7": 96,
-    "8": 95,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 751.33,
+    "hp": 7923.67,
+    "def": 601.33,
+    "impact": 113,
+    "anomalyMastery": 96,
+    "anomalyProficiency": 95,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 18,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14136",
+    "name": "索魂影眸",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1464.33
    }
   },
   "仪玄": {
@@ -782,17 +1483,37 @@
    "profession": 6,
    "camp": "云岿山",
    "sprite": "IconRole44",
-   "props": {
-    "1": 8373,
-    "2": 1615,
-    "3": 441,
-    "4": 93,
-    "5": 20,
-    "6": 50,
-    "7": 92,
-    "8": 90,
-    "9": 0,
-    "11": 0
+   "base": {
+    "atk": 872.67,
+    "hp": 8373,
+    "def": 441.67,
+    "impact": 93,
+    "anomalyMastery": 92,
+    "anomalyProficiency": 90,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 0,
+    "hp": 420,
+    "def": 0,
+    "impact": 0,
+    "crit": 14.4,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14137",
+    "name": "青溟笼舍",
+    "atk": 743
+   },
+   "legacy": {
+    "atkWithSig": 1615.67
    }
   },
   "零号·安比": {
@@ -804,17 +1525,37 @@
    "profession": 1,
    "camp": "新艾利都防卫军",
    "sprite": "IconRole40",
-   "props": {
-    "1": 7673,
-    "2": 1642,
-    "3": 612,
-    "4": 93,
-    "5": 20,
-    "6": 50,
-    "7": 94,
-    "8": 93,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 930.67,
+    "hp": 7673.67,
+    "def": 612.33,
+    "impact": 93,
+    "anomalyMastery": 94,
+    "anomalyProficiency": 93,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 14.4,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14138",
+    "name": "牺牲洁纯",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1643.67
    }
   },
   "橘福福": {
@@ -826,17 +1567,37 @@
    "profession": 2,
    "camp": "云岿山",
    "sprite": "IconRole43",
-   "props": {
-    "1": 8250,
-    "2": 1449,
-    "3": 597,
-    "4": 118,
-    "5": 20,
-    "6": 50,
-    "7": 93,
-    "8": 96,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 766.67,
+    "hp": 8249.67,
+    "def": 598,
+    "impact": 118,
+    "anomalyMastery": 93,
+    "anomalyProficiency": 96,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 14.4,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14139",
+    "name": "福虓炉炉",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1479.67
    }
   },
   "爱丽丝": {
@@ -848,17 +1609,37 @@
    "profession": 3,
    "camp": "怪啖屋",
    "sprite": "IconRole46",
-   "props": {
-    "1": 7673,
-    "2": 1593,
-    "3": 606,
-    "4": 86,
-    "5": 20,
-    "6": 50,
-    "7": 106,
-    "8": 118,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 880.33,
+    "hp": 7673.67,
+    "def": 605.67,
+    "impact": 86,
+    "anomalyMastery": 106,
+    "anomalyProficiency": 118,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 36,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14140",
+    "name": "十方锻星",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1593.33
    }
   },
   "柚叶": {
@@ -870,17 +1651,37 @@
    "profession": 4,
    "camp": "怪啖屋",
    "sprite": "IconRole47",
-   "props": {
-    "1": 8829,
-    "2": 1471,
-    "3": 612,
-    "4": 86,
-    "5": 20,
-    "6": 50,
-    "7": 88,
-    "8": 93,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 759,
+    "hp": 8830,
+    "def": 612.33,
+    "impact": 86,
+    "anomalyMastery": 88,
+    "anomalyProficiency": 93,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 36,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14141",
+    "name": "狸法七变化",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1472
    }
   },
   "潘引壶": {
@@ -892,17 +1693,37 @@
    "profession": 5,
    "camp": "云岿山",
    "sprite": "IconRole45",
-   "props": {
-    "1": 8453,
-    "2": 1285,
-    "3": 712,
-    "4": 94,
-    "5": 20,
-    "6": 50,
-    "7": 91,
-    "8": 90,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 661.67,
+    "hp": 8453.33,
+    "def": 713.67,
+    "impact": 94,
+    "anomalyMastery": 91,
+    "anomalyProficiency": 90,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0.36
+   },
+   "displayWeapon": {
+    "itemId": "13007",
+    "name": "正版变身器",
+    "atk": 594
+   },
+   "legacy": {
+    "atkWithSig": 1255.67
    }
   },
   "叶瞬光": {
@@ -914,17 +1735,37 @@
    "profession": 1,
    "camp": "云岿山",
    "sprite": "IconRole55",
-   "props": {
-    "1": 7673,
-    "2": 1681,
-    "3": 606,
-    "4": 83,
-    "5": 20,
-    "6": 50,
-    "7": 94,
-    "8": 93,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 938.33,
+    "hp": 7673.67,
+    "def": 605.67,
+    "impact": 83,
+    "anomalyMastery": 94,
+    "anomalyProficiency": 93,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 14.4,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14143",
+    "name": "云霓孤光",
+    "atk": 743
+   },
+   "legacy": {
+    "atkWithSig": 1681.33
    }
   },
   "真斗": {
@@ -936,17 +1777,37 @@
    "profession": 6,
    "camp": "怪啖屋",
    "sprite": "IconRole51",
-   "props": {
-    "1": 7724,
-    "2": 1349,
-    "3": 443,
-    "4": 95,
-    "5": 20,
-    "6": 50,
-    "7": 87,
-    "8": 90,
-    "9": 0,
-    "11": 0
+   "base": {
+    "atk": 755.67,
+    "hp": 7724.33,
+    "def": 442.67,
+    "impact": 95,
+    "anomalyMastery": 87,
+    "anomalyProficiency": 90,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "13144",
+    "name": "燔火胧夜",
+    "atk": 624
+   },
+   "legacy": {
+    "atkWithSig": 1379.67
    }
   },
   "卢西娅": {
@@ -958,17 +1819,37 @@
    "profession": 4,
    "camp": "怪啖屋",
    "sprite": "IconRole50",
-   "props": {
-    "1": 8477,
-    "2": 1471,
-    "3": 594,
-    "4": 83,
-    "5": 20,
-    "6": 50,
-    "7": 96,
-    "8": 95,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 759,
+    "hp": 8477.67,
+    "def": 594.67,
+    "impact": 83,
+    "anomalyMastery": 96,
+    "anomalyProficiency": 95,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0.36
+   },
+   "displayWeapon": {
+    "itemId": "14145",
+    "name": "铸梦炉歌",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1472
    }
   },
   "「席德」": {
@@ -980,17 +1861,37 @@
    "profession": 1,
    "camp": "新艾利都防卫军",
    "sprite": "IconRole48",
-   "props": {
-    "1": 7673,
-    "2": 1642,
-    "3": 612,
-    "4": 93,
-    "5": 20,
-    "6": 50,
-    "7": 94,
-    "8": 93,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 930.67,
+    "hp": 7673.67,
+    "def": 612.33,
+    "impact": 93,
+    "anomalyMastery": 94,
+    "anomalyProficiency": 93,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 28.8,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14146",
+    "name": "机巧心种",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1643.67
    }
   },
   "般岳": {
@@ -1002,17 +1903,37 @@
    "profession": 6,
    "camp": "坎卜斯黑枝",
    "sprite": "IconRole53",
-   "props": {
-    "1": 8496,
-    "2": 1592,
-    "3": 446,
-    "4": 95,
-    "5": 20,
-    "6": 50,
-    "7": 90,
-    "8": 89,
-    "9": 0,
-    "11": 0
+   "base": {
+    "atk": 860.67,
+    "hp": 8496.33,
+    "def": 446,
+    "impact": 95,
+    "anomalyMastery": 90,
+    "anomalyProficiency": 89,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 14.4,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14147",
+    "name": "怒目金刚",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1573.67
    }
   },
   "琉音": {
@@ -1024,17 +1945,37 @@
    "profession": 2,
    "camp": "坎卜斯黑枝",
    "sprite": "IconRole54",
-   "props": {
-    "1": 8250,
-    "2": 1352,
-    "3": 612,
-    "4": 110,
-    "5": 20,
-    "6": 50,
-    "7": 94,
-    "8": 93,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 759,
+    "hp": 8249.67,
+    "def": 612.33,
+    "impact": 110,
+    "anomalyMastery": 94,
+    "anomalyProficiency": 93,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 14.4,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14148",
+    "name": "昨夜来电",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1472
    }
   },
   "千夏": {
@@ -1046,17 +1987,37 @@
    "profession": 4,
    "camp": "妄想天使",
    "sprite": "IconRole58",
-   "props": {
-    "1": 8477,
-    "2": 1374,
-    "3": 600,
-    "4": 98,
-    "5": 20,
-    "6": 50,
-    "7": 96,
-    "8": 95,
-    "9": 0,
-    "11": 1
+   "base": {
+    "atk": 751.33,
+    "hp": 8477.67,
+    "def": 601.33,
+    "impact": 98,
+    "anomalyMastery": 96,
+    "anomalyProficiency": 95,
+    "penRatio": 0,
+    "energyRegen": 1,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14149",
+    "name": "思络成歌",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1464.33
    }
   },
   "爱芮": {
@@ -1068,17 +2029,37 @@
    "profession": 3,
    "camp": "妄想天使",
    "sprite": "IconRole57",
-   "props": {
-    "1": 7749,
-    "2": 1547,
-    "3": 619,
-    "4": 87,
-    "5": 20,
-    "6": 50,
-    "7": 115,
-    "8": 116,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 864,
+    "hp": 7749.67,
+    "def": 620,
+    "impact": 87,
+    "anomalyMastery": 115,
+    "anomalyProficiency": 116,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 36,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14150",
+    "name": "壳中之灵",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1577
    }
   },
   "南宫羽": {
@@ -1090,17 +2071,37 @@
    "profession": 2,
    "camp": "妄想天使",
    "sprite": "IconRole59",
-   "props": {
-    "1": 8373,
-    "2": 1340,
-    "3": 622,
-    "4": 120,
-    "5": 20,
-    "6": 50,
-    "7": 90,
-    "8": 93,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 747,
+    "hp": 8373,
+    "def": 623.33,
+    "impact": 120,
+    "anomalyMastery": 90,
+    "anomalyProficiency": 93,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 36,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14151",
+    "name": "霓虹妄想",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1460
    }
   },
   "希希芙": {
@@ -1112,17 +2113,37 @@
    "profession": 1,
    "camp": "新艾利都治安局",
    "sprite": "IconRole60",
-   "props": {
-    "1": 7673,
-    "2": 1562,
-    "3": 606,
-    "4": 93,
-    "5": 20,
-    "6": 50,
-    "7": 94,
-    "8": 93,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 938.33,
+    "hp": 7673.67,
+    "def": 605.67,
+    "impact": 93,
+    "anomalyMastery": 94,
+    "anomalyProficiency": 93,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0.36
+   },
+   "displayWeapon": {
+    "itemId": "14152",
+    "name": "鳞齿寻踪",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1651.33
    }
   },
   "星徽·比利": {
@@ -1134,17 +2155,37 @@
    "profession": 6,
    "camp": "狡兔屋",
    "sprite": "IconRole62",
-   "props": {
-    "1": 8496,
-    "2": 1592,
-    "3": 446,
-    "4": 95,
-    "5": 20,
-    "6": 50,
-    "7": 90,
-    "8": 89,
-    "9": 0,
-    "11": 0
+   "base": {
+    "atk": 860.67,
+    "hp": 8496.33,
+    "def": 446,
+    "impact": 95,
+    "anomalyMastery": 90,
+    "anomalyProficiency": 89,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 14.4,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14153",
+    "name": "辉骑面铠",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1573.67
    }
   },
   "普罗米娅": {
@@ -1156,17 +2197,37 @@
    "profession": 3,
    "camp": "坎卜斯黑枝",
    "sprite": "IconRole61",
-   "props": {
-    "1": 7788,
-    "2": 1585,
-    "3": 612,
-    "4": 86,
-    "5": 20,
-    "6": 50,
-    "7": 112,
-    "8": 114,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 872.67,
+    "hp": 7789.33,
+    "def": 612.33,
+    "impact": 86,
+    "anomalyMastery": 112,
+    "anomalyProficiency": 114,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 36,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14154",
+    "name": "朔月裁霜",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1585.67
    }
   },
   "佩洛伊斯": {
@@ -1178,17 +2239,37 @@
    "profession": 1,
    "camp": "法厄同",
    "sprite": "IconRole63",
-   "props": {
-    "1": 7673,
-    "2": 1637,
-    "3": 612,
-    "4": 94,
-    "5": 20,
-    "6": 50,
-    "7": 94,
-    "8": 93,
-    "9": 0,
-    "11": 1
+   "base": {
+    "atk": 923,
+    "hp": 7673.67,
+    "def": 612.33,
+    "impact": 94,
+    "anomalyMastery": 94,
+    "anomalyProficiency": 93,
+    "penRatio": 0,
+    "energyRegen": 1,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 14.4,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14155",
+    "name": "日冕遗蜕",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1636
    }
   },
   "维琳娜": {
@@ -1200,17 +2281,37 @@
    "profession": 3,
    "camp": "罗斯凯利法",
    "sprite": "IconRole64",
-   "props": {
-    "1": 7788,
-    "2": 1466,
-    "3": 612,
-    "4": 86,
-    "5": 20,
-    "6": 50,
-    "7": 112,
-    "8": 111,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 872.67,
+    "hp": 7789.33,
+    "def": 612.33,
+    "impact": 86,
+    "anomalyMastery": 112,
+    "anomalyProficiency": 111,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 54,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14156",
+    "name": "琳琅鎏心",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1585.67
    }
   },
   "诺姆": {
@@ -1222,17 +2323,37 @@
    "profession": 2,
    "camp": "罗斯凯利法",
    "sprite": "IconRole65",
-   "props": {
-    "1": 7800,
-    "2": 1342,
-    "3": 584,
-    "4": 106,
-    "5": 20,
-    "6": 50,
-    "7": 99,
-    "8": 98,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 763.33,
+    "hp": 7800.33,
+    "def": 583.67,
+    "impact": 106,
+    "anomalyMastery": 99,
+    "anomalyProficiency": 98,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 14.4,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14157",
+    "name": "首席跟班",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1476.33
    }
   },
   "蕾米埃尔": {
@@ -1244,17 +2365,37 @@
    "profession": 3,
    "camp": "达识结社",
    "sprite": "IconRole67",
-   "props": {
-    "1": 7482,
-    "2": 1538,
-    "3": 601,
-    "4": 83,
-    "5": 20,
-    "6": 50,
-    "7": 115,
-    "8": 116,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 864,
+    "hp": 7482,
+    "def": 601.33,
+    "impact": 83,
+    "anomalyMastery": 115,
+    "anomalyProficiency": 116,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 54,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14158",
+    "name": "空羽复归之诗",
+    "atk": 743
+   },
+   "legacy": {
+    "atkWithSig": 1607
    }
   },
   "希格莉德": {
@@ -1266,17 +2407,37 @@
    "profession": 1,
    "camp": "罗斯凯利法",
    "sprite": "IconRole66",
-   "props": {
-    "1": 7789,
-    "2": 1639,
-    "3": 606,
-    "4": 93,
-    "5": 20,
-    "6": 50,
-    "7": 92,
-    "8": 90,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 938.33,
+    "hp": 7789.33,
+    "def": 605.67,
+    "impact": 93,
+    "anomalyMastery": 92,
+    "anomalyProficiency": 90,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 14.4,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14159",
+    "name": "骁骑礼赞",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1651.33
    }
   },
   "克拉蕾": {
@@ -1288,17 +2449,37 @@
    "profession": 7,
    "camp": "罗斯凯利法",
    "sprite": "IconRole1611",
-   "props": {
-    "1": 5651,
-    "2": 1136,
-    "3": 442,
-    "4": 93,
-    "5": 20,
-    "6": 50,
-    "7": 80,
-    "8": 79,
-    "9": 0,
-    "11": 0
+   "base": {
+    "atk": 701,
+    "hp": 5650.67,
+    "def": 441.67,
+    "impact": 93,
+    "anomalyMastery": 80,
+    "anomalyProficiency": 79,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 0,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 28.8,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14161",
+    "name": "猩红渴望",
+    "atk": 0
+   },
+   "legacy": {
+    "atkWithSig": 701
    }
   },
   "洛克茜": {
@@ -1310,17 +2491,37 @@
    "profession": 2,
    "camp": "罗斯凯利法",
    "sprite": "IconRole68",
-   "props": {
-    "1": 8233,
-    "2": 1303,
-    "3": 658,
-    "4": 100,
-    "5": 20,
-    "6": 50,
-    "7": 110,
-    "8": 63,
-    "9": 0,
-    "11": 1.2
+   "base": {
+    "atk": 737,
+    "hp": 8233,
+    "def": 657.67,
+    "impact": 100,
+    "anomalyMastery": 110,
+    "anomalyProficiency": 63,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 14.4,
+    "critDmg": 0,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14162",
+    "name": "绯月银棺",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1450
    }
   }
  }
