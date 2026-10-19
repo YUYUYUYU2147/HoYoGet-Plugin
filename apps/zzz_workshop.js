@@ -1,22 +1,73 @@
 // 绝区零工坊榜单
 //
-// 数据源：https://api.zzzmap.com（绝区零工坊小程序后端，公开只读接口，无需登录态）
-// 接口来源：由小程序包（wx06433d7f9d17db8b）解包后从 app-service.js 中提取，
-//          详见 HANDOFF_2026-10-19.md 附二 / 附三。
+// 数据源：https://api.zzzmap.com（绝区零工坊小程序后端）
+// 接口来源：由小程序包 wx06433d7f9d17db8b 解包后从 app-service.js 提取，
+//          签名算法与参数见 HANDOFF_2026-10-19.md 附二/附三。
 // 接口：
 //   GET /api/v1/love/ranking                      角色好感度 / 强度评分榜（官方标注每 2 小时更新）
 //   GET /api/v1/role/grad_stat?item_id=&level=40   单角色全服配装（音擎 / 驱动盘使用率）
 //   GET /api/v1/card_ranking/ranking_v5            抽卡欧非排行（分页，每页固定 50 条）
 //   GET /api/v1/abyss/stats + /api/v1/abyss/result 式舆防卫战角色使用率（数据已停更，仅存档查询）
 //   GET /api/v1/game_role/list、/api/v1/weapon/list、/api/v1/relic/list  名称映射用
+//   POST /api/v1/user_role/ranking                 单玩家练度详情（需要签名头）
 //
 // 说明：接口随时可能调整或关闭，失败时只回提示，不抛出未捕获异常。
 
+import { createHash } from 'node:crypto'
+
+import fs from 'node:fs'
+import path from 'node:path'
 import { pluginPriority } from '#HoYoGet'
+import { getRankScope } from '../system/rank_scope.js'
+
+const YUNZAI_DB = path.join(process.cwd(), 'data', 'db', 'data.db')
+
+/**
+ * 取群成员绑定的绝区零 UID。
+ * 与 apps/zzz_rank.js 同一套逻辑：读 Users.games 的 zzz.uid。
+ * 拿不到成员列表或数据库时返回 null，由调用方回落成「不限范围」。
+ */
+async function getGroupMemberUids(e) {
+  const memberSet = new Set()
+  try {
+    if (e?.group?.getMemberMap) {
+      const map = await e.group.getMemberMap()
+      for (const qq of map.keys()) memberSet.add(String(qq))
+    } else if (e?.group?.members) {
+      for (const qq of Object.keys(e.group.members)) memberSet.add(String(qq))
+    }
+  } catch (_) {}
+  if (!memberSet.size || !fs.existsSync(YUNZAI_DB)) return null
+  try {
+    const sqlite3 = (await import('sqlite3')).default
+    const rows = await new Promise(resolve => {
+      const db = new sqlite3.Database(YUNZAI_DB, sqlite3.OPEN_READONLY, err => (err ? resolve([]) : null))
+      db.all('select id, games from Users', (err2, list) => {
+        db.close(() => {})
+        resolve(err2 ? [] : list || [])
+      })
+    })
+    const result = new Set()
+    for (const row of rows) {
+      if (!memberSet.has(String(row.id))) continue
+      try {
+        const uid = String(JSON.parse(row.games || '{}')?.zzz?.uid || '').trim()
+        if (/^\d{8,9}$/.test(uid)) result.add(uid)
+      } catch (_) {}
+    }
+    return result
+  } catch (_) {
+    return null
+  }
+}
 
 const API_HOST = 'https://api.zzzmap.com'
 const REQUEST_TIMEOUT = 12000
 const CACHE_TTL = 6 * 3600 * 1000
+
+// POST 接口签名：小程序请求库把参数按 k=v 排序拼接后取 MD5，键尾固定追加该串
+const SIGN_KEY = 'VW^)(^*^$$#*%(#)!@VIAI%'
+const APP_VERSION = '100'
 
 const CARD_TYPES = {
   综合: 'all',
@@ -47,6 +98,8 @@ const RE_LOVE = /^[#%]*(?:米哈游)?(?:绝区零|zzz)(?:角色)?(?:评分|好�
 const RE_GRAD = /^[#%]*(?:米哈游)?(?:绝区零|zzz)(?:角色)?配装(?:统计)?(?:\s+(.+))?$/i
 const RE_CARD = /^[#%]*(?:米哈游)?(?:绝区零|zzz)(?:抽卡|欧非)(?:榜|排行)(?:\s+(.+))?$/i
 const RE_ABYSS = /^[#%]*(?:米哈游)?(?:绝区零|zzz)式舆(?:使用率|排名|排行)$/i
+const RE_ROLE_RANK = /^[#%]*(?:米哈游)?(?:绝区零|zzz)(?:角色)?(?:练度)?排名(?:\s+(.+))?$/i
+const RE_DETAIL = /^[#%]*(?:米哈游)?(?:绝区零|zzz)(?:查)?练度(?:\s+(.+))?$/i
 const RE_HELP = /^[#%]*(?:米哈游)?(?:绝区零|zzz)榜单帮助$/i
 
 // ===== 通用请求 =====
@@ -74,6 +127,55 @@ async function request(pathname, query = {}) {
     return await run()
   } catch (err) {
     // 单次重试：工坊接口偶发抖动，重试一次可覆盖大部分瞬时失败
+    if (err?.name === 'TimeoutError' || err?.name === 'TypeError' || /HTTP 5\d\d/.test(err?.message || '')) {
+      return await run()
+    }
+    throw err
+  }
+}
+
+/**
+ * POST 接口需要签名头：sign = MD5(排序后的 "k=v" 串)，键尾追加 SIGN_KEY。
+ * 规则来自小程序请求库：去掉 null、对象值 JSON.stringify、按整串排序。
+ */
+function signOf(params) {
+  const merged = { ...params, key: SIGN_KEY }
+  const pairs = Object.entries(merged).map(([key, value]) => {
+    const text = typeof value === 'object' ? JSON.stringify(value) : value
+    return `${key}=${text ?? ''}`
+  })
+  return createHash('md5').update(pairs.join('&').split('&').sort().join('&')).digest('hex')
+}
+
+async function signedPost(pathname, params) {
+  const body = {}
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== null && value !== undefined) body[key] = value
+  }
+  const run = async () => {
+    const res = await fetch(new URL(pathname, API_HOST), {
+      method: 'POST',
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT),
+      headers: {
+        'content-type': 'application/json',
+        accept: 'application/json, text/plain, */*',
+        'accept-language': 'zh-CN,zh;q=0.9',
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+        version: APP_VERSION,
+        platform: 'weixin',
+        sign: signOf(params),
+        time: String(Date.now()),
+      },
+      body: JSON.stringify(body),
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const json = await res.json()
+    if (Number(json?.code) !== 0) throw new Error(json?.message || `接口返回 code=${json?.code}`)
+    return json.data
+  }
+  try {
+    return await run()
+  } catch (err) {
     if (err?.name === 'TimeoutError' || err?.name === 'TypeError' || /HTTP 5\d\d/.test(err?.message || '')) {
       return await run()
     }
@@ -194,6 +296,13 @@ function limitOf(text, fallback = 10, max = 30) {
   const num = Number.parseInt(String(text || '').match(/\d+/)?.[0] || '', 10)
   if (!Number.isFinite(num) || num <= 0) return fallback
   return Math.min(num, max)
+}
+
+function formatTime(value) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const pad2 = num => String(num).padStart(2, '0')
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ${pad2(date.getHours())}:${pad2(date.getMinutes())}`
 }
 
 function logError(tag, err) {
@@ -325,6 +434,165 @@ async function buildCardRank(arg) {
   return lines.join('\n')
 }
 
+/**
+ * 角色练度排名：GET /api/v1/user_relic/ranking
+ * 页面（pagesCase/relic-ranking）参数：
+ *   type      relic / role / damage（对应不同榜单口径，综合榜为 role）
+ *   role_id   角色 item_id
+ *   role_level 60 / 50 / 40
+ *   role_rank  影画 0-6，null 为不限
+ *   part_index 驱动盘部位 0-5，null 为全部
+ *   weapon_id  音擎 id，null 为不限
+ * 返回 rows: [{ item_id, level, uid, relic_point, rank, user_case:{ nick_name } }]
+ */
+async function buildRoleRank(arg, opts = {}) {
+  const tokens = String(arg || '').trim().split(/\s+/).filter(Boolean)
+  if (!tokens.length) {
+    return '用法：%绝区零角色排名 <角色名> [60|50|40] [影画0-6] [数量]\n例：%绝区零角色排名 星见雅'
+  }
+  let roleName = ''
+  let level = 60
+  let rank = null
+  let count = 10
+  for (const token of tokens) {
+    const levelHit = token.match(/^(60|50|40)级?$/)
+    if (levelHit) { level = Number(levelHit[1]); continue }
+    if (/影画|星魂/.test(token)) {
+      const rankHit = token.match(/([0-6])/)
+      if (rankHit) { rank = Number(rankHit[1]); continue }
+    }
+    if (/^\d+$/.test(token)) { count = limitOf(token, 10, 30); continue }
+    if (!roleName) roleName = token
+  }
+  if (!roleName) return '请提供角色名，例：%绝区零角色排名 星见雅'
+
+  const role = await resolveRole(roleName)
+  if (!role) return `未找到角色「${roleName}」，可先用【%绝区零评分榜】查看角色名。`
+
+  const subtitle = `${level}级 / ${rank === null ? '不限影画' : `${rank}影画`} / 按驱动盘总分排序`
+  let data
+  try {
+    data = await request('/api/v1/user_relic/ranking', {
+      limit: 50,
+      offset: 0,
+      type: 'role',
+      role_id: role.item_id,
+      role_level: level,
+      role_rank: rank,
+      part_index: null,
+      weapon_id: null,
+    })
+  } catch (err) {
+    // 工坊对部分筛选组合返回「数据统计中」，属于无数据而非接口故障
+    if (/统计中/.test(err?.message || '')) {
+      return `绝区零工坊 · ${role.nick_name} 练度排名\n${subtitle}\n\n${err.message}\n换用「不限影画 / 60级」再试。`
+    }
+    throw err
+  }
+  let rows = Array.isArray(data?.rows) ? data.rows : []
+  if (!rows.length) {
+    return `绝区零工坊 · ${role.nick_name} 练度排名\n${subtitle}\n\n暂无符合条件的记录（该角色可能未开放统计）。`
+  }
+
+  /* 本群范围：工坊返回的是完整 UID（不打码），所以能直接和群成员绑定 UID 求交集。
+     交集为空时说明群里没人把这个角色上传到工坊角色柜，明确说明而不是显示空榜。 */
+  const scope = opts.scope || 'all'
+  const members = opts.memberUids
+  let scopeText = '全服'
+  if (scope === 'group') {
+    if (!members || !members.size) {
+      return [
+        `绝区零工坊 · ${role.nick_name} 练度排名`,
+        subtitle,
+        '',
+        '本群统计需要群成员已绑定绝区零 UID，当前没读到任何成员绑定。',
+        '可发送「%面板排名范围」切换到全服查看工坊总榜。',
+      ].join('\n')
+    }
+    rows = rows.filter(row => members.has(String(row?.uid ?? '')))
+    scopeText = `本群（${members.size} 人有绑定）`
+    if (!rows.length) {
+      return [
+        `绝区零工坊 · ${role.nick_name} 练度排名`,
+        subtitle,
+        '',
+        `本群没有成员把「${role.nick_name}」上传到工坊角色柜，因此没有本群排名。`,
+        '可发送「%面板排名范围」切换到全服查看工坊总榜。',
+      ].join('\n')
+    }
+  }
+
+  const lines = [`绝区零工坊 · ${role.nick_name} 练度排名`, subtitle, `范围：${scopeText}`, '']
+  rows.slice(0, count).forEach((row, index) => {
+    const name = row?.user_case?.nick_name || `UID ${row?.uid ?? '?'}`
+    const point = Number(row?.relic_point || 0).toFixed(3)
+    const rankText = scope === 'group' ? `第 ${index + 1} 名` : `#${row?.rank ?? index + 1}`
+    lines.push(`${String(index + 1).padStart(2, '0')}. ${fit(name, 20)}${point}  ${rankText}`)
+  })
+  lines.push('', scope === 'group'
+    ? `本群共 ${rows.length} 人上榜（工坊单页 50 条）。`
+    : `共 ${data?.total ?? rows.length} 条（接口单页 50 条），展示前 ${Math.min(count, rows.length)} 名。`)
+  lines.push('数据来源：绝区零工坊角色柜用户。')
+  return lines.join('\n')
+}
+
+/**
+ * 单玩家练度详情：POST /api/v1/user_role/ranking（需签名头）
+ * 参数：{ uid, type:'ranking', item_id?, refresh:false }
+ * 返回：{ uid, nick_name, level, roles:[{ item_id, level, relic_point, set_info, item_json, ... }] }
+ * 说明：接口只给原始数据，面板数值（生命/攻击/暴击等）由工坊前端按权重计算，这里不做还原。
+ */
+async function buildDetail(arg) {
+  const tokens = String(arg || '').trim().split(/\s+/).filter(Boolean)
+  const uid = tokens.find(token => /^\d{6,}$/.test(token))
+  const nameToken = tokens.find(token => !/^\d{6,}$/.test(token))
+  if (!uid || !nameToken) {
+    return '用法：%绝区零练度 <UID> <角色名>\n例：%绝区零练度 14819792 星见雅\n\n该接口必须带角色，单独查玩家请先用【%绝区零角色排名 <角色>】找到 UID。'
+  }
+
+  const role = await resolveRole(nameToken)
+  if (!role) {
+    return `未找到角色「${nameToken}」，可先用【%绝区零评分榜】查看角色名。`
+  }
+
+  const params = { uid, type: 'ranking', refresh: false, item_id: role.item_id }
+  const data = await signedPost('/api/v1/user_role/ranking', params)
+  const roles = Array.isArray(data?.roles) ? data.roles : []
+  if (!roles.length) {
+    return `未查询到 UID ${uid} 的练度数据。\n该玩家可能未在绝区零工坊上传角色柜，或尚未达到纳入统计的条件。`
+  }
+
+  const nick = data?.nick_name || '未知玩家'
+  const playerLevel = data?.level ? ` Lv.${data.level}` : ''
+  const [, weapons, relics] = await Promise.all([getRoles(), getWeapons(), getRelics()])
+
+  const row = roles[0]
+  const level = row?.level || role.level || '-'
+  const point = Number(row?.relic_point || 0).toFixed(1)
+  const talent = row?.item_json?.TalentLevel ?? 0
+  const weaponId = String(row?.weapon_id ?? '')
+  const weaponName = weaponId && weaponId !== 'other' ? (weapons.get(weaponId) || `音擎${weaponId}`) : '未装备'
+  const refine = row?.item_json?.Weapon?.UpgradeLevel
+  const sets = parseSetInfo(row?.set_info)
+    .filter(part => part.setId !== 'other')
+    .map(part => `${relics.get(part.setId) || `套装${part.setId}`}${part.count}件`)
+    .join(' + ') || '未知'
+  const updatedAt = formatTime(row?.updated_at)
+  const updated = updatedAt ? `\n数据更新：${updatedAt}` : ''
+
+  return [
+    `绝区零工坊 · ${role.nick_name}`,
+    `玩家 ${nick}（${uid}）${playerLevel}`,
+    '',
+    `等级：Lv.${level}　影画：${talent}`,
+    `驱动总分：${point}`,
+    `音擎：${weaponName}${refine ? `　精炼 ${refine}` : ''}`,
+    `驱动盘：${sets}${updated}`,
+    '',
+    '面板属性与单件评分由工坊前端按权重计算，接口只返回原始数据。',
+  ].join('\n')
+}
+
 /** 统计区间结束日期距今超过 90 天即视为停更 */
 function isStale(period) {
   const dates = String(period || '').match(/\d{4}-\d{2}-\d{2}/g)
@@ -364,27 +632,30 @@ async function buildAbyssRank() {
 }
 
 const HELP_TEXT = [
-  '绝区零工坊榜单',
-  '#米哈游绝区零评分榜 [好感|强度] [数量]   角色好感度 / 强度评分榜',
-  '#米哈游绝区零角色配装 <角色名>           全服音擎与驱动盘使用率',
-  '#米哈游绝区零欧非榜 [综合|角色|音擎|常驻] [欧|非|氪] [数量]',
-  '#米哈游绝区零式舆排名                    式舆防卫战角色使用率（数据已停更）',
+  '绝区零工坊榜单（独立插件）',
+  '%绝区零评分榜 [好感|强度] [数量]   角色好感度 / 强度评分榜',
+  '%绝区零角色配装 <角色名>          全服音擎与驱动盘使用率',
+  '%绝区零角色排名 <角色名> [等级] [影画]  练度排行（驱动盘总分）',
+  '%绝区零练度 <UID> [角色名]        查询单个玩家 / 单个角色的练度详情',
+  '%绝区零欧非榜 [综合|角色|音擎|常驻] [欧|非|氪] [数量]',
+  '%绝区零式舆排名                   式舆防卫战角色使用率（数据已停更）',
   '',
   '数据均来自绝区零工坊公开接口，无需绑定账号。',
-  '也兼容不带「米哈游」的简写：%绝区零评分榜 等。',
 ].join('\n')
 
 export class zzz_workshop extends plugin {
   constructor() {
     super({
       name: '[米哈游]绝区零工坊榜单',
-      dsc: '绝区零工坊角色评分 / 配装 / 欧非 / 式舆榜单',
+      dsc: '绝区零工坊角色评分 / 配装 / 练度排名 / 欧非 / 式舆',
       event: 'message',
       priority: pluginPriority('zzz_workshop', 5000),
       rule: [
         { reg: RE_LOVE, fnc: 'loveRank' },
         { reg: RE_GRAD, fnc: 'gradStat' },
         { reg: RE_CARD, fnc: 'cardRank' },
+        { reg: RE_ROLE_RANK, fnc: 'roleRank' },
+        { reg: RE_DETAIL, fnc: 'detail' },
         { reg: RE_ABYSS, fnc: 'abyssRank' },
         { reg: RE_HELP, fnc: 'help' },
       ],
@@ -415,6 +686,29 @@ export class zzz_workshop extends plugin {
     } catch (err) {
       logError('cardRank', err)
       return await e.reply(`获取欧非榜失败：${err?.message || err}`)
+    }
+  }
+
+  async roleRank(e) {
+    try {
+      /* 范围跟随「%面板排名范围」的开关，与本地面板排名共用同一份状态。
+         本群范围需要群成员绑定 UID，拿不到成员列表时回落全服。 */
+      const wantGroup = getRankScope() === 'group'
+      const memberUids = wantGroup ? await getGroupMemberUids(e) : null
+      const scope = wantGroup && memberUids ? 'group' : 'all'
+      return await e.reply(await buildRoleRank(RE_ROLE_RANK.exec(e.msg)?.[1] || '', { scope, memberUids }))
+    } catch (err) {
+      logError('roleRank', err)
+      return await e.reply(`获取练度排名失败：${err?.message || err}`)
+    }
+  }
+
+  async detail(e) {
+    try {
+      return await e.reply(await buildDetail(RE_DETAIL.exec(e.msg)?.[1] || ''))
+    } catch (err) {
+      logError('detail', err)
+      return await e.reply(`查询练度失败：${err?.message || err}`)
     }
   }
 

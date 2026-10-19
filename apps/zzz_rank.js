@@ -16,17 +16,9 @@ const RANK_HELP_REG = /^(面板排名|面板排行)$/
 const RANK_DATA_CMD = /^(%|％)?(面板排名数据|排名数据)$/
 const RANK_SCOPE_CMD = /^(?:%|％|#?zzz|#?ZZZ|#?绝区零|#?绝区)?\s*(?:面板排名范围|排名范围|面板排行范围)$/
 
-/** 排名范围：group = 本群（默认）、all = 全部已保存记录 */
-let RANK_SCOPE = 'group'
-
-function setRankScope(scope) {
-  RANK_SCOPE = scope === 'all' ? 'all' : 'group'
-  return RANK_SCOPE
-}
-
-function scopeLabel(scope = RANK_SCOPE) {
-  return scope === 'all' ? '全部' : '本群'
-}
+/* 排名范围（本群 / 全部）由 system/rank_scope.js 统一持有，
+   工坊练度排名也读同一份，切换后两边同步。 */
+import { getRankScope, setRankScope as setScopeShared, scopeLabel } from '../system/rank_scope.js'
 
 /**
  * 取群成员绑定的绝区零 UID。
@@ -314,7 +306,7 @@ export class zzz_panel_rank extends plugin {
   /** 切换排名范围：本群 ↔ 全部。群里只有一个“当前范围”，切一次后续都按新范围出图 */
   async toggleRankScope(e) {
     const current = scopeLabel()
-    const next = setRankScope(RANK_SCOPE === 'group' ? 'all' : 'group')
+    const next = setScopeShared(getRankScope() === 'group' ? 'all' : 'group')
     return e.reply(`面板排名范围已切换为「${scopeLabel(next)}」（原「${current}」）。\n本群范围只统计群里已绑定绝区零 UID 的成员；非群聊时按全部统计。`)
   }
 
@@ -365,7 +357,7 @@ export class zzz_panel_rank extends plugin {
     // 本群范围只在群聊成立；私聊或拿不到成员列表时回落成全部，避免空榜
     let groupUids = null
     let label = scopeLabel()
-    if (RANK_SCOPE === 'group') {
+    if (getRankScope() === 'group') {
       groupUids = e?.isGroup ? await getGroupMemberUids(e) : null
       if (!groupUids) label = '全部'
     } else {
