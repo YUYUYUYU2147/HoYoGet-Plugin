@@ -507,6 +507,12 @@ async function buildRoleRank(arg, opts = {}) {
     return { error: `暂无符合条件的记录（该角色可能未开放统计）。`, subtitle }
   }
 
+  /* 全服名次 = 接口返回顺序（工坊按驱动总分降序给出，序号即名次）。
+     必须在按群成员过滤**之前**记下来，否则本群范围下名次会从 1 重新排，
+     和工坊总榜对不上。
+     注意 row.rank 不是名次，它是**影画**（0~6），单独放 constellation。 */
+  const fullRank = new Map(rows.map((row, i) => [String(row?.uid ?? ''), i + 1]))
+
   /* 本群范围：工坊返回的是完整 UID（不打码），所以能直接和群成员绑定 UID 求交集。
      交集为空时说明群里没人把这个角色上传到工坊角色柜，明确说明而不是显示空榜。 */
   const scope = opts.scope || 'all'
@@ -531,7 +537,12 @@ async function buildRoleRank(arg, opts = {}) {
 
   const list = rows.slice(0, count).map((row, index) => ({
     rank: index + 1,
-    globalRank: Number(row?.rank ?? 0) || index + 1,
+    globalRank: fullRank.get(String(row?.uid ?? '')) || index + 1,
+    /* 接口的 rank 字段是影画数（实测 0~6，同一 UID 在详情接口里也是这个值），
+       不是名次；以前当成名次再配 `|| index + 1` 兜底，导致影画 0 的人退化成序号，
+       出现「#3 / #5 / #10」这种既重复又乱序的列。 */
+    constellation: Number(row?.rank ?? 0) || 0,
+    constellationText: `影画${Number(row?.rank ?? 0) || 0}`,
     uid: String(row?.uid ?? ''),
     nickname: row?.user_case?.nick_name || '',
     level: Number(row?.level ?? 0) || 0,
