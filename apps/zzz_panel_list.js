@@ -117,9 +117,31 @@ function getPlayerBadge(e, gamePlayer = null) {
 }
 
 /** 多账号 CK 里挑出与当前 ZZZ UID 匹配的那条，避免拿到原神/别的账号的 cookie */
+/**
+ * 从 CK 表里挑出与目标 uid 对应的那一条。
+ *
+ * 不能「匹配不到就回落 list[0]」：CK 表是按 ltuid 存的，条目里的 uid 是
+ * 该账号上次绑定/查询过的游戏 UID。换过号、从 ZZZ-Plugin 迁移过数据、
+ * 或表里只记了账号 1 的 uid 时，回落会拿**别人的 cookie** 去请求目标 uid，
+ * 结果不是 10041，就是返回另一个账号下同名角色的数据 —— 后者更危险，
+ * 因为看起来「查成功了」。
+ *
+ * 因此策略是：
+ *   1) uid 精确匹配 → 用它
+ *   2) 只有一个账号 → 用它（单账号用户没有歧义）
+ *   3) 多个账号但都对不上 → 返回 null，由调用方明确报错，不要瞎猜
+ */
 function pickCkItem(ck, uid = '') {
   const list = Object.values(ck || {}).filter(item => item?.ck)
-  return list.find(item => String(item.uid) === String(uid)) || list[0] || null
+  if (!list.length) return null
+  const want = String(uid || '')
+  if (want) {
+    const hit = list.find(item => String(item.uid) === want)
+    if (hit) return hit
+  }
+  if (list.length === 1) return list[0]
+  /* 多个账号且无法定位目标 → 不猜 */
+  return null
 }
 
 /** CK 对象 -> 字符串（mhy.getHeaders 只认字符串） */
@@ -321,6 +343,15 @@ async function zzzAutoVerify(e, ck, uid = '') {
 
 /** 直接请求 ZZZ record 接口：返回 data，失败抛带 retcode/message 的错误，便于面板显示真实原因 */
 async function zzzGet(e, uid, ck, type, query, extraHeaders = {}, retried = false) {
+  /* 先确认能定位到目标 uid 对应的 CK：pickCkItem 在「多账号但对不上」时返回 null，
+     这里必须报错而不是带着空 Cookie 去请求（那样只会拿到 10041 或被当成未登录）。 */
+  if (!pickCkItem(ck, uid)) {
+    throw new Error(
+      `找不到 UID ${uid} 对应的米游社账号 CK`
+      + `（该 QQ 绑定了多个账号，但没有任何一个记录到这个 UID）。`
+      + `请重新绑定该账号或确认 UID 是否正确。`,
+    )
+  }
   const base = type === 'user'
     ? 'https://api-takumi.mihoyo.com/binding/api/getUserGameRolesByCookie'
     : type === 'index'
