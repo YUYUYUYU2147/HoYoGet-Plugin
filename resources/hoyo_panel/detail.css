@@ -841,6 +841,77 @@ body.elem-physical { --elem-line: rgba(207, 216, 227, .9); --elem-glow: rgba(180
 }
 .ak-rdmg { text-align: right; font-weight: 800; color: #ffd27a; }
 
+/* ───── 星铁工坊：遗器排名 / 队伍配队（替代星铁缺失的 Akasha 模块） ───── */
+.sw-note {
+  margin-left: 6px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: #5f819b;
+}
+.sw-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) 34px 52px;
+  gap: 6px;
+  align-items: center;
+  padding: 3px 0;
+  font-size: 11px;
+}
+.sw-cons { text-align: center; font-size: 9px; color: #7fa2bd; white-space: nowrap; }
+.sw-pt {
+  text-align: right;
+  font-weight: 800;
+  color: #ffd27a;
+  font-variant-numeric: tabular-nums;
+}
+
+.sw-team { margin-top: 7px; }
+.sw-team + .sw-team {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(120, 180, 220, .14);
+}
+.sw-thead { display: flex; align-items: center; gap: 6px; }
+.sw-tname {
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 800;
+  color: #cfe4f2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sw-stars { flex: none; margin-left: auto; font-size: 9px; letter-spacing: .5px; color: #ffd27a; }
+.sw-members {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px 6px;
+  margin-top: 4px;
+}
+.sw-m { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.sw-ava {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(120, 180, 220, .34);
+}
+.sw-ava img { width: 100%; height: 100%; object-fit: cover; }
+.sw-mname {
+  min-width: 0;
+  font-size: 10px;
+  color: #cfe4f2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 当前面板角色高亮，方便一眼看出队伍里哪个是 TA */
+.sw-m.on .sw-ava { border-color: #ffd27a; box-shadow: 0 0 0 1px rgba(255, 210, 122, .35); }
+.sw-m.on .sw-mname { color: #ffe699; font-weight: 800; }
+.sw-foot { font-size: 9px; color: #5f819b; letter-spacing: .3px; }
+
 /* ───── 圣遗物 / 遗器 ───── */
 .equip {
   display: grid;
@@ -848,6 +919,10 @@ body.elem-physical { --elem-line: rgba(207, 216, 227, .9); --elem-glow: rgba(180
   gap: 10px;
   align-items: start;
 }
+
+/* 星铁属性行比原神多（速度/击破/命中/抵抗/治疗/充能），立绘卡加高一点，
+   否则 Apple 主题（面板 top 82 / bottom 12）会把最后一行裁掉。 */
+body.game-sr .hero { min-height: 500px; }
 
 /* 星铁有 6 件遗器：武器单独占满一行（横向排布），遗器正好 3 个一行、排两行，
    否则最后一件会孤零零掉到第三行。 */

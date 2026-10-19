@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { config, pluginPriority, render } from '#HoYoGet'
 import { listCategories, fetchLeaderboard, getUserCalculations, getDamageDistribution } from '../system/akasha.js'
 import { getRoleProfile } from '../system/roleProfile.js'
+import { srPanelExtras } from '../system/sr_panel.js'
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const YUNZAI_DB = path.join(process.cwd(), 'data', 'db', 'data.db')
@@ -231,18 +232,40 @@ const GS_STAT_CN = {
   pyro: '火元素伤害', hydro: '水元素伤害', cryo: '冰元素伤害', electro: '雷元素伤害',
   anemo: '风元素伤害', geo: '岩元素伤害', dendro: '草元素伤害', phys: '物理伤害',
 }
+/* 星铁的键与 miao 的 AttrData 一致：speed / stance / effPct / effDef；
+   旧写法 spd / mastery / effect / resist 保留为别名，兼容历史缓存数据。 */
 const SR_STAT_CN = {
-  hp: '生命值', atk: '攻击力', def: '防御力', spd: '速度', mastery: '击破特攻',
+  hp: '生命值', atk: '攻击力', def: '防御力',
+  speed: '速度', spd: '速度',
+  stance: '击破特攻', mastery: '击破特攻',
   cpct: '暴击率', cdmg: '暴击伤害', recharge: '能量恢复效率',
-  effect: '效果命中', resist: '效果抵抗', heal: '治疗量加成', dmg: '伤害加成', atkBase: '基础攻击力',
+  effPct: '效果命中', effect: '效果命中',
+  effDef: '效果抵抗', resist: '效果抵抗',
+  heal: '治疗加成', shield: '护盾强效', dmg: '伤害加成', atkBase: '基础攻击力',
   hpPlus: '生命值', atkPlus: '攻击力', defPlus: '防御力',
 }
 /** 需要带 % 的键；其余按整数处理 */
 const PCT_KEYS = new Set([
   'cpct', 'cdmg', 'recharge', 'heal', 'shield', 'dmg', 'hpp', 'atkp', 'defp',
   'pyro', 'hydro', 'cryo', 'electro', 'anemo', 'geo', 'dendro', 'phys',
-  'effect', 'resist',
+  'effect', 'resist', 'stance', 'effPct', 'effDef', 'elation',
 ])
+/* 星铁元素（miao 用小写英文）→ 中文，用于「量子属性伤害加成」这类标签 */
+const SR_ELEM_CN = {
+  physical: '物理', fire: '火', ice: '冰', lightning: '雷',
+  wind: '风', quantum: '量子', imaginary: '虚数',
+}
+/* 星铁增伤词条的图标：miao 只有原神七元素 + 量子，火/冰/雷/风借用对应元素图，
+   虚数没有素材就不显示图标（模板里 aicon-wrap 会占位，不会错位） */
+const SR_ELEM_ICON = {
+  physical: { icon: 'Physical.png', iconMiao: false },
+  fire: { icon: 'common/bg/talent-pyro.webp', iconMiao: true },
+  ice: { icon: 'common/bg/talent-cryo.webp', iconMiao: true },
+  lightning: { icon: 'common/bg/talent-electro.webp', iconMiao: true },
+  wind: { icon: 'common/bg/talent-anemo.webp', iconMiao: true },
+  quantum: { icon: 'common/bg/talent-quantum.webp', iconMiao: true },
+  imaginary: { icon: '', iconMiao: false },
+}
 /** 原神圣遗物部位（miao 的 artis 数组按此顺序） */
 const GS_SLOTS = ['生之花', '死之羽', '时之沙', '空之杯', '理之冠']
 const SR_SLOTS = ['头部', '手部', '躯干', '脚部', '位面球', '连结绳']
@@ -458,7 +481,14 @@ function flattenArtis(list, game, weights = {}) {
   })
 }
 
-/** 属性行：原神 7 项、星铁 9 项，缺值自动跳过 */
+/**
+ * 属性行：原神 8 项、星铁 12 项，缺值自动跳过。
+ *
+ * 星铁的属性键与 miao 的 AttrData 一致：speed / stance / effPct / effDef；
+ * 之前写成了 spd / mastery / effect / resist，导致速度、击破、命中、抵抗全部取不到。
+ * 双爆/命中/抵抗这类「天生就有基础值」的项一直显示；击破/治疗/增伤在 0 时隐藏，
+ * 避免整列都是 0.0%。
+ */
 function detailAttrRows(profile, game, weights = {}) {
   const a = profile?.attr || {}
   const b = profile?.base || {}
@@ -466,13 +496,19 @@ function detailAttrRows(profile, game, weights = {}) {
   /* 伤害加成：物理杯时 miao 把 phy 当主增伤，取大的那个 */
   const dmgKey = !isSr && Number(a.phy) > Number(a.dmg) ? 'phy' : 'dmg'
   const spec = isSr
-    ? [['hp', '生命值'], ['atk', '攻击力'], ['def', '防御力'], ['spd', '速度'],
-      ['cpct', '暴击率'], ['cdmg', '暴击伤害'], ['mastery', '击破特攻'],
-      ['effect', '效果命中'], ['resist', '效果抵抗']]
-    : [['hp', '生命值上限'], ['atk', '攻击力'], ['def', '防御力'], ['mastery', '元素精通'],
-      ['cpct', '暴击率'], ['cdmg', '暴击伤害'], ['recharge', '元素充能效率'],
-      ['dmg', '伤害加成']]
-  const pctKeys = new Set(['cpct', 'cdmg', 'recharge', 'effect', 'resist', 'dmg', 'phy'])
+    ? [['hp', '生命值', true], ['atk', '攻击力', true], ['def', '防御力', true],
+      ['speed', '速度', true], ['cpct', '暴击率', true], ['cdmg', '暴击伤害', true],
+      ['dmg', '伤害加成', false], ['stance', '击破特攻', false],
+      /* 命中/抵抗/治疗即使为 0 也列出来：游戏内属性页就是这么显示的，
+         也让「这个词条面板有」一目了然 */
+      ['effPct', '效果命中', true], ['effDef', '效果抵抗', true],
+      ['heal', '治疗加成', true], ['recharge', '能量恢复效率', true]]
+    : [['hp', '生命值上限', true], ['atk', '攻击力', true], ['def', '防御力', true],
+      ['mastery', '元素精通', true], ['cpct', '暴击率', true], ['cdmg', '暴击伤害', true],
+      ['recharge', '元素充能效率', true], ['dmg', '伤害加成', true]]
+  const pctKeys = new Set([
+    'cpct', 'cdmg', 'recharge', 'heal', 'dmg', 'phy', 'stance', 'effPct', 'effDef', 'elation',
+  ])
   /* 生命值不保留小数，其余数值与 miao 一致保留 1 位 */
   const fmt = (n, pct, int) => {
     const v = Number(n)
@@ -480,32 +516,43 @@ function detailAttrRows(profile, game, weights = {}) {
     if (pct) return `${v.toFixed(1)}%`
     return v.toLocaleString('en-US', { minimumFractionDigits: int ? 0 : 1, maximumFractionDigits: int ? 0 : 1 })
   }
-  const elemCn = Object.keys(ELEM_NAME_ICON).find(k => ELEM_NAME_ICON[k] === String(profile?.char?.elem || ''))
-  return spec.map(([k, label]) => {
+  const elem = String(profile?.char?.elem || '')
+  const elemCn = isSr
+    ? SR_ELEM_CN[elem] || ''
+    : Object.keys(ELEM_NAME_ICON).find(k => ELEM_NAME_ICON[k] === elem)
+  return spec.map(([k, label, always]) => {
     const key = k === 'dmg' ? dmgKey : k
     const v = a[key]
     if (v == null || v === '') return null
-    const n = Number(v)
+    let n = Number(v)
     if (!Number.isFinite(n)) return null
+    /* 星铁 attr.recharge 只是「额外充能」（如 24.4），面板上的终值要加 100 */
+    if (isSr && key === 'recharge') n += 100
+    if (!always && Math.abs(n) < 0.05) return null
     /* miao 的 attr 百分比字段已经是「百分数」（暴击率 59.44 表示 59.44%），
        直接拼 % 即可；旧代码再乘 100 会变成 5944%。 */
     const pct = pctKeys.has(key)
     const int = key === 'hp'
     const baseN = Number(b[key])
-    const hasBase = Number.isFinite(baseN)
+    /* 充能是「100 + 额外」，基础值没有意义；其余项基础为 0 时不显示副行 */
+    const hasBase = key !== 'recharge' && Number.isFinite(baseN) && baseN > 0
     const plusN = n - (hasBase ? baseN : 0)
     /* 权重来自 miao 的 charWeight（0-100）：双爆 100、攻击 75 这种；
        0 或缺失就不显示徽章，避免满屏 0 */
     const weight = Number(weights[key] ?? weights[k]) || 0
-    const dmgName = key === 'phy' ? '物理伤害加成' : (elemCn ? `${elemCn}元素伤害加成` : '')
+    const dmgName = key === 'phy'
+      ? '物理伤害加成'
+      : (elemCn ? `${elemCn}${isSr ? '属性' : '元素'}伤害加成` : '')
     return {
       key: k,
-      label,
+      label: key === 'dmg' && dmgName ? dmgName : label,
       value: fmt(n, pct, int),
       base: hasBase ? fmt(baseN, pct, int) : '',
       plus: hasBase ? `${plusN >= 0 ? '+' : ''}${fmt(plusN, pct, int)}` : '',
       weight,
-      ...propIcon({ key, name: key === 'dmg' || key === 'phy' ? dmgName : '' }),
+      ...(isSr && key === 'dmg' && SR_ELEM_ICON[elem]
+        ? SR_ELEM_ICON[elem]
+        : propIcon({ key, name: key === 'dmg' || key === 'phy' ? dmgName : '' })),
     }
   }).filter(Boolean)
 }
@@ -516,11 +563,13 @@ function detailAttrRows(profile, game, weights = {}) {
  */
 function buildRadar(profile, game) {
   const a = profile?.attr || {}
+  /* miao 的 attr 里 cpct/cdmg/recharge 已经是百分数（41.5 表示 41.5%），
+     不能再 ×100，否则双爆永远贴边。星铁的速度键是 speed（不是 spd）。 */
   const axes = game === 'sr'
     ? [['生命值', a.hp, 8000], ['攻击力', a.atk, 3000], ['防御力', a.def, 1200],
-      ['暴击率', Number(a.cpct) * 100, 100], ['暴击伤害', Number(a.cdmg) * 100, 250], ['速度', a.spd, 160]]
+      ['暴击率', a.cpct, 100], ['暴击伤害', a.cdmg, 250], ['速度', a.speed, 160]]
     : [['生命值', a.hp, 35000], ['攻击力', a.atk, 2600], ['防御力', a.def, 1800],
-      ['暴击率', Number(a.cpct) * 100, 100], ['暴击伤害', Number(a.cdmg) * 100, 250], ['元素充能', Number(a.recharge) * 100, 200]]
+      ['暴击率', a.cpct, 100], ['暴击伤害', a.cdmg, 250], ['元素充能', a.recharge, 200]]
   const cx = 92
   const cy = 92
   const r = 62
@@ -589,6 +638,8 @@ function detailTalents(profile, game, imgs = {}) {
  */
 const VALID_SUB_KEYS = new Set([
   'cpct', 'cdmg', 'atk', 'hp', 'def', 'atkp', 'hpp', 'defp', 'recharge', 'mastery',
+  /* 星铁特有的副词条（miao 的键名） */
+  'speed', 'stance', 'effPct', 'effDef',
 ])
 
 /**
@@ -604,8 +655,13 @@ const GS_SUB_AVG = {
 }
 const SR_SUB_AVG = {
   hp: 38, atk: 19, def: 19,
-  hpp: 3.89, atkp: 3.89, defp: 4.86, spd: 2.3,
-  cpct: 2.83, cdmg: 5.67, effect: 3.46, resist: 3.46, mastery: 5.83,
+  hpp: 3.89, atkp: 3.89, defp: 4.86,
+  /* miao 的键名；后面几个旧别名只为兼容 */
+  speed: 2.3, spd: 2.3,
+  cpct: 2.83, cdmg: 5.67,
+  stance: 5.83, mastery: 5.83,
+  effPct: 3.46, effect: 3.46,
+  effDef: 3.46, resist: 3.46,
   hpPlus: 38, atkPlus: 19, defPlus: 19,
 }
 
@@ -1461,8 +1517,10 @@ export class hoyo_panel extends plugin {
       /* Akasha 只有原神有榜；随机背景与它并行请求，两者失败都不影响面板。
          玩家头像/昵称与「原石统计」同源（roleProfile 的 index 接口），
          它内部已兜底，取不到就只是不显示这个角标。 */
-      const [akasha, randomBg, miaoDmg, roleInfo] = await Promise.all([
+      /* Akasha 只有原神榜；星铁右栏改取星穹铁道工坊的遗器排名与队伍配队。 */
+      const [akasha, srWorkshop, randomBg, miaoDmg, roleInfo] = await Promise.all([
         game === 'gs' && hit?.char?.id ? akashaForChar(hit.char.id, uid, hit?.char?.name || '') : Promise.resolve(null),
+        game === 'sr' ? srPanelExtras({ name: data.name, level: data.level }).catch(() => null) : Promise.resolve(null),
         randomBgUrl(),
         miaoDmgTable(hit),
         getRoleProfile(e, uid, game).catch(() => ({})),
@@ -1480,6 +1538,7 @@ export class hoyo_panel extends plugin {
         nickname: roleInfo?.nickname || info.nickname || info.name || '',
         ownerAvatar: roleInfo?.avatar || '',
         akasha,
+        srWorkshop,
         miaoDmg,
         randomBg,
         appleStyle: style === 'apple',

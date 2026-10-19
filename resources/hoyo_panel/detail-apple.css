@@ -262,6 +262,15 @@ body {
 .ak-wq { color: var(--ap-mute); }
 .ak-rdmg { color: var(--ap-text); font-weight: 600; font-variant-numeric: tabular-nums; }
 
+/* 星铁工坊模块（遗器排名 / 队伍配队） */
+.sw-note, .sw-cons, .sw-foot { color: var(--ap-mute); }
+.sw-pt { color: var(--ap-text); font-weight: 600; }
+.sw-tname, .sw-mname { color: #d1d1d6; }
+.sw-stars { color: var(--ap-yellow); }
+.sw-m.on .sw-ava { border-color: var(--ap-yellow); box-shadow: none; }
+.sw-m.on .sw-mname { color: var(--ap-yellow); font-weight: 600; }
+.sw-team + .sw-team { border-top-color: var(--ap-line); }
+
 /* ───── 页脚 ───── */
 .set-pill {
   background: rgba(255, 255, 255, .08);

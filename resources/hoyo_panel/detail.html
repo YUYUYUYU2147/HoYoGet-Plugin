@@ -289,6 +289,50 @@
           </div>
           {{/if}}
 
+          {{if srWorkshop}}
+          <div class="akasha sw">
+            {{if srWorkshop.rank}}
+            <div class="ak-board">
+              <div class="ak-title">工坊 · 遗器排名<span class="sw-note">Lv.{{srWorkshop.rank.level}} 角色柜前 5</span></div>
+              {{each srWorkshop.rank.rows r}}
+              <div class="sw-row">
+                <span class="ak-rk">{{r.rank}}</span>
+                <span class="ak-nick">{{r.nickname}}</span>
+                <span class="sw-cons">{{r.consText}}</span>
+                <span class="sw-pt">{{r.pointText}}</span>
+              </div>
+              {{/each}}
+            </div>
+            {{/if}}
+
+            {{if srWorkshop.teams.length}}
+            <div class="ak-rank">
+              <div class="ak-title">工坊 · 队伍配队</div>
+              {{each srWorkshop.teams t}}
+              <div class="sw-team">
+                <div class="sw-thead">
+                  <span class="sw-tname">{{t.name}}</span>
+                  <span class="sw-stars">{{t.stars}}</span>
+                </div>
+                <div class="sw-members">
+                  {{each t.members m}}
+                  <span class="sw-m {{if m.on}}on{{/if}}">
+                    <span class="sw-ava">
+                      {{if m.face}}<img src="{{_miao_path}}{{m.face}}" onerror="this.style.display='none'">{{/if}}
+                    </span>
+                    <span class="sw-mname">{{m.name}}</span>
+                  </span>
+                  {{/each}}
+                </div>
+              </div>
+              {{/each}}
+            </div>
+            {{/if}}
+
+            <div class="sw-foot">数据来源：星穹铁道工坊角色柜 · 无需绑定账号</div>
+          </div>
+          {{/if}}
+
           {{if akasha}}
           <div class="akasha">
             <div class="ak-rank">
