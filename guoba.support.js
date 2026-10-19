@@ -13,6 +13,11 @@ function getDataMode() {
   return v === 'test' ? 'test' : 'official'
 }
 
+/** 单角色面板风格：dark=暗色霓虹（默认） / apple=Apple 深色玻璃 */
+function getPanelStyle() {
+  return String(getCfg().panel_style || 'dark').trim().toLowerCase() === 'apple' ? 'apple' : 'dark'
+}
+
 function getOther() {
   return yaml.get(_path + 'other.yaml') || {}
 }
@@ -1297,6 +1302,22 @@ export const supportGuoba = () => {
       },
       {
         component: 'SOFT_GROUP_BEGIN',
+        label: '面板',
+      },
+      {
+        field: 'panel_style',
+        label: '单角色面板风格',
+        helpMessage: 'dark=暗色霓虹（默认）；apple=Apple 深色玻璃（半透明卡片 + 背景模糊，保留立绘）。只影响 #米哈游xx面板 <角色>，改完即生效',
+        component: 'RadioGroup',
+        componentProps: {
+          options: [
+            { label: '暗色霓虹', value: 'dark' },
+            { label: 'Apple 玻璃', value: 'apple' },
+          ],
+        },
+      },
+      {
+        component: 'SOFT_GROUP_BEGIN',
         label: '其他',
       },
       {
@@ -1334,6 +1355,7 @@ export const supportGuoba = () => {
       return {
         // 数据模式：面板上要能读到当前值，否则单选框显示不出选中的那一项
         data_mode: getDataMode(),
+        panel_style: getPanelStyle(),
         update: !!cfg.update,
         img_quality: cfg.img_quality ?? 80,
         wiki: !!cfg.wiki,
@@ -1550,6 +1572,10 @@ export const supportGuoba = () => {
          schema 有字段、getter 也能读，唯独保存时没写回去。 */
       if (data.data_mode != null) {
         yaml.set(_path + 'config.yaml', 'data_mode', String(data.data_mode).trim() === 'test' ? 'test' : 'official')
+      }
+      /* 面板风格同样只认 dark / apple，其它值一律回落到 dark */
+      if (data.panel_style != null) {
+        yaml.set(_path + 'config.yaml', 'panel_style', String(data.panel_style).trim().toLowerCase() === 'apple' ? 'apple' : 'dark')
       }
       for (const [k, v] of Object.entries(boolMap)) {
         const target = ['forwardMsg', 'bh3', 'by', 'xbgd', 'cover'].includes(k) ? 'other.yaml' : 'config.yaml'
