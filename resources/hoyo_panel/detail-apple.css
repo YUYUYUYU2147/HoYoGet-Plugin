@@ -72,6 +72,12 @@ body {
   backdrop-filter: blur(10px);
   box-shadow: 0 2px 10px rgba(0, 0, 0, .3);
 }
+/* 点亮命座：元素色描边 + 外发光 + 元素色底（变量来自 detail.css 的 body.elem-*） */
+.cons-item.on {
+  border-color: var(--elem-line, rgba(255, 255, 255, .55));
+  background: radial-gradient(circle at 50% 38%, var(--elem-fill, rgba(255, 255, 255, .22)), var(--elem-bg, rgba(28, 28, 30, .55)) 82%);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .3), 0 0 12px var(--elem-glow, rgba(255, 255, 255, .2));
+}
 .cons-item.off {
   filter: grayscale(1);
   opacity: .34;

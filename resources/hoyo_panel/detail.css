@@ -137,6 +137,25 @@ body {
   border: 1px solid rgba(150, 220, 255, .75);
   box-shadow: 0 0 8px rgba(96, 200, 255, .35), 0 2px 8px rgba(0, 0, 0, .35);
 }
+/* 命座点亮色跟角色元素走：miao 的命座图标是白色剪影，只改描边还是发白，
+   所以圆片本身也铺一层元素色径向渐变，白图标落上去就带上了属性色。
+   未识别元素时回落到原来的青蓝。 */
+.cons-item.on {
+  border-color: var(--elem-line, rgba(150, 220, 255, .75));
+  background: radial-gradient(circle at 50% 38%, var(--elem-fill, rgba(20, 60, 90, .6)), var(--elem-bg, rgba(10, 30, 50, .55)) 80%);
+  box-shadow: 0 0 10px var(--elem-glow, rgba(96, 200, 255, .35)), 0 2px 8px rgba(0, 0, 0, .35);
+}
+body.elem-pyro { --elem-line: rgba(255, 154, 118, .95); --elem-glow: rgba(255, 110, 70, .55); --elem-fill: rgba(255, 118, 76, .5); --elem-bg: rgba(58, 22, 14, .75); }
+body.elem-hydro { --elem-line: rgba(111, 184, 255, .95); --elem-glow: rgba(70, 150, 255, .55); --elem-fill: rgba(64, 146, 255, .48); --elem-bg: rgba(12, 34, 62, .78); }
+body.elem-electro { --elem-line: rgba(201, 166, 255, .95); --elem-glow: rgba(170, 120, 255, .55); --elem-fill: rgba(164, 118, 255, .48); --elem-bg: rgba(36, 22, 62, .78); }
+body.elem-cryo { --elem-line: rgba(140, 220, 255, .95); --elem-glow: rgba(90, 195, 255, .55); --elem-fill: rgba(84, 194, 255, .46); --elem-bg: rgba(12, 38, 56, .78); }
+body.elem-anemo { --elem-line: rgba(143, 224, 192, .95); --elem-glow: rgba(100, 215, 175, .55); --elem-fill: rgba(92, 214, 172, .46); --elem-bg: rgba(12, 44, 38, .78); }
+body.elem-geo { --elem-line: rgba(255, 210, 122, .95); --elem-glow: rgba(255, 190, 80, .55); --elem-fill: rgba(255, 186, 72, .46); --elem-bg: rgba(52, 38, 14, .78); }
+body.elem-dendro { --elem-line: rgba(166, 224, 106, .95); --elem-glow: rgba(135, 215, 70, .55); --elem-fill: rgba(128, 212, 62, .46); --elem-bg: rgba(26, 46, 14, .78); }
+body.elem-quantum { --elem-line: rgba(169, 155, 255, .95); --elem-glow: rgba(135, 115, 255, .55); --elem-fill: rgba(128, 108, 255, .48); --elem-bg: rgba(26, 22, 62, .78); }
+body.elem-imaginary { --elem-line: rgba(255, 215, 106, .95); --elem-glow: rgba(255, 195, 60, .55); --elem-fill: rgba(255, 196, 62, .46); --elem-bg: rgba(54, 44, 12, .78); }
+body.elem-physical { --elem-line: rgba(207, 216, 227, .9); --elem-glow: rgba(180, 196, 214, .5); --elem-fill: rgba(170, 190, 212, .42); --elem-bg: rgba(30, 36, 46, .78); }
+
 .cons-item.off {
   filter: grayscale(1) brightness(.8);
   opacity: .45;

@@ -733,6 +733,7 @@ function flattenCharDetail(profile, Character, game, meta = {}) {
     abbr: char?.abbr || char?.name || '',
     star: char?.star || 5,
     elem: char?.elem || '',
+    elemKey: elemKeyOf(char?.elem),
     elemName: (game === 'sr' ? (char?.damageType || '') : '') || '',
     level: Number(profile?.level) || 0,
     cons: Number(profile?.cons) || 0,
@@ -1022,6 +1023,15 @@ function buildTeam(cat) {
  * Akasha 只有榜首配装的一条汇总，喵喵这份按招式逐条列出，且就是本地面板算的。
  * 失败（老版本 miao 没有 calcDmg、角色没有 calc 规则）一律返回 null，不影响出图。
  */
+/* 元素键归一：原神 meta 是英文键（pyro/hydro/…），星铁是中文（火/冰/雷/量子/虚数/物理），
+   统一成 `elem-<key>` 类名挂到 body 上，命座点亮色等元素相关样式都吃这一个变量。 */
+const ELEM_KEY_ALIAS = {
+  pyro: 'pyro', hydro: 'hydro', electro: 'electro', cryo: 'cryo', anemo: 'anemo', geo: 'geo', dendro: 'dendro',
+  火: 'pyro', 水: 'hydro', 雷: 'electro', 冰: 'cryo', 风: 'anemo', 岩: 'geo', 草: 'dendro',
+  量子: 'quantum', 虚数: 'imaginary', 物理: 'physical',
+}
+const elemKeyOf = (elem) => ELEM_KEY_ALIAS[String(elem || '').trim().toLowerCase()] || ''
+
 const commaNum = (n) => {
   const v = Number(n)
   if (!Number.isFinite(v)) return ''

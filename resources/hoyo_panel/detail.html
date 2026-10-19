@@ -5,7 +5,7 @@
     <link rel="stylesheet" type="text/css" href="{{ppath}}hoyo_panel/detail.css" />
     {{if appleStyle}}<link rel="stylesheet" type="text/css" href="{{ppath}}hoyo_panel/detail-apple.css" />{{/if}}
   </head>
-  <body class="game-{{game}}" {{sys.scale}}>
+  <body class="game-{{game}}{{if elemKey}} elem-{{elemKey}}{{/if}}" {{sys.scale}}>
     <div class="card">
       {{if randomBg}}
       <img class="bg-layer bg-random" src="{{randomBg}}" onerror="this.style.display='none'">
