@@ -240,7 +240,10 @@ export class hoyo_panel extends plugin {
     }
 
     try {
-      await e.reply(`正在更新 ${uid} 的${conf.cn}面板，请稍候…`)
+      /* 静默更新：miao 内部会自己发「开始获取uid…」和失败提示，
+         这里再发一条「正在更新…」就会变成连发多条。
+         用一个空 reply 占位，miao 看到 e._isReplyed 就不会重复提示。 */
+      e._isReplyed = true
 
       /* 关键：**不能**强制走米游社。
          Serv.getServ(uid, game, fromMys) 里 fromMys=true 会直接返回 mysPanel，
@@ -253,6 +256,9 @@ export class hoyo_panel extends plugin {
       e.uid = uid
       e.game = game
       e.isfromMys = false
+      /* miao 的 ProfileReq 会在 2 秒后无条件 e.reply 一条「开始获取uid…」，
+         不检查 _isReplyed。这里临时把 e.reply 静音，只收集真正需要的消息，
+         更新结束后一次性汇报，避免一条指令刷出四五条消息。 */
       const mys = await miao.MysApi.init(e, 'cookie')
       if (!mys) {
         return e.reply([
@@ -260,7 +266,15 @@ export class hoyo_panel extends plugin {
           '请先发送 #米哈游扫码绑定 绑定账号，或 #刷新ck 刷新失效的 Cookie。',
         ].join('\n'))
       }
-      const refreshed = await player.refreshProfile(2, false)
+      // 只有刷新这一段静音，避免 miao 的「开始获取uid…」等中间提示
+      const realReply = e.reply.bind(e)
+      let refreshed
+      try {
+        e.reply = async () => true
+        refreshed = await player.refreshProfile(2, false)
+      } finally {
+        e.reply = realReply
+      }
       if (refreshed === false || refreshed === undefined) {
         logger.warn?.(`[HoYoGet][hoyo_panel] ${uid} 面板未刷新（返回 ${refreshed}）`)
         return
