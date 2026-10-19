@@ -56,18 +56,31 @@ class mhy {
     const { deviceName, deviceModel, oaid, deviceFingerprint, deviceBoard } = info;
     const device_ = deviceFingerprint.split('/')[0];
     if (!oaid || oaid.includes('error') || /^0+$/.test(oaid)) return e.reply('设备oaid获取失败，你的设备不支持获取');
+    /* device_id 必须全程用同一个值（这里就是 oaid）。
+       之前的写法有三处各自不同的 device_id：
+         · getFp 请求 body 的 device_id = oaid
+         · body 的 bbs_device_id      = getDeviceGuid()（随机）
+         · 请求头 x-rpc-device_id      = getDeviceGuid()（又一次随机）
+       因为 getHeaders 传了 info 时会跳过读存档，device_id 是 undefined，
+       于是落到 `device_id || this.getDeviceGuid()`。
+       结果：device_fp 是按 oaid 申请出来的，存档里却存了一个无关的随机 GUID，
+       米游社按「fp ↔ device_id」成对校验，后续 %更新面板 直接被判
+       10041 设备指纹未通过。这里统一成 oaid。 */
+    const deviceId = String(oaid);
     let body = {
-      device_id: oaid,
+      device_id: deviceId,
       seed_id: this.randomString(16),
       seed_time: new Date().getTime() + '',
       platform: '2',
       device_fp: '38d7f0aac0ab7',
       app_name: 'bbs_cn',
       ext_fields: `{"cpuType":"arm64-v8a","romCapacity":"512","productName":"${deviceName}","romRemain":"459","manufacturer":"${device_}","appMemory":"512","hostname":"${device_}","screenSize":"1440x3022","osVersion":"13","aaid":"${this.getDeviceGuid()}","vendor":"中国电信","accelerometer":"0.061016977x0.8362915x9.826724","buildTags":"release-keys","model":"${deviceModel}","brand":"${device_}","oaid":"${oaid}","hardware":"qcom","deviceType":"${deviceName}","devId":"REL","serialNumber":"unknown","buildTime":"1690889245000","buildUser":"builder","ramCapacity":"229481","magnetometer":"80.64375x-14.1x77.90625","display":"${deviceModel} release-keys","ramRemain":"110308","deviceInfo":"${deviceFingerprint}","gyroscope":"7.9894776E-4x-1.3315796E-4x6.6578976E-4","vaid":"${this.getDeviceGuid()}","buildType":"user","sdkVersion":"33","board":"${deviceBoard}"}`,
-      bbs_device_id: this.getDeviceGuid(),
+      bbs_device_id: deviceId,
     };
 
-    let headers = this.getHeaders(e, ck, true, info);
+    /* 显式把 device_id 交给 getHeaders：它只在 info 为空时才读存档，
+       传了 info 就拿不到 device_id，必须由调用方给。 */
+    let headers = this.getHeaders(e, ck, true, info, deviceId);
 
     let res = await fetch(this.fp_url, {
       method: 'POST',
@@ -82,7 +95,7 @@ class mhy {
       logger.error(res);
       return e.reply('设备绑定失败,未能获取到device_fp');
     }
-    const device_id = headers['x-rpc-device_id'];
+    const device_id = deviceId;
     const device_name = headers['x-rpc-device_name'];
     body = this.getbody_(device_id, device_name);
     const res1 = await fetch(
@@ -108,8 +121,15 @@ class mhy {
       fp: fp,
       device_info: info || '',
     };
-    const yaml_url = `./plugins/HoYoGet-Plugin/data/fp/${e.user_id}.yaml`;
+    const dir = './plugins/HoYoGet-Plugin/data/fp';
+    const yaml_url = `${dir}/${e.user_id}.yaml`;
+    /* 目录不存在时 writeFileSync 会抛 ENOENT，绑定流程看起来「跑完没反应」。
+       先建目录，失败也照样把异常抛出来，不要静默吞掉。 */
+    fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(yaml_url, YAML.stringify(a_), 'utf-8');
+    /* 留一条可核对的日志：存档里的 device_id 必须与申请 fp 时用的一致，
+       否则米游社会按「fp ↔ device_id」成对校验失败（10041）。 */
+    logger.mark(`[HoYoGet] 设备存档 ${e.user_id}: device_id=${device_id} fp=${String(fp).slice(0, 10)}…`);
     let ltuid = this.getUser(e).ltuid;
     //作用ZZZ-plugin???
     await redis.set(`ZZZ:DEVICE_FP:${ltuid}:FP`, fp);
@@ -132,8 +152,9 @@ class mhy {
     return e.user.getMysUser('zzz');
   }
 
-  getHeaders(e, ck, Ds_ = true, info) {
+  getHeaders(e, ck, Ds_ = true, info, forcedDeviceId) {
     let device_id, device_fp;
+    if (forcedDeviceId) device_id = forcedDeviceId;
     if (!info) {
       const yaml_url = `./plugins/HoYoGet-Plugin/data/fp/${e.user_id}.yaml`;
       if (fs.existsSync(yaml_url)) {
