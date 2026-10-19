@@ -430,20 +430,22 @@ function flattenArtis(list, game, weights = {}) {
         const roll = subRoll(p, game)
         /* 评分直接抄 miao：单条副词条的 `_mark` 就是它按角色权重算出的加权分。
            命中次数用 `upNum`：miao 解析面板时按「每次强化一条 attrId」展开，
-           所以 upNum 就是这条副词条实际中了几次（整数）。
-           `eff` 是「数值 ÷ 单档最大值 ÷ 0.85」的等效词条数，只作 upNum 缺失时的兜底。 */
+           upNum 含初始那一次（词条出现时自带一档），所以强化命中次数 = upNum - 1，
+           单个词条最多 5 次。`eff` 是「数值 ÷ 单档最大值 ÷ 0.85」的等效词条数，
+           只在 upNum 缺失时兜底。 */
         const weight = Number(weights?.[weightKeyOf(key)]) || 0
         const markNum = Number(p?._mark)
-        const hit = Number(p?.upNum) || 0
+        const upNum = Number(p?.upNum) || 0
+        const hit = upNum > 0 ? Math.max(0, upNum - 1) : 0
         const miaoEff = Number(String(p?.eff ?? '').replace(/,/g, ''))
-        const rolls = hit > 0 ? hit : (Number.isFinite(miaoEff) && miaoEff > 0 ? miaoEff : (roll?.num || 0))
+        const rolls = upNum > 0 ? hit : (Number.isFinite(miaoEff) && miaoEff > 0 ? miaoEff : (roll?.num || 0))
         return {
           key,
           label: propLabel(p, game),
           value: propText(p),
           ...propIcon(p),
           /* 命中次数（词条数）与进度条宽度；词条不在有效集合里时只淡化显示 */
-          roll: rolls ? (hit > 0 ? String(hit) : rolls.toFixed(1)) : '',
+          roll: upNum > 0 ? String(hit) : (rolls ? rolls.toFixed(1) : ''),
           bar: Math.min(100, Math.round((rolls / 5) * 100)),
           valid: hasWeights ? weight > 0 : roll?.valid === true,
           weight,
