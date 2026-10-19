@@ -92,7 +92,14 @@ const POOL_GAME_NAME = { gs: '原神', sr: '星穹铁道', zzz: '绝区零' };
  * 绝对路径（星铁角标取的是 miao-plugin 的三月七立绘），两种都要能显示，
  * 所以下面按是否含 protocol 决定怎么拼。
  */
+/* 绝区零统计页右上角用游戏 logo，不用卡池 UP 立绘：
+   立绘会随卡池变动、且常带重色背景，压在标题区上不易辨认；
+   logo 是固定标识，一眼能认出是绝区零。
+   其他游戏（原神/星铁/崩三）保持原有卡池立绘不变。 */
+const ZZZ_CORNER_LOGO = 'help/games/zzz-logo.png';
+
 function poolCornerIcon(e, game) {
+    if (game === 'zzz') return ZZZ_CORNER_LOGO;
     try {
         return new xhh_gacha_pool(e).fixedCornerFallback(POOL_GAME_NAME[game] || '') || '';
     } catch (err) {
