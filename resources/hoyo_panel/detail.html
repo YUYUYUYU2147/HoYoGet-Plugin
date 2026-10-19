@@ -46,6 +46,24 @@
               </div>
             </div>
             <div class="uid">UID {{uid}}{{if nickname}} · {{nickname}}{{/if}}</div>
+
+            <div class="attrs">
+              {{each attrs a}}
+              <div class="attr">
+                <span class="a-left">
+                  <span class="aicon-wrap">
+                    {{if a.iconMiao}}
+                    <img class="aicon" src="{{_miao_path}}{{a.icon}}" onerror="this.style.display='none'">
+                    {{else if a.icon}}
+                    <img class="aicon" src="{{ppath}}zzz_panel/images/panel_icons/{{a.icon}}" onerror="this.style.display='none'">
+                    {{/if}}
+                  </span>
+                  <span class="a-label">{{a.label}}</span>
+                </span>
+                <span class="a-value">{{a.value}}</span>
+              </div>
+              {{/each}}
+            </div>
           </div>
 
           {{if weapon}}
@@ -70,24 +88,6 @@
             </div>
           </div>
           {{/if}}
-
-          <div class="attrs">
-            {{each attrs a}}
-            <div class="attr">
-              <span class="a-left">
-                <span class="aicon-wrap">
-                  {{if a.iconMiao}}
-                  <img class="aicon" src="{{_miao_path}}{{a.icon}}" onerror="this.style.display='none'">
-                  {{else if a.icon}}
-                  <img class="aicon" src="{{ppath}}zzz_panel/images/panel_icons/{{a.icon}}" onerror="this.style.display='none'">
-                  {{/if}}
-                </span>
-                <span class="a-label">{{a.label}}</span>
-              </span>
-              <span class="a-value">{{a.value}}</span>
-            </div>
-            {{/each}}
-          </div>
 
           <div class="artis">
             {{each artis a}}
@@ -202,6 +202,23 @@
                 {{/if}}
               </div>
               <div class="ov-valid">有效词条 <b>{{artisOverall.valid}}</b> / {{artisOverall.total}}{{if artisOverall.avg}}<span class="ov-sep">·</span>平均 <b>{{artisOverall.avg}}</b>{{/if}}</div>
+              {{if artisOverall.stats.length}}
+              <div class="ov-eff">
+                <span class="ov-eff-label">词条统计</span>
+                {{if artisOverall.classTitle}}<span class="ov-eff-tag">评分规则 · {{artisOverall.classTitle}}</span>{{/if}}
+              </div>
+              {{/if}}
+              {{if artisOverall.stats.length}}
+              <div class="ov-stats">
+                {{each artisOverall.stats st}}
+                <span class="ov-stat">
+                  <i class="os-r">×{{st.rolls}}</i>
+                  <i class="os-k">{{st.label}}</i>
+                  <i class="os-v">{{st.value}}</i>
+                </span>
+                {{/each}}
+              </div>
+              {{/if}}
             </div>
             {{/if}}
           </div>

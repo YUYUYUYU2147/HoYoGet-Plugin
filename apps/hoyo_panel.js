@@ -225,6 +225,8 @@ const GS_STAT_CN = {
   cpct: '暴击率', cdmg: '暴击伤害', recharge: '元素充能效率',
   heal: '治疗加成', shield: '护盾强效', dmg: '伤害加成',
   hpp: '生命值', atkp: '攻击力', defp: '防御力',
+  /* miao 的圣遗物词条键：atk/hp/def 是大词条（百分比），*Plus 是小词条（固定值） */
+  hpPlus: '生命值', atkPlus: '攻击力', defPlus: '防御力', phy: '物理伤害加成',
   pyro: '火元素伤害', hydro: '水元素伤害', cryo: '冰元素伤害', electro: '雷元素伤害',
   anemo: '风元素伤害', geo: '岩元素伤害', dendro: '草元素伤害', phys: '物理伤害',
 }
@@ -232,6 +234,7 @@ const SR_STAT_CN = {
   hp: '生命值', atk: '攻击力', def: '防御力', spd: '速度', mastery: '击破特攻',
   cpct: '暴击率', cdmg: '暴击伤害', recharge: '能量恢复效率',
   effect: '效果命中', resist: '效果抵抗', heal: '治疗量加成', dmg: '伤害加成',
+  hpPlus: '生命值', atkPlus: '攻击力', defPlus: '防御力',
 }
 /** 需要带 % 的键；其余按整数处理 */
 const PCT_KEYS = new Set([
@@ -310,7 +313,10 @@ const PROP_ICON = {
   hpp: 'IconHpMax.png',
   atk: 'IconAttack.png',
   atkp: 'IconAttack.png',
+  hpPlus: 'IconHpMax.png',
+  atkPlus: 'IconAttack.png',
   def: 'IconDef.png',
+  defPlus: 'IconDef.png',
   defp: 'IconDef.png',
   mastery: 'IconElementMystery.png',
   cpct: 'IconCrit.png',
@@ -359,9 +365,13 @@ function artisList(profile) {
         .map(k => items[k])
         .filter(Boolean)
       if (arr.length) {
-        /* 把总评挂在数组上，flattenCharDetail 取总分时直接读这里 */
+        /* 把总评挂在数组上，flattenCharDetail 取总分时直接读这里。
+           charWeight 是 miao 按角色/武器/套装算出的副词条权重（0-100），
+           classTitle 形如「绫华-通用」，评分与词条统计都要乘这张表。 */
         arr.markClass = detail.markClass || ''
         arr.totalMark = Number(detail._mark) || 0
+        arr.charWeight = detail.charWeight || {}
+        arr.classTitle = detail.classTitle || ''
         return arr
       }
     }
@@ -380,8 +390,10 @@ function artisList(profile) {
   return []
 }
 
-function flattenArtis(list, game) {
+function flattenArtis(list, game, weights = {}) {
   const slots = game === 'sr' ? SR_SLOTS : GS_SLOTS
+  /* 有 miao 的权重表就以它为准（权重 0 的词条视为无效），没有才退回键名白名单 */
+  const hasWeights = Object.keys(weights).length > 0
   return list.map((item, i) => {
     const mains = Array.isArray(item?.main) ? item.main : (item?.main ? [item.main] : [])
     const subs = Array.isArray(item?.attrs) ? item.attrs : (Array.isArray(item?.subs) ? item.subs : [])
@@ -402,16 +414,26 @@ function flattenArtis(list, game) {
       score: item?._mark != null ? (Math.round(item._mark * 10) / 10).toFixed(1) : '',
       main: mains.slice(0, 1).map(p => ({ key: propKey(p), label: propLabel(p, game), value: propText(p), ...propIcon(p) })).filter(x => x.label && x.value),
       subs: subs.slice(0, 4).map(p => {
+        const key = propKey(p)
         const roll = subRoll(p, game)
+        /* 评分直接抄 miao：单条副词条的 `_mark` 就是它按角色权重算出的加权分，
+           `eff` 是它自己的词条数（已按 0.85 折算）。这里只做换算与展示，不另起算法。 */
+        const weight = Number(weights?.[weightKeyOf(key)]) || 0
+        const markNum = Number(p?._mark)
+        const miaoEff = Number(String(p?.eff ?? '').replace(/,/g, ''))
+        const rolls = Number.isFinite(miaoEff) && miaoEff > 0 ? miaoEff : (roll?.num || 0)
         return {
-          key: propKey(p),
+          key,
           label: propLabel(p, game),
           value: propText(p),
           ...propIcon(p),
           /* 命中次数（词条数）与进度条宽度；词条不在有效集合里时只淡化显示 */
-          roll: roll?.text || '',
-          bar: roll?.bar || 0,
-          valid: roll?.valid === true,
+          roll: rolls ? rolls.toFixed(1) : '',
+          bar: Math.min(100, Math.round((rolls / 5) * 100)),
+          valid: hasWeights ? weight > 0 : roll?.valid === true,
+          weight,
+          useful: weight > 0,
+          eff: Number.isFinite(markNum) ? markNum / 100 : 0,
         }
       }).filter(x => x.label && x.value),
     }
@@ -512,28 +534,39 @@ function detailTalents(profile, game, imgs = {}) {
 }
 
 /**
- * 圣遗物总评：总分取 miao 的 `artis._mark`，
- * 「有效词条」按暴击/暴伤/攻击%/生命%/防御%/充能/精通的副词条条数近似统计
- * （miao 的权重表未对外暴露，这里只是本插件口径，不是工坊/akasha 的绝对值）。
+ * 圣遗物总评：总分取 miao 的 `artis._mark`。
+ * 词条统计按「词条数 × 角色权重」折算，权重来自 `getArtisMark(true).charWeight`
+ * （miao 按角色/武器/套装算出的 0-100 表，暴击率/暴伤 100、攻击% 75 …），
+ * 所以有效词条分与喵喵面板同口径；这里仍不搬 miao 的评分代码。
  */
-const VALID_SUB_KEYS = new Set(['cpct', 'cdmg', 'atkp', 'hpp', 'defp', 'recharge', 'mastery'])
+const VALID_SUB_KEYS = new Set([
+  'cpct', 'cdmg', 'atk', 'hp', 'def', 'atkp', 'hpp', 'defp', 'recharge', 'mastery',
+])
 
 /**
  * 副词条「命中次数」：词条数值 ÷ 单词条平均档位。
  * 平均档位取 5★ 圣遗物 / 遗器各词条档位的均值（暴击率 3.3%、暴击伤害 6.6% …），
- * 与社区常用的「词条数」口径一致；miao 的逐角色权重表未对外暴露，
- * 因此这里只做数值折算，不乘角色权重。
+ * 与社区常用的「词条数」口径一致；角色权重在 flattenArtis 里再乘上。
  */
 const GS_SUB_AVG = {
   hp: 239.4, atk: 15.56, def: 18.5,
   hpp: 4.96, atkp: 4.96, defp: 6.2,
   cpct: 3.3, cdmg: 6.6, recharge: 5.5, mastery: 19.75,
+  hpPlus: 239.4, atkPlus: 15.56, defPlus: 18.5, phy: 6.2,
 }
 const SR_SUB_AVG = {
   hp: 38, atk: 19, def: 19,
   hpp: 3.89, atkp: 3.89, defp: 4.86, spd: 2.3,
   cpct: 2.83, cdmg: 5.67, effect: 3.46, resist: 3.46, mastery: 5.83,
+  hpPlus: 38, atkPlus: 19, defPlus: 19,
 }
+
+/* miao 的权重表用 dmg/phy 归并元素伤害加成，这里把具体元素键映射过去 */
+const WEIGHT_KEY_ALIAS = {
+  pyro: 'dmg', hydro: 'dmg', cryo: 'dmg', electro: 'dmg', anemo: 'dmg',
+  geo: 'dmg', dendro: 'dmg', quantum: 'dmg', phys: 'phy',
+}
+const weightKeyOf = k => WEIGHT_KEY_ALIAS[k] || k
 
 function subRoll(p, game) {
   const key = propKey(p)
@@ -546,23 +579,48 @@ function subRoll(p, game) {
   const rolls = Math.max(0, value / avg)
   return {
     text: rolls.toFixed(1),
+    num: rolls,
     /* 单词条最多约 5 档（4 词条起手 + 5 次强化），进度条按 5 档封顶 */
     bar: Math.min(100, Math.round((rolls / 5) * 100)),
     valid: VALID_SUB_KEYS.has(key),
   }
 }
 
-function buildArtisOverall(artis, score, markClass) {
+function buildArtisOverall(artis, score, markClass, opts = {}) {
   if (!artis.length) return null
   let valid = 0
+  const stat = new Map()
   const rows = artis.map(a => {
     let own = 0
     for (const s of (a.subs || [])) {
-      if (VALID_SUB_KEYS.has(s.key)) own++
+      /* 有效 = 该词条对本角色权重 > 0；词条分再按权重折算，不再只数条数 */
+      if (!s.useful) continue
+      own++
+      valid++
+      const cur = stat.get(s.key) || {
+        key: s.key, label: s.label, rolls: 0, eff: 0, num: 0,
+        pct: PCT_KEYS.has(s.key), ...propIcon({ key: s.key }),
+      }
+      cur.rolls += Number(s.roll) || 0
+      cur.eff += s.eff || 0
+      cur.num += Number(String(s.value).replace(/%/g, '')) || 0
+      stat.set(s.key, cur)
     }
-    valid += own
-    return { slot: a.slot, score: a.score || '-', valid: own, markClass: a.markClass || '' }
+    return {
+      slot: a.slot,
+      score: a.score || '-',
+      valid: own,
+      markClass: a.markClass || '',
+    }
   })
+  const stats = [...stat.values()]
+    .sort((x, y) => y.eff - x.eff)
+    .map(x => ({
+      ...x,
+      rolls: x.rolls.toFixed(1),
+      eff: x.eff.toFixed(1),
+      value: x.pct ? `${x.num.toFixed(1)}%` : String(Math.round(x.num)),
+    }))
   return {
     score: score || '-',
     grade: markKeyOf(markClass),
@@ -570,6 +628,8 @@ function buildArtisOverall(artis, score, markClass) {
     valid,
     total: artis.length * 4,
     rows,
+    stats,
+    classTitle: opts.classTitle || '',
     avg: score ? (Number(score) / artis.length).toFixed(1) : '',
   }
 }
@@ -591,7 +651,8 @@ function flattenCharDetail(profile, Character, game, meta = {}) {
   const char = profile?.char || {}
   const imgs = char?.imgs || {}
   const artis = artisList(profile)
-  const equip = flattenArtis(artis, game)
+  const charWeight = artis.charWeight || {}
+  const equip = flattenArtis(artis, game, charWeight)
   const weapon = profile?.weapon || {}
   const weaponIcon = stripSlash(weapon?.imgs?.icon || weapon?.icon || weapon?.img || '')
   const weaponMains = Array.isArray(weapon?.attrs) ? weapon.attrs : []
@@ -656,7 +717,9 @@ function flattenCharDetail(profile, Character, game, meta = {}) {
     artis: equip,
     sets: setSummary(equip),
     talents: detailTalents(profile, game, imgs),
-    artisOverall: buildArtisOverall(equip, score, artis.markClass || profile?.artis?.markClass || ''),
+    artisOverall: buildArtisOverall(equip, score, artis.markClass || profile?.artis?.markClass || '', {
+      classTitle: artis.classTitle || '',
+    }),
     score,
     scoreClass: profile?.artis?.markClass || '',
   }
