@@ -8,58 +8,53 @@
     <div class="page">
       <div class="head">
         <div class="head-left">
-          <div class="title">{{character}}</div>
+          <div class="title">{{character}} <span class="title-sub">练度排名</span></div>
           <div class="subtitle">{{subtitle}}</div>
         </div>
         <div class="head-right">
-          <div class="badge">工坊</div>
           <div class="scope {{if isGroup}}group{{else}}all{{/if}}">{{scopeText}}</div>
         </div>
       </div>
 
-      <div class="legend">
-        <span>按驱动盘总分排序</span>
-        <span class="sep">·</span>
-        <span>数据来源 绝区零工坊</span>
-      </div>
-
       <div class="list">
         {{each list r}}
-        <div class="row {{if r.rank === 1}}top1{{else if r.rank === 2}}top2{{else if r.rank === 3}}top3{{/if}}">
-          <div class="rank">{{r.rank}}</div>
-
-          <div class="player">
-            <div class="nick">{{if r.nickname}}{{r.nickname}}{{else}}UID {{r.uid}}{{/if}}</div>
-            <div class="meta">
-              <span class="uid">UID {{r.uid}}</span>
-              {{if r.level}}<span class="lv">Lv{{r.level}}</span>{{/if}}
+        <div class="card {{if r.rank === 1}}top1{{else if r.rank === 2}}top2{{else if r.rank === 3}}top3{{/if}}">
+          <div class="card-left">
+            <div class="rank-badge">{{r.rank}}</div>
+            <div class="avatar">
+              {{if r.avatar}}<img src="{{r.avatar}}" onerror="this.style.visibility='hidden'">{{/if}}
             </div>
+            <div class="avatar-name">{{if r.nickname}}{{r.nickname}}{{else}}UID {{r.uid}}{{/if}}</div>
+            <div class="avatar-sub">{{if r.level}}Lv{{r.level}} · {{/if}}{{r.uid}}</div>
           </div>
 
-          <div class="point">
-            <div class="point-value">{{r.pointText}}</div>
-            <div class="point-label">驱动总分</div>
-          </div>
-
-          <div class="global">
-            {{if isGroup}}
-            <span class="g-label">本群</span>
-            <span class="g-value">第 {{r.rank}} 名</span>
-            {{else}}
-            <span class="g-label">全服</span>
-            <span class="g-value">#{{r.globalRank}}</span>
-            {{/if}}
+          <div class="card-right">
+            <div class="score-row">
+              <div class="score-main">{{r.pointText}}</div>
+              <div class="score-unit">驱动总分</div>
+            </div>
+            <div class="detail-row">
+              <div class="detail-item">
+                <span class="d-label">全服名次</span>
+                <span class="d-value">#{{r.globalRank}}</span>
+              </div>
+              <div class="detail-item">
+                <span class="d-label">本群名次</span>
+                <span class="d-value">{{if isGroup}}第 {{r.rank}} 名{{else}}-{{/if}}</span>
+              </div>
+              <div class="detail-item">
+                <span class="d-label">UID</span>
+                <span class="d-value">{{r.uid}}</span>
+              </div>
+            </div>
           </div>
         </div>
         {{/each}}
       </div>
 
       <div class="footer">
-        {{if isGroup}}
-        本群共 {{list.length}} 人上榜
-        {{else}}
-        共 {{total}} 条（接口单页 50 条）
-        {{/if}}
+        {{if isGroup}}本群共 {{list.length}} 人上榜{{else}}共 {{total}} 条 · 接口单页 50 条{{/if}}
+        <span class="src">数据来源 绝区零工坊</span>
       </div>
     </div>
   </body>

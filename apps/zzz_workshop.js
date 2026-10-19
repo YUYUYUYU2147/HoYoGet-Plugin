@@ -524,6 +524,8 @@ async function buildRoleRank(arg, opts = {}) {
     level: Number(row?.level ?? 0) || 0,
     point: Number(row?.relic_point || 0),
     pointText: Number(row?.relic_point || 0).toFixed(3),
+    // 角色柜里没有玩家头像，统一用该角色立绘/头像占位
+    avatar: role.avatar2 || role.long_avatar || '',
   }))
 
   return {
