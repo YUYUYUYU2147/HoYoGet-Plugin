@@ -6,6 +6,8 @@ body {
 }
 
 .page {
+  position: relative;
+  overflow: hidden;
   width: 1180px;
   padding: 24px 24px 18px;
   box-sizing: border-box;
@@ -14,6 +16,33 @@ body {
     linear-gradient(168deg, #f8fafd 0%, #eef2f8 60%, #e6ecf5 100%);
   color: #2c3444;
 }
+
+/* 随机背景（api.yppp.net/pc.php）：图片铺满，再盖一层浅色纱，
+   保证深色文字仍然清晰；取不到图时整块不渲染，回落原来的渐变。 */
+.bg-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 22%;
+  pointer-events: none;
+}
+.bg-random { opacity: .85; filter: saturate(.9) blur(.5px); }
+.bg-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(168deg,
+    rgba(250, 252, 255, .72) 0%,
+    rgba(240, 245, 252, .66) 55%,
+    rgba(230, 238, 248, .76) 100%);
+}
+.page > .head,
+.page > .grid,
+.page > .footer { position: relative; z-index: 1; }
 body.game-sr .page {
   background:
     radial-gradient(900px 300px at 85% -10%, rgba(127, 212, 255, .16), transparent 60%),
@@ -113,9 +142,41 @@ body.game-sr .page {
 }
 .cons-badge.c6 { background: #d94f6a; }
 
+/* 群内排名角标：最强（伤害第一）/ 最高分（评分第一）/ 名次 */
+.group-rank {
+  position: absolute;
+  left: 50%;
+  /* 贴在命座/等级角标下方，与它们只贴边不重叠 */
+  bottom: -18px;
+  z-index: 2;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 19px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, .92);
+  font-size: 9.5px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: .2px;
+  white-space: nowrap;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(60, 90, 130, .24);
+}
+.gr-icon { width: 9px; height: 9px; flex: none; fill: currentColor; }
+.group-rank.rank-1.rank-type-dmg { background: linear-gradient(180deg, #ffa53c, #f0641a); }
+.group-rank.rank-1.rank-type-mark { background: linear-gradient(180deg, #74a9ff, #6a63f2); }
+.group-rank.rank-2 { background: linear-gradient(180deg, #a9bed9, #7d94b4); }
+.group-rank.rank-3 { background: linear-gradient(180deg, #e3b184, #bd8754); }
+.group-rank.rank-4 { color: #5c6c84; background: #e9eff9; border-color: #fff; }
+.group-rank.rank-10 { color: #8797ac; background: #f0f4fa; border-color: #fff; }
+
 .cell-name {
   /* 留出头像下沿排名角标的高度，否则「最强」会压住角色名 */
-  margin-top: 14px;
+  margin-top: 22px;
   max-width: 100%;
   font-size: 13px;
   font-weight: 900;

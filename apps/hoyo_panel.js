@@ -1341,6 +1341,16 @@ export class hoyo_panel extends plugin {
     let game = ['星铁', '崩铁', 'sr'].includes(key) ? 'sr' : 'gs'
     let charName = cm ? String(cm[2] || '').trim() : ''
     if (short) charName = String(short[1] || '').trim()
+    /* 游戏名也可能写在角色名里：
+         #米哈游星铁遐蝶面板 / #米哈游面板 星铁遐蝶
+       把开头的「星铁 / 崩铁 / sr / 原神」剥掉并按它定游戏，
+       否则会被当成原神角色名，报「角色柜里没有找到「星铁遐蝶」」。 */
+    const alias = charName.match(/^(原神|星铁|崩铁|gs|sr)\s*/i)
+    if (alias) {
+      /* 显式写了游戏名时以它为准，这里只负责把前缀从角色名里剥掉 */
+      if (!key) game = ['星铁', '崩铁', 'sr'].includes(alias[1].toLowerCase()) ? 'sr' : 'gs'
+      charName = charName.slice(alias[0].length).trim()
+    }
     e.isSr = game === 'sr'
 
     const miao = await loadMiao()
@@ -1348,8 +1358,8 @@ export class hoyo_panel extends plugin {
       return e.reply('需要先安装 miao-plugin 才能读取面板数据（本功能复用它抓取的面板）。')
     }
 
-    /* #米哈游雷神面板：没写游戏名时，若原神角色表里没有、星铁里有，就切到星铁 */
-    if (short) {
+    /* 没写游戏名时，若原神角色表里没有、星铁里有，就切到星铁 */
+    if (!key && charName) {
       try {
         const inGs = miao.Character?.get?.(charName, 'gs')
         const inSr = miao.Character?.get?.(charName, 'sr')
@@ -1552,7 +1562,10 @@ export class hoyo_panel extends plugin {
       /* 群内排名角标：复用 miao 的 ProfileRank（内部按群 + 角色维护 zset），
          给每个角色标「最强」（期望伤害第一）/「最高分」（圣遗物分第一）/ 名次。
          私聊或 miao 没有该模块时整块跳过，不影响出图。 */
-      const groupRank = await this.buildGroupRank(e, game, miao, uid, pairs)
+      const [groupRank, randomBg] = await Promise.all([
+        this.buildGroupRank(e, game, miao, uid, pairs),
+        randomBgUrl(),
+      ])
 
       // 排序：五星优先 → 等级 → 评分
       chars.sort((a, b) => (b.star - a.star) || (b.level - a.level) || ((b.artisScore || 0) - (a.artisScore || 0)))
@@ -1581,6 +1594,7 @@ export class hoyo_panel extends plugin {
         maxScore: maxScore ? maxScore.toFixed(1) : '',
         groupRank,
         rankLimit: groupRank?.limit || 15,
+        randomBg,
       }, { e, ret: true })
       return img
     } catch (err) {
