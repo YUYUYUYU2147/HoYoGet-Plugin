@@ -291,8 +291,15 @@ export class zzz_panel_rank extends plugin {
   /** accept 截胡纯 角色名排名（不带"面板"），避免被 ZZZ-Plugin 的 panelRankBridge 抢走 */
   async accept(e) {
     const msg = String(e?.msg || '').trim()
+    /* 带范围修饰词的写法（%雅全服排名 / %星见雅本群排名 / %xx工坊排名）交给
+       apps/zzz_workshop.js 的工坊练度榜处理，这里必须放行。
+       原因：SHORT_RANK_REG 的 (.+?) 非贪婪但会把修饰词一起吃进角色名
+       （%雅全服排名 → 角色名「雅全服」），而且 accept 一旦 return 就
+       直接结束事件分发，zzz_workshop 根本没有机会响应。 */
+    if (/(?:全服|本群|工坊)排名$/.test(msg)) return false
     const m = msg.match(SHORT_RANK_REG)
     if (!m) return false
+    if (/(?:全服|本群|工坊)$/.test(m[1])) return false
     this.e = e
     if (/^[%％]/.test(m[0])) {
       e.msg = `%${m[1]}面板排名`
