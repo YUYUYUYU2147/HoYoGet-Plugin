@@ -13,11 +13,10 @@
 //
 // 说明：接口随时可能调整或关闭，失败时只回提示，不抛出未捕获异常。
 
-import { createHash } from 'node:crypto'
-
 import fs from 'node:fs'
 import path from 'node:path'
 import { pluginPriority, render } from '#HoYoGet'
+import { ZZZ_HOST, request, signedPost, parseSetInfo } from '../system/workshop_api.js'
 import {
   buildBasicProperties,
   calcDamage as calcPanelDamage,
@@ -93,13 +92,8 @@ export async function getUidToQqMap() {
   return map
 }
 
-const API_HOST = 'https://api.zzzmap.com'
-const REQUEST_TIMEOUT = 12000
+const API_HOST = ZZZ_HOST
 const CACHE_TTL = 6 * 3600 * 1000
-
-// POST 接口签名：小程序请求库把参数按 k=v 排序拼接后取 MD5，键尾固定追加该串
-const SIGN_KEY = 'VW^)(^*^$$#*%(#)!@VIAI%'
-const APP_VERSION = '100'
 
 const CARD_TYPES = {
   综合: 'all',
@@ -148,91 +142,14 @@ const RE_ABYSS = /^[#%]*(?:米哈游)?(?:绝区零|zzz)式舆(?:使用率|排名
    这些都会命中后面的 ([^\s]+?)...排名 结构（角色名被取成「我的幽境」之类）。
    accept 里也放了行，但 rule 同样会匹配 —— 正则本身必须排除，
    否则 accept 放行后照样被 rule 接住（「我的全球排名」就是这么漏的）。 */
-const RE_ROLE_RANK_SHORT = /^(?!.*(?:全球排名|幽境|圣遗物|阿卡夏|akasha))[#%]*(?:米哈游)?(?:绝区零|zzz)?\s*(?![zZ]{3})([^\s]+?)\s*(全服|本群|工坊)?\s*(?:角色)?(?:练度)?排名(?:\s+(.+))?$/i
+const RE_ROLE_RANK_SHORT = /^(?!.*(?:全球排名|幽境|圣遗物|阿卡夏|akasha|星铁|星穹铁道))[#%]*(?:米哈游)?(?:绝区零|zzz)?\s*(?![zZ]{3})([^\s]+?)\s*(全服|本群|工坊)?\s*(?:角色)?(?:练度)?排名(?:\s+(.+))?$/i
 const RE_ROLE_RANK = /^[#%]*(?:米哈游)?(?:绝区零|zzz)(?:角色)?(?:练度)?排名(?:\s+(.+))?$/i
 const RE_DETAIL = /^[#%]*(?:米哈游)?(?:绝区零|zzz)(?:查)?练度(?:\s+(.+))?$/i
 const RE_HELP = /^[#%]*(?:米哈游)?(?:绝区零|zzz)榜单帮助$/i
 
-// ===== 通用请求 =====
+// ===== 通用请求（实现见 system/workshop_api.js，与星铁侧共用） =====
 
-async function request(pathname, query = {}) {
-  const url = new URL(API_HOST + pathname)
-  for (const [key, value] of Object.entries(query)) {
-    if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, String(value))
-  }
-  const run = async () => {
-    const res = await fetch(url, {
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT),
-      headers: {
-        accept: 'application/json, text/plain, */*',
-        'accept-language': 'zh-CN,zh;q=0.9',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
-      },
-    })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const json = await res.json()
-    if (Number(json?.code) !== 0) throw new Error(json?.message || `接口返回 code=${json?.code}`)
-    return json.data
-  }
-  try {
-    return await run()
-  } catch (err) {
-    // 单次重试：工坊接口偶发抖动，重试一次可覆盖大部分瞬时失败
-    if (err?.name === 'TimeoutError' || err?.name === 'TypeError' || /HTTP 5\d\d/.test(err?.message || '')) {
-      return await run()
-    }
-    throw err
-  }
-}
-
-/**
- * POST 接口需要签名头：sign = MD5(排序后的 "k=v" 串)，键尾追加 SIGN_KEY。
- * 规则来自小程序请求库：去掉 null、对象值 JSON.stringify、按整串排序。
- */
-function signOf(params) {
-  const merged = { ...params, key: SIGN_KEY }
-  const pairs = Object.entries(merged).map(([key, value]) => {
-    const text = typeof value === 'object' ? JSON.stringify(value) : value
-    return `${key}=${text ?? ''}`
-  })
-  return createHash('md5').update(pairs.join('&').split('&').sort().join('&')).digest('hex')
-}
-
-async function signedPost(pathname, params) {
-  const body = {}
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== null && value !== undefined) body[key] = value
-  }
-  const run = async () => {
-    const res = await fetch(new URL(pathname, API_HOST), {
-      method: 'POST',
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT),
-      headers: {
-        'content-type': 'application/json',
-        accept: 'application/json, text/plain, */*',
-        'accept-language': 'zh-CN,zh;q=0.9',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
-        version: APP_VERSION,
-        platform: 'weixin',
-        sign: signOf(params),
-        time: String(Date.now()),
-      },
-      body: JSON.stringify(body),
-    })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const json = await res.json()
-    if (Number(json?.code) !== 0) throw new Error(json?.message || `接口返回 code=${json?.code}`)
-    return json.data
-  }
-  try {
-    return await run()
-  } catch (err) {
-    if (err?.name === 'TimeoutError' || err?.name === 'TypeError' || /HTTP 5\d\d/.test(err?.message || '')) {
-      return await run()
-    }
-    throw err
-  }
-}
+export { request, signedPost }
 
 // ===== 名称缓存 =====
 
@@ -508,16 +425,6 @@ async function buildGradStat(arg) {
   return lines.join('\n')
 }
 
-/** set_info 形如 "31000_2__32700_4"：前面是套装 ID，后面是件数 */
-function parseSetInfo(raw) {
-  const text = String(raw || '')
-  if (!text) return []
-  return text.split('__').map(part => {
-    const [setId, count] = part.split('_')
-    return { setId: String(setId || ''), count: Number(count) || 0 }
-  }).filter(part => part.setId)
-}
-
 async function buildCardRank(arg) {
   const tokens = String(arg || '').trim().split(/\s+/).filter(Boolean)
   let type = 'all'
@@ -525,31 +432,50 @@ async function buildCardRank(arg) {
   let count = 10
   for (const token of tokens) {
     if (/^\d+$/.test(token)) { count = limitOf(token, 10, 30); continue }
-    if (CARD_SORTS[token]) { sort = CARD_SORTS[token]; continue }
-    if (CARD_TYPES[token.toLowerCase()] || CARD_TYPES[token]) { type = CARD_TYPES[token] || CARD_TYPES[token.toLowerCase()]; continue }
+    const key = token.toLowerCase()
+    if (CARD_SORTS[token] || CARD_SORTS[key]) { sort = CARD_SORTS[token] || CARD_SORTS[key]; continue }
+    if (CARD_TYPES[token] || CARD_TYPES[key]) { type = CARD_TYPES[token] || CARD_TYPES[key]; continue }
   }
+  /* 连 UP / 连歪：这两组只有按氪（ke）口径才有有效字段，
+     配 ou / fei 会返回全 0（与星铁侧一致，见 HANDOFF 附九）。 */
+  const effectiveSort = (type === 'up' || type === 'wai') ? 'ke' : sort
   // 分页固定 50 条，取一页足够覆盖默认显示条数
   const data = await request('/api/v1/card_ranking/ranking_v5', {
     limit: 50,
     offset: 0,
     ranking_type: type,
-    sort,
+    sort: effectiveSort,
   })
   const rows = Array.isArray(data?.rows) ? data.rows : []
   if (!rows.length) throw new Error('榜单暂无数据')
   const lines = [
-    `绝区零工坊 · 抽卡欧非榜（${CARD_TYPE_LABEL[type] || type} / ${CARD_SORT_LABEL[sort] || sort}）`,
+    `绝区零工坊 · 抽卡欧非榜（${CARD_TYPE_LABEL[type] || type} / ${CARD_SORT_LABEL[effectiveSort] || effectiveSort}）`,
     `显示前 ${Math.min(count, rows.length)} 名｜UID 由工坊脱敏`,
     '',
   ]
   rows.slice(0, count).forEach((row, index) => {
-    lines.push(
-      `${String(index + 1).padStart(2, '0')}. ${pad(row?.uid || '未知', 12)}` +
-      `抽数 ${pad(row?.draw_total ?? 0, 6)}五星 ${pad(row?.five_total ?? 0, 4)}` +
-      `UP 平均 ${row?.xbd_avg ?? '-'}`
-    )
+    const no = String(index + 1).padStart(2, '0')
+    const uid = pad(row?.uid || '未知', 12)
+    if (type === 'up' || type === 'wai') {
+      const valueKey = type === 'up' ? 'max_role_keep_up' : 'max_role_keep_no_up'
+      const label = type === 'up' ? '连 UP' : '连歪'
+      lines.push(`${no}. ${uid}${label} ${pad(row?.[valueKey] ?? '-', 3)}次　总抽 ${row?.draw_total ?? 0}`)
+      return
+    }
+    if (effectiveSort === 'ke') {
+      lines.push(`${no}. ${uid}总抽 ${pad(row?.draw_total ?? 0, 6)}五星 ${pad(row?.five_total ?? 0, 4)}UP 平均 ${row?.xbd_avg ?? '-'}`)
+      return
+    }
+    /* 欧 / 非：不同池子的平均抽数字段不同，按口径取对应字段 */
+    const avgField = {
+      all: 'all_avg_total',
+      role_avg_up: 'role_up_avg_total',
+      guang_avg_up: 'guang_up_avg_total',
+      common: 'common_avg_total',
+    }[type] || 'all_avg_total'
+    lines.push(`${no}. ${uid}抽数 ${pad(row?.draw_total ?? 0, 6)}五星 ${pad(row?.five_total ?? 0, 4)}平均 ${row?.[avgField] ?? '-'}`)
   })
-  lines.push('', '用法：%绝区零欧非榜 [综合|角色|音擎|常驻] [欧|非|氪] [数量]')
+  lines.push('', '用法：%绝区零欧非榜 [综合|角色|音擎|常驻|连UP|连歪] [欧|非|氪] [数量]')
   return lines.join('\n')
 }
 
@@ -1298,15 +1224,16 @@ async function buildAbyssRank() {
 }
 
 const HELP_TEXT = [
-  '绝区零工坊榜单（独立插件）',
+  '绝区零工坊榜单',
   '%绝区零评分榜 [好感|强度] [数量]   角色好感度 / 强度评分榜',
   '%绝区零角色配装 <角色名>          全服音擎与驱动盘使用率',
   '%绝区零角色排名 <角色名> [等级] [影画]  练度排行（驱动盘总分）',
   '%绝区零练度 <UID> [角色名]        查询单个玩家 / 单个角色的练度详情',
-  '%绝区零欧非榜 [综合|角色|音擎|常驻] [欧|非|氪] [数量]',
+  '%绝区零欧非榜 [综合|角色|音擎|常驻|连UP|连歪] [欧|非|氪] [数量]',
   '%绝区零式舆排名                   式舆防卫战角色使用率（数据已停更）',
   '',
   '数据均来自绝区零工坊公开接口，无需绑定账号。',
+  '星铁工坊榜单见「星铁榜单帮助」。',
 ].join('\n')
 
 export class zzz_workshop extends plugin {
@@ -1353,6 +1280,10 @@ export class zzz_workshop extends plugin {
     /* 原神的 Akasha 系列：全球排名 / 幽境排名 / 圣遗物排名 / 阿卡夏，
        都会被 ([^\s]+?)...排名 结构当成绝区零角色名，必须放行。 */
     if (/全球排名|幽境|圣遗物|阿卡夏|akasha/i.test(msg)) return false
+    /* 星铁工坊榜单归 apps/sr_workshop.js：
+       「%星铁练度排名」这类写法会被短式的 ([^\s]+?)…排名 当成角色名「星铁练度」，
+       必须在这里放行，否则被绝区零榜接住后查不到角色。 */
+    if (/星铁|星穹铁道|^[#%]*\s*(?:sr|hsr)/i.test(msg)) return false
     /* 框架已把 % 改写成 #绝区零，两种形态都要认 */
     const hasScopeWord = /(?:全服|本群|工坊)排名$/.test(msg)
     /* 不带范围修饰词时看「%面板排名范围」：

@@ -290,6 +290,10 @@ export class zzz_panel_rank extends plugin {
     /* 原神的 Akasha 系列：全球排名 / 幽境排名 / 圣遗物排名 / 阿卡夏，
        都会被 ([^\s]+?)...排名 结构当成绝区零角色名，必须放行。 */
     if (/全球排名|幽境|圣遗物|阿卡夏|akasha/i.test(msg)) return false
+    /* 星铁工坊榜单归 apps/sr_workshop.js：
+       「%星铁练度排名」这类写法会被短式的 ([^\s]+?)…排名 当成角色名「星铁练度」，
+       必须在这里放行，否则被绝区零榜接住后查不到角色。 */
+    if (/星铁|星穹铁道|^[#%]*\s*(?:sr|hsr)/i.test(msg)) return false
     /* 带范围修饰词的写法（%雅全服排名 / %星见雅本群排名 / %xx工坊排名）一律放行：
        这类是「临时指定范围」，由 apps/zzz_workshop.js 处理，见那边的 accept。
        顺带一提，SHORT_RANK_REG 的 (.+?) 会把修饰词吃进角色名
