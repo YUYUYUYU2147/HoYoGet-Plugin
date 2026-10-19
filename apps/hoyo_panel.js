@@ -196,6 +196,24 @@ export class hoyo_panel extends plugin {
     })
   }
 
+  /**
+   * accept 早于所有 rule 执行。
+   *
+   * 必须在这里截胡，不能只靠 rule：本插件的 meme 模块在 init() 里把
+   * 1392 个表情包关键词各扩成一条正则（其中就有 `^#米哈游`），
+   * 而 `#米哈游原神面板` 正好以它开头，会被表情包抢走 ——
+   * 日志里能看到 `[#米哈游原神面板 113440] → [米哈游]Meme表情包(memes)`。
+   */
+  async accept(e) {
+    const msg = String(e?.msg || '')
+    if (!PANEL_REG.test(msg) && !PANEL_REFRESH_REG.test(msg) && !PANEL_LIST_REG.test(msg)) return
+    this.e = e
+    if (PANEL_REFRESH_REG.test(msg)) await this.refreshPanel(e)
+    else await this.panel(e)
+    // 'return' 表示已处理完毕，不再继续匹配后面的插件
+    return 'return'
+  }
+
   /** 「#米哈游原神更新面板」：拉取最新面板后直接出总览图 */
   async refreshPanel(e) {
     const m = String(e.msg || '').match(PANEL_REFRESH_REG)
@@ -224,19 +242,16 @@ export class hoyo_panel extends plugin {
     try {
       await e.reply(`正在更新 ${uid} 的${conf.cn}面板，请稍候…`)
 
-      const player = new miao.Player(uid, game)
-      /* 三个前置条件缺一不可：
-         · player.e  —— ProfileAvatar.refreshProfile 用它取 ck 与回复提示
-         · e.uid     —— Serv.req 里 ProfileReq.create(e) 要求 e.uid 且大于内置预设的 UID 段，
-                        少了直接 return false，表现就是「提示更新成功但数据没变」
-         · force=2   —— 传 true 会被当成 force=0，走 60 分钟缓存判断，可能直接跳过 */
+      /* 与 miao 的 ProfileList.doRefresh 完全对齐：
+         · isfromMys —— miao 用 `/米游社|mys/.test(e.msg)` 判断走不走米游社，
+           我们的指令是「米哈游原神面板」，不含「米游社」，不加这个标记
+           fromMys 就是 false，会跑去第三方面板服务而不是米游社。
+         · e._mys    —— ProfileReq 直接读 player.e._mys.getCharacter()
+         · force=2   —— 无视缓存 */
       player.e = e
       e.uid = uid
       e.game = game
-      /* ProfileReq.requestProfile 里直接读 player.e._mys.getCharacter()，
-         而 e._mys 要 MysApi.init() 才会挂上去。不初始化会抛
-         「Cannot read properties of undefined (reading 'getCharacter')」。
-         用 auth='cookie' 走已绑定的 ck，拿不到（未绑/失效）时明确提示。 */
+      e.isfromMys = true
       const mys = await miao.MysApi.init(e, 'cookie')
       if (!mys) {
         return e.reply([
@@ -245,31 +260,17 @@ export class hoyo_panel extends plugin {
         ].join('\n'))
       }
       const refreshed = await player.refreshProfile(2, true)
-      /* ⚠ 返回值不能当成败判据：refreshProfile 返回的是 `player._update.length`
-         —— 本次**内容有变化**的角色数。数据拉取成功但和缓存一致时它是 0，
-         把 0 当失败会出现「数据明明更新了却提示更新失败」。
-         真正的失败信号只有 false / undefined（请求没发出去或抛错）。 */
       if (refreshed === false || refreshed === undefined) {
-        logger.warn?.(`[HoYoGet][hoyo_panel] ${uid} 面板未刷新（refreshProfile 返回 ${refreshed}）`)
-        return e.reply([
-          `更新 ${uid} 的${conf.cn}面板失败。`,
-          '可能原因：',
-          '  · 未绑定 Cookie（先 #米哈游扫码绑定）',
-          '  · 米游社请求被风控拦截，稍后重试',
-          '  · 面板更新有 CD，刚更新过需要等一会',
-        ].join('\n'))
+        logger.warn?.(`[HoYoGet][hoyo_panel] ${uid} 面板未刷新（返回 ${refreshed}）`)
+        return
       }
-      // refreshProfile 内部会 reload，重新取一次 player 状态
-      if (!player.hasProfile) {
-        return e.reply([
-          `更新失败：没拿到 ${uid} 的${conf.cn}面板数据。`,
-          '请确认角色已在游戏内「角色展柜」中展示，并开启「显示角色详情」，',
-          '设置完成后等 5 分钟再试。',
-        ].join('\n'))
+      // refreshProfile 会把数据写盘，重新读一次拿最新的
+      const fresh = new miao.Player(uid, game)
+      if (!fresh.hasProfile) {
+        logger.warn?.(`[HoYoGet][hoyo_panel] ${uid} 刷新后仍无面板数据`)
+        return
       }
-
-      // 数据已刷新，直接走总览渲染
-      return this.renderPanel(e, game, uid, miao, true)
+      return this.renderPanel(e, game, uid, miao, true, fresh)
     } catch (err) {
       logger.error?.(`[HoYoGet][hoyo_panel] 更新面板失败: ${err?.message || err}`)
       return e.reply(`更新面板失败：${err?.message || err}`)
@@ -306,12 +307,13 @@ export class hoyo_panel extends plugin {
       const player = new miao.Player(uid, game)
       if (!player.hasProfile) {
         /* 本地没有面板缓存，尝试刷新一次。
-           和 refreshPanel 一样，必须先 MysApi.init 挂上 e._mys，
-           否则 ProfileReq.requestProfile 读 e._mys.getCharacter() 直接抛错，
-           请求发不出去，hasProfile 仍然是 false。 */
+           和 refreshPanel 一样需要 isfromMys + e._mys：
+           miao 用 `/米游社|mys/` 判断走米游社还是第三方面板服务，
+           本插件指令名不含「米游社」，不显式置 true 会走错服务。 */
         player.e = e
         e.uid = uid
         e.game = game
+        e.isfromMys = true
         const mys = await miao.MysApi.init(e, 'cookie')
         if (mys) await player.refreshProfile(2, true)
       }
