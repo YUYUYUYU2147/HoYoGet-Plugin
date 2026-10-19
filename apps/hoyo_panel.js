@@ -172,10 +172,39 @@ export class hoyo_panel extends plugin {
       await e.reply(`正在更新 ${uid} 的${conf.cn}面板，请稍候…`)
 
       const player = new miao.Player(uid, game)
-      // miao 的 ProfileAvatar.refreshProfile 依赖 player.e（取 ck、回报提示）
+      /* 三个前置条件缺一不可：
+         · player.e  —— ProfileAvatar.refreshProfile 用它取 ck 与回复提示
+         · e.uid     —— Serv.req 里 ProfileReq.create(e) 要求 e.uid 且大于内置预设的 UID 段，
+                        少了直接 return false，表现就是「提示更新成功但数据没变」
+         · force=2   —— 传 true 会被当成 force=0，走 60 分钟缓存判断，可能直接跳过 */
       player.e = e
-      await player.refresh({ profile: true })
-
+      e.uid = uid
+      e.game = game
+      /* ProfileReq.requestProfile 里直接读 player.e._mys.getCharacter()，
+         而 e._mys 要 MysApi.init() 才会挂上去。不初始化会抛
+         「Cannot read properties of undefined (reading 'getCharacter')」。
+         用 auth='cookie' 走已绑定的 ck，拿不到（未绑/失效）时明确提示。 */
+      const mys = await miao.MysApi.init(e, 'cookie')
+      if (!mys) {
+        return e.reply([
+          `更新 ${uid} 的面板需要米游社 Cookie。`,
+          '请先发送 #米哈游扫码绑定 绑定账号，或 #刷新ck 刷新失效的 Cookie。',
+        ].join('\n'))
+      }
+      const refreshed = await player.refreshProfile(2, true)
+      /* 返回值：false / 0 = 没有更新到任何角色，数字 = 本次更新的角色数。
+         两者都说明数据没变，必须明确告知，不能静默继续出旧图。 */
+      if (!refreshed) {
+        logger.warn?.(`[HoYoGet][hoyo_panel] ${uid} 面板未刷新（refreshProfile 返回 ${refreshed}）`)
+        return e.reply([
+          `更新 ${uid} 的${conf.cn}面板失败。`,
+          '可能原因：',
+          '  · 未绑定 Cookie（先 #米哈游扫码绑定）',
+          '  · 米游社请求被风控拦截，稍后重试',
+          '  · 面板更新有 CD，刚更新过需要等一会',
+        ].join('\n'))
+      }
+      // refreshProfile 内部会 reload，重新取一次 player 状态
       if (!player.hasProfile) {
         return e.reply([
           `更新失败：没拿到 ${uid} 的${conf.cn}面板数据。`,
@@ -220,9 +249,11 @@ export class hoyo_panel extends plugin {
     try {
       const player = new miao.Player(uid, game)
       if (!player.hasProfile) {
-        // 本地没有面板缓存，尝试刷新一次
+        // 本地没有面板缓存，尝试刷新一次（同样需要 e.uid 才能发起请求）
         player.e = e
-        await player.refresh({ profile: true })
+        e.uid = uid
+        e.game = game
+        await player.refreshProfile(2, true)
       }
       if (!player.hasProfile) {
         return e.reply([
