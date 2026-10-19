@@ -184,7 +184,52 @@ class mhy {
       await redis.set(`ZZZ:DEVICE_FP:${ltuid}:FP`, fp);
       await redis.set(`ZZZ:DEVICE_FP:${ltuid}:ID`, device_id);
     }
-    e.reply(`常用设备信息绑定成功!（已登记 ${targets.length} 个米游社账号）`);
+    /* 同步写进 Genshin 插件的 MysUsers 表：
+       它的 #uid 页面用 `SELECT device_fp FROM MysUsers WHERE ltuid=?`
+       判断这一栏显示「设备ID(绿)」还是「验证码(红)」，
+       只在 Redis / 本地 yaml 里写的话，Genshin 那边永远看不到，一直标红。 */
+    const synced = await this.syncGenshinDeviceFp(targets, fp);
+    e.reply(`常用设备信息绑定成功!（已登记 ${targets.length} 个米游社账号`
+      + `${synced ? `，其中 ${synced} 个已同步到 genshin` : ''}）`);
+  }
+
+  /**
+   * 把设备指纹写进 Genshin 插件的 MysUsers 表，让它的 #uid 列表显示「设备ID」。
+   * 用与 apps/device_fp.js 完全一致的 upsert 语句，保证两处口径相同。
+   * 任何失败都只记日志：HoYoGet 自己的绑定不依赖这一步。
+   */
+  async syncGenshinDeviceFp(ltuids, fp) {
+    if (!fp || !Array.isArray(ltuids) || !ltuids.length) return 0;
+    const dbFile = `${process.cwd()}/data/db/data.db`;
+    if (!fs.existsSync(dbFile)) return 0;
+    let db;
+    try {
+      const { default: sqlite3 } = await import('sqlite3');
+      db = new sqlite3.Database(dbFile);
+      const run = (sql, params) => new Promise((resolve, reject) => {
+        db.run(sql, params, (err) => (err ? reject(err) : resolve()));
+      });
+      let n = 0;
+      for (const ltuid of ltuids) {
+        try {
+          await run(
+            'INSERT INTO MysUsers (ltuid, device_fp, createdAt, updatedAt) '
+            + "VALUES (?, ?, datetime('now'), datetime('now')) "
+            + 'ON CONFLICT(ltuid) DO UPDATE SET device_fp = EXCLUDED.device_fp, updatedAt = datetime(\'now\')',
+            [String(ltuid), fp],
+          );
+          n++;
+        } catch (err) {
+          logger.warn?.(`[HoYoGet][mhy] 同步 genshin device_fp 失败（ltuid=${ltuid}）：${err?.message || err}`);
+        }
+      }
+      return n;
+    } catch (err) {
+      logger.warn?.(`[HoYoGet][mhy] 无法打开 genshin 数据库：${err?.message || err}`);
+      return 0;
+    } finally {
+      try { db?.close(); } catch (_) { /* ignore */ }
+    }
   }
 
   getbody_(device_id, device_name) {
