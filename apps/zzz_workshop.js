@@ -568,6 +568,9 @@ async function buildRoleRank(arg, opts = {}) {
       row.damageCrit = Number(dmg.top?.crit) || 0
       row.damageRate = Number(dmg.top?.rate) || 0
       row.damageAreas = dmg.areasTxt || ''
+      /* 技能名附上倍率，例如「终结技：永冬狂宴 ×44.693」——
+         同一个数字在不同招式间差很多，标出倍率能直接看出算的是哪一格 */
+      if (row.damageRate) row.damageSkill = `${row.damageSkill} ×${row.damageRate}`
     } catch (_) {
       /* 单个玩家失败不影响榜单 */
     }

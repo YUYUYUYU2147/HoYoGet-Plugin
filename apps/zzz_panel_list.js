@@ -452,6 +452,12 @@ function calcDamageAreas(bp, level, extra = {}) {
       ? (extra.boost || 1)
       : (toRatio(bp.dmgbonus?.final) + (extra.boost || 1)),
     vulnerability: extra.vulnerability || 1,
+    /* 失衡易伤：打失衡目标时游戏内是 ×1.5（部分角色/条件 ×2）。
+       默认按 1.5 计入 —— 目标是让数字贴近玩家在游戏里看到的值。
+       静态面板（工坊 properties）不含这一乘区，所以它会让「面板 × 倍率」
+       与最终伤害相差 1.5 倍，这是口径差不是算错；
+       需要纯静态对比时传 stunVulnerability: 1 关掉。 */
+    stun: Math.max(1, Number(extra.stunVulnerability ?? 1.5)),
     // 抗性区 = 1 - (敌人抗性 - 无视抗性)；默认敌人抗性 -0.2（有弱点）
     resistance: 1 - (-0.2 - (extra.resIgnoreAdd || 0)),
     defence: Math.min(1, Math.max(0, base / (effectiveDef + base))),
@@ -642,7 +648,7 @@ export function calcDamage(bp, level, avatar, charName) {
     const buff = getBuffAreas({ ...buffBase, key, dynLevel: buffBase.tLevel })
     const areas = calcDamageAreas(bp, level, buff)
     const base = rate * atk
-    const mul = areas.boost * areas.vulnerability * areas.resistance * areas.defence
+    const mul = areas.boost * areas.vulnerability * areas.resistance * areas.defence * (areas.stun || 1)
     // 期望列含暴击率（期望值），暴击列不含 —— 两列口径不同，别混用
     let expect = base * areas.critical * mul
     let crit = base * (1 + areas.critdmg) * mul
@@ -775,14 +781,16 @@ export function calcDamage(bp, level, avatar, charName) {
     // 口径说明：写进面板，免得看到数字却不知道它算的是什么
     notes: [
       '期望＝1+暴击率×暴伤 的期望值；暴击列按必暴击计，不含暴击率。',
-      '敌方面板按角色等级、1级基础防御50、抗性-0.2（有弱点）估算；未计失衡易伤。',
+      '敌方面板按角色等级、1级基础防御50、抗性-0.2（有弱点）估算；已计失衡易伤 ×1.5。',
       '增伤区只计音擎、套装、核心被动、额外能力、影画；技能自身倍率型增伤（如对某目标增伤50%）未计。',
       '等效倍率含多段追加（如蓄力攻击＝蓄力段＋回旋斩击）；各段按各自技能等级代入，并分别套用各自生效的增益。',
       buffMiss.length ? `未收录：${buffMiss.join('、')}` : '',
     ].filter(Boolean),
     skills: out,
     top: out[0],
-    areasTxt: `暴击${r2(areas.critical)} 增伤${r2(areas.boost)} 易伤${r2(areas.vulnerability)} 抗性${r2(areas.resistance)} 防御${r2(areas.defence)}（取倍率最高一招）`,
+    areasTxt: `暴击${r2(areas.critical)} 增伤${r2(areas.boost)} 易伤${r2(areas.vulnerability)}`
+      + `${(areas.stun || 1) !== 1 ? ` 失衡${r2(areas.stun)}` : ''}`
+      + ` 抗性${r2(areas.resistance)} 防御${r2(areas.defence)}（取倍率最高一招）`,
   }
 }
 

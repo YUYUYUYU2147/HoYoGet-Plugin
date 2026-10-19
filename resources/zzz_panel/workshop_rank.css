@@ -167,6 +167,7 @@ body {
   gap: 10px;
 }
 .detail-item .damage { color: #d64f8e; }
+.detail-item .d-sub { margin-left: 4px; font-size: 10px; opacity: .65; white-space: nowrap; }
 .detail-item {
   padding: 8px 12px;
   border-radius: 12px;
