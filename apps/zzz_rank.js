@@ -228,14 +228,52 @@ function loadAllRecords(groupUids = null) {
   return records
 }
 
-/* 启动时打一行优先级，方便确认 #重启 后是否生效：
-   必须 > -30000（ZZZ-Plugin 极限面板），否则 accept 阶段会被它截走。 */
+/**
+ * 把本插件的优先级就地写进框架的调度表。
+ *
+ * 为什么需要这一步：priority 与 rule 都在 constructor 里交给 plugin 基类注册，
+ * 而本插件的热重载只替换原型方法、换不掉 constructor ——
+ * 所以改优先级后不重启是不生效的（热重载源码里明确写了这条边界）。
+ *
+ * 但框架每次处理消息时读的是 this.priority 数组里那条记录的 priority 字段
+ * （lib/plugins/loader.js: 先 orderBy priority，再逐条跑 accept），
+ * 所以直接改那条记录就能立刻生效，不必重启。
+ */
+function applyPriorityToLoader(want) {
+  const value = Number(want)
+  if (!Number.isFinite(value)) return null
+  const timer = setTimeout(() => {
+    try {
+      /* apps/ → HoYoGet-Plugin/ → plugins/ → TRSS-Yunzai/（三层） */
+      import('../../../lib/plugins/loader.js').then(mod => {
+        const loader = mod?.default
+        const list = loader?.priority
+        if (!Array.isArray(list)) return
+        const key = path.basename(new URL(import.meta.url).pathname).replace(/\.js$/, '')
+        for (const item of list) {
+          /* key 是 apps 文件名（zzz_rank），namespace 可能被改写，两个都比一遍 */
+          if (item.key !== key && item.namespace !== key) continue
+          if (Number(item.priority) === value) return
+          const before = item.priority
+          item.priority = value
+          /* 框架内部数组按 priority 升序排过，改完要重排，否则顺序不变 */
+          list.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0))
+          logger.mark?.(`[HoYoGet][zzz_rank] 优先级已就地更新：${before} → ${value}（无需重启）`)
+        }
+      }).catch(() => { /* 拿不到 loader 就维持启动时的值 */ })
+    } catch (_) { /* ignore */ }
+  }, 1500)   /* 等 index.js 把插件全部注册完 */
+  timer.unref?.()
+  return value
+}
+
 {
   const p = pluginPriority('zzz_panel_rank', -20000)
   logger.mark?.(`[HoYoGet][zzz_rank] 优先级 ${p}（需 > -30000 才能抢在 ZZZ-Plugin 之前）`)
   if (Number(p) <= -30000) {
     logger.error?.('[HoYoGet][zzz_rank] 优先级过低，%<角色>排名 会被 ZZZ-Plugin 截走，请检查 config.yaml 的 zzz_panel_rank_priority')
   }
+  applyPriorityToLoader(p)
 }
 
 export class zzz_panel_rank extends plugin {
