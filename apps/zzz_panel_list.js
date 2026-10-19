@@ -1382,8 +1382,15 @@ function discGrade(score) {
   return 'A'
 }
 
-/** 计算驱动盘总分与段位；另返回每个盘评分 discScores 与有益/有效词条数 */
-function calcEquipScore(equip_final, charName, stats, profession, elementType, baseProps = {}) {
+/**
+ * 计算驱动盘总分与段位；另返回每个盘评分 discScores 与有益/有效词条数。
+ *
+ * 导出给 apps/zzz_rank.js 复用 —— 排名榜与面板详情必须是同一套评分，
+ * 曾经因为两处各写一份，星见雅的直伤权重只加在了这里，
+ * 导致「%雅排名」与「%雅面板」算出两个不同的分数。
+ * 以后调权重只改这一处。
+ */
+export function calcEquipScore(equip_final, charName, stats, profession, elementType, baseProps = {}) {
   const { ruleName, weight } = getScoreWeight(charName, stats, profession, elementType, baseProps)
   let total = 0
   const discScores = []

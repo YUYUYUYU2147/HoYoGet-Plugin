@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { pluginPriority, render, yaml, mys } from '#HoYoGet'
-import { buildBasicProperties, calcDamage as calcPanelDamage } from './zzz_panel_list.js'
+import { buildBasicProperties, calcDamage as calcPanelDamage, calcEquipScore as calcEquipScoreShared } from './zzz_panel_list.js'
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const RECORDS_DIR = path.join(PLUGIN_ROOT, 'data', 'zzz_panel', 'records')
@@ -63,85 +63,38 @@ async function getGroupMemberUids(e) {
 
 const PROF_WEIGHT_NAME = { 1: '强攻', 2: '击破', 3: '异常', 4: '支援', 5: '防护', 6: '命破', 7: '锋御' }
 
-const SCORE_PROP_ID = {
-  '生命值百分比': 11102, '攻击力百分比': 12102, '防御力百分比': 13102, '冲击力': 12202,
-  '暴击率': 20103, '暴击伤害': 21103, '穿透率': 23103, '穿透值': 23203,
-  '能量自动回复': 30502, '异常精通': 31203, '异常掌控': 31402,
-}
-const ELEM_DMG_ID = { 200: 31503, 201: 31603, 202: 31703, 203: 31803, 204: 32303, 205: 31903 }
-const BASE_VALUE = { 11102: 3, 11103: 112, 12102: 3, 12103: 19, 13102: 4.8, 13103: 15 }
-const SUB_STAT_IDS = [11102, 11103, 12102, 12103, 13102, 13103, 20103, 21103, 31203, 31402, 23203]
-const SCORE_MAIN_STATS = {
-  4: [11102, 12102, 13102, 20103, 21103, 31203],
-  5: [11102, 12102, 13102, 23103, 31503, 31603, 31703, 31803, 32303, 31903],
-  6: [11102, 12102, 12202, 13102, 30502, 31402],
-}
-const SELF_SCORE_WEIGHTS = {
-  strong:   { '攻击力百分比': .75, '暴击率': 1, '暴击伤害': 1, '穿透值': 1, '属性伤害加成': 1 },
-  stun:     { '冲击力': 1, '攻击力百分比': .75, '暴击率': 1, '暴击伤害': .75, '穿透值': .5, '属性伤害加成': .75 },
-  anomaly:  { '攻击力百分比': .75, '异常精通': 1, '异常掌控': 1, '穿透值': .75, '属性伤害加成': 1 },
-  support:  { '攻击力百分比': .75, '暴击率': .75, '暴击伤害': .75, '能量自动回复': 1, '穿透值': .5, '属性伤害加成': .75 },
-  rupture:  { '生命值百分比': .75, '攻击力百分比': .25, '暴击率': 1, '暴击伤害': 1, '属性伤害加成': 1, '冲击力': .5, '防御力百分比': .25 },
-  defender: { '防御力百分比': 1, '暴击率': .75, '暴击伤害': .75, '穿透值': .75, '属性伤害加成': 1 },
-}
-const PROF_WEIGHT_KEY = { 1: 'strong', 2: 'stun', 3: 'anomaly', 4: 'support', 5: 'defender', 6: 'rupture', 7: 'defender' }
-
 /**
- * 角色级权重覆盖 —— 必须与 apps/zzz_panel_list.js 的 CHAR_WEIGHT_OVERRIDE 保持一致。
+ * 驱动盘评分统一走 apps/zzz_panel_list.js 的 calcEquipScore。
  *
- * 这里和面板详情是两份独立的评分实现（签名不同，一个吃原始 data、一个吃
- * 归一化后的 equip），同步维护容易漏。星见雅就是漏的那一个：
- * 面板那边已经按直伤给了双暴权重，这边还是 anomaly 模板（双暴权重 0），
- * 于是同一个角色在「%雅排名」和「%雅面板」两个地方评分对不上。
- *
- * 星见雅：职业是异常，但专武副词条是暴击率、核心被动按暴伤结算，
- * 用 anomaly 权重会把她的双暴盘全部判成无效词条。
+ * 这里曾经有一份完整复制（权重表、主词条池、评分公式全都各存一份），
+ * 结果给星见雅加直伤权重时只改了面板那份，排名榜还是 anomaly 模板，
+ * 同一个角色在两个入口算出不同分数。
+ * 现在只保留「原始 data → 归一化参数」的适配层，公式与权重只有一处。
  */
-const CHAR_WEIGHT_OVERRIDE = {
-  雅: { '攻击力百分比': 1, '暴击率': 1, '暴击伤害': 1, '穿透值': .75, '属性伤害加成': 1, '异常精通': .25 },
-}
-
-function getScoreWeight(charName, profession, elementType, baseProps = {}) {
-  const elemId = ELEM_DMG_ID[elementType]
-  const override = CHAR_WEIGHT_OVERRIDE[charName]
-  const key = PROF_WEIGHT_KEY[profession] || 'strong'
-  const ruleName = override
-    ? `自研·${charName}（特化）`
-    : `自研·${PROF_WEIGHT_NAME[profession] || '强攻'}`
-  const named = { ...(override || SELF_SCORE_WEIGHTS[key]) }
-  const weight = {}
-  for (const nm in named) {
-    const id = nm === '属性伤害加成' ? elemId : SCORE_PROP_ID[nm]
-    if (id != null) weight[id] = named[nm]
-  }
-  for (const [small, big, keyName] of [[11103, 11102, 'hpmax'], [12103, 12102, 'attack'], [13103, 13102, 'def']]) {
-    if (!weight[big]) continue
-    const base = parseFloat(baseProps?.[keyName]?.base)
-    if (!(base > 0)) continue
-    weight[small] ??= BASE_VALUE[small] * 100 / (BASE_VALUE[big] * base) * weight[big]
-  }
-  return { ruleName, weight }
-}
-
 function calcEquipScore(data) {
   const equip = data?.equip || []
-  const profession = data?.avatar_profession
-  const elementType = data?.element_type
-  const baseProps = {}
-  for (const p of data?.properties || []) {
-    const pid = Number(p.property_id)
-    if (pid === 1 || pid === 11102 || pid === 11103) baseProps.hpmax = { base: p.base || '0' }
-    if (pid === 2 || pid === 12101 || pid === 12102 || pid === 12103) baseProps.attack = { base: p.base || '0' }
-    if (pid === 3 || pid === 13102 || pid === 13103) baseProps.def = { base: p.base || '0' }
-  }
-  const { weight } = getScoreWeight(
-    data?.name_mi18n || data?.full_name_mi18n || '',
-    profession,
-    elementType,
-    baseProps,
-  )
+  const a = data || {}
 
-  const equipList = equip.map(eq => ({
+  /* 面板版要求的是已归一化的属性：基础值另取、词条用 {pid, count}。
+     原始 data 里 properties 是 [{property_id, base, final}]、盘上是 [{property_id, level}]，
+     在这里一次性转换，避免把面板侧也改造成兼容两种格式。 */
+  const baseProps = {}
+  const stats = {}
+  for (const p of a.properties || []) {
+    const pid = Number(p.property_id)
+    const base = parseFloat(p.base) || 0
+    const final = parseFloat(p.final) || 0
+    if (pid === 1 || pid === 11102) baseProps.hpmax = { base: String(base || final) }
+    if (pid === 2 || pid === 12101) baseProps.attack = { base: String(base || final) }
+    if (pid === 3 || pid === 13102) baseProps.def = { base: String(base || final) }
+    if (pid === 2 || pid === 12101) stats.atk = base || final
+    if (pid === 5) stats.crit = (final || 0) / 100
+    if (pid === 6) stats.critdmg = (final || 0) / 100
+    if (pid === 7) stats.am = final || 0
+    if (pid === 8) stats.ap = final || 0
+  }
+
+  const equipFinal = equip.map(eq => ({
     slot: eq.equipment_type ?? 0,
     level: eq.level ?? 0,
     rarity: eq.rarity || 'A',
@@ -149,39 +102,16 @@ function calcEquipScore(data) {
     properties: (eq.properties || []).map(p => ({ pid: p.property_id, count: p.level ?? 0 })),
   }))
 
-  let total = 0
-  for (const eq of equipList) {
-    const slot = eq.slot || 0
-    const levelMult = 0.25 + eq.level * 0.05
-    const rarityMult = eq.rarity === 'S' ? 1 : eq.rarity === 'A' ? 2 / 3 : 1 / 3
-    const mainId = eq.main_properties[0]?.pid || 0
-    let actual = 0
-    for (const p of eq.properties) {
-      const w = weight[p.pid]
-      if (w) actual += w * p.count
-    }
-    const cand = SUB_STAT_IDS.filter(id => id !== mainId && weight[id]).sort((a, b) => weight[b] - weight[a]).slice(0, 4)
-    let score = 0
-    if (cand.length) {
-      let max = weight[cand[0]] * 6
-      for (let i = 1; i < cand.length; i++) max += weight[cand[i]] || 0
-      if (max > 0) {
-        if (slot >= 1 && slot <= 3) {
-          const minScore = 12 * levelMult * rarityMult
-          score = actual === 0 ? minScore : Math.max(actual / max * levelMult * rarityMult * 55, minScore)
-        } else {
-          const ms = (SCORE_MAIN_STATS[slot] || []).filter(id => weight[id]).sort((a, b) => weight[b] - weight[a])[0]
-          const mainScore = ms ? 12 * (weight[mainId] || 0) / weight[ms] : 12
-          const subScore = actual / max * 43
-          score = (mainScore + subScore) * levelMult * rarityMult
-        }
-      }
-    }
-    total += score
-  }
-  const rating = total >= 280 ? 'MAX' : total >= 220 ? 'ACE' : total >= 200 ? 'SSS' : total >= 180 ? 'SS' : total >= 160 ? 'S' : total >= 120 ? 'A' : total >= 80 ? 'B' : 'C'
-  return { score: +total.toFixed(1), rating }
+  return calcEquipScoreShared(
+    equipFinal,
+    a.name_mi18n || a.full_name_mi18n || '',
+    stats,
+    a.avatar_profession,
+    a.element_type,
+    baseProps,
+  )
 }
+
 
 function formatDamage(num = 0) {
   num = Number(num || 0)
