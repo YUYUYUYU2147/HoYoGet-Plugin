@@ -86,11 +86,29 @@ const SELF_SCORE_WEIGHTS = {
 }
 const PROF_WEIGHT_KEY = { 1: 'strong', 2: 'stun', 3: 'anomaly', 4: 'support', 5: 'defender', 6: 'rupture', 7: 'defender' }
 
-function getScoreWeight(profession, elementType, baseProps = {}) {
+/**
+ * 角色级权重覆盖 —— 必须与 apps/zzz_panel_list.js 的 CHAR_WEIGHT_OVERRIDE 保持一致。
+ *
+ * 这里和面板详情是两份独立的评分实现（签名不同，一个吃原始 data、一个吃
+ * 归一化后的 equip），同步维护容易漏。星见雅就是漏的那一个：
+ * 面板那边已经按直伤给了双暴权重，这边还是 anomaly 模板（双暴权重 0），
+ * 于是同一个角色在「%雅排名」和「%雅面板」两个地方评分对不上。
+ *
+ * 星见雅：职业是异常，但专武副词条是暴击率、核心被动按暴伤结算，
+ * 用 anomaly 权重会把她的双暴盘全部判成无效词条。
+ */
+const CHAR_WEIGHT_OVERRIDE = {
+  雅: { '攻击力百分比': 1, '暴击率': 1, '暴击伤害': 1, '穿透值': .75, '属性伤害加成': 1, '异常精通': .25 },
+}
+
+function getScoreWeight(charName, profession, elementType, baseProps = {}) {
   const elemId = ELEM_DMG_ID[elementType]
+  const override = CHAR_WEIGHT_OVERRIDE[charName]
   const key = PROF_WEIGHT_KEY[profession] || 'strong'
-  const ruleName = `自研·${PROF_WEIGHT_NAME[profession] || '强攻'}`
-  const named = { ...SELF_SCORE_WEIGHTS[key] }
+  const ruleName = override
+    ? `自研·${charName}（特化）`
+    : `自研·${PROF_WEIGHT_NAME[profession] || '强攻'}`
+  const named = { ...(override || SELF_SCORE_WEIGHTS[key]) }
   const weight = {}
   for (const nm in named) {
     const id = nm === '属性伤害加成' ? elemId : SCORE_PROP_ID[nm]
@@ -116,7 +134,12 @@ function calcEquipScore(data) {
     if (pid === 2 || pid === 12101 || pid === 12102 || pid === 12103) baseProps.attack = { base: p.base || '0' }
     if (pid === 3 || pid === 13102 || pid === 13103) baseProps.def = { base: p.base || '0' }
   }
-  const { weight } = getScoreWeight(profession, elementType, baseProps)
+  const { weight } = getScoreWeight(
+    data?.name_mi18n || data?.full_name_mi18n || '',
+    profession,
+    elementType,
+    baseProps,
+  )
 
   const equipList = equip.map(eq => ({
     slot: eq.equipment_type ?? 0,
