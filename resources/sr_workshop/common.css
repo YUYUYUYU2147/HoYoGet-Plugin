@@ -148,10 +148,12 @@ body {
 }
 
 /* ───── 页脚 ───── */
-/* 说明行在左、来源在右的布局保留；只有「from 米哈游」这行居中 */
+/* 说明行靠左；「from 米哈游」绝对定位到整条页脚的水平中线上，
+   这样无论左侧文字多长，它都正好居中（flex 的 1 1 auto 会被左侧撑偏）。 */
 .footer {
+  position: relative;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   margin-top: 14px;
   padding-top: 12px;
@@ -160,9 +162,11 @@ body {
   color: #7d97bd;
 }
 .footer .src {
-  flex: 1 1 auto;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   color: #ff8a8a;
   font-weight: 900;
   letter-spacing: 1px;
-  text-align: center;
+  white-space: nowrap;
 }
