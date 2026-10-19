@@ -54,7 +54,7 @@ class mhy {
     if (info?.device_fp && info?.device_id) {
       const accounts = await this.listAccounts(e);
       if (!accounts.length) return e.reply('请先扫码绑定米游社后，在绑定设备');
-      const ltuids = await this.registerDevice(e, accounts, info.device_id, info.device_fp);
+      const ltuids = await this.registerDevice(e, accounts, info.device_id, info.device_fp, info);
       return this.bd(e, info.device_id, info.device_fp, info, ltuids);
     }
     if (!info?.oaid) return logger.error('设备格式错误');
@@ -119,7 +119,7 @@ class mhy {
       logger.error(res1, res2)
     }
     const rest = accounts.filter(a => a.ltuid !== accounts[0].ltuid)
-    const more = await this.registerDevice(e, rest, device_id, fp)
+    const more = await this.registerDevice(e, rest, device_id, fp, info)
     const ltuids = [...new Set([...done, ...more])]
     if (!ltuids.length) return e.reply('设备登记失败，米游社未接受任何账号，请稍后重试或检查 CK 是否过期');
     return this.bd(e, device_id, fp, info, ltuids);
@@ -129,24 +129,28 @@ class mhy {
    * 对指定账号逐个登记设备（deviceLogin + saveDevice），返回成功的 ltuid 列表。
    * 米游社的设备信任是按账号维护的，所以必须每个账号各用各的 Cookie 调一次。
    */
-  async registerDevice(e, accounts, device_id, fp) {
+  async registerDevice(e, accounts, device_id, fp, info = null) {
     const ok = []
     for (const acc of accounts || []) {
       try {
-        /* 不能用 null：getHeaders 在 info 为空时会去读旧存档，
-           可能拿到上一次绑定的 device_name，导致设备描述前后不一致。
-           这里明确不要旧信息，后面统一覆盖 device_id / device_fp。 */
-        const headers = this.getHeaders(e, acc.ck, true, {});
+        /* 设备名要与指纹里的机型一致：米游社拿 device_name / model 做交叉校验，
+           随便生成一个随机串容易和设备指纹对不上。
+           deviceInfo 存在时按「品牌 机型」拼，取不到再退回默认名。 */
+        const modelName = info?.deviceModel || 'Mi 10'
+        const brandName = String(info?.deviceFingerprint || '').split('/')[0] || ''
+        const deviceName = `${brandName} ${modelName}`.trim()
+        const headers = this.getHeaders(e, acc.ck, true, info || {});
         headers['x-rpc-device_id'] = device_id;
         if (fp) headers['x-rpc-device_fp'] = fp;
-        const deviceName = headers['x-rpc-device_name'];
+        headers['x-rpc-device_name'] = deviceName;
+        headers['x-rpc-device_model'] = modelName;
         const body = this.getbody_(device_id, deviceName);
-        const [r1, r2] = await Promise.all([
-          fetch('https://bbs-api.miyoushe.com/apihub/api/deviceLogin',
-            { method: 'POST', headers, body: JSON.stringify(body) }).then(r => r.json()).catch(() => ({})),
-          fetch('https://bbs-api.miyoushe.com/apihub/api/saveDevice',
-            { method: 'POST', headers, body: JSON.stringify(body) }).then(r => r.json()).catch(() => ({})),
-        ]);
+        /* 必须先 deviceLogin 再 saveDevice：后者依赖前者建立的会话。
+           之前用 Promise.all 并发发出去，顺序不保证，容易只成功一个。 */
+        const r1 = await fetch('https://bbs-api.miyoushe.com/apihub/api/deviceLogin',
+          { method: 'POST', headers, body: JSON.stringify(body) }).then(r => r.json()).catch(() => ({}))
+        const r2 = await fetch('https://bbs-api.miyoushe.com/apihub/api/saveDevice',
+          { method: 'POST', headers, body: JSON.stringify(body) }).then(r => r.json()).catch(() => ({}))
         if (r1?.retcode === 0 && r2?.retcode === 0) {
           ok.push(acc.ltuid)
         } else {
