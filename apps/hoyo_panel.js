@@ -926,17 +926,22 @@ export class hoyo_panel extends plugin {
       } finally {
         e.reply = realReply
       }
-      if (refreshed === false || refreshed === undefined) {
-        logger.warn?.(`[HoYoGet][hoyo_panel] ${uid} 面板未刷新（返回 ${refreshed}）`)
-        return
-      }
-      // refreshProfile 会把数据写盘，重新读一次拿最新的
+      /* ⚠ 不能用返回值判断成功。
+         miao 的 ProfileAvatar.refreshProfile 成功时返回 player._update.length，
+         走 MiniGG / enka 这类第三方面板服务时可能返回 undefined（实测 10.4 秒后
+         数据已写盘，但返回值仍是 undefined）。之前按返回值判断会直接静默 return，
+         用户看到的就是「发了没反应」。改为以「重新读盘后有没有面板」为准。 */
       const fresh = new miao.Player(uid, game)
+      const avatarCount = Object.keys(fresh._avatars || {}).length
       if (!fresh.hasProfile) {
-        logger.warn?.(`[HoYoGet][hoyo_panel] ${uid} 刷新后仍无面板数据`)
-        return
+        logger.warn?.(`[HoYoGet][hoyo_panel] ${uid} 刷新后仍无面板数据（refreshProfile=${refreshed}，avatars=${avatarCount}）`)
+        return e.reply([
+          `没能更新到 ${uid} 的面板数据。`,
+          '可能原因：米游社 / 第三方面板服务都未返回可用数据，或该账号未在游戏内公开角色详情。',
+          '可以先用 miao 自带的「#更新面板」确认数据源是否正常，稍后再试。',
+        ].join('\n'))
       }
-      logger.mark?.(`[HoYoGet][hoyo_panel] ${uid} 刷新完成，开始渲染（avatars=${Object.keys(fresh._avatars || {}).length}）`)
+      logger.mark?.(`[HoYoGet][hoyo_panel] ${uid} 刷新完成，开始渲染（avatars=${avatarCount}，refreshProfile=${refreshed}）`)
       return this.renderPanel(e, game, uid, miao, true, fresh)
     } catch (err) {
       logger.error?.(`[HoYoGet][hoyo_panel] 更新面板失败: ${err?.message || err}`)
