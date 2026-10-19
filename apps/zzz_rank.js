@@ -3,7 +3,8 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { pluginPriority, render, yaml, mys } from '#HoYoGet'
 import { buildBasicProperties, calcDamage as calcPanelDamage, calcEquipScore as calcEquipScoreShared } from './zzz_panel_list.js'
-import { getRelicMeta, getWeaponMeta } from './zzz_workshop.js'
+import { getRelicMeta, getWeaponMeta, getUidToQqMap } from './zzz_workshop.js'
+import { zzz_panel_list } from './zzz_panel_list.js'
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const RECORDS_DIR = path.join(PLUGIN_ROOT, 'data', 'zzz_panel', 'records')
@@ -432,6 +433,35 @@ export class zzz_panel_rank extends plugin {
         icon: buildAvatar(r.data) || r.data?.role_vertical_painting_url || '',
         nickname: r.player?.nickname || r.charName,
       })
+    }
+
+    /* 玩家游戏内头像：只有 index 接口的 data.cur_head_icon_url 有，
+       而 records / ZZZ-Plugin 的 player 里都没有（实测全是空串或没这个字段）。
+       所以对缺头像的行逐个补一次，并做并发上限，避免一次打太多触发风控。
+       取不到就保持空值，模板会跳过，不影响出图。 */
+    const needIcon = resolved.filter(r => !r.icon).slice(0, 10)
+    if (needIcon.length) {
+      /* 不 new 整个插件类（会走 plugin 基类构造函数、注册一堆东西），
+         直接用原型方法：getCk / fetchPlayer 只依赖 this 上的少量成员，
+         传一个最小对象即可。 */
+      /* 必须按 UID 反查 QQ：榜上是别的群成员，拿发指令那个人的 CK 去查会串号
+         （pickCkItem 找不到对应 uid 会返回 null，这里也就不查了）。 */
+      const uidToQq = await getUidToQqMap().catch(() => new Map())
+      const handler = Object.create(zzz_panel_list.prototype)
+      if (handler) {
+        await Promise.all(needIcon.map(async row => {
+          try {
+            const qq = uidToQq.get(String(row.uid))
+            if (!qq) return
+            const mock = { user_id: Number(qq), game: 'zzz', reply: () => {} }
+            const ck = await handler.getCk(mock, row.uid)
+            if (!ck || !Object.values(ck).some(i => i?.ck)) return
+            const p = await handler.fetchPlayer(mock, row.uid, ck)
+            if (p?.avatar) row.icon = p.avatar
+            if (p?.nickname && !row.playerNickname) row.playerNickname = p.nickname
+          } catch (_) { /* 单个失败不影响整榜 */ }
+        }))
+      }
     }
 
     if (!resolved.length) {

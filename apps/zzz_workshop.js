@@ -70,7 +70,7 @@ async function getGroupMemberUids(e) {
  * 本群榜要显示游戏内头像/昵称，必须先由 UID 找到对应的 QQ，
  * 再借该 QQ 的 CK 调 index 接口。全服榜上的陌生人不在表里，取不到。
  */
-async function getUidToQqMap() {
+export async function getUidToQqMap() {
   const map = new Map()
   if (!fs.existsSync(YUNZAI_DB)) return map
   try {
