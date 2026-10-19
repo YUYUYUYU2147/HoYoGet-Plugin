@@ -242,27 +242,40 @@ function loadAllRecords(groupUids = null) {
 function applyPriorityToLoader(want) {
   const value = Number(want)
   if (!Number.isFinite(value)) return null
-  const timer = setTimeout(() => {
-    try {
-      /* apps/ → HoYoGet-Plugin/ → plugins/ → TRSS-Yunzai/（三层） */
-      import('../../../lib/plugins/loader.js').then(mod => {
-        const loader = mod?.default
-        const list = loader?.priority
-        if (!Array.isArray(list)) return
-        const key = path.basename(new URL(import.meta.url).pathname).replace(/\.js$/, '')
+  const key = 'zzz_rank'
+  /* 热重载只替换原型方法，换不掉 constructor，所以调度表里的 priority 还是启动时的旧值。
+     这里在模块被重新求值后，把新值写回那条记录。
+
+     注意 loader.js 顶层会 new Cfg()、读全局 logger，只有在框架进程里才 import 成功；
+     单独 node 跑会报 logger is not defined —— 所以失败只记 warn，不抛。
+     候选路径写多个，兼容从 trss-yunzai 根目录启动/子目录启动两种部署。 */
+  const candidates = [
+    new URL('../../../lib/plugins/loader.js', import.meta.url).href,
+    new URL('file://' + process.cwd() + '/lib/plugins/loader.js').href,
+  ]
+  const timer = setTimeout(async () => {
+    for (const href of candidates) {
+      try {
+        const mod = await import(href)
+        const list = mod?.default?.priority
+        if (!Array.isArray(list)) continue
+        let hit = false
         for (const item of list) {
-          /* key 是 apps 文件名（zzz_rank），namespace 可能被改写，两个都比一遍 */
           if (item.key !== key && item.namespace !== key) continue
+          hit = true
           if (Number(item.priority) === value) return
           const before = item.priority
           item.priority = value
-          /* 框架内部数组按 priority 升序排过，改完要重排，否则顺序不变 */
           list.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0))
           logger.mark?.(`[HoYoGet][zzz_rank] 优先级已就地更新：${before} → ${value}（无需重启）`)
         }
-      }).catch(() => { /* 拿不到 loader 就维持启动时的值 */ })
-    } catch (_) { /* ignore */ }
-  }, 1500)   /* 等 index.js 把插件全部注册完 */
+        if (hit) return
+      } catch (err) {
+        /* 换下一个候选；全失败才提示 */
+      }
+    }
+    logger.warn?.('[HoYoGet][zzz_rank] 无法直接改调度表，优先级依赖启动时的值（重启后生效）')
+  }, 1500)
   timer.unref?.()
   return value
 }
