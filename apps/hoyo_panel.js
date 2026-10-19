@@ -428,19 +428,22 @@ function flattenArtis(list, game, weights = {}) {
       subs: subs.slice(0, 4).map(p => {
         const key = propKey(p)
         const roll = subRoll(p, game)
-        /* 评分直接抄 miao：单条副词条的 `_mark` 就是它按角色权重算出的加权分，
-           `eff` 是它自己的词条数（已按 0.85 折算）。这里只做换算与展示，不另起算法。 */
+        /* 评分直接抄 miao：单条副词条的 `_mark` 就是它按角色权重算出的加权分。
+           命中次数用 `upNum`：miao 解析面板时按「每次强化一条 attrId」展开，
+           所以 upNum 就是这条副词条实际中了几次（整数）。
+           `eff` 是「数值 ÷ 单档最大值 ÷ 0.85」的等效词条数，只作 upNum 缺失时的兜底。 */
         const weight = Number(weights?.[weightKeyOf(key)]) || 0
         const markNum = Number(p?._mark)
+        const hit = Number(p?.upNum) || 0
         const miaoEff = Number(String(p?.eff ?? '').replace(/,/g, ''))
-        const rolls = Number.isFinite(miaoEff) && miaoEff > 0 ? miaoEff : (roll?.num || 0)
+        const rolls = hit > 0 ? hit : (Number.isFinite(miaoEff) && miaoEff > 0 ? miaoEff : (roll?.num || 0))
         return {
           key,
           label: propLabel(p, game),
           value: propText(p),
           ...propIcon(p),
           /* 命中次数（词条数）与进度条宽度；词条不在有效集合里时只淡化显示 */
-          roll: rolls ? rolls.toFixed(1) : '',
+          roll: rolls ? (hit > 0 ? String(hit) : rolls.toFixed(1)) : '',
           bar: Math.min(100, Math.round((rolls / 5) * 100)),
           valid: hasWeights ? weight > 0 : roll?.valid === true,
           weight,
@@ -629,7 +632,7 @@ function buildArtisOverall(artis, score, markClass, opts = {}) {
     .sort((x, y) => y.eff - x.eff)
     .map(x => ({
       ...x,
-      rolls: x.rolls.toFixed(1),
+      rolls: Number.isInteger(x.rolls) ? String(x.rolls) : x.rolls.toFixed(1),
       eff: x.eff.toFixed(1),
       value: x.pct ? `${x.num.toFixed(1)}%` : String(Math.round(x.num)),
     }))
