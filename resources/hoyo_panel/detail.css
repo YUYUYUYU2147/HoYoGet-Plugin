@@ -1,5 +1,5 @@
 body {
-  width: 1080px;
+  width: 1160px;
   margin: 0;
   background: #08192b;
   font-family: 'HelpSans', 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', sans-serif;
@@ -7,7 +7,7 @@ body {
 
 .card {
   position: relative;
-  width: 1080px;
+  width: 1160px;
   padding: 16px 16px 12px;
   box-sizing: border-box;
   overflow: hidden;
@@ -18,7 +18,7 @@ body {
     linear-gradient(158deg, #16395a 0%, #0f2a44 48%, #08192b 100%);
 }
 
-/* 两列长图：左列 立绘/武器/圣遗物，右列 属性/ROLLS/Akasha */
+/* 两列长图：左列 立绘 + 装备九宫格（武器 1 + 圣遗物 5），右列 属性/ROLLS/Akasha */
 .layout {
   display: flex;
   align-items: flex-start;
@@ -26,7 +26,7 @@ body {
 }
 
 .col-left {
-  width: 480px;
+  width: 620px;
   flex: none;
   display: flex;
   flex-direction: column;
@@ -104,15 +104,18 @@ body {
   height: 100%;
   object-fit: cover;
   object-position: center 16%;
+  /* 面板浮在右侧，立绘整体放大一点再往左让，避免角色被面板压住 */
+  transform: scale(1.06) translateX(-4%);
+  transform-origin: 50% 35%;
   filter: drop-shadow(0 8px 26px rgba(0, 0, 0, .55));
 }
 
 .hero-fade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, rgba(5, 18, 30, .05) 0%, rgba(5, 18, 30, .34) 46%, rgba(5, 18, 30, .82) 78%),
-    linear-gradient(0deg, rgba(5, 18, 30, .92) 0%, transparent 42%),
-    linear-gradient(180deg, rgba(5, 18, 30, .55) 0%, transparent 26%);
+  background: linear-gradient(90deg, rgba(5, 18, 30, .04) 0%, rgba(5, 18, 30, .22) 52%, rgba(5, 18, 30, .52) 84%),
+    linear-gradient(0deg, rgba(5, 18, 30, .9) 0%, transparent 40%),
+    linear-gradient(180deg, rgba(5, 18, 30, .48) 0%, transparent 26%);
 }
 
 /* 命座图标：竖排在立绘左缘，点亮为原色，未点亮灰度处理 */
@@ -126,18 +129,19 @@ body {
   gap: 6px;
 }
 .cons-item {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   overflow: hidden;
   background: rgba(10, 30, 50, .55);
-  border: 1px solid rgba(122, 192, 236, .5);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, .35);
+  border: 1px solid rgba(150, 220, 255, .75);
+  box-shadow: 0 0 8px rgba(96, 200, 255, .35), 0 2px 8px rgba(0, 0, 0, .35);
 }
 .cons-item.off {
-  filter: grayscale(1) brightness(.72);
-  opacity: .5;
+  filter: grayscale(1) brightness(.8);
+  opacity: .45;
   border-color: rgba(140, 165, 185, .32);
+  box-shadow: none;
 }
 .cons-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
@@ -198,28 +202,31 @@ body {
 
 .weapon {
   display: flex;
-  align-items: center;
-  gap: 11px;
-  padding: 9px 11px;
-  border-radius: 12px;
-  background: linear-gradient(100deg, rgba(24, 74, 112, .55), rgba(10, 32, 52, .45));
-  border: 1px solid rgba(90, 170, 220, .3);
+  flex-direction: column;
+  padding: 8px 9px 8px;
+  border-radius: 11px;
+  background: linear-gradient(180deg, rgba(24, 74, 112, .72), rgba(9, 28, 46, .9));
+  border: 1px solid rgba(90, 170, 220, .34);
+  overflow: hidden;
 }
 
+.wq-head { display: flex; align-items: center; gap: 8px; }
+
 .wq-icon {
-  width: 62px;
-  height: 62px;
+  width: 46px;
+  height: 46px;
   flex: none;
-  border-radius: 10px;
+  border-radius: 8px;
   object-fit: contain;
   background: rgba(255, 255, 255, .06);
 }
 
-.wq-info { min-width: 0; }
+.wq-info { min-width: 0; flex: 1; }
 
 .wq-name {
-  font-size: 17px;
+  font-size: 13px;
   font-weight: 900;
+  line-height: 1.25;
   color: #f2fbff;
   white-space: nowrap;
   overflow: hidden;
@@ -227,20 +234,45 @@ body {
 }
 
 .wq-meta {
-  margin-top: 4px;
+  margin-top: 3px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
+  gap: 7px;
+  font-size: 11px;
   font-weight: 800;
   color: #93bcd6;
 }
-.wq-star { display: inline-flex; align-items: center; gap: 1px; }
+.wq-star { margin-top: 2px; display: flex; align-items: center; gap: 1px; }
 .wq-refine { color: #8fe0c8; }
 
-.wq-props { margin-top: 5px; display: flex; flex-wrap: wrap; gap: 10px; }
-.wq-prop { font-size: 12px; color: #9fc4dc; }
-.wq-prop b { color: #eaf7ff; font-weight: 900; }
+.wq-props {
+  margin-top: 7px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(110, 180, 224, .18);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.wq-prop { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #9fc4dc; }
+.wq-prop-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wq-prop-value { color: #ffe08f; font-weight: 900; }
+
+.wq-passive {
+  margin-top: 7px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(110, 180, 224, .2);
+}
+.wq-passive-name {
+  font-size: 11px;
+  font-weight: 900;
+  color: #bfe6ff;
+  margin-bottom: 2px;
+}
+.wq-passive-desc {
+  font-size: 10px;
+  line-height: 1.5;
+  color: #9dbdd4;
+}
 
 .attrs {
   display: grid;
@@ -254,23 +286,23 @@ body {
   right: 0;
   top: 66px;
   bottom: 0;
-  width: 256px;
+  width: 244px;
   z-index: 2;
   align-content: center;
-  padding: 8px 10px 12px;
+  padding: 8px 8px 10px;
   border-radius: 12px 0 12px 0;
-  background: linear-gradient(90deg, rgba(6, 20, 34, .18), rgba(6, 20, 34, .72) 22%);
+  background: linear-gradient(90deg, rgba(6, 20, 34, 0), rgba(6, 20, 34, .3) 30%, rgba(6, 20, 34, .5) 100%);
 }
 
 .attr {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 10px 4px 8px;
+  padding: 4px 8px 4px 7px;
   border-radius: 7px;
-  background: rgba(6, 24, 40, .5);
+  background: rgba(6, 24, 40, .26);
 }
-.attr:nth-child(odd) { background: rgba(8, 30, 48, .68); }
+.attr:nth-child(odd) { background: rgba(8, 30, 48, .4); }
 
 .a-left { display: flex; align-items: center; gap: 6px; min-width: 0; }
 /* 没有对应图标的词条也要占位，否则同一列文字会左移、与上面行不齐 */
@@ -300,7 +332,7 @@ body {
 /* 雷达 */
 .side {
   display: grid;
-  grid-template-columns: 258px minmax(0, 1fr);
+  grid-template-columns: 232px minmax(0, 1fr);
   grid-template-areas:
     "talents talents"
     "radar overall";
@@ -692,10 +724,11 @@ body {
 .ak-rdmg { text-align: right; font-weight: 800; color: #ffd27a; }
 
 /* ───── 圣遗物 / 遗器 ───── */
-.artis {
+.equip {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
+  align-items: start;
 }
 
 .art {
@@ -792,11 +825,19 @@ body {
   display: flex;
   align-items: center;
   gap: 3px;
-  padding: 1px 2px;
+  padding: 1px 3px;
   border-radius: 4px;
   font-size: 11px;
   overflow: hidden;
 }
+/* 有效词条（角色权重 > 0）：左侧亮条 + 淡蓝底 + 高亮文字，和无效词条一眼区分 */
+.sub.sub-on {
+  background: linear-gradient(90deg, rgba(86, 196, 255, .2), rgba(86, 196, 255, .02) 72%);
+  box-shadow: inset 2px 0 0 #56c4ff;
+}
+.sub.sub-on .s-label { color: #d9f2ff; font-weight: 800; }
+.sub.sub-on .s-value { color: #ffffff; }
+.sub:not(.sub-on) { opacity: .62; }
 /* 命中进度条：贴左铺底，长度按词条数占比（5 档封顶） */
 .sub-bar {
   position: absolute;
@@ -809,21 +850,22 @@ body {
 }
 .sub > *:not(.sub-bar) { position: relative; z-index: 1; }
 
-/* 命中次数标签：有效词条亮蓝，其余灰 */
+/* 命中次数标签：有效词条用亮金徽章，其余灰 */
 .sub-roll {
-  width: 19px;
+  min-width: 24px;
   flex: none;
   text-align: center;
   font-size: 9px;
   font-weight: 900;
-  line-height: 1.45;
-  border-radius: 3px;
+  line-height: 1.5;
+  border-radius: 4px;
   color: #7c9db6;
   background: rgba(120, 180, 220, .12);
 }
 .sub.sub-on .sub-roll {
-  color: #b6ecff;
-  background: rgba(120, 200, 240, .24);
+  color: #3a2400;
+  background: linear-gradient(180deg, #ffe9a8, #ffc44d);
+  box-shadow: 0 0 6px rgba(255, 200, 90, .35);
 }
 .sub:not(.sub-on) .s-label { color: #7d9bb1; }
 .sub:not(.sub-on) .s-value { color: #b7cee0; }

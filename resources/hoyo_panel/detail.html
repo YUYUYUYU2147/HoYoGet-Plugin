@@ -66,30 +66,49 @@
             </div>
           </div>
 
-          {{if weapon}}
-          <div class="weapon">
-            <img class="wq-icon" src="{{_miao_path}}{{weapon.icon}}" onerror="this.style.display='none'">
-            <div class="wq-info">
-              <div class="wq-name">{{weapon.name}}</div>
-              <div class="wq-meta">
-                <span class="wq-star">
-                  {{each weapon.stars}}
-                  <i class="star"></i>
-                  {{/each}}
-                </span>
-                <span class="wq-refine">{{if game === 'sr'}}叠影{{else}}精炼{{/if}}{{weapon.refine}}</span>
-                <span class="wq-lv">Lv.{{weapon.level}}</span>
+          <div class="equip">
+            {{if weapon}}
+            <div class="weapon">
+              <div class="wq-head">
+                <img class="wq-icon" src="{{_miao_path}}{{weapon.icon}}" onerror="this.style.display='none'">
+                <div class="wq-info">
+                  <div class="wq-name">{{weapon.name}}</div>
+                  <div class="wq-star">
+                    {{each weapon.stars}}
+                    <i class="star"></i>
+                    {{/each}}
+                  </div>
+                  <div class="wq-meta">
+                    <span class="wq-refine">{{if game === 'sr'}}叠影{{else}}精炼{{/if}}{{weapon.refine}}</span>
+                    <span class="wq-lv">Lv.{{weapon.level}}</span>
+                  </div>
+                </div>
               </div>
+              {{if weapon.props.length}}
               <div class="wq-props">
                 {{each weapon.props p}}
-                <span class="wq-prop">{{p.label}} <b>{{p.value}}</b></span>
+                <div class="wq-prop">
+                  <span class="picon-wrap">
+                    {{if p.iconMiao}}
+                    <img class="picon" src="{{_miao_path}}{{p.icon}}" onerror="this.style.display='none'">
+                    {{else if p.icon}}
+                    <img class="picon" src="{{ppath}}zzz_panel/images/panel_icons/{{p.icon}}" onerror="this.style.display='none'">
+                    {{/if}}
+                  </span>
+                  <span class="wq-prop-label">{{p.label}}</span>
+                  <b class="wq-prop-value">{{p.value}}</b>
+                </div>
                 {{/each}}
               </div>
+              {{/if}}
+              {{if weapon.passiveDesc}}
+              <div class="wq-passive">
+                {{if weapon.passiveName}}<div class="wq-passive-name">{{weapon.passiveName}}</div>{{/if}}
+                <div class="wq-passive-desc">{{weapon.passiveDesc}}</div>
+              </div>
+              {{/if}}
             </div>
-          </div>
-          {{/if}}
-
-          <div class="artis">
+            {{/if}}
             {{each artis a}}
             <div class="art {{a.markClass}}">
               <div class="art-top">
@@ -135,7 +154,7 @@
                 {{each a.subs s}}
                 <div class="sub {{if s.valid}}sub-on{{/if}}">
                   {{if s.roll}}<i class="sub-bar" style="width:{{s.bar}}%"></i>{{/if}}
-                  <span class="sub-roll">{{s.roll}}</span>
+                  <span class="sub-roll">×{{s.roll}}</span>
                   <span class="picon-wrap">
                     {{if s.iconMiao}}
                     <img class="picon" src="{{_miao_path}}{{s.icon}}" onerror="this.style.display='none'">

@@ -223,7 +223,7 @@ function pickAttrs(profile) {
 const GS_STAT_CN = {
   hp: '生命值', atk: '攻击力', def: '防御力', mastery: '元素精通',
   cpct: '暴击率', cdmg: '暴击伤害', recharge: '元素充能效率',
-  heal: '治疗加成', shield: '护盾强效', dmg: '伤害加成',
+  heal: '治疗加成', shield: '护盾强效', dmg: '伤害加成', atkBase: '基础攻击力',
   hpp: '生命值', atkp: '攻击力', defp: '防御力',
   /* miao 的圣遗物词条键：atk/hp/def 是大词条（百分比），*Plus 是小词条（固定值） */
   hpPlus: '生命值', atkPlus: '攻击力', defPlus: '防御力', phy: '物理伤害加成',
@@ -233,7 +233,7 @@ const GS_STAT_CN = {
 const SR_STAT_CN = {
   hp: '生命值', atk: '攻击力', def: '防御力', spd: '速度', mastery: '击破特攻',
   cpct: '暴击率', cdmg: '暴击伤害', recharge: '能量恢复效率',
-  effect: '效果命中', resist: '效果抵抗', heal: '治疗量加成', dmg: '伤害加成',
+  effect: '效果命中', resist: '效果抵抗', heal: '治疗量加成', dmg: '伤害加成', atkBase: '基础攻击力',
   hpPlus: '生命值', atkPlus: '攻击力', defPlus: '防御力',
 }
 /** 需要带 % 的键；其余按整数处理 */
@@ -313,6 +313,7 @@ const PROP_ICON = {
   hpp: 'IconHpMax.png',
   atk: 'IconAttack.png',
   atkp: 'IconAttack.png',
+  atkBase: 'IconAttack.png',
   hpPlus: 'IconHpMax.png',
   atkPlus: 'IconAttack.png',
   def: 'IconDef.png',
@@ -323,6 +324,12 @@ const PROP_ICON = {
   cdmg: 'IconCritDam.png',
   recharge: 'IconSpRecover.png',
   phys: 'Physical.png',
+  phy: 'Physical.png',
+}
+/* 元素伤害杯：miao 的主词条 key 统一是 dmg，靠 name（「雷元素伤害加成」）还原元素图标 */
+const ELEM_NAME_ICON = {
+  火: 'pyro', 水: 'hydro', 冰: 'cryo', 雷: 'electro',
+  风: 'anemo', 岩: 'geo', 草: 'dendro', 物理: 'phys',
 }
 
 /**
@@ -343,6 +350,11 @@ const ELEM_ICON = {
 function propIcon(p) {
   const key = propKey(p)
   if (PROP_ICON[key]) return { icon: PROP_ICON[key], iconMiao: false }
+  if (key === 'dmg') {
+    const elem = Object.keys(ELEM_NAME_ICON).find(k => String(p?.name || '').includes(k))
+    if (elem === '物理') return { icon: 'Physical.png', iconMiao: false }
+    if (elem && ELEM_ICON[ELEM_NAME_ICON[elem]]) return { icon: ELEM_ICON[ELEM_NAME_ICON[elem]], iconMiao: true }
+  }
   if (ELEM_ICON[key]) return { icon: ELEM_ICON[key], iconMiao: true }
   return { icon: '', iconMiao: false }
 }
@@ -655,8 +667,26 @@ function flattenCharDetail(profile, Character, game, meta = {}) {
   const equip = flattenArtis(artis, game, charWeight)
   const weapon = profile?.weapon || {}
   const weaponIcon = stripSlash(weapon?.imgs?.icon || weapon?.icon || weapon?.img || '')
-  const weaponMains = Array.isArray(weapon?.attrs) ? weapon.attrs : []
-  const wMain = weaponMains.slice(0, 2).map(p => ({ label: propLabel(p, game), value: propText(p) })).filter(x => x.label && x.value)
+  /* 武器主/副词条与被动都从 miao 的 getWeaponDetail() 拿：
+     `attrs` 形如 { atkBase: '674', cdmg: '44.1%' }，`desc` 是 { name, desc }（已按精炼替换数值） */
+  const wDetail = (() => {
+    try {
+      return typeof profile?.getWeaponDetail === 'function' ? (profile.getWeaponDetail() || {}) : {}
+    } catch {
+      return {}
+    }
+  })()
+  const wAttrs = wDetail?.attrs && typeof wDetail.attrs === 'object' ? wDetail.attrs : {}
+  const wMain = Object.entries(wAttrs)
+    .map(([key, value]) => ({ key, label: propLabel({ key }, game), value: String(value), ...propIcon({ key }) }))
+    .filter(x => x.label && x.value && x.value !== 'NaN')
+  const wPassive = wDetail?.desc && typeof wDetail.desc === 'object' ? wDetail.desc : {}
+  /* 被动描述带 <nobr>/<span> 等标签，图片里用不到，统一压成纯文本 */
+  const wPassiveDesc = String(wPassive?.desc || '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 
   const attrs = detailAttrRows(profile, game)
   const score = (() => {
@@ -678,11 +708,11 @@ function flattenCharDetail(profile, Character, game, meta = {}) {
     ? `${miaoPath}profile/normal-character/${char.name}.webp`
     : ''
 
-  /* 命座图标：miao 的 char.imgs 里存 cons0~cons5 的文件名（部分版本从 cons1 起），
+  /* 命座图标：miao 的 char.imgs 里存的是 cons1~cons6（1 对应第 1 命），
      点亮的个数与 profile.cons 一致，未点亮由 CSS 灰度处理 */
   const consCount = Number(profile?.cons) || 0
   const consIcons = Array.from({ length: 6 }, (_, i) => ({
-    file: stripSlash(imgs[`cons${i}`] || imgs[`cons${i + 1}`] || ''),
+    file: stripSlash(imgs[`cons${i + 1}`] || ''),
     active: i < consCount,
     index: i + 1,
   }))
@@ -713,6 +743,8 @@ function flattenCharDetail(profile, Character, game, meta = {}) {
       refine: weapon.affix || 0,
       icon: weaponIcon,
       props: wMain,
+      passiveName: wPassive?.name || '',
+      passiveDesc: wPassiveDesc,
     } : null,
     artis: equip,
     sets: setSummary(equip),
