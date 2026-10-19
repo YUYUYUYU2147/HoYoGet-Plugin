@@ -1546,6 +1546,8 @@ const EXTREME_REG = /^(?:米游社|%|#?绝区零)?(.+?)极限面板$/
 const BULK_UPDATE_REG = /^(?:米游社|%|#?绝区零)?(?:批量)?更新群友面板$/
 // 主人专用：批量更新群友的挑战记录（式舆 + 危局）
 const BULK_CHALLENGE_REG = /^(?:米游社|%|#?绝区零)?(?:批量)?更新群友挑战(记录|数据)$/
+// 主人专用：清理失效的绝区零绑定（无任何可用 CK 的）
+const CLEAN_BINDING_REG = /^(?:米游社|%|#?绝区零)?清理失效(ck|CK|绑定)$/
 // 练度统计：%练度 / 米游社练度 / 绝区零练度统计（对齐 ZZZ-Plugin 的 %zzz练度）
 const PROFICIENCY_REG = /^(?:米游社|%|#?绝区零)?练度(统计)?$/
 const REMIND_PREFIX = '^(?:米游社|%|#?绝区零)?'
@@ -1577,6 +1579,7 @@ export class zzz_panel_list extends plugin {
         // 但放前面能避免以后有人把 CMD_REG 放宽时被抢走
         { reg: BULK_UPDATE_REG.source, fnc: 'panelBulkUpdate' },
         { reg: BULK_CHALLENGE_REG.source, fnc: 'panelBulkChallenge' },
+        { reg: CLEAN_BINDING_REG.source, fnc: 'panelCleanBinding' },
         { reg: CMD_REG.source, fnc: 'panelList' },
         { reg: DAMAGE_REG.source, fnc: 'panelDamage' },
         { reg: DETAIL_REG.source, fnc: 'panelDetail' },
@@ -1653,6 +1656,45 @@ export class zzz_panel_list extends plugin {
     } catch (err) {
       logger.error?.(`[HoYoGet][zzz_panel] 批量更新挑战失败：${err?.message || err}`)
       return e.reply(`批量更新挑战失败：${err?.message || err}`)
+    }
+  }
+
+  /**
+   * 主人专用：清理失效的绝区零绑定。
+   * 判定见 apps/zzz_clean_binding.js —— ltuids 无有效 CK 且没有 Stoken 文件才算失效，
+   * 避免误删「ltuids 没写但 Stoken 还能用」的老用户。
+   */
+  async panelCleanBinding(e) {
+    if (!e.isMaster) return e.reply('仅主人可操作')
+    const { scanBindings, removeZzzBindings } = await import('./zzz_clean_binding.js')
+    try {
+      const scan = await scanBindings()
+      if (scan.error) return e.reply(scan.error)
+      if (!scan.invalid.length) {
+        return e.reply(`检查完成：共 ${scan.valid.length} 个有效绑定，没有失效的。`)
+      }
+      const preview = scan.invalid.slice(0, 10)
+        .map(x => `  ${x.qq} → ${x.uid}`).join('\n')
+      const more = scan.invalid.length > 10 ? `\n  ……另有 ${scan.invalid.length - 10} 个` : ''
+      await e.reply([
+        `发现 ${scan.invalid.length} 个失效绑定（无任何可用 CK）：`,
+        preview + more,
+        '',
+        '正在清理…',
+      ].join('\n'))
+
+      const res = await removeZzzBindings(scan.invalid.map(x => x.qq))
+      if (res.error) return e.reply(res.error)
+      const lines = [`清理完成：已解除 ${res.done} 个失效绑定。`]
+      if (res.errors.length) {
+        lines.push('', '未处理：')
+        for (const err of res.errors.slice(0, 6)) lines.push(`  ${err}`)
+      }
+      lines.push('', `剩余有效绑定：${scan.valid.length} 个`)
+      return e.reply(lines.join('\n'))
+    } catch (err) {
+      logger.error?.(`[HoYoGet][zzz_panel] 清理失效 CK 失败：${err?.message || err}`)
+      return e.reply(`清理失败：${err?.message || err}`)
     }
   }
 
