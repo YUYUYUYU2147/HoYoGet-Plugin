@@ -198,6 +198,39 @@ body.elem-physical { --elem-line: rgba(207, 216, 227, .9); --elem-glow: rgba(180
 }
 .cmeta .nick { color: #8fb6d0; font-weight: 700; }
 
+/* 玩家头像 + 昵称：与「原石统计」卡片左上角同源（index 接口） */
+.player-chip {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 210px;
+  padding: 4px 11px 4px 4px;
+  border-radius: 999px;
+  background: rgba(6, 24, 40, .55);
+  border: 1px solid rgba(120, 190, 240, .22);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .25);
+}
+.pc-avatar {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+  background: rgba(255, 255, 255, .08);
+}
+.pc-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #d9ecfa;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .uid {
   position: absolute;
   left: 18px;

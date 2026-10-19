@@ -109,6 +109,14 @@ body {
   letter-spacing: -.3px;
   font-variant-numeric: tabular-nums;
 }
+.player-chip {
+  background: rgba(255, 255, 255, .08);
+  border-color: rgba(255, 255, 255, .14);
+  box-shadow: none;
+  backdrop-filter: blur(14px);
+}
+.pc-name { color: var(--ap-text); font-weight: 600; }
+
 .a-weight { color: var(--ap-mute); background: rgba(255, 255, 255, .1); font-weight: 600; }
 .a-weight.hi { color: var(--ap-orange); background: rgba(255, 159, 10, .16); }
 .a-sub i { color: var(--ap-mute); }

@@ -46,7 +46,13 @@
                 {{if cons}}<span class="cons">{{cons}}{{if game === 'sr'}}星魂{{else}}命之座{{/if}}</span>{{/if}}
               </div>
             </div>
-            <div class="uid">UID {{uid}}{{if nickname}} · {{nickname}}{{/if}}</div>
+            <div class="uid">UID {{uid}}</div>
+            {{if nickname || ownerAvatar}}
+            <div class="player-chip">
+              {{if ownerAvatar}}<img class="pc-avatar" src="{{ownerAvatar}}" onerror="this.style.display='none'">{{/if}}
+              {{if nickname}}<span class="pc-name">{{nickname}}</span>{{/if}}
+            </div>
+            {{/if}}
 
             <div class="attrs">
               {{each attrs a}}

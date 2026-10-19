@@ -3,6 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { config, pluginPriority, render } from '#HoYoGet'
 import { listCategories, fetchLeaderboard, getUserCalculations, getDamageDistribution } from '../system/akasha.js'
+import { getRoleProfile } from '../system/roleProfile.js'
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const YUNZAI_DB = path.join(process.cwd(), 'data', 'db', 'data.db')
@@ -1447,11 +1448,14 @@ export class hoyo_panel extends plugin {
         return e.reply(`读到了「${data.name || charName}」，但面板字段为空（可能是 miao-plugin 版本差异）。\n可先发「#米哈游${conf.cn}更新面板」后再试。`)
       }
 
-      /* Akasha 只有原神有榜；随机背景与它并行请求，两者失败都不影响面板 */
-      const [akasha, randomBg, miaoDmg] = await Promise.all([
+      /* Akasha 只有原神有榜；随机背景与它并行请求，两者失败都不影响面板。
+         玩家头像/昵称与「原石统计」同源（roleProfile 的 index 接口），
+         它内部已兜底，取不到就只是不显示这个角标。 */
+      const [akasha, randomBg, miaoDmg, roleInfo] = await Promise.all([
         game === 'gs' && hit?.char?.id ? akashaForChar(hit.char.id, uid, hit?.char?.name || '') : Promise.resolve(null),
         randomBgUrl(),
         miaoDmgTable(hit),
+        getRoleProfile(e, uid, game).catch(() => ({})),
       ])
 
       /* panel_style: dark（默认暗色霓虹）/ apple（深色玻璃，见 detail-apple.css） */
@@ -1462,6 +1466,9 @@ export class hoyo_panel extends plugin {
         gameCn: conf.cn,
         _miao_path: miaoResPath,
         avatarId: hitId,
+        /* 头像昵称优先用 index 接口的，取不到再退回 miao 的 player info */
+        nickname: roleInfo?.nickname || info.nickname || info.name || '',
+        ownerAvatar: roleInfo?.avatar || '',
         akasha,
         miaoDmg,
         randomBg,
