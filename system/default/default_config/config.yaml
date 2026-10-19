@@ -21,6 +21,11 @@ auto_reload: true
 zzz_panel_accel_enabled: true
 zzz_panel_accel_concurrency: 4
 zzz_panel_accel_interval: 400
+# 主人批量更新群友面板（%更新群友面板）的节奏：
+# interval 两次请求间隔（毫秒，低于 1000 会被强制提到 1000，米游社对 IP 有频次风控）
+# max 单次最多处理多少个 UID，超出部分需再执行一次
+zzz_bulk_update_interval: 2000
+zzz_bulk_update_max: 50
 
 #绝区零自研面板数据探针（米游社更新面板）：把真实接口响应原样落盘，供写归一化用。
 # 默认 -100，压过 miao-plugin 与原神/ZZZ-Plugin 的同名面板指令，确保本插件先抢到。
