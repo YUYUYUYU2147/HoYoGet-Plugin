@@ -1339,8 +1339,15 @@ export class zzz_workshop extends plugin {
    */
   async accept(e) {
     const msg = String(e?.msg || '').trim()
+    logger.mark?.(`[HoYoGet][zzz_workshop] accept 被调用 msg=${JSON.stringify(msg)} scope=${getRankScope(e)}`)
     /* 框架已把 % 改写成 #绝区零，两种形态都要认 */
-    if (!/(?:全服|本群|工坊)排名$/.test(msg)) return false
+    const hasScopeWord = /(?:全服|本群|工坊)排名$/.test(msg)
+    /* 不带范围修饰词时看「%面板排名范围」：
+         全部 → 由本插件接管（工坊练度榜）
+         本群 → 放行给 apps/zzz_rank.js 的本地面板排名
+       之前这里只接带修饰词的写法，导致「%雅排名」在 scope=all 时
+       两边都放行，最后落到 ZZZ-Plugin 手里。 */
+    if (!hasScopeWord && getRankScope(e) === 'group') return false
     /* 先确认能解析出角色名再接管：解析不出来就放行，让 ZZZ-Plugin 按它自己的
        方式处理（避免本插件报「未识别角色」把别人的入口也堵死）。 */
     const stripped = msg.replace(/^[#%]*绝区零\s*/i, '').replace(/^[#%]+\s*/, '')
