@@ -152,71 +152,42 @@ body.game-sr .page {
   color: #b0b9c9;
 }
 
-/* 总览卡（头像网格）右上角的评级字母：与详情页同一套配色 */
+/* 总览卡（头像网格）右上角的评级字母：
+   之前只有一列细字，叠在浅色头像上几乎看不见。改成带深底的小标签，保证可读。 */
 .badge-mark.mini {
   position: absolute;
-  top: 0;
-  right: 2px;
+  top: -7px;
+  right: -7px;
   margin: 0;
+  min-width: 26px;
+  height: 18px;
+  padding: 0 5px;
+  box-sizing: border-box;
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
   font-size: 10px;
   font-weight: 900;
   letter-spacing: .2px;
   line-height: 1;
   text-transform: uppercase;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, .85);
+  color: #fff;
+  background: rgba(10, 22, 40, .86);
+  border: 1px solid rgba(255, 255, 255, .30);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .5);
+  text-shadow: none;
 }
 .badge-mark.mini .bm-shape { display: none; }
-.badge-mark.mini.t7 .bm-text,
-.badge-mark.mini.t8 .bm-text { color: #e85656; }
-.badge-mark.mini.t5 .bm-text,
-.badge-mark.mini.t6 .bm-text { color: #ffe699; }
-.badge-mark.mini.t3 .bm-text,
-.badge-mark.mini.t4 .bm-text { color: #d699ff; }
+/* 各档文字色沿用详情页，但底色固定深色，确保在浅色头像上也看得清 */
 .badge-mark.mini.t0 .bm-text,
 .badge-mark.mini.t1 .bm-text,
-.badge-mark.mini.t2 .bm-text { color: #8fa9cd; }
-
-/* ── 群内排名角标（与 miao 的 #面板列表 同一套语义）──
-   第 1 名：dmg 口径显示「最强」、mark 口径显示「最高分」；2-3 名显示数字；
-   其余上榜的显示名次但弱化，未上榜（rank-10）不显示。
-   位置放在头像下沿居中，与右上角的评级字母错开。 */
-.group-rank {
-  position: absolute;
-  left: 50%;
-  bottom: -9px;
-  transform: translateX(-50%);
-  min-width: 30px;
-  height: 18px;
-  padding: 0 7px;
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9px;
-  font-size: 10px;
-  font-weight: 900;
-  line-height: 1;
-  letter-spacing: .2px;
-  color: #2a1200;
-  background: linear-gradient(180deg, #ffd88a, #e8a33c);
-  border: 1px solid rgba(255, 226, 160, .9);
-  box-shadow: 0 1px 5px rgba(0, 0, 0, .55);
-  white-space: nowrap;
-}
-/* 伤害口径用红色系，与评分口径区分开 */
-.group-rank.rank-type-dmg {
-  background: linear-gradient(180deg, #ff9a8a, #d9483a);
-  border-color: rgba(255, 190, 175, .9);
-  color: #2c0800;
-}
-.group-rank.rank-2 { background: linear-gradient(180deg, #eaf2ff, #a9bdd8); border-color: rgba(220, 233, 250, .9); color: #1d2a3c; }
-.group-rank.rank-3 { background: linear-gradient(180deg, #ffc79a, #d4793a); border-color: rgba(255, 210, 175, .9); color: #2c1400; }
-/* 第 4 档（上榜但非前三）弱化，避免抢视线 */
-.group-rank.rank-4 {
-  background: rgba(20, 40, 70, .88);
-  border-color: rgba(110, 165, 245, .5);
-  color: #b9d4f5;
-  font-weight: 800;
-}
+.badge-mark.mini.t2 .bm-text { color: #b9cde4; }
+.badge-mark.mini.t3 .bm-text,
+.badge-mark.mini.t4 .bm-text { color: #d8b6ff; }
+.badge-mark.mini.t5 .bm-text,
+.badge-mark.mini.t6 .bm-text { color: #ffe699; }
+.badge-mark.mini.t7 .bm-text,
+.badge-mark.mini.t8 .bm-text { color: #ff9a8a; }
+.badge-mark.mini.t7 { border-color: rgba(255, 230, 153, .7); }
+.badge-mark.mini.t8 { border-color: rgba(255, 154, 138, .75); }

@@ -28,12 +28,22 @@ const GAME_CONF = {
   sr: { aliases: ['星铁', '崩铁', 'sr'], cn: '星穹铁道', bind: '*', prefix: '*绑定' },
 }
 
-const PANEL_REG = /^#?(?:米哈游)?\s*(原神|星铁|崩铁|gs|sr)\s*面板(?:\s+(\d{9}))?$/i
-const PANEL_LIST_REG = /^#?(?:米哈游)?\s*(原神|星铁|崩铁|gs|sr)\s*面板列表$/i
-/* 带角色名 = 单角色详情图：#米哈游原神面板 桑多涅 */
-const PANEL_CHAR_REG = /^#?(?:米哈游)?\s*(原神|星铁|崩铁|gs|sr)\s*面板\s+(\S+)$/i
+/*
+ * 面板指令。游戏名可省略：
+ *   #米哈游原神面板 / #米哈游星铁面板        —— 总览
+ *   #米哈游雷神面板                        —— 游戏名省略时按原神处理
+ *   #米哈游原神面板 雷电将军 / #米哈游雷神面板 雷电将军  —— 单角色详情
+ * 但「米哈游」必须有：不加的话会和 miao 的 #雷神面板 抢，也会误吃各种「xx面板」。
+ */
+const GAME_WORD = '(?:(原神|星铁|崩铁|gs|sr)\\s*)?'
+const PANEL_REG = new RegExp(`^#?米哈游\\s*${GAME_WORD}面板(?:\\s+(\\d{9}))?$`, 'i')
+const PANEL_LIST_REG = new RegExp(`^#?米哈游\\s*${GAME_WORD}面板列表$`, 'i')
+/* 带角色名 = 单角色详情图：#米哈游原神面板 桑多涅 / #米哈游雷神面板 */
+const PANEL_CHAR_REG = new RegExp(`^#?米哈游\\s*${GAME_WORD}面板\\s+(\\S+)$`, 'i')
+/* 「#米哈游雷神面板」这种：面板前面直接跟角色名，没有游戏名 */
+const PANEL_SHORT_CHAR_REG = /^#?米哈游\s*([^\s]+?)\s*面板$/i
 /* 更新面板：#米哈游原神更新面板 / #米哈游星铁更新面板 [UID] */
-const PANEL_REFRESH_REG = /^#?(?:米哈游)?\s*(原神|星铁|崩铁|gs|sr)\s*(?:更新|刷新)(?:全部)?面板(?:\s+(\d{9}))?$/i
+const PANEL_REFRESH_REG = new RegExp(`^#?米哈游\\s*${GAME_WORD}(?:更新|刷新)(?:全部)?面板(?:\\s+(\\d{9}))?$`, 'i')
 
 /** 从 Users 表读该用户的某个游戏 UID */
 async function readBoundUid(e, game) {
@@ -975,7 +985,8 @@ export class hoyo_panel extends plugin {
    */
   async accept(e) {
     const msg = String(e?.msg || '')
-    if (!PANEL_REG.test(msg) && !PANEL_CHAR_REG.test(msg) && !PANEL_REFRESH_REG.test(msg) && !PANEL_LIST_REG.test(msg)) return
+    if (!PANEL_REG.test(msg) && !PANEL_CHAR_REG.test(msg) && !PANEL_REFRESH_REG.test(msg)
+      && !PANEL_LIST_REG.test(msg) && !PANEL_SHORT_CHAR_REG.test(msg)) return
     this.e = e
     if (PANEL_REFRESH_REG.test(msg)) await this.refreshPanel(e)
     else await this.panel(e)
@@ -1072,17 +1083,30 @@ export class hoyo_panel extends plugin {
     const m = msg.match(PANEL_REG) || msg.match(PANEL_LIST_REG)
     // 带角色名时 PANEL_REG 不成立（它只认 9 位 UID），所以单独再匹配一次
     const cm = m ? null : msg.match(PANEL_CHAR_REG)
-    if (!m && !cm) return false
-    const key = String((m || cm)[1] || '').toLowerCase()
-    const game = ['星铁', '崩铁', 'sr'].includes(key) ? 'sr' : 'gs'
-    const conf = GAME_CONF[game]
-    const charName = cm ? String(cm[2] || '').trim() : ''
+    /* #米哈游雷神面板：没有游戏名，按原神处理（角色名足够区分；
+       真要查星铁请写 #米哈游星铁面板 流萤）。 */
+    const short = (m || cm) ? null : msg.match(PANEL_SHORT_CHAR_REG)
+    if (!m && !cm && !short) return false
+    const key = String((m || cm)?.[1] || '').toLowerCase()
+    let game = ['星铁', '崩铁', 'sr'].includes(key) ? 'sr' : 'gs'
+    let charName = cm ? String(cm[2] || '').trim() : ''
+    if (short) charName = String(short[1] || '').trim()
     e.isSr = game === 'sr'
 
     const miao = await loadMiao()
     if (!miao) {
       return e.reply('需要先安装 miao-plugin 才能读取面板数据（本功能复用它抓取的面板）。')
     }
+
+    /* #米哈游雷神面板：没写游戏名时，若原神角色表里没有、星铁里有，就切到星铁 */
+    if (short) {
+      try {
+        const inGs = miao.Character?.get?.(charName, 'gs')
+        const inSr = miao.Character?.get?.(charName, 'sr')
+        if (!inGs && inSr) { game = 'sr'; e.isSr = true }
+      } catch (_) { /* 查不到就按原神处理 */ }
+    }
+    const conf = GAME_CONF[game]
 
     // UID：指令里带的优先，其次绑定
     let uid = m ? (m[2] || '') : ''
