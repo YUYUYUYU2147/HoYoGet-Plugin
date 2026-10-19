@@ -1308,7 +1308,10 @@ export class zzz_workshop extends plugin {
       name: '[米哈游]绝区零工坊榜单',
       dsc: '绝区零工坊角色评分 / 配装 / 练度排名 / 欧非 / 式舆',
       event: 'message',
-      priority: pluginPriority('zzz_workshop', 5000),
+      /* ⚠ 数值越小越先执行（框架用 orderBy asc 排序 accept 队列）。
+         必须小于 ZZZ-Plugin 的 -30000，否则 %<角色>排名 会被它当面板排名接走。
+         zzz_workshop -36000 排在 zzz_panel_rank(-35000) 之前：范围=全部时由它接管。 */
+      priority: pluginPriority('zzz_workshop', -36000),
       rule: [
         { reg: RE_LOVE, fnc: 'loveRank' },
         { reg: RE_GRAD, fnc: 'gradStat' },

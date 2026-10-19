@@ -268,10 +268,10 @@ function applyPriorityToLoader(want) {
 }
 
 {
-  const p = pluginPriority('zzz_panel_rank', -20000)
-  logger.mark?.(`[HoYoGet][zzz_rank] 优先级 ${p}（需 > -30000 才能抢在 ZZZ-Plugin 之前）`)
-  if (Number(p) <= -30000) {
-    logger.error?.('[HoYoGet][zzz_rank] 优先级过低，%<角色>排名 会被 ZZZ-Plugin 截走，请检查 config.yaml 的 zzz_panel_rank_priority')
+  const p = pluginPriority('zzz_panel_rank', -35000)
+  logger.mark?.(`[HoYoGet][zzz_rank] 优先级 ${p}（需 < -30000 才能抢在 ZZZ-Plugin 之前，数值越小越先）`)
+  if (Number(p) >= -30000) {
+    logger.error?.('[HoYoGet][zzz_rank] 优先级不够小，%<角色>排名 会被 ZZZ-Plugin 截走，请把 zzz_panel_rank_priority 调到小于 -30000')
   }
   applyPriorityToLoader(p)
 }
@@ -282,13 +282,16 @@ export class zzz_panel_rank extends plugin {
       name: '[米哈游]绝区层面板排名',
       dsc: '绝区零角色面板排名（跨用户，基于本地已保存面板数据）',
       event: 'message',
-      /* 必须高于 ZZZ-Plugin（-30000）。
-         Yunzai 先把所有插件的 accept 按优先级跑一遍，命中即 return、事件就此结束，
-         所以 accept 的执行顺序完全由 priority 决定。
-         本插件在「范围=本群」时靠 accept 接管「%雅排名」；若优先级低于 ZZZ-Plugin，
-         它会先把这个指令当成自己的面板排名接走，这里根本轮不到。
-         zzz_workshop(5000) 仍然在最前面，范围=全部时由它接管，两边不冲突。 */
-      priority: pluginPriority('zzz_panel_rank', -20000),
+      /* ⚠ 数值越小越先执行。
+         Yunzai 用 lodash.orderBy(this.priority, ['priority'], ['asc']) 排序，
+         accept 阶段按这个数组顺序逐条跑，命中即 return 结束事件。
+         所以「优先级高」= **数值更小**，不是更大。
+         ZZZ-Plugin 是 -30000，本插件必须比它更小才能先接管：
+           zzz_workshop   -36000  范围=全部时接管
+           zzz_panel_rank -35000  范围=本群时接管
+           ZZZ-Plugin     -30000
+         （曾经写成 -20000 / 5000，结果永远排在 ZZZ-Plugin 之后被它截走。） */
+      priority: pluginPriority('zzz_panel_rank', -35000),
       rule: [
         { reg: PANEL_RANK_REG.source, fnc: 'panelRank' },
         { reg: RANK_SCOPE_CMD.source, fnc: 'toggleRankScope' },
