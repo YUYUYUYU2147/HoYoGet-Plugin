@@ -102,6 +102,15 @@ const RE_LOVE = /^[#%]*(?:米哈游)?(?:绝区零|zzz)(?:角色)?(?:评分|好�
 const RE_GRAD = /^[#%]*(?:米哈游)?(?:绝区零|zzz)(?:角色)?配装(?:统计)?(?:\s+(.+))?$/i
 const RE_CARD = /^[#%]*(?:米哈游)?(?:绝区零|zzz)(?:抽卡|欧非)(?:榜|排行)(?:\s+(.+))?$/i
 const RE_ABYSS = /^[#%]*(?:米哈游)?(?:绝区零|zzz)式舆(?:使用率|排名|排行)$/i
+/* 工坊角色排名。两种写法等价：
+     ① 短式：%星见雅全服排名 / %星见雅排名
+        —— 游戏名放在后面，角色名在前，日常最顺口。
+        ZZZ-Plugin 的排名规则是 /^.*?(?:%|...|绝区零)\s*.+(面板)?排名$/，
+        它也能匹配「%星见雅全服排名」；本插件优先级 -100 高于它的 -10000，
+        所以这种写法由本插件接管（它算的是工坊驱动榜，带属性与配装）。
+     ② 长式：米哈游绝区零角色排名 星见雅 / %zzz排名 星见雅
+        —— 保留原写法，参数用空格分隔（等级/影画/数量）。 */
+const RE_ROLE_RANK_SHORT = /^[#%]*(?:米哈游)?(?:绝区零|zzz)?\s*([^\s]+?)\s*(?:全服|工坊)?\s*(?:角色)?(?:练度)?排名(?:\s+(.+))?$/i
 const RE_ROLE_RANK = /^[#%]*(?:米哈游)?(?:绝区零|zzz)(?:角色)?(?:练度)?排名(?:\s+(.+))?$/i
 const RE_DETAIL = /^[#%]*(?:米哈游)?(?:绝区零|zzz)(?:查)?练度(?:\s+(.+))?$/i
 const RE_HELP = /^[#%]*(?:米哈游)?(?:绝区零|zzz)榜单帮助$/i
@@ -1248,6 +1257,7 @@ export class zzz_workshop extends plugin {
         { reg: RE_GRAD, fnc: 'gradStat' },
         { reg: RE_CARD, fnc: 'cardRank' },
         { reg: RE_ROLE_RANK, fnc: 'roleRank' },
+        { reg: RE_ROLE_RANK_SHORT, fnc: 'roleRank' },
         { reg: RE_DETAIL, fnc: 'detail' },
         { reg: RE_ABYSS, fnc: 'abyssRank' },
         { reg: RE_HELP, fnc: 'help' },
@@ -1289,7 +1299,12 @@ export class zzz_workshop extends plugin {
       const wantGroup = getRankScope(e) === 'group'
       const memberUids = wantGroup ? await getGroupMemberUids(e) : null
       const scope = wantGroup && memberUids ? 'group' : 'all'
-      const res = await buildRoleRank(RE_ROLE_RANK.exec(e.msg)?.[1] || '', { scope, memberUids })
+      const longHit = RE_ROLE_RANK.exec(e.msg)
+      const longArg = longHit?.[1]
+      /* 短式允许后面跟参数（等级/影画/数量），要和角色名拼回去交给 buildRoleRank 解析 */
+      const shortHit = longArg ? null : RE_ROLE_RANK_SHORT.exec(e.msg)
+      const shortArg = shortHit ? [shortHit[1], shortHit[2]].filter(Boolean).join(' ') : ''
+      const res = await buildRoleRank(longArg || shortArg || '', { scope, memberUids })
       // 无数据/无本群样本时返回 { error }，直接回文字
       if (res?.error) return e.reply(res.error)
       try {
