@@ -381,7 +381,31 @@ export class zzz_panel_rank extends plugin {
       })
     }
 
-    if (!resolved.length) return e.reply(`未找到【${name}】的相关排名数据。`)
+    if (!resolved.length) {
+      /* 区分两种情况，否则用户看到「未找到」会以为是数据没传上来：
+         ① 角色本身不存在（名字打错 / 本地表未收录）→ 直接说清楚
+         ② 角色存在但没人上传过面板 → 提示先去看面板详情 */
+      const knownChars = new Set()
+      try {
+        const stat = JSON.parse(fs.readFileSync(
+          path.join(PLUGIN_ROOT, 'system', 'default', 'zzz_char_stat.json'), 'utf8',
+        ))
+        for (const [key, v] of Object.entries(stat.chars || {})) {
+          knownChars.add(key)
+          if (v?.fullName) knownChars.add(String(v.fullName))
+        }
+      } catch (_) { /* 表读不到就按「存在」处理，别误报 */ }
+      const exists = !knownChars.size
+        || [...knownChars].some(k => k.includes(name) || name.includes(k))
+      if (!exists) {
+        return e.reply([
+          `未找到角色「${name}」。`,
+          '请确认名字是否正确（支持简称，如「雅」「艾莲」）。',
+          `当前收录 ${knownChars.size ? new Set([...knownChars]).size : '?'} 个角色名。`,
+        ].join('\n'))
+      }
+      return e.reply(`「${name}」暂无${label}面板排名数据。\n请先发送「米游社${name}面板」查看角色详情（数据会自动保存），或使用 ZZZ-Plugin 更新面板。`)
+    }
 
     const maxDamage = Math.max(...resolved.map(r => r.damage || 0), 0)
     const maxScore = Math.max(...resolved.map(r => r.score || 0), 0)
