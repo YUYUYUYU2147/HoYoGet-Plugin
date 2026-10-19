@@ -148,18 +148,26 @@ body {
 }
 
 /* ───── 页脚 ───── */
+/* 页脚整体居中：来源行与说明行都居中，不再一左一右 */
 .footer {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
+  gap: 4px;
   margin-top: 14px;
   padding-top: 12px;
   border-top: 1px solid rgba(120, 170, 255, .16);
   font-size: 12px;
+  line-height: 1.7;
   color: #7d97bd;
+  text-align: center;
 }
 .footer .src {
   color: #ff8a8a;
   font-weight: 900;
   letter-spacing: 1px;
+}
+.footer > * {
+  text-align: center;
 }
