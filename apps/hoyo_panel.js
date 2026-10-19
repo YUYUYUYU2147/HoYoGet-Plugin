@@ -113,10 +113,16 @@ async function readMysMainUid(e, game) {
 async function loadMiao() {
   try {
     const mod = await import('../../miao-plugin/models/index.js')
+    let ProfileRank = null
+    try {
+      // 群排名的核心逻辑在 models/ProfileRank.js（zset 按群 + 角色排名）
+      ProfileRank = (await import('../../miao-plugin/models/ProfileRank.js')).default
+    } catch (_) { /* 老版本 miao 没有这个模块，排名角标直接跳过 */ }
     return {
       Player: mod.Player,
       Character: mod.Character,
       MysApi: mod.MysApi,
+      ProfileRank,
     }
   } catch (_) {
     return null
@@ -1188,6 +1194,45 @@ export class hoyo_panel extends plugin {
     }
   }
 
+  /**
+   * 计算群内排名角标。
+   *
+   * 数据与 miao 的 #面板列表 完全一致：用它的 ProfileRank（按群 + 角色存 zset），
+   * getRank 返回 { rank, rankType }，rankType 为 dmg 表示伤害第一、mark 表示评分第一。
+   * 只在群聊里做（私聊没有群号），并且 miao 未启用群排名时直接跳过。
+   */
+  async buildGroupRank(e, game, miao, uid, pairs) {
+    const groupId = e?.group_id
+    if (!groupId || !miao?.ProfileRank) return null
+    try {
+      const rank = await miao.ProfileRank.create({ groupId, uid, qq: e.user_id }, game)
+      const cfg = await miao.ProfileRank.getGroupCfg(groupId, game)
+      if (!rank?.allowRank || cfg?.status === 1) return null
+      const limit = Number(cfg?.number) || 15
+      let counted = 0
+      for (const { item, av } of pairs) {
+        try {
+          const profile = av.getProfile?.() || av
+          if (!profile?.hasData) continue
+          const info = await rank.getRank(profile)
+          if (!info) continue
+          item.groupRank = {
+            rank: Number(info.rank) || 0,
+            type: info.rankType || 'mark',
+            /* 前三名留真实名次，其余只要「上榜」就显示名次（与 miao 的 1/2/3/4 分档一致） */
+            level: Number(info.rank) <= 3 ? Number(info.rank) : (Number(info.rank) < limit ? 4 : 10),
+          }
+          counted++
+        } catch (_) { /* 单个角色排名失败不影响其它 */ }
+      }
+      logger.mark?.(`[HoYoGet][hoyo_panel] ${uid} 群排名角标：${counted}/${pairs.length}`)
+      return counted ? { limit } : null
+    } catch (err) {
+      logger.debug?.(`[HoYoGet][hoyo_panel] 群排名计算失败：${err?.message || err}`)
+      return null
+    }
+  }
+
   /** 把 player 的面板渲染成总览图（panel 与 refreshPanel 共用） */
   async renderPanel(e, game, uid, miao, isRefresh, prePlayer = null) {
     const conf = GAME_CONF[game]
@@ -1197,6 +1242,7 @@ export class hoyo_panel extends plugin {
          miao 的 Player.getProfiles() 内部会对每个 avatar 调 setAvatar，
          某些残缺记录（如 artis 结构缺字段）会抛错并中断整个遍历。 */
       const chars = []
+      const pairs = []
       let skipped = 0
       const ids = Object.keys(player._avatars || {})
       for (const id of ids) {
@@ -1204,7 +1250,7 @@ export class hoyo_panel extends plugin {
           const av = player.getAvatar(id)
           if (!av?.isProfile) continue
           const item = flattenProfile(av, miao.Character)
-          if (item.name) chars.push(item)
+          if (item.name) { chars.push(item); pairs.push({ item, av }) }
         } catch (err) {
           skipped++
           logger.debug?.(`[HoYoGet][hoyo_panel] 跳过角色 ${id}：${err?.message || err}`)
@@ -1213,6 +1259,11 @@ export class hoyo_panel extends plugin {
       if (skipped) logger.mark?.(`[HoYoGet][hoyo_panel] ${uid} 有 ${skipped} 个角色数据异常，已跳过`)
 
       if (!chars.length) return e.reply(`没有读到 ${uid} 的角色面板数据。`)
+
+      /* 群内排名角标：复用 miao 的 ProfileRank（内部按群 + 角色维护 zset），
+         给每个角色标「最强」（期望伤害第一）/「最高分」（圣遗物分第一）/ 名次。
+         私聊或 miao 没有该模块时整块跳过，不影响出图。 */
+      const groupRank = await this.buildGroupRank(e, game, miao, uid, pairs)
 
       // 排序：五星优先 → 等级 → 评分
       chars.sort((a, b) => (b.star - a.star) || (b.level - a.level) || ((b.artisScore || 0) - (a.artisScore || 0)))
@@ -1239,6 +1290,8 @@ export class hoyo_panel extends plugin {
         total: chars.length,
         avgScore,
         maxScore: maxScore ? maxScore.toFixed(1) : '',
+        groupRank,
+        rankLimit: groupRank?.limit || 15,
       }, { e, ret: true })
       return img
     } catch (err) {

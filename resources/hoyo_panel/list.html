@@ -32,6 +32,9 @@
             <div class="avatar" style="background-image:url('{{_miao_path}}{{c.face}}')"></div>
             {{if c.cons > 0}}<span class="cons-badge c{{c.cons}}">{{c.cons}}</span>{{/if}}
             {{if c.artisGrade.hasBadge}}<span class="badge-mark mini t{{c.artisGrade.tier}}"><i class="bm-shape"></i><span class="bm-text">{{c.artisGrade.label}}</span></span>{{/if}}
+            {{if groupRank && c.groupRank}}
+            <span class="group-rank rank-{{c.groupRank.level}} rank-type-{{c.groupRank.type}}">{{if c.groupRank.rank === 1}}{{if c.groupRank.type === 'dmg'}}最强{{else}}最高分{{/if}}{{else}}{{c.groupRank.rank}}{{/if}}</span>
+            {{/if}}
             <span class="lv-badge">{{c.level}}</span>
           </div>
           <div class="cell-name">{{c.abbr}}</div>
