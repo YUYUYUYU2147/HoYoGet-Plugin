@@ -285,6 +285,9 @@ export class zzz_panel_rank extends plugin {
   /** accept 截胡纯 角色名排名（不带"面板"），避免被 ZZZ-Plugin 的 panelRankBridge 抢走 */
   async accept(e) {
     const msg = String(e?.msg || '').trim()
+    /* 原神的 Akasha 全球榜：「全球」会被 SHORT_RANK_REG 当成角色名的一部分
+       （%我的全球排名 → 「我的全球」）。这类归原神插件，必须放行。 */
+    if (/全球排名|阿卡夏|akasha/i.test(msg)) return false
     /* 带范围修饰词的写法（%雅全服排名 / %星见雅本群排名 / %xx工坊排名）一律放行：
        这类是「临时指定范围」，由 apps/zzz_workshop.js 处理，见那边的 accept。
        顺带一提，SHORT_RANK_REG 的 (.+?) 会把修饰词吃进角色名

@@ -1339,6 +1339,11 @@ export class zzz_workshop extends plugin {
    */
   async accept(e) {
     const msg = String(e?.msg || '').trim()
+    /* 原神的 Akasha 全球榜也以「排名」结尾，且「全球」会被 RE_ROLE_RANK_SHORT
+       当成角色名的一部分（%我的全球排名 → 角色名「我的全球」）。必须在最前面放行：
+         #<角色>全球排名 / %我的全球排名 / 全球 <角色> / %胡桃全球排名
+       这些归原神插件（miao-plugin / xhh myGlobal），不是绝区零工坊榜。 */
+    if (/全球排名|阿卡夏|akasha/i.test(msg)) return false
     /* 框架已把 % 改写成 #绝区零，两种形态都要认 */
     const hasScopeWord = /(?:全服|本群|工坊)排名$/.test(msg)
     /* 不带范围修饰词时看「%面板排名范围」：
