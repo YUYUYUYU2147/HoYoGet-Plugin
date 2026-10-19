@@ -1,0 +1,66 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}zzz_panel/workshop_rank.css" />
+  </head>
+  <body>
+    <div class="page">
+      <div class="head">
+        <div class="head-left">
+          <div class="title">{{character}}</div>
+          <div class="subtitle">{{subtitle}}</div>
+        </div>
+        <div class="head-right">
+          <div class="badge">工坊</div>
+          <div class="scope {{if isGroup}}group{{else}}all{{/if}}">{{scopeText}}</div>
+        </div>
+      </div>
+
+      <div class="legend">
+        <span>按驱动盘总分排序</span>
+        <span class="sep">·</span>
+        <span>数据来源 绝区零工坊</span>
+      </div>
+
+      <div class="list">
+        {{each list r}}
+        <div class="row {{if r.rank === 1}}top1{{else if r.rank === 2}}top2{{else if r.rank === 3}}top3{{/if}}">
+          <div class="rank">{{r.rank}}</div>
+
+          <div class="player">
+            <div class="nick">{{if r.nickname}}{{r.nickname}}{{else}}UID {{r.uid}}{{/if}}</div>
+            <div class="meta">
+              <span class="uid">UID {{r.uid}}</span>
+              {{if r.level}}<span class="lv">Lv{{r.level}}</span>{{/if}}
+            </div>
+          </div>
+
+          <div class="point">
+            <div class="point-value">{{r.pointText}}</div>
+            <div class="point-label">驱动总分</div>
+          </div>
+
+          <div class="global">
+            {{if isGroup}}
+            <span class="g-label">本群</span>
+            <span class="g-value">第 {{r.rank}} 名</span>
+            {{else}}
+            <span class="g-label">全服</span>
+            <span class="g-value">#{{r.globalRank}}</span>
+            {{/if}}
+          </div>
+        </div>
+        {{/each}}
+      </div>
+
+      <div class="footer">
+        {{if isGroup}}
+        本群共 {{list.length}} 人上榜
+        {{else}}
+        共 {{total}} 条（接口单页 50 条）
+        {{/if}}
+      </div>
+    </div>
+  </body>
+</html>

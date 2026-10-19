@@ -17,7 +17,7 @@ import { createHash } from 'node:crypto'
 
 import fs from 'node:fs'
 import path from 'node:path'
-import { pluginPriority } from '#HoYoGet'
+import { pluginPriority, render } from '#HoYoGet'
 import { getRankScope } from '../system/rank_scope.js'
 
 const YUNZAI_DB = path.join(process.cwd(), 'data', 'db', 'data.db')
@@ -491,7 +491,7 @@ async function buildRoleRank(arg, opts = {}) {
   }
   let rows = Array.isArray(data?.rows) ? data.rows : []
   if (!rows.length) {
-    return `绝区零工坊 · ${role.nick_name} 练度排名\n${subtitle}\n\n暂无符合条件的记录（该角色可能未开放统计）。`
+    return { error: `暂无符合条件的记录（该角色可能未开放统计）。`, subtitle }
   }
 
   /* 本群范围：工坊返回的是完整 UID（不打码），所以能直接和群成员绑定 UID 求交集。
@@ -501,42 +501,46 @@ async function buildRoleRank(arg, opts = {}) {
   let scopeText = '全服'
   if (scope === 'group') {
     if (!members || !members.size) {
-      return [
-        `绝区零工坊 · ${role.nick_name} 练度排名`,
+      return {
+        error: '本群统计需要群成员已绑定绝区零 UID，当前没读到任何成员绑定。\n可发送「%面板排名范围」切换到全服查看工坊总榜。',
         subtitle,
-        '',
-        '本群统计需要群成员已绑定绝区零 UID，当前没读到任何成员绑定。',
-        '可发送「%面板排名范围」切换到全服查看工坊总榜。',
-      ].join('\n')
+      }
     }
     rows = rows.filter(row => members.has(String(row?.uid ?? '')))
     scopeText = `本群（${members.size} 人有绑定）`
     if (!rows.length) {
-      return [
-        `绝区零工坊 · ${role.nick_name} 练度排名`,
+      return {
+        error: `本群没有成员把「${role.nick_name}」上传到工坊角色柜，因此没有本群排名。\n可发送「%面板排名范围」切换到全服查看工坊总榜。`,
         subtitle,
-        '',
-        `本群没有成员把「${role.nick_name}」上传到工坊角色柜，因此没有本群排名。`,
-        '可发送「%面板排名范围」切换到全服查看工坊总榜。',
-      ].join('\n')
+      }
     }
   }
 
-  const lines = [`绝区零工坊 · ${role.nick_name} 练度排名`, subtitle, `范围：${scopeText}`, '']
-  rows.slice(0, count).forEach((row, index) => {
-    const name = row?.user_case?.nick_name || `UID ${row?.uid ?? '?'}`
-    const point = Number(row?.relic_point || 0).toFixed(3)
-    const rankText = scope === 'group' ? `第 ${index + 1} 名` : `#${row?.rank ?? index + 1}`
-    lines.push(`${String(index + 1).padStart(2, '0')}. ${fit(name, 20)}${point}  ${rankText}`)
-  })
-  lines.push('', scope === 'group'
-    ? `本群共 ${rows.length} 人上榜（工坊单页 50 条）。`
-    : `共 ${data?.total ?? rows.length} 条（接口单页 50 条），展示前 ${Math.min(count, rows.length)} 名。`)
-  lines.push('数据来源：绝区零工坊角色柜用户。')
-  return lines.join('\n')
+  const list = rows.slice(0, count).map((row, index) => ({
+    rank: index + 1,
+    globalRank: Number(row?.rank ?? 0) || index + 1,
+    uid: String(row?.uid ?? ''),
+    nickname: row?.user_case?.nick_name || '',
+    level: Number(row?.level ?? 0) || 0,
+    point: Number(row?.relic_point || 0),
+    pointText: Number(row?.relic_point || 0).toFixed(3),
+  }))
+
+  return {
+    character: role.nick_name,
+    level,
+    rankFilter: rank,
+    subtitle,
+    scope,
+    scopeText,
+    isGroup: scope === 'group',
+    total: Number(data?.total) || rows.length,
+    list,
+  }
 }
 
 /**
+ * 单玩家练度详情/**
  * 单玩家练度详情：POST /api/v1/user_role/ranking（需签名头）
  * 参数：{ uid, type:'ranking', item_id?, refresh:false }
  * 返回：{ uid, nick_name, level, roles:[{ item_id, level, relic_point, set_info, item_json, ... }] }
@@ -696,7 +700,18 @@ export class zzz_workshop extends plugin {
       const wantGroup = getRankScope() === 'group'
       const memberUids = wantGroup ? await getGroupMemberUids(e) : null
       const scope = wantGroup && memberUids ? 'group' : 'all'
-      return await e.reply(await buildRoleRank(RE_ROLE_RANK.exec(e.msg)?.[1] || '', { scope, memberUids }))
+      const res = await buildRoleRank(RE_ROLE_RANK.exec(e.msg)?.[1] || '', { scope, memberUids })
+      // 无数据/无本群样本时返回 { error }，直接回文字
+      if (res?.error) return e.reply(res.error)
+      try {
+        return await render('zzz_panel/workshop_rank', res, { e, ret: true })
+      } catch (err) {
+        // 渲染失败降级成文字，至少把数据给到
+        logError('roleRank-render', err)
+        const lines = [`绝区零工坊 · ${res.character} 练度排名`, res.subtitle, `范围：${res.scopeText}`, '']
+        res.list.forEach(r => lines.push(`${String(r.rank).padStart(2, '0')}. ${r.nickname || 'UID ' + r.uid}  ${r.pointText}  ${res.isGroup ? '第 ' + r.rank + ' 名' : '#' + r.globalRank}`))
+        return e.reply(lines.join('\n'))
+      }
     } catch (err) {
       logError('roleRank', err)
       return await e.reply(`获取练度排名失败：${err?.message || err}`)
