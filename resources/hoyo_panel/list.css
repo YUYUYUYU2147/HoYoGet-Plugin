@@ -149,66 +149,80 @@ body.game-sr .page {
   color: #b0b9c9;
 }
 
-/* 总览卡（头像网格）右上角的水滴评级徽章：与详情页同一套造型与配色 */
+/* 总览卡（头像网格）右上角的月亮评级徽章：与详情页同一套造型与配色 */
 .badge-mark.mini {
   position: absolute;
-  top: -8px;
+  top: -6px;
   right: -6px;
-  width: 28px;
-  height: 31px;
+  width: 30px;
+  height: 30px;
   margin: 0;
-  padding-top: 3px;
-  box-sizing: border-box;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 8px;
+  border-radius: 9px;
+  overflow: hidden;
+  font-size: 9px;
   font-weight: 900;
   letter-spacing: .2px;
   line-height: 1;
   text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: #fff;
   background:
-    linear-gradient(158deg, rgba(255, 255, 255, .26), transparent 44%),
-    radial-gradient(circle at 34% 30%, #8697ab 0%, #56697f 56%, #374554 100%);
-  clip-path: path('M 14 0 C 20 6 27 13 27 19 C 27 25 21 29 14 29 C 7 29 1 25 1 19 C 1 13 8 6 14 0 Z');
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .55));
+    linear-gradient(158deg, rgba(255, 255, 255, .18), transparent 46%),
+    radial-gradient(circle at 30% 24%, #8697ab 0%, #56697f 55%, #374554 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, .42),
+    inset 0 -5px 8px rgba(0, 0, 0, .35),
+    0 2px 4px rgba(0, 0, 0, .45);
 }
 .badge-mark.mini::before {
   content: '';
   position: absolute;
-  left: 7px;
-  top: 8px;
-  width: 5px;
-  height: 10px;
+  right: -6px;
+  bottom: -6px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, .7), rgba(255, 255, 255, 0));
-  transform: rotate(-11deg);
+  background: rgba(255, 255, 255, .22);
+  -webkit-mask: radial-gradient(circle at 72% 28%, transparent 50%, #000 51%);
+          mask: radial-gradient(circle at 72% 28%, transparent 50%, #000 51%);
+  pointer-events: none;
+}
+.badge-mark.mini::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 5px;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .60);
+  box-shadow: 4px 4px 0 -0.5px rgba(255, 255, 255, .40);
   pointer-events: none;
 }
 .badge-mark.mini .bm-text {
   position: relative;
   z-index: 2;
-  margin-top: 2px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, .9);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .85);
 }
-.badge-mark.mini.t0 { background: linear-gradient(158deg, rgba(255,255,255,.24), transparent 44%), radial-gradient(circle at 34% 30%, #8697ab 0%, #56697f 56%, #374554 100%); }
-.badge-mark.mini.t1 { background: linear-gradient(158deg, rgba(255,255,255,.26), transparent 44%), radial-gradient(circle at 34% 30%, #a2b6cb 0%, #68809b 56%, #42556c 100%); }
-.badge-mark.mini.t2 { background: linear-gradient(158deg, rgba(255,255,255,.28), transparent 44%), radial-gradient(circle at 34% 30%, #6fc0fa 0%, #3688d4 56%, #1e568d 100%); }
-.badge-mark.mini.t3 { background: linear-gradient(158deg, rgba(255,255,255,.28), transparent 44%), radial-gradient(circle at 34% 30%, #8b9efc 0%, #5066dd 56%, #2e3a98 100%); }
-.badge-mark.mini.t4 { background: linear-gradient(158deg, rgba(255,255,255,.28), transparent 44%), radial-gradient(circle at 34% 30%, #c493fa 0%, #8b52dd 56%, #532a8f 100%); }
-.badge-mark.mini.t5 { background: linear-gradient(158deg, rgba(255,255,255,.30), transparent 44%), radial-gradient(circle at 34% 30%, #6ce8d5 0%, #27ac9c 56%, #126b63 100%); }
-.badge-mark.mini.t6 { background: linear-gradient(158deg, rgba(255,255,255,.36), transparent 44%), radial-gradient(circle at 34% 30%, #ffdd75 0%, #e8a526 56%, #8f5f08 100%); color: #402800; }
+.badge-mark.mini.t0 { background: linear-gradient(158deg, rgba(255,255,255,.18), transparent 46%), radial-gradient(circle at 30% 24%, #8697ab 0%, #56697f 55%, #374554 100%); }
+.badge-mark.mini.t1 { background: linear-gradient(158deg, rgba(255,255,255,.20), transparent 46%), radial-gradient(circle at 30% 24%, #a2b6cb 0%, #68809b 55%, #42556c 100%); }
+.badge-mark.mini.t2 { background: linear-gradient(158deg, rgba(255,255,255,.22), transparent 46%), radial-gradient(circle at 30% 24%, #6fc0fa 0%, #3688d4 55%, #1e568d 100%); }
+.badge-mark.mini.t3 { background: linear-gradient(158deg, rgba(255,255,255,.22), transparent 46%), radial-gradient(circle at 30% 24%, #8b9efc 0%, #5066dd 55%, #2e3a98 100%); }
+.badge-mark.mini.t4 { background: linear-gradient(158deg, rgba(255,255,255,.22), transparent 46%), radial-gradient(circle at 30% 24%, #c493fa 0%, #8b52dd 55%, #532a8f 100%); }
+.badge-mark.mini.t5 { background: linear-gradient(158deg, rgba(255,255,255,.24), transparent 46%), radial-gradient(circle at 30% 24%, #6ce8d5 0%, #27ac9c 55%, #126b63 100%); }
+.badge-mark.mini.t6 { background: linear-gradient(158deg, rgba(255,255,255,.30), transparent 46%), radial-gradient(circle at 30% 24%, #ffdd75 0%, #e8a526 55%, #8f5f08 100%); color: #402800; }
 .badge-mark.mini.t7 {
-  background: linear-gradient(158deg, rgba(255,255,255,.42), transparent 44%), radial-gradient(circle at 34% 30%, #fff0b0 0%, #f7bc33 56%, #b07406 100%);
+  background: linear-gradient(158deg, rgba(255,255,255,.36), transparent 46%), radial-gradient(circle at 30% 24%, #fff0b0 0%, #f7bc33 55%, #b07406 100%);
   color: #402800;
-  filter: drop-shadow(0 2px 4px rgba(247, 188, 51, .6));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .6), inset 0 -5px 8px rgba(120, 70, 0, .35), 0 0 8px rgba(247, 188, 51, .55);
 }
 .badge-mark.mini.t8 {
-  background: linear-gradient(158deg, rgba(255,255,255,.40), transparent 44%), radial-gradient(circle at 34% 30%, #ffd0a8 0%, #f06a3c 56%, #a82b14 100%);
+  background: linear-gradient(158deg, rgba(255,255,255,.34), transparent 46%), radial-gradient(circle at 30% 24%, #ffd0a8 0%, #f06a3c 55%, #a82b14 100%);
   color: #3d1200;
-  filter: drop-shadow(0 2px 4px rgba(240, 106, 60, .65));
+  box-shadow: inset 0 0 0 1px rgba(255, 235, 190, .75), inset 0 -5px 8px rgba(120, 20, 0, .35), 0 0 9px rgba(240, 106, 60, .6);
 }
 .badge-mark.mini.t6 .bm-text, .badge-mark.mini.t7 .bm-text, .badge-mark.mini.t8 .bm-text {
-  text-shadow: 0 1px 1px rgba(255, 255, 255, .48);
+  text-shadow: 0 1px 1px rgba(255, 255, 255, .45);
 }
