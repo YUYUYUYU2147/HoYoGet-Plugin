@@ -110,7 +110,7 @@ const RE_ABYSS = /^[#%]*(?:米哈游)?(?:绝区零|zzz)式舆(?:使用率|排名
         所以这种写法由本插件接管（它算的是工坊驱动榜，带属性与配装）。
      ② 长式：米哈游绝区零角色排名 星见雅 / %zzz排名 星见雅
         —— 保留原写法，参数用空格分隔（等级/影画/数量）。 */
-const RE_ROLE_RANK_SHORT = /^[#%]*(?:米哈游)?(?:绝区零|zzz)?\s*([^\s]+?)\s*(?:全服|工坊)?\s*(?:角色)?(?:练度)?排名(?:\s+(.+))?$/i
+const RE_ROLE_RANK_SHORT = /^[#%]*(?:米哈游)?(?:绝区零|zzz)?\s*(?![zZ]{3})([^\s]+?)\s*(?:全服|工坊)?\s*(?:角色)?(?:练度)?排名(?:\s+(.+))?$/i
 const RE_ROLE_RANK = /^[#%]*(?:米哈游)?(?:绝区零|zzz)(?:角色)?(?:练度)?排名(?:\s+(.+))?$/i
 const RE_DETAIL = /^[#%]*(?:米哈游)?(?:绝区零|zzz)(?:查)?练度(?:\s+(.+))?$/i
 const RE_HELP = /^[#%]*(?:米哈游)?(?:绝区零|zzz)榜单帮助$/i
@@ -1299,12 +1299,26 @@ export class zzz_workshop extends plugin {
       const wantGroup = getRankScope(e) === 'group'
       const memberUids = wantGroup ? await getGroupMemberUids(e) : null
       const scope = wantGroup && memberUids ? 'group' : 'all'
-      const longHit = RE_ROLE_RANK.exec(e.msg)
-      const longArg = longHit?.[1]
-      /* 短式允许后面跟参数（等级/影画/数量），要和角色名拼回去交给 buildRoleRank 解析 */
-      const shortHit = longArg ? null : RE_ROLE_RANK_SHORT.exec(e.msg)
-      const shortArg = shortHit ? [shortHit[1], shortHit[2]].filter(Boolean).join(' ') : ''
-      const res = await buildRoleRank(longArg || shortArg || '', { scope, memberUids })
+      /* Yunzai 会把 % 前缀改写成「#绝区零」（lib/plugins/loader.js 的 zzzReg）：
+           %星见雅全服排名      → #绝区零星见雅全服排名
+           %绝区零排名 星见雅    → #绝区零排名 星见雅
+         第二种里「绝区零」本来就是用户输入的游戏名，剥掉后角色名会丢。
+         所以剥离前后两种形态都要试，取第一个能解析出角色名的结果。 */
+      const rawMsg = String(e.msg || '')
+      const stripped = rawMsg.replace(/^[#%]*绝区零\s*/i, '').replace(/^[#%]+\s*/, '')
+      /* 解析顺序：
+         ① 剥离后先试长式 —— 「%绝区零排名 星见雅」剥完是「排名 星见雅」，
+            长式不中（缺游戏名），留给短式处理会取不到角色名；
+         ② 再用原始消息试长式 —— 「#绝区零zzz排名 星见雅」必须走这条；
+         ③ 最后对两者试短式。 */
+      let arg = RE_ROLE_RANK.exec(stripped)?.[1] || RE_ROLE_RANK.exec(rawMsg)?.[1] || ''
+      if (!arg) {
+        for (const msg of [stripped, rawMsg]) {
+          const hit = RE_ROLE_RANK_SHORT.exec(msg)
+          if (hit) { arg = [hit[1], hit[2]].filter(Boolean).join(' '); break }
+        }
+      }
+      const res = await buildRoleRank(arg, { scope, memberUids })
       // 无数据/无本群样本时返回 { error }，直接回文字
       if (res?.error) return e.reply(res.error)
       try {
