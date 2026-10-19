@@ -1269,14 +1269,30 @@ const SELF_SCORE_WEIGHTS = {
 // prof5「防护」走 defender 权重：防护角色（凯撒/本/赛斯/潘引壶/照）主词条是防御%/生命%，
 // 此前被映射到 support（暴击/攻击/能量）导致副词条优先级完全错位。
 const PROF_WEIGHT_KEY = { 1: 'strong', 2: 'stun', 3: 'anomaly', 4: 'support', 5: 'defender', 6: 'rupture', 7: 'defender' }
+
+/**
+ * 角色级权重覆盖：职业权重只能给出「这一类角色通常怎么配」，
+ * 但个别角色的实际收益会偏离职业模板，继续套职业权重会把好盘评成烂盘。
+ *
+ * 星见雅（雅）：职业是异常，但输出完全走直伤 —— 专武「霰落星殿」副词条是暴击率，
+ * 核心被动按暴击伤害结算，6 影再给穿透。用 anomaly 权重（只认精通/掌控，
+ * 双暴权重为 0）会把她的双暴盘全部判为无效词条，评分因此明显偏低。
+ */
+const CHAR_WEIGHT_OVERRIDE = {
+  雅: { '攻击力百分比': 1, '暴击率': 1, '暴击伤害': 1, '穿透值': .75, '属性伤害加成': 1, '异常精通': .25 },
+}
 const PROF_WEIGHT_NAME = { 1: '强攻', 2: '击破', 3: '异常', 4: '支援', 5: '防护', 6: '命破', 7: '锋御' }
 
 /** 取评分权重（按 property_id） */
 function getScoreWeight(charName, stats, profession, elementType, baseProps = {}) {
   const elemId = ELEM_DMG_ID[elementType]
+  /* 角色级覆盖优先：命中就直接用覆盖表，不再看职业 */
+  const override = CHAR_WEIGHT_OVERRIDE[charName]
   const key = PROF_WEIGHT_KEY[profession] || 'strong'
-  const ruleName = `自研·${PROF_WEIGHT_NAME[profession] || '强攻'}`
-  const named = { ...SELF_SCORE_WEIGHTS[key] }
+  const ruleName = override
+    ? `自研·${charName}（特化）`
+    : `自研·${PROF_WEIGHT_NAME[profession] || '强攻'}`
+  const named = { ...(override || SELF_SCORE_WEIGHTS[key]) }
   const weight = {}
   for (const nm in named) {
     const id = nm === '属性伤害加成' ? elemId : SCORE_PROP_ID[nm]

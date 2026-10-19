@@ -138,7 +138,10 @@ const RE_ABYSS = /^[#%]*(?:米哈游)?(?:绝区零|zzz)式舆(?:使用率|排名
         所以这种写法由本插件接管（它算的是工坊驱动榜，带属性与配装）。
      ② 长式：米哈游绝区零角色排名 星见雅 / %zzz排名 星见雅
         —— 保留原写法，参数用空格分隔（等级/影画/数量）。 */
-const RE_ROLE_RANK_SHORT = /^[#%]*(?:米哈游)?(?:绝区零|zzz)?\s*(?![zZ]{3})([^\s]+?)\s*(?:全服|工坊)?\s*(?:角色)?(?:练度)?排名(?:\s+(.+))?$/i
+/* 短式里「全服/本群/工坊」是范围修饰词，必须单独捕获：
+   之前写成 (?:全服|工坊)? 不捕获也不认「本群」，
+   「%星见雅本群排名」会被解析成角色名「星见雅本群」而查不到角色。 */
+const RE_ROLE_RANK_SHORT = /^[#%]*(?:米哈游)?(?:绝区零|zzz)?\s*(?![zZ]{3})([^\s]+?)\s*(全服|本群|工坊)?\s*(?:角色)?(?:练度)?排名(?:\s+(.+))?$/i
 const RE_ROLE_RANK = /^[#%]*(?:米哈游)?(?:绝区零|zzz)(?:角色)?(?:练度)?排名(?:\s+(.+))?$/i
 const RE_DETAIL = /^[#%]*(?:米哈游)?(?:绝区零|zzz)(?:查)?练度(?:\s+(.+))?$/i
 const RE_HELP = /^[#%]*(?:米哈游)?(?:绝区零|zzz)榜单帮助$/i
@@ -1350,9 +1353,11 @@ export class zzz_workshop extends plugin {
     try {
       /* 范围跟随「%面板排名范围」的开关，与本地面板排名共用同一份状态（按群持久化，重启不丢）。
          本群范围需要群成员绑定 UID，拿不到成员列表时回落全服。 */
-      const wantGroup = getRankScope(e) === 'group'
-      const memberUids = wantGroup ? await getGroupMemberUids(e) : null
-      const scope = wantGroup && memberUids ? 'group' : 'all'
+      /* 默认跟随「%面板排名范围」的开关；但指令里显式写了范围时以指令为准：
+           %星见雅全服排名 → all
+           %星见雅本群排名 → group
+         这样同一个群不必来回切设置也能临时看另一种范围。 */
+      const configuredGroup = getRankScope(e) === 'group'
       /* Yunzai 会把 % 前缀改写成「#绝区零」（lib/plugins/loader.js 的 zzzReg）：
            %星见雅全服排名      → #绝区零星见雅全服排名
            %绝区零排名 星见雅    → #绝区零排名 星见雅
@@ -1366,12 +1371,20 @@ export class zzz_workshop extends plugin {
          ② 再用原始消息试长式 —— 「#绝区零zzz排名 星见雅」必须走这条；
          ③ 最后对两者试短式。 */
       let arg = RE_ROLE_RANK.exec(stripped)?.[1] || RE_ROLE_RANK.exec(rawMsg)?.[1] || ''
+      /* 范围修饰词：'全服'/'工坊' → all，'本群' → group；没写则跟随配置 */
+      let scopeHint = ''
       if (!arg) {
         for (const msg of [stripped, rawMsg]) {
           const hit = RE_ROLE_RANK_SHORT.exec(msg)
-          if (hit) { arg = [hit[1], hit[2]].filter(Boolean).join(' '); break }
+          if (!hit) continue
+          arg = [hit[1], hit[3]].filter(Boolean).join(' ')
+          scopeHint = hit[2] || ''
+          break
         }
       }
+      const wantGroup = scopeHint ? scopeHint === '本群' : configuredGroup
+      const memberUids = wantGroup ? await getGroupMemberUids(e) : null
+      const scope = wantGroup && memberUids ? 'group' : 'all'
       /* handler 传进去：本群榜要靠它调 fetchPlayer 取游戏内昵称/头像 */
       const res = await buildRoleRank(arg, { scope, memberUids, handler: this })
       // 无数据/无本群样本时返回 { error }，直接回文字
