@@ -1,0 +1,305 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}hoyo_panel/detail.css" />
+  </head>
+  <body class="game-{{game}}">
+    <div class="card">
+      {{if randomBg}}
+      <img class="bg-layer bg-random" src="{{randomBg}}" onerror="this.style.display='none'">
+      {{else}}
+      {{if bgElemImage}}
+      <img class="bg-layer" src="{{bgElemImage}}" onerror="this.style.display='none'">
+      {{/if}}
+      {{if bgCharImage}}
+      <img class="bg-layer bg-char" src="{{bgCharImage}}" onerror="this.style.display='none'">
+      {{/if}}
+      {{/if}}
+      <div class="glow g1"></div>
+      <div class="glow g2"></div>
+
+      <div class="hero">
+        {{if splash}}
+        <img class="splash" src="{{_miao_path}}{{splash}}" onerror="this.style.display='none'">
+        {{/if}}
+
+        {{if consIcons.length}}
+        <div class="char-cons">
+          {{each consIcons c}}
+          <div class="cons-item {{if c.active}}on{{else}}off{{/if}}">
+            {{if c.file}}
+            <img class="cons-img" src="{{_miao_path}}{{c.file}}" onerror="this.style.visibility='hidden'">
+            {{/if}}
+          </div>
+          {{/each}}
+        </div>
+        {{/if}}
+        <div class="hero-fade"></div>
+        <div class="hero-text">
+          <div class="cname">{{name}}</div>
+          <div class="cmeta">
+            <span class="lv">Lv.{{level}}</span>
+            {{if cons}}<span class="cons">{{cons}}{{if game === 'sr'}}星魂{{else}}命之座{{/if}}</span>{{/if}}
+          </div>
+        </div>
+        <div class="uid">UID {{uid}}{{if nickname}} · {{nickname}}{{/if}}</div>
+      </div>
+
+      <div class="right">
+        <div class="right-main">
+          {{if weapon}}
+          <div class="weapon">
+            <img class="wq-icon" src="{{_miao_path}}{{weapon.icon}}" onerror="this.style.display='none'">
+            <div class="wq-info">
+              <div class="wq-name">{{weapon.name}}</div>
+              <div class="wq-meta">
+                <span class="wq-star">
+                  {{each weapon.stars}}
+                  <i class="star"></i>
+                  {{/each}}
+                </span>
+                <span class="wq-refine">{{if game === 'sr'}}叠影{{else}}精炼{{/if}}{{weapon.refine}}</span>
+                <span class="wq-lv">Lv.{{weapon.level}}</span>
+              </div>
+              <div class="wq-props">
+                {{each weapon.props p}}
+                <span class="wq-prop">{{p.label}} <b>{{p.value}}</b></span>
+                {{/each}}
+              </div>
+            </div>
+          </div>
+          {{/if}}
+
+          <div class="attrs">
+            {{each attrs a}}
+            <div class="attr">
+              <span class="a-left">
+                <span class="aicon-wrap">
+                  {{if a.iconMiao}}
+                  <img class="aicon" src="{{_miao_path}}{{a.icon}}" onerror="this.style.display='none'">
+                  {{else if a.icon}}
+                  <img class="aicon" src="{{ppath}}zzz_panel/images/panel_icons/{{a.icon}}" onerror="this.style.display='none'">
+                  {{/if}}
+                </span>
+                <span class="a-label">{{a.label}}</span>
+              </span>
+              <span class="a-value">{{a.value}}</span>
+            </div>
+            {{/each}}
+          </div>
+        </div>
+
+        <div class="side">
+          <div class="radar-wrap">
+            <svg class="radar" viewBox="-30 -14 244 212">
+              {{each radar.grid g}}
+              <polygon class="rg" points="{{g}}"></polygon>
+              {{/each}}
+              {{each radar.spokes s}}
+              <line class="rs" x1="{{s.x1}}" y1="{{s.y1}}" x2="{{s.x2}}" y2="{{s.y2}}"></line>
+              {{/each}}
+              <polygon class="rv" points="{{radar.polygon}}"></polygon>
+              {{each radar.labels l}}
+              <text class="rl" x="{{l.x}}" y="{{l.y}}" text-anchor="{{l.anchor}}">{{l.label}}</text>
+              {{/each}}
+            </svg>
+          </div>
+
+          {{if talents.length}}
+          <div class="talents{{if talents.length > 3}} talents-2{{/if}}">
+            {{each talents t}}
+            <div class="talent">
+              {{if t.icon}}
+              <img class="t-icon" src="{{_miao_path}}{{t.icon}}" onerror="this.style.display='none'">
+              {{/if}}
+              <span class="t-name">{{t.label}}</span>
+              <span class="t-lv">{{t.level}}</span>
+            </div>
+            {{/each}}
+          </div>
+          {{/if}}
+
+          {{if artisOverall}}
+          <div class="overall">
+            <div class="ov-head">圣遗物总评</div>
+            <div class="ov-score-row">
+              <span class="ov-score">{{artisOverall.score}}</span>
+              <span class="ov-unit">分</span>
+              {{if artisOverall.mark.hasBadge}}
+              <span class="badge-mark t{{artisOverall.mark.tier}}" title="圣遗物评级">
+                <span class="bm-text">{{artisOverall.mark.label}}</span>
+              </span>
+              {{/if}}
+            </div>
+            <div class="ov-valid">有效词条 <b>{{artisOverall.valid}}</b> / {{artisOverall.total}}{{if artisOverall.avg}}<span class="ov-sep">·</span>平均 <b>{{artisOverall.avg}}</b>{{/if}}</div>
+          </div>
+          {{/if}}
+        </div>
+      </div>
+
+      {{if akasha}}
+      <div class="akasha">
+        <div class="ak-rank">
+          <div class="ak-title">AKASHA 全球排名</div>
+          {{if akasha.mine}}
+          <div class="ak-main">
+            <span class="ak-no">#{{akasha.mine.rank}}</span>
+            <span class="ak-of">/ {{akasha.mine.outOf}}</span>
+          </div>
+          <div class="ak-beat">超越 {{akasha.mine.beat}}% 的玩家</div>
+          <div class="ak-dmg-num">理论伤害 {{akasha.mine.dmgText}}</div>
+          {{else}}
+          <div class="ak-none">未在 Akasha 上找到本人排名</div>
+          {{/if}}
+          {{if akasha.planName}}
+          <div class="ak-plan">{{akasha.planName}}</div>
+          {{/if}}
+
+          {{if akasha.team.length}}
+          <div class="ak-team">
+            <div class="ak-title">队伍配队</div>
+            <div class="ak-team-list">
+              {{each akasha.team t}}
+              <div class="ak-trow">
+                <span class="ak-tava {{t.element}}">
+                  {{if t.icon}}<img src="{{t.icon}}" onerror="this.style.display='none'">{{/if}}
+                </span>
+                <span class="ak-tname">{{t.name}}</span>
+                {{if t.consText}}<span class="ak-tcons">{{t.consText}}</span>{{/if}}
+              </div>
+              {{/each}}
+            </div>
+          </div>
+          {{/if}}
+        </div>
+
+        {{if akasha.detail.length}}
+        <div class="ak-detail">
+          <div class="ak-dhead">
+            <span class="ak-dico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+            <span class="ak-dtitle">伤害计算</span>
+            <span class="ak-dbadge">DAMAGE</span>
+            <span class="ak-dhint">榜首同配装</span>
+          </div>
+
+          <div class="ak-dcols">
+            <span class="ak-h-type">伤害类型</span>
+            <span class="ak-h-q">次数</span>
+            <span class="ak-h-val">期望伤害</span>
+          </div>
+
+          {{each akasha.detail d}}
+          <div class="ak-drow">
+            <span class="ak-dtag">{{d.tag}}</span>
+            <span class="ak-dname">{{d.name}}</span>
+            <span class="ak-dq">{{d.qtyText}}</span>
+            <span class="ak-dval">{{d.valueText}}</span>
+          </div>
+          {{/each}}
+
+          <div class="ak-dfoot">
+            <span>按榜首配装模拟，数值仅供参考</span>
+            <span class="ak-dsrc">AKASHA</span>
+          </div>
+        </div>
+        {{/if}}
+
+        {{if akasha.rows.length}}
+        <div class="ak-board">
+          <div class="ak-title">全服前 10 · 共 {{akasha.total}} 人</div>
+          {{each akasha.rows r}}
+          <div class="ak-row">
+            <span class="ak-rk">{{r.rank}}</span>
+            <span class="ak-flag">
+              {{if r.flag}}
+              <img class="flag-img" src="{{r.flag}}" onerror="this.style.display='none'">
+              {{/if}}
+            </span>
+            <span class="ak-nick">{{r.nickname}}</span>
+            <span class="ak-wq">{{r.consText}}</span>
+            <span class="ak-rdmg">{{r.dmgText}}</span>
+          </div>
+          {{/each}}
+        </div>
+        {{/if}}
+      </div>
+      {{/if}}
+
+      <div class="artis">
+        {{each artis a}}
+        <div class="art {{a.markClass}}">
+          <div class="art-top">
+            <span class="art-slot">{{a.slot}}</span>
+            <span class="art-rating">
+              {{if a.mark.hasBadge}}
+              <span class="badge-mark sm t{{a.mark.tier}}">
+                <span class="bm-text">{{a.mark.label}}</span>
+              </span>
+              {{/if}}
+              {{if a.score}}<span class="art-score">{{a.score}}</span>{{/if}}
+            </span>
+          </div>
+
+          <div class="art-mid">
+            <img class="art-icon" src="{{_miao_path}}{{a.icon}}" onerror="this.style.display='none'">
+            <div class="art-text">
+              <div class="art-name">{{a.name}}</div>
+              <div class="art-star">
+                {{each a.stars}}
+                <i class="star"></i>
+                {{/each}}
+              </div>
+              <div class="art-main">
+                {{each a.main m}}
+                <span class="main-prop">
+                  <span class="picon-wrap">
+                    {{if m.iconMiao}}
+                    <img class="picon" src="{{_miao_path}}{{m.icon}}" onerror="this.style.display='none'">
+                    {{else if m.icon}}
+                    <img class="picon" src="{{ppath}}zzz_panel/images/panel_icons/{{m.icon}}" onerror="this.style.display='none'">
+                    {{/if}}
+                  </span>
+                  {{m.label}} {{m.value}}
+                </span>
+                {{/each}}
+              </div>
+            </div>
+          </div>
+
+          <div class="art-subs">
+            {{each a.subs s}}
+            <div class="sub {{if s.valid}}sub-on{{/if}}">
+              {{if s.roll}}<i class="sub-bar" style="width:{{s.bar}}%"></i>{{/if}}
+              <span class="sub-roll">{{s.roll}}</span>
+              <span class="picon-wrap">
+                {{if s.iconMiao}}
+                <img class="picon" src="{{_miao_path}}{{s.icon}}" onerror="this.style.display='none'">
+                {{else if s.icon}}
+                <img class="picon" src="{{ppath}}zzz_panel/images/panel_icons/{{s.icon}}" onerror="this.style.display='none'">
+                {{/if}}
+              </span>
+              <span class="s-label">{{s.label}}</span>
+              <span class="s-value">{{s.value}}</span>
+            </div>
+            {{/each}}
+          </div>
+
+          {{if a.set}}
+          <div class="art-set">{{a.set}}</div>
+          {{/if}}
+        </div>
+        {{/each}}
+      </div>
+
+      <div class="footer">
+        <div class="sets">
+          {{each sets s}}
+          <span class="set-pill">{{s.name}} ×{{s.count}}</span>
+          {{/each}}
+        </div>
+        <span class="src">from 米哈游 · {{gameCn}}</span>
+      </div>
+    </div>
+  </body>
+</html>
