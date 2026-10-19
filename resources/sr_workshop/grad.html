@@ -1,0 +1,86 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}sr_workshop/common.css" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}sr_workshop/panel-boards.css" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}sr_workshop/grad.css" />
+  </head>
+  <body>
+    <div class="page">
+      <div class="head">
+        <div class="head-left">
+          <div class="head-face">
+            {{if face}}<img src="{{face}}" onerror="this.style.display='none';this.parentNode.innerHTML='{{initial}}'">{{else}}<span class="initial">{{initial}}</span>{{/if}}
+          </div>
+          <div>
+            <div class="title">{{title}}<span class="title-sub">全服配装</span></div>
+            <div class="subtitle">{{subtitle}}</div>
+            <div class="tags">
+              {{if stars}}<span class="tag gold">{{stars}}</span>{{/if}}
+              {{if elem}}<span class="tag">{{elem}}属性</span>{{/if}}
+              {{if path}}<span class="tag">{{path}}</span>{{/if}}
+            </div>
+          </div>
+        </div>
+        <div class="badge">星穹铁道工坊</div>
+      </div>
+
+      {{if note}}<div class="note">{{note}}</div>{{/if}}
+
+      <div class="boards">
+        <div class="board">
+          <div class="board-title">光锥使用率</div>
+          {{each weapons item}}
+          <div class="bar-row">
+            <div class="bar-no">{{item.no}}</div>
+            <div class="bar-main">
+              <div class="bar-label">
+                <span class="bar-name">{{item.name}}</span>
+                <span class="bar-value">{{item.text}}</span>
+              </div>
+              <div class="bar-track"><div class="bar-fill" style="width:{{item.width}}%"></div></div>
+              <div class="bar-sub">样本 {{item.countText}}</div>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+
+        <div class="board">
+          <div class="board-title">遗器套装</div>
+          {{each relics item}}
+          <div class="bar-row">
+            <div class="bar-no">{{item.no}}</div>
+            <div class="bar-main">
+              <div class="bar-label">
+                <span class="bar-name">{{item.name}}</span>
+                <span class="bar-value">{{item.text}}</span>
+              </div>
+              <div class="bar-track"><div class="bar-fill" style="width:{{item.width}}%"></div></div>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+      </div>
+
+      {{if ranks.length}}
+      <div class="board ranks">
+        <div class="board-title">星魂分布</div>
+        <div class="rank-grid">
+          {{each ranks item}}
+          <div class="rank-cell">
+            <div class="rank-head"><span class="rank-label">{{item.rank}} 星魂</span><span class="rank-value">{{item.text}}</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width:{{item.width}}%"></div></div>
+          </div>
+          {{/each}}
+        </div>
+      </div>
+      {{/if}}
+
+      <div class="footer">
+        <span>数据来源：星穹铁道工坊角色柜用户，按高练度玩家统计</span>
+        <span class="src">from 米哈游</span>
+      </div>
+    </div>
+  </body>
+</html>

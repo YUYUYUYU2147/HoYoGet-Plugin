@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}sr_workshop/common.css" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}sr_workshop/team.css" />
+  </head>
+  <body>
+    <div class="page">
+      <div class="head">
+        <div class="head-left">
+          <div class="head-face">
+            {{if face}}<img src="{{face}}" onerror="this.style.display='none';this.parentNode.innerHTML='{{initial}}'">{{else}}<span class="initial">{{initial}}</span>{{/if}}
+          </div>
+          <div>
+            <div class="title">队伍体系推荐<span class="title-sub">{{if keyword}}筛选{{else}}全部{{/if}}</span></div>
+            <div class="subtitle">{{title}}｜按推荐星级排序，展示前 {{count}} 套</div>
+          </div>
+        </div>
+        <div class="badge">共 {{total}} 套</div>
+      </div>
+
+      <div class="cards">
+        {{each rows r}}
+        <div class="card s{{r.starNum}}">
+          <div class="card-head">
+            <div class="team-name">{{r.name}}</div>
+            <div class="team-stars">{{r.stars}}</div>
+          </div>
+          <div class="team-system">{{r.system}}</div>
+          <div class="members">
+            {{each r.members m}}
+            <span class="member">{{m}}</span>
+            {{/each}}
+          </div>
+          {{if r.swaps.length}}
+          <div class="swaps">
+            {{each r.swaps s}}
+            <div class="swap">{{s}}</div>
+            {{/each}}
+          </div>
+          {{/if}}
+        </div>
+        {{/each}}
+      </div>
+
+      <div class="footer">
+        <span>数据来源：星穹铁道工坊队伍体系推荐 · 发送 *配队 &lt;角色名&gt; 可按角色筛选</span>
+        <span class="src">from 米哈游</span>
+      </div>
+    </div>
+  </body>
+</html>

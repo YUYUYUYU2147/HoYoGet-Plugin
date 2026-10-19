@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}sr_workshop/common.css" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}sr_workshop/card.css" />
+  </head>
+  <body>
+    <div class="page">
+      <div class="head">
+        <div class="head-left">
+          <div class="head-icon">{{if isStreak}}🔥{{else}}✦{{/if}}</div>
+          <div>
+            <div class="title">抽卡欧非榜<span class="title-sub">{{subtitle}}</span></div>
+            <div class="subtitle">显示前 {{rows.length}} 名｜UID 由工坊脱敏</div>
+            <div class="tags">
+              <span class="tag gold">{{title}}</span>
+              {{if isStreak}}<span class="tag">按「氪」口径统计</span>{{/if}}
+            </div>
+          </div>
+        </div>
+        <div class="badge">星穹铁道工坊</div>
+      </div>
+
+      <div class="thead">
+        <span class="th c-rank">排名</span>
+        <span class="th c-uid">UID</span>
+        {{if isStreak}}
+        <span class="th c-main">{{streakLabel}}</span>
+        <span class="th c-num">总抽</span>
+        {{else}}
+        <span class="th c-num">抽数</span>
+        <span class="th c-num">五星</span>
+        <span class="th c-num">平均</span>
+        {{/if}}
+      </div>
+
+      <div class="rows">
+        {{each rows r}}
+        <div class="row r{{r.rank}}">
+          <div class="c-rank">
+            {{if r.rank <= 3}}<span class="medal m{{r.rank}}"><em>{{r.rank}}</em></span>{{else}}<span class="plain">{{r.rank}}</span>{{/if}}
+          </div>
+          <div class="c-uid">{{r.uid}}</div>
+          {{if isStreak}}
+          <div class="c-main"><span class="streak">{{r.streak}}</span><span class="unit">次</span></div>
+          <div class="c-num dim">{{r.draw}}</div>
+          {{else}}
+          <div class="c-num">{{r.draw}}</div>
+          <div class="c-num">{{r.five}}</div>
+          <div class="c-num gold">{{r.avg}}</div>
+          {{/if}}
+        </div>
+        {{/each}}
+      </div>
+
+      <div class="footer">
+        <span>数据来自工坊统计，UID 已脱敏</span>
+        <span class="src">from 米哈游</span>
+      </div>
+    </div>
+  </body>
+</html>

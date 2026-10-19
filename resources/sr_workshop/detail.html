@@ -1,0 +1,70 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}sr_workshop/common.css" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}sr_workshop/detail.css" />
+  </head>
+  <body>
+    <div class="page">
+      <div class="head">
+        <div class="head-left">
+          <div class="head-face">
+            {{if face}}<img src="{{face}}" onerror="this.style.display='none';this.parentNode.innerHTML='{{initial}}'">{{else}}<span class="initial">{{initial}}</span>{{/if}}
+          </div>
+          <div>
+            <div class="title">{{title}}<span class="title-sub">练度详情</span></div>
+            <div class="subtitle">玩家 {{nick}}</div>
+            <div class="tags">
+              {{if stars}}<span class="tag gold">{{stars}}</span>{{/if}}
+              {{if elem}}<span class="tag">{{elem}}属性</span>{{/if}}
+              {{if path}}<span class="tag">{{path}}</span>{{/if}}
+              <span class="tag">Lv.{{level}}</span>
+              <span class="tag">{{rank}} 星魂</span>
+            </div>
+          </div>
+        </div>
+        <div class="badge">星穹铁道工坊</div>
+      </div>
+
+      <div class="summary">
+        <div class="sum-cell">
+          <div class="sum-label">遗器总分</div>
+          <div class="sum-value gold">{{pointText}}</div>
+        </div>
+        <div class="sum-cell">
+          <div class="sum-label">光锥</div>
+          <div class="sum-value sm">{{weapon}}</div>
+          {{if refine}}<div class="sum-sub">叠影 {{refine}}</div>{{/if}}
+        </div>
+        <div class="sum-cell wide">
+          <div class="sum-label">遗器套装</div>
+          <div class="sum-value sm">{{sets}}</div>
+        </div>
+        <div class="sum-cell">
+          <div class="sum-label">数据更新</div>
+          <div class="sum-value sm">{{updatedAt}}</div>
+        </div>
+      </div>
+
+      {{if panel.length}}
+      <div class="panel">
+        <div class="panel-title">面板属性</div>
+        <div class="panel-grid">
+          {{each panel item}}
+          <div class="pv">
+            <div class="pv-label">{{item.label}}</div>
+            <div class="pv-value">{{item.value}}</div>
+          </div>
+          {{/each}}
+        </div>
+      </div>
+      {{/if}}
+
+      <div class="footer">
+        <span>数据来自玩家上传至工坊的角色柜，仅供参考</span>
+        <span class="src">from 米哈游</span>
+      </div>
+    </div>
+  </body>
+</html>

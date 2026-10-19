@@ -1,0 +1,75 @@
+/* 榜单式进度条（配装 / 星魂分布共用） */
+
+.boards {
+  display: flex;
+  gap: 14px;
+  margin-top: 14px;
+}
+.board {
+  flex: 1 1 0;
+  padding: 14px 18px 16px;
+  border-radius: 14px;
+  background: rgba(34, 64, 118, .34);
+  border: 1px solid rgba(110, 160, 240, .20);
+}
+.board-title {
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #ffd479;
+  margin-bottom: 12px;
+}
+
+.bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.bar-no {
+  flex: 0 0 auto;
+  width: 22px;
+  font-size: 12px;
+  font-weight: 900;
+  color: #7f9dc4;
+}
+.bar-main { flex: 1 1 auto; min-width: 0; }
+.bar-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 13px;
+  margin-bottom: 5px;
+}
+.bar-name {
+  color: #dbe8ff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 300px;
+}
+.bar-value {
+  flex: 0 0 auto;
+  margin-left: 10px;
+  font-weight: 900;
+  color: #ffca6a;
+}
+.bar-track {
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(12, 26, 52, .75);
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #4d8fe6, #8fc4ff);
+}
+.bar-row:first-child .bar-fill {
+  background: linear-gradient(90deg, #e0a83a, #ffd479);
+}
+.bar-sub {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #7c98bd;
+}

@@ -1,0 +1,69 @@
+/* 玩家练度：概要四格 + 面板属性网格 */
+
+.summary {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: 160px 1fr 1.4fr 190px;
+  gap: 12px;
+}
+.sum-cell {
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(34, 64, 118, .38);
+  border: 1px solid rgba(110, 160, 240, .20);
+  min-width: 0;
+}
+.sum-label {
+  font-size: 12px;
+  color: #8fa9cd;
+  letter-spacing: 1px;
+  margin-bottom: 7px;
+}
+.sum-value {
+  font-size: 26px;
+  font-weight: 900;
+  color: #dbe8ff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sum-value.gold { color: #ffca6a; text-shadow: 0 0 14px rgba(255, 200, 90, .28); }
+.sum-value.sm { font-size: 17px; font-weight: 800; line-height: 1.4; white-space: normal; }
+.sum-sub {
+  margin-top: 5px;
+  font-size: 12px;
+  color: #ffd479;
+}
+
+.panel {
+  margin-top: 14px;
+  padding: 16px 20px 18px;
+  border-radius: 14px;
+  background: rgba(30, 58, 108, .34);
+  border: 1px solid rgba(110, 160, 240, .20);
+}
+.panel-title {
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #ffd479;
+  margin-bottom: 14px;
+}
+.panel-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px 18px;
+}
+.pv {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(16, 32, 62, .62);
+  border: 1px solid rgba(100, 150, 230, .16);
+}
+.pv-label { font-size: 12px; color: #8fa9cd; }
+.pv-value {
+  margin-top: 5px;
+  font-size: 22px;
+  font-weight: 900;
+  color: #e6f0ff;
+}

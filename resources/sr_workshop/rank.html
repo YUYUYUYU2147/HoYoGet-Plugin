@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}sr_workshop/common.css" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}sr_workshop/rank.css" />
+  </head>
+  <body>
+    <div class="page">
+      <div class="head">
+        <div class="head-left">
+          <div class="head-face">
+            {{if face}}<img src="{{face}}" onerror="this.style.display='none';this.parentNode.innerHTML='{{initial}}'">{{else}}<span class="initial">{{initial}}</span>{{/if}}
+          </div>
+          <div>
+            <div class="title">{{title}}<span class="title-sub">{{label}}排名</span></div>
+            <div class="subtitle">{{caption}}</div>
+            <div class="tags">
+              {{if star !== null && star !== undefined}}<span class="tag">{{star}} 星魂</span>{{else}}<span class="tag">不限星魂</span>{{/if}}
+              <span class="tag">{{levelText}}</span>
+              <span class="tag gold">{{skillName}}</span>
+            </div>
+          </div>
+        </div>
+        <div class="badge">星穹铁道工坊</div>
+      </div>
+
+      <div class="rules">
+        <div class="rules-title">榜单说明</div>
+        <div class="rule">{{if isDamage}}按该角色在当前配装下的{{skillName}}排序，数值由工坊按其伤害模型计算{{else}}按遗器总分排序，分数由工坊按其遗器评分模型计算{{/if}}</div>
+        <div class="rule">UID 仅显示首尾，昵称与等级取自玩家上传至工坊的角色柜</div>
+        <div class="rule">接口单页最多 50 条，本图展示前 {{count}} 名；数据并非实时刷新</div>
+      </div>
+
+      <div class="thead">
+        <span class="th c-rank">排名</span>
+        <span class="th c-user">用户</span>
+        <span class="th c-point">遗器评分</span>
+        <span class="th c-dmg">{{if isDamage}}{{skillName}}{{else}}遗器总分{{/if}}</span>
+      </div>
+
+      <div class="rows">
+        {{each rows r}}
+        <div class="row r{{r.rank}}">
+          <div class="c-rank">
+            {{if r.rank <= 3}}<span class="medal m{{r.rank}}">{{r.rank}}</span>{{else}}<span class="plain">{{r.rank}}</span>{{/if}}
+          </div>
+          <div class="c-user">
+            <div class="uface">
+              {{if face}}<img src="{{face}}" onerror="this.style.display='none';this.parentNode.innerHTML='{{initial}}'">{{else}}<span class="uinitial">{{initial}}</span>{{/if}}
+            </div>
+            <div class="uinfo">
+              <div class="nick">{{r.nickname}}</div>
+              <div class="uid">{{r.uidText}}{{if r.level}} · Lv.{{r.level}}{{/if}}</div>
+            </div>
+          </div>
+          <div class="c-point">{{r.pointText}}</div>
+          <div class="c-dmg">{{if isDamage}}<span class="dmg">{{r.damageText}}</span>{{else}}<span class="dim">—</span>{{/if}}</div>
+        </div>
+        {{/each}}
+      </div>
+
+      <div class="footer">
+        <span>共 {{total}} 条（接口单页 50 条）· 展示前 {{count}} 名</span>
+        <span class="src">from 米哈游</span>
+      </div>
+    </div>
+  </body>
+</html>
