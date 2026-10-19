@@ -339,13 +339,13 @@ const ELEM_NAME_ICON = {
  * 找不到 miao 资源时 `iconMiao` 项会因 onerror 隐藏，不影响排版。
  */
 const ELEM_ICON = {
-  pyro: 'talent-pyro.webp',
-  hydro: 'talent-hydro.webp',
-  cryo: 'talent-cryo.webp',
-  electro: 'talent-electro.webp',
-  anemo: 'talent-anemo.webp',
-  geo: 'talent-geo.webp',
-  dendro: 'talent-dendro.webp',
+  pyro: 'common/bg/talent-pyro.webp',
+  hydro: 'common/bg/talent-hydro.webp',
+  cryo: 'common/bg/talent-cryo.webp',
+  electro: 'common/bg/talent-electro.webp',
+  anemo: 'common/bg/talent-anemo.webp',
+  geo: 'common/bg/talent-geo.webp',
+  dendro: 'common/bg/talent-dendro.webp',
 }
 
 function propIcon(p) {
@@ -496,7 +496,7 @@ function detailAttrRows(profile, game, weights = {}) {
     const plusN = n - (hasBase ? baseN : 0)
     /* 权重来自 miao 的 charWeight（0-100）：双爆 100、攻击 75 这种；
        0 或缺失就不显示徽章，避免满屏 0 */
-    const weight = Number(weights[k] ?? weights[key]) || 0
+    const weight = Number(weights[key] ?? weights[k]) || 0
     const dmgName = key === 'phy' ? '物理伤害加成' : (elemCn ? `${elemCn}元素伤害加成` : '')
     return {
       key: k,

@@ -384,10 +384,10 @@ body.elem-physical { --elem-line: rgba(207, 216, 227, .9); --elem-glow: rgba(180
   font-size: 9px;
   font-weight: 900;
   line-height: 13px;
-  color: #8fb6d0;
-  background: rgba(120, 180, 220, .16);
+  color: #a6c6dd;
+  background: rgba(120, 180, 220, .22);
 }
-.a-weight.hi { color: #ffd27a; background: rgba(255, 210, 122, .16); }
+.a-weight.hi { color: #ffd27a; background: rgba(255, 210, 122, .2); }
 
 /* 右侧两行：总数值 + 基础/圣遗物加成 */
 .a-right {
