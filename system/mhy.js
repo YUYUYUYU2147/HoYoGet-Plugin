@@ -49,24 +49,28 @@ class mhy {
   }
 
   async shebei(e, info) {
-    if (info?.device_fp && info?.device_id) return this.bd(e, info.device_id, info.device_fp);
+    /* 客户端抓包路径：已经带着 device_fp + device_id，不用再申请指纹，
+       但仍然要对每个账号调 deviceLogin/saveDevice —— 设备信任是按账号登记的。 */
+    if (info?.device_fp && info?.device_id) {
+      const accounts = await this.listAccounts(e);
+      if (!accounts.length) return e.reply('请先扫码绑定米游社后，在绑定设备');
+      const ltuids = await this.registerDevice(e, accounts, info.device_id, info.device_fp);
+      return this.bd(e, info.device_id, info.device_fp, info, ltuids);
+    }
     if (!info?.oaid) return logger.error('设备格式错误');
-    let ck = this.getUser(e)?.ck;
-    if (!ck) return e.reply('请先扫码绑定米游社后，在绑定设备');
-    const { deviceName, deviceModel, oaid, deviceFingerprint, deviceBoard } = info;
+    const accounts = await this.listAccounts(e);
+    if (!accounts.length) return e.reply('请先扫码绑定米游社后，在绑定设备');
+    let ck = accounts[0].ck;
+    const { deviceName, deviceModel, oaid, deviceFingerprint, deviceBoard, androidVersion } = info;
     const device_ = deviceFingerprint.split('/')[0];
     if (!oaid || oaid.includes('error') || /^0+$/.test(oaid)) return e.reply('设备oaid获取失败，你的设备不支持获取');
-    /* device_id 必须全程用同一个值（这里就是 oaid）。
-       之前的写法有三处各自不同的 device_id：
-         · getFp 请求 body 的 device_id = oaid
-         · body 的 bbs_device_id      = getDeviceGuid()（随机）
-         · 请求头 x-rpc-device_id      = getDeviceGuid()（又一次随机）
-       因为 getHeaders 传了 info 时会跳过读存档，device_id 是 undefined，
-       于是落到 `device_id || this.getDeviceGuid()`。
-       结果：device_fp 是按 oaid 申请出来的，存档里却存了一个无关的随机 GUID，
-       米游社按「fp ↔ device_id」成对校验，后续 %更新面板 直接被判
-       10041 设备指纹未通过。这里统一成 oaid。 */
-    const deviceId = String(oaid);
+    /* 米游社是按「device_fp ↔ device_id」成对校验的：getFp 时提交的 device_id，
+       之后每次业务请求的 x-rpc-device_id 必须是同一个值。
+       原先 body 用 oaid、header 却用 getDeviceGuid() 现生成的随机 GUID，
+       存档里也存这个随机值，等于拿 A 的指纹配 B 的设备号，绑定成功也照样 10041。
+       另外 device_id 需要是 16 位十六进制（米游社口径），oaid 是 64 位，直接用也会被拒，
+       所以取 md5(oaid) 前 16 位：同一台设备恒定，格式也对。 */
+    const deviceId = md5(String(oaid)).slice(0, 16);
     let body = {
       device_id: deviceId,
       seed_id: this.randomString(16),
@@ -74,13 +78,12 @@ class mhy {
       platform: '2',
       device_fp: '38d7f0aac0ab7',
       app_name: 'bbs_cn',
-      ext_fields: `{"cpuType":"arm64-v8a","romCapacity":"512","productName":"${deviceName}","romRemain":"459","manufacturer":"${device_}","appMemory":"512","hostname":"${device_}","screenSize":"1440x3022","osVersion":"13","aaid":"${this.getDeviceGuid()}","vendor":"中国电信","accelerometer":"0.061016977x0.8362915x9.826724","buildTags":"release-keys","model":"${deviceModel}","brand":"${device_}","oaid":"${oaid}","hardware":"qcom","deviceType":"${deviceName}","devId":"REL","serialNumber":"unknown","buildTime":"1690889245000","buildUser":"builder","ramCapacity":"229481","magnetometer":"80.64375x-14.1x77.90625","display":"${deviceModel} release-keys","ramRemain":"110308","deviceInfo":"${deviceFingerprint}","gyroscope":"7.9894776E-4x-1.3315796E-4x6.6578976E-4","vaid":"${this.getDeviceGuid()}","buildType":"user","sdkVersion":"33","board":"${deviceBoard}"}`,
+      ext_fields: `{"cpuType":"arm64-v8a","romCapacity":"512","productName":"${deviceName}","romRemain":"459","manufacturer":"${device_}","appMemory":"512","hostname":"${device_}","screenSize":"1440x3022","osVersion":"${androidVersion || '13'}","aaid":"${this.getDeviceGuid()}","vendor":"中国电信","accelerometer":"0.061016977x0.8362915x9.826724","buildTags":"release-keys","model":"${deviceModel}","brand":"${device_}","oaid":"${oaid}","hardware":"qcom","deviceType":"${deviceName}","devId":"REL","serialNumber":"unknown","buildTime":"1690889245000","buildUser":"builder","ramCapacity":"229481","magnetometer":"80.64375x-14.1x77.90625","display":"${deviceModel} release-keys","ramRemain":"110308","deviceInfo":"${deviceFingerprint}","gyroscope":"7.9894776E-4x-1.3315796E-4x6.6578976E-4","vaid":"${this.getDeviceGuid()}","buildType":"user","sdkVersion":"${({ 12: '31', 13: '33', 14: '34', 15: '35', 16: '36' })[Number(androidVersion)] || '33'}","board":"${deviceBoard}"}`,
       bbs_device_id: deviceId,
     };
 
-    /* 显式把 device_id 交给 getHeaders：它只在 info 为空时才读存档，
-       传了 info 就拿不到 device_id，必须由调用方给。 */
-    let headers = this.getHeaders(e, ck, true, info, deviceId);
+    let headers = this.getHeaders(e, ck, true, info);
+    headers['x-rpc-device_id'] = deviceId;
 
     let res = await fetch(this.fp_url, {
       method: 'POST',
@@ -95,7 +98,7 @@ class mhy {
       logger.error(res);
       return e.reply('设备绑定失败,未能获取到device_fp');
     }
-    const device_id = deviceId;
+    const device_id = headers['x-rpc-device_id'];
     const device_name = headers['x-rpc-device_name'];
     body = this.getbody_(device_id, device_name);
     const res1 = await fetch(
@@ -106,35 +109,77 @@ class mhy {
       'https://bbs-api.miyoushe.com/apihub/api/saveDevice',
       { method: 'POST', headers, body: JSON.stringify(body) }
     ).then(res => res.json());
+    /* 当前账号（第一个）已经登记过一轮，剩下账号交给 registerDevice；
+       一起收集成功的 ltuid，全部失败才报错。 */
+    const done = []
     if (res1.retcode == 0 && res2.retcode == 0) {
-      return this.bd(e, device_id, fp, info);
+      done.push(accounts[0].ltuid)
     } else {
-      logger.error(res1, res2);
+      logger.error(res1, res2)
     }
-    return;
+    const rest = accounts.filter(a => a.ltuid !== accounts[0].ltuid)
+    const more = await this.registerDevice(e, rest, device_id, fp)
+    const ltuids = [...new Set([...done, ...more])]
+    if (!ltuids.length) return e.reply('设备登记失败，米游社未接受任何账号，请稍后重试或检查 CK 是否过期');
+    return this.bd(e, device_id, fp, info, ltuids);
+  }
+
+  /**
+   * 对指定账号逐个登记设备（deviceLogin + saveDevice），返回成功的 ltuid 列表。
+   * 米游社的设备信任是按账号维护的，所以必须每个账号各用各的 Cookie 调一次。
+   */
+  async registerDevice(e, accounts, device_id, fp) {
+    const ok = []
+    for (const acc of accounts || []) {
+      try {
+        /* 不能用 null：getHeaders 在 info 为空时会去读旧存档，
+           可能拿到上一次绑定的 device_name，导致设备描述前后不一致。
+           这里明确不要旧信息，后面统一覆盖 device_id / device_fp。 */
+        const headers = this.getHeaders(e, acc.ck, true, {});
+        headers['x-rpc-device_id'] = device_id;
+        if (fp) headers['x-rpc-device_fp'] = fp;
+        const deviceName = headers['x-rpc-device_name'];
+        const body = this.getbody_(device_id, deviceName);
+        const [r1, r2] = await Promise.all([
+          fetch('https://bbs-api.miyoushe.com/apihub/api/deviceLogin',
+            { method: 'POST', headers, body: JSON.stringify(body) }).then(r => r.json()).catch(() => ({})),
+          fetch('https://bbs-api.miyoushe.com/apihub/api/saveDevice',
+            { method: 'POST', headers, body: JSON.stringify(body) }).then(r => r.json()).catch(() => ({})),
+        ]);
+        if (r1?.retcode === 0 && r2?.retcode === 0) {
+          ok.push(acc.ltuid)
+        } else {
+          logger.warn?.(`[HoYoGet][mhy] 账号 ${acc.ltuid} 设备登记失败：${r1?.retcode}/${r2?.retcode} ${r1?.message || r2?.message || ''}`)
+        }
+      } catch (err) {
+        logger.warn?.(`[HoYoGet][mhy] 账号 ${acc.ltuid} 设备登记异常：${err?.message || err}`)
+      }
+    }
+    return ok
   }
 
   //绑定设备参数保存到文件
-  async bd(e, device_id, fp, info) {
+  async bd(e, device_id, fp, info, ltuids = []) {
     let a_ = {
       device_id: device_id,
       fp: fp,
       device_info: info || '',
+      /* 记录这批设备登记覆盖了哪些账号，便于排查「换号就 10041」 */
+      ltuids: Array.isArray(ltuids) ? ltuids : [],
     };
-    const dir = './plugins/HoYoGet-Plugin/data/fp';
-    const yaml_url = `${dir}/${e.user_id}.yaml`;
-    /* 目录不存在时 writeFileSync 会抛 ENOENT，绑定流程看起来「跑完没反应」。
-       先建目录，失败也照样把异常抛出来，不要静默吞掉。 */
-    fs.mkdirSync(dir, { recursive: true });
+    const yaml_url = `./plugins/HoYoGet-Plugin/data/fp/${e.user_id}.yaml`;
+    // data/fp 目录可能还不存在，先建好，否则写文件直接抛异常、绑定静默失败
+    fs.mkdirSync('./plugins/HoYoGet-Plugin/data/fp', { recursive: true });
     fs.writeFileSync(yaml_url, YAML.stringify(a_), 'utf-8');
-    /* 留一条可核对的日志：存档里的 device_id 必须与申请 fp 时用的一致，
-       否则米游社会按「fp ↔ device_id」成对校验失败（10041）。 */
-    logger.mark(`[HoYoGet] 设备存档 ${e.user_id}: device_id=${device_id} fp=${String(fp).slice(0, 10)}…`);
-    let ltuid = this.getUser(e).ltuid;
-    //作用ZZZ-plugin???
-    await redis.set(`ZZZ:DEVICE_FP:${ltuid}:FP`, fp);
-    await redis.set(`ZZZ:DEVICE_FP:${ltuid}:ID`, device_id);
-    e.reply('常用设备信息绑定成功!');
+    logger.mark(`[HoYoGet][mhy] 设备绑定存档：device_id=${device_id} fp=${String(fp).slice(0, 10)}…`);
+    /* 每个登记成功的账号都要写一份：ZZZ-Plugin 按 ltuid 读缓存，
+       只写默认账号会让其他账号继续 10041。 */
+    const targets = (Array.isArray(ltuids) && ltuids.length ? ltuids : [this.getUser(e)?.ltuid]).filter(Boolean);
+    for (const ltuid of targets) {
+      await redis.set(`ZZZ:DEVICE_FP:${ltuid}:FP`, fp);
+      await redis.set(`ZZZ:DEVICE_FP:${ltuid}:ID`, device_id);
+    }
+    e.reply(`常用设备信息绑定成功!（已登记 ${targets.length} 个米游社账号）`);
   }
 
   getbody_(device_id, device_name) {
@@ -152,9 +197,43 @@ class mhy {
     return e.user.getMysUser('zzz');
   }
 
-  getHeaders(e, ck, Ds_ = true, info, forcedDeviceId) {
+  /**
+   * 该 QQ 名下所有已绑定的米游社账号 [{ ltuid, ck, uid? }]。
+   *
+   * 为什么需要全部账号：米游社的设备信任是**按账号**登记的。
+   * deviceLogin / saveDevice 用的是哪个账号的 Cookie，就只给哪个账号登记，
+   * 其他账号查面板时这台设备不在它的信任列表里，一样 10041。
+   * 之前只取 getMysUser('zzz') 一个账号，多账号用户换号查就必然失败。
+   */
+  async listAccounts(e) {
+    const out = []
+    const seen = new Set()
+    const push = (ltuid, ck, uid) => {
+      const id = String(ltuid || '')
+      if (!id || !ck || seen.has(id)) return
+      seen.add(id)
+      out.push({ ltuid: id, ck, uid: uid || '' })
+    }
+    try {
+      const user = e?.user
+      const mysUsers = user?.mysUsers || {}
+      for (const ltuid of Object.keys(mysUsers)) {
+        const item = mysUsers[ltuid] || {}
+        push(ltuid, item.ck, item.uid)
+      }
+    } catch (_) { /* 拿不到就退回单账号 */ }
+    /* 兜底：mysUsers 为空时至少把当前游戏账号带上 */
+    if (!out.length) {
+      try {
+        const one = this.getUser(e)
+        if (one?.ck) push(one.ltuid, one.ck, one.uid)
+      } catch (_) { /* ignore */ }
+    }
+    return out
+  }
+
+  getHeaders(e, ck, Ds_ = true, info) {
     let device_id, device_fp;
-    if (forcedDeviceId) device_id = forcedDeviceId;
     if (!info) {
       const yaml_url = `./plugins/HoYoGet-Plugin/data/fp/${e.user_id}.yaml`;
       if (fs.existsSync(yaml_url)) {
@@ -164,18 +243,24 @@ class mhy {
         info = data.device_info;
       }
     }
+    /* 绑定了设备就按那台设备的机型/系统版本发请求：指纹里编码的就是这台机器，
+       UA 写着另一台会被米游社判成「设备指纹未通过」。 */
+    const devVer = String(info?.androidVersion || '13')
+    const devBuild = String(info?.deviceFingerprint || '').split('/')[3] || 'UKQ1.230804.001'
     return {
       Origin: 'https://app.mihoyo.com',
-      'User-Agent': `Mozilla/5.0 (Linux; Android 13; ${info?.deviceModel || 'Mi 10'} Build/UKQ1.230804.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/74.0.3729.186 Mobile Safari/537.36 miHoYoBBS/2.71.1`,
+      'User-Agent': `Mozilla/5.0 (Linux; Android ${devVer}; ${info?.deviceModel || 'Mi 10'} Build/${devBuild}; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/74.0.3729.186 Mobile Safari/537.36 miHoYoBBS/2.71.1`,
       'Content-Type': 'application/json, text/plain, */*',
       Referer: 'https://app.mihoyo.com',
       'X-Requested-With': 'com.mihoyo.hyperion',
       "x-rpc-app_version": "2.71.1",
-      'x-rpc-sys_version': '13',
+      'x-rpc-sys_version': devVer,
       'x-rpc-client_type': '2',
       'x-rpc-device_id': device_id || this.getDeviceGuid(),
-      'x-rpc-device_name': info
-        ? info.deviceFingerprint.split('/')[0] + ' ' + info.deviceModel
+      /* info 可能是空对象（如 registerDevice 不想读旧存档），
+         缺少 deviceFingerprint 时退回随机名，别让这里抛异常。 */
+      'x-rpc-device_name': info?.deviceFingerprint
+        ? `${String(info.deviceFingerprint).split('/')[0]} ${info.deviceModel || ''}`.trim()
         : this.randomString(lodash.random(1, 10)),
       'x-rpc-device_model': info?.deviceModel || 'Mi 10',
       'x-rpc-channel': 'miyousheluodi',

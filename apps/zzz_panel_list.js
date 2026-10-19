@@ -205,7 +205,9 @@ async function fetchZzzDeviceFp(ck, uid = '') {
     }).then(r => r.json())
     const fp = res?.data?.device_fp || ''
     if (!fp) logger.warn?.(`[HoYoGet][zzz_panel] getFp 失败：retcode=${res?.retcode} ${res?.message || ''}`)
-    return { fp, device_id: uuid }
+    /* 必须回传「申请指纹时用的那个 device_id」：body 里是 'cc57c40f763ae4cc'，
+       原来返回的是随机 uuid，请求头与指纹对不上，一样 10041。 */
+    return { fp, device_id: body.device_id }
   } catch (err) {
     logger.warn?.(`[HoYoGet][zzz_panel] getFp 异常：${err?.message || err}`)
     return { fp: '', device_id: uuid }
@@ -252,16 +254,26 @@ function zzzHeaders(e, ck, query = '', dev = null, uid = '') {
   if (!fp.fp && ckItem?.fp) fp.fp = ckItem.fp
   if (dev?.device_id) fp.device_id = dev.device_id
   if (dev?.fp) fp.fp = dev.fp
+  /* 绑定过设备时，UA / 系统版本 / 机型必须和指纹里编码的那台机器一致。
+     指纹是照着 OPPO PJB110、Android 14 申请的，请求却自称 XQ-AT52、Android 12，
+     米游社一样判 10041「设备指纹未通过」——设备号对上还不够。 */
+  const info = fp.device_info && typeof fp.device_info === 'object' ? fp.device_info : null
+  const devModel = String(info?.deviceModel || '')
+  const devName = String(info?.deviceName || '')
+  const devVer = String(info?.androidVersion || '12')
+  const devBuild = String(info?.deviceFingerprint || '').split('/')[3] || '58.2.A.7.93'
   const t = Math.round(Date.now() / 1000)
   const r = Math.floor(Math.random() * 900000 + 100000)
   const salt = 'xV8v4Qu54lUKrEYFZkJhB8cuOh9Asafs'
   const DS = crypto.createHash('md5').update(`salt=${salt}&t=${t}&r=${r}&b=&q=${query}`).digest('hex')
   const headers = {
     'x-rpc-app_version': '2.73.1',
-    'x-rpc-sys_version': '12',
+    'x-rpc-sys_version': devVer,
     'x-rpc-client_type': '2',
     'x-rpc-channel': 'mihoyo',
-    'User-Agent': 'Mozilla/5.0 (Linux; Android 12; XQ-AT52 Build/58.2.A.7.93; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/100.0.4896.88 Mobile Safari/537.36 miHoYoBBS/2.73.1',
+    'User-Agent': devModel
+      ? `Mozilla/5.0 (Linux; Android ${devVer}; ${devModel} Build/${devBuild}; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/100.0.4896.88 Mobile Safari/537.36 miHoYoBBS/2.73.1`
+      : 'Mozilla/5.0 (Linux; Android 12; XQ-AT52 Build/58.2.A.7.93; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/100.0.4896.88 Mobile Safari/537.36 miHoYoBBS/2.73.1',
     Origin: 'https://act.mihoyo.com',
     'X-Requested-With': 'com.mihoyo.hyperion',
     Referer: 'https://act.mihoyo.com/',
@@ -272,6 +284,10 @@ function zzzHeaders(e, ck, query = '', dev = null, uid = '') {
   // 设备信息只在用户绑定过设备时带；随便生成一个 device_id 反而更容易触发风控
   if (fp.device_id) headers['x-rpc-device_id'] = String(fp.device_id)
   if (fp.fp) headers['x-rpc-device_fp'] = fp.fp
+  if (devModel) {
+    headers['x-rpc-device_model'] = devModel
+    if (devName) headers['x-rpc-device_name'] = devName
+  }
   return headers
 }
 
@@ -328,6 +344,13 @@ async function zzzGet(e, uid, ck, type, query, extraHeaders = {}, retried = fals
     if (code === 10041) {
       const fpFile = `./plugins/HoYoGet-Plugin/data/fp/${e?.user_id}.yaml`
       const bound = fs.existsSync(fpFile)
+      // 把实际发出去的设备三件套打出来，便于判断是「没带上」还是「带上了不被认」
+      logger.mark(`[HoYoGet][zzz_panel] 10041 诊断：type=${type}`
+        + ` device_id=${headers['x-rpc-device_id'] || '(无)'}`
+        + ` fp=${String(headers['x-rpc-device_fp'] || '(无)').slice(0, 12)}…`
+        + ` model=${headers['x-rpc-device_model'] || '(无)'}`
+        + ` sys=${headers['x-rpc-sys_version']}`
+        + ` ua=${headers['User-Agent']}`)
       throw new Error(bound
         ? '米游社风控（10041）：设备指纹未通过，请重新绑定常用设备后再试（#绑定设备帮助）'
         : '米游社风控（10041）：尚未绑定设备指纹。请先发 #米哈游开启设备绑定，再按 #绑定设备帮助 绑定常用设备')
