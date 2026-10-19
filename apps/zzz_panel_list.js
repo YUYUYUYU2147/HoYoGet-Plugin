@@ -1544,6 +1544,8 @@ const PANEL_DELETE_IMG_REG = /^(?:米游社|%|#?绝区零)?删除(.+?)(?:角色|
 const EXTREME_REG = /^(?:米游社|%|#?绝区零)?(.+?)极限面板$/
 // 主人专用：批量更新群友（私聊则全部绑定用户）的面板
 const BULK_UPDATE_REG = /^(?:米游社|%|#?绝区零)?(?:批量)?更新群友面板$/
+// 主人专用：批量更新群友的挑战记录（式舆 + 危局）
+const BULK_CHALLENGE_REG = /^(?:米游社|%|#?绝区零)?(?:批量)?更新群友挑战(记录|数据)$/
 // 练度统计：%练度 / 米游社练度 / 绝区零练度统计（对齐 ZZZ-Plugin 的 %zzz练度）
 const PROFICIENCY_REG = /^(?:米游社|%|#?绝区零)?练度(统计)?$/
 const REMIND_PREFIX = '^(?:米游社|%|#?绝区零)?'
@@ -1574,6 +1576,7 @@ export class zzz_panel_list extends plugin {
         // 必须排在 CMD_REG 之前：'更新群友面板' 不会命中 CMD_REG，
         // 但放前面能避免以后有人把 CMD_REG 放宽时被抢走
         { reg: BULK_UPDATE_REG.source, fnc: 'panelBulkUpdate' },
+        { reg: BULK_CHALLENGE_REG.source, fnc: 'panelBulkChallenge' },
         { reg: CMD_REG.source, fnc: 'panelList' },
         { reg: DAMAGE_REG.source, fnc: 'panelDamage' },
         { reg: DETAIL_REG.source, fnc: 'panelDetail' },
@@ -1633,6 +1636,23 @@ export class zzz_panel_list extends plugin {
     } catch (err) {
       logger.error?.(`[HoYoGet][zzz_panel] 批量更新失败：${err?.message || err}`)
       return e.reply(`批量更新失败：${err?.message || err}`)
+    }
+  }
+
+  /**
+   * 主人专用：批量更新群友挑战记录（式舆防卫战 + 危局强袭战）。
+   * 群聊只刷本群已绑定成员，私聊刷全部绑定用户。
+   */
+  async panelBulkChallenge(e) {
+    if (!e.isMaster) return e.reply('仅主人可操作')
+    const { updateGroupChallenges, formatResult } = await import('./zzz_bulk_challenge.js')
+    await e.reply('开始批量更新挑战记录（式舆 + 危局），请求会限速串行执行，请稍候…')
+    try {
+      const res = await updateGroupChallenges(this, e)
+      return e.reply(formatResult(res))
+    } catch (err) {
+      logger.error?.(`[HoYoGet][zzz_panel] 批量更新挑战失败：${err?.message || err}`)
+      return e.reply(`批量更新挑战失败：${err?.message || err}`)
     }
   }
 
