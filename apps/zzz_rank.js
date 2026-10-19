@@ -387,6 +387,10 @@ export class zzz_panel_rank extends plugin {
       if (!charName.includes(name) && !name.includes(charName)) continue
       const dmg = calcDamage(r.data)
       const { score, rating } = calcEquipScore(r.data)
+      /* 伤害算不出来时留下原因，否则榜上只会显示「-」，看不出是倍率缺失还是面板字段缺失 */
+      if (!dmg.damage && dmg.error) {
+        logger.warn?.(`[HoYoGet][zzz_rank] ${charName}(${r.uid}) 伤害缺失：${dmg.error}`)
+      }
       resolved.push({
         uid: r.uid,
         data: r.data,
