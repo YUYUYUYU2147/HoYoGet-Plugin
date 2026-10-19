@@ -166,6 +166,7 @@ body {
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
+.detail-item .damage { color: #d64f8e; }
 .detail-item {
   padding: 8px 12px;
   border-radius: 12px;

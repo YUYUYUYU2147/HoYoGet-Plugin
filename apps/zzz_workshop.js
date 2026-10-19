@@ -18,6 +18,10 @@ import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { pluginPriority, render } from '#HoYoGet'
+import {
+  buildBasicProperties,
+  calcDamage as calcPanelDamage,
+} from './zzz_panel_list.js'
 import { getRankScope } from '../system/rank_scope.js'
 
 const YUNZAI_DB = path.join(process.cwd(), 'data', 'db', 'data.db')
@@ -286,6 +290,15 @@ function ratio(value) {
   return `${(num * 100).toFixed(1)}%`
 }
 
+/** 伤害数字：>=1 万用「万」 */
+function formatNum(v) {
+  const n = Number(v) || 0
+  if (!n) return '-'
+  if (n >= 1e8) return `${(n / 1e8).toFixed(2)}亿`
+  if (n >= 1e4) return `${(n / 1e4).toFixed(2)}万`
+  return String(Math.round(n))
+}
+
 function countText(value) {
   const num = Number(value) || 0
   if (num >= 10000) return `${(num / 10000).toFixed(1)} 万`
@@ -526,7 +539,35 @@ async function buildRoleRank(arg, opts = {}) {
     pointText: Number(row?.relic_point || 0).toFixed(3),
     // 角色柜里没有玩家头像，统一用该角色立绘/头像占位
     avatar: role.avatar2 || role.long_avatar || '',
+    damage: 0,
+    damageText: '-',
+    damageSkill: '',
   }))
+
+  /* 伤害：排行接口只有驱动总分，要算伤害得逐人拉 /user_role/ranking 拿词条。
+     一次请求 1~2 秒，为控制耗时只给前 10 名算，其余显示「-」。
+     失败（未上传/接口异常）不影响整张榜单。 */
+  const damageLimit = Math.min(list.length, 10)
+  await Promise.all(list.slice(0, damageLimit).map(async row => {
+    try {
+      const params = { uid: row.uid, type: 'ranking', refresh: false, item_id: role.item_id }
+      const detail = await signedPost('/api/v1/user_role/ranking', params)
+      const target = (detail?.roles || []).find(r => String(r?.item_id) === String(role.item_id))
+      if (!target) return
+      /* role 是 buildRoleRank 里 resolveRole 得到的工坊角色对象，
+         nick_name 才是中文名（target.name 是 null）。 */
+      const panel = await calcWorkshopPanel(target, role.nick_name)
+      if (!panel) return
+      const bp = buildBasicProperties(panel)
+      const dmg = calcPanelDamage(bp, panel.level, panel, role.nick_name)
+      if (!dmg?.ok) return
+      row.damage = Number(dmg.top?.expect) || 0
+      row.damageSkill = dmg.top?.name || ''
+    } catch (_) {
+      /* 单个玩家失败不影响榜单 */
+    }
+  }))
+  for (const row of list) row.damageText = row.damage ? formatNum(row.damage) : '-'
 
   return {
     character: role.nick_name,
@@ -538,6 +579,257 @@ async function buildRoleRank(arg, opts = {}) {
     isGroup: scope === 'group',
     total: Number(data?.total) || rows.length,
     list,
+  }
+}
+
+/* ───────────── 工坊数据 → 面板属性 → 伤害 ─────────────
+ *
+ * 工坊 /user_role/ranking 不返回面板数值（hp/attack/crit 全是 0），只给：
+ *   · 驱动盘的 MainPropertyList / RandomPropertyList（PropertyValue 为「游戏内数值 ×1000」）
+ *   · 音擎 Id / Level / BreakLevel / UpgradeLevel
+ *   · SkillLevelList（各技能等级）
+ * 所以伤害只能自己算：先按词条还原面板属性，再套本插件的倍率与乘区。
+ *
+ * PropertyValue 单位核对：
+ *   12102(攻击%) 单条 300 → 3%（S 盘单条满档 5.8%），即 value/1000 得百分比
+ *   21103(暴伤)  单条 480 → 4.8%（S 盘单条满档 6.2%）同上
+ *   12103(小攻击) 19     → 19 点固定值（不除）
+ */
+const PCT_IDS = new Set([11102, 12102, 13102, 20103, 21103, 23103, 30502, 31402,
+  31503, 31603, 31703, 31803, 31903, 32303])
+
+/**
+ * 工坊词条 → 百分数（不是比值）。主词条与副词条的编码不同：
+ *   主词条：满级 30% 记作 750 → 除以 25
+ *   副词条：3% 记作 300、2.4% 记作 240、4.8% 记作 480 → 除以 100
+ *   固定值（12103 小攻击、11103 小生命…）：原样返回
+ */
+function workshopPropValue(pid, raw, isMain) {
+  const v = Number(raw) || 0
+  if (!PCT_IDS.has(Number(pid))) return v
+  return isMain ? v / 25 : v / 100
+}
+
+/**
+ * 由「驱动盘词条 + 音擎」累加出面板终值。
+ *
+ * 工坊不返回面板数值，这里按游戏规则自己加：
+ *   基础值（角色 Lv60 底值） + 百分比加成 × 基础值 + 固定值
+ * 角色基础值取自本地的 zzz_char_stat.json（与极限面板同一份数据）。
+ */
+async function calcWorkshopPanel(role, roleName) {
+  const item = role?.item_json || {}
+  // 角色基础属性（Lv60）
+  const statTable = await loadCharStat()
+  const entry = statBase(statTable, roleName)
+  if (!entry) return null
+  /* zzz_char_stat.json 的 props 用数字键（1 生命 / 2 攻击 / 3 防御 / 4 冲击力 /
+     5 暴击率 / 6 暴击伤害 / 7 异常掌控 / 8 异常精通 / 9 穿透率 / 11 能量自动回复），
+     且是**不含驱动盘与音擎**的角色裸值。 */
+  const pr = entry.props || {}
+  const acc = {
+    hp: Number(pr['1']) || 0,
+    atk: Number(pr['2']) || 0,
+    def: Number(pr['3']) || 0,
+    breakstun: Number(pr['4']) || 93,
+    crit: Number(pr['5']) || 5,
+    critdam: Number(pr['6']) || 50,
+    penratio: Number(pr['9']) || 0,
+    penvalue: 0,
+    mastery: Number(pr['8']) || 0,
+    recharge: (Number(pr['11']) || 1.2) * 100,
+  }
+  // 百分比类先累计，最后一次性乘到基础值上
+  const pct = { hp: 0, atk: 0, def: 0, dmg: 0 }
+  const addFixed = (pid, val) => {
+    switch (Number(pid)) {
+      case 11102: pct.hp += val; break
+      case 11103: acc.hp += val; break
+      case 12102: pct.atk += val; break
+      case 12103: acc.atk += val; break
+      case 13102: pct.def += val; break
+      case 13103: acc.def += val; break
+      // val 是比值（0.03），这里转成百分点累加（3）
+      // val 已是百分数（2.4 = 2.4%），直接累加
+      case 20103: acc.crit += val; break
+      case 21103: acc.critdam += val; break
+      case 23103: acc.penratio += val; break
+      case 23203: acc.penvalue += val; break
+      case 31203: acc.mastery += val; break
+      case 30502: acc.recharge += val; break
+      case 12202: break
+      default:
+        if (pid >= 31503 && pid <= 32303) pct.dmg += val
+    }
+  }
+  for (const eq of item.EquippedList || []) {
+    const e = eq?.Equipment || {}
+    for (const pr of e.MainPropertyList || []) addFixed(pr.PropertyId, workshopPropValue(pr.PropertyId, pr.PropertyValue, true))
+    for (const pr of e.RandomPropertyList || []) addFixed(pr.PropertyId, workshopPropValue(pr.PropertyId, pr.PropertyValue, false))
+  }
+  // 音擎：主词条（基础攻击力已含在角色底值外，需另加）+ 副词条
+  const wqId = Number(item.Weapon?.Id) || 0
+  const wq = await loadWeapon(wqId)
+  if (wq) {
+    /* 音擎主词条的「基础攻击力」**已经包含在 zzz_char_stat.json 的角色 Lv60 攻击里**
+       （星见雅 913 + 满级 S 音擎 713 ≈ 1623），这里再加会重复，所以跳过。
+       只要处理副词条（同样是 ×100 编码：霰落星殿暴击率 960 → 9.6%）。 */
+    if (wq.sub?.pid) addFixed(wq.sub.pid, workshopPropValue(wq.sub.pid, wq.sub.value, false))
+  }
+
+  /* pct 里存的是百分数（45 = 45%），这里除以 100 再乘 */
+  const final = {
+    hp: acc.hp * (1 + pct.hp / 100),
+    atk: acc.atk * (1 + pct.atk / 100),
+    def: acc.def * (1 + pct.def / 100),
+    breakstun: acc.breakstun,
+    crit: acc.crit,
+    critdam: acc.critdam,
+    penratio: acc.penratio,
+    penvalue: acc.penvalue,
+    mastery: acc.mastery,
+    recharge: acc.recharge,
+    dmgbonus: pct.dmg,
+  }
+  return {
+    name_mi18n: roleName,
+    level: Number(role?.level) || 60,
+    rank: Number(item.TalentLevel) || 0,
+    rarity: 'S',
+    /* 伤害计算只需要套装增伤，但工坊只给 set_info 字符串（如 "32700_2__32800_2"），
+       没有套装名；这里按件数还原出 4 件套/2 件套的名字给 buildBuffContext 用。 */
+    equip: buildEquipSets(role),
+    weapon: { id: wqId, level: Number(item.Weapon?.Level) || 60, star: Number(item.Weapon?.UpgradeLevel) || 1, rarity: 'S' },
+    skills: (item.SkillLevelList || []).map(sk => ({ skill_type: Number(sk.Index), level: Number(sk.Level) || 0 })),
+    // buildBasicProperties 读的是已算好的面板，这里直接给出
+    properties: [
+      { property_id: 1, base: String(final.hp), final: String(final.hp) },
+      { property_id: 2, base: String(final.atk), final: String(final.atk) },
+      { property_id: 3, base: String(final.def), final: String(final.def) },
+      { property_id: 4, base: String(final.breakstun), final: String(final.breakstun) },
+      { property_id: 5, base: `${final.crit}%`, final: `${final.crit}%` },
+      { property_id: 6, base: `${final.critdam}%`, final: `${final.critdam}%` },
+      { property_id: 9, base: `${final.penratio}%`, final: `${final.penratio}%` },
+      { property_id: 232, base: String(final.penvalue), final: String(final.penvalue) },
+      { property_id: 8, base: String(final.mastery), final: String(final.mastery) },
+      { property_id: 11, base: String(final.recharge / 100), final: String(final.recharge / 100) },
+      { property_id: 317, base: `${final.dmgbonus}%`, final: `${final.dmgbonus}%` },
+    ],
+  }
+}
+
+/** set_info "32700_2__32800_2" → 每件驱动盘补一个 equip_suit（供套装增益匹配） */
+function buildEquipSets(role) {
+  const parts = String(role?.set_info || '').split('__').map(x => {
+    const [id, count] = x.split('_')
+    return { id: String(id || ''), count: Number(count) || 0 }
+  }).filter(p => p.id)
+  const out = []
+  let slot = 1
+  for (const part of parts) {
+    for (let i = 0; i < part.count; i++) {
+      out.push({
+        equipment_type: slot++,
+        equip_suit: { suit_id: Number(part.id) || 0, name: SUIT_NAME[part.id] || '', own: part.count },
+      })
+    }
+  }
+  return out
+}
+
+/** 驱动盘套装 id → 名称（只收常用的，用于增益匹配；缺名字时增益会被跳过） */
+const SUIT_NAME = {
+  31000: '啄木鸟电音', 31100: '河豚电音', 31200: '炎狱重金属', 31300: '混沌重金属',
+  31400: '激素朋克', 31500: '雷暴重金属', 31600: '摇摆爵士', 31700: '极地重金属',
+  31800: '混沌爵士', 31900: '原始朋克', 32000: '自由蓝调', 32100: '灵魂摇滚',
+  32200: '獠牙重金属', 32400: ' Thunder Metal', 32500: '极地重金属',
+  32600: '獠牙重金属', 32700: '折枝剑歌', 32800: '静听嘉音', 32900: '如影相随',
+  33000: '法厄同之歌', 33100: '云岿如我', 33200: '山大王', 33300: '拂晓生花',
+  33400: '月光骑士颂', 33500: '沧浪行歌', 33600: '流光咏叹', 33700: '混沌重金属',
+  33800: '炎狱重金属', 33900: '雷暴重金属', 34000: '法厄同之歌',
+}
+
+/** 角色 Lv60 基础值（与极限面板共用 zzz_char_stat.json） */
+let CHAR_STAT_CACHE = null
+async function loadCharStat() {
+  if (CHAR_STAT_CACHE) return CHAR_STAT_CACHE
+  try {
+    const f = path.join(process.cwd(), 'plugins', 'HoYoGet-Plugin', 'system', 'default', 'zzz_char_stat.json')
+    CHAR_STAT_CACHE = JSON.parse(fs.readFileSync(f, 'utf8'))
+  } catch (_) {
+    CHAR_STAT_CACHE = null
+  }
+  return CHAR_STAT_CACHE
+}
+/**
+ * 按名字取角色 Lv60 基础值。
+ * zzz_char_stat.json 的结构是 { chars: { 中文名: { id, fullName, enName, props } } }，
+ * **没有 name 字段**，所以要先按键名精确匹配，再退到 fullName / enName / 简写。
+ */
+function statBase(table, name) {
+  const chars = table?.chars || {}
+  const key = String(name || '').trim()
+  if (!key) return null
+  if (chars[key]) return chars[key]
+  const exact = Object.values(chars).find(c =>
+    c?.fullName === key || c?.enName === key || String(c?.id) === key)
+  if (exact) return exact
+  return Object.values(chars).find(c =>
+    String(c?.fullName || '').includes(key) || key.includes(String(c?.fullName || ''))) || null
+}
+
+/** 音擎主/副词条 */
+let ITEM_TABLE_CACHE = null
+async function loadWeapon(id) {
+  if (!ITEM_TABLE_CACHE) {
+    try {
+      const f = path.join(process.cwd(), 'plugins', 'HoYoGet-Plugin', 'system', 'default', 'zzz_item_stat.json')
+      ITEM_TABLE_CACHE = JSON.parse(fs.readFileSync(f, 'utf8'))
+    } catch (_) {
+      ITEM_TABLE_CACHE = {}
+    }
+  }
+  return ITEM_TABLE_CACHE?.weapons?.[String(id)] || null
+}
+
+/** 把工坊的 roles[0] 还原成本地面板记录的形状，供本插件已有计算链使用 */
+async function workshopToPanel(role, roleName) {
+  const item = role?.item_json || {}
+  const equips = []
+  for (const eq of item.EquippedList || []) {
+    const e = eq?.Equipment || {}
+    equips.push({
+      equipment_type: Number(eq?.Slot) || 0,
+      level: Number(e?.Level) || 0,
+      rarity: 'S',
+      main_properties: (e.MainPropertyList || []).map(p => ({
+        property_id: Number(p.PropertyId),
+        base: workshopPropValue(p.PropertyId, p.PropertyValue),
+      })),
+      properties: (e.RandomPropertyList || []).map(p => ({
+        property_id: Number(p.PropertyId),
+        base: workshopPropValue(p.PropertyId, p.PropertyValue),
+        level: Number(p.PropertyLevel) || 0,
+      })),
+    })
+  }
+  const w = item.Weapon || {}
+  return {
+    name_mi18n: roleName,
+    level: Number(role?.level) || 60,
+    rank: Number(item.TalentLevel) || 0,
+    rarity: 'S',
+    equip: equips,
+    weapon: {
+      id: Number(w.Id) || 0,
+      level: Number(w.Level) || 60,
+      star: Number(w.UpgradeLevel) || 1,
+      rarity: 'S',
+    },
+    skills: (item.SkillLevelList || []).map(s => ({
+      skill_type: Number(s.Index),
+      level: Number(s.Level) || 0,
+    })),
   }
 }
 

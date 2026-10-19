@@ -35,16 +35,16 @@
             </div>
             <div class="detail-row">
               <div class="detail-item">
+                <span class="d-label">期望伤害</span>
+                <span class="d-value damage">{{r.damageText}}</span>
+              </div>
+              <div class="detail-item">
                 <span class="d-label">全服名次</span>
                 <span class="d-value">#{{r.globalRank}}</span>
               </div>
               <div class="detail-item">
                 <span class="d-label">本群名次</span>
                 <span class="d-value">{{if isGroup}}第 {{r.rank}} 名{{else}}-{{/if}}</span>
-              </div>
-              <div class="detail-item">
-                <span class="d-label">UID</span>
-                <span class="d-value">{{r.uid}}</span>
               </div>
             </div>
           </div>
