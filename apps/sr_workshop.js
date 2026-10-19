@@ -29,13 +29,30 @@ import { SR_HOST, request, signedPost, parseSetInfo } from '../system/workshop_a
 const CACHE_TTL = 6 * 3600 * 1000
 
 // 指令正则：规则表与参数提取共用，避免两处写法不一致
-const RE_SR_RANK = /^[#%]*(?:米哈游)?(?:星铁|星穹铁道|sr|hsr)(?:遗器)?(?:练度)?排名(?:\s+(.+))?$/i
-const RE_SR_DMG = /^[#%]*(?:米哈游)?(?:星铁|星穹铁道|sr|hsr)伤害(?:排名|排行)(?:\s+(.+))?$/i
-const RE_SR_GRAD = /^[#%]*(?:米哈游)?(?:星铁|星穹铁道|sr|hsr)(?:角色)?配装(?:统计)?(?:\s+(.+))?$/i
-const RE_SR_CARD = /^[#%]*(?:米哈游)?(?:星铁|星穹铁道|sr|hsr)(?:抽卡|欧非)(?:榜|排行)?(?:\s+(.+))?$/i
-const RE_SR_TEAM = /^[#%]*(?:米哈游)?(?:星铁|星穹铁道|sr|hsr)(?:队伍)?(?:体系)?(?:推荐|配队)(?:\s+(.+))?$/i
-const RE_SR_DETAIL = /^[#%]*(?:米哈游)?(?:星铁|星穹铁道|sr|hsr)(?:查)?练度(?:\s+(.+))?$/i
-const RE_SR_HELP = /^[#%]*(?:米哈游)?(?:星铁|星穹铁道|sr|hsr)榜单帮助$/i
+//
+// 星铁前缀有一堆等价写法，框架（lib/plugins/loader.js 的 srReg）会在 accept 之前
+// 把它们统一改写成「#星铁」：
+//   *遗器排名 / 崩铁遗器排名 / 星穹遗器排名 / 星轨遗器排名 / 铁道遗器排名 → #星铁遗器排名
+// 所以线上看到的基本都是 #星铁；但 * 开头本身就是星铁标记（不带游戏名），
+// 单测或直接调用处理函数时拿到的是原文，两种形态都必须认。
+const SR_PREFIX = '(?:米哈游)?(?:星铁|星轨|穹轨|星穹|崩铁|星穹铁道|崩坏星穹铁道|铁道|sr|hsr)'
+const SR_ARG = String.raw`(?:\s+(.+))?$`
+const srReg = body =>
+  new RegExp(
+    `^(?:[#%]*\\s*${SR_PREFIX}|[#%]*[\*＊]\\s*(?:${SR_PREFIX})?)${body}${SR_ARG}`,
+    'i',
+  )
+
+const RE_SR_RANK = srReg(String.raw`(?:遗器)?(?:练度)?排名`)
+const RE_SR_DMG = srReg(String.raw`伤害(?:排名|排行)`)
+const RE_SR_GRAD = srReg(String.raw`(?:角色)?配装(?:统计)?`)
+const RE_SR_CARD = srReg(String.raw`(?:抽卡|欧非)(?:榜|排行)?`)
+const RE_SR_TEAM = srReg(String.raw`(?:队伍)?(?:体系)?(?:推荐|配队)`)
+const RE_SR_DETAIL = srReg(String.raw`(?:查)?练度`)
+const RE_SR_HELP = srReg(String.raw`榜单帮助`)
+
+/** 消息是否以星铁前缀开头（accept 用，只做粗筛，最终由具体规则判定） */
+const SR_PREFIX_RE = new RegExp(`^(?:[#%]*\\s*${SR_PREFIX}|[#%]*[\\*＊])`, 'i')
 
 // ===== 名称缓存 =====
 
@@ -587,7 +604,7 @@ async function buildSrTeam(arg) {
 }
 
 const HELP_TEXT = [
-  '星穹铁道工坊榜单',
+  '星穹铁道工坊榜单（前缀 * 或 星铁 都可，如 *遗器排名 流萤）',
   '%星铁遗器排名 <角色名> [80|70|60] [星魂0-6] [数量]   遗器练度排行',
   '%星铁伤害排名 <角色名> [80|70|60] [星魂0-6] [数量]   伤害排行（口径由工坊给出）',
   '%星铁配装 <角色名> [70级]                           全服光锥与遗器套装使用率',
@@ -596,7 +613,8 @@ const HELP_TEXT = [
   '%星铁练度 <UID> <角色名>                            玩家面板 / 光锥 / 遗器',
   '',
   '数据均来自星穹铁道工坊公开接口，无需绑定账号。',
-  '绝区零侧见「绝区零榜单帮助」，两者前缀可混用（星铁 / 星穹铁道 / sr / hsr）。',
+  '前缀等价写法：* / 星铁 / 崩铁 / 星穹 / 星轨 / 穹轨 / 铁道 / sr / hsr。',
+  '绝区零侧见「绝区零榜单帮助」（前缀 % 或 绝区零）。',
 ].join('\n')
 
 export class sr_workshop extends plugin {
@@ -629,15 +647,18 @@ export class sr_workshop extends plugin {
    * ZZZ-Plugin 的 accept 会把「%星铁练度排名」当成绝区零面板排名接走，
    * 所以星铁消息必须在这里显式接管并 return。
    *
-   * ⚠ 只接「星铁 / 星穹铁道 / sr / hsr」开头的消息：
-   *   %星铁X / %星穹铁道X / %srX / %hsrX
-   * 框架可能已把 % 改写成 #绝区零，但那只会作用于 zzzReg（%|绝区零|绝区）开头，
-   * 「%星铁…」不变形，因此这里直接匹配原文即可。
+   * ⚠ 只接星铁前缀开头的消息。星铁有多个等价前缀，框架的 srReg
+   * （lib/plugins/loader.js）会在 accept 之前统一改写成「#星铁」：
+   *   *遗器排名 流萤 / 崩铁遗器排名 流萤 / 星穹遗器排名 流萤
+   *   → #星铁遗器排名 流萤
+   * 所以线上绝大多数情况这里是「#星铁…」；但 `*` 本身就是星铁标记（可省游戏名），
+   * 且单测 / 直接调用处理函数时看到的是原文，因此两种形态都要认。
    */
   async accept(e) {
     const msg = String(e?.msg || '').trim()
-    const stripped = msg.replace(/^[#%]+\s*/, '').replace(/^米哈游\s*/i, '')
-    if (!/^(?:星铁|星穹铁道|sr|hsr)/i.test(stripped)) return false
+    /* 框架已把 * / 崩铁 / 星穹 等改写成 #星铁；* 开头是星铁标记（不带游戏名），
+       两种形态都要认，见文件顶部 SR_PREFIX 的说明。 */
+    if (!SR_PREFIX_RE.test(msg)) return false
     for (const [reg, fnc] of [
       [RE_SR_RANK, 'srRank'],
       [RE_SR_DMG, 'srDamageRank'],
