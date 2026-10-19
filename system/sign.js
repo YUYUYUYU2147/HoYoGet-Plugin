@@ -585,6 +585,20 @@ function isBbsCaptcha(res) {
     return !!(res?.data?.challenge || res?.data?.gt || [1034, 10035, 10041].includes(rc));
 }
 
+/**
+ * 米游社的瞬时拒绝：retcode -1，message 形如「暂不支持 https://bbs-api.miyoushe.com」。
+ * 既不是验证码也不是凭证问题，隔几秒重打通常就成功（实测首轮 -1、次轮 0）。
+ * 注意别把真正的参数错误也算进来：要求 retcode 为 -1 且 message 带域名或「暂不支持」。
+ */
+function isBbsTransient(res) {
+    if (Number(res?.retcode) !== -1) return false;
+    const msg = String(res?.message || '');
+    return /bbs-api\.miyoushe\.com/.test(msg) || /暂不支持/.test(msg);
+}
+
+/** 瞬时拒绝的重试间隔：由短到长，总时长控制在 12 秒内，避免拖住整轮签到 */
+const TRANSIENT_RETRY_GAPS = [2000, 4000, 6000];
+
 /** 凭证失效。-10001 不在内：那是签名被拒，换凭证没用 */
 function isBbsExpired(res) {
     return [-100, -101, 10001].includes(Number(res?.retcode));
@@ -937,6 +951,20 @@ async function bbsForumSign(e, account, forum, ctx = {}) {
     if (signRes?.retcode === -500) {
         await sleep(1500);
         signRes = await bbsJson(e, refreshed, signUrl, { gids }, true);
+    }
+    /* 米游社偶发「暂不支持 https://bbs-api.miyoushe.com」：retcode -1、message 里带域名。
+       这不是验证码（过码流程不会启动），也不是真失败 —— 稍等重打就能成功，
+       日志里同一批次经常是「首轮 -1 → 次轮 retcode 0」。以前只有 -500 会重试，
+       于是首轮的 -1 被当成最终结果写进卡片，看着像「没签上」。
+       按梯度重试几次，成功就采用新结果。 */
+    if (isBbsTransient(signRes)) {
+        for (const gap of TRANSIENT_RETRY_GAPS) {
+            await sleep(gap);
+            const retry = await bbsJson(e, refreshed, signUrl, { gids }, true);
+            if (config().debug) logger.mark(`[HoYoGet][bbs_sign] ${forum.name} 瞬时失败重试 retcode=${retry?.retcode} gap=${gap}`);
+            signRes = retry;
+            if (!isBbsTransient(retry)) break;
+        }
     }
     if (config().debug) {
         const fields = (refreshed.ck || '').split(';').map(s => s.split('=')[0]).filter(Boolean).join(',');
