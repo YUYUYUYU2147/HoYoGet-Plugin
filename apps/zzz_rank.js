@@ -9,7 +9,10 @@ const RECORDS_DIR = path.join(PLUGIN_ROOT, 'data', 'zzz_panel', 'records')
 const ZZZ_PANEL_DIR = path.join(process.cwd(), 'plugins', 'ZZZ-Plugin', 'data', 'panel')
 const YUNZAI_DB = path.join(process.cwd(), 'data', 'db', 'data.db')
 
-const RANK_PREFIX = '^(?:%|％|#?zzz|#?ZZZ|#?绝区零|#?绝区)?\\s*'
+/* 框架会把 % 前缀改写成「#绝区零」（lib/plugins/loader.js 的 zzzReg），
+   所以到插件手里的消息形如「#绝区零雅排名」。
+   这里把 #绝区零 写成显式分支并放在最前，避免被后面的可选前缀吃掉。 */
+const RANK_PREFIX = '^(?:#绝区零|%|％|#?zzz|#?ZZZ|#?绝区零|#?绝区)?\\s*'
 const PANEL_RANK_REG = new RegExp(`${RANK_PREFIX}(.+?)面板排名$`)
 const SHORT_RANK_REG = /^(?:[%％]|#?zzz|#?ZZZ|#?绝区零|#?绝区)\s*(.+?)排名$/
 const RANK_HELP_REG = /^(面板排名|面板排行)$/
@@ -223,6 +226,16 @@ function loadAllRecords(groupUids = null) {
     } catch {}
   }
   return records
+}
+
+/* 启动时打一行优先级，方便确认 #重启 后是否生效：
+   必须 > -30000（ZZZ-Plugin 极限面板），否则 accept 阶段会被它截走。 */
+{
+  const p = pluginPriority('zzz_panel_rank', -20000)
+  logger.mark?.(`[HoYoGet][zzz_rank] 优先级 ${p}（需 > -30000 才能抢在 ZZZ-Plugin 之前）`)
+  if (Number(p) <= -30000) {
+    logger.error?.('[HoYoGet][zzz_rank] 优先级过低，%<角色>排名 会被 ZZZ-Plugin 截走，请检查 config.yaml 的 zzz_panel_rank_priority')
+  }
 }
 
 export class zzz_panel_rank extends plugin {
