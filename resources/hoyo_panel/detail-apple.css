@@ -237,6 +237,8 @@ body {
 .md-dmg { color: var(--ap-text); font-weight: 600; }
 .md-avg { color: var(--ap-sub); font-weight: 600; }
 
+.flag-globe { color: var(--ap-mute); }
+
 .ak-rk { color: var(--ap-mute); }
 .ak-nick { color: #d1d1d6; font-weight: 400; }
 .ak-wq { color: var(--ap-mute); }

@@ -353,6 +353,8 @@
                 <span class="ak-flag">
                   {{if r.flag}}
                   <img class="flag-img" src="{{r.flag}}" onerror="this.style.display='none'">
+                  {{else if r.region}}
+                  <svg class="flag-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.7 3.1 2.7 14.9 0 18"/><path d="M12 3c-2.7 3.1-2.7 14.9 0 18"/></svg>
                   {{/if}}
                 </span>
                 <span class="ak-nick">{{r.nickname}}</span>

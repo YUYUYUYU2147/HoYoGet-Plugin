@@ -1071,6 +1071,10 @@ async function randomBgUrl() {
   }
 }
 
+/* akasha 的服务器码 → 国旗（flagcdn 的两位码）。
+   CN=国服、NA=美服、EU=欧服；ASIA 是亚服（日韩东南亚共用），没有统一国旗。 */
+const REGION_FLAG = { CN: 'cn', NA: 'us', EU: 'eu', TW: 'tw' }
+
 async function akashaForChar(charId, uid, charName = '') {
   try {
     const all = await akashaCategories()
@@ -1085,16 +1089,19 @@ async function akashaForChar(charId, uid, charName = '') {
     ])
 
     const rows = (list || []).map((e, i) => {
-      /* akasha 的 owner.region 是两位国家码（CN / US / JP…），用它拼国旗 */
+      /* ⚠ akasha 的 owner.region 是「服务器」不是国家码：CN / NA / EU / ASIA。
+         以前直接拿两位码拼国旗，NA 会命中纳米比亚（ Namibia ），ASIA 又不是两位码
+         直接被丢掉 —— 榜单里就出现「有的行有旗、有的行没有」。
+         这里显式映射到代表性国旗；ASIA 跨多国没有统一国旗，交给模板画地球图标。 */
       const region = String(e?.owner?.region || '').toUpperCase()
-      const validRegion = /^[A-Z]{2}$/.test(region)
+      const flagCode = REGION_FLAG[region] || ''
       const cons = Number(e?.constellation) || 0
       return {
         rank: i + 1,
         uid: String(e?.uid || ''),
         nickname: e?.owner?.nickname || '',
-        region: validRegion ? region : '',
-        flag: validRegion ? `https://flagcdn.com/w20/${region.toLowerCase()}.png` : '',
+        region,
+        flag: flagCode ? `https://flagcdn.com/w20/${flagCode}.png` : '',
         cons,
         /* 武器名是英文专有名词，榜单里改显示中文的命座，避免整列看不懂 */
         consText: cons >= 6 ? '满命' : (cons > 0 ? `${cons}命` : '0命'),

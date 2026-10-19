@@ -745,6 +745,8 @@ body {
   border-radius: 2px;
   box-shadow: 0 0 0 1px rgba(255, 255, 255, .2);
 }
+/* 亚服（ASIA）没有统一国旗，用地球图标占位，避免整列忽有忽无 */
+.flag-globe { width: 13px; height: 13px; color: #7fa2bd; }
 .ak-rk { font-weight: 900; color: #7fa2bd; }
 .ak-nick {
   color: #d8d2f0;
