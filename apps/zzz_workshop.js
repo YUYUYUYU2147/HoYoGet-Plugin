@@ -1322,6 +1322,34 @@ export class zzz_workshop extends plugin {
     })
   }
 
+  /**
+   * 必须在 accept 阶段接住「<角色><范围>排名」。
+   *
+   * 原因：Yunzai 的事件分发是「先把所有插件的 accept 跑一遍，
+   * 命中的直接 return 结束」，accept 阶段结束后才轮到 rule。
+   * ZZZ-Plugin 的 accept 用 /^.*?(?:%|...|绝区)\s*.+(面板)?排名$/ 匹配，
+   * 会把「%雅全服排名」当成它自己的面板排名接走并 return，
+   * 于是本插件的 rule 根本轮不到执行（priority 再高也没用，rule 排在 accept 之后）。
+   *
+   * 这里只接带范围修饰词的写法，其余保持原样交给 rule 与 ZZZ-Plugin：
+   *   %雅全服排名 / %星见雅本群排名 / %雅工坊排名 → 本插件工坊练度榜
+   */
+  async accept(e) {
+    const msg = String(e?.msg || '').trim()
+    /* 框架已把 % 改写成 #绝区零，两种形态都要认 */
+    if (!/(?:全服|本群|工坊)排名$/.test(msg)) return false
+    /* 先确认能解析出角色名再接管：解析不出来就放行，让 ZZZ-Plugin 按它自己的
+       方式处理（避免本插件报「未识别角色」把别人的入口也堵死）。 */
+    const stripped = msg.replace(/^[#%]*绝区零\s*/i, '').replace(/^[#%]+\s*/, '')
+    let ok = false
+    for (const m of [stripped, msg]) {
+      if (RE_ROLE_RANK_SHORT.exec(m)) { ok = true; break }
+    }
+    if (!ok) return false
+    await this.roleRank(e)
+    return 'return'
+  }
+
   async loveRank(e) {
     try {
       return await e.reply(await buildLoveRank(RE_LOVE.exec(e.msg)?.[1] || ''))
