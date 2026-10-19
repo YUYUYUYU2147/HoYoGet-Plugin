@@ -1015,6 +1015,44 @@ function buildTeam(cat) {
  * 这里用 redirect: 'manual' 只取 Location，不下载图片本身，
  * 再把 CDN 地址交给模板的 <img> 加载；接口异常时返回空串，模板自动跳过该层。
  */
+/* ───────────── 喵喵伤害计算 ─────────────
+ *
+ * 与 `#<角色>伤害` 同源：直接调 miao 的 Avatar.calcDmg({ mode: 'profile' })，
+ * 拿到该配装下所有招式的暴击 / 期望伤害。和 Akasha 那份的区别是：
+ * Akasha 只有榜首配装的一条汇总，喵喵这份按招式逐条列出，且就是本地面板算的。
+ * 失败（老版本 miao 没有 calcDmg、角色没有 calc 规则）一律返回 null，不影响出图。
+ */
+const commaNum = (n) => {
+  const v = Number(n)
+  if (!Number.isFinite(v)) return ''
+  return Math.round(v).toLocaleString('en-US')
+}
+
+async function miaoDmgTable(av) {
+  if (typeof av?.calcDmg !== 'function') return null
+  try {
+    const calc = await av.calcDmg({ mode: 'profile' })
+    const rows = (calc?.ret || [])
+      .filter((r) => r && r.type !== 'text' && Number.isFinite(Number(r.dmg)) && Number.isFinite(Number(r.avg)))
+      .map((r) => ({
+        title: String(r.title || '').trim(),
+        dmg: commaNum(r.dmg),
+        avg: commaNum(r.avg),
+      }))
+      .filter((r) => r.title)
+    if (!rows.length) return null
+    return {
+      rows,
+      enemyLv: Number(calc.enemyLv) || 103,
+      enemyName: String(calc.enemyName || '').trim(),
+      createdBy: String(calc.createdBy || '').trim(),
+    }
+  } catch (err) {
+    logger.debug?.(`[HoYoGet][hoyo_panel] 喵喵伤害计算失败：${err?.message || err}`)
+    return null
+  }
+}
+
 const RANDOM_BG_API = 'https://api.yppp.net/pc.php'
 
 async function randomBgUrl() {
@@ -1121,7 +1159,7 @@ async function akashaForChar(charId, uid, charName = '') {
 }
 
 /* 供自测脚本调用（不改运行行为） */
-export const __test = { cnDmgEntry, cleanDmgName, talentCn }
+export const __test = { cnDmgEntry, cleanDmgName, talentCn, miaoDmgTable, commaNum }
 
 export class hoyo_panel extends plugin {
   constructor() {
@@ -1363,9 +1401,10 @@ export class hoyo_panel extends plugin {
       }
 
       /* Akasha 只有原神有榜；随机背景与它并行请求，两者失败都不影响面板 */
-      const [akasha, randomBg] = await Promise.all([
+      const [akasha, randomBg, miaoDmg] = await Promise.all([
         game === 'gs' && hit?.char?.id ? akashaForChar(hit.char.id, uid, hit?.char?.name || '') : Promise.resolve(null),
         randomBgUrl(),
+        miaoDmgTable(hit),
       ])
 
       /* panel_style: dark（默认暗色霓虹）/ apple（深色玻璃，见 detail-apple.css） */
@@ -1377,6 +1416,7 @@ export class hoyo_panel extends plugin {
         _miao_path: miaoResPath,
         avatarId: hitId,
         akasha,
+        miaoDmg,
         randomBg,
         appleStyle: style === 'apple',
       }, { e, ret: true })

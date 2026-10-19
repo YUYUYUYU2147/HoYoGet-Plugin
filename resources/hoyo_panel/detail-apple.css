@@ -230,6 +230,13 @@ body {
 .ak-dval { color: var(--ap-text); font-weight: 600; font-variant-numeric: tabular-nums; }
 .ak-dfoot { color: var(--ap-mute); border-top: 1px solid rgba(255, 255, 255, .08); }
 
+/* 喵喵伤害计算表 */
+.md-cols { color: var(--ap-mute); border-bottom: 1px solid rgba(255, 255, 255, .08); }
+.md-row:nth-child(even) { background: rgba(255, 255, 255, .04); }
+.md-name { color: #d1d1d6; }
+.md-dmg { color: var(--ap-text); font-weight: 600; }
+.md-avg { color: var(--ap-sub); font-weight: 600; }
+
 .ak-rk { color: var(--ap-mute); }
 .ak-nick { color: #d1d1d6; font-weight: 400; }
 .ak-wq { color: var(--ap-mute); }

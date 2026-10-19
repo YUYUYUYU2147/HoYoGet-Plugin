@@ -689,6 +689,44 @@ body {
 }
 .ak-dsrc { margin-left: auto; letter-spacing: 1px; }
 
+/* 喵喵伤害计算表：与上面 Akasha 表同款外观，三列（招式 / 暴击 / 期望） */
+.md-cols,
+.md-row {
+  display: grid;
+  grid-template-columns: 1fr 74px 74px;
+  gap: 6px;
+  align-items: center;
+}
+.md-cols {
+  padding: 5px 0 3px;
+  font-size: 9px;
+  color: #5f819b;
+  border-bottom: 1px solid rgba(120, 180, 220, .16);
+}
+.md-cols span:not(:first-child) { text-align: right; }
+.md-row {
+  /* 负外边距把斑马底色铺到卡片内边距之外，与 Akasha 表一致 */
+  margin: 0 -12px;
+  padding: 4px 12px;
+  font-size: 11px;
+}
+.md-row:nth-child(even) { background: rgba(120, 180, 220, .11); }
+.md-name {
+  min-width: 0;
+  color: #9dc0d8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.md-dmg,
+.md-avg {
+  text-align: right;
+  font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+.md-dmg { font-weight: 900; color: #eaf4ff; }
+.md-avg { font-weight: 800; color: #9dc0d8; }
+
 .ak-row {
   display: grid;
   grid-template-columns: 18px 20px 1fr 44px 62px;
