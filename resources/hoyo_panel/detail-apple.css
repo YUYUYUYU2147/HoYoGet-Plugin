@@ -105,10 +105,14 @@ body {
 .a-value {
   color: var(--ap-text);
   font-weight: 600;
-  font-size: 18px;
+  font-size: 16px;
   letter-spacing: -.3px;
   font-variant-numeric: tabular-nums;
 }
+.a-weight { color: var(--ap-mute); background: rgba(255, 255, 255, .1); font-weight: 600; }
+.a-weight.hi { color: var(--ap-orange); background: rgba(255, 159, 10, .16); }
+.a-sub i { color: var(--ap-mute); }
+.a-sub em { color: var(--ap-green); }
 .aicon { filter: none; opacity: .95; }
 
 /* ───── 通用玻璃卡 ───── */

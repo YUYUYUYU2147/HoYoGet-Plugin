@@ -340,13 +340,39 @@ body.elem-physical { --elem-line: rgba(207, 216, 227, .9); --elem-glow: rgba(180
   filter: brightness(1.15);
 }
 
-.a-label { font-size: 13px; font-weight: 700; color: #9fb8cc; }
+.a-label { font-size: 13px; font-weight: 700; color: #9fb8cc; white-space: nowrap; }
+/* 词条权重徽章：双爆 100 这类高权重给金色，其余中性色 */
+.a-weight {
+  flex: none;
+  margin-left: 1px;
+  padding: 0 4px;
+  border-radius: 4px;
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 13px;
+  color: #8fb6d0;
+  background: rgba(120, 180, 220, .16);
+}
+.a-weight.hi { color: #ffd27a; background: rgba(255, 210, 122, .16); }
+
+/* 右侧两行：总数值 + 基础/圣遗物加成 */
+.a-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex: none;
+  line-height: 1.1;
+}
 .a-value {
   font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 900;
   color: #f4fbff;
 }
+.a-sub { margin-top: 1px; display: flex; gap: 4px; font-size: 9.5px; }
+.a-sub i { font-style: normal; color: #7f9db4; }
+.a-sub em { font-style: normal; color: #9fe0c8; }
 
 /* 雷达 */
 .side {

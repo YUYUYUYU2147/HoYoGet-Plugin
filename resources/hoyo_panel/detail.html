@@ -60,8 +60,14 @@
                     {{/if}}
                   </span>
                   <span class="a-label">{{a.label}}</span>
+                  {{if a.weight}}<i class="a-weight {{if a.weight >= 80}}hi{{/if}}">{{a.weight}}</i>{{/if}}
                 </span>
-                <span class="a-value">{{a.value}}</span>
+                <span class="a-right">
+                  <b class="a-value">{{a.value}}</b>
+                  {{if a.base}}
+                  <span class="a-sub"><i>{{a.base}}</i><em>{{a.plus}}</em></span>
+                  {{/if}}
+                </span>
               </div>
               {{/each}}
             </div>

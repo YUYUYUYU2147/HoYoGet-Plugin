@@ -458,24 +458,54 @@ function flattenArtis(list, game, weights = {}) {
 }
 
 /** 属性行：原神 7 项、星铁 9 项，缺值自动跳过 */
-function detailAttrRows(profile, game) {
+function detailAttrRows(profile, game, weights = {}) {
   const a = profile?.attr || {}
-  const spec = game === 'sr'
+  const b = profile?.base || {}
+  const isSr = game === 'sr'
+  /* 伤害加成：物理杯时 miao 把 phy 当主增伤，取大的那个 */
+  const dmgKey = !isSr && Number(a.phy) > Number(a.dmg) ? 'phy' : 'dmg'
+  const spec = isSr
     ? [['hp', '生命值'], ['atk', '攻击力'], ['def', '防御力'], ['spd', '速度'],
       ['cpct', '暴击率'], ['cdmg', '暴击伤害'], ['mastery', '击破特攻'],
       ['effect', '效果命中'], ['resist', '效果抵抗']]
     : [['hp', '生命值上限'], ['atk', '攻击力'], ['def', '防御力'], ['mastery', '元素精通'],
-      ['cpct', '暴击率'], ['cdmg', '暴击伤害'], ['recharge', '元素充能效率']]
-  const pctKeys = new Set(['cpct', 'cdmg', 'recharge', 'effect', 'resist'])
+      ['cpct', '暴击率'], ['cdmg', '暴击伤害'], ['recharge', '元素充能效率'],
+      ['dmg', '伤害加成']]
+  const pctKeys = new Set(['cpct', 'cdmg', 'recharge', 'effect', 'resist', 'dmg', 'phy'])
+  /* 生命值不保留小数，其余数值与 miao 一致保留 1 位 */
+  const fmt = (n, pct, int) => {
+    const v = Number(n)
+    if (!Number.isFinite(v)) return ''
+    if (pct) return `${v.toFixed(1)}%`
+    return v.toLocaleString('en-US', { minimumFractionDigits: int ? 0 : 1, maximumFractionDigits: int ? 0 : 1 })
+  }
+  const elemCn = Object.keys(ELEM_NAME_ICON).find(k => ELEM_NAME_ICON[k] === String(profile?.char?.elem || ''))
   return spec.map(([k, label]) => {
-    const v = a[k]
+    const key = k === 'dmg' ? dmgKey : k
+    const v = a[key]
     if (v == null || v === '') return null
     const n = Number(v)
     if (!Number.isFinite(n)) return null
     /* miao 的 attr 百分比字段已经是「百分数」（暴击率 59.44 表示 59.44%），
        直接拼 % 即可；旧代码再乘 100 会变成 5944%。 */
-    const text = pctKeys.has(k) ? `${n.toFixed(1)}%` : String(Math.round(n))
-    return { key: k, label, value: text, ...propIcon({ key: k }) }
+    const pct = pctKeys.has(key)
+    const int = key === 'hp'
+    const baseN = Number(b[key])
+    const hasBase = Number.isFinite(baseN)
+    const plusN = n - (hasBase ? baseN : 0)
+    /* 权重来自 miao 的 charWeight（0-100）：双爆 100、攻击 75 这种；
+       0 或缺失就不显示徽章，避免满屏 0 */
+    const weight = Number(weights[k] ?? weights[key]) || 0
+    const dmgName = key === 'phy' ? '物理伤害加成' : (elemCn ? `${elemCn}元素伤害加成` : '')
+    return {
+      key: k,
+      label,
+      value: fmt(n, pct, int),
+      base: hasBase ? fmt(baseN, pct, int) : '',
+      plus: hasBase ? `${plusN >= 0 ? '+' : ''}${fmt(plusN, pct, int)}` : '',
+      weight,
+      ...propIcon({ key, name: key === 'dmg' || key === 'phy' ? dmgName : '' }),
+    }
   }).filter(Boolean)
 }
 
@@ -693,7 +723,7 @@ function flattenCharDetail(profile, Character, game, meta = {}) {
     .replace(/\s+/g, ' ')
     .trim()
 
-  const attrs = detailAttrRows(profile, game)
+  const attrs = detailAttrRows(profile, game, charWeight)
   const score = (() => {
     const total = Number(artis.totalMark)
     if (Number.isFinite(total) && total > 0) return (Math.round(total * 10) / 10).toFixed(1)
