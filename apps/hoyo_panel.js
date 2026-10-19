@@ -305,13 +305,18 @@ export class hoyo_panel extends plugin {
     try {
       const player = new miao.Player(uid, game)
       if (!player.hasProfile) {
-        // 本地没有面板缓存，尝试刷新一次（同样需要 e.uid 才能发起请求）
+        /* 本地没有面板缓存，尝试刷新一次。
+           和 refreshPanel 一样，必须先 MysApi.init 挂上 e._mys，
+           否则 ProfileReq.requestProfile 读 e._mys.getCharacter() 直接抛错，
+           请求发不出去，hasProfile 仍然是 false。 */
         player.e = e
         e.uid = uid
         e.game = game
-        await player.refreshProfile(2, true)
+        const mys = await miao.MysApi.init(e, 'cookie')
+        if (mys) await player.refreshProfile(2, true)
       }
       if (!player.hasProfile) {
+        logger.warn?.(`[HoYoGet][hoyo_panel] ${uid} 本地无面板：avatars=${Object.keys(player._avatars || {}).length}，文件=${player._file}`)
         return e.reply([
           `本地暂无 ${uid} 的${conf.cn}面板数据。`,
           '请先在游戏内把角色放进「角色展柜」并开启显示详情，然后：',
