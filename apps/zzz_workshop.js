@@ -1339,7 +1339,6 @@ export class zzz_workshop extends plugin {
    */
   async accept(e) {
     const msg = String(e?.msg || '').trim()
-    logger.mark?.(`[HoYoGet][zzz_workshop] accept 被调用 msg=${JSON.stringify(msg)} scope=${getRankScope(e)}`)
     /* 框架已把 % 改写成 #绝区零，两种形态都要认 */
     const hasScopeWord = /(?:全服|本群|工坊)排名$/.test(msg)
     /* 不带范围修饰词时看「%面板排名范围」：

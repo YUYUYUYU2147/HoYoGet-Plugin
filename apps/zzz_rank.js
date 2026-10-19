@@ -239,56 +239,15 @@ function loadAllRecords(groupUids = null) {
  * （lib/plugins/loader.js: 先 orderBy priority，再逐条跑 accept），
  * 所以直接改那条记录就能立刻生效，不必重启。
  */
-function applyPriorityToLoader(want) {
-  const value = Number(want)
-  if (!Number.isFinite(value)) return null
-  /* 关键：框架 priority 数组里的 key 是**插件目录名**（HoYoGet-Plugin），
-     不是 apps 文件名。一个插件目录里所有 apps 类共用同一个 key，
-     要用 plugin.name（构造时传的中文名）才能定位到具体那一条。
-        lib/plugins/loader.js
-          key: file.name            // 'HoYoGet-Plugin'
-          name: plugin.name         // '[米哈游]绝区层面板排名'
-     之前按 key==='zzz_rank' 匹配，永远找不到（日志里 len=372 却没有任何命中）。 */
-  const pluginName = '[米哈游]绝区层面板排名'
-  const candidates = [
-    new URL('../../../lib/plugins/loader.js', import.meta.url).href,
-    new URL('file://' + process.cwd() + '/lib/plugins/loader.js').href,
-  ]
-  const timer = setTimeout(async () => {
-    for (const href of candidates) {
-      try {
-        const mod = await import(href)
-        const list = mod?.default?.priority
-        if (!Array.isArray(list)) continue
-        let hit = false
-        for (const item of list) {
-          if (item.name !== pluginName) continue
-          hit = true
-          if (Number(item.priority) === value) return
-          const before = item.priority
-          item.priority = value
-          list.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0))
-          logger.mark?.(`[HoYoGet][zzz_rank] 优先级已就地更新：${before} → ${value}（无需重启）`)
-        }
-        if (hit) return
-        logger.warn?.(`[HoYoGet][zzz_rank] 调度表里没找到「${pluginName}」，现有示例：`
-          + list.slice(0, 3).map(x => `${x.key}|${x.name}|${x.priority}`).join(' ; '))
-      } catch (err) {
-        logger.warn?.(`[HoYoGet][zzz_rank] import ${href} 失败：${err?.message || err}`)
-      }
-    }
-  }, 1500)
-  timer.unref?.()
-  return value
-}
-
 {
   const p = pluginPriority('zzz_panel_rank', -35000)
+  /* 优先级在 constructor 里注册，热重载换不掉，改完要 #重启 才落到调度表。
+     曾经试图运行时直接改 loader.priority 那条记录，但本插件由 loader 加载，
+     两者构成循环依赖，插件侧 import loader 会一直挂起，这条路走不通。 */
   logger.mark?.(`[HoYoGet][zzz_rank] 优先级 ${p}（需 < -30000 才能抢在 ZZZ-Plugin 之前，数值越小越先）`)
   if (Number(p) >= -30000) {
     logger.error?.('[HoYoGet][zzz_rank] 优先级不够小，%<角色>排名 会被 ZZZ-Plugin 截走，请把 zzz_panel_rank_priority 调到小于 -30000')
   }
-  applyPriorityToLoader(p)
 }
 
 export class zzz_panel_rank extends plugin {
@@ -319,7 +278,6 @@ export class zzz_panel_rank extends plugin {
   /** accept 截胡纯 角色名排名（不带"面板"），避免被 ZZZ-Plugin 的 panelRankBridge 抢走 */
   async accept(e) {
     const msg = String(e?.msg || '').trim()
-    logger.mark?.(`[HoYoGet][zzz_rank] accept 被调用 msg=${JSON.stringify(msg)} scope=${getRankScope(e)}`)
     /* 带范围修饰词的写法（%雅全服排名 / %星见雅本群排名 / %xx工坊排名）一律放行：
        这类是「临时指定范围」，由 apps/zzz_workshop.js 处理，见那边的 accept。
        顺带一提，SHORT_RANK_REG 的 (.+?) 会把修饰词吃进角色名
