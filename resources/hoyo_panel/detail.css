@@ -809,8 +809,18 @@ body {
 .wq-star .star { width: 12px; height: 12px; }
 .art-star .star { width: 9px; height: 9px; }
 
-.art-main { margin-top: 3px; display: flex; flex-direction: column; gap: 1px; }
-.main-prop { font-size: 13px; font-weight: 900; color: #ffe08f; }
+/* 主词条独占整行：放在图标行下方，避免「雷元素伤害加成 46.6%」被图标挤到换行 */
+.art-main { margin-top: 5px; display: flex; flex-direction: column; gap: 1px; }
+.main-prop {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 13px;
+  font-weight: 900;
+  color: #ffe08f;
+}
+.mp-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mp-value { flex: none; white-space: nowrap; }
 
 .art-subs {
   margin-top: 6px;

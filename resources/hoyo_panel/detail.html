@@ -133,21 +133,23 @@
                     <i class="star"></i>
                     {{/each}}
                   </div>
-                  <div class="art-main">
-                    {{each a.main m}}
-                    <span class="main-prop">
-                      <span class="picon-wrap">
-                        {{if m.iconMiao}}
-                        <img class="picon" src="{{_miao_path}}{{m.icon}}" onerror="this.style.display='none'">
-                        {{else if m.icon}}
-                        <img class="picon" src="{{ppath}}zzz_panel/images/panel_icons/{{m.icon}}" onerror="this.style.display='none'">
-                        {{/if}}
-                      </span>
-                      {{m.label}} {{m.value}}
-                    </span>
-                    {{/each}}
-                  </div>
                 </div>
+              </div>
+
+              <div class="art-main">
+                {{each a.main m}}
+                <span class="main-prop">
+                  <span class="picon-wrap">
+                    {{if m.iconMiao}}
+                    <img class="picon" src="{{_miao_path}}{{m.icon}}" onerror="this.style.display='none'">
+                    {{else if m.icon}}
+                    <img class="picon" src="{{ppath}}zzz_panel/images/panel_icons/{{m.icon}}" onerror="this.style.display='none'">
+                    {{/if}}
+                  </span>
+                  <span class="mp-label">{{m.label}}</span>
+                  <span class="mp-value">{{m.value}}</span>
+                </span>
+                {{/each}}
               </div>
 
               <div class="art-subs">
