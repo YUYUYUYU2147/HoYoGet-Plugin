@@ -183,21 +183,14 @@ async function fetchZzzDeviceFp(ck, uid = '') {
     appInstallTimeDiff: 1740498108042, packageVersion: '2.35.0',
     gyroscope: '-0.22601996x-0.09453133x0.09040799', batteryStatus: 88, hasKeyboard: 0, board,
   }
-  /* 不要再写死别人的设备值：
-       device_id 必须是完整 UUID 形态（短串会被判异常设备 → 1034/10041），
-       设备间还要稳定，换一次就换一个设备风险分。用账号 CK 派生一个固定 UUID。 */
-  const seed = String(ckStringOf(ck, uid) || uid || deviceInfo)
-  const stableId = (() => {
-    const hex = crypto.createHash('md5').update(seed).digest('hex')
-    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
-  })()
+  /* device_id 用完整 UUID：截成 16 位会被判异常设备（sign.js 里同款问题），
+     64 位 oaid 也是形态不对。这里与 bbs_device_id 用同一个值，
+     保证 getFp 申请的指纹和后续请求头是同一对。 */
   const body = {
     app_name: 'bbs_cn',
-    bbs_device_id: stableId,
-    /* getFp 请求里的 device_fp 只是种子值，真实指纹由响应返回；
-       与 system/mhy.js 保持一致，避免两条路径申请出不同风格的指纹。 */
-    device_fp: '38d7f0aac0ab7',
-    device_id: stableId,
+    bbs_device_id: uuid,
+    device_fp: '38d805c20d53d',
+    device_id: uuid,
     ext_fields: JSON.stringify(ext),
     platform: '2',
     seed_id: uuid,
@@ -215,8 +208,8 @@ async function fetchZzzDeviceFp(ck, uid = '') {
     }).then(r => r.json())
     const fp = res?.data?.device_fp || ''
     if (!fp) logger.warn?.(`[HoYoGet][zzz_panel] getFp 失败：retcode=${res?.retcode} ${res?.message || ''}`)
-    /* 必须回传「申请指纹时用的那个 device_id」：原来返回的是随机 uuid，
-       请求头与指纹对不上，一样 10041。 */
+    /* 必须回传「申请指纹时用的那个 device_id」：body 里是 'cc57c40f763ae4cc'，
+       原来返回的是随机 uuid，请求头与指纹对不上，一样 10041。 */
     return { fp, device_id: body.device_id }
   } catch (err) {
     logger.warn?.(`[HoYoGet][zzz_panel] getFp 异常：${err?.message || err}`)
@@ -354,12 +347,17 @@ async function zzzGet(e, uid, ck, type, query, extraHeaders = {}, retried = fals
     if (code === 10041) {
       const fpFile = `./plugins/HoYoGet-Plugin/data/fp/${e?.user_id}.yaml`
       const bound = fs.existsSync(fpFile)
-      // 把实际发出去的设备三件套打出来，便于判断是「没带上」还是「带上了不被认」
+      // 把实际发出去的设备三件套 + 用的是哪个账号的 CK 一起打出来，
+      // 多账号时能立刻看出是不是「拿 A 账号的 CK 查 B 账号的角色」
+      const picked = pickCkItem(ck, uid)
       logger.mark(`[HoYoGet][zzz_panel] 10041 诊断：type=${type}`
         + ` device_id=${headers['x-rpc-device_id'] || '(无)'}`
         + ` fp=${String(headers['x-rpc-device_fp'] || '(无)').slice(0, 12)}…`
         + ` model=${headers['x-rpc-device_model'] || '(无)'}`
         + ` sys=${headers['x-rpc-sys_version']}`
+        + ` ltuid=${picked?.ltuid || '(无)'}`
+        + ` ck_uid=${picked?.uid || '(无)'}`
+        + ` req_uid=${uid}`
         + ` ua=${headers['User-Agent']}`)
       throw new Error(bound
         ? '米游社风控（10041）：设备指纹未通过，请重新绑定常用设备后再试（#绑定设备帮助）'
