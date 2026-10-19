@@ -27,6 +27,29 @@ function looksBlocked(text) {
     return t.includes('已阻断') || t.includes('阻断页面') || t.includes('安全威胁');
 }
 
+/**
+ * 需要改走代理的错误码。
+ *
+ * looksBlocked 只认 HTML 阻断页，但实测更常见的是**正常 JSON + retcode**：
+ *   · 10041 设备指纹未通过 —— 机房 IP / 环境特征被判异常时也会返回它，
+ *     换出口 IP 是唯一可行的自救方式；
+ *   · 1034 触发验证码、10035 请求过于频繁 —— 同一类频次/IP 风控。
+ * 这些都不是「代码写错」，直连再怎么重试也没用，所以一并触发代理重试。
+ */
+const PROXY_RETCODES = new Set([10041, 1034, 10035, 5003]);
+
+function looksBlockedJson(text) {
+    if (!text) return false;
+    const t = String(text).trim();
+    if (!t.startsWith('{')) return false;
+    try {
+        const json = JSON.parse(t);
+        return PROXY_RETCODES.has(Number(json?.retcode));
+    } catch (_) {
+        return false;
+    }
+}
+
 /** 这类 host 才是米游社官方地址，别把打码平台之类的也往代理送 */
 const MHY_HOSTS = [
     'api-takumi.mihoyo.com',
@@ -145,7 +168,8 @@ export async function mhyFetch(url, obj = {}) {
     }
     // 先把 body 读出来：无论是判断阻断页还是交给调用方解析，都需要文本
     const text = await resp.text();
-    if (!looksBlocked(text)) {
+    // HTML 阻断页 与 风控 retcode（10041/1034/10035/5003）都要试一次代理
+    if (!looksBlocked(text) && !looksBlockedJson(text)) {
         return makeResponse(resp.ok, resp.status, text);
     }
     const via = await viaProxy(url, obj);
