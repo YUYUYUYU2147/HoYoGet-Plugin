@@ -343,14 +343,13 @@ body {
   color: #ffd27a;
 }
 .ov-unit { font-size: 11px; color: #7fa2bd; }
-/* 圣遗物评级徽章：盾形，九档配色（与 miao 的 D/C/B/A/S/SS/SSS/ACE/MAX 一致） */
+/* 圣遗物评级徽章：九档配色（与 miao 的 D/C/B/A/S/SS/SSS/ACE/MAX 一致） */
 /*
- * 评级徽章：五边形盾牌（上宽下尖）。
- * 之前用半透明底 + drop-shadow，在深色卡片上会糊成一团灰；改为
- *   · 实色渐变（每档一对明暗色）
- *   · 1px 亮色内描边（inset ring），外圈再加一层同色柔光
- *   · 顶部高光 + 底部内阴影，做出金属片感
- * 用 filter: drop-shadow 而不是 border —— clip-path 会把 border 裁掉一半。
+ * 评级徽章：圆角方块 + 右下角月牙点缀。
+ * 上一版是盾形，用户反馈不好看；月牙既贴合原神「月」主题，也让档位色更醒目。
+ *   · 实色径向渐变（每档一对明暗色）
+ *   · 1px 亮色内描边 + 底部内阴影，做出金属片感
+ *   · 右下角一枚半透明月牙作装饰，不压文字
  */
 .badge-mark {
   position: relative;
@@ -358,84 +357,94 @@ body {
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  width: 48px;
-  height: 54px;
+  width: 50px;
+  height: 50px;
   margin-left: auto;
+  border-radius: 14px;
+  overflow: hidden;
   font-size: 13px;
   font-weight: 900;
-  letter-spacing: .6px;
+  letter-spacing: .4px;
   line-height: 1;
   text-transform: uppercase;
   color: #fff;
-  /* 默认（D 档）底色，具体档位在下方覆盖 */
-  background: linear-gradient(160deg, #6d7d92 0%, #46566b 52%, #2c3949 100%);
-  clip-path: polygon(50% 0%, 100% 9%, 100% 60%, 50% 100%, 0% 60%, 0% 9%);
+  background: radial-gradient(circle at 30% 24%, #8697ab 0%, #56697f 55%, #374554 100%);
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, .45),
-    inset 0 3px 4px rgba(255, 255, 255, .30),
-    inset 0 -8px 12px rgba(0, 0, 0, .35);
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .45));
+    inset 0 -8px 12px rgba(0, 0, 0, .35),
+    0 2px 5px rgba(0, 0, 0, .45);
 }
-/* 顶部一条高光带，模拟金属反光 */
+/* 右下角月牙：一个圆用 mask 挖掉一侧，只留弯钩 */
 .badge-mark::before {
   content: '';
   position: absolute;
-  left: 12%;
-  right: 12%;
-  top: 4px;
-  height: 10px;
+  right: -9px;
+  bottom: -9px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, .55), transparent);
+  background: rgba(255, 255, 255, .18);
+  -webkit-mask: radial-gradient(circle at 72% 28%, transparent 50%, #000 51%);
+          mask: radial-gradient(circle at 72% 28%, transparent 50%, #000 51%);
+  pointer-events: none;
+}
+/* 左上角一小撮星点，呼应星穹 */
+.badge-mark::after {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 6px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .55);
+  box-shadow: 7px 5px 0 -1px rgba(255, 255, 255, .38), 2px 10px 0 -1px rgba(255, 255, 255, .30);
   pointer-events: none;
 }
 .badge-mark .bm-text {
   position: relative;
-  transform: translateY(-3px);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, .75), 0 0 6px rgba(0, 0, 0, .35);
+  z-index: 2;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .85);
 }
 /* 单件卡片右上角 */
 .badge-mark.sm {
-  width: 40px;
-  height: 45px;
+  width: 42px;
+  height: 42px;
   margin-left: 0;
+  border-radius: 12px;
   font-size: 11px;
 }
-.badge-mark.sm .bm-text { transform: translateY(-2px); }
+.badge-mark.sm::before { width: 28px; height: 28px; right: -8px; bottom: -8px; }
 
 /* ── 九档配色：灰 → 蓝 → 靛 → 紫 → 青 → 金 → 赤金，逐档升温 ── */
-.badge-mark.t0 { background: linear-gradient(160deg, #8697ab 0%, #56697f 52%, #374554 100%); }
-.badge-mark.t1 { background: linear-gradient(160deg, #a2b6cb 0%, #68809b 52%, #42556c 100%); }
-.badge-mark.t2 { background: linear-gradient(160deg, #6fc0fa 0%, #3688d4 52%, #1e568d 100%); }
-.badge-mark.t3 { background: linear-gradient(160deg, #8b9efc 0%, #5066dd 52%, #2e3a98 100%); }
-.badge-mark.t4 { background: linear-gradient(160deg, #c493fa 0%, #8b52dd 52%, #532a8f 100%); }
-.badge-mark.t5 { background: linear-gradient(160deg, #6ce8d5 0%, #27ac9c 52%, #126b63 100%); }
-.badge-mark.t6 { background: linear-gradient(160deg, #ffdd75 0%, #e8a526 52%, #8f5f08 100%); color: #402800; }
+.badge-mark.t0 { background: radial-gradient(circle at 30% 24%, #8697ab 0%, #56697f 55%, #374554 100%); }
+.badge-mark.t1 { background: radial-gradient(circle at 30% 24%, #a2b6cb 0%, #68809b 55%, #42556c 100%); }
+.badge-mark.t2 { background: radial-gradient(circle at 30% 24%, #6fc0fa 0%, #3688d4 55%, #1e568d 100%); }
+.badge-mark.t3 { background: radial-gradient(circle at 30% 24%, #8b9efc 0%, #5066dd 55%, #2e3a98 100%); }
+.badge-mark.t4 { background: radial-gradient(circle at 30% 24%, #c493fa 0%, #8b52dd 55%, #532a8f 100%); }
+.badge-mark.t5 { background: radial-gradient(circle at 30% 24%, #6ce8d5 0%, #27ac9c 55%, #126b63 100%); }
+.badge-mark.t6 { background: radial-gradient(circle at 30% 24%, #ffdd75 0%, #e8a526 55%, #8f5f08 100%); color: #402800; }
 .badge-mark.t7 {
-  background: linear-gradient(160deg, #fff0b0 0%, #f7bc33 50%, #b07406 100%);
+  background: radial-gradient(circle at 30% 24%, #fff0b0 0%, #f7bc33 55%, #b07406 100%);
   color: #402800;
-  filter: drop-shadow(0 2px 5px rgba(247, 188, 51, .5)) drop-shadow(0 0 9px rgba(255, 214, 120, .55));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, .65),
+    inset 0 -8px 12px rgba(120, 70, 0, .35),
+    0 0 12px rgba(247, 188, 51, .55);
 }
 .badge-mark.t8 {
-  background: linear-gradient(160deg, #ffd0a8 0%, #f06a3c 48%, #a82b14 100%);
+  background: radial-gradient(circle at 30% 24%, #ffd0a8 0%, #f06a3c 55%, #a82b14 100%);
   color: #3d1200;
-  filter: drop-shadow(0 2px 5px rgba(240, 106, 60, .55)) drop-shadow(0 0 10px rgba(255, 150, 90, .6));
+  box-shadow:
+    inset 0 0 0 1.5px rgba(255, 235, 190, .75),
+    inset 0 -8px 12px rgba(120, 20, 0, .35),
+    0 0 13px rgba(240, 106, 60, .6);
 }
-/* 亮底档位文字用深色 */
+/* 亮底档位文字转深色 */
 .badge-mark.t6 .bm-text, .badge-mark.t7 .bm-text, .badge-mark.t8 .bm-text {
-  text-shadow: 0 1px 1px rgba(255, 255, 255, .40);
+  text-shadow: 0 1px 1px rgba(255, 255, 255, .45);
 }
-.badge-mark.t6::before, .badge-mark.t7::before, .badge-mark.t8::before {
-  background: linear-gradient(180deg, rgba(255, 255, 255, .78), transparent);
-}
-/* 满档（MAX）再加一圈描边光，强调是最高级 */
-.badge-mark.t8::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  clip-path: polygon(50% 0%, 100% 9%, 100% 60%, 50% 100%, 0% 60%, 0% 9%);
-  box-shadow: inset 0 0 0 1.5px rgba(255, 235, 190, .75);
-  pointer-events: none;
-}
+
 .ov-valid { margin-top: 3px; font-size: 11px; color: #9fb8cc; }
 .ov-valid b { color: #e8f6ff; font-weight: 900; }
 .ov-sep { margin: 0 5px; color: #4f7391; }
