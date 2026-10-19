@@ -48,10 +48,62 @@ async function readBoundUid(e, game) {
     })
     if (!row?.games) return ''
     const uid = String(JSON.parse(row.games)?.[game]?.uid || '').trim()
-    return /^[1-9]\d{8}$/.test(uid) ? uid : ''
+    if (/^[1-9]\d{8}$/.test(uid)) return uid
   } catch (_) {
-    return ''
+    /* 回落下面的 MysUsers */
   }
+  return ''
+}
+
+/**
+ * 从 genshin 的 MysUsers 表读「当前生效 UID」。
+ *
+ * 为什么优先用它：`#uid 2` 这类切换只会重排 MysUsers.uids[game] 的顺序，
+ * **不会改 Users.games.<game>.uid**。只读后者的话，用户切了 UID 这里仍拿旧的。
+ * 所以先看 MysUsers（uid 列表第一项即当前生效），拿不到再回落 Users。
+ */
+async function readMysMainUid(e, game) {
+  const qq = String(e?.user_id || e?.sender?.user_id || '').trim()
+  if (!qq) return ''
+  if (!fs.existsSync(YUNZAI_DB)) return ''
+  try {
+    const sqlite3 = (await import('sqlite3')).default
+    const rows = await new Promise(resolve => {
+      const db = new sqlite3.Database(YUNZAI_DB, sqlite3.OPEN_READONLY, err => (err ? resolve([]) : null))
+      db.all('select uids from MysUsers', (err2, list) => {
+        db.close(() => {})
+        resolve(err2 ? [] : list || [])
+      })
+    })
+    // MysUsers 按 ltuid 存，需要再通过 Users.games 里的 ck 归属筛选出该 QQ 的账号；
+    // 简单做法：取该 QQ 在 Users 里记过的所有 uid 作为候选，匹配到哪个 ltuid 就用它的 uids[0]
+    const own = new Set()
+    const userRow = await new Promise(resolve => {
+      const db = new sqlite3.Database(YUNZAI_DB, sqlite3.OPEN_READONLY, err => (err ? resolve(null) : null))
+      db.get('select games from Users where id = ?', [qq], (err2, r) => {
+        db.close(() => {})
+        resolve(err2 ? null : r)
+      })
+    })
+    try {
+      const games = JSON.parse(userRow?.games || '{}')
+      for (const uid of Object.keys(games?.[game]?.data || {})) own.add(String(uid))
+      if (games?.[game]?.uid) own.add(String(games[game].uid))
+    } catch (_) { /* ignore */ }
+    if (!own.size) return ''
+    for (const row of rows) {
+      let uids = {}
+      try { uids = JSON.parse(row.uids || '{}') } catch (_) { continue }
+      const list = uids?.[game] || []
+      if (list.some(u => own.has(String(u)))) {
+        const main = String(list.find(u => own.has(String(u))) || list[0] || '')
+        if (/^[1-9]\d{8}$/.test(main)) return main
+      }
+    }
+  } catch (_) {
+    /* 回落 */
+  }
+  return ''
 }
 
 /** 动态加载 miao 的模型；缺失时返回 null，让调用方给出可读提示 */
@@ -159,6 +211,7 @@ export class hoyo_panel extends plugin {
     }
 
     let uid = m[2] || ''
+    if (!uid) uid = await readMysMainUid(e, game)
     if (!uid) uid = await readBoundUid(e, game)
     if (!uid) {
       return e.reply([
@@ -192,9 +245,11 @@ export class hoyo_panel extends plugin {
         ].join('\n'))
       }
       const refreshed = await player.refreshProfile(2, true)
-      /* 返回值：false / 0 = 没有更新到任何角色，数字 = 本次更新的角色数。
-         两者都说明数据没变，必须明确告知，不能静默继续出旧图。 */
-      if (!refreshed) {
+      /* ⚠ 返回值不能当成败判据：refreshProfile 返回的是 `player._update.length`
+         —— 本次**内容有变化**的角色数。数据拉取成功但和缓存一致时它是 0，
+         把 0 当失败会出现「数据明明更新了却提示更新失败」。
+         真正的失败信号只有 false / undefined（请求没发出去或抛错）。 */
+      if (refreshed === false || refreshed === undefined) {
         logger.warn?.(`[HoYoGet][hoyo_panel] ${uid} 面板未刷新（refreshProfile 返回 ${refreshed}）`)
         return e.reply([
           `更新 ${uid} 的${conf.cn}面板失败。`,
@@ -236,6 +291,7 @@ export class hoyo_panel extends plugin {
 
     // UID：指令里带的优先，其次绑定
     let uid = m[2] || ''
+    if (!uid) uid = await readMysMainUid(e, game)
     if (!uid) uid = await readBoundUid(e, game)
     if (!uid) {
       return e.reply([
