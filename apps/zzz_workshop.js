@@ -279,7 +279,7 @@ async function getRelics() {
    与 getRelics/getWeapons 分开缓存，避免把「id → 名字」的既有调用方改成对象。 */
 const metaCache = { relics: null, relicsAt: 0, weapons: null, weaponsAt: 0 }
 
-async function getRelicMeta() {
+export async function getRelicMeta() {
   if (metaCache.relics && fresh(metaCache.relicsAt)) return metaCache.relics
   const map = new Map()
   try {
@@ -300,7 +300,7 @@ async function getRelicMeta() {
   return map
 }
 
-async function getWeaponMeta() {
+export async function getWeaponMeta() {
   if (metaCache.weapons && fresh(metaCache.weaponsAt)) return metaCache.weapons
   const map = new Map()
   try {

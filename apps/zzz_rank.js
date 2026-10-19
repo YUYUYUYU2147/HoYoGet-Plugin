@@ -3,6 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { pluginPriority, render, yaml, mys } from '#HoYoGet'
 import { buildBasicProperties, calcDamage as calcPanelDamage, calcEquipScore as calcEquipScoreShared } from './zzz_panel_list.js'
+import { getRelicMeta, getWeaponMeta } from './zzz_workshop.js'
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const RECORDS_DIR = path.join(PLUGIN_ROOT, 'data', 'zzz_panel', 'records')
@@ -158,6 +159,10 @@ function buildEquips(data) {
     .sort((a, b) => Number(a.equipment_type || 0) - Number(b.equipment_type || 0))
     .map(e => ({
       slot: Number(e.equipment_type || 0),
+      /* 装备实例 id（如 32741）与套装 id（equip_suit.suit_id，如 32700）不是一回事：
+         工坊 relic/list 是按套装 id 建表的，补图要用后者。 */
+      id: String(e.id || ''),
+      suitId: String(e.equip_suit?.suit_id || ''),
       name: e.name || '',
       icon: e.icon || '',
     }))
@@ -371,6 +376,15 @@ export class zzz_panel_rank extends plugin {
       return e.reply(`暂无${label}面板排名数据。\n请先使用「米游社<名字>面板」查看角色详情（数据会自动保存），或使用 ZZZ-Plugin 更新面板。\n发送「%面板排名范围」可切换本群 / 全部。`)
     }
 
+    /* ZZZ-Plugin 落盘的面板数据里 icon / role_square_url 全是空字符串，
+       本群榜大量记录来自那边，于是头像和驱动盘图标都是空的。
+       这里用工坊的名称表按 id 补图：relic 用装备 id、weapon 用音擎 id。
+       拿不到就维持空值，模板里的 {{if}} 会跳过，不会出现裂图。 */
+    const [relicMeta, weaponMeta] = await Promise.all([
+      getRelicMeta().catch(() => new Map()),
+      getWeaponMeta().catch(() => new Map()),
+    ]).then(([a, b]) => [a || new Map(), b || new Map()])
+
     const resolved = []
     for (const r of allRecords) {
       const charName = r.data?.name_mi18n || r.data?.full_name_mi18n || ''
@@ -396,15 +410,26 @@ export class zzz_panel_rank extends plugin {
         level: r.data?.level ?? 0,
         weapon: {
           name: r.data?.weapon?.name || '',
-          icon: r.data?.weapon?.icon || '',
+          /* 音擎图标：优先用记录里的，缺失时按 weapon.id 去工坊音擎表取 */
+          icon: r.data?.weapon?.icon
+            || weaponMeta.get(String(r.data?.weapon?.id || ''))?.icon
+            || '',
           level: r.data?.weapon?.level || '',
           star: r.data?.weapon?.star || '',
           rarity: r.data?.weapon?.rarity || '',
         },
         stats: buildStatItems(r.data),
         skills: buildSkillLevels(r.data),
-        equips: buildEquips(r.data),
-        icon: buildAvatar(r.data),
+        /* 驱动盘图标：记录里没有就按装备 id 查工坊驱动盘表 */
+        equips: buildEquips(r.data).map(eq => ({
+          ...eq,
+          icon: eq.icon
+            || relicMeta.get(String(eq.suitId || ''))?.icon
+            || relicMeta.get(String(eq.id || ''))?.icon
+            || '',
+        })),
+        /* 角色头像：role_square_url 为空时用角色立绘兜底（工坊表里没有这层数据） */
+        icon: buildAvatar(r.data) || r.data?.role_vertical_painting_url || '',
         nickname: r.player?.nickname || r.charName,
       })
     }
