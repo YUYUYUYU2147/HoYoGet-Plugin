@@ -252,4 +252,4 @@ body {
   font-weight: 500;
   box-shadow: none;
 }
-.src { color: var(--ap-mute); font-weight: 400; }
+.src { color: var(--ap-red); font-weight: 500; }
