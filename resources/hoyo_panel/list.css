@@ -149,59 +149,28 @@ body.game-sr .page {
   color: #b0b9c9;
 }
 
-/* 总览卡（头像网格）右上角的纯月牙徽章：与详情页同一套造型与配色 */
+/* 总览卡（头像网格）右上角的评级字母：与详情页同一套配色 */
 .badge-mark.mini {
   position: absolute;
-  top: -9px;
-  right: -8px;
-  width: 38px;
-  height: 38px;
+  top: 0;
+  right: 2px;
   margin: 0;
-  padding-left: 5px;
-  box-sizing: border-box;
   display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  font-size: 8px;
+  align-items: baseline;
+  font-size: 10px;
   font-weight: 900;
-  letter-spacing: .1px;
+  letter-spacing: .2px;
   line-height: 1;
   text-transform: uppercase;
-  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .85);
 }
-.badge-mark.mini .bm-shape {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 26% 22%, rgba(255, 255, 255, .38), transparent 46%),
-    radial-gradient(circle at 26% 24%, #8697ab 0%, #56697f 56%, #374554 100%);
-  -webkit-mask: radial-gradient(circle at 78% 50%, transparent 56%, #000 57%);
-          mask: radial-gradient(circle at 78% 50%, transparent 56%, #000 57%);
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .65));
-}
-.badge-mark.mini .bm-text {
-  position: relative;
-  z-index: 2;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, .95);
-}
-.badge-mark.mini.t0 .bm-shape { background: radial-gradient(circle at 26% 22%, rgba(255,255,255,.38), transparent 46%), radial-gradient(circle at 26% 24%, #8697ab 0%, #56697f 56%, #374554 100%); }
-.badge-mark.mini.t1 .bm-shape { background: radial-gradient(circle at 26% 22%, rgba(255,255,255,.40), transparent 46%), radial-gradient(circle at 26% 24%, #a2b6cb 0%, #68809b 56%, #42556c 100%); }
-.badge-mark.mini.t2 .bm-shape { background: radial-gradient(circle at 26% 22%, rgba(255,255,255,.42), transparent 46%), radial-gradient(circle at 26% 24%, #6fc0fa 0%, #3688d4 56%, #1e568d 100%); }
-.badge-mark.mini.t3 .bm-shape { background: radial-gradient(circle at 26% 22%, rgba(255,255,255,.42), transparent 46%), radial-gradient(circle at 26% 24%, #8b9efc 0%, #5066dd 56%, #2e3a98 100%); }
-.badge-mark.mini.t4 .bm-shape { background: radial-gradient(circle at 26% 22%, rgba(255,255,255,.42), transparent 46%), radial-gradient(circle at 26% 24%, #c493fa 0%, #8b52dd 56%, #532a8f 100%); }
-.badge-mark.mini.t5 .bm-shape { background: radial-gradient(circle at 26% 22%, rgba(255,255,255,.44), transparent 46%), radial-gradient(circle at 26% 24%, #6ce8d5 0%, #27ac9c 56%, #126b63 100%); }
-.badge-mark.mini.t6 .bm-shape { background: radial-gradient(circle at 26% 22%, rgba(255,255,255,.50), transparent 46%), radial-gradient(circle at 26% 24%, #ffdd75 0%, #e8a526 56%, #8f5f08 100%); }
-.badge-mark.mini.t6 .bm-text { color: #402800; }
-.badge-mark.mini.t7 .bm-shape {
-  background: radial-gradient(circle at 26% 22%, rgba(255,255,255,.55), transparent 46%), radial-gradient(circle at 26% 24%, #fff0b0 0%, #f7bc33 56%, #b07406 100%);
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .65)) drop-shadow(0 0 8px rgba(247, 188, 51, .6));
-}
-.badge-mark.mini.t7 .bm-text { color: #402800; }
-.badge-mark.mini.t8 .bm-shape {
-  background: radial-gradient(circle at 26% 22%, rgba(255,255,255,.52), transparent 46%), radial-gradient(circle at 26% 24%, #ffd0a8 0%, #f06a3c 56%, #a82b14 100%);
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .65)) drop-shadow(0 0 9px rgba(240, 106, 60, .65));
-}
-.badge-mark.mini.t8 .bm-text { color: #3d1200; }
-.badge-mark.mini.t6 .bm-text, .badge-mark.mini.t7 .bm-text, .badge-mark.mini.t8 .bm-text {
-  text-shadow: 0 1px 1px rgba(255, 255, 255, .5);
-}
+.badge-mark.mini .bm-shape { display: none; }
+.badge-mark.mini.t7 .bm-text,
+.badge-mark.mini.t8 .bm-text { color: #e85656; }
+.badge-mark.mini.t5 .bm-text,
+.badge-mark.mini.t6 .bm-text { color: #ffe699; }
+.badge-mark.mini.t3 .bm-text,
+.badge-mark.mini.t4 .bm-text { color: #d699ff; }
+.badge-mark.mini.t0 .bm-text,
+.badge-mark.mini.t1 .bm-text,
+.badge-mark.mini.t2 .bm-text { color: #8fa9cd; }

@@ -343,85 +343,36 @@ body {
   color: #ffd27a;
 }
 .ov-unit { font-size: 11px; color: #7fa2bd; }
-/*
- * 圣遗物评级徽章：纯月牙。
- * 整枚徽章就是一个弯月（圆形挖掉右侧偏上的一个圆），没有底板方块；
- * 文字落在月牙加厚的「肚子」里。底部加一点暗角，让弯月从深色卡片上浮起来。
- */
+/* 圣遗物评级：纯文字字母，配色与 miao-plugin 的 .mark-XXX 一致 */
 .badge-mark {
-  position: relative;
   display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  flex: 0 0 auto;
-  width: 64px;
-  height: 64px;
+  align-items: baseline;
   margin-left: auto;
-  padding-left: 9px;
-  box-sizing: border-box;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 900;
-  letter-spacing: .3px;
-  line-height: 1;
+  letter-spacing: .5px;
+  line-height: 1.1;
   text-transform: uppercase;
-  color: #fff;
 }
-/* 月牙本体：圆扣掉右侧偏上的圆 */
-.badge-mark .bm-shape {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 26% 22%, rgba(255, 255, 255, .38), transparent 46%),
-    radial-gradient(circle at 26% 24%, #8697ab 0%, #56697f 56%, #374554 100%);
-  -webkit-mask: radial-gradient(circle at 78% 50%, transparent 56%, #000 57%);
-          mask: radial-gradient(circle at 78% 50%, transparent 56%, #000 57%);
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .65));
-}
-/* 月牙尖端的柔光，避免边缘像被硬切 */
-.badge-mark .bm-shape::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 22% 26%, rgba(255, 255, 255, .45), transparent 32%);
-  -webkit-mask: radial-gradient(circle at 78% 50%, transparent 56%, #000 57%);
-          mask: radial-gradient(circle at 78% 50%, transparent 56%, #000 57%);
-}
-.badge-mark .bm-text {
-  position: relative;
-  z-index: 2;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, .95);
-}
-/* 单件卡片右上角 */
-.badge-mark.sm {
-  width: 50px;
-  height: 50px;
-  margin-left: 0;
-  padding-left: 7px;
-  font-size: 9px;
-}
+.badge-mark .bm-shape { display: none; }
+.badge-mark .bm-text { display: inline; }
 
-/* ── 九档配色：灰 → 蓝 → 靛 → 紫 → 青 → 金 → 赤金 ── */
-.badge-mark.t0 .bm-shape { background: radial-gradient(circle at 26% 22%, rgba(255,255,255,.38), transparent 46%), radial-gradient(circle at 26% 24%, #8697ab 0%, #56697f 56%, #374554 100%); }
-.badge-mark.t1 .bm-shape { background: radial-gradient(circle at 26% 22%, rgba(255,255,255,.40), transparent 46%), radial-gradient(circle at 26% 24%, #a2b6cb 0%, #68809b 56%, #42556c 100%); }
-.badge-mark.t2 .bm-shape { background: radial-gradient(circle at 26% 22%, rgba(255,255,255,.42), transparent 46%), radial-gradient(circle at 26% 24%, #6fc0fa 0%, #3688d4 56%, #1e568d 100%); }
-.badge-mark.t3 .bm-shape { background: radial-gradient(circle at 26% 22%, rgba(255,255,255,.42), transparent 46%), radial-gradient(circle at 26% 24%, #8b9efc 0%, #5066dd 56%, #2e3a98 100%); }
-.badge-mark.t4 .bm-shape { background: radial-gradient(circle at 26% 22%, rgba(255,255,255,.42), transparent 46%), radial-gradient(circle at 26% 24%, #c493fa 0%, #8b52dd 56%, #532a8f 100%); }
-.badge-mark.t5 .bm-shape { background: radial-gradient(circle at 26% 22%, rgba(255,255,255,.44), transparent 46%), radial-gradient(circle at 26% 24%, #6ce8d5 0%, #27ac9c 56%, #126b63 100%); }
-.badge-mark.t6 .bm-shape { background: radial-gradient(circle at 26% 22%, rgba(255,255,255,.50), transparent 46%), radial-gradient(circle at 26% 24%, #ffdd75 0%, #e8a526 56%, #8f5f08 100%); }
-.badge-mark.t6 .bm-text { color: #402800; }
-.badge-mark.t7 .bm-shape {
-  background: radial-gradient(circle at 26% 22%, rgba(255,255,255,.55), transparent 46%), radial-gradient(circle at 26% 24%, #fff0b0 0%, #f7bc33 56%, #b07406 100%);
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .65)) drop-shadow(0 0 10px rgba(247, 188, 51, .6));
-}
-.badge-mark.t7 .bm-text { color: #402800; }
-.badge-mark.t8 .bm-shape {
-  background: radial-gradient(circle at 26% 22%, rgba(255,255,255,.52), transparent 46%), radial-gradient(circle at 26% 24%, #ffd0a8 0%, #f06a3c 56%, #a82b14 100%);
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .65)) drop-shadow(0 0 11px rgba(240, 106, 60, .65));
-}
-.badge-mark.t8 .bm-text { color: #3d1200; }
-/* 亮底档位文字转深色 */
-.badge-mark.t6 .bm-text, .badge-mark.t7 .bm-text, .badge-mark.t8 .bm-text {
-  text-shadow: 0 1px 1px rgba(255, 255, 255, .5);
+/* 与 miao 保持一致：ACE / MAX 红，SSS / SS 金，S / A 紫，B / C / D 用低饱和灰蓝 */
+.badge-mark.t7 .bm-text,
+.badge-mark.t8 .bm-text { color: #e85656; }
+.badge-mark.t5 .bm-text,
+.badge-mark.t6 .bm-text { color: #ffe699; }
+.badge-mark.t3 .bm-text,
+.badge-mark.t4 .bm-text { color: #d699ff; }
+.badge-mark.t0 .bm-text,
+.badge-mark.t1 .bm-text,
+.badge-mark.t2 .bm-text { color: #8fa9cd; }
+
+/* 单件卡片右上角：略小一号，与分数同行 */
+.badge-mark.sm {
+  margin-left: 0;
+  font-size: 12px;
+  letter-spacing: .3px;
 }
 
 .ov-valid { margin-top: 3px; font-size: 11px; color: #9fb8cc; }
