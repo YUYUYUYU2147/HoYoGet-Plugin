@@ -291,12 +291,16 @@ export class zzz_panel_rank extends plugin {
   /** accept 截胡纯 角色名排名（不带"面板"），避免被 ZZZ-Plugin 的 panelRankBridge 抢走 */
   async accept(e) {
     const msg = String(e?.msg || '').trim()
-    /* 带范围修饰词的写法（%雅全服排名 / %星见雅本群排名 / %xx工坊排名）交给
-       apps/zzz_workshop.js 的工坊练度榜处理，这里必须放行。
-       原因：SHORT_RANK_REG 的 (.+?) 非贪婪但会把修饰词一起吃进角色名
-       （%雅全服排名 → 角色名「雅全服」），而且 accept 一旦 return 就
-       直接结束事件分发，zzz_workshop 根本没有机会响应。 */
+    /* 带范围修饰词的写法（%雅全服排名 / %星见雅本群排名 / %xx工坊排名）一律放行：
+       这类是「临时指定范围」，由 apps/zzz_workshop.js 处理，见那边的 accept。
+       顺带一提，SHORT_RANK_REG 的 (.+?) 会把修饰词吃进角色名
+       （%雅全服排名 → 「雅全服」），所以这里也不能接。 */
     if (/(?:全服|本群|工坊)排名$/.test(msg)) return false
+    /* 不带修饰词时按「%面板排名范围」的当前值决定榜单：
+         本群 → 本地面板排名（就是本文件）
+         全部 → 工坊练度榜（交给 zzz_workshop 的 accept）
+       这是为了两个入口语义一致：设成全部时，%雅排名 和 %雅全服排名 看同一个榜。 */
+    if (getRankScope(e) !== 'group') return false
     const m = msg.match(SHORT_RANK_REG)
     if (!m) return false
     if (/(?:全服|本群|工坊)$/.test(m[1])) return false
