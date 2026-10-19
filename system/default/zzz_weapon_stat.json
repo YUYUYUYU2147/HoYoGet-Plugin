@@ -1,826 +1,1079 @@
 {
-  "generatedAt": "2026-10-19T03:15:37.678Z",
-  "source": "wiki.biligame.com/zzz 音擎页「基础攻击力 a~b」「副属性 x a~b」",
-  "count": 101,
+  "generatedAt": "2026-10-19T03:32:59.593Z",
+  "source": "Bwiki 音擎页 + 米游社百科 multi_table（Bwiki 缺词条时）",
+  "count": 100,
   "failed": 0,
+  "sources": {
+    "bwiki": 67,
+    "derived": 28,
+    "miyoushe": 5
+  },
   "weapons": {
     "12001": {
       "name": "「月相」-望",
+      "baseType": "atk",
       "atk1": 32,
       "atk60": 475,
       "subName": "攻击力",
       "sub1": "8",
-      "sub60": "20%"
+      "sub60": "20%",
+      "source": "bwiki"
     },
     "12002": {
       "name": "「月相」-晦",
+      "baseType": "atk",
       "atk1": 32,
       "atk60": 475,
       "subName": "攻击力",
       "sub1": "8",
-      "sub60": "20%"
+      "sub60": "20%",
+      "source": "bwiki"
     },
     "12003": {
       "name": "「月相」-朔",
+      "baseType": "atk",
       "atk1": 32,
       "atk60": 475,
       "subName": "暴击率",
       "sub1": "6.4",
-      "sub60": "16%"
+      "sub60": "16%",
+      "source": "bwiki"
     },
     "12004": {
-      "name": "「残响」-Ⅰ型",
+      "name": "残响-I型",
+      "baseType": "atk",
       "atk1": 32,
       "atk60": 475,
+      "def60": null,
       "subName": "攻击力",
-      "sub1": "8",
-      "sub60": "8.0%",
-      "derived": true
+      "sub1": "",
+      "sub60": "20.0%",
+      "subDerived": true,
+      "source": "derived"
     },
     "12005": {
-      "name": "「残响」-Ⅱ型",
+      "name": "残响-II型",
+      "baseType": "atk",
       "atk1": 32,
       "atk60": 475,
+      "def60": null,
       "subName": "能量自动回复",
-      "sub1": "16",
-      "sub60": "16.0%",
-      "derived": true
+      "sub1": "",
+      "sub60": "40.0%",
+      "subDerived": true,
+      "source": "derived"
     },
     "12006": {
-      "name": "「残响」-Ⅲ型",
+      "name": "残响III型",
+      "baseType": "atk",
       "atk1": 32,
       "atk60": 475,
+      "def60": null,
       "subName": "生命值",
-      "sub1": "8",
-      "sub60": "8.0%",
-      "derived": true
+      "sub1": "",
+      "sub60": "20.0%",
+      "subDerived": true,
+      "source": "derived"
     },
     "12007": {
       "name": "「湍流」-铳型",
+      "baseType": "atk",
       "atk1": 32,
       "atk60": 475,
       "subName": "攻击力",
       "sub1": "8",
-      "sub60": "20%"
+      "sub60": "20%",
+      "source": "bwiki"
     },
     "12008": {
       "name": "「湍流」-矢型",
+      "baseType": "atk",
       "atk1": 32,
       "atk60": 475,
       "subName": "冲击力",
       "sub1": "4.8",
-      "sub60": "12%"
+      "sub60": "12%",
+      "source": "bwiki"
     },
     "12009": {
       "name": "「湍流」-斧型",
+      "baseType": "atk",
       "atk1": 32,
       "atk60": 475,
       "subName": "能量自动回复",
       "sub1": "16",
-      "sub60": "40%"
+      "sub60": "40%",
+      "source": "bwiki"
     },
     "12010": {
       "name": "「电磁暴」-壹式",
+      "baseType": "atk",
       "atk1": 32,
       "atk60": 475,
       "subName": "攻击力",
       "sub1": "8",
-      "sub60": "20%"
+      "sub60": "20%",
+      "source": "bwiki"
     },
     "12011": {
       "name": "「电磁暴」-贰式",
+      "baseType": "atk",
       "atk1": 32,
       "atk60": 475,
       "subName": "异常精通",
       "sub1": "24",
-      "sub60": "60"
+      "sub60": "60",
+      "source": "bwiki"
     },
     "12012": {
       "name": "「电磁暴」-叁式",
+      "baseType": "atk",
       "atk1": 32,
       "atk60": 475,
       "subName": "穿透率",
       "sub1": "6.4",
-      "sub60": "16%"
+      "sub60": "16%",
+      "source": "bwiki"
     },
     "12013": {
       "name": "「恒等式」-本格",
+      "baseType": "atk",
       "atk1": 32,
       "atk60": 475,
       "subName": "防御力",
       "sub1": "12.8",
-      "sub60": "32%"
+      "sub60": "32%",
+      "source": "bwiki"
     },
     "12014": {
       "name": "「恒等式」-变格",
+      "baseType": "atk",
       "atk1": 32,
       "atk60": 475,
+      "def60": null,
       "subName": "防御力",
-      "sub1": "12.8",
-      "sub60": "32%"
+      "sub1": "",
+      "sub60": "32.0%",
+      "subDerived": true,
+      "source": "derived"
     },
     "12015": {
       "name": "「灰烬」-钴蓝",
+      "baseType": "atk",
       "atk1": 32,
       "atk60": 475,
       "subName": "生命值",
       "sub1": "8",
-      "sub60": "20%"
+      "sub60": "20%",
+      "source": "bwiki"
     },
     "12016": {
       "name": "「月相」-弦",
+      "baseType": "def",
       "atk1": null,
-      "atk60": null,
+      "atk60": 0,
+      "def60": 282,
       "subName": "防御力",
-      "sub1": "12.8",
-      "sub60": "12.8%",
-      "derived": true
+      "sub1": "",
+      "sub60": "32%",
+      "source": "miyoushe",
+      "entryId": 2190
     },
     "13001": {
       "name": "街头巨星",
+      "baseType": "atk",
       "atk1": 40,
       "atk60": 594,
+      "def60": null,
       "subName": "攻击力",
-      "sub1": "10",
-      "sub60": "25%"
+      "sub1": "",
+      "sub60": "25.0%",
+      "subDerived": true,
+      "source": "derived"
     },
     "13002": {
       "name": "时光切片",
+      "baseType": "atk",
       "atk1": 40,
       "atk60": 594,
+      "def60": null,
       "subName": "穿透率",
-      "sub1": "8",
-      "sub60": "20%"
+      "sub1": "",
+      "sub60": "20.0%",
+      "subDerived": true,
+      "source": "derived"
     },
     "13003": {
       "name": "雨林饕客",
+      "baseType": "atk",
       "atk1": 40,
       "atk60": 594,
       "subName": "异常精通",
       "sub1": "30",
-      "sub60": "75"
+      "sub60": "75",
+      "source": "bwiki"
     },
     "13004": {
       "name": "星徽引擎",
+      "baseType": "atk",
       "atk1": 40,
       "atk60": 594,
       "subName": "攻击力",
       "sub1": "10",
-      "sub60": "25%"
+      "sub60": "25%",
+      "source": "bwiki"
     },
     "13005": {
       "name": "人为刀俎",
+      "baseType": "atk",
       "atk1": 40,
       "atk60": 594,
       "subName": "能量自动回复",
       "sub1": "20",
-      "sub60": "50%"
+      "sub60": "50%",
+      "source": "bwiki"
     },
     "13006": {
       "name": "贵重骨核",
+      "baseType": "atk",
       "atk1": 40,
       "atk60": 594,
       "subName": "冲击力",
       "sub1": "6",
-      "sub60": "15%"
+      "sub60": "15%",
+      "source": "bwiki"
     },
     "13007": {
       "name": "正版变身器",
+      "baseType": "atk",
       "atk1": 40,
       "atk60": 594,
       "subName": "生命值",
       "sub1": "10",
-      "sub60": "25%"
+      "sub60": "25%",
+      "source": "bwiki"
     },
     "13008": {
       "name": "双生泣星",
+      "baseType": "atk",
       "atk1": 40,
       "atk60": 594,
       "subName": "攻击力",
       "sub1": "10",
-      "sub60": "25%"
+      "sub60": "25%",
+      "source": "bwiki"
     },
     "13009": {
       "name": "触电唇彩",
+      "baseType": "atk",
       "atk1": 40,
       "atk60": 594,
       "subName": "异常精通",
       "sub1": "30",
-      "sub60": "75"
+      "sub60": "75",
+      "source": "bwiki"
     },
     "13010": {
       "name": "兔能环",
+      "baseType": "atk",
       "atk1": 40,
       "atk60": 594,
       "subName": "防御力",
       "sub1": "16",
-      "sub60": "40%"
+      "sub60": "40%",
+      "source": "bwiki"
     },
     "13011": {
       "name": "春日融融",
+      "baseType": "atk",
       "atk1": 40,
       "atk60": 594,
       "subName": "攻击力",
       "sub1": "10",
-      "sub60": "25%"
+      "sub60": "25%",
+      "source": "bwiki"
     },
     "13012": {
       "name": "幻变魔方",
+      "baseType": "atk",
       "atk1": 40,
       "atk60": 594,
       "subName": "攻击力",
       "sub1": "10",
-      "sub60": "25%"
+      "sub60": "25%",
+      "source": "bwiki"
     },
     "13013": {
       "name": "鎏金花信",
+      "baseType": "atk",
       "atk1": 40,
       "atk60": 594,
       "subName": "攻击力",
       "sub1": "10",
-      "sub60": "25%"
+      "sub60": "25%",
+      "source": "bwiki"
     },
     "13014": {
       "name": "电波漫步",
+      "baseType": "atk",
       "atk1": 40,
       "atk60": 594,
       "subName": "生命值",
       "sub1": "10",
-      "sub60": "25%"
+      "sub60": "25%",
+      "source": "bwiki"
     },
     "13015": {
       "name": "强音热望",
+      "baseType": "atk",
       "atk1": 40,
       "atk60": 594,
       "subName": "暴击率",
       "sub1": "8",
-      "sub60": "20%"
+      "sub60": "20%",
+      "source": "bwiki"
     },
     "13016": {
       "name": "光影刻刀",
+      "baseType": "atk",
       "atk1": 40,
       "atk60": 594,
       "subName": "冲击力",
       "sub1": "6",
-      "sub60": "15%"
+      "sub60": "15%",
+      "source": "bwiki"
     },
     "13017": {
       "name": "喵运当头",
+      "baseType": "def",
       "atk1": null,
-      "atk60": null,
+      "atk60": 0,
+      "def60": 356,
       "subName": "防御力",
-      "sub1": "16",
-      "sub60": "16.0%",
-      "derived": true
+      "sub1": "",
+      "sub60": "40%",
+      "source": "miyoushe",
+      "entryId": 2200
     },
     "13018": {
       "name": "咚哒回声",
+      "baseType": "atk",
       "atk1": 40,
       "atk60": 594,
+      "def60": null,
       "subName": "异常精通",
-      "sub1": "30",
-      "sub60": "75"
+      "sub1": "",
+      "sub60": "75",
+      "subDerived": true,
+      "source": "derived"
     },
     "13019": {
       "name": "青漪灵鼎",
+      "baseType": "atk",
       "atk1": 40,
       "atk60": 594,
       "subName": "生命值",
       "sub1": "10",
-      "sub60": "25%"
+      "sub60": "25%",
+      "source": "bwiki"
     },
     "13020": {
       "name": "炎炙沸釜",
+      "baseType": "atk",
       "atk1": 40,
       "atk60": 594,
       "subName": "冲击力",
       "sub1": "6",
-      "sub60": "15%"
+      "sub60": "15%",
+      "source": "bwiki"
     },
     "13021": {
       "name": "血髓秘匣",
+      "baseType": "def",
       "atk1": null,
-      "atk60": null,
+      "atk60": 0,
+      "def60": 356,
       "subName": "暴击率",
-      "sub1": "8",
-      "sub60": "8.0%",
-      "derived": true
+      "sub1": "",
+      "sub60": "20%",
+      "source": "miyoushe",
+      "entryId": 2189
     },
     "13101": {
       "name": "德玛拉电池II型",
+      "baseType": "atk",
       "atk1": 42,
       "atk60": 624,
       "subName": "冲击力",
       "sub1": "6",
-      "sub60": "15%"
+      "sub60": "15%",
+      "source": "bwiki"
     },
     "13103": {
       "name": "聚宝箱",
+      "baseType": "atk",
       "atk1": 42,
       "atk60": 624,
       "subName": "能量自动回复",
       "sub1": "20",
-      "sub60": "50%"
+      "sub60": "50%",
+      "source": "bwiki"
     },
     "13106": {
       "name": "家政员",
+      "baseType": "atk",
       "atk1": 42,
       "atk60": 624,
       "subName": "攻击力",
       "sub1": "10",
-      "sub60": "25%"
+      "sub60": "25%",
+      "source": "bwiki"
     },
     "13108": {
       "name": "仿制星徽引擎",
+      "baseType": "atk",
       "atk1": 42,
       "atk60": 624,
       "subName": "攻击力",
       "sub1": "10",
-      "sub60": "25%"
+      "sub60": "25%",
+      "source": "bwiki"
     },
     "13111": {
       "name": "旋钻机-赤轴",
+      "baseType": "atk",
       "atk1": 42,
       "atk60": 624,
       "subName": "能量自动回复",
       "sub1": "20",
-      "sub60": "50%"
+      "sub60": "50%",
+      "source": "bwiki"
     },
     "13112": {
       "name": "比格气缸",
+      "baseType": "atk",
       "atk1": 42,
       "atk60": 624,
       "subName": "防御力",
       "sub1": "16",
-      "sub60": "40%"
+      "sub60": "40%",
+      "source": "bwiki"
     },
     "13113": {
       "name": "含羞恶面",
+      "baseType": "atk",
       "atk1": 42,
       "atk60": 624,
       "subName": "攻击力",
       "sub1": "10",
-      "sub60": "25%"
+      "sub60": "25%",
+      "source": "bwiki"
     },
     "13115": {
       "name": "好斗的阿炮",
+      "baseType": "atk",
       "atk1": 42,
       "atk60": 624,
       "subName": "能量自动回复",
       "sub1": "20",
-      "sub60": "50%"
+      "sub60": "50%",
+      "source": "bwiki"
     },
     "13127": {
       "name": "维序者-特化型",
+      "baseType": "atk",
       "atk1": 42,
       "atk60": 624,
       "subName": "攻击力",
       "sub1": "10",
-      "sub60": "25%"
+      "sub60": "25%",
+      "source": "bwiki"
     },
     "13128": {
       "name": "轰鸣座驾",
+      "baseType": "atk",
       "atk1": 42,
       "atk60": 624,
       "subName": "攻击力",
       "sub1": "10",
-      "sub60": "25%"
+      "sub60": "25%",
+      "source": "bwiki"
     },
     "13135": {
       "name": "裁纸刀",
+      "baseType": "atk",
       "atk1": 42,
       "atk60": 624,
       "subName": "冲击力",
       "sub1": "6",
-      "sub60": "15%"
+      "sub60": "15%",
+      "source": "bwiki"
     },
     "13142": {
       "name": "震元奇枢",
+      "baseType": "atk",
       "atk1": 42,
       "atk60": 624,
       "subName": "攻击力",
       "sub1": "10",
-      "sub60": "25%"
+      "sub60": "25%",
+      "source": "bwiki"
     },
     "13144": {
       "name": "燔火胧夜",
+      "baseType": "atk",
       "atk1": 42,
       "atk60": 624,
       "subName": "生命值",
       "sub1": "10",
-      "sub60": "25%"
+      "sub60": "25%",
+      "source": "bwiki"
     },
     "14001": {
       "name": "加农转子",
+      "baseType": "atk",
       "atk1": 40,
       "atk60": 594,
       "subName": "暴击率",
       "sub1": "8",
-      "sub60": "20%"
+      "sub60": "20%",
+      "source": "bwiki"
     },
     "14002": {
       "name": "逍遥游球",
+      "baseType": "atk",
       "atk1": 40,
       "atk60": 594,
+      "def60": null,
       "subName": "能量自动回复",
-      "sub1": "20",
-      "sub60": "50%"
+      "sub1": "",
+      "sub60": "50.0%",
+      "subDerived": true,
+      "source": "derived"
     },
     "14003": {
       "name": "左轮转子",
+      "baseType": "atk",
       "atk1": 40,
       "atk60": 594,
       "subName": "冲击力",
       "sub1": "6",
-      "sub60": "15%"
-    },
-    "14004": {
-      "name": "Item_Weapon_S_Common_04_Name",
-      "atk1": 40,
-      "atk60": 594,
-      "subName": "冲击力",
-      "sub1": "6",
-      "sub60": "6",
-      "derived": true
+      "sub60": "15%",
+      "source": "bwiki"
     },
     "14102": {
       "name": "钢铁肉垫",
+      "baseType": "atk",
       "atk1": 46,
       "atk60": 683,
       "subName": "暴击率",
       "sub1": "9.6",
-      "sub60": "24%"
+      "sub60": "24%",
+      "source": "bwiki"
     },
     "14104": {
       "name": "硫磺石",
+      "baseType": "atk",
       "atk1": 46,
       "atk60": 683,
       "subName": "攻击力",
       "sub1": "12",
-      "sub60": "30%"
+      "sub60": "30%",
+      "source": "bwiki"
     },
     "14105": {
       "name": "海妖摇篮",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
       "subName": "生命值",
       "sub1": "12",
-      "sub60": "30%"
+      "sub60": "30%",
+      "source": "bwiki"
     },
     "14107": {
       "name": "奔袭獠牙",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
       "subName": "冲击力",
       "sub1": "7.2",
-      "sub60": "18%"
+      "sub60": "18%",
+      "source": "bwiki"
     },
     "14109": {
       "name": "霰落星殿",
+      "baseType": "atk",
       "atk1": 50,
       "atk60": 743,
       "subName": "暴击率",
       "sub1": "9.6",
-      "sub60": "24%"
+      "sub60": "24%",
+      "source": "bwiki"
     },
     "14110": {
       "name": "燃狱齿轮",
+      "baseType": "atk",
       "atk1": 46,
       "atk60": 683,
       "subName": "冲击力",
       "sub1": "7.2",
-      "sub60": "18%"
+      "sub60": "18%",
+      "source": "bwiki"
     },
     "14114": {
       "name": "拘缚者",
+      "baseType": "atk",
       "atk1": 46,
       "atk60": 683,
       "subName": "冲击力",
       "sub1": "7.2",
-      "sub60": "18%"
+      "sub60": "18%",
+      "source": "bwiki"
     },
     "14116": {
       "name": "焰心桂冠",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
       "subName": "冲击力",
       "sub1": "7.2",
-      "sub60": "18%"
+      "sub60": "18%",
+      "source": "bwiki"
     },
     "14117": {
       "name": "灼心摇壶",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
       "subName": "攻击力",
       "sub1": "12",
-      "sub60": "30%"
+      "sub60": "30%",
+      "source": "bwiki"
     },
     "14118": {
       "name": "嵌合编译器",
+      "baseType": "atk",
       "atk1": 46,
       "atk60": 683,
       "subName": "穿透率",
       "sub1": "9.6",
-      "sub60": "24%"
+      "sub60": "24%",
+      "source": "bwiki"
     },
     "14119": {
       "name": "深海访客",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
       "subName": "暴击率",
       "sub1": "9.6",
-      "sub60": "24%"
+      "sub60": "24%",
+      "source": "bwiki"
     },
     "14120": {
       "name": "残心青囊",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
+      "def60": null,
       "subName": "暴击伤害",
-      "sub1": "19.2",
-      "sub60": "48%"
+      "sub1": "",
+      "sub60": "48.0%",
+      "subDerived": true,
+      "source": "derived"
     },
     "14121": {
       "name": "啜泣摇篮",
+      "baseType": "atk",
       "atk1": 46,
       "atk60": 683,
       "subName": "穿透率",
       "sub1": "9.6",
-      "sub60": "24%"
+      "sub60": "24%",
+      "source": "bwiki"
     },
     "14122": {
       "name": "时流贤者",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
       "subName": "攻击力",
       "sub1": "12",
-      "sub60": "30%"
+      "sub60": "30%",
+      "source": "bwiki"
     },
     "14124": {
       "name": "防暴者VI型",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
       "subName": "暴击伤害",
       "sub1": "19.2",
-      "sub60": "48%"
+      "sub60": "48%",
+      "source": "bwiki"
     },
     "14125": {
       "name": "玉壶青冰",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
       "subName": "冲击力",
       "sub1": "7.2",
-      "sub60": "18%"
+      "sub60": "18%",
+      "source": "bwiki"
     },
     "14126": {
       "name": "淬锋钳刺",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
       "subName": "异常精通",
       "sub1": "36",
-      "sub60": "90"
+      "sub60": "90",
+      "source": "bwiki"
     },
     "14129": {
       "name": "千面日陨",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
       "subName": "暴击率",
       "sub1": "9.6",
-      "sub60": "24%"
+      "sub60": "24%",
+      "source": "bwiki"
     },
     "14130": {
       "name": "嚣枪喧焰",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
+      "def60": null,
       "subName": "能量自动回复",
-      "sub1": "24",
-      "sub60": "60%"
+      "sub1": "",
+      "sub60": "60.0%",
+      "subDerived": true,
+      "source": "derived"
     },
     "14131": {
       "name": "玲珑妆匣",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
+      "def60": null,
       "subName": "攻击力",
-      "sub1": "12",
-      "sub60": "30%"
+      "sub1": "",
+      "sub60": "30.0%",
+      "subDerived": true,
+      "source": "derived"
     },
     "14132": {
       "name": "心弦夜响",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
       "subName": "暴击率",
       "sub1": "9.6",
-      "sub60": "24%"
+      "sub60": "24%",
+      "source": "bwiki"
     },
     "14133": {
       "name": "飞鸟星梦",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
       "subName": "异常精通",
       "sub1": "36",
-      "sub60": "90"
+      "sub60": "90",
+      "source": "bwiki"
     },
     "14134": {
       "name": "半糖雪兔",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
+      "def60": null,
       "subName": "生命值",
-      "sub1": "12",
-      "sub60": "30%"
+      "sub1": "",
+      "sub60": "30.0%",
+      "subDerived": true,
+      "source": "derived"
     },
     "14136": {
       "name": "索魂影眸",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
       "subName": "暴击率",
       "sub1": "9.6",
-      "sub60": "24%"
+      "sub60": "24%",
+      "source": "bwiki"
     },
     "14137": {
       "name": "青溟笼舍",
+      "baseType": "atk",
       "atk1": 50,
       "atk60": 743,
       "subName": "生命值",
       "sub1": "12",
-      "sub60": "30%"
+      "sub60": "30%",
+      "source": "bwiki"
     },
     "14138": {
       "name": "牺牲洁纯",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
+      "def60": null,
       "subName": "暴击伤害",
-      "sub1": "19.2",
-      "sub60": "48%"
+      "sub1": "",
+      "sub60": "48.0%",
+      "subDerived": true,
+      "source": "derived"
     },
     "14139": {
       "name": "福虓炉炉",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
       "subName": "攻击力",
       "sub1": "12",
-      "sub60": "30%"
+      "sub60": "30%",
+      "source": "bwiki"
     },
     "14140": {
       "name": "十方锻星",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
       "subName": "攻击力",
       "sub1": "12",
-      "sub60": "30%"
+      "sub60": "30%",
+      "source": "bwiki"
     },
     "14141": {
       "name": "狸法七变化",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
       "subName": "能量自动回复",
       "sub1": "24",
-      "sub60": "60%"
+      "sub60": "60%",
+      "source": "bwiki"
     },
     "14143": {
       "name": "云霓孤光",
+      "baseType": "atk",
       "atk1": 50,
       "atk60": 743,
+      "def60": null,
       "subName": "暴击伤害",
-      "sub1": "19.2",
-      "sub60": "48%"
+      "sub1": "",
+      "sub60": "48.0%",
+      "subDerived": true,
+      "source": "derived"
     },
     "14145": {
       "name": "铸梦炉歌",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
+      "def60": null,
       "subName": "生命值",
-      "sub1": "12",
-      "sub60": "30%"
+      "sub1": "",
+      "sub60": "30.0%",
+      "subDerived": true,
+      "source": "derived"
     },
     "14146": {
       "name": "机巧心种",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
       "subName": "暴击率",
       "sub1": "9.6",
-      "sub60": "24%"
+      "sub60": "24%",
+      "source": "bwiki"
     },
     "14147": {
       "name": "怒目金刚",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
+      "def60": null,
       "subName": "生命值",
-      "sub1": "12",
-      "sub60": "30%"
+      "sub1": "",
+      "sub60": "30.0%",
+      "subDerived": true,
+      "source": "derived"
     },
     "14148": {
       "name": "昨夜来电",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
+      "def60": null,
       "subName": "暴击率",
-      "sub1": "9.6",
-      "sub60": "24%"
+      "sub1": "",
+      "sub60": "24.0%",
+      "subDerived": true,
+      "source": "derived"
     },
     "14149": {
       "name": "思络成歌",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
+      "def60": null,
       "subName": "能量自动回复",
-      "sub1": "24",
-      "sub60": "60%"
+      "sub1": "",
+      "sub60": "60.0%",
+      "subDerived": true,
+      "source": "derived"
     },
     "14150": {
       "name": "壳中之灵",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
+      "def60": null,
       "subName": "异常掌控",
-      "sub1": "12",
-      "sub60": "30"
+      "sub1": "",
+      "sub60": "30.0%",
+      "subDerived": true,
+      "source": "derived"
     },
     "14151": {
       "name": "霓虹妄想",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
+      "def60": null,
       "subName": "异常掌控",
-      "sub1": "12",
-      "sub60": "30"
+      "sub1": "",
+      "sub60": "30.0%",
+      "subDerived": true,
+      "source": "derived"
     },
     "14152": {
       "name": "鳞齿寻踪",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
+      "def60": null,
       "subName": "能量自动回复",
-      "sub1": "24",
-      "sub60": "60%"
+      "sub1": "",
+      "sub60": "60.0%",
+      "subDerived": true,
+      "source": "derived"
     },
     "14153": {
       "name": "辉骑面铠",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
+      "def60": null,
       "subName": "生命值",
-      "sub1": "12",
-      "sub60": "30%"
+      "sub1": "",
+      "sub60": "30.0%",
+      "subDerived": true,
+      "source": "derived"
     },
     "14154": {
       "name": "朔月裁霜",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
+      "def60": null,
       "subName": "异常掌控",
-      "sub1": "12",
-      "sub60": "30"
+      "sub1": "",
+      "sub60": "30.0%",
+      "subDerived": true,
+      "source": "derived"
     },
     "14155": {
       "name": "日冕遗蜕",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
+      "def60": null,
       "subName": "攻击力",
-      "sub1": "12",
-      "sub60": "30%"
+      "sub1": "",
+      "sub60": "30.0%",
+      "subDerived": true,
+      "source": "derived"
     },
     "14156": {
       "name": "琳琅鎏心",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
+      "def60": null,
       "subName": "能量自动回复",
-      "sub1": "24",
-      "sub60": "60%"
+      "sub1": "",
+      "sub60": "60.0%",
+      "subDerived": true,
+      "source": "derived"
     },
     "14157": {
       "name": "首席跟班",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
+      "def60": null,
       "subName": "暴击率",
-      "sub1": "9.6",
-      "sub60": "24%"
+      "sub1": "",
+      "sub60": "24.0%",
+      "subDerived": true,
+      "source": "derived"
     },
     "14158": {
       "name": "空羽复归之诗",
+      "baseType": "atk",
       "atk1": 50,
       "atk60": 743,
+      "def60": null,
       "subName": "攻击力",
-      "sub1": "14.4",
-      "sub60": "36%"
+      "sub1": "",
+      "sub60": "36.0%",
+      "subDerived": true,
+      "source": "derived"
     },
     "14159": {
       "name": "骁骑礼赞",
+      "baseType": "atk",
       "atk1": 48,
       "atk60": 713,
+      "def60": null,
       "subName": "暴击伤害",
-      "sub1": "19.2",
-      "sub60": "48%"
+      "sub1": "",
+      "sub60": "48.0%",
+      "subDerived": true,
+      "source": "derived"
     },
     "14161": {
       "name": "猩红渴望",
+      "baseType": "def",
       "atk1": null,
-      "atk60": null,
+      "atk60": 0,
+      "def60": 431,
       "subName": "防御力",
-      "sub1": "19.2",
-      "sub60": "19.2%",
-      "derived": true
+      "sub1": "",
+      "sub60": "48%",
+      "source": "miyoushe",
+      "entryId": 2188
     },
     "14162": {
-      "name": "...",
-      "atk1": 48,
+      "name": "绯月银棺",
+      "baseType": "atk",
+      "atk1": null,
       "atk60": 713,
+      "def60": null,
       "subName": "能量自动回复",
-      "sub1": "24",
-      "sub60": "24.0%",
-      "derived": true
+      "sub1": "",
+      "sub60": "60%",
+      "source": "miyoushe",
+      "entryId": 2234
     }
-  },
-  "derivedCount": 9
+  }
 }

@@ -678,11 +678,18 @@ async function panelFromRaw(item, roleName, role) {
     }
   }
 
-  /* 音擎：满级基础攻击 + 副词条 */
+  /* 音擎按 baseType 分流：
+     atk 型 → 攻击 += atk60
+     def 型 → 攻击 += 0，防御 += def60（猩红渴望/血髓秘匣/喵运当头/「月相」-弦）
+     副词条两种情况都正常计入。 */
   const wqId = String(item.Weapon?.Id || '')
   const wq = weaponStat?.weapons?.[wqId] || null
   if (wq) {
-    if (wq.atk60) acc.atk += Number(wq.atk60) || 0
+    if (wq.baseType === 'def') {
+      acc.def += Number(wq.def60) || 0
+    } else {
+      acc.atk += Number(wq.atk60) || 0
+    }
     if (wq.sub60 != null) {
       const subPid = SUB_NAME_TO_PID[wq.subName]
       if (subPid) addProp(subPid, Number(String(wq.sub60).replace('%', '')) || 0, false)
