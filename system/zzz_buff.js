@@ -42,7 +42,12 @@ function loadTable() {
 const num = v => (Number.isFinite(Number(v)) ? Number(v) : 0)
 
 /** 套装基名归一：运行时的「基名+件数」（如 极地重金属2）与表里的基名（极地重金属）对上 */
-const setBase = name => String(name || '').replace(/\d+$/, '')
+/* 套装名归一：工坊给的是「折枝剑歌」，实测某些通道带后缀「折枝剑歌[1]」或「极地重金属4」，
+   两种都要剥掉，否则套装增益整条匹配不到（艾莲曾因此冰伤区少了 10%~20%）。 */
+const setBase = name => String(name || '')
+  .replace(/\s*\[\d+\]\s*$/, '')
+  .replace(/\d+$/, '')
+  .trim()
 
 /** 角色名归一：接口给「席德」，表键是「「席德」」，直接按原串查会漏 */
 const cleanName = name => String(name || '').replace(/[\s「」·・\-]/g, '')

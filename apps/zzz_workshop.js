@@ -563,6 +563,11 @@ async function buildRoleRank(arg, opts = {}) {
       if (!dmg?.ok) return
       row.damage = Number(dmg.top?.expect) || 0
       row.damageSkill = dmg.top?.name || ''
+      /* 口径留痕：倍率 + 各乘区，便于和游戏内数值对账
+         （工坊榜单只给总分，出现偏差时能直接定位是哪一区） */
+      row.damageCrit = Number(dmg.top?.crit) || 0
+      row.damageRate = Number(dmg.top?.rate) || 0
+      row.damageAreas = dmg.areasTxt || ''
     } catch (_) {
       /* 单个玩家失败不影响榜单 */
     }
@@ -634,18 +639,25 @@ async function panelFromRaw(item, roleName, role) {
   const charHp = Number(p.HpMax || 0) + Number(lv6.HpMax || 0) * scale
   const charDef = Number(p.Defence || 0) + Number(lv6.Defence || 0) * scale
 
+  /* 基础值优先读 zzz_char_stat.json 的 base —— 它已与工坊 properties.base 对齐过，
+     含突破（暴击 20% / 暴伤 50% / 冲击力等），不再从 PartnerId2Data 现拼。
+     PartnerId2Data 只作为兜底，且注意它的 ExtraLevel 编码是 ×100
+     （艾莲暴击额外 1440 = 14.4%），而 base.crit 已经把这个算进去了。 */
+  const charStat = await loadCharStat()
+  const statEntry = statBase(charStat, p.name) || null
+  const sb = statEntry?.base || null
   const acc = {
-    hp: charHp,
-    atk: charAtk,
-    def: charDef,
-    breakstun: (Number(p.BreakStun) || 93) + extraOf(12201),
-    crit: ((Number(p.Crit) || 500) + extraOf(20101)) / 100,
-    critdam: ((Number(p.CritDamage) || 5000) + extraOf(21101)) / 100,
-    penratio: ((Number(p.PenRate) || 0) + extraOf(23201)) / 100,
+    hp: sb?.hp ?? charHp,
+    atk: sb?.atk ?? charAtk,
+    def: sb?.def ?? charDef,
+    breakstun: sb?.impact ?? (Number(p.BreakStun) || 93),
+    crit: sb?.crit ?? ((Number(p.Crit) || 500) / 100),
+    critdam: sb?.critDmg ?? ((Number(p.CritDamage) || 5000) / 100),
+    penratio: sb?.penRatio ?? ((Number(p.PenRate) || 0) / 100),
     penvalue: extraOf(23203),
-    mastery: (Number(p.ElementMystery) || 0) + extraOf(31201),
-    abnormal: (Number(p.ElementAbnormalPower) || 0) + extraOf(31401),
-    recharge: ((Number(p.SpRecover) || 120) + extraOf(30501)) / 100,
+    mastery: sb?.anomalyProficiency ?? (Number(p.ElementMystery) || 0),
+    abnormal: sb?.anomalyMastery ?? (Number(p.ElementAbnormalPower) || 0),
+    recharge: sb?.energyRegen ?? ((Number(p.SpRecover) || 120) / 100),
     dmgbonus: 0,
   }
   /* 百分比词条单独累计，最后乘到基础值上（只在生命/攻击/防御上生效） */
@@ -713,12 +725,15 @@ async function panelFromRaw(item, roleName, role) {
     penratio: acc.penratio,
     penvalue: acc.penvalue,
     mastery: acc.mastery,
+    abnormal: acc.abnormal,
     recharge: acc.recharge,
     dmgbonus: acc.dmgbonus,
   }
 
   return {
     name_mi18n: roleName || p.name || '',
+    element_type: Number(p.ElementType) || 0,
+    profession: Number(p.WeaponType) || 0,
     level: Number(role?.level) || 60,
     rank: Number(item.TalentLevel) || 0,
     rarity: p.Rarity || 'S',
@@ -730,6 +745,7 @@ async function panelFromRaw(item, roleName, role) {
     })),
     weapon: {
       id: Number(item.Weapon?.Id) || 0,
+      name: wq?.name || '',   /* buildBuffContext 靠名字匹配音擎增益 */
       level: Number(item.Weapon?.Level) || 60,
       star: Number(item.Weapon?.UpgradeLevel) || 1,
       rarity: wq?.rarity || 'S',
@@ -747,6 +763,7 @@ async function panelFromRaw(item, roleName, role) {
       { property_id: 6, base: `${final.critdam.toFixed(1)}%`, final: `${final.critdam.toFixed(1)}%` },
       { property_id: 9, base: `${final.penratio.toFixed(1)}%`, final: `${final.penratio.toFixed(1)}%` },
       { property_id: 232, base: String(final.penvalue), final: String(final.penvalue) },
+      { property_id: 7, base: String(final.abnormal), final: String(final.abnormal) },
       { property_id: 8, base: String(final.mastery), final: String(final.mastery) },
       { property_id: 11, base: String(final.recharge.toFixed(2)), final: String(final.recharge.toFixed(2)) },
       { property_id: 317, base: `${final.dmgbonus.toFixed(1)}%`, final: `${final.dmgbonus.toFixed(1)}%` },
@@ -793,6 +810,10 @@ async function panelFromFinal(item, roleName) {
 
   return {
     name_mi18n: roleName || item.name || '',
+    /* element_type / profession：buildBuffContext 靠 element 过滤带属性的增伤
+       （如深海访客的冰伤、霰落星殿的冰伤），缺了会导致这些增益全部失效。 */
+    element_type: Number(item.element_type || item.sub_element_type) || 0,
+    profession: Number(item.avatar_profession) || 0,
     level: Number(item.level) || 60,
     rank: Number(item.rank) || 0,
     rarity: item.rarity || 'S',
@@ -804,6 +825,9 @@ async function panelFromFinal(item, roleName) {
     })),
     weapon: {
       id: Number(item.weapon?.id) || 0,
+      /* name 必须带上：buildBuffContext 靠它匹配 zzz_buff.json 里的音擎增益，
+         缺了会导致音擎被动（如霰落星殿的暴伤/冰伤）完全失效。 */
+      name: item.weapon?.name || '',
       level: Number(item.weapon?.level) || 60,
       star: Number(item.weapon?.star) || 1,
       rarity: item.weapon?.rarity || 'S',

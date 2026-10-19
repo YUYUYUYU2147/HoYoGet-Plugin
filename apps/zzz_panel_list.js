@@ -651,11 +651,20 @@ export function calcDamage(bp, level, avatar, charName) {
     let baseTotal = base
     for (const op of entry.ops || []) {
       if (op.op === 'add') {
+        /* ops.add 有两种语义，必须分辨，不能一刀切：
+           ① 累计型（19 处）：本段 rates 已包含前置段，如星见雅
+              AX3(50.616) ⊇ AX2(20.296) ⊇ AX1(10.757)。再加就重复。
+           ② 拼接型（6 处）：本段 rates 只是自身，如简 AX(3.818) + AX0(7.118)。
+              必须把子段加进来。
+           判据：rates 不小于子段 rates → 累计型（跳过叠加）；否则拼接型（叠加）。 */
         const sub = one(op.key, depth + 1)
         if (!sub) continue
-        expect += sub.expect
-        crit += sub.crit
-        baseTotal += sub.baseTotal
+        const isCumulative = rate >= (sub.rate || 0)
+        if (!isCumulative) {
+          expect += sub.expect
+          crit += sub.crit
+          baseTotal += sub.baseTotal
+        }
         adds.push(op.key)
         parts.push(...sub.parts)
       } else if (op.op === 'x' && Number.isFinite(op.n)) {
