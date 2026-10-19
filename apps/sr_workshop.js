@@ -44,20 +44,82 @@ const CACHE_TTL = 6 * 3600 * 1000
 // 所以线上看到的基本都是 #星铁；但 * 开头本身就是星铁标记（不带游戏名），
 // 单测或直接调用处理函数时拿到的是原文，两种形态都必须认。
 const SR_PREFIX = '(?:米哈游)?(?:星铁|星轨|穹轨|星穹|崩铁|星穹铁道|崩坏星穹铁道|铁道|sr|hsr)'
-const SR_ARG = String.raw`(?:\s+(.+))?$`
-const srReg = body =>
-  new RegExp(
-    `^(?:[#%]*\\s*${SR_PREFIX}|[#%]*[\*＊]\\s*(?:${SR_PREFIX})?)${body}${SR_ARG}`,
-    'i',
-  )
 
-const RE_SR_RANK = srReg(String.raw`(?:遗器)?(?:练度)?排名`)
+/**
+ * 星铁指令的三种写法，都能命中同一条规则：
+ *   ① *遗器排名 流萤            —— `*` 是星铁标记，后面可省游戏名，也可直接跟角色名
+ *   ② *流萤遗器排名 / *流萤 遗器排名
+ *   ③ 星铁遗器排名 流萤 / 崩铁伤害排名 流萤 / sr配队 流萤
+ *
+ * ①③ 由框架改写后最终都是「#星铁…」；②只有 `*` 能表达（`星铁流萤遗器排名` 不像人话）。
+ * 参数捕获 groups 依次为：starRole（`*` 后角色名，可能为空）、starRest（`*` 后剩余）、tail（游戏名后的参数）。
+ */
+const SR_ARG = String.raw`(?:\s+(.+))?`
+/* 两种前缀形态，各自独立成完整正则的分支（不用外层 (?:…|…) 包，避免拼接时括号对不上） */
+const srReg = (body, { avoid = '' } = {}) => {
+  const head = String.raw`[#%]*\s*` + SR_PREFIX + String.raw`\s*`
+  const star = String.raw`[#%]*[\*＊]\s*(?:` + SR_PREFIX + String.raw`\s*)?`
+  /* avoid：`*` 分支的角色名里不能出现这些词，否则「*流萤伤害排名」会被遗器规则
+     当成角色名「流萤伤害」接走（`*` 分支允许任意角色名，必须显式排除）。
+     同时排除别的游戏标记：`*绝区零配装` 之类是绝区零的写法，不能算星铁。 */
+  const blocked = ['绝区零', 'zzz', '原神', '崩坏3', '崩坏三', avoid].filter(Boolean).join('|')
+  const lead = String.raw`(?:(?!` + blocked + String.raw`).)*?`
+  return new RegExp(`^(?:${head}(?:${body})${SR_ARG}|${star}(${lead})(?:${body})${SR_ARG})$`, 'i')
+}
+
+const RE_SR_RANK = srReg(String.raw`(?:遗器)?(?:练度)?排名`, { avoid: '伤害' })
 const RE_SR_DMG = srReg(String.raw`伤害(?:排名|排行)`)
 const RE_SR_GRAD = srReg(String.raw`(?:角色)?配装(?:统计)?`)
 const RE_SR_CARD = srReg(String.raw`(?:抽卡|欧非)(?:榜|排行)?`)
 const RE_SR_TEAM = srReg(String.raw`(?:队伍)?(?:体系)?(?:推荐|配队)`)
 const RE_SR_DETAIL = srReg(String.raw`(?:查)?练度`)
 const RE_SR_HELP = srReg(String.raw`榜单帮助`)
+
+/**
+ * 从命中结果里取参数：`*` 分支的角色名在 group 1、参数在 group 2，
+ * 游戏名分支参数在 group 1。统一成「角色名 + 其余参数」。
+ */
+function srArgs(reg, msg) {
+  const hit = reg?.exec(String(msg || ''))
+  if (!hit) return ''
+  /* 两个分支共用 3 个捕获组：
+       游戏名分支 → 1 = 参数、2/3 = undefined
+       `*` 分支  → 1 = undefined、2 = 角色名、3 = 参数 */
+  if (hit[2] !== undefined) {
+    return [String(hit[2] || '').trim(), String(hit[3] || '').trim()].filter(Boolean).join(' ')
+  }
+  return String(hit[1] || '').trim()
+}
+
+/**
+ * 练度指令的参数顺序：`*练度 <UID> <角色>` 与 `*流萤练度 <UID>` 两种写法。
+ * 后者经 srArgs 拼出来是「角色名 UID」，这里把 UID 提前，统一成 buildSrDetail 认识的形式。
+ */
+/**
+ * 角色名前置写法（`*流萤配装` / `*流萤配队` / `*流萤伤害排名`）会把角色名拼到参数最前，
+ * 若用户又写了一遍（`*流萤配队 流萤`），去掉重复的那个。
+ */
+function dedupeRole(args, role) {
+  const tokens = String(args || '').trim().split(/\s+/).filter(Boolean)
+  if (!role) return tokens.join(' ')
+  const seen = new Set()
+  const out = []
+  for (const token of tokens) {
+    if (token === role) {
+      if (seen.has('role')) continue
+      seen.add('role')
+    }
+    out.push(token)
+  }
+  return out.join(' ')
+}
+
+function orderDetailArgs(args) {
+  const tokens = String(args || '').trim().split(/\s+/).filter(Boolean)
+  const uid = tokens.find(t => /^\d{6,}$/.test(t))
+  const name = tokens.find(t => !/^\d{6,}$/.test(t))
+  return [uid, name].filter(Boolean).join(' ')
+}
 
 /** 消息是否以星铁前缀开头（accept 用，只做粗筛，最终由具体规则判定） */
 const SR_PREFIX_RE = new RegExp(`^(?:[#%]*\\s*${SR_PREFIX}|[#%]*[\\*＊])`, 'i')
@@ -875,6 +937,7 @@ function teamText(view) {
 
 const HELP_TEXT = [
   '星穹铁道工坊榜单（前缀 * 或 星铁 都可，如 *遗器排名 流萤）',
+  '角色名放前面也可以：*流萤遗器排名 / *流萤伤害排名 / *流萤配队',
   '*遗器排名 <角色名> [80|70|60] [星魂0-6] [数量]   遗器练度排行',
   '*伤害排名 <角色名> [80|70|60] [星魂0-6] [数量]   伤害排行（口径由工坊给出）',
   '*配装 <角色名> [70级]                           全服光锥与遗器套装使用率',
@@ -958,7 +1021,7 @@ export class sr_workshop extends plugin {
 
   async srRank(e) {
     try {
-      const view = await buildSrRank(RE_SR_RANK.exec(e.msg)?.[1] || '', 'relic')
+      const view = await buildSrRank(srArgs(RE_SR_RANK, e.msg), 'relic')
       return await sendView(e, view, 'rank', rankText)
     } catch (err) {
       logError('srRank', err)
@@ -968,7 +1031,7 @@ export class sr_workshop extends plugin {
 
   async srDamageRank(e) {
     try {
-      const view = await buildSrRank(RE_SR_DMG.exec(e.msg)?.[1] || '', 'damage')
+      const view = await buildSrRank(srArgs(RE_SR_DMG, e.msg), 'damage')
       return await sendView(e, view, 'rank', rankText)
     } catch (err) {
       logError('srDamageRank', err)
@@ -978,7 +1041,7 @@ export class sr_workshop extends plugin {
 
   async srGradStat(e) {
     try {
-      const view = await buildSrGradStat(RE_SR_GRAD.exec(e.msg)?.[1] || '')
+      const view = await buildSrGradStat(srArgs(RE_SR_GRAD, e.msg))
       return await sendView(e, view, 'grad', gradText)
     } catch (err) {
       logError('srGradStat', err)
@@ -988,7 +1051,7 @@ export class sr_workshop extends plugin {
 
   async srCardRank(e) {
     try {
-      const view = await buildSrCardRank(RE_SR_CARD.exec(e.msg)?.[1] || '')
+      const view = await buildSrCardRank(srArgs(RE_SR_CARD, e.msg))
       return await sendView(e, view, 'card', cardText)
     } catch (err) {
       logError('srCardRank', err)
@@ -998,7 +1061,7 @@ export class sr_workshop extends plugin {
 
   async srTeam(e) {
     try {
-      const view = await buildSrTeam(RE_SR_TEAM.exec(e.msg)?.[1] || '')
+      const view = await buildSrTeam(srArgs(RE_SR_TEAM, e.msg))
       return await sendView(e, view, 'team', teamText)
     } catch (err) {
       logError('srTeam', err)
@@ -1008,7 +1071,7 @@ export class sr_workshop extends plugin {
 
   async srDetail(e) {
     try {
-      const view = await buildSrDetail(RE_SR_DETAIL.exec(e.msg)?.[1] || '')
+      const view = await buildSrDetail(orderDetailArgs(srArgs(RE_SR_DETAIL, e.msg)))
       return await sendView(e, view, 'detail', detailText)
     } catch (err) {
       logError('srDetail', err)
