@@ -343,13 +343,11 @@ body {
   color: #ffd27a;
 }
 .ov-unit { font-size: 11px; color: #7fa2bd; }
-/* 圣遗物评级徽章：九档配色（与 miao 的 D/C/B/A/S/SS/SSS/ACE/MAX 一致） */
 /*
- * 评级徽章：圆角方块 + 右下角月牙点缀。
- * 上一版是盾形，用户反馈不好看；月牙既贴合原神「月」主题，也让档位色更醒目。
- *   · 实色径向渐变（每档一对明暗色）
- *   · 1px 亮色内描边 + 底部内阴影，做出金属片感
- *   · 右下角一枚半透明月牙作装饰，不压文字
+ * 圣遗物评级徽章：水滴造型。
+ * 上方饱满、下方收尖，配斜向玻璃高光；水滴在深色卡片上辨识度高，
+ * 也不会像盾形/雪花那样在小尺寸下把字母挤糊。
+ * 形状用 clip-path: path() 直接画贝塞尔，避免多层遮罩的锯齿。
  */
 .badge-mark {
   position: relative;
@@ -358,91 +356,79 @@ body {
   justify-content: center;
   flex: 0 0 auto;
   width: 50px;
-  height: 50px;
+  height: 54px;
   margin-left: auto;
-  border-radius: 14px;
-  overflow: hidden;
+  padding-top: 5px;
+  box-sizing: border-box;
   font-size: 13px;
   font-weight: 900;
   letter-spacing: .4px;
   line-height: 1;
   text-transform: uppercase;
   color: #fff;
-  background: radial-gradient(circle at 30% 24%, #8697ab 0%, #56697f 55%, #374554 100%);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, .45),
-    inset 0 -8px 12px rgba(0, 0, 0, .35),
-    0 2px 5px rgba(0, 0, 0, .45);
+  /* 底色 + 斜向玻璃反光 */
+  background:
+    linear-gradient(158deg, rgba(255, 255, 255, .26), transparent 44%),
+    radial-gradient(circle at 34% 30%, #8697ab 0%, #56697f 56%, #374554 100%);
+  clip-path: path('M 25 0 C 36 11 49 23 49 34 C 49 45 38 52 25 52 C 12 52 1 45 1 34 C 1 23 14 11 25 0 Z');
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .55));
 }
-/* 右下角月牙：一个圆用 mask 挖掉一侧，只留弯钩 */
+/* 左上高光点：模拟水滴的镜面反射 */
 .badge-mark::before {
   content: '';
   position: absolute;
-  right: -9px;
-  bottom: -9px;
-  width: 34px;
-  height: 34px;
+  left: 12px;
+  top: 15px;
+  width: 8px;
+  height: 18px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, .18);
-  -webkit-mask: radial-gradient(circle at 72% 28%, transparent 50%, #000 51%);
-          mask: radial-gradient(circle at 72% 28%, transparent 50%, #000 51%);
-  pointer-events: none;
-}
-/* 左上角一小撮星点，呼应星穹 */
-.badge-mark::after {
-  content: '';
-  position: absolute;
-  left: 7px;
-  top: 6px;
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, .55);
-  box-shadow: 7px 5px 0 -1px rgba(255, 255, 255, .38), 2px 10px 0 -1px rgba(255, 255, 255, .30);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .72), rgba(255, 255, 255, 0));
+  transform: rotate(-11deg);
   pointer-events: none;
 }
 .badge-mark .bm-text {
   position: relative;
   z-index: 2;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, .85);
+  margin-top: 4px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .9);
 }
 /* 单件卡片右上角 */
 .badge-mark.sm {
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 44px;
   margin-left: 0;
-  border-radius: 12px;
-  font-size: 11px;
+  padding-top: 4px;
+  font-size: 10px;
 }
-.badge-mark.sm::before { width: 28px; height: 28px; right: -8px; bottom: -8px; }
+.badge-mark.sm::before {
+  left: 9px;
+  top: 12px;
+  width: 7px;
+  height: 14px;
+}
+.badge-mark.sm .bm-text { margin-top: 3px; }
 
-/* ── 九档配色：灰 → 蓝 → 靛 → 紫 → 青 → 金 → 赤金，逐档升温 ── */
-.badge-mark.t0 { background: radial-gradient(circle at 30% 24%, #8697ab 0%, #56697f 55%, #374554 100%); }
-.badge-mark.t1 { background: radial-gradient(circle at 30% 24%, #a2b6cb 0%, #68809b 55%, #42556c 100%); }
-.badge-mark.t2 { background: radial-gradient(circle at 30% 24%, #6fc0fa 0%, #3688d4 55%, #1e568d 100%); }
-.badge-mark.t3 { background: radial-gradient(circle at 30% 24%, #8b9efc 0%, #5066dd 55%, #2e3a98 100%); }
-.badge-mark.t4 { background: radial-gradient(circle at 30% 24%, #c493fa 0%, #8b52dd 55%, #532a8f 100%); }
-.badge-mark.t5 { background: radial-gradient(circle at 30% 24%, #6ce8d5 0%, #27ac9c 55%, #126b63 100%); }
-.badge-mark.t6 { background: radial-gradient(circle at 30% 24%, #ffdd75 0%, #e8a526 55%, #8f5f08 100%); color: #402800; }
+/* ── 九档配色：灰 → 蓝 → 靛 → 紫 → 青 → 金 → 赤金 ── */
+.badge-mark.t0 { background: linear-gradient(158deg, rgba(255,255,255,.24), transparent 44%), radial-gradient(circle at 34% 30%, #8697ab 0%, #56697f 56%, #374554 100%); }
+.badge-mark.t1 { background: linear-gradient(158deg, rgba(255,255,255,.26), transparent 44%), radial-gradient(circle at 34% 30%, #a2b6cb 0%, #68809b 56%, #42556c 100%); }
+.badge-mark.t2 { background: linear-gradient(158deg, rgba(255,255,255,.28), transparent 44%), radial-gradient(circle at 34% 30%, #6fc0fa 0%, #3688d4 56%, #1e568d 100%); }
+.badge-mark.t3 { background: linear-gradient(158deg, rgba(255,255,255,.28), transparent 44%), radial-gradient(circle at 34% 30%, #8b9efc 0%, #5066dd 56%, #2e3a98 100%); }
+.badge-mark.t4 { background: linear-gradient(158deg, rgba(255,255,255,.28), transparent 44%), radial-gradient(circle at 34% 30%, #c493fa 0%, #8b52dd 56%, #532a8f 100%); }
+.badge-mark.t5 { background: linear-gradient(158deg, rgba(255,255,255,.30), transparent 44%), radial-gradient(circle at 34% 30%, #6ce8d5 0%, #27ac9c 56%, #126b63 100%); }
+.badge-mark.t6 { background: linear-gradient(158deg, rgba(255,255,255,.36), transparent 44%), radial-gradient(circle at 34% 30%, #ffdd75 0%, #e8a526 56%, #8f5f08 100%); color: #402800; }
 .badge-mark.t7 {
-  background: radial-gradient(circle at 30% 24%, #fff0b0 0%, #f7bc33 55%, #b07406 100%);
+  background: linear-gradient(158deg, rgba(255,255,255,.42), transparent 44%), radial-gradient(circle at 34% 30%, #fff0b0 0%, #f7bc33 56%, #b07406 100%);
   color: #402800;
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, .65),
-    inset 0 -8px 12px rgba(120, 70, 0, .35),
-    0 0 12px rgba(247, 188, 51, .55);
+  filter: drop-shadow(0 2px 5px rgba(247, 188, 51, .60));
 }
 .badge-mark.t8 {
-  background: radial-gradient(circle at 30% 24%, #ffd0a8 0%, #f06a3c 55%, #a82b14 100%);
+  background: linear-gradient(158deg, rgba(255,255,255,.40), transparent 44%), radial-gradient(circle at 34% 30%, #ffd0a8 0%, #f06a3c 56%, #a82b14 100%);
   color: #3d1200;
-  box-shadow:
-    inset 0 0 0 1.5px rgba(255, 235, 190, .75),
-    inset 0 -8px 12px rgba(120, 20, 0, .35),
-    0 0 13px rgba(240, 106, 60, .6);
+  filter: drop-shadow(0 2px 5px rgba(240, 106, 60, .65));
 }
 /* 亮底档位文字转深色 */
 .badge-mark.t6 .bm-text, .badge-mark.t7 .bm-text, .badge-mark.t8 .bm-text {
-  text-shadow: 0 1px 1px rgba(255, 255, 255, .45);
+  text-shadow: 0 1px 1px rgba(255, 255, 255, .48);
 }
 
 .ov-valid { margin-top: 3px; font-size: 11px; color: #9fb8cc; }
