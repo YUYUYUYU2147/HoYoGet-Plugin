@@ -305,9 +305,9 @@ export class zzz_panel_rank extends plugin {
 
   /** 切换排名范围：本群 ↔ 全部。群里只有一个“当前范围”，切一次后续都按新范围出图 */
   async toggleRankScope(e) {
-    const current = scopeLabel()
-    const next = setScopeShared(getRankScope() === 'group' ? 'all' : 'group')
-    return e.reply(`面板排名范围已切换为「${scopeLabel(next)}」（原「${current}」）。\n本群范围只统计群里已绑定绝区零 UID 的成员；非群聊时按全部统计。`)
+    const current = scopeLabel(getRankScope(e))
+    const next = setScopeShared(getRankScope(e) === 'group' ? 'all' : 'group', e)
+    return e.reply(`面板排名范围已切换为「${scopeLabel(next)}」（原「${current}」）。\n本群范围只统计群里已绑定绝区零 UID 的成员；非群聊时按全部统计。\n该设置已保存，重启后仍然有效。`)
   }
 
   async rankHelp(e) {
@@ -317,7 +317,7 @@ export class zzz_panel_rank extends plugin {
       '指令说明：',
       '  %<角色名>面板排名  - 查看角色面板排名（跨用户）',
       '  例：%艾莲面板排名、%丽娜面板排名',
-      `  %面板排名范围      - 切换「本群 / 全部」，当前：${scopeLabel()}`,
+      `  %面板排名范围      - 切换「本群 / 全部」，当前：${scopeLabel(getRankScope(e))}`,
       '',
       '排序规则：',
       '  综合分 = 期望伤害占比×60 + 驱动盘评分占比×40',
@@ -356,8 +356,8 @@ export class zzz_panel_rank extends plugin {
 
     // 本群范围只在群聊成立；私聊或拿不到成员列表时回落成全部，避免空榜
     let groupUids = null
-    let label = scopeLabel()
-    if (getRankScope() === 'group') {
+    let label = scopeLabel(getRankScope(e))
+    if (getRankScope(e) === 'group') {
       groupUids = e?.isGroup ? await getGroupMemberUids(e) : null
       if (!groupUids) label = '全部'
     } else {

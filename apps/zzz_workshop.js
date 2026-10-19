@@ -1184,7 +1184,7 @@ export class zzz_workshop extends plugin {
     try {
       /* 范围跟随「%面板排名范围」的开关，与本地面板排名共用同一份状态。
          本群范围需要群成员绑定 UID，拿不到成员列表时回落全服。 */
-      const wantGroup = getRankScope() === 'group'
+      const wantGroup = getRankScope(e) === 'group'
       const memberUids = wantGroup ? await getGroupMemberUids(e) : null
       const scope = wantGroup && memberUids ? 'group' : 'all'
       const res = await buildRoleRank(RE_ROLE_RANK.exec(e.msg)?.[1] || '', { scope, memberUids })
