@@ -1297,6 +1297,12 @@ const STAT_ROW_PID = {
 }
 // 单条副词条的基础值：用于把固定攻击/生命/防御换算成百分比等效权重
 const BASE_VALUE = { 11102: 3, 11103: 112, 12102: 3, 12103: 19, 13102: 4.8, 13103: 15 }
+// 培养进度雷达的「推荐毕业值」（面板终值，百分比按百分数存）：达到即贴边
+const RADAR_TARGET = {
+  attack: 3000, hpmax: 15000, def: 2000, breakstun: 130,
+  crit: 75, critdam: 150, elementabnormalpower: 150, elementmystery: 200,
+  penratio: 24, sprecover: 1.8, dmgbonus: 46.4, penvalue: 36,
+}
 const SUB_BASE_VALUE = { ...BASE_VALUE, 20103: 2.4, 21103: 4.8, 23203: 9, 31203: 9 }
 const MAIN_MAX_VALUE = {
   11102: '30%', 12102: '30%', 13102: '48%', 12202: '18%',
@@ -1442,6 +1448,82 @@ export function calcEquipScore(equip_final, charName, stats, profession, element
   const rating = total >= 280 ? 'MAX' : total >= 220 ? 'ACE' : total >= 200 ? 'SSS' : total >= 180 ? 'SS' : total >= 160 ? 'S' : total >= 120 ? 'A' : total >= 80 ? 'B' : 'C'
   // weight 一并返回：面板属性行/词条统计要标权重，避免再算一遍（两处各算一份迟早会漂）
   return { score: +total.toFixed(1), rating, ruleName, weight, discScores, usefulCount: useful, effectiveCount: +effective.toFixed(2) }
+}
+
+/**
+ * 培养进度雷达：取该角色「评分权重最高」的 6 项属性作轴，
+ * 每轴按推荐毕业值归一化（贴边=达标），实线是当前、虚线是推荐。
+ * 轴取自评分权重而不是固定六项，异常角色就不会被迫拿双爆去比。
+ */
+function buildZZZRadar(stat_rows) {
+  const src = stat_rows
+    .map(r => {
+      const key = r.icon === 'element' ? 'dmgbonus' : r.cls
+      const value = parseFloat(String(r.final).replace(/[^\d.]/g, ''))
+      return { key, label: r.label, value, weight: Number(r.weight) || 0, target: RADAR_TARGET[key] }
+    })
+    .filter(r => r.target > 0 && Number.isFinite(r.value))
+  // 有收益的词条优先；轴数不足 4 时再用基础属性补齐（够 4 轴就保持原样，
+  // 免得拿「生命值」这种无关属性凑满六边形，看起来像没练生命）
+  const picked = src.filter(r => r.weight > 0).sort((a, b) => b.weight - a.weight).slice(0, 6)
+  if (picked.length < 4) {
+    for (const key of ['attack', 'crit', 'critdam', 'hpmax', 'dmgbonus']) {
+      if (picked.length >= 4) break
+      const hit = src.find(r => r.key === key && !picked.includes(r))
+      if (hit) picked.push(hit)
+    }
+  }
+  if (picked.length < 4) return null
+  // 轴顺序固定回面板属性顺序，避免权重排序让每张图的轴位漂移
+  const order = src.filter(r => picked.includes(r))
+
+  const cx = 92
+  const cy = 92
+  const r = 62
+  const step = (Math.PI * 2) / order.length
+  const angleAt = i => -Math.PI / 2 + i * step
+  const at = (i, ratio) => [
+    cx + Math.cos(angleAt(i)) * r * ratio,
+    cy + Math.sin(angleAt(i)) * r * ratio,
+  ]
+  const poly = ratioOf => order.map((_, i) => {
+    const [x, y] = at(i, ratioOf(i))
+    return `${x.toFixed(1)},${y.toFixed(1)}`
+  }).join(' ')
+
+  const ratios = order.map(o => {
+    const raw = (o.value || 0) / o.target
+    // 0 值也留一圈小凸起，否则雷达会塌成一条线看不出形状
+    return Math.max(0.12, Math.min(1, raw))
+  })
+  const labels = order.map((o, i) => {
+    const cos = Math.cos(angleAt(i))
+    const [x, y] = at(i, 1)
+    const lr = r + 15
+    return {
+      label: o.label,
+      x: (cx + Math.cos(angleAt(i)) * lr).toFixed(1),
+      y: (cy + Math.sin(angleAt(i)) * lr).toFixed(1),
+      anchor: Math.abs(cos) < 0.2 ? 'middle' : (cos > 0 ? 'start' : 'end'),
+      ratio: ratios[i],
+      pct: Math.round(ratios[i] * 100),
+    }
+  })
+  const spokes = order.map((_, i) => {
+    const [x2, y2] = at(i, 1)
+    return { x1: cx, y1: cy, x2: x2.toFixed(1), y2: y2.toFixed(1) }
+  })
+  const rings = [1, 0.66, 0.33].map(s => poly(() => s))
+  return {
+    cx, cy, r,
+    grid: rings,
+    spokes,
+    labels,
+    polygon: poly(i => ratios[i]),
+    target: poly(() => 1),
+    // 整体培养度：各轴归一化后取均值
+    progress: Math.round(ratios.reduce((s, v) => s + v, 0) / ratios.length * 100),
+  }
 }
 
 /**
@@ -1628,6 +1710,7 @@ function normalizeDetail(a, uid) {
     rateCovered,
     sets,
     stat_rows,
+    radar: buildZZZRadar(stat_rows),
   }
   return { uid: charData.uid, charData }
 }

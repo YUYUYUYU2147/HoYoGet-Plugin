@@ -106,6 +106,35 @@ body {
 .sec-title::before { content: ""; width: 4px; height: 1.1em; border-radius: 3px; background: linear-gradient(#ff7fa8, #f5c96b); }
 .sec-title .sub { font-size: .7em; color: #c3cad8; font-weight: 400; }
 
+/* ============ 培养进度雷达 ============ */
+.radar-card {
+  display: flex; align-items: center; gap: 18px;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1);
+  border-radius: 14px; padding: 12px 16px;
+}
+.radar { width: 250px; flex: none; height: auto; display: block; }
+.rg { fill: none; stroke: rgba(255,255,255,.14); stroke-width: 1; }
+.rs { stroke: rgba(255,255,255,.12); stroke-width: 1; }
+/* 推荐毕业线：虚线描边不填充，避免盖住实线 */
+.rt { fill: none; stroke: rgba(245,201,107,.55); stroke-width: 1.4; stroke-dasharray: 4 3; }
+.rv { fill: rgba(255,127,168,.2); stroke: #ff7fa8; stroke-width: 1.8; stroke-linejoin: round; }
+.rv-dot { fill: #ff7fa8; }
+.rl { font-size: 9px; font-weight: 700; fill: #c3cad8; dominant-baseline: middle; }
+.radar-side { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.radar-progress { display: flex; align-items: baseline; gap: 8px; }
+.radar-progress b { font-size: 2em; font-weight: 900; line-height: 1; color: #f5c96b; font-variant-numeric: tabular-nums; }
+.radar-progress b span { font-size: .45em; margin-left: 2px; }
+.radar-progress em { font-style: normal; font-size: .82em; color: #c0c8d6; }
+.radar-legend { display: flex; gap: 14px; font-size: .8em; color: #c0c8d6; }
+.radar-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.radar-legend i { width: 18px; height: 0; border-top: 2px solid #ff7fa8; }
+.radar-legend .lg-rec { border-top-style: dashed; border-top-color: rgba(245,201,107,.85); }
+.radar-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 14px; }
+.rl-item { display: flex; align-items: baseline; gap: 6px; font-size: .82em; }
+.rl-name { color: #c3cad8; white-space: nowrap; }
+.rl-pct { margin-left: auto; font-weight: 700; color: #e7ebf3; font-variant-numeric: tabular-nums; }
+.rl-pct.ok { color: #6fe3b0; }
+
 /* ============ 技能（左列、音擎上方，一行 6 个） ============ */
 .skills-card {
   display: grid;
@@ -178,6 +207,12 @@ body {
 .useful-bar b { color: #cfd6e6; font-weight: 800; }
 .useful-bar .useful-sep { color: #7c8496; }
 .useful-bar .useful-effective, .useful-bar .useful-effective b { color: #f5c96b; }
+
+/* 左栏评分：760px 宽，评分卡与词条统计并排，避免竖向堆叠后右侧大片留白 */
+.col-left .score-wrap { flex-direction: row; align-items: center; gap: 22px; }
+.col-left .score-box { width: 260px; }
+.col-left .prop-stats { flex: 1; min-width: 0; gap: 6px 10px; }
+.col-left .ps-item { font-size: .86em; }
 
 /* ============ 驱动盘 ============ */
 .disc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }

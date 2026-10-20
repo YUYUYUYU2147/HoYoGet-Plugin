@@ -138,9 +138,6 @@
             {{/each}}
           </div>
         </div>
-      </div>
-
-      <div class="col-right">
         <div class="section">
           <div class="sec-title">评分</div>
           <div class="score-wrap">
@@ -168,6 +165,50 @@
             <span class="useful-effective">有效词条数：<b>{{c.effectiveCount}}</b></span>
           </div>
         </div>
+      </div>
+
+      <div class="col-right">
+
+        {{if c.radar}}
+        <div class="section">
+          <div class="sec-title">培养进度</div>
+          <div class="radar-card">
+            <svg class="radar" viewBox="-20 0 224 186">
+              {{each c.radar.grid g}}
+              <polygon class="rg" points="{{g}}"></polygon>
+              {{/each}}
+              {{each c.radar.spokes s}}
+              <line class="rs" x1="{{s.x1}}" y1="{{s.y1}}" x2="{{s.x2}}" y2="{{s.y2}}"></line>
+              {{/each}}
+              <!-- 虚线 = 推荐毕业线，实线 = 当前 -->
+              <polygon class="rt" points="{{c.radar.target}}"></polygon>
+              <polygon class="rv" points="{{c.radar.polygon}}"></polygon>
+              <circle class="rv-dot" cx="{{c.radar.cx}}" cy="{{c.radar.cy}}" r="2"></circle>
+              {{each c.radar.labels l}}
+              <text class="rl" x="{{l.x}}" y="{{l.y}}" text-anchor="{{l.anchor}}">{{l.label}}</text>
+              {{/each}}
+            </svg>
+            <div class="radar-side">
+              <div class="radar-progress">
+                <b>{{c.radar.progress}}<span>%</span></b>
+                <em>综合培养度</em>
+              </div>
+              <div class="radar-legend">
+                <span><i class="lg-cur"></i>当前</span>
+                <span><i class="lg-rec"></i>推荐</span>
+              </div>
+              <div class="radar-list">
+                {{each c.radar.labels l}}
+                <div class="rl-item">
+                  <span class="rl-name">{{l.label}}</span>
+                  <span class="rl-pct{{if l.ratio >= 0.95}} ok{{/if}}">{{l.pct}}%</span>
+                </div>
+                {{/each}}
+              </div>
+            </div>
+          </div>
+        </div>
+        {{/if}}
 
         {{if c.sets.length}}
         <div class="section">

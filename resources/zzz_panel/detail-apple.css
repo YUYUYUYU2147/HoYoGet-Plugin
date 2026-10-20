@@ -39,7 +39,7 @@ body {
 
 /* 通用玻璃卡 */
 .skills-card, .weapon-card, .disc-card, .score-box, .set-item,
-.dmg-wrap, .team-item {
+.dmg-wrap, .team-item, .radar-card {
   background: var(--ap-glass);
   border: 1px solid var(--ap-line);
   border-radius: 20px;
@@ -124,6 +124,25 @@ body {
 .useful-bar { color: var(--ap-mute); letter-spacing: .2px; }
 .useful-bar b { color: var(--ap-text); font-weight: 600; }
 .useful-bar .useful-effective, .useful-bar .useful-effective b { color: var(--ap-yellow); }
+
+/* ───── 培养进度雷达 ───── */
+.radar { width: 240px; }
+.rg { stroke: rgba(255, 255, 255, .09); }
+.rs { stroke: rgba(255, 255, 255, .08); }
+/* 推荐线要比参考网格明显，否则和环线糊成一片 */
+.rt { stroke: rgba(255, 214, 10, .9); stroke-width: 1.8; stroke-dasharray: 6 4; }
+.rv { fill: rgba(10, 132, 255, .22); stroke: var(--ap-blue); stroke-width: 1.8; }
+.rv-dot { fill: var(--ap-blue); }
+.rl { fill: var(--ap-sub); font-weight: 600; }
+.radar-progress b { color: var(--ap-text); font-weight: 700; letter-spacing: -1px; }
+.radar-progress b span { color: var(--ap-mute); }
+.radar-progress em { color: var(--ap-mute); }
+.radar-legend { color: var(--ap-mute); }
+.radar-legend i { border-top-color: var(--ap-blue); border-top-width: 2px; }
+.radar-legend .lg-rec { border-top-color: rgba(255, 214, 10, .85); }
+.rl-name { color: var(--ap-sub); }
+.rl-pct { color: var(--ap-text); font-weight: 600; }
+.rl-pct.ok { color: var(--ap-green); }
 
 /* ───── 驱动盘 ───── */
 .disc-card { border-radius: 18px; }
