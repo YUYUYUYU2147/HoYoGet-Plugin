@@ -581,6 +581,45 @@ function parseMsg(msg = '') {
   return { layer, version, periodId, offset, modeKey };
 }
 
+/**
+ * 取当期深渊每一层的怪物/BOSS 配置（给「深境螺旋」战绩图做右栏用）。
+ * 数据源与速览相同（Alioth 静态 JSON），失败返回空对象，不影响主图。
+ * @returns {Promise<Object<number, Array>>} { 12: [{label,level,waves:[{monsters:[...]}]}] }
+ */
+export async function getAbyssBossesByFloor(opts = {}) {
+  try {
+    const mode = MODES.gs_abyss;
+    const loaded = await loadPhase(mode, opts);
+    if (!loaded || loaded.error) return {};
+    const detail = loaded.detail || {};
+    const out = {};
+    for (const floor of (detail.Floors || [])) {
+      const idx = Number(floor.Index);
+      if (!Number.isFinite(idx)) continue;
+      const chambers = (floor.Chambers || []).slice().sort((a, b) => a.Index - b.Index || a.Half - b.Half);
+      const halvesMap = new Map();
+      for (const c of chambers) {
+        const half = {
+          label: Number(c.Half) === 1 ? '上半' : '下半',
+          level: c.Level,
+          waves: (c.Waves || []).map(w => ({
+            name: w.Wave || '',
+            monsters: (w.Monsters || []).map(m => giMonster(detail, m)).filter(Boolean),
+          })).filter(w => w.monsters.length),
+        };
+        if (!half.waves.length) continue;
+        if (!halvesMap.has(c.Index)) halvesMap.set(c.Index, []);
+        halvesMap.get(c.Index).push(half);
+      }
+      out[idx] = [...halvesMap.keys()].sort((a, b) => a - b).map(roomIdx => ({ idx: roomIdx, halves: halvesMap.get(roomIdx) }));
+    }
+    return out;
+  } catch (err) {
+    logger.debug?.(`[HoYoGet][abyss_now] 取深渊 BOSS 配置失败：${err?.message || err}`);
+    return {};
+  }
+}
+
 export class AbyssNow extends plugin {
   constructor(e) {
     super({

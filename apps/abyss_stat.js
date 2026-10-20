@@ -96,6 +96,9 @@ export class abyss_stat extends plugin {
     /* 角色详情（头像/武器/圣遗物）：模板按 avatars[id] 渲染角色卡，
        取不到就传空对象，模板里有 avatar 判空，只是不显示卡片 */
     const avatars = await this.fetchAvatars(e, mys, data)
+    /* 右栏的深渊 BOSS 信息：接口（spiralAbyss）不返回怪物，从速览同一份数据源补，
+       按层号对齐；取不到就不显示右栏，不影响主图 */
+    const bosses = await this.fetchFloorBosses()
     const miaoRes = miaoResPath()
     return render('abyss_stat/abyss-summary', {
       abyss: data,
@@ -109,8 +112,20 @@ export class abyss_stat extends plugin {
       tplPath: abyssTplPath(),
       msg: type === 2 ? '上期' : '',
       stat: data.stat || [],
+      bossesByFloor: bosses,
       sys: { copyright: '' },
     }, { e, ret: true, dsf: 2 })
+  }
+
+  /** 当期深渊每层的怪物/BOSS（来自速览的数据源），失败返回 {} */
+  async fetchFloorBosses() {
+    try {
+      const { getAbyssBossesByFloor } = await import('./abyss_now.js')
+      return await getAbyssBossesByFloor({})
+    } catch (err) {
+      logger.debug?.(`[HoYoGet][abyss_stat] 深渊 BOSS 配置获取失败：${err?.message || err}`)
+      return {}
+    }
   }
 
   /**
