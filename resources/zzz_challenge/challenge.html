@@ -69,8 +69,8 @@
             <table class="boss-attrs" style="border-collapse:separate !important; border-spacing:0 !important; border:none !important; width:auto !important; line-height:normal !important;">
               <tr>
                 <td style="width:2.4em !important; padding:0 !important; padding-right:8px !important; vertical-align:middle !important; white-space:nowrap !important; text-align:left !important;">弱点</td>
-                <td style="padding:0 !important; vertical-align:middle !important; white-space:nowrap !important;">
-                  <div style="display:flex !important; flex-wrap:nowrap !important; align-items:center !important; gap:8px !important;">
+                <td style="padding:0 !important; vertical-align:middle !important;">
+                  <div style="display:flex !important; flex-wrap:wrap !important; align-items:center !important; gap:4px !important;">
                     {{if item.monster_weakness_tags && item.monster_weakness_tags.length}}
                       {{each item.monster_weakness_tags tag}}
                       <span class="element-tag">
@@ -86,8 +86,8 @@
               </tr>
               <tr>
                 <td style="width:2.4em !important; padding:0 !important; padding-right:8px !important; vertical-align:middle !important; white-space:nowrap !important; text-align:left !important;">抗性</td>
-                <td style="padding:0 !important; vertical-align:middle !important; white-space:nowrap !important;">
-                  <div style="display:flex !important; flex-wrap:nowrap !important; align-items:center !important; gap:8px !important;">
+                <td style="padding:0 !important; vertical-align:middle !important;">
+                  <div style="display:flex !important; flex-wrap:wrap !important; align-items:center !important; gap:4px !important;">
                     {{if item.monster_resistance_tags && item.monster_resistance_tags.length}}
                       {{each item.monster_resistance_tags tag}}
                       <span class="element-tag resist-tag">

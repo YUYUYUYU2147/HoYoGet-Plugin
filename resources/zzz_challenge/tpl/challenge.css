@@ -240,7 +240,9 @@ body {
 }
 
 .boss-panel {
-    width: 112px;
+    /* 原来 112px：抗性胶囊加上「+20%」后两个就放不下，会撑出 .boss-info 的边框。
+       加宽到 150px，并允许内部换行 */
+    width: 150px;
     flex-shrink: 0;
 }
 
