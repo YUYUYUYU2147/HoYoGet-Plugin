@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <title>ZZZ Challenge</title>
+  <link rel="stylesheet" type="text/css" href="{{ppath}}zzz_challenge/challenge.css" />
+</head>
+<body {{sys.scale}}>
+  <div class="container">
+    <div class="head">
+      <div class="head-left">
+        <div class="title">{{data.title}}</div>
+        <div class="period">{{if data.period}}统计周期 {{data.period}}{{/if}}</div>
+      </div>
+      <div class="head-right">
+        {{if data.nickname}}<div class="nick">{{data.nickname}}</div>{{/if}}
+        {{if data.uid}}<div class="uid">UID {{data.uid}}</div>{{/if}}
+      </div>
+    </div>
+
+    {{if data.empty}}
+    <div class="empty">没有查到{{data.title}}数据。<br>可能是本期还没打，或面板未公开。</div>
+    {{else}}
+
+    <div class="summary">
+      {{if data.type === 'shiyu'}}
+      <div class="sum-item">
+        <span class="sum-label">总分</span>
+        <span class="sum-value">{{data.score || '-'}}</span>
+      </div>
+      <div class="sum-item">
+        <span class="sum-label">评级</span>
+        <span class="sum-value rating r-{{data.ratingKey}}">{{data.rating || '-'}}</span>
+      </div>
+      {{if data.rankPercent}}<div class="sum-item">
+        <span class="sum-label">排名前</span>
+        <span class="sum-value small">{{data.rankPercent}}%</span>
+      </div>{{/if}}
+      <div class="sum-item">
+        <span class="sum-label">S / A / B</span>
+        <span class="sum-value small"><b class="g-s">{{data.grade.S}}</b> / {{data.grade.A}} / {{data.grade.B}}</span>
+      </div>
+      {{else}}
+      <div class="sum-item">
+        <span class="sum-label">总星数</span>
+        <span class="sum-value">{{data.totalStar}}<span class="unit">/ 9</span></span>
+      </div>
+      {{if data.totalScore !== ''}}<div class="sum-item">
+        <span class="sum-label">总分</span>
+        <span class="sum-value">{{data.totalScore}}</span>
+      </div>{{/if}}
+      {{if data.rankPercent}}<div class="sum-item">
+        <span class="sum-label">排名前</span>
+        <span class="sum-value small">{{data.rankPercent}}%</span>
+      </div>{{/if}}
+      {{/if}}
+      {{if data.remain}}<div class="sum-item remain">
+        <span class="sum-label">刷新剩余</span>
+        <span class="sum-value small">{{data.remain}}</span>
+      </div>{{/if}}
+    </div>
+
+    {{if data.type === 'shiyu'}}
+    {{each data.layers layer}}
+    <div class="layer">
+      <div class="layer-head">
+        <span class="layer-name">第 {{layer.zh}} 层</span>
+        {{if layer.rating}}<span class="grade r-{{layer.ratingKey}}">{{layer.rating}}</span>{{/if}}
+        {{if layer.score !== ''}}<span class="layer-score">{{layer.score}} 分</span>{{/if}}
+        {{if layer.timeText}}<span class="layer-time">{{layer.timeText}}</span>{{/if}}
+      </div>
+
+      {{if layer.boss}}
+      <div class="boss">
+        {{if layer.boss.pic}}<img class="boss-pic" src="{{layer.boss.pic}}" onerror="this.style.display='none'">{{/if}}
+        <div class="boss-meta">
+          <div class="boss-name">{{layer.boss.name || 'BOSS'}}</div>
+          <div class="boss-tags">
+            {{if layer.boss.weakness.length}}<span class="tag-w">弱点</span>
+            {{each layer.boss.weakness e}}<span class="elem">{{e}}</span>{{/each}}{{/if}}
+            {{if layer.boss.resist.length}}<span class="tag-r">抗性</span>
+            {{each layer.boss.resist e}}<span class="elem resist">{{e}}</span>{{/each}}{{/if}}
+          </div>
+        </div>
+      </div>
+      {{/if}}
+
+      <div class="nodes">
+        {{each layer.nodes node}}
+        <div class="node">
+          <div class="node-head">
+            <span class="node-idx">节点 {{node.index}}</span>
+            {{if node.rating}}<span class="grade sm r-{{node.ratingKey}}">{{node.rating}}</span>{{/if}}
+            {{if node.timeText}}<span class="node-time">{{node.timeText}}</span>{{/if}}
+          </div>
+          {{if node.avatars.length}}
+          <div class="teams">
+            {{each node.avatars a}}
+            <div class="member">
+              {{if a.icon}}<img src="{{a.icon}}" onerror="this.style.display='none'">{{/if}}
+              <i>{{a.name}}</i>
+            </div>
+            {{/each}}
+          </div>
+          {{/if}}
+          {{if node.buff}}<div class="buff">{{node.buff}}</div>{{/if}}
+        </div>
+        {{/each}}
+      </div>
+    </div>
+    {{/each}}
+    {{else}}
+    <div class="rooms">
+      {{each data.rooms room}}
+      <div class="room">
+        <div class="room-head">
+          <span class="room-idx">第 {{room.index}} 关</span>
+          <span class="stars">
+            {{set i = 0}}{{each [1,2,3]}}<i class="star{{if i < room.star}} on{{/if}}"></i>{{set i = i + 1}}{{/each}}
+          </span>
+          {{if room.score !== ''}}<span class="room-score">{{room.score}} 分</span>{{/if}}
+        </div>
+        {{if room.bossPic || room.bossName}}
+        <div class="boss">
+          {{if room.bossPic}}<img class="boss-pic" src="{{room.bossPic}}" onerror="this.style.display='none'">{{/if}}
+          <div class="boss-meta">
+            <div class="boss-name">{{room.bossName || 'BOSS'}}</div>
+            <div class="boss-tags">
+              {{if room.weakness.length}}<span class="tag-w">弱点</span>
+              {{each room.weakness e}}<span class="elem">{{e}}</span>{{/each}}{{/if}}
+              {{if room.resist.length}}<span class="tag-r">抗性</span>
+              {{each room.resist e}}<span class="elem resist">{{e}}</span>{{/each}}{{/if}}
+            </div>
+          </div>
+        </div>
+        {{/if}}
+        {{if room.avatars.length}}
+        <div class="teams">
+          {{each room.avatars a}}
+          <div class="member">
+            {{if a.icon}}<img src="{{a.icon}}" onerror="this.style.display='none'">{{/if}}
+            <i>{{a.name}}</i>
+          </div>
+          {{/each}}
+        </div>
+        {{/if}}
+        {{if room.buffName || room.buffDesc}}
+        <div class="buff"><b>{{room.buffName}}</b>{{if room.buffDesc}} {{room.buffDesc}}{{/if}}</div>
+        {{/if}}
+      </div>
+      {{/each}}
+    </div>
+
+    {{if data.hardRooms.length}}
+    <div class="hard-title">困难模式（超过 {{data.hardRankPercent || '0.00'}}%）</div>
+    <div class="rooms">
+      {{each data.hardRooms room}}
+      <div class="room">
+        <div class="room-head">
+          <span class="room-idx">第 {{room.index}} 关</span>
+          <span class="stars">
+            {{set i = 0}}{{each [1,2,3]}}<i class="star{{if i < room.star}} on{{/if}}"></i>{{set i = i + 1}}{{/each}}
+          </span>
+          <span class="room-score">{{room.score}} 分</span>
+        </div>
+      </div>
+      {{/each}}
+    </div>
+    {{/if}}
+    {{/if}}
+
+    {{/if}}
+
+    <div class="copyright">{{footer}}</div>
+  </div>
+</body>
+</html>
