@@ -6,7 +6,8 @@
 }
 body,
 .container {
-  width: 970px;
+  /* 原版 970px；右侧要放「本层怪物/BOSS」栏，加宽到 1320 */
+  width: 1320px;
   background: url(./imgs/bg1.png) top left no-repeat #2a3860;
   background-size: 100% auto;
 }
@@ -289,14 +290,15 @@ body,
 }
 /*# sourceMappingURL=abyss-summary.css.map */
 /* 每层卡片：左栏保持原来的战绩内容，右栏补该层深渊怪物/BOSS 信息 */
-.floor-split { display: flex; gap: 14px; align-items: flex-start; }
+.floor-split { display: flex; gap: 16px; align-items: flex-start; width: 100%; min-width: 0; }
 .floor-split.has-boss .floor-main { flex: 1; min-width: 0; }
 .floor-split:not(.has-boss) .floor-main { flex: 1; min-width: 0; }
 .floor-main { flex: 1; min-width: 0; }
 
 .floor-boss {
-  width: 300px;
-  flex: 0 0 auto;
+  width: 330px;
+  flex: 0 0 330px;
+  box-sizing: border-box;
   padding: 12px;
   border-radius: 14px;
   background: #f8fafc;
