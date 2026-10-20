@@ -92,3 +92,11 @@ footer{text-align:center;margin-top:24px;color:#a3adbd;font-size:13px}
     color: #c4b5fd;
     font-weight: 600;
 }
+
+/* 两栏：左栏挑战数据（限制元素/角色/增益/地脉异常），右栏怪物与 BOSS 信息 */
+.layout{display:flex;gap:20px;align-items:flex-start}
+.col-left{width:392px;flex:none;min-width:0}
+.col-right{flex:1;min-width:0}
+/* 两栏里的面板都去掉底部留白（栏间距由 .layout 控制） */
+.col-left .panel:last-child{margin-bottom:0}
+.col-right .panel:last-child{margin-bottom:0}
