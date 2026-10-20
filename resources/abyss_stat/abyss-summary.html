@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-cn"><head><meta charset="utf-8">
+<link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/common.css"/>
+
+<link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/common.css?v=1.0"/>
+<link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/common.css?v=1.0"/>
+<link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/abyss-summary.css?v=1.0"/>
+</head>
+<body class="elem-hydro" {{sys.scale}}>
+<div class="container" id="container">
+{{ set upDown = {up:'上半', down:'下半'} }}
+<div class="head-box type">
+  <div class="title">#{{msg}}深渊<span>{{abyss.schedule}} · {{abyss.total}}次战斗</span></div>
+  <div class="uid">UID:{{uid}}</div>
+</div>
+{{if upTip}}
+<div class="cont abyss-notice">
+  <div class="cont-body">
+    <ul class="cont-msg">
+      <li><strong>#上传深渊</strong>{{if [200,400].includes(upTip.code)}}成功，{{upTip.result}}{{else}}失败，{{upTip.result}}，请联系管理员修复{{/if}}</li>
+    </ul>
+  </div>
+</div>
+{{/if}}
+<div class="info_box">
+
+  <div class="abyss-stat-cont">
+
+    <div class="abyss-stat">
+      {{each stat ds}}
+      {{set avatar = avatars[ds.id]}}
+      <div class="cont">
+        {{if avatar}}
+        <div class="stat-title">
+          <span>{{ds.title}}</span>
+          <strong>{{ds.value}}</strong>
+        </div>
+        <div class="avatar-banner avatar-{{avatar.name}}"
+             style="background-image:url('{{_miao_path}}{{avatar.gacha}}')"></div>
+
+        {{if ds.msg}}
+        <div class="stat-msg">
+          {{each ds.msg msg}}
+          {{if msg.txt}}
+          <div class="msg">{{msg.txt}}</div>
+          {{else}}
+          <div class="msg">{{msg.title}}<strong>{{msg.value}}%</strong>的{{msg.name}}</div>
+          {{/if}}
+          {{/each}}
+        </div>
+        {{/if}}
+        {{/if}}
+      </div>
+      {{/each}}
+    </div>
+
+  </div>
+  {{set cardTypes={1:['wide wide2'],2:['wide','wide'],3:['wide','mini','mini'],4:['mini','mini','mini','mini']} }}
+  {{each abyss?.floors floor}}
+  <div class="cont">
+
+    <div class="cont-body">
+      <div class="abyss-title">
+        <strong>第{{floor.index}}层</strong>
+        <span class="abyss-star">{{floor.star}}/9</span>
+      </div>
+      <div class="abyss-floor-team">
+        <div class="abyss-team">
+          {{set ds=floor?.display?.up?.avatars||[] }}
+          {{each ds id idx}}
+          <% include(_tpl_path+'/avatar-card.html', [avatars[id],{_res_path, cardType:cardTypes[ds.length][idx]}]) %>
+          {{/each}}
+        </div>
+        <div class="line"></div>
+        <div class="abyss-team">
+          {{set ds=floor?.display?.down?.avatars||[] }}
+          {{each ds id idx}}
+          <% include(_tpl_path+'/avatar-card.html', [avatars[id],{_res_path, cardType:cardTypes[ds.length][idx]}]) %>
+          {{/each}}
+        </div>
+      </div>
+      <div class="abyss-detail">
+        {{each floor.levels level idx}}
+        <div class="abyss-level">
+          <div class="info">
+            <div class="title">
+              第{{idx}}间
+            </div>
+            <span class="star star{{level.star}}"></span>
+            <div class="time">{{level?.up?.time}}</div>
+          </div>
+          <div class="avatars">
+            {{each upDown v k}}
+            <div class="avatar-list {{k}}">
+              {{each level[k]?.avatars||[] id}}
+              {{set avatar = avatars[id] || {} }}
+              <div class="avatar-icon item-icon star{{avatar.star==4?4:5}}">
+                <span class="img" style="background-image:url('{{_miao_path}}{{avatar.face}}')"></span>
+              </div>
+              {{/each}}
+            </div>
+            {{/each}}
+          </div>
+        </div>
+        {{/each}}
+      </div>
+    </div>
+  </div>
+  {{/each}}
+
+  <div class="cont abyss-notice">
+    <div class="cont-body">
+      <ul class="cont-msg">
+        <li>统计服务由提瓦特小助手<strong>YShelper API</strong>提供，上传的数据将会用于<strong>#深渊使用率</strong><strong>#角色持有率</strong>等统计</li>
+        <li><strong>#上传深渊</strong>仅会上传<strong>当期深渊12层满星</strong>挑战数据，<strong>不会上传其他信息</strong>，感谢支持，喵~</li>
+        <li>每期深渊仅可通过<strong>#上传深渊</strong>上传<strong>1</strong>次<strong>当期12层满星</strong>数据，重复提交将不计入统计</li>
+        <li>角色装备与圣遗物为当前最新状态</li>
+      </ul>
+    </div>
+  </div>
+</div>
+</div>
+</body></html>
