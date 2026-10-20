@@ -14,7 +14,7 @@
   font-family: Number, "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
 }
 .font-NZBZ {
-  font-family: Number, "印品南征北战NZBZ体", NZBZ, "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  font-family: Number, "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
 }
 * {
   margin: 0;
@@ -44,7 +44,7 @@ body {
   margin-top: 30px;
 }
 .head-box .title {
-  font-family: Number, "印品南征北战NZBZ体", NZBZ, "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  font-family: Number, "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
   font-size: 36px;
   text-shadow: 0 0 1px #000, 1px 1px 3px rgba(0, 0, 0, 0.9);
 }
