@@ -10,6 +10,11 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+/** 本插件自己的自定义面板目录：resources/hoyo_panel/images/panel/<游戏>/<角色>/ */
+export const CUSTOM_PANEL_ROOT = path.join(PLUGIN_ROOT, 'resources', 'hoyo_panel', 'images', 'panel')
 
 const MIAO_RES = path.join(process.cwd(), 'plugins', 'miao-plugin', 'resources')
 const NORMAL_DIR = path.join(MIAO_RES, 'profile', 'normal-character')
@@ -57,4 +62,49 @@ export function hasCustomPanelArt(names = []) {
     }
   }
   return false
+}
+
+
+/** 角色在自定义目录里的文件夹（兼容「XX」式写法） */
+function nameVariants(name) {
+  const n = String(name || '').trim()
+  if (!n) return []
+  return [...new Set([n, `「${n}」`, n.replace(/[「」]/g, '')])]
+}
+
+/**
+ * 本插件自定义面板图（resources/hoyo_panel/images/panel/<game>/<角色>/）。
+ * @returns {string} 相对插件 resources 的路径，如 hoyo_panel/images/panel/gs/雷电将军/x.webp
+ */
+export function pickUserPanelArt(game, names = []) {
+  const g = game === 'sr' ? 'sr' : 'gs'
+  for (const name of names.flatMap(n => nameVariants(n))) {
+    const dir = path.join(CUSTOM_PANEL_ROOT, g, name)
+    const hit = pickInDir(dir)
+    if (!hit) continue
+    // pickInDir 返回的是 miao 的格式，这里换算成插件内的路径
+    return `hoyo_panel/images/panel/${g}/${encodeURIComponent(name)}/${hit.split('/').pop()}`
+  }
+  return ''
+}
+
+/** 列出某角色自定义目录下的图片文件名（按名字排序） */
+export function listUserPanelArt(game, name) {
+  const g = game === 'sr' ? 'sr' : 'gs'
+  for (const n of nameVariants(name)) {
+    const dir = path.join(CUSTOM_PANEL_ROOT, g, n)
+    try {
+      const files = fs.readdirSync(dir).filter(f => /\.(png|jpe?g|webp)$/i.test(f)).sort()
+      if (files.length) return { dir, name: n, files }
+    } catch { /* 试下一个写法 */ }
+  }
+  return { dir: path.join(CUSTOM_PANEL_ROOT, g, String(name || '').trim()), name: String(name || '').trim(), files: [] }
+}
+
+/** 上传用的目标目录（不存在就建） */
+export function ensureUserPanelDir(game, name) {
+  const g = game === 'sr' ? 'sr' : 'gs'
+  const dir = path.join(CUSTOM_PANEL_ROOT, g, String(name || '').trim())
+  fs.mkdirSync(dir, { recursive: true })
+  return dir
 }

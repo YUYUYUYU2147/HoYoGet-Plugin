@@ -56,9 +56,11 @@ zzz_panel_bg_url: 'https://api.yppp.net/api.php'
 # 每次出图现读，改完即生效；默认配置只给新装用户兜底，实际生效值看 config/config.yaml。
 panel_style: dark
 
-# 原神/星铁单角色面板是否使用「咕咕牛图库」的自定义面板图作为立绘。
-# 图来自咕咕牛管理器部署的 miao-plugin/resources/profile/normal-character/<角色名>/，
-# 有多张时随机取一张；该角色没有自定义图就自动回落到官方立绘。
+# 原神/星铁单角色面板的立绘来源（按顺序取，取到就用）：
+#   1. 咕咕牛管理器：miao-plugin/resources/profile/normal-character/<角色名>/（多张随机一张）
+#   2. 本插件自定义目录：plugins/HoYoGet-Plugin/resources/hoyo_panel/images/panel/<gs|sr>/<角色名>/
+#      可以自己往里放图，也可以发「#米哈游上传<角色>面板图」并附带图片
+#   3. 官方立绘
 # 设为 false 则始终用官方立绘。
 panel_custom_art: true
 

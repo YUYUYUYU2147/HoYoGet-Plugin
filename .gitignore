@@ -16,3 +16,6 @@ HANDOFF_*.md
 
 # 绝区零面板：用户自定义立绘目录，放的是自己下载的图片，不入库
 resources/zzz_panel/images/panel/
+# 原神/星铁面板：用户自己上传/拷贝的自定义立绘，同样不入库（目录说明 README 例外）
+resources/hoyo_panel/images/panel/*
+!resources/hoyo_panel/images/panel/README.md

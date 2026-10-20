@@ -23,8 +23,12 @@
       <div class="layout">
         <div class="col-left">
           <div class="hero">
-            {{if splash}}
+            {{if splashLocal}}
+            <img class="splash" src="{{ppath}}{{splashLocal}}" onerror="this.style.display='none'">
+            {{else if splash}}
             <img class="splash" src="{{_miao_path}}{{splash}}" onerror="this.style.display='none'">
+            {{else if splashOfficial}}
+            <img class="splash" src="{{_miao_path}}{{splashOfficial}}" onerror="this.style.display='none'">
             {{/if}}
 
             {{if consIcons.length}}

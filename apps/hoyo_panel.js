@@ -1,11 +1,11 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { config, pluginPriority, render } from '#HoYoGet'
+import { config, pluginPriority, render, makeForwardMsg } from '#HoYoGet'
 import { listCategories, fetchLeaderboard, getUserCalculations, getDamageDistribution } from '../system/akasha.js'
 import { getRoleProfile } from '../system/roleProfile.js'
 import { srPanelExtras } from '../system/sr_panel.js'
-import { pickCustomPanelArt } from '../system/custom_panel.js'
+import { pickCustomPanelArt, pickUserPanelArt, ensureUserPanelDir, listUserPanelArt } from '../system/custom_panel.js'
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const YUNZAI_DB = path.join(process.cwd(), 'data', 'db', 'data.db')
@@ -47,6 +47,11 @@ const PANEL_CHAR_REG = new RegExp(`^#?米哈游\\s*${GAME_WORD}面板\\s+(\\S+?)
 const PANEL_SHORT_CHAR_REG = /^#?米哈游\s*([^\s]+?)\s*面板$/i
 /* 更新面板：#米哈游原神更新面板 / #米哈游星铁更新面板 [UID] */
 const PANEL_REFRESH_REG = new RegExp(`^#?米哈游\\s*${GAME_WORD}(?:更新|刷新)(?:全部)?面板(?:\\s+(\\d{9}))?$`, 'i')
+
+/* 自定义面板图：上传 / 查看 / 删除（都要写「米哈游」，避免和绝区零的「上传xx面板图」抢） */
+const ART_UPLOAD_REG = /^#?米哈游\s*(?:上传|添加)\s*(.+?)\s*(?:角色|面板)?图$/
+const ART_LIST_REG = /^#?米哈游\s*(?:查看|获取)\s*(.+?)\s*(?:角色|面板)图\s*(\d*)$/
+const ART_DELETE_REG = /^#?米哈游\s*删除\s*(.+?)\s*(?:角色|面板)图\s*(.+)$/
 
 /*
  * 不带「米哈游」的写法（#原神面板 / #星铁面板 / #原神面板 桑多涅 …）。
@@ -897,9 +902,12 @@ function flattenCharDetail(profile, Character, game, meta = {}) {
     level: Number(profile?.level) || 0,
     cons: Number(profile?.cons) || 0,
     face: stripSlash(imgs.qFace || imgs.face || ''),
-    /* 立绘：优先咕咕牛自定义面板（miao 的 profile/normal-character/<角色>/ 随机一张），
-       没配置或该角色没有图时回落到官方立绘。可在配置里关掉。 */
-    splash: (customArtEnabled() && pickCustomPanelArt([char?.name, char?.abbr])) || stripSlash(imgs.splash || imgs.gacha || ''),
+    /* 立绘优先级：咕咕牛管理器（miao 的 normal-character 目录）→ 本插件自定义面板目录
+       → 官方立绘。前两者都是随机取一张；可在配置里整体关掉。
+       两处路径前缀不同（miao 用 _miao_path，本插件用 ppath），所以分开给模板两个字段。 */
+    splash: customArtEnabled() ? pickCustomPanelArt([char?.name, char?.abbr]) : '',
+    splashLocal: customArtEnabled() ? pickUserPanelArt(game, [char?.name, char?.abbr]) : '',
+    splashOfficial: stripSlash(imgs.splash || imgs.gacha || ''),
     attrs,
     radar: buildRadar(profile, game),
     weapon: weapon?.name ? {
@@ -1359,6 +1367,10 @@ export class hoyo_panel extends plugin {
         /* 取代 miao 的裸面板指令（accept 里已规范化，这里留表项保持一致） */
         { reg: BARE_OVERVIEW_REG.source, fnc: 'panel' },
         { reg: BARE_CHAR_REG.source, fnc: 'panel' },
+        /* 自定义面板图：上传 / 查看 / 删除 */
+        { reg: ART_UPLOAD_REG.source, fnc: 'panelArtUpload' },
+        { reg: ART_LIST_REG.source, fnc: 'panelArtList' },
+        { reg: ART_DELETE_REG.source, fnc: 'panelArtDelete' },
       ],
     })
   }
@@ -1373,6 +1385,15 @@ export class hoyo_panel extends plugin {
    */
   async accept(e) {
     const msg = String(e?.msg || '')
+    /* 自定义面板图的三条指令先接走：它们不以「面板」结尾，不会被下面的裸指令误伤，
+       但要抢在 miao 的图片上传指令之前处理 */
+    if (ART_UPLOAD_REG.test(msg) || ART_LIST_REG.test(msg) || ART_DELETE_REG.test(msg)) {
+      this.e = e
+      if (ART_UPLOAD_REG.test(msg)) await this.panelArtUpload(e)
+      else if (ART_LIST_REG.test(msg)) await this.panelArtList(e)
+      else await this.panelArtDelete(e)
+      return 'return'
+    }
     /* 免「米哈游」前缀：#原神面板 / #星铁面板 桑多涅 ……
        优先级低于 miao 就会先被它接走，所以先把 e.msg 补回前缀，后面全走同一套逻辑 */
     const prefixed = withMhyPrefix(msg)
@@ -1566,6 +1587,125 @@ export class hoyo_panel extends plugin {
    * 角色按 名字 → 简称 → 双向包含 依次匹配；命中后把 miao 的 Avatar 实例
    * 压成扁平结构交给模板，模板与总览图共用同一套 miao 资源路径。
    */
+  /**
+   * 解析自定义面板图用的角色：写名字或简称都行，返回 { name, game }。
+   * 用 miao 的角色表只为「认名字 / 定游戏」，图本身完全走本插件目录，不读 miao 的图。
+   */
+  async resolveArtRole(raw) {
+    const miao = await loadMiao()
+    const clean = String(raw || '').replace(/[「」]/g, '').trim()
+    if (!clean) return null
+    /* 「星铁遐蝶」「原神胡桃」这种把游戏写在前面的写法 */
+    let game = ''
+    let name = clean
+    const g = clean.match(/^(原神|星铁|崩铁|gs|sr)\s*/i)
+    if (g) {
+      game = ['星铁', '崩铁', 'sr'].includes(g[1].toLowerCase()) ? 'sr' : 'gs'
+      name = clean.slice(g[0].length).trim()
+    }
+    const found = miao?.Character?.get?.(name)
+    if (found) return { name: found.name, game: found.isSr || found.game === 'sr' ? 'sr' : 'gs' }
+    if (!game) return null
+    return { name, game }
+  }
+
+  /** 取消息里 / 引用消息里的图片 */
+  async collectArtImages(e) {
+    const images = []
+    const push = arr => {
+      for (const val of (Array.isArray(arr) ? arr : [])) {
+        if (val?.type === 'image') images.push(val)
+      }
+    }
+    push(e.message)
+    if (!images.length) {
+      try {
+        const src = e.getReply ? await e.getReply() : null
+        push(src?.message)
+      } catch { /* 引用取不到就只认当前消息 */ }
+    }
+    return images
+  }
+
+  /** 保存一张消息图片到目录，返回是否成功 */
+  async saveArtImage(img, dir) {
+    const url = img?.url || img?.file || ''
+    let buf
+    if (/^https?:/i.test(url)) {
+      const resp = await fetch(url)
+      buf = Buffer.from(await resp.arrayBuffer())
+    } else {
+      buf = fs.readFileSync(String(url).replace(/^file:\/\//, ''))
+    }
+    const rawName = path.basename(String(img?.file || url || '').split('?')[0])
+    let ext = (path.extname(rawName) || '.png').toLowerCase()
+    if (!/\.(png|jpe?g|webp)$/.test(ext)) ext = '.png'
+    const base = path.basename(rawName, path.extname(rawName)) || String(Date.now())
+    let target = path.join(dir, `${base}${ext}`)
+    if (fs.existsSync(target)) target = path.join(dir, `${base}_${Date.now()}${ext}`)
+    fs.writeFileSync(target, buf)
+  }
+
+  /** 「#米哈游上传雷神面板图」：把图存进 resources/hoyo_panel/images/panel/<游戏>/<角色>/ */
+  async panelArtUpload(e) {
+    if (!e.isMaster) return e.reply('只有主人才能上传面板图')
+    const m = String(e.msg || '').match(ART_UPLOAD_REG)
+    const role = await this.resolveArtRole(m?.[1] || '')
+    if (!role) return e.reply('没认出这是哪个角色，可以写成「#米哈游上传星铁遐蝶面板图」')
+    const images = await this.collectArtImages(e)
+    if (!images.length) return e.reply('消息里没找到图片，请把图片和指令一起发，或引用图片后再发指令')
+    const dir = ensureUserPanelDir(role.game, role.name)
+    let ok = 0
+    for (const img of images) {
+      try {
+        await this.saveArtImage(img, dir)
+        ok++
+      } catch (err) {
+        logger.warn?.(`[HoYoGet][hoyo_panel] 上传面板图失败：${err?.message || err}`)
+      }
+    }
+    const where = `resources/hoyo_panel/images/panel/${role.game}/${role.name}/`
+    return e.reply(`成功上传 ${ok} 张（${role.name}·${role.game === 'sr' ? '星铁' : '原神'}），失败 ${images.length - ok} 张。\n目录：${where}`)
+  }
+
+  /** 「#米哈游查看雷神面板图」：列出已上传的图，带 ID 方便删除 */
+  async panelArtList(e) {
+    const m = String(e.msg || '').match(ART_LIST_REG)
+    const role = await this.resolveArtRole(m?.[1] || '')
+    if (!role) return e.reply('没认出这是哪个角色')
+    const { dir, files } = listUserPanelArt(role.game, role.name)
+    if (!files.length) return e.reply(`【${role.name}】还没有自定义面板图。\n发「#米哈游上传${role.name}面板图」并附带图片即可添加。`)
+    const pageSize = 5
+    let page = Number(m?.[2]) || 1
+    if (page < 1) page = 1
+    const total = Math.ceil(files.length / pageSize)
+    if (page > total) return e.reply('没有这么多图片')
+    const slice = files.slice((page - 1) * pageSize, page * pageSize)
+    const msg = [`【${role.name}】共 ${files.length} 张，第 ${page}/${total} 页（删完会重新排序，删除前请重新查看）`]
+    slice.forEach((file, i) => {
+      msg.push([`ID：${(page - 1) * pageSize + i + 1}`, segment.image(path.join(dir, file))])
+    })
+    return e.reply(await makeForwardMsg(e, msg))
+  }
+
+  /** 「#米哈游删除雷神面板图 1,2」 */
+  async panelArtDelete(e) {
+    if (!e.isMaster) return e.reply('只有主人才能删除面板图')
+    const m = String(e.msg || '').match(ART_DELETE_REG)
+    const role = await this.resolveArtRole(m?.[1] || '')
+    if (!role) return e.reply('没认出这是哪个角色')
+    const { dir, files } = listUserPanelArt(role.game, role.name)
+    if (!files.length) return e.reply(`【${role.name}】还没有自定义面板图`)
+    const ok = []
+    const fail = []
+    for (const id of String(m?.[2] || '').split(/[,，、\s]+/).filter(Boolean)) {
+      const idx = Number(id) - 1
+      if (!Number.isInteger(idx) || idx < 0 || idx >= files.length) { fail.push(id); continue }
+      try { fs.unlinkSync(path.join(dir, files[idx])); ok.push(id) } catch { fail.push(id) }
+    }
+    return e.reply([`已删除 ID：${ok.join(',') || '无'}`, fail.length ? `删除失败 ID：${fail.join(',')}` : ''].filter(Boolean).join('\n'))
+  }
+
   async renderCharPanel(e, game, uid, miao, charName, prePlayer = null) {
     const conf = GAME_CONF[game]
     try {
