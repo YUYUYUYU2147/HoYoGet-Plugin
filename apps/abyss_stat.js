@@ -114,15 +114,16 @@ export class abyss_stat extends plugin {
     const avatars = await this.fetchAvatars(e, mys, data)
     /* 右栏的深渊 BOSS 信息：接口（spiralAbyss）不返回怪物，从速览同一份数据源补，
        按层号对齐；取不到就不显示右栏，不影响主图 */
-    /* 左栏圣遗物详情：按层把出战角色的 artisDetail 汇总好，模板直接遍历 */
-    for (const floor of Object.values(data.floors || {})) {
-      const ids = [...new Set([...(floor?.display?.up?.avatars || []), ...(floor?.display?.down?.avatars || [])])]
-      floor.artisTeams = ids
-        .map(id => avatars[id])
-        .filter(a => a && a.artisDetail && a.artisDetail.length)
-        .map(a => ({ name: a.name, setName: a.artisSet?.name || '', artis: a.artisDetail }))
-        .filter(t => t.artis.length)
-    }
+    /* 圣遗物详情只挂在最高层（第 12 层）下面，且只展示顶部统计（最强一击/
+       最高承伤/最多击破/战技/爆发）对应的那几个角色，低层不显示 */
+    const statIds = [...new Set((data.stat || []).map(s => Number(s.id)).filter(Boolean))]
+    const artisTeams = statIds
+      .map(id => avatars[id])
+      .filter(a => a && a.artisDetail && a.artisDetail.length)
+      .map(a => ({ name: a.name, setName: a.artisSet?.name || '', artis: a.artisDetail }))
+    const floorNums = Object.keys(data.floors || {}).map(Number).filter(Number.isFinite)
+    const topFloor = floorNums.length ? Math.max(...floorNums) : 0
+    if (topFloor && data.floors[topFloor]) data.floors[topFloor].artisTeams = artisTeams
 
     const bosses = await this.fetchFloorBosses()
     logger.mark?.(`[HoYoGet][abyss_stat] BOSS 配置层数：${Object.keys(bosses).join(',') || '无'}`
