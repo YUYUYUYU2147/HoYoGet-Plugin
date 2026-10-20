@@ -119,6 +119,7 @@
         <div class="boss-half-title">{{half.label}}{{if half.level}} · Lv.{{half.level}}{{/if}}</div>
         {{each half.waves w}}
         {{if w.name}}<div class="boss-wave">{{w.name}}</div>{{/if}}
+        <div class="boss-monsters">
         {{each w.monsters m}}
         <div class="boss-item">
           <div class="boss-icon">{{if m.icon}}<img src="{{m.icon}}" alt="" />{{else}}<span>{{m.name.slice(0,1)}}</span>{{/if}}</div>
@@ -141,6 +142,7 @@
           </div>
         </div>
         {{/each}}
+        </div>
         {{/each}}
       </div>
       {{/each}}
