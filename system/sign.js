@@ -593,11 +593,16 @@ function isBbsCaptcha(res) {
 function isBbsTransient(res) {
     if (Number(res?.retcode) !== -1) return false;
     const msg = String(res?.message || '');
-    return /bbs-api\.miyoushe\.com/.test(msg) || /暂不支持/.test(msg);
+    /* 实测两种文案都有：「暂不支持 https://…」和「暂不不支持 https://…」（多一个"不"），
+       所以只认域名 + 宽松的「暂.*支持」，避免漏判。 */
+    return /bbs-api\.miyoushe\.com/.test(msg) || /暂.*支持/.test(msg);
 }
 
-/** 瞬时拒绝的重试间隔：由短到长，总时长控制在 12 秒内，避免拖住整轮签到 */
-const TRANSIENT_RETRY_GAPS = [2000, 4000, 6000];
+/** 瞬时拒绝的重试间隔：由短到长。
+    米游社偶发「暂不不支持 https://bbs-api.miyoushe.com」（retcode -1），
+    实测要等 8~20 秒才放行，原来 2/4/6 秒三次跑完仍是 -1，于是被当成真失败
+    写进卡片（看着像「没签上」）。现在拉长到近 40 秒，仍只在命中该错误时才等。 */
+const TRANSIENT_RETRY_GAPS = [3000, 5000, 8000, 12000, 12000];
 
 /** 凭证失效。-10001 不在内：那是签名被拒，换凭证没用 */
 function isBbsExpired(res) {
@@ -1071,6 +1076,8 @@ async function bbsForumSign(e, account, forum, ctx = {}) {
     else if (isBbsExpired(signRes)) return '登录失效,请重新[扫码绑定]';
     else if (isBbsCaptcha(signRes)) return '遇到验证码(未过码)';
     else if (isBbsBadSign(signRes)) return '请求被拒(签名/版本)';
+    /* 重试完仍是这个瞬时拒绝：别把接口原文（带域名链接）写进卡片，看着像出 bug */
+    else if (isBbsTransient(signRes)) return '米游社繁忙，稍后自动重试';
     else signTip = signRes?.message || `失败(${signRes?.retcode ?? '无返回'})`;
     return signTip;
 }
