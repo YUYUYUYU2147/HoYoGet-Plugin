@@ -20,8 +20,10 @@ export class zzz_challenge extends zzz_panel_list {
     this.dsc = '绝区零式舆防卫战 / 危局强袭战记录'
     // 压过 ZZZ-Plugin 的 abyss/deadly（默认 70，桥接 -30000）
     this.priority = pluginPriority('zzz_challenge', -32000)
-    /* 父类构造会注册「挑战提醒」定时任务；这里只复用它的取数方法，不能再挂一份 */
-    this.task = null
+    /* 父类构造会注册「挑战提醒」定时任务；这里只复用它的取数方法，不能再挂一份。
+       必须是**空数组**：框架 collectTask 会对 task 做 [task] 展开再读 i.cron，
+       null / undefined 都会抛 TypeError，进而让整个插件加载失败。 */
+    this.task = []
     this.rule = [
       { reg: /^#?(?:%|％|绝区零|米游社)?\s*(上期|往期)?\s*(式舆防卫战|式舆|深渊|防卫战|防卫)$/i.source, fnc: 'shiyu' },
       { reg: /^#?(?:%|％|绝区零|米游社)?\s*(上期|往期)?\s*(危局强袭战|危局|强袭|强袭战)$/i.source, fnc: 'deadly' },
