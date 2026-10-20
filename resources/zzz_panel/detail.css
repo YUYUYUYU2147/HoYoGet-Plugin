@@ -83,9 +83,16 @@ body {
 .hero .uid { margin-top: 6px; color: #c3cad8; font-size: .82em; letter-spacing: .5px; }
 
 .stats { margin-top: 14px; display: grid; grid-template-columns: 1fr; gap: 0; }
-.stats .row { display: flex; align-items: center; gap: 10px; padding: 6px 2px; border-bottom: 1px solid rgba(255,255,255,.06); }
+.stats .row { display: flex; align-items: center; gap: 7px; padding: 6px 2px; border-bottom: 1px solid rgba(255,255,255,.06); font-size: .9em; }
 .stats .row:last-child { border-bottom: none; }
-.stats .label { color: #c0c8d6; white-space: nowrap; }
+.stats .label { color: #c0c8d6; white-space: nowrap; flex: none; width: 98px; }
+/* 词条权重徽章（对齐喵喵面板：>=80 金色，0 不显示） */
+.stats .wt {
+  flex: none; width: 26px; height: 18px; line-height: 18px;
+  border-radius: 5px; background: rgba(0,0,0,.45);
+  font-size: .68em; text-align: center; color: #9fb3cc;
+}
+.stats .wt.gold { color: #ffe699; }
 .stats .mid { color: #c3cad8; font-size: .95em; white-space: nowrap; }
 .stats .mid .add { color: #6fe3b0; margin-left: 4px; }
 .stats .final { margin-left: auto; font-weight: 700; font-size: 1.05em; white-space: nowrap; }

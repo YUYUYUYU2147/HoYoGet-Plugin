@@ -1282,6 +1282,13 @@ const SCORE_PROP_ID = {
   '能量自动回复': 30502, '异常精通': 31203, '异常掌控': 31402,
 }
 const ELEM_DMG_ID = { 200: 31503, 201: 31603, 202: 31703, 203: 31803, 204: 32303, 205: 31903 }
+// 左栏属性行 → 评分词条 id：面板上每条属性后面标出它在评分里的权重（同喵喵面板）。
+// 伤害加成按角色元素取对应 id（见 ELEM_DMG_ID）。
+const STAT_ROW_PID = {
+  hpmax: 11102, attack: 12102, def: 13102, breakstun: 12202,
+  crit: 20103, critdam: 21103, elementabnormalpower: 31402, elementmystery: 31203,
+  penratio: 23103, sprecover: 30502, penvalue: 23203,
+}
 // 单条副词条的基础值：用于把固定攻击/生命/防御换算成百分比等效权重
 const BASE_VALUE = { 11102: 3, 11103: 112, 12102: 3, 12103: 19, 13102: 4.8, 13103: 15 }
 const SUB_BASE_VALUE = { ...BASE_VALUE, 20103: 2.4, 21103: 4.8, 23203: 9, 31203: 9 }
@@ -1521,12 +1528,8 @@ function normalizeDetail(a, uid) {
       if (!isNaN(num)) agg[pid].value += num
     }
   }
-  const propertyStats = Object.values(agg)
-    // weight：该词条在评分里的权重（0~100，0 表示不计分），模板里跟在词条名后面
-    .map(s => ({ name: s.name, count: s.count, value: s.value.toFixed(1) + (s.isPct ? '%' : ''), weight: Math.round((scoreRes.weight?.[Number(s.pid)] || 0) * 100) }))
-    .sort((x, y) => y.count - x.count)
-
-  // 评分：按自研权重计算（0~330 分制），替换接口分
+  // 评分：按自研权重计算（0~330 分制），替换接口分。
+  // 先算，后面的词条统计与属性行都要用 scoreRes.weight 标权重。
   const scoreStats = {
     atk: parseFloat(basic_properties.attack?.final) || 0,
     crit: toRatio(basic_properties.crit?.final),
@@ -1535,6 +1538,13 @@ function normalizeDetail(a, uid) {
     ap: parseFloat(basic_properties.elementmystery?.final) || 0,
   }
   const scoreRes = calcEquipScore(equip_final, a?.name_mi18n || '', scoreStats, a?.avatar_profession, a?.element_type, basic_properties)
+  const statWeight = pid => Math.round((scoreRes.weight?.[Number(pid)] || 0) * 100)
+
+  const propertyStats = Object.values(agg)
+    // weight：该词条在评分里的权重（0~100，0 表示不计分），模板里跟在词条名后面
+    .map(s => ({ name: s.name, count: s.count, value: s.value.toFixed(1) + (s.isPct ? '%' : ''), weight: statWeight(s.pid) }))
+    .sort((x, y) => y.count - x.count)
+
   const rating = scoreRes.rating
   const equip_score = scoreRes.score
   equip_final.forEach((eq, i) => {
@@ -1572,8 +1582,12 @@ function normalizeDetail(a, uid) {
   for (const [k, label] of STAT_ORDER) {
     const v = basic_properties[k]
     if (!v) continue
-    if (k === 'dmgbonus') stat_rows.push({ label: v.property_name || label, icon: 'element', cls: elementStr, base: v.base, add: v.add, final: v.final })
-    else stat_rows.push({ label, icon: 'prop', cls: k, base: v.base, add: v.add, final: v.final })
+    // 权重：这一条属性在评分里值多少分（0~100），模板里作为小徽章跟在属性名后面
+    const weight = statWeight(k === 'dmgbonus' ? ELEM_DMG_ID[a?.element_type] : STAT_ROW_PID[k])
+    // 伤害加成的属性名带元素前缀（冰属性伤害加成），太长会把权重徽章挤掉；
+    // 元素已由图标颜色区分，标签统一用「伤害加成」（与喵喵面板一致）
+    if (k === 'dmgbonus') stat_rows.push({ label, icon: 'element', cls: elementStr, weight, base: v.base, add: v.add, final: v.final })
+    else stat_rows.push({ label, icon: 'prop', cls: k, weight, base: v.base, add: v.add, final: v.final })
   }
 
   const apiPortrait = a?.role_vertical_painting_url || a?.role_square_url || ''
