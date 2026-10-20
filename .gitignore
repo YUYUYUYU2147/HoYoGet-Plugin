@@ -23,3 +23,15 @@ resources/hoyo_panel/images/panel/*
 # 内置数据层（vendor/miao）的用户配置：从 miao-plugin 迁移过来的本地设置，不入库
 system/vendor/miao/config/cfg/*
 !system/vendor/miao/config/cfg/.gitkeep
+
+# meta 资源里的图片（角色立绘/武器/圣遗物，约 300MB）不入库：
+# 由 #米哈游同步资源包 或启动时的在线同步从作者服务拉取，落地到这两个目录
+resources/meta-gs/**/*.webp
+resources/meta-gs/**/*.png
+resources/meta-gs/**/*.jpg
+resources/meta-sr/**/*.webp
+resources/meta-sr/**/*.png
+resources/meta-sr/**/*.jpg
+# 同步版本标记（每台机器不一样，不入库）
+resources/meta-gs/.sha
+resources/meta-sr/.sha
