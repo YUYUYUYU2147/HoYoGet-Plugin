@@ -149,9 +149,15 @@ body,
 }
 .abyss-floor-team {
   /* 队伍卡改用 mini（105px）后，8 张横排约 930px，1300 的左栏放得下，
-     恢复「上半 | 下半」并排，避免一上一下把整层拉高一倍 */
+     恢复「上半 | 下半」并排，避免一上一下把整层拉高一倍。
+     space-between 让下半贴住本层右边缘，和下面各间的下半队伍右对齐 */
   display: flex;
   align-items: flex-start;
+  justify-content: space-between;
+  /* 和 .abyss-level 的左右 10px 内距对齐：上半贴第一间左侧、
+     下半贴第三间右侧（也就是通关时间的右边缘） */
+  padding: 0 10px;
+  box-sizing: border-box;
 }
 .abyss-floor-team .line {
   width: 1px;
@@ -206,7 +212,8 @@ body,
 }
 .abyss-level {
   padding: 5px 10px 7px;
-  width: 33%;
+  /* 三间正好铺满，第三间右边缘才和上面队伍行的右边缘对得上 */
+  width: 33.3333%;
   box-sizing: border-box;
   box-shadow: 0 0 1px 0 #fff;
 }
