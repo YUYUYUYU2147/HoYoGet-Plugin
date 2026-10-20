@@ -361,6 +361,9 @@ body {
     height: 15px;
     top: -1px;
     margin-left: -2px;
+    /* .tag 带 padding:1px 4px，box-sizing 是 border-box，
+       不重置的话 15px 盒子里只剩 7px 宽的内容区，段位图被压扁 */
+    padding: 0;
 }
 
 .rarity-A {
@@ -370,6 +373,7 @@ body {
     height: 15px;
     top: -1px;
     margin-left: -2px;
+    padding: 0;
 }
 
 .rank {

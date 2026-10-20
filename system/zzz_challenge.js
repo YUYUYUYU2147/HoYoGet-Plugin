@@ -11,6 +11,50 @@
 //   危局：/api/zzz/hadal_mem_detail_v2 → has_data / list / total_star …
 
 /** 元素英文键 → 本地图标文件名（resources/zzz_challenge/element/ 下） */
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import YAML from 'yaml'
+
+const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const BOSS_DIR = path.join(PLUGIN_ROOT, 'system', 'default')
+
+/** 读一次 BOSS 名称/弱点映射（来源：米游社接口不返回，靠图片 hash 查本地表） */
+let _bossMap = null
+function bossMap() {
+  if (_bossMap) return _bossMap
+  const read = f => {
+    try { return YAML.parse(fs.readFileSync(path.join(BOSS_DIR, f), 'utf8')) || {} } catch { return {} }
+  }
+  _bossMap = { name: read('zzz_boss_name.yaml'), meta: read('zzz_boss_meta.yaml') }
+  return _bossMap
+}
+
+/** 从图片 URL 里取 hash（米游社 CDN 是 .../item_icon_u8d5de/<32位hash>.png） */
+function hashOf(url = '') {
+  return String(url).match(/[a-f0-9]{32}/i)?.[0]?.toLowerCase()
+    || String(url).split('/').pop()?.replace(/\.[^.]+$/, '').toLowerCase() || ''
+}
+
+/**
+ * BOSS 名称 / 弱点 / 抗性。
+ * 接口只给立绘地址，名称与弱点抗性查本地表（key 是图片 hash），查不到就留空。
+ */
+function bossMetaOf(boss = {}) {
+  const url = boss?.icon || boss?.monster_pic || boss?.boss_pic || boss?.image || boss?.pic || ''
+  const h = hashOf(url)
+  if (!h) return { name: '', weakness: '', resistance: '' }
+  const { name: names, meta } = bossMap()
+  const rawName = names?.[h]
+  const rawMeta = meta?.[h]
+  const pick = v => (v && typeof v === 'object' ? (v.name || v.weakness || '') : v)
+  return {
+    name: String(pick(rawName) || '').trim(),
+    weakness: rawMeta?.weakness || '',
+    resistance: rawMeta?.resistance || '',
+  }
+}
+
 const ELEM_ICON = {
   physical: 'Physical', fire: 'Fire', ice: 'Ice', electric: 'Electric',
   lightning: 'Electric', ether: 'Ether', wind: 'Wind',
@@ -19,6 +63,23 @@ const ELEM_ICON = {
 const ELEM_CN = {
   physical: '物理', fire: '火', ice: '冰', electric: '电', lightning: '电',
   ether: '以太', wind: '风', quantum: '量子', imaginary: '虚数',
+}
+
+/**
+ * 代理人列表归一化。
+ * 接口字段是 role_square_url / rarity / rank，**没有 name** ——
+ * 早先按 name 过滤会把整队人都丢掉（强袭战代理人消失就是这个原因）。
+ */
+function normalizeAvatars(list = []) {
+  return (list || []).map(a => ({
+    id: a?.id ?? 0,
+    role_square_url: a?.role_square_url || a?.icon || a?.avatar || '',
+    rarity: a?.rarity || '',
+    rank: Number(a?.rank) || 0,
+    level: Number(a?.level) || 0,
+    element_type: a?.element_type ?? 0,
+    avatar_profession: a?.avatar_profession ?? 0,
+  })).filter(a => a.role_square_url)
 }
 
 /** 弱点/抗性 → 模板的 tag 结构。模板写的是 {{ppath}}{{tag.icon}}，所以给插件相对路径 */
@@ -98,12 +159,7 @@ export function normalizeShiyu(raw = {}, meta = {}) {
         rating: ratingPic(rating),
         // 模板用 item.rating 显示；真实评级放到 challenge_time 旁边不现实，这里保持图片即可
         challenge_time_fmt: item?.challenge_time ? formatSeconds(item.challenge_time) : '',
-        avatars: (item?.avatars || item?.avatar_list || []).map(a => ({
-          name: a?.name || '',
-          role_square_url: a?.icon || a?.avatar || a?.role_square_url || '',
-          rank: Number(a?.rank ?? a?.rarity ?? 0) || 0,
-          rarity: a?.rarity || '',
-        })).filter(a => a.name),
+        avatars: normalizeAvatars(item?.avatars || item?.avatar_list),
         buffer: item?.buffer?.text ? { text: stripTags(item.buffer.text) } : null,
         /* 立绘直接用接口的 monster_pic（米游社 CDN 完整 URL）；
            不要写成 boss?.pic || ''，取不到 boss 时会把原字段清空，导致没图 */
@@ -175,6 +231,87 @@ async function fetchAsset(url) {
   }
 }
 
+/* ───── nanoka 的 BOSS 弱点/抗性（危局用） ─────
+ * 米游社接口只给立绘，弱点抗性要另找数据：nanoka 的当期 boss.json 里每个房间的
+ * monster_list[].element 用 1 表示弱点、-1 表示抗性。
+ * 取不到就静默跳过，只是少显示两行，不影响出图。 */
+const NANOKA = 'https://static.nanoka.cc'
+const NANOKA_ELEM_CN = {
+  physical: '物理', fire: '火', ice: '冰', electric: '电', ether: '以太', wind: '风',
+}
+
+async function fetchJson(url, timeout = 8000) {
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), timeout)
+  try {
+    const resp = await fetch(url, { signal: ctrl.signal })
+    if (!resp.ok) return null
+    return await resp.json()
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+const pickBySign = (element = {}, sign) => Object.entries(element || {})
+  .filter(([, v]) => Number(v) === sign)
+  .map(([k]) => NANOKA_ELEM_CN[k])
+  .filter(Boolean)
+
+let _nanokaBossCache = { at: 0, bosses: null }
+const NANOKA_TTL = 30 * 60 * 1000
+
+/**
+ * 当期危局每关的 BOSS 信息（按房间顺序）。
+ * @param {number} periodOffset 0=当期，-1=上期
+ * @returns {Promise<Array<{name,weakness,resistance}>|null>}
+ */
+async function nanokaDeadlyBosses(periodOffset = 0) {
+  if (!periodOffset && _nanokaBossCache.bosses && Date.now() - _nanokaBossCache.at < NANOKA_TTL) {
+    return _nanokaBossCache.bosses
+  }
+  const manifest = await fetchJson(`${NANOKA}/manifest.json`, 6000)
+  const nv = manifest?.zzz?.latest
+  if (!nv) return null
+  const list = await fetchJson(`${NANOKA}/zzz/${nv}/boss.json`)
+  const items = Object.entries(list || {})
+    .map(([k, v]) => ({ id: Number(k), ...v }))
+    .filter(v => Number.isFinite(v.id) && v.live_begin && v.live_end)
+    .sort((a, b) => a.id - b.id)
+  if (!items.length) return null
+
+  const now = new Date()
+  let idx = items.findIndex(v => now >= new Date(v.live_begin) && now <= new Date(v.live_end))
+  if (idx < 0) idx = items.length - 1
+  idx += periodOffset
+  idx = Math.max(0, Math.min(items.length - 1, idx))
+
+  const detail = await fetchJson(`${NANOKA}/zzz/${nv}/zh/boss/${items[idx].id}.json`, 10000)
+  if (!detail?.modes) return null
+  /* 按名字建索引，不依赖房间顺序：
+     nanoka 的 modes 里既有普通（3 关）也有困难（1 关），zone 顺序还与接口不一致，
+     用名字对齐最稳。 */
+  const byName = new Map()
+  for (const mode of Object.values(detail.modes)) {
+    for (const zone of Object.values(mode?.zone || {})) {
+      for (const room of Object.values(zone?.layer_room || {})) {
+        const entries = Object.entries(room?.monster_list || {}).sort(([a], [b]) => Number(a) - Number(b))
+        const mon = entries.length ? entries[entries.length - 1][1] : null
+        if (!mon?.name || byName.has(mon.name)) continue
+        byName.set(mon.name, {
+          name: mon.name,
+          weakness: pickBySign(mon.element, 1).join(' / '),
+          resistance: pickBySign(mon.element, -1).join(' / '),
+        })
+      }
+    }
+  }
+  const ret = byName.size ? [...byName.values()] : null
+  if (ret && !periodOffset) _nanokaBossCache = { at: Date.now(), bosses: ret }
+  return ret
+}
+
 /** BOSS 背景序号：接口给 boss_bg_3 这种文件名，取数字；没有就按序号循环 */
 function bossBgNum(boss = {}, idx = 0) {
   // 只看 bg_icon：boss.icon 是立绘地址，误匹配会把背景换成错的
@@ -189,6 +326,8 @@ function bossBgNum(boss = {}, idx = 0) {
  */
 export async function normalizeDeadly(raw = {}, meta = {}) {
   /* 先并行把每关 BOSS 立绘转成 data URI（详见 fetchAsset 注释） */
+  /* 弱点/抗性：nanoka 当期数据按房间顺序对齐（接口本身不给） */
+  const nanokaBosses = await nanokaDeadlyBosses(0).catch(() => null)
   const assets = await Promise.all((raw?.list || []).map(v => {
     const boss = v?.boss?.[0] || {}
     return fetchAsset(boss?.icon || boss?.monster_pic || boss?.boss_pic || boss?.image || boss?.pic || '')
@@ -196,6 +335,11 @@ export async function normalizeDeadly(raw = {}, meta = {}) {
   const list = (raw?.list || []).map((v, idx) => {
     const boss = v?.boss?.[0] || {}
     const buff = v?.buffer?.[0] || {}
+    // 接口只给立绘地址；名称/弱点/抗性依次取：接口 → nanoka → 本地映射表
+    const bm = bossMetaOf(boss)
+    // nanoka 数据按名字对齐（顺序不可靠）
+    const bossName = boss?.name || boss?.monster_name || ''
+    const nb = bossName ? (nanokaBosses || []).find(b => b.name === bossName) || null : null
     return {
       score: v?.score ?? '',
       star: Number(v?.star) || 0,
@@ -208,22 +352,18 @@ export async function normalizeDeadly(raw = {}, meta = {}) {
         bg_num: bossBgNum(boss, idx),
         // assets[idx] 是下载好的 base64；下载失败会回落到原始 URL
         icon: assets[idx] || boss?.icon || boss?.monster_pic || boss?.boss_pic || boss?.image || boss?.pic || '',
-        name: boss?.name || boss?.monster_name || '',
+        // 名称优先用接口的，接口没有就查本地表
+        name: boss?.name || boss?.monster_name || nb?.name || bm.name || '',
         race_icon: boss?.race_icon || '',
-        monster_weakness_tags: toElementTags(boss?.weakness || boss?.monster_weakness),
-        monster_resistance_tags: toElementTags(boss?.resistance || boss?.monster_resistance),
+        monster_weakness_tags: toElementTags(boss?.weakness || boss?.monster_weakness || nb?.weakness || bm.weakness),
+        monster_resistance_tags: toElementTags(boss?.resistance || boss?.monster_resistance || nb?.resistance || bm.resistance),
       },
       buffer: {
         icon: buff?.icon || '',
         name: buff?.name || '',
         desc: buff?.desc ? stripTags(buff.desc) : '',
       },
-      avatars: (v?.avatar_list || []).map(a => ({
-        name: a?.name || '',
-        role_square_url: a?.icon || a?.avatar || a?.role_square_url || '',
-        rank: Number(a?.rank ?? a?.rarity ?? 0) || 0,
-        rarity: a?.rarity || '',
-      })).filter(a => a.name),
+      avatars: normalizeAvatars(v?.avatar_list),
       buddy: {
         bangboo_rectangle_url: v?.buddy?.bangboo_rectangle_url || v?.buddy?.icon || '',
         rarity: v?.buddy?.rarity || '',
