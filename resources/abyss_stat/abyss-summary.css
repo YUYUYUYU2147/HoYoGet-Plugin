@@ -7,7 +7,7 @@
 body,
 .container {
   /* 原版 970px；左右两栏等宽放「战绩 / 怪物BOSS」，加宽到 1800 */
-  width: 1800px;
+  width: 2000px;
   background: url(./imgs/bg1.png) top left no-repeat #2a3860;
   background-size: 100% auto;
 }
@@ -292,13 +292,13 @@ body,
 /*# sourceMappingURL=abyss-summary.css.map */
 /* 每层卡片：左栏保持原来的战绩内容，右栏补该层深渊怪物/BOSS 信息 */
 .floor-split { display: flex; gap: 16px; align-items: flex-start; width: 100%; min-width: 0; }
-.floor-split.has-boss .floor-main { flex: 1 1 50%; min-width: 0; }
-.floor-split:not(.has-boss) .floor-main { flex: 1 1 50%; min-width: 0; }
-.floor-main { flex: 1 1 50%; min-width: 0; }
+.floor-split.has-boss .floor-main { flex: 0 0 1300px; min-width: 0; }
+.floor-split:not(.has-boss) .floor-main { flex: 0 0 1300px; min-width: 0; }
+.floor-main { flex: 0 0 1300px; min-width: 0; }
 
 .floor-boss {
-  /* 与左栏等宽：两边都用 50% 基准，靠 gap 分开 */
-  flex: 1 1 50%;
+  /* 左栏固定 1300，右栏吃掉剩余宽度（加宽右栏而不是压左栏） */
+  flex: 1 1 auto;
   min-width: 0;
   box-sizing: border-box;
   /* 上边距与左栏 .abyss-title 对齐（左侧标题在 .cont-body 里还有内距） */
