@@ -120,7 +120,13 @@ export class abyss_stat extends plugin {
     const artisTeams = statIds
       .map(id => avatars[id])
       .filter(a => a && a.artisDetail && a.artisDetail.length)
-      .map(a => ({ name: a.name, setName: a.artisSet?.name || '', artis: a.artisDetail }))
+      .map(a => ({
+        name: a.name,
+        setName: a.artisSummary?.set || '',
+        mark: a.artisSummary?.mark || '',
+        score: a.artisSummary?.score || '',
+        images: (a.artisDetail || []).map(x => x.icon).filter(Boolean).slice(0, 2),
+      }))
     const floorNums = Object.keys(data.floors || {}).map(Number).filter(Number.isFinite)
     const topFloor = floorNums.length ? Math.max(...floorNums) : 0
     if (topFloor && data.floors[topFloor]) data.floors[topFloor].artisTeams = artisTeams
@@ -222,7 +228,18 @@ export class abyss_stat extends plugin {
               }
             })
             .filter(x => x.name || x.set)
-          if (list.length) ret[id] = { ...ret[id], artisDetail: list }
+          if (list.length) {
+            const mark = av?.getArtisMark?.(true) || {}
+            ret[id] = {
+              ...ret[id],
+              artisDetail: list,
+              artisSummary: {
+                set: ret[id]?.artisSet?.name || '',
+                mark: mark.markClass || '',
+                score: Number(mark._mark) ? (Math.round(Number(mark._mark) * 10) / 10).toFixed(1) : '',
+              },
+            }
+          }
         } catch (_) { /* 单角色取不到就跳过 */ }
       }
       /* 缺面板的角色（深渊里出现过、但米游社角色详情里没有）会导致立绘/圣遗物为空，
