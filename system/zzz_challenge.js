@@ -64,6 +64,13 @@ const ELEM_CN = {
   physical: '物理', fire: '火', ice: '冰', electric: '电', lightning: '电',
   ether: '以太', wind: '风', quantum: '量子', imaginary: '虚数',
 }
+/* 中文名 → 图标文件名（nanoka 给的是中文，直接按英文键查会拿不到图标）。
+   后三个是绝区零的特殊属性，素材文件名见 resources/zzz_challenge/element/。 */
+const ELEM_CN_ICON = {
+  物理: 'Physical', 火: 'Fire', 冰: 'Ice', 电: 'Electric', 雷: 'Electric',
+  以太: 'Ether', 风: 'Wind', 量子: 'Quantum', 虚数: 'Imaginary',
+  凛刃: 'HonedEdge', 烈霜: 'Frost', 玄墨: 'AuricInk', 流明: 'Lumiflux',
+}
 
 /**
  * 代理人列表归一化。
@@ -87,9 +94,13 @@ export function toElementTags(list = []) {
   return (Array.isArray(list) ? list : String(list || '').split(/[/、,]/))
     .map(v => String(v || '').trim())
     .filter(Boolean)
-    .map(name => {
-      const icon = ELEM_ICON[name.toLowerCase()] || ''
-      return { name: ELEM_CN[name.toLowerCase()] || name, icon: icon ? `zzz_challenge/element/${icon}.png` : '' }
+    .map(raw => {
+      const key = String(raw || '').trim()
+      // 英文键（physical/fire…）与中文名（物理/火…）两种来源都要认
+      const lower = key.toLowerCase()
+      const cn = ELEM_CN[lower] || key
+      const icon = ELEM_ICON[lower] || ELEM_CN_ICON[key] || ELEM_CN_ICON[cn] || ''
+      return { name: cn, icon: icon ? `zzz_challenge/element/${icon}.png` : '' }
     })
 }
 
