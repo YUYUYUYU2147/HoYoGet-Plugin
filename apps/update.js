@@ -2,6 +2,7 @@ import common from '../../../lib/common/common.js';
 import { Restart } from '../../other/restart.js';
 import { createRequire } from 'module';
 import lodash from 'lodash';
+import fs from 'node:fs';
 import { yaml, config, pluginPriority } from '#HoYoGet';
 
 const require = createRequire(import.meta.url);
@@ -24,6 +25,11 @@ export class update extends plugin {
         {
           reg: '^#*米哈游(插件)?更新日志$',
           fnc: 'updateLog',
+        },
+        {
+          // 从线上补齐 meta 资源（角色/武器/圣遗物图片），不依赖 miao 插件
+          reg: '^#*米哈游(强制)?(同步|更新)资源(包)?$',
+          fnc: 'updateMeta',
         },
       ],
     });
@@ -73,6 +79,30 @@ export class update extends plugin {
       }
     }
     return;
+  }
+
+  /** 主人：同步 meta 资源（角色立绘/武器图/圣遗物图） */
+  async updateMeta() {
+    if (!this.e.isMaster) return false
+    const force = /强制/.test(String(this.e.msg || ''))
+    await this.reply(force ? '开始强制同步资源包…' : '开始同步资源包…')
+    const { syncAllMeta } = await import('../system/meta_sync.js')
+    if (force) {
+      // 强制模式：删掉版本标记，让它重新应用一次（会重新下载最新增量包）
+      for (const game of ['gs', 'sr']) {
+        try { fs.unlinkSync(`./plugins/HoYoGet-Plugin/resources/meta-${game}/.sha`) } catch (_) { }
+      }
+    }
+    let res
+    try {
+      res = await syncAllMeta({ log: msg => logger.mark?.(`[HoYoGet][meta] ${msg}`) })
+    } catch (err) {
+      return this.reply(`同步失败：${err?.message || err}`)
+    }
+    const lines = res.map(r => r.error
+      ? `  ${r.game}：失败 ${r.error}`
+      : `  ${r.game}：${r.skipped ? '已是最新' : `更新 ${r.updated} 个提交`}（${String(r.latest || '').slice(0, 8)}）`)
+    return this.reply(['资源包同步完成：', ...lines].join('\n'))
   }
 
   async update() {
