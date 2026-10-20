@@ -313,9 +313,10 @@ body,
   flex: 1 1 auto;
   min-width: 0;
   box-sizing: border-box;
-  /* 左栏标题在 .cont-body 里（padding 10px 15px + 1px 阴影线）；
-     右栏有 1px 边框，所以 padding-top 用 9px，标题才能和左栏在同一基线 */
-  padding: 9px 15px 15px;
+  /* 左栏「第N层」标题在 .cont-body 内，比卡片顶部低 14px；
+     右栏顶部直接是卡片边缘，所以 padding-top 要补足这 14px，
+     让「本层怪物/BOSS」和「第N层」在同一条水平线上 */
+  padding: 7px 15px 15px;
   border-radius: 14px;
   background: #f8fafc;
   border: 1px solid #e6ebf2;
@@ -373,7 +374,12 @@ body,
 /* 分栏时左栏内容不能撑破（.abyss-detail 原本用 calc(100% + 40px) 抵消内距，
    在 flex 子项里会把左栏撑宽，导致左右不等宽） */
 .floor-main { overflow: visible; }
-.floor-main .abyss-detail { width: 100%; margin-left: 0; margin-right: 0; }
+.floor-main .abyss-detail {
+  /* 原版用 calc(100% + 40px) + 负边距抵消 .cont-body 的 15px 内距；
+     分栏后左栏要和队伍左对齐，直接铺满并去掉负边距 */
+  width: 100%;
+  margin: 10px 0 0;
+}
 .floor-main .abyss-level { box-sizing: border-box; }
 
 /* 左栏底部：各出战角色的圣遗物详情（图标 + 套装 + 等级 + 主副词条，两列网格） */
