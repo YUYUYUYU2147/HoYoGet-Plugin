@@ -105,10 +105,12 @@ export function normalizeShiyu(raw = {}, meta = {}) {
           rarity: a?.rarity || '',
         })).filter(a => a.name),
         buffer: item?.buffer?.text ? { text: stripTags(item.buffer.text) } : null,
-        monster_pic: boss?.pic || '',
-        monster_name: boss?.name || '',
-        monster_weakness_tags: toElementTags(boss?.weakness),
-        monster_resistance_tags: toElementTags(boss?.resist),
+        /* 立绘直接用接口的 monster_pic（米游社 CDN 完整 URL）；
+           不要写成 boss?.pic || ''，取不到 boss 时会把原字段清空，导致没图 */
+        monster_pic: boss?.pic || item?.monster_pic || '',
+        monster_name: boss?.name || item?.monster_name || '',
+        monster_weakness_tags: toElementTags(boss?.weakness?.length ? boss.weakness : item?.monster_weakness),
+        monster_resistance_tags: toElementTags(boss?.resist?.length ? boss.resist : item?.monster_resistance),
       }
     })
     layers.push({
