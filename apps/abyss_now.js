@@ -216,7 +216,7 @@ function giRes(show) {
 function giMonster(detail, m = {}) {
   const info = detail.Monsters?.[m.ID] || {};
   return {
-    name: info.Name || m.Note || `怪物 ${m.ID}`,
+    name: cleanRich(info.Name) || m.Note || `怪物 ${m.ID}`,
     icon: monsterIcon('gi', info.Icon),
     hp: fmt(m.HP),
     count: Number(m.Num) > 1 ? m.Num : (m.HPCount || ''),
@@ -349,12 +349,12 @@ async function buildTheater(mode, opts = {}) {
 function styMonster(detail, id, diffIdx) {
   const info = detail.Monsters?.[id] || {};
   return {
-    name: info.Name || `怪物 ${id}`,
+    name: cleanRich(info.Name) || `怪物 ${id}`,
     icon: monsterIcon('gi', info.Icon),
     hp: info.Stats ? `HP ${fmt(info.Stats.HP)}` : '',
     count: '',
     res: giRes((info.RESShow || [])[diffIdx] || (info.RESShow || [])[0]),
-    mech: (info.Buff || []).map(b => b.Name).filter(Boolean).join(' / '),
+    mech: (info.Buff || []).map(b => cleanRich(b.Name)).filter(Boolean).join(' / '),
   };
 }
 
@@ -402,7 +402,7 @@ function srMonster(detail, m = {}, healPct = 0) {
     value: pct(v),
   })).filter(v => v.elems.length);
   const mon = {
-    name: info.Name || `怪物 ${m.ID}`,
+    name: cleanRich(info.Name) || `怪物 ${m.ID}`,
     icon: monsterIcon('sr', info.Icon),
     hp: fmt(m.HP),
       // HPCount = 血条数，即页面上的 xN（如「9,645,484 x2」），与污染等级无关
@@ -439,7 +439,7 @@ function srWaves(detail, stage, healPct = 0) {
     if (Array.isArray(w.Monsters)) monsters = w.Monsters.map(m => srMonster(detail, m, healPct));
     else if (w.ID) monsters = [srMonster(detail, w, healPct)];
     return {
-      name: w.WaveName || (Array.isArray(raw) && list.length > 1 ? `第${w.Wave ?? i + 1}波` : ''),
+      name: cleanRich(w.WaveName) || (Array.isArray(raw) && list.length > 1 ? `第${w.Wave ?? i + 1}波` : ''),
       monsters,
     };
   }).filter(v => v.monsters.length);
