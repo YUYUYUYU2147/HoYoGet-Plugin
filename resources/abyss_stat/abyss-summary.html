@@ -60,14 +60,13 @@
   <div class="cont">
     {{set floorBosses = bossesByFloor[floor.index] || [] }}
 
-    <div class="floor-head">
-      <strong>第{{floor.index}}层</strong>
-      <span class="abyss-star">{{floor.star}}/9</span>
-    </div>
-
     <div class="floor-split{{if floorBosses.length}} has-boss{{/if}}">
     <div class="floor-main">
     <div class="cont-body">
+      <div class="abyss-title">
+        <strong>第{{floor.index}}层</strong>
+        <span class="abyss-star">{{floor.star}}/9</span>
+      </div>
       <div class="abyss-floor-team">
         <div class="abyss-team">
           {{set ds=floor?.display?.up?.avatars||[] }}
@@ -116,6 +115,7 @@
 
     {{if floorBosses.length}}
     <div class="floor-boss">
+      <div class="boss-title">本层怪物 / BOSS</div>
       {{each floorBosses room}}
       {{each room.halves half}}
       <div class="boss-half">

@@ -295,41 +295,27 @@ body,
 }
 /*# sourceMappingURL=abyss-summary.css.map */
 /* 每层卡片：左栏保持原来的战绩内容，右栏补该层深渊怪物/BOSS 信息 */
-.floor-head {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin: 6px 0 4px 15px;
-}
-.floor-head strong {
-  color: #d3bc8e;
-  font-size: 18px;
-  font-weight: normal;
-  font-family: Number, "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
-}
-
 .floor-split {
-  /* 右栏绝对定位，完全不参与这一层的高度计算：
-     这一层的高度只由左栏（战绩）决定，左栏底部就不会再留出 2000px 的空白。
-     右栏自身限高 + overflow:hidden，超出的 BOSS 条目裁掉（次要信息）。 */
-  position: relative;
+  display: flex;
+  gap: 16px;
+  /* 不用 flex-start：右栏怪物多时会把整层撑高，左栏底部就空出一块。
+     用 stretch 让两栏背景等高，空白不会显得突兀 */
+  align-items: stretch;
   width: 100%;
   min-width: 0;
 }
-.floor-split.has-boss .floor-main { width: 1300px; min-width: 0; }
-.floor-split:not(.has-boss) .floor-main { width: 1300px; min-width: 0; }
-.floor-main { width: 1300px; min-width: 0; }
+.floor-split.has-boss .floor-main { flex: 0 0 1300px; min-width: 0; }
+.floor-split:not(.has-boss) .floor-main { flex: 0 0 1300px; min-width: 0; }
+.floor-main { flex: 0 0 1300px; min-width: 0; }
 
 .floor-boss {
-  /* 绝对定位到右侧：不撑高这一层 */
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 660px;
-  height: 100%;
-  overflow: hidden;
-  /* 标题已经单独一行，右栏从这里开始和左栏 .cont-body 顶部齐平 */
+  /* 左栏固定 1300，右栏吃掉剩余宽度（加宽右栏而不是压左栏） */
+  flex: 1 1 auto;
   min-width: 0;
+  /* 关键：右栏内容比左栏长时不许把这一层撑高（否则左栏底部一片空白）。
+     高度跟随本层（flex stretch），超出部分裁掉 */
+  overflow: hidden;
+  align-self: stretch;
   box-sizing: border-box;
   /* 左栏「第N层」标题在 .cont-body 内，比卡片顶部低 14px；
      右栏顶部直接是卡片边缘，所以 padding-top 要补足这 14px，
@@ -400,44 +386,97 @@ body,
 }
 .floor-main .abyss-level { box-sizing: border-box; }
 
-/* 左栏底部：各出战角色的圣遗物总评（套装 + 评级 + 分数），不再逐件列出 */
+/* 左栏底部：各出战角色的圣遗物详情（图标 + 套装 + 等级 + 主副词条，两列网格） */
 .abyss-artis {
-  margin-top: 8px;
-  padding-top: 7px;
+  margin-top: 10px;
+  padding-top: 8px;
   border-top: 1px dashed rgba(255, 255, 255, .22);
 }
 .abyss-artis .artis-title {
-  font-size: 12.5px;
+  font-size: 13px;
   color: #d3bc8e;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
   letter-spacing: 1px;
 }
-.artis-sum {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 3px 8px;
-  margin-bottom: 3px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, .05);
-  font-size: 11.5px;
+.artis-char { margin-bottom: 8px; }
+.artis-char:last-child { margin-bottom: 0; }
+.artis-char-name {
+  font-size: 12.5px;
+  color: #fff;
+  font-weight: 700;
+  margin-bottom: 4px;
 }
-.artis-sum:last-child { margin-bottom: 0; }
-.artis-sum .as-name { color: #fff; font-weight: 700; min-width: 72px; }
-.artis-sum .as-set { color: rgba(255, 255, 255, .72); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.artis-sum .as-mark {
-  flex: 0 0 auto;
-  padding: 0 6px;
-  border-radius: 4px;
+.artis-char-name span {
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, .6);
+}
+.artis-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 6px;
+}
+.artis-card {
+  padding: 4px 6px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .08);
+  min-width: 0;
+}
+.artis-card-head { display: flex; align-items: center; gap: 5px; }
+.artis-icon {
+  width: 24px; height: 24px; flex: 0 0 auto;
+  border-radius: 5px; object-fit: contain;
+  background: rgba(0, 0, 0, .25);
+}
+.artis-card-meta { min-width: 0; }
+.artis-set {
   font-size: 10.5px;
-  font-weight: 800;
-  line-height: 16px;
-  color: #ffe699;
-  background: rgba(255, 230, 153, .16);
+  color: rgba(255, 255, 255, .88);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.artis-sum .as-score { color: #9fe0c8; font-weight: 700; font-variant-numeric: tabular-nums; }
+.artis-lv { font-size: 10px; color: #d3bc8e; }
+.artis-main { font-size: 10.5px; color: #9fe0c8; margin-top: 2px; }
+.artis-sub {
+  font-size: 10px;
+  color: rgba(255, 255, 255, .58);
+  line-height: 1.4;
+  margin-top: 1px;
+  word-break: break-all;
+}
 
-/* 圣遗物评分：挂在每个角色头像下方 */
+/* 层与层之间不要留空：原版 .cont 上下各 5px，两层的卡会隔开一段 */
+.cont { margin-top: 0; margin-bottom: 0; }
+.cont + .cont { margin-top: 0; }
+
+/* BOSS 技能应对：跨满整行，避免挤在 1/3 列里 */
+.boss-guide {
+  grid-column: 1 / -1;
+  margin: 2px 0 6px;
+  padding: 6px 9px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .05);
+  border-left: 2px solid #d3bc8e;
+}
+.boss-guide .guide-for {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #d3bc8e;
+  margin-bottom: 3px;
+}
+.boss-guide .guide-title {
+  font-size: 11px;
+  color: #fff;
+  margin-top: 3px;
+}
+.boss-guide .guide-line {
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, .66);
+  line-height: 1.5;
+}
+
+/* 圣遗物评分：挂在每个角色头像下方（评级 + 分数） */
 .avatar-icon { position: relative; }
 .av-score {
   position: absolute;
@@ -454,5 +493,5 @@ body,
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.abyss-level .avatars { padding-bottom: 16px; }
 .av-score i { font-style: normal; opacity: .8; font-weight: 600; }
+.abyss-level .avatars { padding-bottom: 16px; }
