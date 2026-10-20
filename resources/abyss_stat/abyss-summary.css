@@ -6,8 +6,8 @@
 }
 body,
 .container {
-  /* 原版 970px；右侧要放「本层怪物/BOSS」栏，加宽到 1500 */
-  width: 1500px;
+  /* 原版 970px；右侧要放「本层怪物/BOSS」栏，加宽到 1640 */
+  width: 1640px;
   background: url(./imgs/bg1.png) top left no-repeat #2a3860;
   background-size: 100% auto;
 }
@@ -296,8 +296,8 @@ body,
 .floor-main { flex: 1; min-width: 0; }
 
 .floor-boss {
-  width: 420px;
-  flex: 0 0 420px;
+  width: 560px;
+  flex: 0 0 560px;
   box-sizing: border-box;
   padding: 12px;
   border-radius: 14px;
@@ -315,8 +315,9 @@ body,
 .boss-half-title { font-size: 12px; color: #7c8aa0; margin-bottom: 6px; }
 .boss-wave { font-size: 12px; color: #8b7fd0; margin: 4px 0; }
 
+.boss-monsters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 8px; margin-bottom: 6px; }
 .boss-item {
-  /* 一只怪占一行：图标 + 名字 + 血量 + 弱点/抗性，全部横排 */
+  /* 小怪两列并排，单只内部仍是一行：图标 + 名字 + 血量 + 弱点/抗性 */
   display: flex;
   align-items: center;
   gap: 7px;
