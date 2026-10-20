@@ -505,6 +505,11 @@ function findZzzStokenEntry(qq, uid = '') {
 
 // 面板随机背景：默认用 yppp 的随机二次元图；配置成空字符串可恢复纯黑底
 const DEFAULT_PANEL_BG = 'https://api.yppp.net/api.php'
+/** 面板风格：dark（默认暗色霓虹）/ apple（深色玻璃，见 detail-apple.css） */
+function panelAppleStyle() {
+  try { return String(config()?.panel_style || 'dark').trim().toLowerCase() === 'apple' } catch { return false }
+}
+
 function getPanelBg() {
   let url = DEFAULT_PANEL_BG
   try { url = String(config()?.zzz_panel_bg_url ?? DEFAULT_PANEL_BG).trim() } catch { /* 用默认 */ }
@@ -2014,7 +2019,7 @@ export class zzz_panel_list extends plugin {
       } catch (err) {
         logger.debug?.(`[HoYoGet][zzz_panel] 面板记录落盘失败：${err?.message || err}`)
       }
-      const img = await render('zzz_panel/detail', { ...detail, footer, zzzWorkshop, bgImage: getPanelBg(), ...getPlayerBadge(e, gamePlayer) }, { e, ret: true })
+      const img = await render('zzz_panel/detail', { ...detail, footer, zzzWorkshop, appleStyle: panelAppleStyle(), bgImage: getPanelBg(), ...getPlayerBadge(e, gamePlayer) }, { e, ret: true })
       const sent = img // render(ret:true) 已自动 e.reply 发送，此处仅保留引用供下方缓存使用
       // 缓存面板用的角色原图，供「%原图」直接取回
       const roleIcon = detail.charData?.role_icon
@@ -2548,6 +2553,7 @@ export class zzz_panel_list extends plugin {
       const img = await render('zzz_panel/detail', {
         ...detail,
         footer: 'from 米哈游 · 理论极限',
+        appleStyle: panelAppleStyle(),
         bgImage: getPanelBg(),
         playerName: '理论极限',
         playerAvatar: '',

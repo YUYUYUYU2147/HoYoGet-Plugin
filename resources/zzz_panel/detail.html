@@ -7,6 +7,7 @@
   <title>ZZZ Panel</title>
   <link rel="stylesheet" type="text/css" href="{{ppath}}zzz_panel/panel-icons.css">
   <link rel="stylesheet" type="text/css" href="{{ppath}}zzz_panel/detail.css">
+  {{if appleStyle}}<link rel="stylesheet" type="text/css" href="{{ppath}}zzz_panel/detail-apple.css">{{/if}}
 </head>
 <body {{sys.scale}}>
   {{if bgImage}}<div class="panel-bg" style="background-image:url('{{bgImage}}')"></div>{{/if}}
@@ -145,7 +146,7 @@
           <div class="score-wrap">
             <div class="score-box">
               <div class="score-line">
-                <div class="score-rate">{{c.equip_comment}}</div>
+                <div class="score-rate rate-{{c.equip_comment}}">{{c.equip_comment}}</div>
                 <div class="score-val">{{c.equip_score.toFixed(1)}}<span class="unit">分</span></div>
               </div>
               <div class="score-meta">规则：{{c.weightRule}} · 词条权重 0~100</div>

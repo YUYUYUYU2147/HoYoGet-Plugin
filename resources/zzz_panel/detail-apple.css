@@ -1,0 +1,177 @@
+/* ─────────────────────────────────────────────────────────────
+ * 绝区零面板 · Apple 风格预览层（叠在 detail.css 之后，只覆盖观感不改结构）
+ *
+ * 与 hoyo_panel/detail-apple.css 同一套语言：macOS / Apple TV 深色玻璃。
+ * 保留立绘与随机背景，卡片换成半透明深灰 + 模糊 + 1px 高光边；
+ * 文字走系统灰阶，彩色只留给数据、评级与状态。
+ * ───────────────────────────────────────────────────────────── */
+
+:root {
+  --ap-text: #f5f5f7;
+  --ap-sub: #a1a1a6;
+  --ap-mute: #98989d;
+  --ap-line: rgba(255, 255, 255, .09);
+  --ap-glass: rgba(28, 28, 30, .52);
+  --ap-blue: #0a84ff;
+  --ap-orange: #ff9f0a;
+  --ap-yellow: #ffd60a;
+  --ap-green: #30d158;
+  --ap-red: #ff453a;
+  --ap-purple: #bf5af2;
+  --ap-shadow: 0 1px 1px rgba(0, 0, 0, .2), 0 10px 30px rgba(0, 0, 0, .35);
+}
+
+body {
+  background: #000;
+  color: var(--ap-text);
+  font-family: "SF Pro Text", -apple-system, "Helvetica Neue", "Noto Sans SC", "PingFang SC", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: .1px;
+}
+/* 背景压暗改成均匀的 Apple TV 式暗角，别再叠蓝色氛围光 */
+.panel-bg::after { background: linear-gradient(180deg, rgba(0, 0, 0, .42), rgba(0, 0, 0, .62)); }
+.container {
+  background: transparent;
+  padding: 22px 24px 30px;
+}
+
+/* 通用玻璃卡 */
+.skills-card, .weapon-card, .disc-card, .score-box, .set-item,
+.dmg-wrap, .team-item {
+  background: var(--ap-glass);
+  border: 1px solid var(--ap-line);
+  border-radius: 20px;
+  box-shadow: var(--ap-shadow), inset 0 1px 0 rgba(255, 255, 255, .06);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+}
+/* 稀有度不再用彩色描边，Apple 风格里只有一条发丝线 */
+.disc-card.rarityS, .disc-card.rarityA { border-color: var(--ap-line); }
+
+/* 标题：细蓝条 + 白色 600，去掉渐变霓虹 */
+.sec-title { font-weight: 600; color: var(--ap-text); letter-spacing: -.2px; }
+.sec-title::before { background: var(--ap-blue); width: 3px; }
+.sec-title .sub { color: var(--ap-mute); font-weight: 400; letter-spacing: .2px; }
+
+/* ───── 头部 ───── */
+.hero .name { font-size: 38px; font-weight: 700; letter-spacing: -.8px; }
+.hero .chip {
+  background: rgba(255, 255, 255, .09);
+  border-color: rgba(255, 255, 255, .14);
+  color: var(--ap-text);
+  font-weight: 500;
+  backdrop-filter: blur(12px);
+}
+.hero .chip.gold { color: var(--ap-orange); background: rgba(255, 159, 10, .12); border-color: rgba(255, 159, 10, .3); }
+.hero .uid { color: var(--ap-mute); font-weight: 500; }
+.player-badge { background: rgba(28, 28, 30, .55); border-color: var(--ap-line); backdrop-filter: blur(16px); }
+
+/* 属性：去底色，只留发丝分隔线；数字用等宽数字 */
+.stats .row { border-bottom-color: rgba(255, 255, 255, .07); }
+.stats .label { color: var(--ap-mute); font-weight: 500; }
+.stats .mid { color: var(--ap-sub); }
+.stats .mid .add { color: var(--ap-green); }
+.stats .final { color: var(--ap-text); font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.2px; }
+.stats .wt { background: rgba(255, 255, 255, .1); color: var(--ap-mute); font-weight: 600; }
+.stats .wt.gold { background: rgba(255, 159, 10, .16); color: var(--ap-orange); }
+
+/* ───── 技能 ───── */
+.skb img { background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .12); }
+.skb-name { color: var(--ap-sub); }
+.skb-lv { color: var(--ap-text); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* ───── 音擎 ───── */
+.weapon-card .wicon { background: rgba(255, 255, 255, .05); border-color: var(--ap-line); border-radius: 14px; }
+.weapon-card .wname { font-weight: 600; letter-spacing: -.2px; }
+.weapon-card .wmeta { color: var(--ap-mute); font-weight: 500; }
+.weapon-card .wp-line + .wp-line { border-top-color: rgba(255, 255, 255, .08); border-top-style: solid; }
+.weapon-card .wp { color: var(--ap-sub); }
+.weapon-card .wp.main { color: #6cb6ff; }
+.weapon-card .wp .wp-tag { background: rgba(255, 255, 255, .1); color: var(--ap-mute); border-radius: 5px; }
+.weapon-card .wp.main .wp-tag { background: rgba(10, 132, 255, .18); color: #6cb6ff; }
+.weapon-card .wtalent { border-top-color: rgba(255, 255, 255, .08); }
+.weapon-card .wt-title { color: var(--ap-yellow); font-weight: 600; }
+.weapon-card .wt-desc { color: var(--ap-sub); line-height: 1.6; }
+
+/* ───── 评分 ───── */
+.score-box { border-radius: 22px; padding: 16px 22px; }
+.score-box .score-rate { font-weight: 700; letter-spacing: -1px; }
+.score-box .score-rate.rate-SS, .score-box .score-rate.rate-SSS, .score-box .score-rate.rate-ACE { color: var(--ap-orange); }
+.score-box .score-rate.rate-S { color: var(--ap-purple); }
+.score-box .score-rate.rate-A { color: var(--ap-blue); }
+.score-box .score-val { color: var(--ap-text); font-weight: 700; letter-spacing: -1.6px; font-variant-numeric: tabular-nums; }
+.score-box .score-val .unit { color: var(--ap-mute); font-weight: 500; letter-spacing: 0; }
+.score-box .score-meta { color: var(--ap-mute); font-weight: 500; }
+.ps-count { background: rgba(255, 255, 255, .1); border-color: transparent; color: var(--ap-text); font-weight: 700; font-variant-numeric: tabular-nums; }
+.ps-name { color: var(--ap-sub); }
+.ps-val { color: var(--ap-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.ps-w { background: rgba(255, 255, 255, .1); color: var(--ap-mute); font-weight: 600; }
+.ps-w.hi { background: rgba(255, 159, 10, .16); color: var(--ap-orange); }
+.ps-w.zero { background: rgba(255, 255, 255, .06); color: #6e6e73; }
+.useful-bar { color: var(--ap-mute); letter-spacing: .2px; }
+.useful-bar b { color: var(--ap-text); font-weight: 600; }
+.useful-bar .useful-effective, .useful-bar .useful-effective b { color: var(--ap-yellow); }
+
+/* ───── 驱动盘 ───── */
+.disc-card { border-radius: 18px; }
+.dc-icon { background: rgba(255, 255, 255, .05); border-color: var(--ap-line); border-radius: 12px; }
+.dc-name { font-weight: 600; letter-spacing: -.2px; }
+.dc-meta { color: var(--ap-mute); }
+.dc-meta .dc-score { color: var(--ap-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.dc-meta .dc-score.ACE, .dc-meta .dc-score.MAX { color: var(--ap-red); }
+.dp .dp-name { color: var(--ap-sub); }
+.dp .dp-hit { color: var(--ap-mute); font-weight: 600; }
+.dp.main .dp-name, .dp.main .dp-val { color: #6cb6ff; }
+/* 有效词条：Apple 的选中态是蓝色，不再整行金色 */
+.dp.on .dp-name { color: var(--ap-text); }
+.dp.on .dp-val { color: var(--ap-text); font-weight: 600; }
+.dp.on .dp-hit { color: var(--ap-blue); }
+.dp:not(.on) .dp-name, .dp:not(.on) .dp-val { color: #6e6e73; }
+
+/* ───── 套装 ───── */
+.set-item { border-radius: 16px; }
+.set-item b { color: var(--ap-text); font-weight: 600; }
+.set-item .own { color: var(--ap-mute); }
+.set-item .set-desc { color: var(--ap-sub); }
+.set-ring .wep { background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .22); box-shadow: none; }
+.set-ring .disc { background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .18); }
+
+/* ───── 伤害计算 ───── */
+.dmg-wrap { border-radius: 18px; }
+.dmg-head { border-bottom-color: rgba(255, 255, 255, .08); }
+.dmg-mul, .dmg-atk { color: var(--ap-mute); }
+.dmg-mul b { color: var(--ap-sub); }
+.dmg-atk b { color: var(--ap-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.dmg-table th { color: var(--ap-mute); }
+.dmg-table td { border-top-color: rgba(255, 255, 255, .05); color: #d1d1d6; }
+.dmg-table th.idx, .dmg-table td.idx { color: var(--ap-mute); }
+.dmg-table td.n i { color: var(--ap-mute); }
+.dmg-table td.r { color: var(--ap-text); font-weight: 500; }
+.dmg-table td.crit { color: var(--ap-yellow); }
+.dmg-table td.n u { color: #6cb6ff; background: rgba(10, 132, 255, .16); }
+.dmg-sub { color: var(--ap-mute); }
+.dmg-buff { background: rgba(255, 255, 255, .07); border-color: transparent; color: var(--ap-sub); border-radius: 8px; }
+.dmg-notes { color: var(--ap-mute); }
+.dmg-none { background: rgba(255, 255, 255, .04); border-color: rgba(255, 255, 255, .1); color: var(--ap-sub); }
+
+/* ───── 配队 / 排名 ───── */
+.team-item { border-radius: 16px; padding: 7px 12px; }
+.team-title { flex: none; color: var(--ap-text); font-weight: 600; font-size: .86em; }
+.team-bangboo { flex: none; color: var(--ap-mute); }
+/* 一行放不下时宁可截断邦布，也不要让成员换行把卡片撑高 */
+.team-members { flex-wrap: nowrap; overflow: hidden; }
+.team-member { flex: none; background: rgba(255, 255, 255, .07); border-color: transparent; }
+.team-member i { font-size: .8em; }
+.team-member i { color: var(--ap-sub); }
+.team-member.on { background: rgba(10, 132, 255, .16); border-color: rgba(10, 132, 255, .45); }
+.team-member.on i { color: #6cb6ff; font-weight: 600; }
+.rank-row:nth-child(odd) { background: rgba(255, 255, 255, .045); }
+.rank-row.me { background: rgba(10, 132, 255, .14); border-color: rgba(10, 132, 255, .4); }
+.rank-row .rk { color: var(--ap-mute); font-weight: 700; font-variant-numeric: tabular-nums; }
+.rank-row .rn { color: var(--ap-text); }
+.rank-row .rc { color: var(--ap-mute); }
+.rank-row .rp { color: var(--ap-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.rank-mine { color: var(--ap-mute); }
+.rank-mine b { color: var(--ap-text); font-weight: 600; }
+
+.copyright { color: var(--ap-mute); font-weight: 500; letter-spacing: .6px; }
