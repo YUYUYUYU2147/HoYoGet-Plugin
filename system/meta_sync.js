@@ -109,12 +109,63 @@ function copyDir(src, dest) {
   }
 }
 
+/** 本地 miao-plugin 的资源根（装了 miao 时用作缺失文件的兜底来源） */
+function miaoResRoot() {
+  return path.join(PLUGIN_ROOT, '..', 'miao-plugin', 'resources')
+}
+
+/** 只复制目标目录里没有的文件，返回复制数量 */
+function copyMissingTree(src, dest) {
+  let copied = 0
+  const walk = (from, to) => {
+    let entries
+    try {
+      entries = fs.readdirSync(from, { withFileTypes: true })
+    } catch (_) {
+      return
+    }
+    try { fs.mkdirSync(to, { recursive: true }) } catch (_) { return }
+    for (const entry of entries) {
+      const a = path.join(from, entry.name)
+      const b = path.join(to, entry.name)
+      if (entry.isDirectory()) walk(a, b)
+      else if (!fs.existsSync(b)) {
+        try {
+          fs.copyFileSync(a, b)
+          copied++
+        } catch (_) { /* 单个文件失败不影响其它 */ }
+      }
+    }
+  }
+  walk(src, dest)
+  return copied
+}
+
+/**
+ * 用本地 miao-plugin 的资源补齐缺失文件。
+ *
+ * 增量包只带「这次改动过的文件」，基线里的命座/天赋图标（character/<名>/icons/）
+ * 和元素/武器图标（common/）不会出现在增量包里；首次安装如果只应用最新增量包，
+ * 这些图会一直缺，面板上就只剩空圆圈/空方块。miao 装了的话按缺失补齐。
+ *
+ * 只补 common/ 和 meta-{game}/，不碰 profile/（咕咕牛自定义立绘，体积大且是用户数据）。
+ * @returns {number} 补齐的文件数
+ */
+export function backfillFromMiao(game) {
+  const srcRoot = miaoResRoot()
+  if (!fs.existsSync(srcRoot)) return 0
+  let copied = 0
+  copied += copyMissingTree(path.join(srcRoot, 'common'), path.join(RES_ROOT, 'common'))
+  copied += copyMissingTree(path.join(srcRoot, branchOf(game)), targetOf(game))
+  return copied
+}
+
 /**
  * 同步一个游戏的 meta 资源。
  *
  * @param {string} game 'gs' | 'sr'
  * @param {object} opts { log, maxCommits } —— log 用于输出进度（可选）
- * @returns {Promise<{game, updated:number, latest:string, skipped:boolean}>}
+ * @returns {Promise<{game, updated:number, latest:string, skipped:boolean, filled:number}>}
  */
 export async function syncMeta(game, opts = {}) {
   const log = typeof opts.log === 'function' ? opts.log : () => {}
@@ -125,8 +176,10 @@ export async function syncMeta(game, opts = {}) {
   const latest = commits[0].sha
   const local = readSha(game)
   if (local && local === latest && fs.existsSync(path.join(targetOf(game), 'character'))) {
-    log(`${branch} 已是最新（${latest.slice(0, 8)}）`)
-    return { game, updated: 0, latest, skipped: true }
+    /* 版本虽是最新，但资源可能是「只应用了增量包」的半套，顺手用 miao 补齐 */
+    const filled = backfillFromMiao(game)
+    log(`${branch} 已是最新（${latest.slice(0, 8)}）${filled ? `，从 miao 补齐 ${filled} 个文件` : ''}`)
+    return { game, updated: 0, latest, skipped: true, filled }
   }
 
   const workDir = path.join(PLUGIN_ROOT, 'temp', 'meta_sync', `${branch}-${Date.now()}`)
@@ -170,7 +223,9 @@ export async function syncMeta(game, opts = {}) {
 
   writeSha(game, latest)
   try { fs.rmSync(workDir, { recursive: true, force: true }) } catch { /* 忽略 */ }
-  return { game, updated, latest, skipped: false }
+  const filled = backfillFromMiao(game)
+  if (filled) log(`${branch} 从 miao 补齐 ${filled} 个文件`)
+  return { game, updated, latest, skipped: false, filled }
 }
 
 /** 两个游戏一起同步 */

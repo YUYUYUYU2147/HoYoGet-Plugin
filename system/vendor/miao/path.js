@@ -29,39 +29,83 @@ const rootPath = path.join(pluginPath, '..', '..')
  *   1. 配置 panel_meta_root（绝对路径或相对插件根）
  *   2. 插件自己的 resources/meta-gs｜meta-sr（若已拷入）
  *   3. 外部 miao-plugin/resources（兼容老用户，图都还在那儿）
+ *
+ * 不能只看「有没有角色立绘」：插件自带的 resources 可能只拷了数据 + imgs，
+ * 而命座/天赋图标在 character/<名>/icons/、元素与武器图标在 common/ 下。
+ * 选到这种「半套」目录时，立绘正常但命座、天赋、元素图标全部 404。
+ * 所以按资源完整度打分，分高的优先。
  */
+function hasDir(p) {
+  try { return fs.statSync(p).isDirectory() } catch (_) { return false }
+}
+function hasFiles(p) {
+  try { return fs.readdirSync(p).length > 0 } catch (_) { return false }
+}
+
+/** 资源根完整度：common/bg（元素图标）、角色 icons（命座/天赋）、
+ *  profile（咕咕牛自定义立绘）、角色 imgs（立绘）。 */
+function rootScore(dir) {
+  if (!dir) return -1
+  let score = 0
+  if (hasFiles(path.join(dir, 'common', 'bg'))) score += 4
+  if (hasDir(path.join(dir, 'profile', 'normal-character'))) score += 2
+  try {
+    const chars = path.join(dir, 'meta-gs', 'character')
+    let imgs = false
+    let icons = false
+    for (const name of fs.readdirSync(chars)) {
+      if (!imgs && hasFiles(path.join(chars, name, 'imgs'))) imgs = true
+      if (!icons && hasFiles(path.join(chars, name, 'icons'))) icons = true
+      if (imgs && icons) break
+    }
+    if (imgs) score += 1
+    if (icons) score += 4
+  } catch (_) { }
+  return score
+}
+
+let _metaRoot = null
 function metaRoot() {
+  if (_metaRoot) return _metaRoot
   const candidates = []
+  /* 显式配置的根优先，即使它不完整（用户自己指定，按用户的来） */
   try {
     const cfg = globalThis.__HOYO_META_ROOT__
-    if (cfg) candidates.push(cfg)
+    if (cfg && fs.existsSync(path.join(cfg, 'meta-gs'))) {
+      _metaRoot = cfg
+      return cfg
+    }
   } catch (_) { }
   candidates.push(path.join(pluginPath, 'resources'))
   candidates.push(path.join(rootPath, 'plugins', 'miao-plugin', 'resources'))
-  /* 优先选「数据和图片都在」的根；只有数据的根会让图片全部 404，
-     所以这里先按「有 meta-gs/character/<任一角色>/imgs」判一次 */
-  const hasImgs = dir => {
-    try {
-      const chars = path.join(dir, 'meta-gs', 'character')
-      if (!fs.existsSync(chars)) return false
-      for (const name of fs.readdirSync(chars).slice(0, 8)) {
-        if (fs.existsSync(path.join(chars, name, 'imgs'))) return true
-      }
-    } catch (_) { }
-    return false
-  }
+
+  let best = null
+  let bestScore = 0
   for (const dir of candidates) {
     try {
-      if (dir && fs.existsSync(path.join(dir, 'meta-gs')) && hasImgs(dir)) return dir
-    } catch (_) { }
+      if (!dir || !fs.existsSync(path.join(dir, 'meta-gs'))) continue
+    } catch (_) { continue }
+    const score = rootScore(dir)
+    if (score > bestScore) {
+      best = dir
+      bestScore = score
+    }
+  }
+  if (best) {
+    _metaRoot = best
+    return best
   }
   // 没有完整的就退回「有 meta-gs」的第一个（数据可用，图可能缺）
   for (const dir of candidates) {
     try {
-      if (dir && fs.existsSync(path.join(dir, 'meta-gs'))) return dir
+      if (dir && fs.existsSync(path.join(dir, 'meta-gs'))) {
+        _metaRoot = dir
+        return dir
+      }
     } catch (_) { }
   }
-  return candidates[1]
+  _metaRoot = candidates[1]
+  return _metaRoot
 }
 
 /* 兼容 miao 的写法：miaoPath/resources/meta-gs/... —— meta 根在别处时也能拼对 */
