@@ -88,13 +88,18 @@
         {{each floor.artisTeams team}}
         <div class="artis-char">
           <div class="artis-char-name">{{team.name}}<span>{{team.setName}}</span></div>
-          <div class="artis-list">
+          <div class="artis-grid">
             {{each team.artis art}}
-            <div class="artis-row">
-              <span class="artis-set">{{art.set}}</span>
-              <span class="artis-lv">+{{art.level}}</span>
-              <span class="artis-main">{{art.main}}</span>
-              <span class="artis-sub">{{each art.attrs a i}}{{if i > 0}} · {{/if}}{{a}}{{/each}}</span>
+            <div class="artis-card">
+              <div class="artis-card-head">
+                {{if art.icon}}<img class="artis-icon" src="{{_miao_path}}{{art.icon}}" onerror="this.style.visibility='hidden'" />{{/if}}
+                <div class="artis-card-meta">
+                  <div class="artis-set">{{art.set}}</div>
+                  <div class="artis-lv">+{{art.level}}</div>
+                </div>
+              </div>
+              <div class="artis-main">{{art.main}}</div>
+              <div class="artis-sub">{{each art.attrs a i}}{{if i > 0}} · {{/if}}{{a}}{{/each}}</div>
             </div>
             {{/each}}
           </div>
