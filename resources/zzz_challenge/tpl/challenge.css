@@ -484,3 +484,11 @@ body {
     letter-spacing: .5px;
     margin: 10px 0 4px;
 }
+
+/* 抗性百分比：跟在属性名后面，字号略小、不做斜体 */
+.element-tag .res-num {
+    font-style: normal;
+    margin-left: 3px;
+    opacity: .85;
+    font-size: .92em;
+}

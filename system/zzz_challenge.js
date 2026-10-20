@@ -89,8 +89,23 @@ function normalizeAvatars(list = []) {
   })).filter(a => a.role_square_url)
 }
 
-/** 弱点/抗性 → 模板的 tag 结构。模板写的是 {{ppath}}{{tag.icon}}，所以给插件相对路径 */
-export function toElementTags(list = []) {
+/**
+ * 元素抗性百分比。
+ * 游戏里没有按 BOSS 逐个给数值，只有「弱点 / 普通 / 抗性」三档：
+ *   弱点 -20%（负抗性 = 增伤）、普通 0%、抗性 +20%
+ * ZZZ-Plugin 的伤害计算也用 resistance: -0.2 作为弱点基准。
+ */
+const RES_WEAK = -20
+const RES_RESIST = 20
+
+/**
+ * 弱点/抗性 → 模板的 tag 结构。
+ * @param {Array|string} list 元素列表
+ * @param {'weak'|'resist'} kind 决定抗性正负号
+ * 模板写的是 {{ppath}}{{tag.icon}}，所以 icon 给插件相对路径。
+ */
+export function toElementTags(list = [], kind = 'weak') {
+  const res = kind === 'resist' ? RES_RESIST : RES_WEAK
   return (Array.isArray(list) ? list : String(list || '').split(/[/、,]/))
     .map(v => String(v || '').trim())
     .filter(Boolean)
@@ -100,7 +115,12 @@ export function toElementTags(list = []) {
       const lower = key.toLowerCase()
       const cn = ELEM_CN[lower] || key
       const icon = ELEM_ICON[lower] || ELEM_CN_ICON[key] || ELEM_CN_ICON[cn] || ''
-      return { name: cn, icon: icon ? `zzz_challenge/element/${icon}.png` : '' }
+      return {
+        name: cn,
+        icon: icon ? `zzz_challenge/element/${icon}.png` : '',
+        // 带上符号：弱点显示 -20%，抗性显示 +20%
+        resText: `${res > 0 ? '+' : ''}${res}%`,
+      }
     })
 }
 
@@ -188,10 +208,10 @@ export async function normalizeShiyu(raw = {}, meta = {}) {
         monster_name: boss?.name || item?.monster_name || nb?.name || bm.name || '',
         monster_weakness_tags: toElementTags(
           boss?.weakness?.length ? boss.weakness
-            : (item?.monster_weakness || nb?.weakness || bm.weakness)),
+            : (item?.monster_weakness || nb?.weakness || bm.weakness), 'weak'),
         monster_resistance_tags: toElementTags(
           boss?.resist?.length ? boss.resist
-            : (item?.monster_resistance || nb?.resistance || bm.resistance)),
+            : (item?.monster_resistance || nb?.resistance || bm.resistance), 'resist'),
       }
     })
     layers.push({
@@ -442,8 +462,8 @@ export async function normalizeDeadly(raw = {}, meta = {}) {
         // 名称优先用接口的，接口没有就查本地表
         name: boss?.name || boss?.monster_name || nb?.name || bm.name || '',
         race_icon: boss?.race_icon || '',
-        monster_weakness_tags: toElementTags(boss?.weakness || boss?.monster_weakness || nb?.weakness || bm.weakness),
-        monster_resistance_tags: toElementTags(boss?.resistance || boss?.monster_resistance || nb?.resistance || bm.resistance),
+        monster_weakness_tags: toElementTags(boss?.weakness || boss?.monster_weakness || nb?.weakness || bm.weakness, 'weak'),
+        monster_resistance_tags: toElementTags(boss?.resistance || boss?.monster_resistance || nb?.resistance || bm.resistance, 'resist'),
       },
       buffer: {
         icon: buff?.icon || '',

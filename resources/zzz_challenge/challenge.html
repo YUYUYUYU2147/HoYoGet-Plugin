@@ -75,7 +75,7 @@
                       {{each item.monster_weakness_tags tag}}
                       <span class="element-tag">
                         {{if tag.icon}}<img src="{{ppath}}{{tag.icon}}" />{{/if}}
-                        <span>{{tag.name}}</span>
+                        <span>{{tag.name}}{{if tag.resText}}<i class="res-num">{{tag.resText}}</i>{{/if}}</span>
                       </span>
                       {{/each}}
                     {{else}}
@@ -92,7 +92,7 @@
                       {{each item.monster_resistance_tags tag}}
                       <span class="element-tag resist-tag">
                         {{if tag.icon}}<img src="{{ppath}}{{tag.icon}}" />{{/if}}
-                        <span>{{tag.name}}</span>
+                        <span>{{tag.name}}{{if tag.resText}}<i class="res-num">{{tag.resText}}</i>{{/if}}</span>
                       </span>
                       {{/each}}
                     {{else}}
