@@ -56,6 +56,12 @@ zzz_panel_bg_url: 'https://api.yppp.net/api.php'
 # 每次出图现读，改完即生效；默认配置只给新装用户兜底，实际生效值看 config/config.yaml。
 panel_style: dark
 
+# 原神/星铁单角色面板是否使用「咕咕牛图库」的自定义面板图作为立绘。
+# 图来自咕咕牛管理器部署的 miao-plugin/resources/profile/normal-character/<角色名>/，
+# 有多张时随机取一张；该角色没有自定义图就自动回落到官方立绘。
+# 设为 false 则始终用官方立绘。
+panel_custom_art: true
+
 #图鉴数据模式：official=正式服 / test=测试服
 # 这个键必须写在默认配置里：#切换测试服模式 是把它写回 config/config.yaml，
 # 但引导逻辑是「拿默认配置补齐用户配置里缺的键」，默认配置里没有这一项时，

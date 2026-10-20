@@ -5,6 +5,7 @@ import { config, pluginPriority, render } from '#HoYoGet'
 import { listCategories, fetchLeaderboard, getUserCalculations, getDamageDistribution } from '../system/akasha.js'
 import { getRoleProfile } from '../system/roleProfile.js'
 import { srPanelExtras } from '../system/sr_panel.js'
+import { pickCustomPanelArt } from '../system/custom_panel.js'
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const YUNZAI_DB = path.join(process.cwd(), 'data', 'db', 'data.db')
@@ -770,6 +771,14 @@ function setSummary(artis) {
     .map(([name, count]) => ({ name, count }))
 }
 
+/** 配置开关：panel_custom_art（默认开），读不到配置时按开处理 */
+function customArtEnabled() {
+  try {
+    const v = config()?.panel_custom_art
+    return v === undefined || v === null ? true : !!v
+  } catch { return true }
+}
+
 /** 单角色详情 → 模板数据 */
 function flattenCharDetail(profile, Character, game, meta = {}) {
   const char = profile?.char || {}
@@ -845,7 +854,9 @@ function flattenCharDetail(profile, Character, game, meta = {}) {
     level: Number(profile?.level) || 0,
     cons: Number(profile?.cons) || 0,
     face: stripSlash(imgs.qFace || imgs.face || ''),
-    splash: stripSlash(imgs.splash || imgs.gacha || ''),
+    /* 立绘：优先咕咕牛自定义面板（miao 的 profile/normal-character/<角色>/ 随机一张），
+       没配置或该角色没有图时回落到官方立绘。可在配置里关掉。 */
+    splash: (customArtEnabled() && pickCustomPanelArt([char?.name, char?.abbr])) || stripSlash(imgs.splash || imgs.gacha || ''),
     attrs,
     radar: buildRadar(profile, game),
     weapon: weapon?.name ? {
