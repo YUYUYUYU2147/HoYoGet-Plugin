@@ -10,11 +10,15 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import crypto from 'node:crypto'
+import sharp from 'sharp'
 import { fileURLToPath } from 'node:url'
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 /** 本插件自己的自定义面板目录：resources/hoyo_panel/images/panel/<游戏>/<角色>/ */
 export const CUSTOM_PANEL_ROOT = path.join(PLUGIN_ROOT, 'resources', 'hoyo_panel', 'images', 'panel')
+/** 裁掉左侧二维码信息栏后的缓存目录（自动生成，不入库） */
+export const CUSTOM_PANEL_CROP_ROOT = path.join(PLUGIN_ROOT, 'resources', 'hoyo_panel', 'images', 'panel_crop')
 
 const MIAO_RES = path.join(process.cwd(), 'plugins', 'miao-plugin', 'resources')
 const NORMAL_DIR = path.join(MIAO_RES, 'profile', 'normal-character')
@@ -107,4 +111,50 @@ export function ensureUserPanelDir(game, name) {
   const dir = path.join(CUSTOM_PANEL_ROOT, g, String(name || '').trim())
   fs.mkdirSync(dir, { recursive: true })
   return dir
+}
+
+
+/**
+ * 咕咕牛图库的面板图左侧带二维码/编号信息栏，直接当立绘会露出来。
+ * 按比例裁掉左侧（默认 24%，1280 宽的图约 307px，正好切在二维码栏右缘），
+ * 结果写到 panel_crop/<game>/<hash>.webp 缓存；返回插件内相对路径。
+ *
+ * @param {string} splash miao 目录下的相对路径（profile/normal-character/...）
+ * @param {string} splashLocal 本插件目录下的相对路径（hoyo_panel/images/panel/...）
+ * @param {string} game gs | sr
+ * @param {number} ratio 左侧裁切比例，0 < ratio < 0.5
+ * @returns {Promise<string>} 裁切后的插件内相对路径；失败返回空串
+ */
+export async function cropCustomPanelArt(splash = '', splashLocal = '', game = 'gs', ratio = 0.24) {
+  const srcRel = splashLocal || splash
+  if (!srcRel) return ''
+  const r = Number(ratio)
+  if (!Number.isFinite(r) || r <= 0 || r >= 0.5) return ''
+  const g = game === 'sr' ? 'sr' : 'gs'
+  try {
+    const srcAbs = splashLocal
+      ? path.join(PLUGIN_ROOT, 'resources', decodeURIComponent(srcRel))
+      : path.join(MIAO_RES, decodeURIComponent(srcRel))
+    if (!fs.existsSync(srcAbs)) return ''
+    const stat = fs.statSync(srcAbs)
+    const key = crypto.createHash('sha1')
+      .update(`${srcAbs}|${stat.size}|${stat.mtimeMs}|${r}`)
+      .digest('hex').slice(0, 16)
+    const destRel = `hoyo_panel/images/panel_crop/${g}/${key}.webp`
+    const destAbs = path.join(PLUGIN_ROOT, 'resources', destRel)
+    if (fs.existsSync(destAbs)) return destRel
+    const meta = await sharp(srcAbs).metadata()
+    const width = Number(meta.width) || 0
+    const height = Number(meta.height) || 0
+    const left = Math.round(width * r)
+    if (!width || !height || left <= 0 || left >= width) return ''
+    fs.mkdirSync(path.dirname(destAbs), { recursive: true })
+    await sharp(srcAbs)
+      .extract({ left, top: 0, width: width - left, height })
+      .webp({ quality: 92 })
+      .toFile(destAbs)
+    return destRel
+  } catch {
+    return ''
+  }
 }

@@ -65,6 +65,8 @@ panel_style: dark
 #   3. 官方立绘
 # 设为 false 则始终用官方立绘。
 panel_custom_art: true
+# 咕咕牛面板图左侧二维码/编号栏的裁切比例（0~0.5），默认 0.24；设 0 不裁
+panel_custom_art_crop: 0.24
 
 #图鉴数据模式：official=正式服 / test=测试服
 # 这个键必须写在默认配置里：#切换测试服模式 是把它写回 config/config.yaml，

@@ -35,4 +35,12 @@ resources/hoyo_panel/images/panel/
 
 星铁角色可以写 `#米哈游上传星铁遐蝶面板图`。
 
-也可以在配置里把 `panel_custom_art` 设为 `false`，始终使用官方立绘。
+## 左侧二维码栏
+
+咕咕牛图库导出的图左侧带二维码/编号/来源栏，直接当立绘会露出来。
+插件出图前会按 `panel_custom_art_crop` 的比例裁掉左侧（默认 `0.24`，
+1280 宽的图约 307px，正好切在二维码栏右缘），裁切结果缓存在
+`resources/hoyo_panel/images/panel_crop/`。
+
+- 想保留完整图：把 `panel_custom_art_crop` 设为 `0`
+- 想始终用官方立绘：把 `panel_custom_art` 设为 `false`
