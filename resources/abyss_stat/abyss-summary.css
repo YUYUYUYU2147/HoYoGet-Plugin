@@ -295,6 +295,19 @@ body,
 }
 /*# sourceMappingURL=abyss-summary.css.map */
 /* 每层卡片：左栏保持原来的战绩内容，右栏补该层深渊怪物/BOSS 信息 */
+.floor-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 6px 0 4px 15px;
+}
+.floor-head strong {
+  color: #d3bc8e;
+  font-size: 18px;
+  font-weight: normal;
+  font-family: Number, "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+}
+
 .floor-split {
   /* 右栏绝对定位，完全不参与这一层的高度计算：
      这一层的高度只由左栏（战绩）决定，左栏底部就不会再留出 2000px 的空白。
@@ -315,6 +328,7 @@ body,
   width: 660px;
   height: 100%;
   overflow: hidden;
+  /* 标题已经单独一行，右栏从这里开始和左栏 .cont-body 顶部齐平 */
   min-width: 0;
   box-sizing: border-box;
   /* 左栏「第N层」标题在 .cont-body 内，比卡片顶部低 14px；
@@ -428,7 +442,7 @@ body,
 .av-score {
   position: absolute;
   left: 50%;
-  bottom: -13px;
+  bottom: -12px;
   transform: translateX(-50%);
   padding: 0 4px;
   border-radius: 4px;
@@ -440,5 +454,5 @@ body,
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.abyss-level .avatars { padding-bottom: 14px; }
+.abyss-level .avatars { padding-bottom: 16px; }
 .av-score i { font-style: normal; opacity: .8; font-weight: 600; }
