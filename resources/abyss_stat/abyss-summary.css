@@ -441,3 +441,33 @@ body,
   margin-top: 1px;
   word-break: break-all;
 }
+
+/* 层与层之间不要留空：原版 .cont 上下各 5px，两层的卡会隔开一段 */
+.cont { margin-top: 0; margin-bottom: 0; }
+.cont + .cont { margin-top: 0; }
+
+/* BOSS 技能应对：跨满整行，避免挤在 1/3 列里 */
+.boss-guide {
+  grid-column: 1 / -1;
+  margin: 2px 0 6px;
+  padding: 6px 9px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .05);
+  border-left: 2px solid #d3bc8e;
+}
+.boss-guide .guide-for {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #d3bc8e;
+  margin-bottom: 3px;
+}
+.boss-guide .guide-title {
+  font-size: 11px;
+  color: #fff;
+  margin-top: 3px;
+}
+.boss-guide .guide-line {
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, .66);
+  line-height: 1.5;
+}

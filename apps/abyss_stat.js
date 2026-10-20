@@ -143,7 +143,7 @@ export class abyss_stat extends plugin {
       stat: data.stat || [],
       bossesByFloor: bosses,
       sys: { copyright: '' },
-    }, { e, ret: true, dsf: 2 })
+    }, { e, ret: true, dsf: 3.2 })
   }
 
   /** 当期深渊每层的怪物/BOSS（来自速览的数据源），失败返回 {} */
@@ -260,7 +260,7 @@ export class abyss_stat extends plugin {
       timeCalc,
       elemIcon,
       sys: { copyright: '' },
-    }, { e, ret: true, dsf: 2 })
+    }, { e, ret: true, dsf: 3.2 })
   }
 
   srChaos(e) { return this.srChallenge(e, 'chaos') }

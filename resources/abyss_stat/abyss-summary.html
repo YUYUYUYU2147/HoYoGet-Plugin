@@ -167,6 +167,15 @@
             {{if m.mech}}<div class="boss-mech">{{m.mech}}</div>{{/if}}
           </div>
         </div>
+        {{if m.guides && m.guides.length}}
+        <div class="boss-guide">
+          <div class="guide-for">{{m.name}} · 应对</div>
+          {{each m.guides g}}
+          {{if g.title}}<div class="guide-title">{{g.title}}</div>{{/if}}
+          {{each g.lines l}}<div class="guide-line">· {{l}}</div>{{/each}}
+          {{/each}}
+        </div>
+        {{/if}}
         {{/each}}
         </div>
         {{/each}}
