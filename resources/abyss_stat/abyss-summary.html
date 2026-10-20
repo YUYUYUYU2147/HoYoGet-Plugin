@@ -82,6 +82,27 @@
           {{/each}}
         </div>
       </div>
+      {{if floor.artisTeams && floor.artisTeams.length}}
+      <div class="abyss-artis">
+        <div class="artis-title">圣遗物详情</div>
+        {{each floor.artisTeams team}}
+        <div class="artis-char">
+          <div class="artis-char-name">{{team.name}}<span>{{team.setName}}</span></div>
+          <div class="artis-list">
+            {{each team.artis art}}
+            <div class="artis-row">
+              <span class="artis-set">{{art.set}}</span>
+              <span class="artis-lv">+{{art.level}}</span>
+              <span class="artis-main">{{art.main}}</span>
+              <span class="artis-sub">{{each art.attrs a i}}{{if i > 0}} · {{/if}}{{a}}{{/each}}</span>
+            </div>
+            {{/each}}
+          </div>
+        </div>
+        {{/each}}
+      </div>
+      {{/if}}
+
       <div class="abyss-detail">
         {{each floor.levels level levelIdx}}
         <div class="abyss-level">

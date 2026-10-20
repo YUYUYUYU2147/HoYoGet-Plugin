@@ -17,6 +17,22 @@ import { fileURLToPath } from 'node:url'
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 /** 模板里 <% include(_tpl_path+'/avatar-card.html') %> 用的目录（我们自己的副本） */
+/* 圣遗物词条 key → 中文（面板里用的简称） */
+const ATTR_CN = {
+  hp: '生命值', hpPlus: '小生命', hpPct: '生命值',
+  atk: '攻击力', atkPlus: '小攻击', atkPct: '攻击力',
+  def: '防御力', defPlus: '小防御', defPct: '防御力',
+  cpct: '暴击率', cdmg: '暴击伤害', mastery: '元素精通',
+  recharge: '元素充能', dmg: '伤害加成', phy: '物理伤害',
+  heal: '治疗加成', shield: '护盾强效', diffelem: '元素抗性',
+  speed: '速度', stance: '击破特攻', effPct: '效果命中', effDef: '效果抵抗',
+  pyro: '火伤', hydro: '水伤', cryo: '冰伤', electro: '雷伤',
+  anemo: '风伤', geo: '岩伤', dendro: '草伤', physical: '物伤',
+}
+/* 这些 key 的数值是固定值（不带 %），其余都是百分比 */
+const FLAT_KEYS = new Set(['hpPlus', 'atkPlus', 'defPlus'])
+const attrName = key => ATTR_CN[key] || key
+
 const abyssTplPath = () => path.join(PLUGIN_ROOT, 'resources', 'abyss_stat', 'tpl') + path.sep
 /**
  * 角色立绘 / 武器图 / 圣遗物图的 URL 前缀。
@@ -98,6 +114,16 @@ export class abyss_stat extends plugin {
     const avatars = await this.fetchAvatars(e, mys, data)
     /* 右栏的深渊 BOSS 信息：接口（spiralAbyss）不返回怪物，从速览同一份数据源补，
        按层号对齐；取不到就不显示右栏，不影响主图 */
+    /* 左栏圣遗物详情：按层把出战角色的 artisDetail 汇总好，模板直接遍历 */
+    for (const floor of Object.values(data.floors || {})) {
+      const ids = [...new Set([...(floor?.display?.up?.avatars || []), ...(floor?.display?.down?.avatars || [])])]
+      floor.artisTeams = ids
+        .map(id => avatars[id])
+        .filter(a => a && a.artisDetail && a.artisDetail.length)
+        .map(a => ({ name: a.name, setName: a.artisSet?.name || '', artis: a.artisDetail }))
+        .filter(t => t.artis.length)
+    }
+
     const bosses = await this.fetchFloorBosses()
     logger.mark?.(`[HoYoGet][abyss_stat] BOSS 配置层数：${Object.keys(bosses).join(',') || '无'}`
       + ` | 本图层：${Object.keys(data.floors || {}).join(',')}`)
@@ -168,6 +194,36 @@ export class abyss_stat extends plugin {
       const player = miao.Player.create(e)
       player.setMysCharData(detail)
       const ret = player.getAvatarData([...ids]) || {}
+      /* 左栏要列出每队的圣遗物详情（单件：套装/等级/主词条/副词条），
+         getAvatarData 只给套装汇总，单件要单独取，失败忽略 */
+      for (const id of Object.keys(ret)) {
+        try {
+          const av = player.getAvatar(id)
+          const arts = av?.getArtisDetail?.() || {}
+          const list = Object.keys(arts)
+            .sort((a, b) => Number(a) - Number(b))
+            .map(k => {
+              const v = arts[k] || {}
+              const fmtAttr = x => {
+                if (!x?.key) return ''
+                const n = Number(x.value)
+                const pct = !FLAT_KEYS.has(x.key)
+                return `${attrName(x.key)}${pct ? n.toFixed(1) + '%' : ' ' + Math.round(n)}`
+              }
+              return {
+                slot: Number(k),
+                name: v.name || '',
+                set: v.set || '',
+                level: v.level || 0,
+                icon: v.img || '',
+                main: v.main ? fmtAttr({ key: v.main.key, value: v.main.value }) : '',
+                attrs: (v.attrs || []).map(fmtAttr).filter(Boolean),
+              }
+            })
+            .filter(x => x.name || x.set)
+          if (list.length) ret[id] = { ...ret[id], artisDetail: list }
+        } catch (_) { /* 单角色取不到就跳过 */ }
+      }
       /* 缺面板的角色（深渊里出现过、但米游社角色详情里没有）会导致立绘/圣遗物为空，
          把名单打出来方便判断是「没展示圣遗物」还是「角色不在橱窗」 */
       const missing = [...ids].filter(id => !ret[id])
