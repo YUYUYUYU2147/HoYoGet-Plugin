@@ -47,6 +47,26 @@ const PANEL_SHORT_CHAR_REG = /^#?米哈游\s*([^\s]+?)\s*面板$/i
 /* 更新面板：#米哈游原神更新面板 / #米哈游星铁更新面板 [UID] */
 const PANEL_REFRESH_REG = new RegExp(`^#?米哈游\\s*${GAME_WORD}(?:更新|刷新)(?:全部)?面板(?:\\s+(\\d{9}))?$`, 'i')
 
+/*
+ * 不带「米哈游」的写法（#原神面板 / #星铁面板 / #原神面板 桑多涅 …）。
+ * 这几条在 miao-plugin 里也是面板指令，本插件优先级更高（-42000），
+ * 所以会盖掉 miao 的同名指令；accept() 里统一补回「米哈游」前缀再走原逻辑。
+ * 注意只认带了游戏名的：裸 #雷神面板 / #面板 仍留给 miao。
+ */
+const NO_PREFIX_GAME = '(原神|星铁|崩铁|gs|sr)'
+const NO_PREFIX_PANEL_REG = new RegExp(`^#?\\s*${NO_PREFIX_GAME}\\s*面板(?:\\s+(\\d{9}))?$`, 'i')
+const NO_PREFIX_LIST_REG = new RegExp(`^#?\\s*${NO_PREFIX_GAME}\\s*面板列表$`, 'i')
+const NO_PREFIX_CHAR_REG = new RegExp(`^#?\\s*${NO_PREFIX_GAME}\\s*面板\\s+(\\S+)$`, 'i')
+const NO_PREFIX_REFRESH_REG = new RegExp(`^#?\\s*${NO_PREFIX_GAME}\\s*(?:更新|刷新)(?:全部)?面板(?:\\s+(\\d{9}))?$`, 'i')
+
+/** 把「#原神面板」补成「#米哈游原神面板」；不匹配返回空串 */
+function withMhyPrefix(msg) {
+  const m = msg.match(NO_PREFIX_REFRESH_REG) || msg.match(NO_PREFIX_LIST_REG)
+    || msg.match(NO_PREFIX_PANEL_REG) || msg.match(NO_PREFIX_CHAR_REG)
+  if (!m) return ''
+  return msg.replace(/^(#?\s*)/, '$1米哈游')
+}
+
 /** 从 Users 表读该用户的某个游戏 UID */
 async function readBoundUid(e, game) {
   const qq = String(e?.user_id || e?.sender?.user_id || '').trim()
@@ -1277,6 +1297,11 @@ export class hoyo_panel extends plugin {
         { reg: PANEL_REG.source, fnc: 'panel' },
         { reg: PANEL_CHAR_REG.source, fnc: 'panel' },
         { reg: PANEL_LIST_REG.source, fnc: 'panel' },
+        /* 免「米哈游」前缀的同义写法（会先被 accept 改写，规则表里留着保持一致） */
+        { reg: NO_PREFIX_REFRESH_REG.source, fnc: 'refreshPanel' },
+        { reg: NO_PREFIX_PANEL_REG.source, fnc: 'panel' },
+        { reg: NO_PREFIX_CHAR_REG.source, fnc: 'panel' },
+        { reg: NO_PREFIX_LIST_REG.source, fnc: 'panel' },
       ],
     })
   }
@@ -1291,10 +1316,15 @@ export class hoyo_panel extends plugin {
    */
   async accept(e) {
     const msg = String(e?.msg || '')
-    if (!PANEL_REG.test(msg) && !PANEL_CHAR_REG.test(msg) && !PANEL_REFRESH_REG.test(msg)
-      && !PANEL_LIST_REG.test(msg) && !PANEL_SHORT_CHAR_REG.test(msg)) return
+    /* 免「米哈游」前缀：#原神面板 / #星铁面板 桑多涅 ……
+       优先级低于 miao 就会先被它接走，所以先把 e.msg 补回前缀，后面全走同一套逻辑 */
+    const prefixed = withMhyPrefix(msg)
+    if (prefixed) e.msg = prefixed
+    const text = String(e.msg || '')
+    if (!PANEL_REG.test(text) && !PANEL_CHAR_REG.test(text) && !PANEL_REFRESH_REG.test(text)
+      && !PANEL_LIST_REG.test(text) && !PANEL_SHORT_CHAR_REG.test(text)) return
     this.e = e
-    if (PANEL_REFRESH_REG.test(msg)) await this.refreshPanel(e)
+    if (PANEL_REFRESH_REG.test(text)) await this.refreshPanel(e)
     else await this.panel(e)
     // 'return' 表示已处理完毕，不再继续匹配后面的插件
     return 'return'
