@@ -99,6 +99,8 @@ export class abyss_stat extends plugin {
     /* 右栏的深渊 BOSS 信息：接口（spiralAbyss）不返回怪物，从速览同一份数据源补，
        按层号对齐；取不到就不显示右栏，不影响主图 */
     const bosses = await this.fetchFloorBosses()
+    logger.mark?.(`[HoYoGet][abyss_stat] BOSS 配置层数：${Object.keys(bosses).join(',') || '无'}`
+      + ` | 本图层：${Object.keys(data.floors || {}).join(',')}`)
     const miaoRes = miaoResPath()
     return render('abyss_stat/abyss-summary', {
       abyss: data,
