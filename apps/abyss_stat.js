@@ -86,6 +86,13 @@ export class abyss_stat extends plugin {
     if (!raw?.floors?.length) return e.reply('没有查到本期深境螺旋记录，可能还没打或未公开。')
 
     const data = buildGsAbyss(raw)
+    /* 统计项可能缺字段（米游社部分账号不返回战技/爆发榜），打出来便于排查 */
+    try {
+      logger.mark?.(`[HoYoGet][abyss_stat] 统计项 ${data.stat?.length || 0} 个：`
+        + (data.stat || []).map(x => x.title).join('/')
+        + ` | 原始字段：damage=${!!raw.damage_rank} take=${!!raw.take_damage_rank} defeat=${!!raw.defeat_rank}`
+        + ` e=${!!raw.normal_skill_rank} q=${!!raw.energy_skill_rank}`)
+    } catch (_) { }
     /* 角色详情（头像/武器/圣遗物）：模板按 avatars[id] 渲染角色卡，
        取不到就传空对象，模板里有 avatar 判空，只是不显示卡片 */
     const avatars = await this.fetchAvatars(e, mys, data)
