@@ -6,8 +6,8 @@
 }
 body,
 .container {
-  /* 原版 970px；右侧要放「本层怪物/BOSS」栏，加宽到 1320 */
-  width: 1320px;
+  /* 原版 970px；右侧要放「本层怪物/BOSS」栏，加宽到 1500 */
+  width: 1500px;
   background: url(./imgs/bg1.png) top left no-repeat #2a3860;
   background-size: 100% auto;
 }
@@ -296,8 +296,8 @@ body,
 .floor-main { flex: 1; min-width: 0; }
 
 .floor-boss {
-  width: 330px;
-  flex: 0 0 330px;
+  width: 420px;
+  flex: 0 0 420px;
   box-sizing: border-box;
   padding: 12px;
   border-radius: 14px;
