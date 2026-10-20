@@ -6,8 +6,8 @@
 }
 body,
 .container {
-  /* 原版 970px；右侧要放「本层怪物/BOSS」栏，加宽到 1640 */
-  width: 1640px;
+  /* 原版 970px；左右两栏等宽放「战绩 / 怪物BOSS」，加宽到 1800 */
+  width: 1800px;
   background: url(./imgs/bg1.png) top left no-repeat #2a3860;
   background-size: 100% auto;
 }
@@ -170,6 +170,7 @@ body,
 .abyss-level {
   padding: 5px 10px 7px;
   width: 33%;
+  box-sizing: border-box;
   box-shadow: 0 0 1px 0 #fff;
 }
 .abyss-level:nth-child(even) {
@@ -291,13 +292,14 @@ body,
 /*# sourceMappingURL=abyss-summary.css.map */
 /* 每层卡片：左栏保持原来的战绩内容，右栏补该层深渊怪物/BOSS 信息 */
 .floor-split { display: flex; gap: 16px; align-items: flex-start; width: 100%; min-width: 0; }
-.floor-split.has-boss .floor-main { flex: 1; min-width: 0; }
-.floor-split:not(.has-boss) .floor-main { flex: 1; min-width: 0; }
-.floor-main { flex: 1; min-width: 0; }
+.floor-split.has-boss .floor-main { flex: 1 1 50%; min-width: 0; }
+.floor-split:not(.has-boss) .floor-main { flex: 1 1 50%; min-width: 0; }
+.floor-main { flex: 1 1 50%; min-width: 0; }
 
 .floor-boss {
-  width: 560px;
-  flex: 0 0 560px;
+  /* 与左栏等宽：两边都用 50% 基准，靠 gap 分开 */
+  flex: 1 1 50%;
+  min-width: 0;
   box-sizing: border-box;
   padding: 12px;
   border-radius: 14px;
@@ -352,3 +354,9 @@ body,
 .boss-tags img { width: 12px; height: 12px; object-fit: contain; }
 .boss-tags em { font-style: normal; font-weight: 700; }
 .boss-mech { font-size: 10.5px; color: #7c8aa0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+
+/* 分栏时左栏内容不能撑破（.abyss-detail 原本用 calc(100% + 40px) 抵消内距，
+   在 flex 子项里会把左栏撑宽，导致左右不等宽） */
+.floor-main { overflow: hidden; }
+.floor-main .abyss-detail { width: 100%; margin-left: 0; margin-right: 0; }
+.floor-main .abyss-level { box-sizing: border-box; }
