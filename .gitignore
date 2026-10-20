@@ -19,3 +19,7 @@ resources/zzz_panel/images/panel/
 # 原神/星铁面板：用户自己上传/拷贝的自定义立绘，同样不入库（目录说明 README 例外）
 resources/hoyo_panel/images/panel/*
 !resources/hoyo_panel/images/panel/README.md
+
+# 内置数据层（vendor/miao）的用户配置：从 miao-plugin 迁移过来的本地设置，不入库
+system/vendor/miao/config/cfg/*
+!system/vendor/miao/config/cfg/.gitkeep

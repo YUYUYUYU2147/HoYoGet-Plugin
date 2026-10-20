@@ -1,6 +1,7 @@
 import lodash from "lodash"
 import { Data } from "#hoyo.miao"
 import { Character } from "#hoyo.miao.models"
+import { profileMd5Key, getMD5 } from '../../../redis-keys.js'
 
 let HttpsProxyAgent = ""
 
@@ -46,8 +47,8 @@ export default {
     try {
       player.setBasicData(Data.getData(data, "name:nickname,face:headIcon,level:level,word:level,sign:signature"))
       await Promise.all(lodash.map(data.avatars, async(ds, id) => {
-        let key = `miao:profile:sr:${player.uid}:md5:${ds.avatarId}`
-        let md5 = await redis.get(key)
+        let key = profileMd5Key('sr', player.uid, ds.avatarId)
+        let md5 = await getMD5(key)
         if (!md5) {
           md5 = Data.generateMD5(Data.getData(player._original[ds.avatarId], "level,cons,weapon,talent,trees,artis"), "sr")
           redis.set(key, md5)

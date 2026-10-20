@@ -19,11 +19,11 @@ export default class ProfileReq extends Base {
 
   async setCd(seconds = 60) {
     let ext = new Date() * 1 + seconds * 1000
-    await redis.set(`miao:profile-cd:${this.uid}`, ext + "", { EX: seconds })
+    await redis.set(`hoyo:profile-cd:${this.uid}`, ext + "", { EX: seconds })
   }
 
   async inCd() {
-    let ext = await redis.get(`miao:profile-cd:${this.uid}`)
+    let ext = await redis.get(`hoyo:profile-cd:${this.uid}`) || await redis.get(`miao:profile-cd:${this.uid}`)
     if (!ext || isNaN(ext)) return false
     let cd = (new Date() * 1) - ext
     if (cd < 0 && Math.abs(cd) < 100 * 60 * 1000) return Math.ceil(0 - cd / 1000)
