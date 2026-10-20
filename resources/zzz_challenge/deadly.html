@@ -43,7 +43,7 @@
                     {{each item.boss.monster_weakness_tags tag}}
                     <span class="element-tag" style="display:inline-flex !important; align-items:center !important; vertical-align:middle !important; white-space:nowrap !important;">
                       {{if tag.icon}}<img src="{{ppath}}{{tag.icon}}" />{{/if}}
-                      <span style="vertical-align:middle !important;">{{tag.name}}</span>
+                      <span style="vertical-align:middle !important;">{{tag.name}}{{if tag.resText}}<i class="res-num">{{tag.resText}}</i>{{/if}}</span>
                     </span>
                     {{/each}}
                   {{else}}
@@ -60,7 +60,7 @@
                     {{each item.boss.monster_resistance_tags tag}}
                     <span class="element-tag resist-tag" style="display:inline-flex !important; align-items:center !important; vertical-align:middle !important; white-space:nowrap !important;">
                       {{if tag.icon}}<img src="{{ppath}}{{tag.icon}}" />{{/if}}
-                      <span style="vertical-align:middle !important;">{{tag.name}}</span>
+                      <span style="vertical-align:middle !important;">{{tag.name}}{{if tag.resText}}<i class="res-num">{{tag.resText}}</i>{{/if}}</span>
                     </span>
                     {{/each}}
                   {{else}}

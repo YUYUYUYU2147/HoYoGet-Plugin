@@ -536,3 +536,10 @@ body {
 .element-tag.resist-tag {
     background: rgba(255, 80, 80, .16);
 }
+
+.element-tag .res-num {
+    font-style: normal;
+    margin-left: 3px;
+    opacity: .85;
+    font-size: .92em;
+}
