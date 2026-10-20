@@ -18,6 +18,8 @@
     </div>
   </header>
 
+  <div class="layout">
+  <div class="col-left">
 
   {{if elems && elems.length}}
   <section class="panel">
@@ -66,6 +68,7 @@
   {{/if}}
 
   </div>
+  <div class="col-right">
 
   {{each sections s}}
   <section class="floor-header">
@@ -79,7 +82,6 @@
       <div class="room-grid">
         {{each room.halves half}}
         <div class="room-half">
-          <div class="half-left">
           <div class="half-title">
             <b>{{half.label}}</b>
             {{if half.level}}<span>Lv.{{half.level}}</span>{{/if}}
@@ -95,8 +97,6 @@
             {{each half.mechTags t}}<i>{{t}}</i>{{/each}}
           </div>
           {{/if}}
-          </div>
-          <div class="half-right">
           {{each half.waves w}}
           <div class="wave">
             {{if w.name}}<div class="wave-name">{{w.name}}</div>{{/if}}
@@ -136,7 +136,6 @@
             {{/if}}
           </div>
           {{/each}}
-          </div>
         </div>
         {{/each}}
       </div>
@@ -144,6 +143,9 @@
     {{/each}}
   </section>
   {{/each}}
+
+  </div>
+  </div>
 
   <footer>数据来源：Alioth.wiki · 获取时间 {{generatedAt}} · from 米哈游</footer>
 </div>
