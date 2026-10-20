@@ -8,10 +8,10 @@
 
 :root {
   --ap-text: #f5f5f7;
-  --ap-sub: #a1a1a6;
-  --ap-mute: #98989d;
+  --ap-sub: #c7c7cc;
+  --ap-mute: #a1a1a6;
   --ap-line: rgba(255, 255, 255, .09);
-  --ap-glass: rgba(28, 28, 30, .52);
+  --ap-glass: rgba(28, 28, 30, .6);
   --ap-blue: #0a84ff;
   --ap-orange: #ff9f0a;
   --ap-yellow: #ffd60a;
@@ -27,9 +27,11 @@ body {
   font-family: "SF Pro Text", -apple-system, "Helvetica Neue", "Noto Sans SC", "PingFang SC", sans-serif;
   -webkit-font-smoothing: antialiased;
   letter-spacing: .1px;
+  /* 背景图可能很亮，灰字靠这层阴影兜底 */
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .6);
 }
 /* 背景压暗改成均匀的 Apple TV 式暗角，别再叠蓝色氛围光 */
-.panel-bg::after { background: linear-gradient(180deg, rgba(0, 0, 0, .42), rgba(0, 0, 0, .62)); }
+.panel-bg::after { background: linear-gradient(180deg, rgba(0, 0, 0, .5), rgba(0, 0, 0, .68)); }
 .container {
   background: transparent;
   padding: 22px 24px 30px;
@@ -65,6 +67,17 @@ body {
 .hero .chip.gold { color: var(--ap-orange); background: rgba(255, 159, 10, .12); border-color: rgba(255, 159, 10, .3); }
 .hero .uid { color: var(--ap-mute); font-weight: 500; }
 .player-badge { background: rgba(28, 28, 30, .55); border-color: var(--ap-line); backdrop-filter: blur(16px); }
+
+/* 属性：直接压在随机背景上会糊，照 hoyo 面板给一层磨砂浮层；列宽靠负边距抵掉内距 */
+.stats {
+  margin: 14px -12px 0;
+  padding: 8px 12px;
+  border-radius: 18px;
+  background: rgba(28, 28, 30, .5);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1), 0 10px 30px rgba(0, 0, 0, .35);
+  backdrop-filter: blur(26px) saturate(160%);
+  -webkit-backdrop-filter: blur(26px) saturate(160%);
+}
 
 /* 属性：去底色，只留发丝分隔线；数字用等宽数字 */
 .stats .row { border-bottom-color: rgba(255, 255, 255, .07); }
@@ -107,7 +120,7 @@ body {
 .ps-val { color: var(--ap-text); font-weight: 600; font-variant-numeric: tabular-nums; }
 .ps-w { background: rgba(255, 255, 255, .1); color: var(--ap-mute); font-weight: 600; }
 .ps-w.hi { background: rgba(255, 159, 10, .16); color: var(--ap-orange); }
-.ps-w.zero { background: rgba(255, 255, 255, .06); color: #6e6e73; }
+.ps-w.zero { background: rgba(255, 255, 255, .06); color: #8e8e93; }
 .useful-bar { color: var(--ap-mute); letter-spacing: .2px; }
 .useful-bar b { color: var(--ap-text); font-weight: 600; }
 .useful-bar .useful-effective, .useful-bar .useful-effective b { color: var(--ap-yellow); }
@@ -126,7 +139,7 @@ body {
 .dp.on .dp-name { color: var(--ap-text); }
 .dp.on .dp-val { color: var(--ap-text); font-weight: 600; }
 .dp.on .dp-hit { color: var(--ap-blue); }
-.dp:not(.on) .dp-name, .dp:not(.on) .dp-val { color: #6e6e73; }
+.dp:not(.on) .dp-name, .dp:not(.on) .dp-val { color: #8e8e93; }
 
 /* ───── 套装 ───── */
 .set-item { border-radius: 16px; }
