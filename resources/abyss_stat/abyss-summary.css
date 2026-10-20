@@ -124,7 +124,7 @@ body,
   margin-left: 2px;
 }
 .abyss-title {
-  margin: -3px 0 8px;
+  margin: 0 0 8px;
 }
 .abyss-title strong {
   color: #d3bc8e;
@@ -301,16 +301,18 @@ body,
   flex: 1 1 50%;
   min-width: 0;
   box-sizing: border-box;
-  padding: 12px;
+  /* 上边距与左栏 .abyss-title 对齐（左侧标题在 .cont-body 里还有内距） */
+  padding: 8px 12px 12px;
   border-radius: 14px;
   background: #f8fafc;
   border: 1px solid #e6ebf2;
 }
 .floor-boss .boss-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: #475569;
-  margin-bottom: 8px;
+  font-size: 18px;
+  font-weight: 400;
+  color: #d3bc8e;
+  line-height: 1.3;
+  margin: 0 0 8px;
 }
 .boss-half { margin-bottom: 10px; }
 .boss-half:last-child { margin-bottom: 0; }
@@ -361,11 +363,11 @@ body,
 .floor-main .abyss-detail { width: 100%; margin-left: 0; margin-right: 0; }
 .floor-main .abyss-level { box-sizing: border-box; }
 
-/* 左栏底部：各出战角色的圣遗物详情（填补空白） */
+/* 左栏底部：各出战角色的圣遗物详情（图标 + 套装 + 等级 + 主副词条，两列网格） */
 .abyss-artis {
   margin-top: 10px;
   padding-top: 8px;
-  border-top: 1px dashed rgba(255, 255, 255, .25);
+  border-top: 1px dashed rgba(255, 255, 255, .22);
 }
 .abyss-artis .artis-title {
   font-size: 13px;
@@ -379,7 +381,7 @@ body,
   font-size: 12.5px;
   color: #fff;
   font-weight: 700;
-  margin-bottom: 3px;
+  margin-bottom: 4px;
 }
 .artis-char-name span {
   margin-left: 6px;
@@ -387,19 +389,36 @@ body,
   font-weight: 400;
   color: rgba(255, 255, 255, .6);
 }
-.artis-list { display: flex; flex-direction: column; gap: 2px; }
-.artis-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  line-height: 1.5;
-  color: rgba(255, 255, 255, .78);
-  background: rgba(255, 255, 255, .05);
-  border-radius: 6px;
-  padding: 2px 7px;
+.artis-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 6px;
 }
-.artis-set { color: rgba(255, 255, 255, .9); min-width: 0; flex: 0 0 auto; }
-.artis-lv { color: #d3bc8e; flex: 0 0 auto; }
-.artis-main { color: #9fe0c8; flex: 0 0 auto; }
-.artis-sub { color: rgba(255, 255, 255, .62); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.artis-card {
+  padding: 4px 6px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .08);
+  min-width: 0;
+}
+.artis-card-head { display: flex; align-items: center; gap: 5px; }
+.artis-icon {
+  width: 24px; height: 24px; flex: 0 0 auto;
+  border-radius: 5px; object-fit: contain;
+  background: rgba(0, 0, 0, .25);
+}
+.artis-card-meta { min-width: 0; }
+.artis-set {
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, .88);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.artis-lv { font-size: 10px; color: #d3bc8e; }
+.artis-main { font-size: 10.5px; color: #9fe0c8; margin-top: 2px; }
+.artis-sub {
+  font-size: 10px;
+  color: rgba(255, 255, 255, .58);
+  line-height: 1.4;
+  margin-top: 1px;
+  word-break: break-all;
+}
