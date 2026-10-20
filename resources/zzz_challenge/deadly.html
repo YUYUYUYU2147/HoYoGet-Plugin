@@ -70,6 +70,16 @@
               </td>
             </tr>
           </table>
+          {{if item.monster_stats}}
+          <div class="boss-stats">
+            {{each item.monster_stats.top st}}
+            <span class="bs-item"><i>{{st.label}}</i><b>{{st.value}}</b></span>
+            {{/each}}
+            {{each item.monster_stats.bottom st}}
+            <span class="bs-item"><i>{{st.label}}</i><b>{{st.value}}</b></span>
+            {{/each}}
+          </div>
+          {{/if}}
           <div class="score-line">
             <div class="score">{{item.score}}</div>
             <div class="star-icons">

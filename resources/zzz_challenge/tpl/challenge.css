@@ -494,3 +494,36 @@ body {
     opacity: .85;
     font-size: .92em;
 }
+
+/* 怪物面板数值（生命/攻击/防御/失衡值/异常掌控）
+   两列网格：标签在上、数值在下，避免大数字把整行撑开 */
+.boss-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3px 6px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, .12);
+}
+
+.bs-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+    line-height: 1.2;
+}
+
+.bs-item i {
+    font-style: normal;
+    font-size: 8px;
+    color: rgba(255, 255, 255, .5);
+}
+
+.bs-item b {
+    font-size: 10px;
+    color: #fff;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
