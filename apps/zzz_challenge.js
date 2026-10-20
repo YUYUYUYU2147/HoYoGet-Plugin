@@ -80,7 +80,7 @@ export class zzz_challenge extends zzz_panel_list {
     }
     if (!raw?.has_data) return e.reply('没有危局强袭战数据，可能是本期还没打。')
 
-    const data = normalizeDeadly(raw, { uid, nickname: player?.nickname, avatar: player?.avatar })
+    const data = await normalizeDeadly(raw, { uid, nickname: player?.nickname, avatar: player?.avatar })
     if (data.empty) return e.reply('没有查到危局强袭战数据。')
 
     return render('zzz_challenge/deadly', { ...data, footer: 'from 米哈游' }, { e, ret: true, dsf: 2.4 })

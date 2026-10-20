@@ -155,6 +155,26 @@ function pickBoss(item = {}) {
   return { pic, name, weakness, resist }
 }
 
+/**
+ * 把远程图片转成 data URI。
+ *
+ * 米游社的 BOSS 立绘有防盗链，直接写进 <img src> 会加载失败（浏览器里是空白），
+ * ZZZ-Plugin 的 Bos.get_assets() 也是先下载再转 base64 才渲染的。
+ * 取不到就原样返回，最多是没图，不影响其它内容。
+ */
+async function fetchAsset(url) {
+  if (!url || !/^https?:/i.test(url)) return url || ''
+  try {
+    const resp = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0', Referer: 'https://www.miyoushe.com/' } })
+    if (!resp.ok) return url
+    const buf = Buffer.from(await resp.arrayBuffer())
+    const type = resp.headers.get('content-type') || 'image/png'
+    return `data:${type};base64,${buf.toString('base64')}`
+  } catch {
+    return url
+  }
+}
+
 /** BOSS 背景序号：接口给 boss_bg_3 这种文件名，取数字；没有就按序号循环 */
 function bossBgNum(boss = {}, idx = 0) {
   // 只看 bg_icon：boss.icon 是立绘地址，误匹配会把背景换成错的
@@ -167,7 +187,12 @@ function bossBgNum(boss = {}, idx = 0) {
  * 危局强袭战 → deadly.html 的模板数据
  * @param {object} raw hadal_mem_detail_v2 的 data 节点
  */
-export function normalizeDeadly(raw = {}, meta = {}) {
+export async function normalizeDeadly(raw = {}, meta = {}) {
+  /* 先并行把每关 BOSS 立绘转成 data URI（详见 fetchAsset 注释） */
+  const assets = await Promise.all((raw?.list || []).map(v => {
+    const boss = v?.boss?.[0] || {}
+    return fetchAsset(boss?.icon || boss?.monster_pic || boss?.boss_pic || boss?.image || boss?.pic || '')
+  }))
   const list = (raw?.list || []).map((v, idx) => {
     const boss = v?.boss?.[0] || {}
     const buff = v?.buffer?.[0] || {}
@@ -181,7 +206,8 @@ export function normalizeDeadly(raw = {}, meta = {}) {
            只在缺失时补默认值——直接赋值会把已有的立绘地址覆盖成空 */
         ...boss,
         bg_num: bossBgNum(boss, idx),
-        icon: boss?.icon || boss?.monster_pic || boss?.boss_pic || boss?.image || boss?.pic || '',
+        // assets[idx] 是下载好的 base64；下载失败会回落到原始 URL
+        icon: assets[idx] || boss?.icon || boss?.monster_pic || boss?.boss_pic || boss?.image || boss?.pic || '',
         name: boss?.name || boss?.monster_name || '',
         race_icon: boss?.race_icon || '',
         monster_weakness_tags: toElementTags(boss?.weakness || boss?.monster_weakness),
