@@ -447,6 +447,14 @@ body,
 }
 .floor-main .abyss-level { box-sizing: border-box; }
 
+/* 第一层 BOSS 栏上移到统计行顶部，填掉右上角空白；
+   层卡本身要放开 overflow，否则 BOSS 栏上半截会被裁掉 */
+.info_box > .abyss-stat-cont + .cont { overflow: visible; }
+.info_box > .abyss-stat-cont + .cont .cont-body { border-radius: 10px; }
+.info_box > .abyss-stat-cont + .cont .floor-boss { top: -320px; }
+/* 层卡右边距去掉：右边缘和顶部统计行/UID 对齐 */
+.info_box > .cont { margin-right: 0; }
+
 /* 左栏底部：各出战角色的圣遗物详情（图标 + 套装 + 等级 + 主副词条，两列网格） */
 .abyss-artis {
   margin-top: 10px;
