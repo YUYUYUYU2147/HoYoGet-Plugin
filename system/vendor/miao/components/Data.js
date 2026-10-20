@@ -109,6 +109,8 @@ let Data = {
   async redisGet(key, def = {}) {
     try {
       let txt = await redis.get(key)
+      /* 键从 miao:* 迁到 hoyo:* 期间：新键没有就读旧键，避免配置/榜单一下子全空 */
+      if (!txt && key.startsWith('hoyo:')) txt = await redis.get('miao:' + key.slice('hoyo:'.length))
       if (txt) return JSON.parse(txt)
     } catch (e) {
       logger.error(e)

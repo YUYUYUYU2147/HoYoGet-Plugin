@@ -2,7 +2,16 @@ import lodash from "lodash"
 import moment from "moment"
 import { Cfg, Data, Version } from "#hoyo.miao"
 
-export default class ProfileRank {
+/**
+ * redis 键前缀：原先用 miao:rank:*，本插件内置后改 hoyo:rank:*。
+ * 迁移期保留双前缀：写入用新前缀，扫描/解析同时认旧的。
+ */
+const RANK_PREFIX = 'hoyo:rank:'
+const LEGACY_PREFIX = 'miao:rank:'
+/* 把任意 rank key 归一成逻辑键（去掉任一前缀），用于解析角色 id */
+const stripPrefix = (k) => String(k || '').replace(/^(?:hoyo|miao):rank:/, '')
+
+class ProfileRank {
   constructor(data, game = "gs") {
     this.groupId = data.groupId || data.groupId || ""
     if (!this.groupId || this.groupId === "undefined") return false
@@ -18,13 +27,13 @@ export default class ProfileRank {
     return rank
   }
 
-  static async getCharacterFromKey(key, game = "gs") {
+  static getCharacterFromKey(key, game = "gs") {
     if (game === "gs") {
       // 原神的角色id都是8位
-      return /^miao:rank:[\w-]+:(?:mark|dmg|crit|valid):(\d{8})$/.exec(key)
+      return /^[\w-]+:(?:mark|dmg|crit|valid):(\d{8})$/.exec(stripPrefix(key))
     } else {
       // 星铁的角色id都是4位
-      return /^miao:rank:[\w-]+:(?:mark|dmg|crit|valid):(\d{4})$/.exec(key)
+      return /^[\w-]+:(?:mark|dmg|crit|valid):(\d{4})$/.exec(stripPrefix(key))
     }
   }
 
@@ -36,21 +45,24 @@ export default class ProfileRank {
    * @returns {Promise<string|boolean>}
    */
   static async getGroupMaxUid(groupId, charId, type = "mark") {
-    let uids = await redis.zRange(`miao:rank:${groupId}:${type}:${charId}`, -1, -1)
+    let uids = await redis.zRange(`${RANK_PREFIX}${groupId}:${type}:${charId}`, -1, -1)
+    if (!uids?.length) {
+      uids = await redis.zRange(`${LEGACY_PREFIX}${groupId}:${type}:${charId}`, -1, -1)
+    }
     return uids ? uids[0] : false
   }
 
   static async getGroupMaxUidList(groupId, type = "mark", game = "gs") {
-    let keys = await redis.keys(`miao:rank:${groupId}:${type}:*`)
-    let charIds = []
-    for (let key of keys) {
-      let keyRet = await ProfileRank.getCharacterFromKey(key, game)
-      if (keyRet && keyRet[1]) charIds.push(keyRet[1])
-    }
+    let keys = [ ...await redis.keys(`${RANK_PREFIX}${groupId}:${type}:*`), ...await redis.keys(`${LEGACY_PREFIX}${groupId}:${type}:*`) ]
+    /* 新旧前缀都会扫到同一个角色，按 charId 去重，避免列表里出现两条一样的 */
+    let charIds = [ ...new Set(keys
+      .map(key => ProfileRank.getCharacterFromKey(key, game))
+      .filter(ret => ret && ret[1])
+      .map(ret => ret[1])) ]
     if (!charIds.length) return []
     // 管道批量取每个角色排行榜末位(最高分)UID，避免逐个往返
     let pipe = redis.multi()
-    for (let charId of charIds) pipe.zRange(`miao:rank:${groupId}:${type}:${charId}`, -1, -1)
+    for (let charId of charIds) pipe.zRange(`${RANK_PREFIX}${groupId}:${type}:${charId}`, -1, -1)
     let results = await pipe.exec()
     let ret = []
     charIds.forEach((charId, idx) => {
@@ -77,7 +89,7 @@ export default class ProfileRank {
       8008: 8007,
       8009: 8010
     }
-    let uids = charIdMap[charId] ? await redis.zRangeWithScores(`miao:rank:${groupId}:${type}:${charIdMap[charId]}`, -`${number}`, -1) : await redis.zRangeWithScores(`miao:rank:${groupId}:${type}:${charId}`, -`${number}`, -1)
+    let uids = charIdMap[charId] ? await redis.zRangeWithScores(`${RANK_PREFIX}${groupId}:${type}:${charIdMap[charId]}`, -`${number}`, -1) : await redis.zRangeWithScores(`${RANK_PREFIX}${groupId}:${type}:${charId}`, -`${number}`, -1)
     return uids ? uids.reverse() : false
   }
 
@@ -89,7 +101,7 @@ export default class ProfileRank {
    * @returns {Promise<void>}
    */
   static async resetRank(groupId, charId = "", game = "gs") {
-    let keys = await redis.keys(`miao:rank:${groupId}:*`)
+    let keys = [ ...await redis.keys(`${RANK_PREFIX}${groupId}:*`), ...await redis.keys(`${LEGACY_PREFIX}${groupId}:*`) ]
     let delKeys = []
     for (let key of keys) {
       let charRet = await ProfileRank.getCharacterFromKey(key, game)
@@ -97,7 +109,7 @@ export default class ProfileRank {
         if (charId === "" || charId * 1 === charRet[1] * 1) delKeys.push(key)
       }
     }
-    if (charId === "") delKeys.push(`miao:rank:${groupId}:cfg`)
+    if (charId === "") delKeys.push(`${RANK_PREFIX}${groupId}:cfg`)
     if (delKeys.length) await redis.del(delKeys)
   }
 
@@ -110,11 +122,11 @@ export default class ProfileRank {
       5: `绑定CK，或列表有16个角色数据且包含${game == "gs" ? "安柏&凯亚&丽莎" : "丹恒&三月七"}`
     }
     let rankLimit = Cfg.get("groupRankLimit") * 1 || 1
-    let ret = await Data.redisGet(`miao:rank:${groupId}:cfg`, {
+    let ret = await Data.redisGet(`${RANK_PREFIX}${groupId}:cfg`, {
       timestamp: (new Date()) * 1,
       status: 0
     })
-    await Data.redisSet(`miao:rank:${groupId}:cfg`, ret, 3600 * 24 * 365)
+    await Data.redisSet(`${RANK_PREFIX}${groupId}:cfg`, ret, 3600 * 24 * 365)
     ret.limitTxt = rankLimitTxt[rankLimit]
     ret.time = moment(new Date(ret.timestamp)).format("MM-DD HH:mm")
     ret.number = Cfg.get("rankNumber", 15)
@@ -129,12 +141,12 @@ export default class ProfileRank {
    * @returns {Promise<void>}
    */
   static async setGroupStatus(groupId, status = 0) {
-    let cfg = await Data.redisGet(`miao:rank:${groupId}:cfg`, {
+    let cfg = await Data.redisGet(`${RANK_PREFIX}${groupId}:cfg`, {
       timestamp: (new Date()) * 1,
       status
     })
     cfg.status = status
-    await Data.redisSet(`miao:rank:${groupId}:cfg`, cfg, 3600 * 24 * 365)
+    await Data.redisSet(`${RANK_PREFIX}${groupId}:cfg`, cfg, 3600 * 24 * 365)
   }
 
   static async setUidInfo({ uid, qq, profiles, uidType = "bind" }, game = "gs") {
@@ -151,7 +163,8 @@ export default class ProfileRank {
     }
     let data = {}
     try {
-      let uData = await redis.get(`miao:rank:uid-info:${game}:${uid}`)
+      let uData = await redis.get(`${RANK_PREFIX}uid-info:${game}:${uid}`)
+      if (!uData) uData = await redis.get(`${LEGACY_PREFIX}uid-info:${game}:${uid}`)
       if (uData) data = JSON.parse(uData)
     } catch (e) {
       data = {}
@@ -174,13 +187,13 @@ export default class ProfileRank {
         data.qq = qq || data.qq || ""
       }
     }
-    await redis.set(`miao:rank:uid-info:${game}:${uid}`, JSON.stringify(data), { EX: 3600 * 24 * 365 })
+    await redis.set(`${RANK_PREFIX}uid-info:${game}:${uid}`, JSON.stringify(data), { EX: 3600 * 24 * 365 })
   }
 
   static async delUidInfo(uid, game = "gs") {
     uid = uid + ""
     if (!/\d{9,10}/.test(uid)) return false
-    let keys = await redis.keys("miao:rank:*")
+    let keys = [ ...await redis.keys(`${RANK_PREFIX}*`), ...await redis.keys(`${LEGACY_PREFIX}*`) ]
     let pipe = redis.multi()
     let hit = false
     for (let key of keys) {
@@ -195,7 +208,8 @@ export default class ProfileRank {
 
   static async getUidInfo(uid, game = "gs") {
     try {
-      let data = await redis.get(`miao:rank:uid-info:${game}:${uid}`)
+      let data = await redis.get(`${RANK_PREFIX}uid-info:${game}:${uid}`)
+        || await redis.get(`${LEGACY_PREFIX}uid-info:${game}:${uid}`)
       return JSON.parse(data)
     } catch (e) {
       logger.error(`${this.e?.logFnc} 解析 UID 信息失败：${e}`)
@@ -220,7 +234,7 @@ export default class ProfileRank {
       qqMap[qq] = true
     }
 
-    let keys = await redis.keys(`miao:rank:uid-info:${game}:*`)
+    let keys = [ ...await redis.keys(`${RANK_PREFIX}uid-info:${game}:*`), ...await redis.keys(`${LEGACY_PREFIX}uid-info:${game}:*`) ]
     if (keys.length) {
       // 一次 mGet 批量取回所有 uid-info，避免逐 key 往返
       let vals = await redis.mGet(keys)
@@ -234,7 +248,7 @@ export default class ProfileRank {
         let { qq, uidType } = data
         if (!users[qq]) return
 
-        let uidRet = new RegExp(`miao:rank:uid-info:${game}:(\\d{9,10})`).exec(key)
+        let uidRet = new RegExp(`uid-info:${game}:(\\d{9,10})`).exec(stripPrefix(key))
         if (qq && uidType && uidRet?.[1]) add(qq, uidRet[1], uidType === "ck" ? "ck" : "bind")
       })
     }
@@ -297,7 +311,7 @@ export default class ProfileRank {
     try {
       let rankLimit = Cfg.get("groupRankLimit") * 1 || 1
       if (rankLimit === 1) return true
-      let data = await redis.get(`miao:rank:uid-info:${game}:${uid}`)
+      let data = await redis.get(`${RANK_PREFIX}uid-info:${game}:${uid}`)
       data = JSON.parse(data)
       if (data.isSelfUid || data.uidType === "ck") return true
       if (rankLimit === 2) return false
@@ -318,8 +332,8 @@ export default class ProfileRank {
       8008: 8007,
       8009: 8010
     }
-    if (profileIdMap[profile.id]) { return `miao:rank:${this.groupId}:${type}:${profileIdMap[profile.id]}` }
-    return `miao:rank:${this.groupId}:${type}:${profile.id}`
+    if (profileIdMap[profile.id]) { return `${RANK_PREFIX}${this.groupId}:${type}:${profileIdMap[profile.id]}` }
+    return `${RANK_PREFIX}${this.groupId}:${type}:${profile.id}`
   }
 
   /**
@@ -405,3 +419,5 @@ export default class ProfileRank {
     return false
   }
 }
+
+export default ProfileRank

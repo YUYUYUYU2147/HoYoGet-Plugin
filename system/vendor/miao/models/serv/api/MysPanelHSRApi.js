@@ -1,6 +1,7 @@
 import lodash from "lodash"
 import MysPanelHSRData from "./MysPanelHSRData.js"
 import { Data } from "#hoyo.miao"
+import { profileMd5Key, getMD5 } from '../../../redis-keys.js'
 
 export default {
   id: "mysPanelHSR",
@@ -22,8 +23,8 @@ export default {
 
   async updatePlayer(player, data) {
     await Promise.all(lodash.map(data.avatar_list, async(ds) => {
-      let key = `miao:profile:sr:${player.uid}:md5:${ds.id}`
-      let md5 = await redis.get(key)
+      let key = profileMd5Key('sr', player.uid, ds.id)
+      let md5 = await getMD5(key)
       if (!md5) {
         md5 = Data.generateMD5(Data.getData(player._original[ds.id], "level,cons,weapon,talent,trees,artis"), "sr")
         redis.set(key, md5)

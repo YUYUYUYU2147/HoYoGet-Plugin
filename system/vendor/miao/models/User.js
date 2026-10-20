@@ -4,6 +4,7 @@
 * */
 import lodash from "lodash"
 import Base from "./Base.js"
+import { PREFIX, FALLBACK_PREFIX } from "../redis-keys.js"
 
 /* User Class Model
 
@@ -24,15 +25,21 @@ class User extends Base {
 
   // 保存用户配置
   async setCfg(path, value) {
-    let userCfg = await redis.get(`miao:user-cfg:${this.id}`) || await redis.get(`genshin:user-cfg:${this.id}`)
+    /* 用户配置：新前缀 → 旧 miao 前缀 → 更早的 genshin 前缀（逐级回落，迁移不丢数据） */
+    let userCfg = await redis.get(`${PREFIX}user-cfg:${this.id}`)
+      || await redis.get(`${FALLBACK_PREFIX}user-cfg:${this.id}`)
+      || await redis.get(`genshin:user-cfg:${this.id}`)
     userCfg = userCfg ? JSON.parse(userCfg) : {}
     lodash.set(userCfg, path, value)
-    await redis.set(`miao:user-cfg:${this.id}`, JSON.stringify(userCfg))
+    await redis.set(`${PREFIX}user-cfg:${this.id}`, JSON.stringify(userCfg))
   }
 
   /* 获取用户配置 */
   async getCfg(path, defaultValue) {
-    let userCfg = await redis.get(`miao:user-cfg:${this.id}`) || await redis.get(`genshin:user-cfg:${this.id}`)
+    /* 用户配置：新前缀 → 旧 miao 前缀 → 更早的 genshin 前缀（逐级回落，迁移不丢数据） */
+    let userCfg = await redis.get(`${PREFIX}user-cfg:${this.id}`)
+      || await redis.get(`${FALLBACK_PREFIX}user-cfg:${this.id}`)
+      || await redis.get(`genshin:user-cfg:${this.id}`)
     userCfg = userCfg ? JSON.parse(userCfg) : {}
     return lodash.get(userCfg, path, defaultValue)
   }
