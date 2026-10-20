@@ -4,7 +4,7 @@
 body {
   position: relative;
   margin: 0;
-  width: 1300px;
+  width: 1400px;
   font-size: 18px;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif, "Unifont";
   color: #e7ebf3;
@@ -32,7 +32,7 @@ body {
 .container {
   position: relative;
   z-index: 1;
-  width: 1300px;
+  width: 1400px;
   padding: 22px 24px 34px;
   background:
     radial-gradient(1200px 400px at 20% -10%, rgba(120,150,255,.08), transparent 60%),
@@ -155,7 +155,7 @@ body {
 .score-box .score-val .unit { font-size: .45em; color: #cfd6e6; margin-left: 5px; font-weight: 700; }
 .score-box .score-meta { color: #c0c8d6; font-size: .85em; width: 100%; text-align: center; }
 .score-wrap { display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
-.prop-stats { display: grid; grid-template-rows: repeat(3, auto); grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px 16px; align-content: center; }
+.prop-stats { display: grid; grid-template-rows: repeat(3, auto); grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px 12px; align-content: center; }
 .ps-item { display: flex; align-items: center; gap: 7px; font-size: .92em; }
 .ps-count { min-width: 2em; height: 2em; padding: 0 .35em; border-radius: 6px; background: rgba(245, 201, 107, .16); border: 1px solid rgba(245, 201, 107, .35); color: #f5c96b; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
 .ps-name { color: #cfd6e6; white-space: nowrap; }
