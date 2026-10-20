@@ -1,0 +1,483 @@
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+}
+
+html {
+    background: transparent;
+    width: fit-content;
+    height: fit-content;
+}
+
+body {
+    font-size: 14px;
+    color: #fff;
+    width: 500px;
+    transform: scale(2);
+    transform-origin: 0 0;
+}
+
+.container {
+    font-family: "Number", "HYWenHei-55W", "Microsoft YaHei", sans-serif;
+    background-image: url("../deadly_img/page-bg.png");
+    background-size: cover;
+    padding: 8px;
+}
+
+.header {
+    padding: 2px 6px 2px;
+}
+
+.header .title {
+    padding-top: 2px;
+    font-size: 16px;
+    font-weight: 800;
+    text-align: center;
+}
+
+.header .period {
+    font-size: 14px;
+    margin-top: 4px;
+    text-align: center;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    margin: 6px 0;
+    background-image: url("../deadly_img/block-bg.png");
+    background-size: cover;
+    background-position: center;
+    border-radius: 10px;
+}
+
+.user-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 8px;
+    border: 2px solid rgba(255, 255, 255, .2);
+}
+
+.user-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.user-name {
+    font-size: 16px;
+    font-weight: 800;
+    color: #fff;
+}
+
+.user-uid {
+    font-size: 12px;
+    color: rgba(255, 255, 255, .7);
+}
+
+.user-level {
+    font-size: 11px;
+    color: rgba(255, 255, 255, .5);
+}
+
+.summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    margin: 6px 0 10px;
+    background-image: url("../deadly_img/block-bg.png");
+    background-size: cover;
+    background-position: center;
+    border-radius: 10px;
+    min-height: 80px;
+}
+
+.rate-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.rate-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.rate-item img {
+    width: 32px;
+    height: 32px;
+}
+
+.score-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.total-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, .7);
+}
+
+.total-score {
+    font-size: 32px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.rank-pct {
+    font-size: 13px;
+    font-weight: 800;
+    background-image: url("../deadly_img/rank-bg.png");
+    background-size: 100% 100%;
+    width: 80px;
+    color: #1a1a1a;
+    height: 22px;
+    line-height: 22px;
+    text-align: center;
+    padding: 0 6px;
+}
+
+.total-grade {
+    width: 36px;
+    height: 18px;
+    filter: drop-shadow(0 0 0.2em rgba(0,0,0,.5));
+}
+
+.layer-card {
+    background-image: url("../deadly_img/detail-card-bg.png");
+    background-size: 100% 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, .3);
+}
+
+.layer-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0, 0, 0, .45);
+    padding: 8px 12px;
+}
+
+.layer-title {
+    font-size: 15px;
+    font-weight: 800;
+    flex: 1;
+}
+
+.layer-time {
+    font-size: 12px;
+    opacity: .9;
+}
+
+.grade-badge {
+    width: 80px;
+    height: 28px;
+    border-radius: 6px;
+    background-size: cover;
+    background-position: center;
+    color: transparent;
+    font-size: 0;
+    position: relative;
+}
+
+.grade-badge::after {
+    content: "";
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    background-size: contain;
+    background-repeat: no-repeat;
+}
+
+.grade-S {
+    background-image: url("../img/level-s-bg.png");
+}
+
+.grade-A {
+    background-image: url("../img/level-a-bg.png");
+}
+
+.grade-B {
+    background-image: url("../img/level-b-bg.png");
+}
+
+.grade-S::after {
+    background-image: url("../img/level-s.png");
+}
+
+.grade-A::after {
+    background-image: url("../img/level-a.png");
+}
+
+.grade-B::after {
+    background-image: url("../img/level-b.png");
+}
+
+.challenge-card {
+    display: flex;
+    gap: 10px;
+    padding: 10px 12px;
+}
+
+.challenge-card + .challenge-card {
+    border-top: 1px solid rgba(255, 255, 255, .1);
+}
+
+.boss-panel {
+    width: 112px;
+    flex-shrink: 0;
+}
+
+.challenge-cover {
+    position: relative;
+    width: 112px;
+    height: 112px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid rgba(255, 255, 255, .15);
+    background: rgba(0, 0, 0, .28);
+}
+
+.challenge-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.boss-name {
+    color: #fff;
+    font-size: 11px;
+    font-weight: 900;
+    text-align: center;
+    line-height: 1.2;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    text-shadow: 0 0 4px rgba(0,0,0,.8);
+}
+
+.boss-info {
+    margin-top: 5px;
+    padding: 5px 5px 6px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, .48);
+    border: 1px solid rgba(255, 255, 255, .12);
+    color: #fff;
+}
+
+.boss-attrs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 3px;
+    margin-top: 4px;
+    color: rgba(255, 255, 255, .92);
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.boss-resist {
+    opacity: .82;
+}
+
+.attr-label {
+    color: rgba(255, 255, 255, .68);
+    font-size: 9px;
+}
+
+.element-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 1px 4px 1px 2px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .12);
+    white-space: nowrap;
+}
+
+.element-tag img {
+    width: 12px;
+    height: 12px;
+    object-fit: contain;
+}
+
+.resist-tag {
+    background: rgba(255, 80, 80, .16);
+}
+
+.attr-empty {
+    color: rgba(255, 255, 255, .65);
+}
+
+.challenge-time {
+    font-size: 11px;
+    color: rgba(255, 255, 255, .7);
+    margin-top: 4px;
+}
+
+.card-head-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.item-grade {
+    width: 36px;
+    height: 18px;
+    filter: drop-shadow(0 0 0.2em rgba(0,0,0,.5));
+}
+
+.challenge-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.team-icon img {
+    height: 18px;
+}
+
+.team-label {
+    display: inline-block;
+    font-family: "Number", "HYWenHei-55W", "Microsoft YaHei", sans-serif;
+    font-size: 15px;
+    font-weight: 900;
+    color: #b8860b;
+    letter-spacing: 2px;
+}
+
+.challenge-score {
+    display: flex;
+    align-items: center;
+}
+
+.score-val {
+    font-size: 32px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.challenge-buff {
+    font-size: 12px;
+    color: rgba(255, 255, 255, .85);
+}
+
+.buff-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.buff-icon {
+    width: 24px;
+    height: 24px;
+}
+
+.buff-label {
+    font-weight: 700;
+    color: rgba(255, 255, 255, .6);
+}
+
+.buff-name {
+    color: #ffd86b;
+}
+
+.buff-desc {
+    font-size: 10px;
+    margin-top: 4px;
+    line-height: 1.4;
+    color: rgba(255, 255, 255, .7);
+}
+
+.challenge-team {
+    display: flex;
+    gap: 4px;
+    margin-top: auto;
+}
+
+.av-box {
+    position: relative;
+    width: 48px;
+    height: 58px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, .5);
+    border: 3px solid rgba(255, 255, 255, .15);
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, .6) inset;
+}
+
+.av-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: 8px;
+}
+
+.av-rank {
+    position: absolute;
+    right: 0;
+    top: 0;
+    z-index: 2;
+    background: rgba(0, 0, 0, .6);
+    padding: 0 4px;
+    font-size: 11px;
+    line-height: 16px;
+    border-bottom-left-radius: 6px;
+    color: #fff;
+}
+
+.av-rarity {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    z-index: 2;
+}
+
+.rarity-S {
+    background-image: url("../other/RANK_S.png");
+    background-size: 100% 100%;
+    width: 15px;
+    height: 15px;
+    top: -1px;
+    left: -1px;
+}
+
+.rarity-A {
+    background-image: url("../other/RANK_A.png");
+    background-size: 100% 100%;
+    width: 15px;
+    height: 15px;
+    top: -1px;
+    left: -1px;
+}
+
+.buddy-box {
+    width: 48px;
+    height: 58px;
+}
+
+.logo {
+    font-size: 9px;
+    text-align: center;
+    color: rgba(255, 255, 255, .7);
+    margin: 6px 0 2px;
+}
