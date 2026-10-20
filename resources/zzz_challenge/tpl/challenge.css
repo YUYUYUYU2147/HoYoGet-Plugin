@@ -369,8 +369,11 @@ body {
 }
 
 .item-grade {
-    width: 36px;
-    height: 18px;
+    /* 这里用的是 s/a/b.png（150x150 方形评级图），
+       原来写 36x18 的横向尺寸会把方形图压扁、字看着发斜 */
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
     filter: drop-shadow(0 0 0.2em rgba(0,0,0,.5));
 }
 
