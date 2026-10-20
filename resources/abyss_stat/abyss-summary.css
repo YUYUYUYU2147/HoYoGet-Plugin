@@ -46,10 +46,18 @@ body,
      允许换行，避免后几项被挤到可视区外 */
   flex-wrap: wrap;
   gap: 6px 0;
+  /* 和下方 11/12 层左栏同宽（15~1000px）：5 张卡总宽 950px，
+     用 space-between 把多出的 50px 分到卡片间隙，最右卡右缘落到 1000px */
+  width: 1000px;
 }
 .abyss-stat .cont {
   margin: 5px 10px 5px 5px;
+  /* 5 张卡等分左栏宽度（15~1000px），卡片本身也一起变宽，
+     不再只靠加大卡片间隙来对齐右缘 */
+  flex: 1 1 0;
+  min-width: 0;
 }
+.abyss-stat .avatar-banner { width: 100%; }
 .abyss-stat strong {
   text-shadow: 0 0 3px #000;
 }
