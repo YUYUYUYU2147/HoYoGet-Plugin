@@ -309,8 +309,9 @@ body,
   flex: 1 1 auto;
   min-width: 0;
   box-sizing: border-box;
-  /* 上边距与左栏 .abyss-title 对齐（左侧标题在 .cont-body 里还有内距） */
-  padding: 8px 12px 12px;
+  /* 左栏标题在 .cont-body 里（padding 10px 15px + 1px 阴影线）；
+     右栏有 1px 边框，所以 padding-top 用 9px，标题才能和左栏在同一基线 */
+  padding: 9px 15px 15px;
   border-radius: 14px;
   background: #f8fafc;
   border: 1px solid #e6ebf2;
@@ -329,12 +330,12 @@ body,
 
 .boss-monsters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px 6px; margin-bottom: 4px; }
 .boss-item {
-  /* 小怪两列并排，单只内部仍是一行：图标 + 名字 + 血量 + 弱点/抗性 */
+  /* 三列并排，单只内部一行：图标 + 名字 + 血量 + 弱点/抗性 */
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 5px 8px;
-  margin-bottom: 4px;
+  gap: 5px;
+  padding: 3px 6px;
+  margin-bottom: 0;
   border-radius: 9px;
   background: #fff;
   border: 1px solid #e9edf3;
@@ -343,17 +344,17 @@ body,
 }
 .boss-item:last-child { margin-bottom: 0; }
 .boss-icon {
-  width: 30px; height: 30px; flex: 0 0 auto;
+  width: 22px; height: 22px; flex: 0 0 auto;
   border-radius: 9px; background: #f1f5f9;
   display: flex; align-items: center; justify-content: center; overflow: hidden;
 }
 .boss-icon img { width: 100%; height: 100%; object-fit: contain; }
 .boss-icon span { font-size: 15px; font-weight: 800; color: #94a3b8; }
-.boss-info { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 1px; }
+.boss-info { min-width: 0; flex: 1; display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; overflow: hidden; }
 .boss-name { font-size: 11.5px; font-weight: 700; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .boss-hp { font-size: 11px; color: #64748b; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.boss-tags { display: inline-flex; align-items: center; gap: 2px; font-size: 10px; white-space: nowrap; flex-wrap: nowrap; }
-.boss-tags .tag-label { color: #94a3b8; font-style: normal; }
+.boss-tags { display: inline-flex; align-items: center; gap: 2px; font-size: 9.5px; white-space: nowrap; flex: 0 0 auto; }
+.boss-tags .tag-label { display: none; }
 .boss-tags i {
   display: inline-flex; align-items: center; gap: 3px;
   font-style: normal; padding: 1px 6px; border-radius: 999px;
