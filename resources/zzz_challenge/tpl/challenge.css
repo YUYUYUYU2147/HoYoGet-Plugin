@@ -1,3 +1,29 @@
+/* 原版模板依赖 ZZZ-Plugin 的 font/fonts.css（数字字体 Number、原神字体 HYWenHei），
+   复制模板时那条 @import 被去掉了，TEAM 这类文字就落到系统默认字体（发斜、发扁）。
+   这里把用到的两个字体定义补回来，路径相对本 CSS 所在目录。 */
+@font-face {
+    font-family: "Number";
+    src: url("../font/tttgbnumber.ttf") format("truetype");
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "HYWenHei-55W";
+    src: url("../font/HYWenHei-55W.ttf") format("truetype");
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Chinese";
+    src: url("../font/SR.ttf") format("truetype");
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
 
 * {
     margin: 0;
