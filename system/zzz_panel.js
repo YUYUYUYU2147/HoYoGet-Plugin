@@ -20,6 +20,20 @@ async function zzzRoles() {
   return cache.roles
 }
 
+/**
+ * 按名字在工坊角色表里找角色。
+ * 米游社的 full_name_mi18n 带间隔号（星见·雅 / 艾莲·乔），工坊表里是「星见雅」，
+ * 所以两边都先去掉「·」再比，兼容「雅」这种只有名没有姓的短名。
+ */
+function findRole(rows, keyword) {
+  const norm = s => String(s || '').replace(/[·・\s]/g, '')
+  const k = norm(keyword)
+  if (!k) return null
+  const names = row => [row?.nick_name, row?.short_name, row?.en_name].map(norm).filter(Boolean)
+  return rows.find(row => names(row).includes(k))
+    || rows.find(row => names(row).some(n => n.includes(k) || k.includes(n)))
+}
+
 /** 角色头像：工坊角色表的 avatar 是方形小图，直接当队伍成员图标 */
 function faceOf(row) {
   return row?.avatar || row?.avatar2 || ''
@@ -68,9 +82,12 @@ export async function zzzPanelExtras({ name, uid = '', level = 0 } = {}) {
     const keyword = String(name || '').trim()
     if (!keyword) return null
     const rows = await zzzRoles()
-    const role = rows.find(row => row?.nick_name === keyword)
-      || rows.find(row => (row?.nick_name || '').includes(keyword))
-    if (!role?.item_id) return null
+    const role = findRole(rows, keyword)
+    if (!role?.item_id) {
+      // 静默失败最难查：名字对不上工坊表时留一条日志，方便判断是接口挂了还是名字不一致
+      try { logger.debug?.(`[HoYoGet][zzz_panel] 工坊角色表未匹配到「${keyword}」`) } catch (_) { }
+      return null
+    }
 
     const lv = Number(level) >= 55 ? 60 : Number(level) >= 45 ? 50 : 40
     const [rankData, teams] = await Promise.all([
