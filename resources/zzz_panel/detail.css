@@ -247,3 +247,26 @@ body {
 .dmg-buff { padding: 3px 8px; font-size: 11px; color: #b9c2d6; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); border-radius: 6px; }
 .dmg-notes { margin-top: 8px; font-size: 10.5px; line-height: 1.6; color: #9aa3b5; }
 .dmg-table td.n u { text-decoration: none; margin-left: 4px; padding: 0 4px; font-size: 9px; color: #ffcf5c; background: rgba(255,207,92,.12); border-radius: 4px; }
+
+/* ============ 配队推荐 / 工坊排名（绝区零工坊） ============ */
+.team-list { display: flex; flex-direction: column; gap: 8px; }
+/* 一行一套队：队名 + 成员头像 + 邦布，三套队只占 ~180px，右栏不至于比左栏高太多 */
+.team-item { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); border-radius: 12px; padding: 7px 12px; }
+.team-title { flex: none; font-size: .9em; color: #e7ebf3; white-space: nowrap; }
+.team-bangboo { margin-left: auto; font-size: .74em; color: #b0b9c9; white-space: nowrap; }
+.team-members { display: flex; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.team-member { display: flex; align-items: center; gap: 5px; padding: 2px 9px 2px 3px; border-radius: 999px; background: rgba(0,0,0,.28); border: 1px solid rgba(255,255,255,.08); }
+.team-member img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
+.team-member i { font-style: normal; font-size: .84em; color: #cfd6e6; }
+.team-member.on { border-color: rgba(245,201,107,.55); background: rgba(245,201,107,.12); }
+.team-member.on i { color: #f5c96b; font-weight: 700; }
+.rank-list { display: flex; flex-direction: column; }
+.rank-row { display: flex; align-items: center; gap: 10px; padding: 7px 12px; border-radius: 9px; font-size: .9em; }
+.rank-row:nth-child(odd) { background: rgba(255,255,255,.04); }
+.rank-row.me { background: rgba(245,201,107,.12); border: 1px solid rgba(245,201,107,.35); }
+.rank-row .rk { width: 22px; text-align: center; font-weight: 900; color: #f5c96b; }
+.rank-row .rn { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #e7ebf3; }
+.rank-row .rc { font-size: .78em; color: #9fb3cc; }
+.rank-row .rp { font-weight: 800; color: #f5c96b; }
+.rank-mine { margin-top: 8px; font-size: .84em; color: #c0c8d6; }
+.rank-mine b { color: #f5c96b; }

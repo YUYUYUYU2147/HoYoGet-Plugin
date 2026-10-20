@@ -218,6 +218,48 @@
           <div class="dmg-none">该角色暂无技能倍率数据（{{c.damage.error}}）</div>
           {{/if}}
         </div>
+
+        {{if zzzWorkshop && (zzzWorkshop.teams.length || zzzWorkshop.rank)}}
+        {{if zzzWorkshop.teams.length}}
+        <div class="section">
+          <div class="sec-title">配队推荐<span class="sub">绝区零工坊</span></div>
+          <div class="team-list">
+            {{each zzzWorkshop.teams team}}
+            <div class="team-item">
+              <b class="team-title">{{team.title}}</b>
+              <span class="team-members">
+                {{each team.members m}}
+                <span class="team-member{{if m.on}} on{{/if}}">
+                  {{if m.icon}}<img src="{{m.icon}}" onerror="this.style.visibility='hidden'">{{/if}}
+                  <i>{{m.name}}</i>
+                </span>
+                {{/each}}
+              </span>
+              {{if team.bangboo}}<span class="team-bangboo">邦布 {{team.bangboo}}</span>{{/if}}
+            </div>
+            {{/each}}
+          </div>
+        </div>
+        {{/if}}
+        {{if zzzWorkshop.rank}}
+        <div class="section">
+          <div class="sec-title">工坊排名<span class="sub">驱动盘总分 · {{zzzWorkshop.rank.level}} 级</span></div>
+          <div class="rank-list">
+            {{each zzzWorkshop.rank.rows r}}
+            <div class="rank-row{{if r.mine}} me{{/if}}">
+              <span class="rk">{{r.rank}}</span>
+              <span class="rn">{{r.nickname}}</span>
+              {{if r.consText}}<span class="rc">{{r.consText}}</span>{{/if}}
+              <span class="rp">{{r.pointText}}</span>
+            </div>
+            {{/each}}
+          </div>
+          <div class="rank-mine">
+            {{if zzzWorkshop.rank.mine}}你的排名：第 <b>{{zzzWorkshop.rank.mine.rank}}</b> 名 · {{zzzWorkshop.rank.mine.pointText}} 分{{else}}你的角色未进前 {{zzzWorkshop.rank.scanned}} 名{{/if}}
+          </div>
+        </div>
+        {{/if}}
+        {{/if}}
       </div>
     </div>
 

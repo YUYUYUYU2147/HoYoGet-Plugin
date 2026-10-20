@@ -6,6 +6,7 @@ import { config, mhy, pluginPriority, render, yaml, makeForwardMsg, mys } from '
 import { damageSkillsAt, getCharRates } from '../system/zzz_skill_rate.js'
 import { getBuffAreas } from '../system/zzz_buff.js'
 import { mhyFetch } from '../system/mhy_fetch.js'
+import { zzzPanelExtras } from '../system/zzz_panel.js'
 
 /**
  * 绝区零面板（xhh 自研）—— 第 2 步：归一化 + 自研渲染。
@@ -1990,6 +1991,14 @@ export class zzz_panel_list extends plugin {
     try {
       let gamePlayer = null
       try { gamePlayer = await this.fetchPlayer(e, uid, ck) } catch { /* 取不到游戏昵称就回落 QQ */ }
+      /* 右栏配队/排名：工坊接口慢或挂掉时最多等 6 秒，拿不到就不渲染这一块，
+         不能让它把整张面板拖到超时 */
+      const zzzWorkshop = await new Promise(resolve => {
+        const timer = setTimeout(() => resolve(null), 6000)
+        zzzPanelExtras({ name: charData.full_name_mi18n || charData.name || avatar?.name_mi18n, uid, level: avatar?.level })
+          .then(data => { clearTimeout(timer); resolve(data) })
+          .catch(() => { clearTimeout(timer); resolve(null) })
+      })
       // 落盘原始面板，供极限面板/排名复用（不依赖 ZZZ-Plugin 的 data/panel）
       try {
         fs.mkdirSync(RECORDS_DIR, { recursive: true })
@@ -2005,7 +2014,7 @@ export class zzz_panel_list extends plugin {
       } catch (err) {
         logger.debug?.(`[HoYoGet][zzz_panel] 面板记录落盘失败：${err?.message || err}`)
       }
-      const img = await render('zzz_panel/detail', { ...detail, footer, bgImage: getPanelBg(), ...getPlayerBadge(e, gamePlayer) }, { e, ret: true })
+      const img = await render('zzz_panel/detail', { ...detail, footer, zzzWorkshop, bgImage: getPanelBg(), ...getPlayerBadge(e, gamePlayer) }, { e, ret: true })
       const sent = img // render(ret:true) 已自动 e.reply 发送，此处仅保留引用供下方缓存使用
       // 缓存面板用的角色原图，供「%原图」直接取回
       const roleIcon = detail.charData?.role_icon
