@@ -7,6 +7,7 @@ import { getRoleProfile } from '../system/roleProfile.js'
 import { srPanelExtras } from '../system/sr_panel.js'
 import { pickCustomPanelArt, pickUserPanelArt, ensureUserPanelDir, listUserPanelArt, cropCustomPanelArt } from '../system/custom_panel.js'
 import { metaResRel } from '#hoyo.miao.path'
+import { ArtifactSet } from '#hoyo.miao.models'
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const YUNZAI_DB = path.join(process.cwd(), 'data', 'db', 'data.db')
@@ -828,6 +829,18 @@ function setSummary(artis) {
     .map(([name, count]) => ({ name, count }))
 }
 
+/** 套装效果：2/4 件套说明，取 miao 的圣遗物 meta */
+function setEffects(artis) {
+  return setSummary(artis).map(({ name, count }) => {
+    let effects = []
+    try {
+      effects = ArtifactSet.getArtisSetBuff(name, count) || []
+    } catch { /* meta 缺失时只是不显示效果 */ }
+    if (!Array.isArray(effects)) effects = [effects]
+    return { name, count, effects: effects.filter(Boolean) }
+  }).filter(s => s.effects.length)
+}
+
 /** 配置开关：panel_custom_art（默认开），读不到配置时按开处理 */
 function customArtEnabled() {
   try {
@@ -942,6 +955,7 @@ function flattenCharDetail(profile, Character, game, meta = {}) {
     } : null,
     artis: equip,
     sets: setSummary(equip),
+    setEffects: setEffects(equip),
     talents: detailTalents(profile, game, imgs),
     artisOverall: buildArtisOverall(equip, score, artis.markClass || profile?.artis?.markClass || '', {
       classTitle: artis.classTitle || '',

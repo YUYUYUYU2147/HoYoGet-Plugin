@@ -259,6 +259,19 @@
               {{/if}}
             </div>
             {{/if}}
+
+            {{if setEffects.length}}
+            <div class="set-effects">
+              {{each setEffects s}}
+              <div class="set-eff">
+                <div class="se-head"><span class="se-name">{{s.name}}</span><span class="se-count">×{{s.count}}</span></div>
+                {{each s.effects e idx}}
+                <div class="se-line"><span class="se-piece">{{idx === 0 ? '2件套' : '4件套'}}</span><span class="se-desc">{{e}}</span></div>
+                {{/each}}
+              </div>
+              {{/each}}
+            </div>
+            {{/if}}
           </div>
 
           {{if miaoDmg}}
