@@ -211,6 +211,9 @@ body,
 .abyss-level .time {
   text-align: right;
   width: 60%;
+  /* 吃掉标题/星星之后的剩余宽度，让时间贴住本间右边缘，
+     下半队伍靠右后就能和它对齐 */
+  margin-left: auto;
   color: #aaa;
   font-size: 14px;
 }
@@ -221,9 +224,15 @@ body,
 .abyss-level .avatars .avatar-list {
   display: flex;
   position: relative;
+  flex: 1 1 0;
+  box-sizing: border-box;
 }
 .abyss-level .avatars .avatar-list.up {
   padding-right: 15px;
+}
+/* 下半队伍靠右，右边缘与上方「通关时间」对齐 */
+.abyss-level .avatars .avatar-list.down {
+  justify-content: flex-end;
 }
 .abyss-level .avatars .avatar-list.up:after {
   content: "";
