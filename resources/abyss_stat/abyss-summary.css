@@ -255,14 +255,19 @@ body,
   margin-right: 0;
 }
 .abyss-level .time {
-  text-align: right;
-  width: 60%;
-  /* 吃掉标题/星星之后的剩余宽度，让时间贴住本间右边缘，
-     下半队伍靠右后就能和它对齐 */
+  /* 时间居中在下半队伍正上方：宽度跟下半人数一致（每个头像 35px），
+     时间中心就和下半队伍中心对齐；人数太少时保底 76px，防止文字溢出 */
+  text-align: center;
+  width: 140px;
   margin-left: auto;
   color: #aaa;
   font-size: 14px;
+  white-space: nowrap;
 }
+.abyss-level:has(.avatar-list.down .avatar-icon:nth-child(1)) .time { width: max(35px, 76px); }
+.abyss-level:has(.avatar-list.down .avatar-icon:nth-child(2)) .time { width: max(70px, 76px); }
+.abyss-level:has(.avatar-list.down .avatar-icon:nth-child(3)) .time { width: 105px; }
+.abyss-level:has(.avatar-list.down .avatar-icon:nth-child(4)) .time { width: 140px; }
 .abyss-level .avatars {
   display: flex;
   width: 100%;
