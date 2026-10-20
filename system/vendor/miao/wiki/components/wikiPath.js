@@ -15,10 +15,18 @@ const rootPath = path.join(pluginPath, '..', '..')
 
 let wikiPath = {
   getDir(_path, isres = false) {
-    // "miao-plugin" / "wiki" 这两个历史占位名，统一映射到资源根
-    if (_path === 'miao-plugin' || _path === 'wiki') {
+    /* 只把 "miao-plugin" 映射到资源根。
+       "wiki" 必须返回**不存在**的路径：CharImg 里有
+         if (fs.existsSync(`${rPath}/${nPath}`)) nPath = '../../wiki/resources/...'
+       这个分支本意是「wiki 插件自己有一套图就优先用它」，
+       如果 wiki 和 miao 指向同一个根，就会把 nPath 改成无效路径，
+       导致 face/gacha 全部取不到（角色头像空白）。 */
+    if (_path === 'miao-plugin') {
       const root = metaRoot()
-      return path.join(root, isres === false ? '..' : '', isres ? '' : '')
+      return isres ? root : path.join(root, '..')
+    }
+    if (_path === 'wiki') {
+      return path.join(rootPath, 'plugins', 'wiki', '__no_wiki_resources__')
     }
     return path.join(rootPath, 'plugins', _path, isres ? 'resources' : '')
   },
