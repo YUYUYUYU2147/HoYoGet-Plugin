@@ -41,6 +41,8 @@ async function render(path, data_, cfg) {
         },
         ...(cfg.dsf ? { deviceScaleFactor: cfg.dsf } : {}),
         ...data_,
+        // 自定义模板目录（模板里 <% include(_tpl_path+'/x.html') %> 用），默认仍是框架给的 miao 目录
+        ...(data_.tplPath ? { _tpl_path: data_.tplPath } : {}),
         ppath: data_.ppath || ppath,
         tplFile: tplFile,
         saveId: path.split('/')[path.split('/').length - 1],

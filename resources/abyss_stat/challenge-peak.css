@@ -1,0 +1,1078 @@
+/* ============================================================
+   异相仲裁 - 米游社风格 (880px 无缩放)
+   迁移自 genshin/StarRail/html/peak/peak.css
+   字体: SR (星穹铁道字体, 从 genshin 复制)
+   素材: miao-plugin 本地资源
+   ============================================================ */
+
+/* 星穹铁道字体 */
+@font-face {
+  font-family: "SR";
+  src: url("./font/HYWJ-85W.woff") format("woff");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ===== 全局 ===== */
+body {
+  width: 880px;
+  transform: none !important;
+  background: url("./imgs/challenge/peak/block_bg_mid.png") left top repeat #0d0a1a;
+  background-size: 1000px auto;
+}
+
+.container {
+  width: 880px;
+  padding: 0;
+  background: none;
+}
+
+.body {
+  width: 880px;
+  font-family: "SR", "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  overflow: visible;
+  color: #fff;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+/* ===== 容器背景 (三段式背景图) ===== */
+.body {
+  background: url("./imgs/challenge/peak/block_bg_top.png") left top no-repeat,
+              url("./imgs/challenge/peak/block_bg_mid.png") left center repeat,
+              url("./imgs/challenge/peak/block_bg_bottom.png") left bottom no-repeat;
+  background-size: 1000px auto;
+  padding: 0 0 16px;
+}
+
+/* ===== 顶部区域 ===== */
+.copyright {
+  margin-top: -8px;
+  padding-top: 6px;
+  padding-bottom: 10px;
+}
+.head-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 40px 40px 24px;
+  margin-top: 0;
+  border-radius: 0;
+}
+
+.head-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.player-name {
+  font-family: "SR", "印品南征北战NZBZ体", NZBZ, "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  font-size: 38px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 2px;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.player-label {
+  font-size: 38px;
+}
+
+.player-nickname {
+  font-size: 38px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.uid-line {
+  font-size: 28px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.badge-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 8px 24px;
+  font-family: "SR", "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  font-size: 26px;
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.8);
+  background: linear-gradient(135deg, rgba(180, 80, 160, 0.22), rgba(200, 60, 90, 0.18));
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  width: fit-content;
+}
+
+.badge-diamond {
+  color: #d3bc8e;
+  font-size: 22px;
+}
+
+.head-right {
+  display: flex;
+  align-items: flex-start;
+}
+
+.game-logo-img {
+  height: 160px;
+  width: auto;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.4));
+}
+
+/* ===== 统计周期 ===== */
+.time {
+  padding: 0 40px 24px;
+  font-family: "SR", "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  font-size: 28px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* ===== 概览区 ===== */
+
+.overview {
+  display: flex;
+  align-items: center;
+  position: relative;
+  margin: 0 32px 24px;
+  padding: 28px 200px 28px 0;
+  background: url("./imgs/challenge/peak/hard_bg.png") 0 / cover no-repeat;
+  border-radius: 10px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+}
+
+.overview-icon {
+  width: 120px;
+  height: 120px;
+  position: absolute;
+  left: 36px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.overview-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.icon_type {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  align-items: center;
+  justify-content: center;
+}
+
+.rank_icon_mid {
+  width: auto;
+  height: auto;
+  max-width: 35%;
+  max-height: 35%;
+  object-fit: contain;
+}
+
+/* 概览区: 文字在左, 星数在右 */
+.overview-info {
+  display: flex;
+  align-items: stretch;
+  flex: 1;
+  padding-left: 164px;
+}
+
+.overview-info-top {
+  display: flex;
+  gap: 66px;
+}
+
+.overview-stars-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.overview-text-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: center;
+}
+
+.overview-version {
+  font-size: 38px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+.overview-battles {
+  font-size: 28px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.star-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.star-icon {
+  width: 36px;
+  height: 36px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.star-count {
+  font-family: "SR", "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  font-size: 36px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* ===== 分区标题（装饰线） ===== */
+.boss-title {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 40px 20px;
+}
+
+.boss-title-line {
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(140, 120, 180, 0.35), transparent);
+}
+
+.boss-title-text {
+  font-family: "SR", "印品南征北战NZBZ体", NZBZ, "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  font-size: 34px;
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* ===== Boss 卡片外层 ===== */
+.boss-cont-wrap {
+  margin: 0 32px 16px;
+}
+
+/* ===== Boss 卡片 (三段式背景图) ===== */
+.boss-cont {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 28px 32px;
+  border-top-right-radius: 56px;
+  background: url("./imgs/challenge/peak/boss_bg_top.png") left top no-repeat,
+              url("./imgs/challenge/peak/boss_bg_mid.png") left center repeat,
+              url("./imgs/challenge/peak/boss_bg_bottom.png") left bottom no-repeat;
+  background-size: contain;
+  overflow: hidden;
+}
+
+.boss-cont::before {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  top: 6px;
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+  border-top-right-radius: 52px;
+  border: 2px dashed rgba(132, 126, 139, 0.35);
+  z-index: 4;
+}
+
+.hell {
+  background: url("./imgs/challenge/peak/hell_boss_bg_top.png") left top no-repeat,
+              url("./imgs/challenge/peak/hell_boss_bg_mid.png") left center repeat,
+              url("./imgs/challenge/peak/hell_boss_bg_bottom.png") left bottom no-repeat;
+  background-size: contain;
+}
+
+.normal {
+  /* default boss_bg */
+}
+
+.boss-bg-icon {
+  position: absolute;
+  top: -16px;
+  right: -24px;
+  width: 240px;
+  height: 240px;
+  opacity: 0.9;
+  object-fit: contain;
+  border-radius: 16px;
+  z-index: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
+}
+
+.boss-top-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  position: relative;
+  z-index: 5;
+}
+
+.boss-title-area {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.boss-title-name {
+  font-family: "SR", "印品南征北战NZBZ体", NZBZ, "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  font-size: 40px;
+  font-weight: bold;
+  color: #fff;
+  line-height: 1.2;
+  text-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.boss-title-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.boss-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+/* ===== 标签 ===== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  font-family: "SR", "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  font-size: 24px;
+  font-weight: bold;
+  line-height: 1;
+  letter-spacing: 0.5px;
+}
+
+.badge-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #f0c964;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+.badge-check::after {
+  content: "";
+  display: block;
+  width: 12px;
+  height: 7px;
+  border-left: 3px solid #fff;
+  border-bottom: 3px solid #fff;
+  transform: rotate(-45deg) translateY(-1px);
+}
+
+.badge-clear {
+  gap: 0;
+  color: #f0c964;
+  background: rgba(240, 201, 100, 0.08);
+  padding: 6px 14px;
+  border-radius: 8px;
+}
+
+.badge-hard {
+  color: #e06050;
+  background: rgba(220, 80, 60, 0.12);
+  border: 2px solid rgba(220, 80, 60, 0.25);
+  border-radius: 6px;
+  padding: 4px 10px;
+}
+
+.badge-fast {
+  gap: 0;
+  color: #7cb8e0;
+  background: rgba(100, 160, 220, 0.08);
+  padding: 6px 14px;
+  border-radius: 8px;
+}
+
+.badge-cross {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(200, 200, 200, 0.3);
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+.badge-cross::before,
+.badge-cross::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 2px;
+  background: rgba(200, 200, 200, 0.7);
+}
+
+.badge-cross::before {
+  transform: rotate(45deg);
+}
+
+.badge-cross::after {
+  transform: rotate(-45deg);
+}
+
+.badge-fail {
+  gap: 0;
+  color: rgba(200, 200, 200, 0.5);
+  background: rgba(80, 80, 80, 0.06);
+  padding: 6px 14px;
+  border-radius: 8px;
+}
+
+.meta-rounds {
+  font-family: "SR", "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  font-size: 26px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.meta-rounds strong {
+  color: #f0c964;
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.boss-stars-inline {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.star-img-xs {
+  width: 32px;
+  height: 32px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.star-img-dim {
+  opacity: 0.3;
+  inset: 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+/* 王棋队伍白色底框 — 与蓝色底图区分 */
+.avatar-panel {
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 14px;
+  padding: 16px;
+  margin-top: 12px;
+  position: relative;
+  z-index: 5;
+  box-shadow:
+      0 4px 24px rgba(0, 0, 0, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.boss-cont .avatar-panel {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow:
+      0 4px 24px rgba(0, 0, 0, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.avatar-panel-sm {
+  padding: 16px;
+  margin-top: 12px;
+}
+
+.avatar-row {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-start;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  position: relative;
+}
+
+.avatar-row-sm {
+  gap: 12px;
+}
+
+.challenge-time-tag {
+  width: 100%;
+  font-family: "SR", "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  font-size: 27px;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 4px;
+  user-select: none;
+}
+
+.avatar-card {
+  border: 2px solid rgba(140, 120, 180, 0.20);
+  background: rgba(0, 0, 0, 0.08);
+  width: 168px;
+  height: auto;
+  border-top-left-radius: 0;
+  border-top-right-radius: 16px;
+  border-bottom-right-radius: 16px;
+  border-bottom-left-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.avatar-sm {
+  width: 168px;
+  height: 208px;
+}
+
+.rarity-5 {
+  /* rarity bg moved to avatar-inner */
+}
+
+.rarity-4 {
+  /* rarity bg moved to avatar-inner */
+}
+
+.avatar-inner {
+  position: relative;
+  width: 100%;
+  height: 170px;
+  overflow: hidden;
+  border-radius: 0 16px 0 0;
+}
+
+.rarity-5 .avatar-inner {
+  background: url("../abyss_common/item/bg5.png") center/125% no-repeat padding-box;
+}
+
+.rarity-4 .avatar-inner {
+  background: url("../abyss_common/item/bg4.png") center/125% no-repeat padding-box;
+}
+
+.avatar-elem {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(35, 35, 35, 0.55);
+}
+
+.avatar-elem img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.avatar-life {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 10;
+  padding: 2px 8px 4px;
+  font-family: "SR", "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  font-size: 20px;
+  font-weight: 900;
+  color: #fff;
+  border-radius: 0 14px 0 12px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
+  letter-spacing: -0.5px;
+  min-width: 40px;
+  text-align: center;
+}
+
+.avatar-sm .avatar-life {
+  font-size: 20px;
+  padding: 2px 8px 4px;
+  border-radius: 0 14px 0 12px;
+  min-width: 40px;
+}
+
+.life-0 { background: rgba(80, 80, 80, 0.8); }
+.life-1 { background: rgba(100, 200, 240, 0.9); }
+.life-2 { background: rgba(110, 175, 30, 0.9); }
+.life-3 { background: rgba(30, 160, 215, 0.9); }
+.life-4 { background: rgba(225, 90, 90, 0.9); }
+.life-5 { background: rgba(110, 90, 220, 0.9); }
+.life-6 { background: rgba(235, 60, 25, 0.9); }
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.avatar-element {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 36px;
+  height: 36px;
+  background: rgba(30, 30, 35, 0.55);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  padding: 4px;
+  box-sizing: border-box;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6));
+  z-index: 5;
+}
+
+.avatar-sm .avatar-element {
+  width: 26px;
+  height: 26px;
+  bottom: 40px;
+}
+
+.avatar-bottom {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 5;
+  padding: 4px 0 6px;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(42, 47, 71, 0.66), rgba(22, 27, 42, 0.78));
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.avatar-level {
+  font-family: "SR", "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  font-size: 22px;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.8);
+}
+
+.avatar-sm .avatar-level {
+  font-size: 20px;
+}
+
+.avatar-rarity-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: 0 0 16px 16px;
+  z-index: 5;
+}
+
+.rarity-5 .avatar-rarity-bar { background: #ffd170; }
+.rarity-4 .avatar-rarity-bar { background: linear-gradient(180deg, rgba(180, 100, 255, 0.85) 0%, rgba(140, 70, 220, 0.95) 100%); }
+
+/* ===== 天赋等级 ===== */
+.avatar-talent {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  padding: 5px 4px 4px;
+  background: rgba(20, 15, 30, 0.35);
+  border-top: 1px solid rgba(140, 120, 180, 0.2);
+}
+
+.talent-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 0 2px;
+  font-family: "SR", "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  font-size: 24px;
+  font-weight: bold;
+  color: #fff;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.18) 50%, rgba(255, 255, 255, 0.28) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.15),
+              0 1px 3px 0 rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.talent-sm {
+  font-size: 21px;
+  min-width: 0;
+}
+
+.talent-xs {
+  font-size: 18px;
+  min-width: 0;
+}
+
+.talent-max {
+  color: #ff8c1a;
+  background: linear-gradient(135deg, rgba(255, 180, 60, 0.55) 0%, rgba(230, 150, 40, 0.35) 50%, rgba(255, 190, 70, 0.45) 100%);
+  border: 1px solid rgba(230, 150, 40, 0.45);
+}
+
+/* ===== 装备行（光锥 + 遗器） ===== */
+.avatar-equip {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 4px 4px 6px;
+  margin-top: -4px;
+  background: rgba(16, 15, 20, 0.30);
+  border-top: 1px solid rgba(140, 120, 180, 0.18);
+  overflow: visible;
+}
+
+.equip-lc {
+  display: inline-block;
+  position: relative;
+  line-height: 0;
+}
+
+/* 光锥星级底图 */
+.equip-lc-bg {
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  overflow: visible;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  background: #2a2630;
+}
+
+.lc-star-5 {
+  background: #2a2630 url("../abyss_common/item/bg5.png") center/115% no-repeat;
+  border-color: rgba(200, 170, 90, 0.35);
+}
+
+.lc-star-4 {
+  background: #2a2630 url("../abyss_common/item/bg4.png") center/115% no-repeat;
+  border-color: rgba(160, 100, 220, 0.35);
+}
+.lc-star-3 {
+  background: #2a2630 url("../abyss_common/item/bg3.png") center/115% no-repeat;
+  border-color: rgba(180, 180, 180, 0.35);
+}
+
+
+
+.equip-lc-icon {
+  width: 66px;
+  height: 66px;
+  border-radius: 4px;
+  object-fit: cover;
+  border: none;
+  box-shadow: none;
+  display: block;
+  position: relative;
+  z-index: 1;
+}
+
+.equip-lc-affix {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  min-width: 28px;
+  height: 28px;
+  font-family: "SR", "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  font-size: 16px;
+  font-weight: bold;
+  color: #fff;
+  background: rgba(230, 100, 40, 0.85);
+  border-radius: 10px 0 8px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.affix-1 { background: rgba(100, 200, 240, 0.9) !important; }
+.affix-2 { background: rgba(110, 175, 30, 0.9) !important; }
+.affix-3 { background: rgba(30, 160, 215, 0.9) !important; }
+.affix-4 { background: rgba(225, 90, 90, 0.9) !important; }
+.affix-5 { background: rgba(235, 60, 25, 0.9) !important; }
+
+.equip-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 110px;
+  width: 100%;
+  font-size: 24px;
+  color: rgba(140, 120, 180, 0.4);
+}
+
+.equip-relic {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.relic-pair {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  background: #2a2630 url("../abyss_common/item/bg5.png") center/115% no-repeat;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 2px solid rgba(200, 170, 90, 0.35);
+}
+
+.relic-img {
+  position: absolute;
+  width: 66px;
+  height: 66px;
+  border-radius: 5px;
+  object-fit: cover;
+  border: none;
+  box-shadow: none;
+}
+
+.relic-img:first-child {
+  top: 0;
+  left: 0;
+  transform: scale(0.7);
+  transform-origin: left top;
+}
+
+.relic-img:last-child {
+  bottom: 0;
+  right: 0;
+  transform: scale(0.7);
+  transform-origin: right bottom;
+}
+
+/* ===== 遗器套装 ===== */
+.avatar-artis {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  padding: 5px 4px 6px;
+  background: rgba(20, 15, 30, 0.30);
+  border-top: 1px solid rgba(140, 120, 180, 0.18);
+}
+
+.artis-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  border: 1.5px solid rgba(200, 180, 120, 0.4);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* ===== Buff ===== */
+.buff-body {
+  display: flex;
+  flex-direction: column;
+  margin-top: 16px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  position: relative;
+  z-index: 5;
+  box-shadow:
+      0 4px 24px rgba(0, 0, 0, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.buff-msg {
+  flex: 1;
+}
+
+.buff-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: "SR", "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  font-size: 26px;
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.95);
+  letter-spacing: 1px;
+}
+
+.buff-name .buff-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  flex-shrink: 0;
+}
+
+.buff-desc {
+  margin-top: 8px;
+  font-family: "SR", "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  font-size: 22px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* ===== 骑士外层容器 ===== */
+.mob-cont {
+  margin: 0 32px;
+  border-top-right-radius: 36px;
+  background: url("./imgs/challenge/peak/mob_bg_top.png") left top no-repeat,
+              url("./imgs/challenge/peak/mob_bg_mid.png") left center repeat,
+              url("./imgs/challenge/peak/mob_bg_bottom.png") left bottom no-repeat;
+  background-size: 100% auto;
+  overflow: hidden;
+}
+
+.mob-body {
+  position: relative;
+  padding: 20px 28px;
+  margin: 0 0 20px;
+  border-top-right-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.10);
+  box-shadow:
+      0 4px 24px rgba(0, 0, 0, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.mob-body:last-child {
+  margin-bottom: 0;
+}
+
+.mob-body::before {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  top: 6px;
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+  border-top-right-radius: 36px;
+  border: 2px dashed rgba(132, 126, 139, 0.35);
+  z-index: 4;
+}
+
+.boss-status-group {
+  display: inline-flex;
+  align-items: center;
+  border: 2px solid rgba(240, 201, 100, 0.5);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.boss-status-group .badge-clear {
+  border-radius: 0;
+  border: none;
+}
+
+.mob-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  position: relative;
+  z-index: 5;
+}
+
+.mob-title {
+  font-family: "SR", "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  font-size: 30px;
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.mob-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mob-stage-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.mob-meta-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.mob-status-group {
+  display: inline-flex;
+  align-items: center;
+  border: 2px solid rgba(240, 201, 100, 0.5);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.mob-status-group .badge-clear {
+  border-radius: 0;
+  border: none;
+}
+
+.mob-stars-inline {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.mob-stars-inline .star-img-xs {
+  width: 28px;
+  height: 28px;
+}
+
+/* ===== 底部 ===== */
+.footer {
+  text-align: center;
+  padding: 16px 0 24px;
+  font-family: "SR", "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.18);
+  letter-spacing: 1px;
+}

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <link rel="shortcut icon" href="#"/>
+    <link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/common.css"/>
+    <title>HoYoGet</title>
+    
+<link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/common.css?v=1.0"/>
+<link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/challenge-boss.css?v=1.0"/>
+
+  </head>
+  <body class="elem-hydro" {{sys.scale}}>
+    <div class="container" id="container">
+      
+<div class="story-body">
+  <div class="story-header">
+    <div class="story-head-left">
+      <div class="story-title">末日幻影·挑战回顾</div>
+      <div class="story-time">统计周期：{{timeCalc(story?.group?.begin_time)}} - {{timeCalc(story?.group?.end_time)}}</div>
+    </div>
+    <div class="story-head-right">
+      <div>{{nickname || '开拓者'}}</div>
+      <div>UID: {{uid}}</div>
+    </div>
+  </div>
+
+  <div class="story-summary">
+    <div class="summary-title">末日幻影挑战回顾</div>
+    <div class="summary-panel">
+      <div class="summary-cell summary-icon">
+        <img src="{{ppath}}abyss_stat/stat/imgs/challenge/peak/mob_star.png" alt="">
+        <span>{{story.totalStar || 0}}</span>
+        {{if story.extraStar}}
+        <span class="summary-star-sep"></span>
+        {{/if}}
+        {{each Array(story.extraStar || 0) i}}
+        <img class="summary-abyss-star" src="{{ppath}}abyss_stat/stat/imgs/challenge/boss/abyss_star.png" alt="">
+        {{/each}}
+      </div>
+      <div class="summary-cell summary-text">
+        <div><span>最高关卡：</span><b>{{story.bestFloor}}</b></div>
+        <div><span>挑战次数：</span><b>{{story.battleNum || '-'}}</b></div>
+      </div>
+    </div>
+    <div class="summary-boss-list">
+      {{if story?.group?.upper_boss}}
+      <div class="summary-boss-item"><span>节点1</span><img src="{{story.group.upper_boss.icon}}" alt=""></div>
+      {{/if}}
+      {{if story?.group?.lower_boss}}
+      <div class="summary-boss-item"><span>节点2</span><img src="{{story.group.lower_boss.icon}}" alt=""></div>
+      {{/if}}
+      {{if story?.group?.tierce_boss}}
+      <div class="summary-boss-item"><span>节点3</span><img src="{{story.group.tierce_boss.icon}}" alt=""></div>
+      {{/if}}
+    </div>
+  </div>
+
+  {{each story.floors floor floorIndex}}
+  <div class="floor-card">
+    <div class="floor-head">
+      <div>
+        <div class="floor-name">{{floor.name}}{{if floor.isFast}}<span class="floor-fast-tag">快速通关</span>{{/if}}</div>
+      </div>
+      <div class="floor-meta">
+        <div class="floor-stars">
+          {{each Array(floor.star || 0) i}}
+          <img src="{{ppath}}abyss_stat/stat/imgs/challenge/peak/mob_star.png" alt="">
+          {{/each}}
+          {{if floor.extraStar}}
+          <span class="star-sep"></span>
+          {{/if}}
+          {{each Array(floor.extraStar || 0) i}}
+          <img class="abyss-star" src="{{ppath}}abyss_stat/stat/imgs/challenge/boss/abyss_star.png" alt="">
+          {{/each}}
+        </div>
+        {{if !floor.isFast}}<div>总分：<b>{{floor.score || 0}}</b></div>{{/if}}
+      </div>
+    </div>
+
+    {{set nodeList = floor.node3 && floor.node3.avatars && floor.node3.avatars.length ? [floor.node1, floor.node2, floor.node3] : [floor.node1, floor.node2]}}
+    {{each nodeList node nodeIndex}}
+    {{if node && node.avatars && node.avatars.length}}
+    <div class="node-card">
+      <div class="node-top">
+        <div>
+          <span class="node-name">节点{{nodeIndex + 1}}</span>
+          {{if node.time}}<span class="node-time">{{node.time}}</span>{{/if}}
+        </div>
+        <div class="node-score">积分：<b>{{node.score || 0}}</b></div>
+      </div>
+
+      <div class="avatar-row">
+        {{each node.avatars a}}
+        {{set av = avatars[a.id]}}
+        {{if av || a}}
+        <div class="avatar-card rarity-{{av?.star || a?.rarity || 5}}">
+          <div class="avatar-inner">
+            {{if a.element}}<span class="avatar-elem"><img src="{{ppath}}abyss_stat/{{elemIcon(a.element)}}" alt=""></span>{{/if}}
+            <span class="avatar-life life-{{av?.cons || a?.rank || 0}}">{{av?.cons || a?.rank || 0}}</span>
+            {{if av?.face}}<img class="avatar-img" src="{{_miao_path}}{{av.face}}" alt="">{{else if a?.icon}}<img class="avatar-img" src="{{a.icon}}" alt="">{{/if}}
+            <div class="avatar-bottom">
+              <span class="avatar-level">Lv{{av?.level || a?.level || 80}} {{av?.abbr || av?.name || a?.name || ""}}</span>
+            </div>
+            <div class="avatar-rarity-bar"></div>
+          </div>
+          {{if !mysFailed && av?.talent}}
+          <div class="avatar-talent">
+            {{each av.talent k idx}}
+            <span class="talent-item {{if av.talentCount === 5}}talent-sm{{else if av.talentCount === 6}}talent-xs{{/if}} {{if k.max && k.level >= k.max}}talent-max{{/if}}">{{k.level}}</span>
+            {{/each}}
+          </div>
+          {{/if}}
+          {{if !mysFailed}}
+          <div class="avatar-equip">
+            {{if av?.weapon || av?.artisSet}}
+            <div class="equip-lc">
+              {{if av?.weapon && av.weapon.img}}
+              <div class="equip-lc-bg lc-star-{{av.weapon.star || 4}}">
+                <img class="equip-lc-icon" src="{{_miao_path}}{{av.weapon.img}}" alt="">
+                <span class="equip-lc-affix affix-{{av.weapon.affix}}">{{av.weapon.affix}}</span>
+              </div>
+              {{/if}}
+            </div>
+            <div class="equip-relic">
+              <div class="relic-pair">
+                {{if av?.artisSet && av.artisSet.imgs && av.artisSet.imgs[0]}}
+                <img class="relic-img" src="{{ppath}}abyss_stat/{{av.artisSet.imgs[0]}}" alt="">
+                {{/if}}
+                {{if av?.artisSet && av.artisSet.imgs && av.artisSet.imgs[1]}}
+                <img class="relic-img" src="{{ppath}}abyss_stat/{{av.artisSet.imgs[1]}}" alt="">
+                {{/if}}
+              </div>
+            </div>
+            {{else}}
+            <div class="equip-empty"><span>暂无数据</span></div>
+            {{/if}}
+          </div>
+          {{/if}}
+        </div>
+        {{/if}}
+        {{/each}}
+      </div>
+
+      {{if node.buff || node.maze_buff || node.buff_list}}
+      {{set buff = node.buff || node.maze_buff || (node.buff_list && node.buff_list[0])}}
+      <div class="buff-box">
+        {{if buff?.icon}}<span class="buff-icon-wrap"><img class="buff-icon" src="{{buff.icon}}" alt=""></span>{{/if}}
+        <div>
+          <div class="buff-name">{{buff?.name_mi18n || buff?.name || '关卡效果'}}：<span>{{buff?.desc_mi18n || buff?.desc || ''}}</span></div>
+          {{if buff?.simple_desc_mi18m}}
+          <div class="buff-mechanism"><b>战意机制：</b><span>{{buff.simple_desc_mi18m}}</span></div>
+          {{/if}}
+        </div>
+      </div>
+      {{/if}}
+    </div>
+    {{/if}}
+    {{/each}}
+  </div>
+  {{/each}}
+</div>
+
+    </div>
+  </body>
+</html>
