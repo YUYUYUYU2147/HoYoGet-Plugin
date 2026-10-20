@@ -69,7 +69,7 @@ body {
   backdrop-filter: blur(12px);
 }
 .hero .chip.gold { color: var(--ap-orange); background: rgba(255, 159, 10, .12); border-color: rgba(255, 159, 10, .3); }
-.hero .uid { color: var(--ap-mute); font-weight: 500; }
+.hero .uid { color: rgba(255, 255, 255, .94); font-weight: 600; }
 .player-badge { background: rgba(28, 28, 30, .55); border-color: var(--ap-line); backdrop-filter: blur(16px); }
 
 /* 属性：直接压在随机背景上会糊，照 hoyo 面板给一层磨砂浮层；列宽靠负边距抵掉内距 */
@@ -85,7 +85,7 @@ body {
 
 /* 属性：去底色，只留发丝分隔线；数字用等宽数字 */
 .stats .row { border-bottom-color: rgba(255, 255, 255, .07); }
-.stats .label { color: var(--ap-mute); font-weight: 500; }
+.stats .label { color: var(--ap-sub); font-weight: 500; }
 .stats .mid { color: var(--ap-sub); }
 .stats .mid .add { color: var(--ap-green); }
 .stats .final { color: var(--ap-text); font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.2px; }
@@ -212,4 +212,5 @@ body {
 .rank-mine { color: var(--ap-mute); }
 .rank-mine b { color: var(--ap-text); font-weight: 600; }
 
-.copyright { color: var(--ap-mute); font-weight: 500; letter-spacing: .6px; }
+/* 底部版权行保持红色（detail.css 的 #ff4d4f），这里只调字重与间距 */
+.copyright { font-weight: 500; letter-spacing: .6px; }
