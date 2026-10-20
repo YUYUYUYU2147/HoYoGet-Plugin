@@ -47,7 +47,9 @@ const PANEL_CHAR_REG = new RegExp(`^#?米哈游\\s*${GAME_WORD}面板\\s+(\\S+?)
 /* 「#米哈游雷神面板」这种：面板前面直接跟角色名，没有游戏名 */
 const PANEL_SHORT_CHAR_REG = /^#?米哈游\s*([^\s]+?)\s*面板$/i
 /* 更新面板：#米哈游原神更新面板 / #米哈游星铁更新面板 [UID] */
-const PANEL_REFRESH_REG = new RegExp(`^#?米哈游\\s*${GAME_WORD}(?:更新|刷新)(?:全部)?面板(?:\\s+(\\d{9}))?$`, 'i')
+const PANEL_REFRESH_REG = new RegExp(
+  `^#?米哈游\\s*${GAME_WORD}(?:(?:更新|刷新)(?:全部)?面板|(?:全部)?(?:面板)?(?:更新|刷新)全部?面板|全部面板更新)(?:\\s*(\\d{9}))?$`,
+  'i')
 
 /* 自定义面板图：上传 / 查看 / 删除（都要写「米哈游」，避免和绝区零的「上传xx面板图」抢） */
 const ART_UPLOAD_REG = /^#?米哈游\s*(?:上传|添加)\s*(.+?)\s*(?:角色|面板)?图$/
@@ -65,6 +67,9 @@ const NO_PREFIX_PANEL_REG = new RegExp(`^#?\\s*${NO_PREFIX_GAME}\\s*面板(?:\\s
 const NO_PREFIX_LIST_REG = new RegExp(`^#?\\s*${NO_PREFIX_GAME}\\s*面板列表$`, 'i')
 const NO_PREFIX_CHAR_REG = new RegExp(`^#?\\s*${NO_PREFIX_GAME}\\s*面板\\s+(\\S+)$`, 'i')
 const NO_PREFIX_REFRESH_REG = new RegExp(`^#?\\s*${NO_PREFIX_GAME}\\s*(?:更新|刷新)(?:全部)?面板(?:\\s+(\\d{9}))?$`, 'i')
+/* 「更新面板」连游戏名都不带（miao 也有这条）：默认按原神处理，
+   首轮失败再自动切星铁 —— 用户要求本插件的面板指令一律由本插件受理 */
+const BARE_REFRESH_REG = /^#?\s*(?:全部面板更新|更新全部面板|更新面板|刷新面板|面板更新)\s*(\d{9})?$/i
 
 /*
  * 「完全取代喵喵」：不带任何前缀的角色面板，如 #雷神面板 / #星铁遐蝶面板 / #面板。
@@ -109,6 +114,7 @@ async function normalizeBarePanel(msg) {
 function withMhyPrefix(msg) {
   const m = msg.match(NO_PREFIX_REFRESH_REG) || msg.match(NO_PREFIX_LIST_REG)
     || msg.match(NO_PREFIX_PANEL_REG) || msg.match(NO_PREFIX_CHAR_REG)
+    || msg.match(BARE_REFRESH_REG)
   if (!m) return ''
   return msg.replace(/^(#?\s*)/, '$1米哈游')
 }
@@ -1435,6 +1441,16 @@ export class hoyo_panel extends plugin {
     let uid = m[2] || ''
     if (!uid) uid = await readMysMainUid(e, game)
     if (!uid) uid = await readBoundUid(e, game)
+    /* 没写游戏名时先按原神找 UID；找不到且用户其实绑的是星铁，就自动切过去，
+       免得「#更新面板」对纯星铁账号直接报「没能确定 UID」 */
+    if (!uid && !key) {
+      const srUid = (await readMysMainUid(e, 'sr')) || (await readBoundUid(e, 'sr'))
+      if (srUid) {
+        // 改成显式的星铁指令再走一遍，避免复制后来的整段逻辑
+        e.msg = `#米哈游星铁更新面板 ${srUid}`
+        return this.refreshPanel(e)
+      }
+    }
     if (!uid) {
       return e.reply([
         `没能确定要更新的${conf.cn} UID。`,
