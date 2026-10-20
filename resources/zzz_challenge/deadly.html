@@ -42,7 +42,7 @@
                   {{if item.boss.monster_weakness_tags && item.boss.monster_weakness_tags.length}}
                     {{each item.boss.monster_weakness_tags tag}}
                     <span class="element-tag" style="display:inline-flex !important; align-items:center !important; vertical-align:middle !important; white-space:nowrap !important;">
-                      {{if tag.icon}}<img src="{{ppath}}{{tag.icon}}" style="display:inline-block !important; vertical-align:middle !important; width:18px; height:18px; object-fit:contain;" />{{/if}}
+                      {{if tag.icon}}<img src="{{ppath}}{{tag.icon}}" />{{/if}}
                       <span style="vertical-align:middle !important;">{{tag.name}}</span>
                     </span>
                     {{/each}}
@@ -59,7 +59,7 @@
                   {{if item.boss.monster_resistance_tags && item.boss.monster_resistance_tags.length}}
                     {{each item.boss.monster_resistance_tags tag}}
                     <span class="element-tag resist-tag" style="display:inline-flex !important; align-items:center !important; vertical-align:middle !important; white-space:nowrap !important;">
-                      {{if tag.icon}}<img src="{{ppath}}{{tag.icon}}" style="display:inline-block !important; vertical-align:middle !important; width:18px; height:18px; object-fit:contain;" />{{/if}}
+                      {{if tag.icon}}<img src="{{ppath}}{{tag.icon}}" />{{/if}}
                       <span style="vertical-align:middle !important;">{{tag.name}}</span>
                     </span>
                     {{/each}}
