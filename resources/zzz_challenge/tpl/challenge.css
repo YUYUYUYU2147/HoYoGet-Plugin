@@ -476,8 +476,9 @@ body {
 }
 
 .logo {
-    font-size: 9px;
+    font-size: 12px;
     text-align: center;
-    color: rgba(255, 255, 255, .7);
-    margin: 6px 0 2px;
+    color: #ff4d4f;
+    letter-spacing: .5px;
+    margin: 10px 0 4px;
 }
