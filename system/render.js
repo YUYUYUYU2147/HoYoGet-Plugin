@@ -31,10 +31,15 @@ async function render(path, data_, cfg) {
       // 正文字号回到默认、角色详细那种长段落也不换行约束，图高能到 7000+ px。
       const depth = path.split('/').filter(Boolean).length + 3;
       const ppath = '../'.repeat(depth) + 'plugins/HoYoGet-Plugin/resources/';
+      const scale = cfg.pct || (config().img_quality / 100) * 2.4 || 2.4 * 0.8
       return {
         sys: {
-          scale: `style=zoom:${cfg.pct || (config().img_quality / 100) * 2.4 || 2.4 * 0.8}`,
+          // dsf 模式不走 CSS zoom：Chromium 在 `zoom` 下元素截图会按未缩放盒裁剪，
+          // 内容比量到的高度高一截时底部就被切掉（实测绝区零面板尾部的排名/版权行消失）。
+          // 改成 zoom:1 + deviceScaleFactor 截图，布局尺寸不变、像素密度一样。
+          scale: cfg.dsf ? 'style=zoom:1' : `style=zoom:${scale}`,
         },
+        ...(cfg.dsf ? { deviceScaleFactor: cfg.dsf } : {}),
         ...data_,
         ppath: data_.ppath || ppath,
         tplFile: tplFile,

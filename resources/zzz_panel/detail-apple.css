@@ -47,6 +47,10 @@ body {
   backdrop-filter: blur(22px) saturate(140%);
   -webkit-backdrop-filter: blur(22px) saturate(140%);
 }
+/* Chromium 的合成 bug：backdrop-filter 的元素里，继承下来的 text-shadow 会让子元素
+ * 的文字整段不上屏（实测配队卡只剩空壳）。玻璃卡本来就有底，卡内统一取消阴影。 */
+.skills-card, .weapon-card, .disc-card, .score-box, .set-item,
+.dmg-wrap, .team-item, .radar-card, .rank-row { text-shadow: none; }
 /* 稀有度不再用彩色描边，Apple 风格里只有一条发丝线 */
 .disc-card.rarityS, .disc-card.rarityA { border-color: var(--ap-line); }
 
@@ -187,18 +191,20 @@ body {
 .dmg-none { background: rgba(255, 255, 255, .04); border-color: rgba(255, 255, 255, .1); color: var(--ap-sub); }
 
 /* ───── 配队 / 排名 ───── */
-.team-item { border-radius: 16px; padding: 7px 12px; }
+.team-item { border-radius: 16px; padding: 7px 12px; background: rgba(28, 28, 30, .72); }
 .team-title { flex: none; color: var(--ap-text); font-weight: 600; font-size: .86em; }
 .team-bangboo { flex: none; color: var(--ap-mute); }
 /* 一行放不下时宁可截断邦布，也不要让成员换行把卡片撑高 */
 .team-members { flex-wrap: nowrap; overflow: hidden; }
 .team-member { flex: none; background: rgba(255, 255, 255, .07); border-color: transparent; }
+.team-member { background: rgba(255, 255, 255, .12); }
 .team-member i { font-size: .8em; }
 .team-member i { color: var(--ap-sub); }
 .team-member.on { background: rgba(10, 132, 255, .16); border-color: rgba(10, 132, 255, .45); }
 .team-member.on i { color: #6cb6ff; font-weight: 600; }
-.rank-row:nth-child(odd) { background: rgba(255, 255, 255, .045); }
-.rank-row.me { background: rgba(10, 132, 255, .14); border-color: rgba(10, 132, 255, .4); }
+.rank-row { background: rgba(20, 20, 22, .38); }
+.rank-row:nth-child(odd) { background: rgba(20, 20, 22, .5); }
+.rank-row.me { background: rgba(10, 132, 255, .3); border-color: rgba(10, 132, 255, .4); }
 .rank-row .rk { color: var(--ap-mute); font-weight: 700; font-variant-numeric: tabular-nums; }
 .rank-row .rn { color: var(--ap-text); }
 .rank-row .rc { color: var(--ap-mute); }
