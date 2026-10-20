@@ -82,7 +82,7 @@ export class abyss_stat extends plugin {
     const data = buildGsAbyss(raw)
     /* 角色详情（头像/武器/圣遗物）：模板按 avatars[id] 渲染角色卡，
        取不到就传空对象，模板里有 avatar 判空，只是不显示卡片 */
-    const avatars = await this.fetchAvatars(mys, data)
+    const avatars = await this.fetchAvatars(e, mys, data)
     const miaoRes = miaoResPath()
     return render('abyss_stat/abyss-summary', {
       abyss: data,
@@ -104,7 +104,7 @@ export class abyss_stat extends plugin {
    * 取深渊用到的角色详情，整理成模板要的 { id: 角色卡数据 }。
    * 失败返回空对象（模板会跳过角色卡，不影响其它内容）。
    */
-  async fetchAvatars(mys, abyss) {
+  async fetchAvatars(e, mys, abyss) {
     const ids = new Set()
     for (const floor of Object.values(abyss.floors || {})) {
       for (const lv of (floor.levels || [])) {
@@ -116,11 +116,25 @@ export class abyss_stat extends plugin {
     if (!ids.size) return {}
     try {
       const miao = await import('#hoyo.miao.models')
-      const detail = await mys.getCharacter()
-      if (!detail?.avatars) return {}
-      const player = miao.Player.create(mys)
+      /* 角色详情需要 cookie 权限：部分环境 init(e,'all') 拿到的是 roleIndex（无 CK），
+         那样 getCharacter 会返回空，角色卡就整片空白 */
+      let detail = null
+      try {
+        const miaoInit = miao.MysApi.init
+        const cookieMys = await miaoInit(e, 'cookie')
+        if (cookieMys) detail = await cookieMys.getCharacter()
+      } catch (_) { /* 退回下面用 all 的实例 */ }
+      if (!detail?.avatars) detail = await mys.getCharacter()
+      if (!detail?.avatars) {
+        logger.mark?.(`[HoYoGet][abyss_stat] 角色详情为空（getCharacter 未返回 avatars），跳过角色卡`)
+        return {}
+      }
+      // Player.create 传的是 e（内部取 e._mys.uid / e.uid），不是 mys 实例
+      const player = miao.Player.create(e)
       player.setMysCharData(detail)
-      return player.getAvatarData([...ids]) || {}
+      const ret = player.getAvatarData([...ids]) || {}
+      logger.mark?.(`[HoYoGet][abyss_stat] 角色卡：需要 ${ids.size} 个，取到 ${Object.keys(ret).length} 个`)
+      return ret
     } catch (err) {
       logger.debug?.(`[HoYoGet][abyss_stat] 角色详情获取失败：${err?.message || err}`)
       return {}
