@@ -58,7 +58,9 @@ export class zzz_challenge extends zzz_panel_list {
       return e.reply(`式舆防卫战查询失败：${err?.message || err}`)
     }
 
-    const data = normalizeShiyu(raw, { uid, nickname: player?.nickname, avatar: player?.avatar })
+    const data = await normalizeShiyu(raw, {
+      uid, nickname: player?.nickname, avatar: player?.avatar, periodOffset: prev ? -1 : 0,
+    })
     if (data.empty) return e.reply('没有查到式舆防卫战数据，可能是本期还没打，或面板未公开。')
 
     return render('zzz_challenge/challenge', { ...data, footer: 'from 米哈游' }, { e, ret: true, dsf: 2.4 })

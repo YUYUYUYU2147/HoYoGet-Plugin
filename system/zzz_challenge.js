@@ -141,18 +141,25 @@ const ratingPic = r => {
  * 式舆防卫战 → challenge.html 的模板数据
  * @param {object} raw hadal_info_v2 节点
  */
-export function normalizeShiyu(raw = {}, meta = {}) {
+export async function normalizeShiyu(raw = {}, meta = {}) {
   const data = raw?.hadal_info_v2 || raw || {}
+  /* 接口只给 BOSS 立绘的图片 hash，名称/弱点/抗性从 nanoka 当期数据取
+     （本地 hash 表只覆盖少数 BOSS，覆盖不到就没有弱点） */
+  const nanokaByLine = await nanokaShiyuBosses(meta.periodOffset || 0).catch(() => null)
 
   const grade = { S: 0, A: 0, B: 0 }
   const layers = []
   for (const [key, zh] of LAYER_KEYS) {
     const d = data[`${key}_layer_detail`]
     if (!d || !Array.isArray(d.layer_challenge_info_list)) continue
-    const items = d.layer_challenge_info_list.map(item => {
+    const lineBosses = nanokaByLine?.[CN_NUM[zh]] || null
+    const items = d.layer_challenge_info_list.map((item, roomIdx) => {
       const rating = String(item?.rating || '').toUpperCase()
       if (grade[rating] !== undefined) grade[rating]++
       const boss = pickBoss(item)
+      // 同防线内按房间顺序对位；nanoka 缺数据时留空
+      const nb = lineBosses?.[roomIdx] || null
+      const bm = bossMetaOf({ icon: boss?.pic || item?.monster_pic || '' })
       return {
         ...item,
         // 模板用它拼图片、也直接显示
@@ -164,9 +171,13 @@ export function normalizeShiyu(raw = {}, meta = {}) {
         /* 立绘直接用接口的 monster_pic（米游社 CDN 完整 URL）；
            不要写成 boss?.pic || ''，取不到 boss 时会把原字段清空，导致没图 */
         monster_pic: boss?.pic || item?.monster_pic || '',
-        monster_name: boss?.name || item?.monster_name || '',
-        monster_weakness_tags: toElementTags(boss?.weakness?.length ? boss.weakness : item?.monster_weakness),
-        monster_resistance_tags: toElementTags(boss?.resist?.length ? boss.resist : item?.monster_resistance),
+        monster_name: boss?.name || item?.monster_name || nb?.name || bm.name || '',
+        monster_weakness_tags: toElementTags(
+          boss?.weakness?.length ? boss.weakness
+            : (item?.monster_weakness || nb?.weakness || bm.weakness)),
+        monster_resistance_tags: toElementTags(
+          boss?.resist?.length ? boss.resist
+            : (item?.monster_resistance || nb?.resistance || bm.resistance)),
       }
     })
     layers.push({
@@ -309,6 +320,68 @@ async function nanokaDeadlyBosses(periodOffset = 0) {
   }
   const ret = byName.size ? [...byName.values()] : null
   if (ret && !periodOffset) _nanokaBossCache = { at: Date.now(), bosses: ret }
+  return ret
+}
+
+/* ───── nanoka 式舆 BOSS（名称/弱点/抗性） ─────
+ * 接口只给 monster_pic（图片 hash），本地映射表覆盖不全；
+ * nanoka 的 shiyu.json → zh/shiyu/<id>.json 有每个房间 BOSS 的 element
+ * （1=弱点，-1=抗性），按 zone.name 归到第 1~5 防线。
+ * 第 5 防线常被拆成「房间一/二/三」，也归到第 5 防线。 */
+const CN_NUM = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 }
+
+function lineFromZoneName(name = '') {
+  const t = String(name || '')
+  if (!t) return 0
+  const m = t.match(/第([一二三四五六七八九十]+)防线/)
+  if (m) return CN_NUM[m[1]] || 0
+  if (/房间/.test(t)) return 5
+  return 0
+}
+
+let _shiyuBossCache = { at: 0, byLine: null }
+
+/** 当期式舆每道防线的 BOSS 列表：{ 1: [{name,weakness,resistance}], ... } */
+async function nanokaShiyuBosses(periodOffset = 0) {
+  if (!periodOffset && _shiyuBossCache.byLine && Date.now() - _shiyuBossCache.at < NANOKA_TTL) {
+    return _shiyuBossCache.byLine
+  }
+  const manifest = await fetchJson(`${NANOKA}/manifest.json`, 6000)
+  const nv = manifest?.zzz?.latest
+  if (!nv) return null
+  const list = await fetchJson(`${NANOKA}/zzz/${nv}/shiyu.json`)
+  const items = Object.entries(list || {})
+    .map(([k, v]) => ({ id: Number(k), ...v }))
+    .filter(v => Number.isFinite(v.id) && (v.live_begin || v.begin) && (v.live_end || v.end))
+    .sort((a, b) => a.id - b.id)
+  if (!items.length) return null
+
+  const now = new Date()
+  let idx = items.findIndex(v => now >= new Date(v.live_begin || v.begin) && now <= new Date(v.live_end || v.end))
+  if (idx < 0) idx = items.length - 1
+  idx = Math.max(0, Math.min(items.length - 1, idx + periodOffset))
+
+  const detail = await fetchJson(`${NANOKA}/zzz/${nv}/zh/shiyu/${items[idx].id}.json`, 10000)
+  if (!detail?.zone) return null
+
+  const byLine = {}
+  for (const z of Object.values(detail.zone)) {
+    const line = lineFromZoneName(z?.name)
+    if (!line) continue
+    const rooms = Object.entries(z.layer_room || {}).sort(([a], [b]) => Number(a) - Number(b))
+    for (const [, room] of rooms) {
+      const entries = Object.entries(room?.monster_list || {}).sort(([a], [b]) => Number(a) - Number(b))
+      const mon = entries.length ? entries[entries.length - 1][1] : null
+      if (!mon?.name) continue
+      ;(byLine[line] = byLine[line] || []).push({
+        name: mon.name,
+        weakness: pickBySign(mon.element, 1).join(' / '),
+        resistance: pickBySign(mon.element, -1).join(' / '),
+      })
+    }
+  }
+  const ret = Object.keys(byLine).length ? byLine : null
+  if (ret && !periodOffset) _shiyuBossCache = { at: Date.now(), byLine: ret }
   return ret
 }
 
