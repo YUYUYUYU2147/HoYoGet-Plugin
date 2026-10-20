@@ -1427,7 +1427,8 @@ export function calcEquipScore(equip_final, charName, stats, profession, element
     total += score
   }
   const rating = total >= 280 ? 'MAX' : total >= 220 ? 'ACE' : total >= 200 ? 'SSS' : total >= 180 ? 'SS' : total >= 160 ? 'S' : total >= 120 ? 'A' : total >= 80 ? 'B' : 'C'
-  return { score: +total.toFixed(1), rating, ruleName, discScores, usefulCount: useful, effectiveCount: +effective.toFixed(2) }
+  // weight 一并返回：面板属性行/词条统计要标权重，避免再算一遍（两处各算一份迟早会漂）
+  return { score: +total.toFixed(1), rating, ruleName, weight, discScores, usefulCount: useful, effectiveCount: +effective.toFixed(2) }
 }
 
 /**
@@ -1514,14 +1515,15 @@ function normalizeDetail(a, uid) {
     for (const p of (d.properties || [])) {
       const pid = p.property_id
       const isPct = String(p.base).includes('%')
-      if (!agg[pid]) agg[pid] = { name: ZSHORT[pid] || p.property_name || ('x' + pid), count: 0, value: 0, isPct }
+      if (!agg[pid]) agg[pid] = { pid, name: ZSHORT[pid] || p.property_name || ('x' + pid), count: 0, value: 0, isPct }
       agg[pid].count += (p.level ?? 0)
       const num = parseFloat(p.base)
       if (!isNaN(num)) agg[pid].value += num
     }
   }
   const propertyStats = Object.values(agg)
-    .map(s => ({ name: s.name, count: s.count, value: s.value.toFixed(1) + (s.isPct ? '%' : '') }))
+    // weight：该词条在评分里的权重（0~100，0 表示不计分），模板里跟在词条名后面
+    .map(s => ({ name: s.name, count: s.count, value: s.value.toFixed(1) + (s.isPct ? '%' : ''), weight: Math.round((scoreRes.weight?.[Number(s.pid)] || 0) * 100) }))
     .sort((x, y) => y.count - x.count)
 
   // 评分：按自研权重计算（0~330 分制），替换接口分

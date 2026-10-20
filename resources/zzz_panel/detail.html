@@ -56,6 +56,20 @@
           </div>
         </div>
 
+        {{set skNames = ['普攻', '特殊技', '闪避', '连携技', '核心技', '支援技']}}
+        {{set skIcons = ['basic', 'special', 'dodge', 'chain', 'core', 'assist']}}
+        <div class="skills-card">
+          {{each c.skills sk i}}
+          <div class="skb">
+            <img src="{{ppath}}zzz_panel/images/panel_icons/skills/{{skIcons[i]}}.webp">
+            <div class="skb-meta">
+              <span class="skb-name">{{skNames[i]}}</span>
+              <span class="skb-lv">Lv.{{sk.level}}</span>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+
         {{if c.weapon}}
         <div class="section">
           <div class="sec-title">音擎</div>
@@ -125,20 +139,6 @@
       </div>
 
       <div class="col-right">
-        {{set skNames = ['普攻', '特殊技', '闪避', '连携技', '核心技', '支援技']}}
-        {{set skIcons = ['basic', 'special', 'dodge', 'chain', 'core', 'assist']}}
-        <div class="skills-card">
-          {{each c.skills sk i}}
-          <div class="skb">
-            <img src="{{ppath}}zzz_panel/images/panel_icons/skills/{{skIcons[i]}}.webp">
-            <div class="skb-meta">
-              <span class="skb-name">{{skNames[i]}}</span>
-              <span class="skb-lv">Lv.{{sk.level}}</span>
-            </div>
-          </div>
-          {{/each}}
-        </div>
-
         <div class="section">
           <div class="sec-title">评分</div>
           <div class="score-wrap">
@@ -147,13 +147,14 @@
                 <div class="score-rate">{{c.equip_comment}}</div>
                 <div class="score-val">{{c.equip_score.toFixed(1)}}<span class="unit">分</span></div>
               </div>
-              <div class="score-meta">规则：{{c.weightRule}}</div>
+              <div class="score-meta">规则：{{c.weightRule}} · 词条权重 0~100</div>
             </div>
             <div class="prop-stats">
               {{each c.propertyStats stat}}
               <div class="ps-item">
                 <span class="ps-count">{{stat.count}}</span>
                 <span class="ps-name">{{stat.name}}</span>
+                <i class="ps-w{{if stat.weight >= 75}} hi{{/if}}{{if stat.weight === 0}} zero{{/if}}">{{stat.weight}}</i>
                 <span class="ps-val">{{stat.value}}</span>
               </div>
               {{/each}}

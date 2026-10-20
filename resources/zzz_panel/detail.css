@@ -99,10 +99,10 @@ body {
 .sec-title::before { content: ""; width: 4px; height: 1.1em; border-radius: 3px; background: linear-gradient(#ff7fa8, #f5c96b); }
 .sec-title .sub { font-size: .7em; color: #c3cad8; font-weight: 400; }
 
-/* ============ 技能（右列顶部，3×2 网格） ============ */
+/* ============ 技能（左列、音擎上方，一行 6 个） ============ */
 .skills-card {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px 14px;
   padding: 12px 14px;
   background: rgba(255,255,255,.04);
@@ -153,6 +153,20 @@ body {
 .ps-count { min-width: 2em; height: 2em; padding: 0 .35em; border-radius: 6px; background: rgba(245, 201, 107, .16); border: 1px solid rgba(245, 201, 107, .35); color: #f5c96b; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
 .ps-name { color: #cfd6e6; white-space: nowrap; }
 .ps-val { margin-left: auto; font-weight: 700; color: #e7ebf3; white-space: nowrap; }
+/* 词条权重：跟在词条名后的小徽章；>=75 金色（双暴/主收益），0 灰掉表示不计分 */
+.ps-w {
+  flex: none;
+  padding: 0 4px;
+  border-radius: 4px;
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 14px;
+  color: #a6c6dd;
+  background: rgba(120, 180, 220, .22);
+}
+.ps-w.hi { color: #ffd27a; background: rgba(255, 210, 122, .2); }
+.ps-w.zero { color: #7c8496; background: rgba(255, 255, 255, .07); }
 .useful-bar { margin-top: 12px; display: flex; justify-content: center; align-items: center; gap: 10px; color: #c0c8d6; font-size: .88em; letter-spacing: .5px; }
 .useful-bar b { color: #cfd6e6; font-weight: 800; }
 .useful-bar .useful-sep { color: #7c8496; }
