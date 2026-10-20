@@ -99,6 +99,9 @@
               {{set avatar = avatars[id] || {} }}
               <div class="avatar-icon item-icon star{{avatar.star==4?4:5}}">
                 <span class="img" style="background-image:url('{{_miao_path}}{{avatar.face}}')"></span>
+                {{if avatar.artisSummary && (avatar.artisSummary.mark || avatar.artisSummary.score)}}
+                <span class="av-score">{{avatar.artisSummary.mark}}{{if avatar.artisSummary.score}} <i>{{avatar.artisSummary.score}}</i>{{/if}}</span>
+                {{/if}}
               </div>
               {{/each}}
             </div>
@@ -106,20 +109,6 @@
           </div>
         </div>
         {{/each}}
-      {{if floor.artisTeams && floor.artisTeams.length}}
-      <div class="abyss-artis">
-        <div class="artis-title">圣遗物总评</div>
-        {{each floor.artisTeams team}}
-        <div class="artis-sum">
-          <span class="as-name">{{team.name}}</span>
-          <span class="as-set">{{team.setName}}</span>
-          {{if team.mark}}<span class="as-mark m-{{team.mark}}">{{team.mark}}</span>{{/if}}
-          {{if team.score}}<span class="as-score">{{team.score}}</span>{{/if}}
-        </div>
-        {{/each}}
-      </div>
-      {{/if}}
-
       </div>
     </div>
     </div>
