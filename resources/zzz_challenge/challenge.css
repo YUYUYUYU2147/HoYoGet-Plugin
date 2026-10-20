@@ -1,0 +1,112 @@
+/* 绝区零挑战记录（式舆防卫战 / 危局强袭战）
+ * 版式与绝区零角色面板的 Apple 深色玻璃保持一致：深底 + 半透明卡片 + 系统灰阶，
+ * 彩色只留给评级与星数。单列布局，宽度按内容自适应，不做左右分栏。 */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  width: 900px;
+  padding: 0;
+  font-size: 18px;
+  font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue",
+    "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: #f5f5f7;
+  background: #0b0b0d;
+  -webkit-font-smoothing: antialiased;
+}
+
+.container { padding: 24px 28px 20px; }
+
+/* ── 头部 ── */
+.head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.title { font-size: 26px; font-weight: 700; letter-spacing: -.3px; }
+.period { margin-top: 4px; font-size: 12.5px; color: #a1a1a6; }
+.head-right { text-align: right; }
+.nick { font-size: 15px; font-weight: 600; }
+.uid { margin-top: 2px; font-size: 12px; color: #a1a1a6; letter-spacing: .4px; }
+
+/* ── 概要 ── */
+.summary {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  padding: 14px 16px; margin-bottom: 16px;
+  background: rgba(28, 28, 30, .72);
+  border: 1px solid rgba(255, 255, 255, .09);
+  border-radius: 18px;
+}
+.sum-item { display: flex; flex-direction: column; gap: 2px; min-width: 92px; }
+.sum-item.remain { margin-left: auto; text-align: right; }
+.sum-label { font-size: 11px; color: #a1a1a6; letter-spacing: .3px; }
+.sum-value { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.5px; }
+.sum-value.small { font-size: 15px; font-weight: 600; }
+.sum-value .unit { font-size: 11px; color: #a1a1a6; font-weight: 500; margin-left: 2px; }
+.sum-value b.g-s { color: #ffd60a; }
+
+/* 评级配色：S 金 / A 紫 / B 蓝 */
+.grade { font-size: 16px; font-weight: 800; padding: 0 7px; border-radius: 7px; line-height: 22px; }
+.grade.sm { font-size: 12px; line-height: 18px; padding: 0 6px; }
+.r-S { color: #ffd60a; background: rgba(255, 214, 10, .14); }
+.r-A { color: #bf5af2; background: rgba(191, 90, 242, .14); }
+.r-B { color: #0a84ff; background: rgba(10, 132, 255, .14); }
+.sum-value.rating { padding: 0 8px; border-radius: 8px; display: inline-block; margin-top: 1px; }
+
+/* ── 层 / 关卡卡片 ── */
+.layer, .room {
+  margin-bottom: 14px; padding: 12px 14px;
+  background: rgba(28, 28, 30, .66);
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 18px;
+}
+.layer-head, .room-head { display: flex; align-items: center; gap: 10px; }
+.layer-name, .room-idx { font-size: 16px; font-weight: 700; }
+.layer-score, .room-score { font-size: 13px; color: #c7c7cc; font-variant-numeric: tabular-nums; }
+.layer-time { margin-left: auto; font-size: 12px; color: #a1a1a6; }
+.room-score { margin-left: auto; }
+
+.stars { display: inline-flex; gap: 3px; }
+.star { width: 12px; height: 12px; display: inline-block; border-radius: 2px; background: rgba(255, 255, 255, .14); }
+.star.on { background: #ffd60a; }
+
+/* ── BOSS ── */
+.boss {
+  display: flex; align-items: center; gap: 12px; margin-top: 10px;
+  padding: 8px 10px; border-radius: 12px;
+  background: rgba(255, 255, 255, .04);
+}
+.boss-pic { width: 54px; height: 54px; border-radius: 10px; object-fit: cover; background: rgba(255, 255, 255, .06); }
+.boss-meta { min-width: 0; }
+.boss-name { font-size: 14px; font-weight: 600; }
+.boss-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 5px; }
+.tag-w, .tag-r { font-size: 10.5px; color: #a1a1a6; }
+.elem { font-size: 10.5px; padding: 1px 6px; border-radius: 5px; background: rgba(255, 214, 10, .14); color: #ffd60a; }
+.elem.resist { background: rgba(255, 69, 58, .14); color: #ff6961; }
+
+/* ── 节点 / 关卡内容 ── */
+.nodes { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.node { padding: 8px 10px; border-radius: 12px; background: rgba(255, 255, 255, .035); }
+.node-head { display: flex; align-items: center; gap: 8px; }
+.node-idx { font-size: 13px; font-weight: 600; color: #c7c7cc; }
+.node-time { margin-left: auto; font-size: 11.5px; color: #a1a1a6; }
+
+.teams { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.member {
+  display: flex; align-items: center; gap: 5px;
+  padding: 2px 9px 2px 3px; border-radius: 999px;
+  background: rgba(255, 255, 255, .08);
+}
+.member img { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; background: rgba(255,255,255,.08); }
+.member i { font-style: normal; font-size: 11.5px; color: #e5e5ea; }
+
+.buff { margin-top: 7px; font-size: 11.5px; line-height: 1.5; color: #a1a1a6; }
+.buff b { color: #c7c7cc; font-weight: 600; }
+
+.rooms { display: flex; flex-direction: column; gap: 10px; }
+.hard-title { margin: 16px 0 8px; font-size: 13px; color: #a1a1a6; }
+
+.empty {
+  padding: 28px; text-align: center; line-height: 1.8;
+  font-size: 14px; color: #a1a1a6;
+  background: rgba(28, 28, 30, .6); border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, .08);
+}
+
+.copyright { margin-top: 16px; text-align: center; font-size: 12px; color: #ff4d4f; letter-spacing: .5px; }

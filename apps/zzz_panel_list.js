@@ -7,6 +7,7 @@ import { damageSkillsAt, getCharRates } from '../system/zzz_skill_rate.js'
 import { getBuffAreas } from '../system/zzz_buff.js'
 import { mhyFetch } from '../system/mhy_fetch.js'
 import { zzzPanelExtras } from '../system/zzz_panel.js'
+import { getPanelBg } from '../system/zzz_panel_bg.js'
 
 /**
  * 绝区零面板（xhh 自研）—— 第 2 步：归一化 + 自研渲染。
@@ -503,8 +504,6 @@ function findZzzStokenEntry(qq, uid = '') {
   }
 }
 
-// 面板随机背景：默认用 yppp 的随机二次元图；配置成空字符串可恢复纯黑底
-const DEFAULT_PANEL_BG = 'https://api.yppp.net/api.php'
 // 详情长图用 deviceScaleFactor 代替 CSS zoom（见 system/render.js 注释）：
 // 2.4 与原先 zoom 的像素密度一致，输出仍为 1400 x 2.4 = 3360 宽。
 const ZZZ_PANEL_DSF = 2.4
@@ -514,15 +513,7 @@ function panelAppleStyle() {
   try { return String(config()?.panel_style || 'dark').trim().toLowerCase() === 'apple' } catch { return false }
 }
 
-function getPanelBg() {
-  let url = DEFAULT_PANEL_BG
-  try { url = String(config()?.zzz_panel_bg_url ?? DEFAULT_PANEL_BG).trim() } catch { /* 用默认 */ }
-  if (!url) return ''
-  // 随机图接口的 URL 不变时 Chromium 会直接吃缓存，每次加个唯一参数强制重新取图
-  if (!/^https?:\/\//i.test(url)) return url
-  const sep = url.includes('?') ? '&' : '?'
-  return `${url}${sep}_=${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-}
+
 
 const SKILL_NAME = { 0: '普攻', 1: '特殊技', 2: '闪避', 3: '连携技', 5: '核心技', 6: '支援技' }
 // 技能展示顺序（贴近米游社面板）：普攻/闪避/特殊技/支援技/连携/核心
@@ -3036,6 +3027,15 @@ export class zzz_panel_list extends plugin {
     if (diff <= 0) return { days: 0, hours: 0 }
     const total = Math.floor(diff / 3600000)
     return { days: Math.floor(total / 24), hours: total % 24 }
+  }
+
+  /**
+   * 直接取挑战接口原始响应（式舆 / 危局，含往期）。
+   * zzzGet 是模块内函数，这里包一层的目的是给 zzz_challenge 复用，
+   * 免得把取数逻辑抄第二遍。
+   */
+  async zzzGetRaw(e, uid, ck, type, query) {
+    return zzzGet(e, uid, ck, type, query)
   }
 
   async zzzRemindFetch(e, uid, ck, type) {
