@@ -357,6 +357,49 @@ body,
 
 /* 分栏时左栏内容不能撑破（.abyss-detail 原本用 calc(100% + 40px) 抵消内距，
    在 flex 子项里会把左栏撑宽，导致左右不等宽） */
-.floor-main { overflow: hidden; }
+.floor-main { overflow: visible; }
 .floor-main .abyss-detail { width: 100%; margin-left: 0; margin-right: 0; }
 .floor-main .abyss-level { box-sizing: border-box; }
+
+/* 左栏底部：各出战角色的圣遗物详情（填补空白） */
+.abyss-artis {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(255, 255, 255, .25);
+}
+.abyss-artis .artis-title {
+  font-size: 13px;
+  color: #d3bc8e;
+  margin-bottom: 6px;
+  letter-spacing: 1px;
+}
+.artis-char { margin-bottom: 8px; }
+.artis-char:last-child { margin-bottom: 0; }
+.artis-char-name {
+  font-size: 12.5px;
+  color: #fff;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.artis-char-name span {
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, .6);
+}
+.artis-list { display: flex; flex-direction: column; gap: 2px; }
+.artis-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, .78);
+  background: rgba(255, 255, 255, .05);
+  border-radius: 6px;
+  padding: 2px 7px;
+}
+.artis-set { color: rgba(255, 255, 255, .9); min-width: 0; flex: 0 0 auto; }
+.artis-lv { color: #d3bc8e; flex: 0 0 auto; }
+.artis-main { color: #9fe0c8; flex: 0 0 auto; }
+.artis-sub { color: rgba(255, 255, 255, .62); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
