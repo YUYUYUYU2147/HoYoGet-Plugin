@@ -296,21 +296,25 @@ body,
 /*# sourceMappingURL=abyss-summary.css.map */
 /* 每层卡片：左栏保持原来的战绩内容，右栏补该层深渊怪物/BOSS 信息 */
 .floor-split {
-  display: flex;
-  gap: 16px;
-  /* 不用 flex-start：右栏怪物多时会把整层撑高，左栏底部就空出一块。
-     用 stretch 让两栏背景等高，空白不会显得突兀 */
-  align-items: stretch;
+  /* 右栏绝对定位，完全不参与这一层的高度计算：
+     这一层的高度只由左栏（战绩）决定，左栏底部就不会再留出 2000px 的空白。
+     右栏自身限高 + overflow:hidden，超出的 BOSS 条目裁掉（次要信息）。 */
+  position: relative;
   width: 100%;
   min-width: 0;
 }
-.floor-split.has-boss .floor-main { flex: 0 0 1300px; min-width: 0; }
-.floor-split:not(.has-boss) .floor-main { flex: 0 0 1300px; min-width: 0; }
-.floor-main { flex: 0 0 1300px; min-width: 0; }
+.floor-split.has-boss .floor-main { width: 1300px; min-width: 0; }
+.floor-split:not(.has-boss) .floor-main { width: 1300px; min-width: 0; }
+.floor-main { width: 1300px; min-width: 0; }
 
 .floor-boss {
-  /* 左栏固定 1300，右栏吃掉剩余宽度（加宽右栏而不是压左栏） */
-  flex: 1 1 auto;
+  /* 绝对定位到右侧：不撑高这一层 */
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 660px;
+  height: 100%;
+  overflow: hidden;
   min-width: 0;
   box-sizing: border-box;
   /* 左栏「第N层」标题在 .cont-body 内，比卡片顶部低 14px；
