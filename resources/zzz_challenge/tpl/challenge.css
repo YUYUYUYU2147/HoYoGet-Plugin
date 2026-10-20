@@ -241,8 +241,8 @@ body {
 
 .boss-panel {
     /* 原来 112px：抗性胶囊加上「+20%」后两个就放不下，会撑出 .boss-info 的边框。
-       加宽到 150px，并允许内部换行 */
-    width: 150px;
+       加宽到 170px，一行基本能放下两个胶囊 */
+    width: 170px;
     flex-shrink: 0;
 }
 
@@ -312,6 +312,8 @@ body {
     border-radius: 999px;
     background: rgba(255, 255, 255, .12);
     white-space: nowrap;
+    /* 收一收宽度，两个胶囊尽量落在同一行 */
+    font-size: 9px;
 }
 
 .element-tag img {
@@ -526,4 +528,13 @@ body {
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+}
+
+/* 弱点 / 抗性两行：抗性整行加红色调，避免换行后和弱点混在一起 */
+.boss-attrs tr + tr td:first-child {
+    padding-top: 3px;
+}
+
+.boss-attrs tr + tr .element-tag {
+    background: rgba(255, 80, 80, .16);
 }
