@@ -425,8 +425,26 @@ body,
 }
 .boss-icon img { width: 100%; height: 100%; object-fit: contain; }
 .boss-icon span { font-size: 15px; font-weight: 800; color: #94a3b8; }
-.boss-info { min-width: 0; flex: 1; display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; overflow: hidden; }
-.boss-name { font-size: 11.5px; font-weight: 700; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.boss-info {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0 5px;
+  /* 名字独占第一行（完整显示），血量/弱点/抗性换到第二行；
+     原来名字和血量/标签挤在同一行，长名字会被 ellipsis 截断 */
+  flex-wrap: wrap;
+  overflow: hidden;
+}
+.boss-name {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #334155;
+  flex: 1 1 100%;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
 .boss-hp { font-size: 11px; color: #64748b; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .boss-tags { display: inline-flex; align-items: center; gap: 2px; font-size: 9.5px; white-space: nowrap; flex: 0 0 auto; }
 .boss-tags .tag-label { display: none; }
@@ -533,9 +551,9 @@ body,
 
 /* 第二层 BOSS 内容（3 间怪物列表）比楼层高，给第二层留出高度，
    让怪物列表完整显示；左侧多出来的部分用卡片深色底填充 */
-.info_box > .cont + .cont { min-height: 520px; }
-.info_box > .cont + .cont .floor-split { min-height: 520px; }
-.info_box > .cont + .cont .cont-body { min-height: 520px; box-sizing: border-box; }
+.info_box > .cont + .cont { min-height: 560px; }
+.info_box > .cont + .cont .floor-split { min-height: 560px; }
+.info_box > .cont + .cont .cont-body { min-height: 560px; box-sizing: border-box; }
 
 /* BOSS 技能应对：跨满整行，避免挤在 1/3 列里 */
 .boss-guide {
