@@ -2,7 +2,7 @@ import fs from "node:fs"
 import crypto from "node:crypto"
 import util from "node:util"
 import lodash from "lodash"
-import { rootPath } from "#hoyo.miao.path"
+import { rootPath, metaRoot } from "#hoyo.miao.path"
 
 const _path = rootPath
 const getRoot = (root = "") => {
@@ -11,7 +11,9 @@ const getRoot = (root = "") => {
   } else if (root === "root" || root === "yunzai") {
     root = `${_path}/`
   } else if (root === "miao") {
-    root = `${_path}/plugins/miao-plugin/`
+    /* 内置版：meta 资源根可能是本插件自己的 resources，也可能还是外部 miao-plugin */
+    const res = metaRoot()
+    root = res.endsWith('resources') ? `${res}/../` : `${res}/`
   } else {
     root = `${_path}/plugins/${root}/`
   }

@@ -9,6 +9,13 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+/* 上游代码里有裸 logger 引用（Yunzai 全局）。这里兜一个最小实现，
+   保证脱离 Yunzai 进程（单测/脚本）加载时不会 ReferenceError。 */
+if (typeof globalThis.logger === 'undefined') {
+  const noop = () => {}
+  globalThis.logger = { mark: noop, info: noop, warn: noop, error: noop, debug: noop, yellow: s => s, green: s => s, red: s => s }
+}
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // vendor 根（system/vendor/miao）
 const vendorPath = __dirname
