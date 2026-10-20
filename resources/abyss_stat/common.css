@@ -27,6 +27,8 @@ body {
   font-size: 18px;
   color: #1e1f20;
   font-family: Number, "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  /* transform: scale(1.4) 是原版放大字号的手法；出图改用更高的
+     deviceScaleFactor（3.2）来补偿，字不再糊 */
   transform: scale(1.4);
   transform-origin: 0 0;
   width: 600px;

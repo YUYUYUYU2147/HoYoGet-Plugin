@@ -602,6 +602,18 @@ export async function getAbyssBossesByFloor(opts = {}) {
     if (!loaded || loaded.error) return {};
     const detail = loaded.detail || {};
     const out = {};
+    /* 攻略（技能应对）：顶层 Guides[怪物ID] = { Content: [{Title, DescList}] } */
+    const guidesOf = id => {
+      const g = detail.Guides?.[id] || detail.Guides?.[String(id)];
+      if (!Array.isArray(g?.Content)) return [];
+      return g.Content
+        .map(c => ({
+          title: plainText(c?.Title),
+          lines: (c?.DescList || []).map(d => plainText(d)).filter(Boolean),
+        }))
+        .filter(c => c.title || c.lines.length)
+        .slice(0, 3);
+    };
     for (const floor of (detail.Floors || [])) {
       const idx = Number(floor.Index);
       if (!Number.isFinite(idx)) continue;
@@ -613,7 +625,14 @@ export async function getAbyssBossesByFloor(opts = {}) {
           level: c.Level,
           waves: (c.Waves || []).map(w => ({
             name: w.Wave || '',
-            monsters: (w.Monsters || []).map(m => giMonster(detail, m)).filter(Boolean),
+            monsters: (w.Monsters || []).map(m => {
+              const mon = giMonster(detail, m);
+              if (!mon) return null;
+              // 该怪若有攻略，挂上技能应对（每个房间最多显示前 3 条）
+              const g = guidesOf(m.ID);
+              if (g.length) mon.guides = g;
+              return mon;
+            }).filter(Boolean),
           })).filter(w => w.monsters.length),
         };
         if (!half.waves.length) continue;
