@@ -40,6 +40,10 @@ body,
 }
 .abyss-stat {
   display: flex;
+  /* 5 项统计（最强一击/最高承伤/最多击破/战技/爆发）横排会超出画布，
+     允许换行，避免后几项被挤到可视区外 */
+  flex-wrap: wrap;
+  gap: 6px 0;
 }
 .abyss-stat .cont {
   margin: 5px 10px 5px 5px;

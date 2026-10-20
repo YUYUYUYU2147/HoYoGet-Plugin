@@ -83,18 +83,25 @@ export function buildGsAbyss(raw = {}, ctx = {}) {
   }
   out.star = star
 
-  // 战斗统计：最强一击 / 最高承伤 / 最多击破 / 战技 / 爆发
-  const names = { dmg: '最强一击', takeDmg: '最高承伤', defeat: '最多击破', e: '元素战技', q: '元素爆发' }
-  out.stat = Object.entries(names).map(([key, title]) => {
-    const rank = raw[`${key === 'takeDmg' ? 'take_damage' : key === 'defeat' ? 'defeat' : key}_rank`] || {}
+  /* 战斗统计（字段名对齐米游社接口，和 miao 的 Abyss 类一致）：
+       damage_rank / take_damage_rank / defeat_rank / normal_skill_rank / energy_skill_rank
+     每项是数组，取第一条 { avatar_id, value } */
+  const statKeys = [
+    ['damage_rank', '最强一击', 'w'],
+    ['take_damage_rank', '最高承伤', 'w'],
+    ['defeat_rank', '最多击破', 'count'],
+    ['normal_skill_rank', '元素战技', 'count'],
+    ['energy_skill_rank', '元素爆发', 'count'],
+  ]
+  out.stat = statKeys.map(([field, title, unit]) => {
+    const rank = Array.isArray(raw[field]) ? raw[field][0] : raw[field]
     const value = rank?.value
     if (value == null) return null
+    const n = Number(value) || 0
     return {
       title,
-      id: rank.avatar_id || 0,
-      value: ['dmg', 'takeDmg'].includes(key)
-        ? `${(Number(value) / 10000).toFixed(1)} W`
-        : `${value}次`,
+      id: rank?.avatar_id || 0,
+      value: unit === 'w' ? `${(n / 10000).toFixed(1)} W` : `${n}次`,
     }
   }).filter(Boolean)
 
