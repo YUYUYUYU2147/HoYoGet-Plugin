@@ -139,7 +139,13 @@ export class abyss_stat extends plugin {
       const player = miao.Player.create(e)
       player.setMysCharData(detail)
       const ret = player.getAvatarData([...ids]) || {}
-      logger.mark?.(`[HoYoGet][abyss_stat] 角色卡：需要 ${ids.size} 个，取到 ${Object.keys(ret).length} 个`)
+      /* 缺面板的角色（深渊里出现过、但米游社角色详情里没有）会导致立绘/圣遗物为空，
+         把名单打出来方便判断是「没展示圣遗物」还是「角色不在橱窗」 */
+      const missing = [...ids].filter(id => !ret[id])
+      const noArtis = Object.values(ret).filter(a => !a?.artisSet?.imgs?.length).map(a => a?.name)
+      logger.mark?.(`[HoYoGet][abyss_stat] 角色卡：需要 ${ids.size} 个，取到 ${Object.keys(ret).length} 个`
+        + (missing.length ? `，缺面板：${missing.join(',')}` : '')
+        + (noArtis.length ? `，无圣遗物：${noArtis.join(',')}` : ''))
       return ret
     } catch (err) {
       logger.debug?.(`[HoYoGet][abyss_stat] 角色详情获取失败：${err?.message || err}`)
