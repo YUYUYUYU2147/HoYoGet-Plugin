@@ -58,7 +58,10 @@
   {{set cardTypes={1:['wide wide2'],2:['wide','wide'],3:['wide','mini','mini'],4:['mini','mini','mini','mini']} }}
   {{each abyss?.floors floor}}
   <div class="cont">
+    {{set floorBosses = bossesByFloor[floor.index] || [] }}
 
+    <div class="floor-split{{if floorBosses.length}} has-boss{{/if}}">
+    <div class="floor-main">
     <div class="cont-body">
       <div class="abyss-title">
         <strong>第{{floor.index}}层</strong>
@@ -104,6 +107,46 @@
         </div>
         {{/each}}
       </div>
+    </div>
+    </div>
+
+    {{if floorBosses.length}}
+    <div class="floor-boss">
+      <div class="boss-title">本层怪物 / BOSS</div>
+      {{each floorBosses room}}
+      {{each room.halves half}}
+      <div class="boss-half">
+        <div class="boss-half-title">{{half.label}}{{if half.level}} · Lv.{{half.level}}{{/if}}</div>
+        {{each half.waves w}}
+        {{if w.name}}<div class="boss-wave">{{w.name}}</div>{{/if}}
+        {{each w.monsters m}}
+        <div class="boss-item">
+          <div class="boss-icon">{{if m.icon}}<img src="{{m.icon}}" alt="" />{{else}}<span>{{m.name.slice(0,1)}}</span>{{/if}}</div>
+          <div class="boss-info">
+            <div class="boss-name">{{m.name}}</div>
+            {{if m.hp}}<div class="boss-hp">{{m.hp}}</div>{{/if}}
+            {{if m.weak && m.weak.length}}
+            <div class="boss-tags weak">
+              <i class="tag-label">弱点</i>
+              {{each m.weak e}}<i>{{if e.icon}}<img src="{{e.icon}}" alt="" />{{/if}}{{e.cn}}</i>{{/each}}
+            </div>
+            {{/if}}
+            {{if m.res && m.res.length}}
+            <div class="boss-tags res">
+              <i class="tag-label">抗性</i>
+              {{each m.res r}}<i>{{each r.elems e}}{{e.cn}}{{/each}} <em>{{r.value}}</em></i>{{/each}}
+            </div>
+            {{/if}}
+            {{if m.mech}}<div class="boss-mech">{{m.mech}}</div>{{/if}}
+          </div>
+        </div>
+        {{/each}}
+        {{/each}}
+      </div>
+      {{/each}}
+      {{/each}}
+    </div>
+    {{/if}}
     </div>
   </div>
   {{/each}}
