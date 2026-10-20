@@ -11,15 +11,20 @@
  * 模板用 miao 作者的 stat/*.html（已复制到 resources/abyss_stat/ 并改成独立页面）。
  */
 import { render, pluginPriority } from '#HoYoGet'
-import { metaResRel } from '#hoyo.miao.path'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 /** 模板里 <% include(_tpl_path+'/avatar-card.html') %> 用的目录（我们自己的副本） */
 const abyssTplPath = () => path.join(PLUGIN_ROOT, 'resources', 'abyss_stat', 'tpl') + path.sep
-/** meta 资源（角色立绘/武器图）的 URL 前缀，跟随 system/vendor/miao/path.js 的 meta 根 */
-const miaoResPath = () => '../../../../..' + '/' + metaResRel()
+/**
+ * 角色立绘 / 武器图 / 圣遗物图的 URL 前缀。
+ *
+ * 注意不能用 metaResRel()：我们的 resources/meta-gs 只拷了 json（数据），
+ * 图片仍在 plugins/miao-plugin/resources 下的 meta-* 目录里，用 meta 根会拼出空路径。
+ * 以后把图片也拷过来时，这里改成按目录存在与否选择即可。
+ */
+const miaoResPath = () => '../../../../..' + '/plugins/miao-plugin/resources/'
 import { buildGsAbyss, buildSrChallengeData, SR_CFG, timeCalc, elemIcon } from '../system/abyss_stat.js'
 
 const RULES = [
