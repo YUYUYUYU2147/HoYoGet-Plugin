@@ -32,6 +32,15 @@ const ATTR_CN = {
 /* 这些 key 的数值是固定值（不带 %），其余都是百分比 */
 const FLAT_KEYS = new Set(['hpPlus', 'atkPlus', 'defPlus'])
 const attrName = key => ATTR_CN[key] || key
+/* 五张卡片并排时雷达只有一百多像素宽，轴名用两字简称才放得下 */
+const RADAR_SHORT = {
+  生命值: '生命', 攻击力: '攻击', 防御力: '防御',
+  暴击率: '暴击', 暴击伤害: '暴伤', 元素充能: '充能',
+}
+const shortRadar = radar => radar && {
+  ...radar,
+  labels: radar.labels.map(l => ({ ...l, label: RADAR_SHORT[l.label] || l.label })),
+}
 
 const abyssTplPath = () => path.join(PLUGIN_ROOT, 'resources', 'abyss_stat', 'tpl') + path.sep
 /**
@@ -43,6 +52,7 @@ const abyssTplPath = () => path.join(PLUGIN_ROOT, 'resources', 'abyss_stat', 'tp
  */
 const miaoResPath = () => '../../../../..' + '/' + metaResRel()
 import { buildGsAbyss, buildSrChallengeData, SR_CFG, timeCalc, elemIcon } from '../system/abyss_stat.js'
+import { buildRadar } from '../system/radar.js'
 
 const RULES = [
   { reg: /^#?(?:米哈游)?\s*(?:原神)?\s*(上期|往期)?\s*(深境螺旋|深境|深渊)$/i.source, fnc: 'gsSpiral' },
@@ -114,19 +124,31 @@ export class abyss_stat extends plugin {
     const avatars = await this.fetchAvatars(e, mys, data)
     /* 右栏的深渊 BOSS 信息：接口（spiralAbyss）不返回怪物，从速览同一份数据源补，
        按层号对齐；取不到就不显示右栏，不影响主图 */
-    /* 圣遗物详情只挂在最高层（第 12 层）下面，且只展示顶部统计（最强一击/
-       最高承伤/最多击破/战技/爆发）对应的那几个角色，低层不显示 */
+    /* 培养雷达 + 圣遗物评分只挂在最高层（第 12 层）下面，且只展示顶部统计
+       （最强一击/最高承伤/最多击破/战技/爆发）对应的那几个角色，低层不显示。
+       没有面板数据的角色也保留卡片（头像/套装），雷达与评分留空。 */
     const statIds = [...new Set((data.stat || []).map(s => Number(s.id)).filter(Boolean))]
-    const artisTeams = statIds
-      .map(id => avatars[id])
-      .filter(a => a && a.artisDetail && a.artisDetail.length)
-      .map(a => ({
-        name: a.name,
-        setName: a.artisSummary?.set || '',
-        mark: a.artisSummary?.mark || '',
+    const markKeyOf = mark => String(mark || '').toLowerCase().replace(/[^a-z]/g, '')
+    const artisTeams = statIds.map(id => {
+      const a = avatars[id]
+      if (!a) return null
+      const sets = a.artisSet?.sets || {}
+      const setText = Object.keys(sets).length
+        ? Object.entries(sets).map(([name, count]) => `${name}×${count}`).join(' + ')
+        : ''
+      const mark = a.artisSummary?.mark || ''
+      return {
+        id,
+        name: a.name || '',
+        face: a.qFace || a.face || '',
+        setName: a.artisSummary?.set || a.artisSet?.name || '',
+        setText,
+        mark,
+        markKey: markKeyOf(mark),
         score: a.artisSummary?.score || '',
-        images: (a.artisDetail || []).map(x => x.icon).filter(Boolean).slice(0, 2),
-      }))
+        radar: a.radar || null,
+      }
+    }).filter(Boolean)
     const floorNums = Object.keys(data.floors || {}).map(Number).filter(Number.isFinite)
     const topFloor = floorNums.length ? Math.max(...floorNums) : 0
     if (topFloor && data.floors[topFloor]) data.floors[topFloor].artisTeams = artisTeams
@@ -206,6 +228,14 @@ export class abyss_stat extends plugin {
       for (const id of Object.keys(ret)) {
         try {
           const av = player.getAvatar(id)
+          /* 只有完整面板（isProfile）才有 attr / 圣遗物评分；
+             米游社橱窗数据只有套装名，雷达和评分留空。 */
+          if (av?.isProfile && av.attr && Object.keys(av.attr).length) {
+            ret[id] = {
+              ...ret[id],
+              radar: shortRadar(buildRadar(av, 'gs')),
+            }
+          }
           const arts = av?.getArtisDetail?.() || {}
           const list = Object.keys(arts)
             .sort((a, b) => Number(a) - Number(b))
@@ -228,15 +258,16 @@ export class abyss_stat extends plugin {
               }
             })
             .filter(x => x.name || x.set)
-          if (list.length) {
-            const mark = av?.getArtisMark?.(true) || {}
+          const mark = av?.getArtisMark?.(true) || {}
+          const score = Number(mark._mark)
+          if (list.length || score) {
             ret[id] = {
               ...ret[id],
-              artisDetail: list,
+              ...(list.length ? { artisDetail: list } : {}),
               artisSummary: {
                 set: ret[id]?.artisSet?.name || '',
                 mark: mark.markClass || '',
-                score: Number(mark._mark) ? (Math.round(Number(mark._mark) * 10) / 10).toFixed(1) : '',
+                score: score ? (Math.round(score * 10) / 10).toFixed(1) : '',
               },
             }
           }

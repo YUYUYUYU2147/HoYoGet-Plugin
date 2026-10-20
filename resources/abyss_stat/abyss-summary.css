@@ -600,3 +600,137 @@ body,
 }
 .av-score i { font-style: normal; opacity: .8; font-weight: 600; }
 .abyss-level .avatars { padding-bottom: 16px; }
+
+/* 第 12 层下方：顶部五位角色的培养雷达 + 圣遗物评分。
+   填补左栏在 BOSS 栏 560px 高度下留出的空白，一行五张卡。 */
+.abyss-build {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(255, 255, 255, .22);
+}
+.abyss-build .build-title {
+  font-size: 13px;
+  color: #d3bc8e;
+  margin-bottom: 6px;
+  letter-spacing: 1px;
+}
+.abyss-build .build-list {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+.build-card {
+  min-width: 0;
+  padding: 6px 7px 7px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .09);
+  box-sizing: border-box;
+}
+.build-head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 2px;
+  min-width: 0;
+}
+.build-face {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center top;
+  border: 1px solid rgba(255, 255, 255, .28);
+}
+.build-name {
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.build-body {
+  min-width: 0;
+}
+.build-radar {
+  width: 100%;
+  max-width: 146px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+.build-radar .rg { fill: none; stroke: rgba(138, 205, 244, .24); stroke-width: 1; }
+.build-radar .rs { stroke: rgba(138, 205, 244, .20); stroke-width: 1; }
+.build-radar .rv { fill: rgba(88, 190, 246, .26); stroke: #8fe0ff; stroke-width: 1.6; }
+.build-radar .rl {
+  font-size: 15px;
+  font-weight: 700;
+  fill: #9fb8cc;
+  dominant-baseline: middle;
+}
+.build-score {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 1px;
+  min-width: 0;
+}
+.bs-label {
+  font-size: 9px;
+  color: rgba(255, 255, 255, .52);
+  white-space: nowrap;
+}
+.bs-num {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.05;
+  color: #ffe699;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.bs-num i {
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 400;
+  margin-left: 1px;
+  color: rgba(255, 255, 255, .6);
+}
+.bs-mark {
+  display: inline-block;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 13px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, .35);
+  border: 1px solid rgba(255, 255, 255, .14);
+  color: #9aa7b8;
+  white-space: nowrap;
+}
+.bs-mark.mark-c { color: #8ee0a8; }
+.bs-mark.mark-b { color: #86c8ff; }
+.bs-mark.mark-a { color: #c8a6ff; }
+.bs-mark.mark-s { color: #ffd76e; }
+.bs-mark.mark-ss,
+.bs-mark.mark-sss { color: #ffc24d; }
+.bs-mark.mark-ace,
+.bs-mark.mark-max { color: #ff6b6b; }
+.bs-empty {
+  font-size: 11px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, .45);
+}
+.bs-set {
+  margin-top: 1px;
+  font-size: 8.5px;
+  line-height: 1.25;
+  color: rgba(255, 255, 255, .6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
