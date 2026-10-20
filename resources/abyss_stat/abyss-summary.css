@@ -148,19 +148,23 @@ body,
   margin-right: 5px;
 }
 .abyss-floor-team {
+  /* 左栏宽度放不下「上半 | 下半」并排（两队各 1277px 会冲出栏外盖住右栏），
+     改成一上一下堆叠，分隔线也跟着转成横线 */
   display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 .abyss-floor-team .line {
-  width: 1px;
-  background: rgba(255, 255, 255, 0.5);
-  height: 80px;
-  vertical-align: middle;
-  margin: 15px 8px 0;
+  width: 100%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.35);
+  margin: 2px 0;
 }
 .abyss-team {
   display: flex;
   margin-right: -5px;
   margin-left: -5px;
+  min-width: 0;
 }
 .abyss-detail {
   display: flex;
