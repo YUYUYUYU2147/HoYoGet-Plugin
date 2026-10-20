@@ -6,6 +6,7 @@ import { listCategories, fetchLeaderboard, getUserCalculations, getDamageDistrib
 import { getRoleProfile } from '../system/roleProfile.js'
 import { srPanelExtras } from '../system/sr_panel.js'
 import { pickCustomPanelArt, pickUserPanelArt, ensureUserPanelDir, listUserPanelArt } from '../system/custom_panel.js'
+import { metaResRel } from '#hoyo.miao.path'
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const YUNZAI_DB = path.join(process.cwd(), 'data', 'db', 'data.db')
@@ -186,22 +187,24 @@ async function readMysMainUid(e, game) {
   return ''
 }
 
-/** 动态加载 miao 的模型；缺失时返回 null，让调用方给出可读提示 */
+/**
+ * 加载内置的数据模型（system/vendor/miao，来自 miao-plugin 的开源实现）。
+ * 不再 import 外部插件：miao 卸载后面板照样能出图。
+ */
+let _vendorModels = null
 async function loadMiao() {
+  if (_vendorModels) return _vendorModels
   try {
-    const mod = await import('../../miao-plugin/models/index.js')
-    let ProfileRank = null
-    try {
-      // 群排名的核心逻辑在 models/ProfileRank.js（zset 按群 + 角色排名）
-      ProfileRank = (await import('../../miao-plugin/models/ProfileRank.js')).default
-    } catch (_) { /* 老版本 miao 没有这个模块，排名角标直接跳过 */ }
-    return {
+    const mod = await import('#hoyo.miao.models')
+    _vendorModels = {
       Player: mod.Player,
       Character: mod.Character,
       MysApi: mod.MysApi,
-      ProfileRank,
+      ProfileRank: mod.ProfileRank || null,
     }
-  } catch (_) {
+    return _vendorModels
+  } catch (err) {
+    logger.error?.(`[HoYoGet][hoyo_panel] 内置模型加载失败：${err?.message || err}`)
     return null
   }
 }
@@ -1426,7 +1429,7 @@ export class hoyo_panel extends plugin {
 
     const miao = await loadMiao()
     if (!miao) {
-      return e.reply('需要先安装 miao-plugin 才能更新面板（本功能复用它抓取的面板）。')
+      return e.reply('内置面板模型加载失败，请查看日志（system/vendor/miao）。')
     }
 
     let uid = m[2] || ''
@@ -1526,7 +1529,7 @@ export class hoyo_panel extends plugin {
 
     const miao = await loadMiao()
     if (!miao) {
-      return e.reply('需要先安装 miao-plugin 才能读取面板数据（本功能复用它抓取的面板）。')
+      return e.reply('内置面板模型加载失败，请查看日志（system/vendor/miao）。')
     }
 
     /* 没写游戏名时，若原神角色表里没有、星铁里有，就切到星铁 */
@@ -1735,7 +1738,7 @@ export class hoyo_panel extends plugin {
       }
 
       const info = player.getInfo?.() || {}
-      const miaoResPath = '../../../../..' + '/plugins/miao-plugin/resources/'
+      const miaoResPath = '../../../../..' + '/' + metaResRel()
       const data = flattenCharDetail(hit, miao.Character, game, {
         uid,
         nickname: info.nickname || info.name || '',
@@ -1873,7 +1876,7 @@ export class hoyo_panel extends plugin {
       /* _miao_path 由框架只给 miao-plugin 自身提供，本插件拿不到；
          这里按渲染器的实际落盘深度自己算：模板存于
          temp/html/米哈游/hoyo_panel/list/，回退到项目根要 5 层。 */
-      const miaoResPath = '../../../../..' + '/plugins/miao-plugin/resources/'
+      const miaoResPath = '../../../../..' + '/' + metaResRel()
       const img = await render('hoyo_panel/list', {
         game,
         gameCn: conf.cn,

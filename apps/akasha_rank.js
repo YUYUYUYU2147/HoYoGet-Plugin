@@ -98,7 +98,7 @@ async function resolveGsUid(e) {
   if (!uid) uid = await readBoundGsUid(e)
   if (!uid) {
     try {
-      const { MysApi } = await import('../../miao-plugin/models/index.js')
+      const { MysApi } = await import('#hoyo.miao.models')
       const user = await MysApi.initUser(e)
       if (user?.uid) uid = String(user.uid)
     } catch (_) { /* 没装喵喵或接口变了就跳过 */ }
@@ -129,7 +129,30 @@ const ID_TO_CN = { 10000002: '神里绫华', 10000003: '琴', 10000006: '丽莎'
   10000109: '梦见月瑞希', 10000110: '瓦蕾莎', 10000111: '伊安珊', 10000112: '爱可菲',
   10000113: '丝柯克', 10000114: '塔利雅', 10000115: '伊涅芙', 10000116: '菲林斯' }
 
-const characterName = (id, fallback = '') => ID_TO_CN[id] || fallback || String(id)
+/**
+ * miao 的角色表（resources/meta-gs/character/data.json）随版本更新，
+ * 新角色（10000117 以后）只有这里有。静态 ID_TO_CN 容易过期，
+ * 所以优先读它，读不到再退回静态表 / 接口给的名字。
+ */
+const MIAO_GS_DATA = path.join(PLUGIN_ROOT, '..', 'miao-plugin', 'resources', 'meta-gs', 'character', 'data.json')
+let MIAO_ID_TO_CN = null
+function miaoIdToCn() {
+  if (MIAO_ID_TO_CN) return MIAO_ID_TO_CN
+  try {
+    const data = JSON.parse(fs.readFileSync(MIAO_GS_DATA, 'utf8'))
+    MIAO_ID_TO_CN = {}
+    for (const [id, c] of Object.entries(data || {})) {
+      const n = c?.name || c?.abbr
+      if (n) MIAO_ID_TO_CN[id] = n
+    }
+  } catch (_) {
+    MIAO_ID_TO_CN = {}
+  }
+  return MIAO_ID_TO_CN
+}
+
+const characterName = (id, fallback = '') =>
+  miaoIdToCn()[String(id)] || ID_TO_CN[id] || fallback || String(id)
 
 /**
  * akasha 的方案名是英文（如 "Melt Combo, Avg DMG"），接口不提供中文。

@@ -105,6 +105,7 @@ async function getSrSummaryClass() {
 // 插件 ERR_MODULE_NOT_FOUND）。这里按需加载：拿不到就跳过图标补全，
 // 后面还有「按约定路径取本地头像」的兜底，不会因为缺 miao 就出不来图。
 
+/* 优先用本插件内置的数据模型（system/vendor/miao），没有才退回外部 miao-plugin */
 const MIAO_ROOTS = [
   '../../miao-plugin/',
   '../miao-plugin/',
@@ -115,6 +116,11 @@ let miaoModelsCache = null
 
 async function getMiaoModels() {
   if (miaoModelsCache) return miaoModelsCache
+  try {
+    const mod = await import('#hoyo.miao.models')
+    miaoModelsCache = { Character: mod.Character, Weapon: mod.Weapon }
+    return miaoModelsCache
+  } catch (_) { /* 内置模型异常时再试外部插件 */ }
   const bases = MIAO_ROOTS.map(root => new URL(root, import.meta.url).href)
   let lastErr
   for (const base of bases) {
