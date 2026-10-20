@@ -167,6 +167,15 @@ function cleanRich(text = '') {
     .trim();
 }
 
+/** 纯文本：去掉所有标签，只留文字（怪物名用，模板里 {{name}} 是转义输出） */
+function plainText(text = '') {
+  return cleanRich(text)
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 function elemView(game, keys = []) {
   const map = game === 'gi' ? GI_ELEM : SR_ELEM;
   return (Array.isArray(keys) ? keys : [keys]).filter(Boolean).map(k => ({
@@ -216,7 +225,7 @@ function giRes(show) {
 function giMonster(detail, m = {}) {
   const info = detail.Monsters?.[m.ID] || {};
   return {
-    name: cleanRich(info.Name) || m.Note || `怪物 ${m.ID}`,
+    name: plainText(info.Name) || plainText(m.Note) || `怪物 ${m.ID}`,
     icon: monsterIcon('gi', info.Icon),
     hp: fmt(m.HP),
     count: Number(m.Num) > 1 ? m.Num : (m.HPCount || ''),
@@ -349,12 +358,12 @@ async function buildTheater(mode, opts = {}) {
 function styMonster(detail, id, diffIdx) {
   const info = detail.Monsters?.[id] || {};
   return {
-    name: cleanRich(info.Name) || `怪物 ${id}`,
+    name: plainText(info.Name) || `怪物 ${id}`,
     icon: monsterIcon('gi', info.Icon),
     hp: info.Stats ? `HP ${fmt(info.Stats.HP)}` : '',
     count: '',
     res: giRes((info.RESShow || [])[diffIdx] || (info.RESShow || [])[0]),
-    mech: (info.Buff || []).map(b => cleanRich(b.Name)).filter(Boolean).join(' / '),
+    mech: (info.Buff || []).map(b => plainText(b.Name)).filter(Boolean).join(' / '),
   };
 }
 
@@ -402,7 +411,7 @@ function srMonster(detail, m = {}, healPct = 0) {
     value: pct(v),
   })).filter(v => v.elems.length);
   const mon = {
-    name: cleanRich(info.Name) || `怪物 ${m.ID}`,
+    name: plainText(info.Name) || `怪物 ${m.ID}`,
     icon: monsterIcon('sr', info.Icon),
     hp: fmt(m.HP),
       // HPCount = 血条数，即页面上的 xN（如「9,645,484 x2」），与污染等级无关
@@ -439,7 +448,7 @@ function srWaves(detail, stage, healPct = 0) {
     if (Array.isArray(w.Monsters)) monsters = w.Monsters.map(m => srMonster(detail, m, healPct));
     else if (w.ID) monsters = [srMonster(detail, w, healPct)];
     return {
-      name: cleanRich(w.WaveName) || (Array.isArray(raw) && list.length > 1 ? `第${w.Wave ?? i + 1}波` : ''),
+      name: plainText(w.WaveName) || (Array.isArray(raw) && list.length > 1 ? `第${w.Wave ?? i + 1}波` : ''),
       monsters,
     };
   }).filter(v => v.monsters.length);
