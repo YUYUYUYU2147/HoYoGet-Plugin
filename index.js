@@ -154,6 +154,27 @@ try {
   logger.error(`[HoYoGet] 自举热重载启动异常：${err?.message || err}`);
 }
 
+/* 启动后台补齐 meta 资源（角色立绘/武器/圣遗物图片）。
+   以前这些图只存在于 miao-plugin 的 resources，卸载 miao 后全空；
+   现在从作者的服务增量同步到本插件 resources，首次装/缺图时自动补。
+   不阻塞启动，失败只记日志。 */
+setTimeout(async () => {
+  try {
+    const { syncMeta } = await import('./system/meta_sync.js');
+    for (const game of ['gs', 'sr']) {
+      const target = `./plugins/HoYoGet-Plugin/resources/meta-${game}/character`;
+      // 没有角色目录才需要拉；已有资源就交给 #米哈游更新资源包 手动触发
+      let need = false;
+      try { need = !fs.existsSync(target) || fs.readdirSync(target).length === 0; } catch { need = true; }
+      if (!need) continue;
+      logger.mark(`[HoYoGet][meta] ${game} 资源缺失，开始在线同步…`);
+      await syncMeta(game, { log: (m) => logger.mark(`[HoYoGet][meta] ${m}`) });
+    }
+  } catch (err) {
+    logger.warn(`[HoYoGet][meta] 在线同步资源失败：${err?.message || err}`);
+  }
+}, 8000);
+
 // 补齐配置里群号对应的群名，供锅巴群白名单下拉展示
 setTimeout(async () => {
   try {
