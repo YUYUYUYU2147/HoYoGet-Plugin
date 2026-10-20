@@ -1307,7 +1307,7 @@ export const supportGuoba = () => {
       {
         field: 'panel_style',
         label: '单角色面板风格',
-        helpMessage: 'dark=暗色霓虹（默认）；apple=Apple 深色玻璃（半透明卡片 + 背景模糊，保留立绘）。只影响 #米哈游xx面板 <角色>，改完即生效',
+        helpMessage: 'dark=暗色霓虹（默认）；apple=Apple 深色玻璃（半透明卡片 + 背景模糊，保留立绘）。只影响单角色长图（#米哈游xx面板 / 米游社xx面板，含绝区零），改完即生效',
         component: 'RadioGroup',
         componentProps: {
           options: [
