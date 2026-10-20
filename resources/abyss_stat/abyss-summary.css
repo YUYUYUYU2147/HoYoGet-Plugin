@@ -296,26 +296,25 @@ body,
 /*# sourceMappingURL=abyss-summary.css.map */
 /* 每层卡片：左栏保持原来的战绩内容，右栏补该层深渊怪物/BOSS 信息 */
 .floor-split {
-  display: flex;
-  gap: 16px;
-  /* 不用 flex-start：右栏怪物多时会把整层撑高，左栏底部就空出一块。
-     用 stretch 让两栏背景等高，空白不会显得突兀 */
-  align-items: stretch;
+  /* 右栏必须脱离文档流：flex 的 stretch 只是把左栏拉到和右栏一样高，
+     整行仍会被右栏（BOSS 条目很长）撑高，左栏底部就留出一大片空白。
+     这里让右栏绝对定位，层高只由左栏战绩决定。 */
+  position: relative;
   width: 100%;
   min-width: 0;
 }
-.floor-split.has-boss .floor-main { flex: 0 0 1300px; min-width: 0; }
-.floor-split:not(.has-boss) .floor-main { flex: 0 0 1300px; min-width: 0; }
-.floor-main { flex: 0 0 1300px; min-width: 0; }
+.floor-main { width: 1300px; min-width: 0; }
 
 .floor-boss {
-  /* 左栏固定 1300，右栏吃掉剩余宽度（加宽右栏而不是压左栏） */
-  flex: 1 1 auto;
+  /* 绝对定位到左栏右侧，完全不参与这一层的高度计算 */
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 1316px;
+  right: 0;
   min-width: 0;
-  /* 关键：右栏内容比左栏长时不许把这一层撑高（否则左栏底部一片空白）。
-     高度跟随本层（flex stretch），超出部分裁掉 */
+  /* 高度跟随本层（左栏），超出部分裁掉 */
   overflow: hidden;
-  align-self: stretch;
   box-sizing: border-box;
   /* 左栏「第N层」标题在 .cont-body 内，比卡片顶部低 14px；
      右栏顶部直接是卡片边缘，所以 padding-top 要补足这 14px，
