@@ -36,12 +36,8 @@ body{margin:0;min-width:1200px;font-family:"Noto Sans CJK SC","Microsoft YaHei",
 .room-card{padding:18px;border-radius:18px;background:#f8fafc;border:1px solid #eef1f6;margin-bottom:16px}
 .room-title{font-size:18px;font-weight:800;color:#1f2937;margin-bottom:14px}
 .room-title span{margin-left:8px;font-size:13px;color:#8a94a6;font-weight:500}
-.room-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(520px,1fr));gap:16px}
-.room-half{padding:14px;border-radius:14px;background:#fff;border:1px solid #eef1f6;display:flex;gap:14px;align-items:flex-start}
-/* 卡片内部左右两栏：左=挑战信息（上半/下半、等级、时间、弱点、机制），右=怪物与 BOSS */
-.half-left{width:150px;flex:0 0 auto}
-.half-right{flex:1;min-width:0}
-.half-left .half-title{flex-wrap:wrap;margin-bottom:8px}
+.room-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:16px}
+.room-half{padding:14px;border-radius:14px;background:#fff;border:1px solid #eef1f6}
 .half-title{display:flex;align-items:center;gap:8px;font-size:14px;color:#8a94a6;letter-spacing:1px;margin-bottom:12px}
 .half-title b{font-size:15px;color:#475569;letter-spacing:0}
 .half-title span{font-size:13px;color:#94a3b8}
