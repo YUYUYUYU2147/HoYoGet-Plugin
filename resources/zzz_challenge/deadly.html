@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+  <link rel="shortcut icon" href="#" />
+  <link rel="stylesheet" type="text/css" href="{{ppath}}zzz_challenge/deadly_tpl/memDetail.css" />
+</head>
+<body {{sys.scale}}>
+  <div class="container">
+    <div class="header">
+      <div class="title">危局强袭战</div>
+      <div class="period">统计周期 {{period}}</div>
+    </div>
+    <div class="summary-new">
+      <div class="summary-user">
+        <img class="summary-avatar" src="{{avatar_icon}}" />
+        <div class="summary-text">
+          <div class="summary-nick">{{nickname}}</div>
+          <div class="summary-uid">UID: {{uid}}</div>
+          <div class="summary-score-row">
+            <div class="summary-score">{{total_score}}</div>
+            <div class="summary-percent">{{rank_percent}}%</div>
+          </div>
+        </div>
+      </div>
+      <div class="summary-coin"><img src="{{ppath}}zzz_challenge/deadly_img/star-icon-light.png" />x{{total_star}}</div>
+    </div>
+    {{each list item}}
+    <div class="card card-bg">
+      <div class="card-body">
+        <div class="boss-left bg-boss-{{item.boss.bg_num}}">
+          <img class="boss-cover" src="{{item.boss.icon}}" />
+          {{if item.boss.race_icon}}<img class="race-mark" src="{{item.boss.race_icon}}" />{{/if}}
+        </div>
+        <div class="info">
+          <div class="title">{{item.boss.name}}</div>
+          <table class="boss-attrs" style="border-collapse:separate !important; border-spacing:0 !important; border:none !important; width:auto !important; line-height:normal !important; margin-top:6px !important;">
+            <tr>
+              <td style="width:2.4em !important; padding:0 !important; padding-right:8px !important; vertical-align:middle !important; white-space:nowrap !important; text-align:left !important;">弱点</td>
+              <td style="padding:0 !important; vertical-align:middle !important; white-space:nowrap !important;">
+                <div style="display:flex !important; flex-wrap:nowrap !important; align-items:center !important; gap:8px !important;">
+                  {{if item.boss.monster_weakness_tags && item.boss.monster_weakness_tags.length}}
+                    {{each item.boss.monster_weakness_tags tag}}
+                    <span class="element-tag" style="display:inline-flex !important; align-items:center !important; vertical-align:middle !important; white-space:nowrap !important;">
+                      {{if tag.icon}}<img src="{{ppath}}{{tag.icon}}" style="display:inline-block !important; vertical-align:middle !important; width:18px; height:18px; object-fit:contain;" />{{/if}}
+                      <span style="vertical-align:middle !important;">{{tag.name}}</span>
+                    </span>
+                    {{/each}}
+                  {{else}}
+                    <span class="attr-empty">暂未标注</span>
+                  {{/if}}
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="width:2.4em !important; padding:0 !important; padding-right:8px !important; vertical-align:middle !important; white-space:nowrap !important; text-align:left !important;">抗性</td>
+              <td style="padding:0 !important; vertical-align:middle !important; white-space:nowrap !important;">
+                <div style="display:flex !important; flex-wrap:nowrap !important; align-items:center !important; gap:8px !important;">
+                  {{if item.boss.monster_resistance_tags && item.boss.monster_resistance_tags.length}}
+                    {{each item.boss.monster_resistance_tags tag}}
+                    <span class="element-tag resist-tag" style="display:inline-flex !important; align-items:center !important; vertical-align:middle !important; white-space:nowrap !important;">
+                      {{if tag.icon}}<img src="{{ppath}}{{tag.icon}}" style="display:inline-block !important; vertical-align:middle !important; width:18px; height:18px; object-fit:contain;" />{{/if}}
+                      <span style="vertical-align:middle !important;">{{tag.name}}</span>
+                    </span>
+                    {{/each}}
+                  {{else}}
+                    <span class="attr-empty">暂未标注</span>
+                  {{/if}}
+                </div>
+              </td>
+            </tr>
+          </table>
+          <div class="score-line">
+            <div class="score">{{item.score}}</div>
+            <div class="star-icons">
+              {{if item.star>=1}}
+              <img class="star-icon" src="{{ppath}}zzz_challenge/deadly_img/star-icon-light.png" />
+              {{else}}
+              <img class="star-icon" src="{{ppath}}zzz_challenge/deadly_img/star-icon-dark.png" />
+              {{/if}}
+              {{if item.star>=2}}
+              <img class="star-icon" src="{{ppath}}zzz_challenge/deadly_img/star-icon-light.png" />
+              {{else}}
+              <img class="star-icon" src="{{ppath}}zzz_challenge/deadly_img/star-icon-dark.png" />
+              {{/if}}
+              {{if item.star>=3}}
+              <img class="star-icon" src="{{ppath}}zzz_challenge/deadly_img/star-icon-light.png" />
+              {{else}}
+              <img class="star-icon" src="{{ppath}}zzz_challenge/deadly_img/star-icon-dark.png" />
+              {{/if}}
+            </div>
+          </div>
+          <div class="time">通关时刻：{{item.challenge_time}}</div>
+          <div class="team">
+            {{each item.avatars av}}
+            <div class="agent">
+              <img src="{{av.role_square_url}}" />
+              <div class="tag rarity-{{av.rarity}}"></div>
+              {{if av.rank>0}}<div class="rank">{{av.rank}}</div>{{/if}}
+            </div>
+            {{/each}}
+            <div class="buddy">
+              <img src="{{item.buddy.bangboo_rectangle_url}}" />
+              <div class="tag rarity-{{item.buddy.rarity}}"></div>
+            </div>
+          </div>
+          <div class="buffer">
+            <div class="buff-title">
+              <span class="buff-bg"></span>
+              <img class="buff-icon" src="{{item.buffer.icon}}" />
+              <span class="buff-name">{{item.buffer.name}}</span>
+            </div>
+            <div class="buff-desc" style="white-space:pre-line;">{{item.buffer.desc}}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {{/each}}
+    <div class="tip">* 总得分与排名并非即时刷新，挑战详情存在约2小时延迟</div>
+    <div class="logo">{{@sys.copyright}}</div>
+  </div>
+</body>
+</html>

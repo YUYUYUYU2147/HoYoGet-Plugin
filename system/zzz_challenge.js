@@ -1,12 +1,37 @@
-// 绝区零挑战数据（式舆防卫战 / 危局强袭战）归一化
+// 绝区零挑战数据归一化（式舆防卫战 / 危局强袭战）
 //
-// 数据来自米游社 record 接口（apps/zzz_panel_list.js 的 zzzRemindFetch）：
-//   式舆：/api/zzz/hadal_info_v2     → { hadal_info_v2: { brief, first~fitfh_layer_detail } }
-//   危局：/api/zzz/hadal_mem_detail_v2 → { has_data, total_star, total_score, list[] }
-// 这里只做「原始响应 → 模板扁平结构」，排版在 resources/zzz_challenge/ 里自己做，
-// 不复用 ZZZ-Plugin 的模板。
+// 模板直接复用 ZZZ-Plugin 仓库里作者自己写的两套页面（已复制到
+// resources/zzz_challenge/，只改了资源路径前缀）：
+//   式舆：challenge.html   ← ZZZero/html/challenge/challenge.html
+//   危局：deadly.html      ← ZZZero/html/memDetail/memDetail.html
+// 所以这里的字段名必须和它们的模板对齐，不要随意改名。
+//
+// 数据来源：米游社 record 接口
+//   式舆：/api/zzz/hadal_info_v2       → hadal_info_v2
+//   危局：/api/zzz/hadal_mem_detail_v2 → has_data / list / total_star …
 
-/** 去掉富文本标签，保留换行 */
+/** 元素英文键 → 本地图标文件名（resources/zzz_challenge/element/ 下） */
+const ELEM_ICON = {
+  physical: 'Physical', fire: 'Fire', ice: 'Ice', electric: 'Electric',
+  lightning: 'Electric', ether: 'Ether', wind: 'Wind',
+  quantum: 'Quantum', imaginary: 'Imaginary',
+}
+const ELEM_CN = {
+  physical: '物理', fire: '火', ice: '冰', electric: '电', lightning: '电',
+  ether: '以太', wind: '风', quantum: '量子', imaginary: '虚数',
+}
+
+/** 弱点/抗性 → 模板的 tag 结构。模板写的是 {{ppath}}{{tag.icon}}，所以给插件相对路径 */
+export function toElementTags(list = []) {
+  return (Array.isArray(list) ? list : String(list || '').split(/[/、,]/))
+    .map(v => String(v || '').trim())
+    .filter(Boolean)
+    .map(name => {
+      const icon = ELEM_ICON[name.toLowerCase()] || ''
+      return { name: ELEM_CN[name.toLowerCase()] || name, icon: icon ? `zzz_challenge/element/${icon}.png` : '' }
+    })
+}
+
 const stripTags = (s = '') => String(s)
   .replace(/<br\s*\/?>/gi, '\n')
   .replace(/<\/(p|div|li)>/gi, '\n')
@@ -18,20 +43,10 @@ const stripTags = (s = '') => String(s)
   .trim()
 
 const pad = n => String(n || 0).padStart(2, '0')
+const fmtDate = o => (o ? `${o.year}.${pad(o.month)}.${pad(o.day)}` : '')
+const fmtDateTime = o => (o ? `${fmtDate(o)} ${pad(o.hour)}:${pad(o.minute)}` : '')
 
-/** {year,month,day,hour,minute} → YYYY.MM.DD */
-function fmtDate(o) {
-  if (!o) return ''
-  return `${o.year}.${pad(o.month)}.${pad(o.day)}`
-}
-
-/** {year,month,day,hour,minute} → YYYY.MM.DD HH:mm */
-function fmtDateTime(o) {
-  if (!o) return ''
-  return `${fmtDate(o)} ${pad(o.hour)}:${pad(o.minute)}`
-}
-
-/** 距离 end_time 还有多久（用于「刷新剩余」） */
+/** 距离 end 还有多久 */
 function remainingText(end) {
   if (!end) return ''
   const t = new Date(end.year, (end.month || 1) - 1, end.day || 1, end.hour || 0, end.minute || 0)
@@ -42,91 +57,7 @@ function remainingText(end) {
   return days > 0 ? `${days} 天 ${hours} 小时` : `${hours} 小时 ${Math.floor((ms % 3600000) / 60000)} 分钟`
 }
 
-/** 元素英文键 → 中文（挑战里怪物弱点是英文键） */
-const ELEM_CN = {
-  physical: '物理', fire: '火', ice: '冰', electric: '电', lightning: '电',
-  wind: '风', ether: '以太', quantum: '量子', imaginary: '虚数',
-}
-const elemCn = e => ELEM_CN[String(e || '').toLowerCase()] || String(e || '')
-
-/** 评级排序权重，用于统计 S/A/B 数量 */
-const RATINGS = ['S', 'A', 'B']
-
-const LAYERS = [
-  ['first', '一'], ['second', '二'], ['third', '三'], ['fourth', '四'], ['fitfh', '五'],
-]
-
-/**
- * 式舆防卫战 → 模板数据
- * @param {object} raw 接口返回的 hadal_info_v2 节点
- */
-export function normalizeShiyu(raw = {}, meta = {}) {
-  const data = raw?.hadal_info_v2 || raw || {}
-  const layers = []
-  let total = 0
-  const grade = { S: 0, A: 0, B: 0 }
-
-  for (const [key, zh] of LAYERS) {
-    const d = data[`${key}_layer_detail`]
-    if (!d) continue
-    const nodes = (d.layer_challenge_info_list || []).map((item, idx) => {
-      const rating = String(item?.rating || '').toUpperCase().replace('+', '')
-      if (grade[rating] !== undefined) grade[rating]++
-      total++
-      return {
-        index: idx + 1,
-        rating: item?.rating || '',
-        ratingKey: String(item?.rating || '').toUpperCase().replace(/[^SAB]/g, '').slice(0, 1),
-        // 挑战用时只给秒数
-        timeText: Number(item?.challenge_time) > 0 ? formatSeconds(item.challenge_time) : '',
-        // 节点名/队伍：接口给的是 avatars，取名字
-        avatars: (item?.avatars || []).map(a => ({
-          name: a?.name || '',
-          icon: a?.icon || a?.avatar || '',
-          rarity: a?.rarity || '',
-          level: a?.level || '',
-        })).filter(a => a.name),
-        // 每层的 buff（剧变节点增益）
-        buff: item?.buffer?.text ? stripTags(item.buffer.text) : '',
-      }
-    })
-    // 第五层的怪物信息（弱点/抗性）只在部分数据里有
-    const boss = extractBoss(d)
-    layers.push({
-      key,
-      zh,
-      rating: d?.rating || '',
-      ratingKey: String(d?.rating || '').toUpperCase().replace(/[^SAB]/g, '').slice(0, 1),
-      score: d?.score ?? '',
-      timeText: fmtDateTime(d?.challenge_time),
-      nodes,
-      boss,
-    })
-  }
-
-  const brief = data?.brief || {}
-  return {
-    type: 'shiyu',
-    title: '式舆防卫战',
-    period: data.hadal_begin_time ? `${fmtDate(data.hadal_begin_time)} - ${fmtDate(data.hadal_end_time)}` : '',
-    remain: remainingText(data.hadal_end_time),
-    score: brief.score ?? '',
-    rating: brief.rating || '',
-    /* CSS 类名只能用 S/A/B（'+' 不能当类名），原文另存一份用于展示 */
-    ratingKey: String(brief.rating || '').toUpperCase().replace(/[^SAB]/g, '').slice(0, 1),
-    rankPercent: brief.rank_percent != null ? (Number(brief.rank_percent) / 100).toFixed(2) : '',
-    grade,
-    total,
-    layers,
-    uid: meta.uid || '',
-    nickname: meta.nickname || '',
-    avatar: meta.avatar || '',
-    level: meta.level || '',
-    empty: !layers.length,
-  }
-}
-
-/** 挑战用时（秒）→ m 分 s 秒 */
+/** 挑战用时（秒）→ 「1 分 35 秒」 */
 function formatSeconds(v) {
   const n = Number(v) || 0
   if (n <= 0) return ''
@@ -135,80 +66,157 @@ function formatSeconds(v) {
   return m > 0 ? `${m} 分 ${s} 秒` : `${s} 秒`
 }
 
-/** 从层数据里尽量抠出 BOSS 名字与弱点（不同版本字段不稳定，全都做可选） */
-function extractBoss(layerData) {
-  const list = layerData?.layer_challenge_info_list || []
-  for (const item of list) {
-    const pic = item?.monster_pic || item?.boss_pic || item?.boss?.monster_pic || ''
-    const name = item?.monster_name || item?.boss_name || item?.boss?.name || ''
-    if (!pic && !name) continue
-    const weakness = item?.monster_weakness || item?.boss?.weakness || item?.weakness || []
-    const resist = item?.monster_resistance || item?.boss?.resistance || item?.resistance || []
-    return {
-      name,
-      pic,
-      weakness: (Array.isArray(weakness) ? weakness : String(weakness || '').split(/[/、,]/)).map(elemCn).filter(Boolean),
-      resist: (Array.isArray(resist) ? resist : String(resist || '').split(/[/、,]/)).map(elemCn).filter(Boolean),
-    }
-  }
-  return null
+const LAYER_KEYS = [
+  ['first', '一'], ['second', '二'], ['third', '三'], ['fourth', '四'], ['fitfh', '五'],
+]
+
+/** 式舆里每层的评级图片名：S→s.png / A→a.png / B→b.png */
+const ratingPic = r => {
+  const k = String(r || '').toUpperCase()
+  return k === 'S' ? 's' : k === 'A' ? 'a' : 'b'
 }
 
 /**
- * 危局强袭战 → 模板数据
+ * 式舆防卫战 → challenge.html 的模板数据
+ * @param {object} raw hadal_info_v2 节点
+ */
+export function normalizeShiyu(raw = {}, meta = {}) {
+  const data = raw?.hadal_info_v2 || raw || {}
+
+  const grade = { S: 0, A: 0, B: 0 }
+  const layers = []
+  for (const [key, zh] of LAYER_KEYS) {
+    const d = data[`${key}_layer_detail`]
+    if (!d || !Array.isArray(d.layer_challenge_info_list)) continue
+    const items = d.layer_challenge_info_list.map(item => {
+      const rating = String(item?.rating || '').toUpperCase()
+      if (grade[rating] !== undefined) grade[rating]++
+      const boss = pickBoss(item)
+      return {
+        ...item,
+        // 模板用它拼图片、也直接显示
+        rating: ratingPic(rating),
+        // 模板用 item.rating 显示；真实评级放到 challenge_time 旁边不现实，这里保持图片即可
+        challenge_time_fmt: item?.challenge_time ? formatSeconds(item.challenge_time) : '',
+        avatars: (item?.avatars || item?.avatar_list || []).map(a => ({
+          name: a?.name || '',
+          role_square_url: a?.icon || a?.avatar || a?.role_square_url || '',
+          rank: Number(a?.rank ?? a?.rarity ?? 0) || 0,
+          rarity: a?.rarity || '',
+        })).filter(a => a.name),
+        buffer: item?.buffer?.text ? { text: stripTags(item.buffer.text) } : null,
+        monster_pic: boss?.pic || '',
+        monster_name: boss?.name || '',
+        monster_weakness_tags: toElementTags(boss?.weakness),
+        monster_resistance_tags: toElementTags(boss?.resist),
+      }
+    })
+    layers.push({
+      name: key,
+      zh,
+      data: {
+        ...d,
+        layer_challenge_info_list: items,
+        challenge_time: d.challenge_time ? { ...d.challenge_time, fmt: fmtDateTime(d.challenge_time) } : null,
+      },
+    })
+  }
+
+  const brief = data?.brief || {}
+  return {
+    type: 'shiyu',
+    uid: meta.uid || '',
+    nickname: meta.nickname || '',
+    avatar_icon: meta.avatar || '',
+    level: meta.level || '',
+    period: data.hadal_begin_time
+      ? `${fmtDate(data.hadal_begin_time)} - ${fmtDate(data.hadal_end_time)}`
+      : '',
+    remain: remainingText(data.hadal_end_time),
+    brief,
+    // 模板用 {{brief_rating}}.png：S+ → SP
+    brief_rating: String(brief?.rating || '').replace('+', 'P').toUpperCase(),
+    rank_percent: brief?.rank_percent != null ? (Number(brief.rank_percent) / 100).toFixed(2) : '',
+    grade,
+    layers,
+    empty: !layers.length,
+  }
+}
+
+/** 从节点里抠 BOSS 信息（不同版本字段位置不一样，全都兜一遍） */
+function pickBoss(item = {}) {
+  const pic = item.monster_pic || item.boss_pic || item.boss?.monster_pic || item.boss?.pic || ''
+  const name = item.monster_name || item.boss_name || item.boss?.name || ''
+  const weakness = item.monster_weakness || item.boss?.weakness || item.weakness || []
+  const resist = item.monster_resistance || item.boss?.resistance || item.resistance || []
+  if (!pic && !name && !weakness.length && !resist.length) return null
+  return { pic, name, weakness, resist }
+}
+
+/** BOSS 背景序号：接口给 boss_bg_3 这种文件名，取数字；没有就按序号循环 */
+function bossBgNum(boss = {}, idx = 0) {
+  const m = String(boss?.bg_icon || boss?.icon || '').match(/boss_bg_?(\d)/)
+  if (m) return m[1]
+  return String((idx % 4) + 1)
+}
+
+/**
+ * 危局强袭战 → deadly.html 的模板数据
  * @param {object} raw hadal_mem_detail_v2 的 data 节点
  */
 export function normalizeDeadly(raw = {}, meta = {}) {
-  const hasData = !!raw?.has_data
-  const rooms = (raw?.list || []).map((v, idx) => {
+  const list = (raw?.list || []).map((v, idx) => {
     const boss = v?.boss?.[0] || {}
     const buff = v?.buffer?.[0] || {}
-    const weakness = boss?.weakness || boss?.monster_weakness || []
-    const resist = boss?.resistance || boss?.monster_resistance || []
     return {
-      index: idx + 1,
       score: v?.score ?? '',
       star: Number(v?.star) || 0,
-      totalStar: Number(v?.total_star) || 0,
-      bossName: boss?.name || boss?.monster_name || '',
-      bossPic: boss?.monster_pic || boss?.boss_pic || boss?.image || boss?.pic || '',
-      weakness: (Array.isArray(weakness) ? weakness : String(weakness || '').split(/[/、,]/)).map(elemCn).filter(Boolean),
-      resist: (Array.isArray(resist) ? resist : String(resist || '').split(/[/、,]/)).map(elemCn).filter(Boolean),
-      buffName: buff?.name || '',
-      buffDesc: buff?.desc ? stripTags(buff.desc) : '',
+      total_star: Number(v?.total_star) || 0,
+      challenge_time: v?.challenge_time ? fmtDateTime(v.challenge_time) : '',
+      boss: {
+        ...boss,
+        bg_num: bossBgNum(boss, idx),
+        icon: boss?.monster_pic || boss?.boss_pic || boss?.image || boss?.pic || '',
+        name: boss?.name || boss?.monster_name || '',
+        race_icon: boss?.race_icon || '',
+        monster_weakness_tags: toElementTags(boss?.weakness || boss?.monster_weakness),
+        monster_resistance_tags: toElementTags(boss?.resistance || boss?.monster_resistance),
+      },
+      buffer: {
+        icon: buff?.icon || '',
+        name: buff?.name || '',
+        desc: buff?.desc ? stripTags(buff.desc) : '',
+      },
       avatars: (v?.avatar_list || []).map(a => ({
         name: a?.name || '',
-        icon: a?.icon || a?.avatar || '',
+        role_square_url: a?.icon || a?.avatar || a?.role_square_url || '',
+        rank: Number(a?.rank ?? a?.rarity ?? 0) || 0,
         rarity: a?.rarity || '',
-        level: a?.level || '',
       })).filter(a => a.name),
+      buddy: {
+        bangboo_rectangle_url: v?.buddy?.bangboo_rectangle_url || v?.buddy?.icon || '',
+        rarity: v?.buddy?.rarity || '',
+      },
     }
   })
 
-  // 强袭战的「困难」模式（部分版本有）
-  const hardRooms = (raw?.hard_list || []).map((v, idx) => ({
-    index: idx + 1,
-    score: v?.score ?? '',
-    star: Number(v?.star) || 0,
-    totalStar: Number(v?.total_star) || 0,
-    bossName: v?.boss?.[0]?.name || '',
-  }))
-
   return {
     type: 'deadly',
-    title: '危局强袭战',
-    period: raw?.start_time ? `${fmtDate(raw.start_time)} - ${fmtDate(raw.end_time)}` : '',
-    remain: remainingText(raw?.end_time),
-    totalStar: Number(raw?.total_star) || 0,
-    totalScore: raw?.total_score ?? '',
-    rankPercent: raw?.rank_percent != null ? (Number(raw.rank_percent) / 100).toFixed(2) : '',
-    rooms,
-    hardRooms,
-    hardRankPercent: raw?.hard_rank_percent != null ? (Number(raw.hard_rank_percent) / 100).toFixed(2) : '',
     uid: meta.uid || '',
     nickname: raw?.nick_name || meta.nickname || '',
-    avatar: raw?.avatar_icon || meta.avatar || '',
-    level: meta.level || '',
-    empty: !hasData || !rooms.length,
+    avatar_icon: raw?.avatar_icon || meta.avatar || '',
+    period: raw?.start_time ? `${fmtDate(raw.start_time)} - ${fmtDate(raw.end_time)}` : '',
+    remain: remainingText(raw?.end_time),
+    total_star: Number(raw?.total_star) || 0,
+    total_score: raw?.total_score ?? '',
+    rank_percent: raw?.rank_percent != null ? (Number(raw.rank_percent) / 100).toFixed(2) : '',
+    list,
+    hard_list: (raw?.hard_list || []).map((v, idx) => ({
+      score: v?.score ?? '',
+      star: Number(v?.star) || 0,
+      total_star: Number(v?.total_star) || 0,
+      boss: { ...(v?.boss?.[0] || {}), bg_num: bossBgNum(v?.boss?.[0], idx) },
+    })),
+    empty: !raw?.has_data || !list.length,
   }
 }
