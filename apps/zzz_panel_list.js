@@ -7,6 +7,7 @@ import { damageSkillsAt, getCharRates } from '../system/zzz_skill_rate.js'
 import { getBuffAreas } from '../system/zzz_buff.js'
 import { mhyFetch } from '../system/mhy_fetch.js'
 import { zzzPanelExtras } from '../system/zzz_panel.js'
+import { fillBaseAdd } from '../system/zzz_attr_base.js'
 import { getPanelBg } from '../system/zzz_panel_bg.js'
 
 /**
@@ -1671,8 +1672,21 @@ function normalizeDetail(a, uid) {
     const weight = statWeight(k === 'dmgbonus' ? ELEM_DMG_ID[a?.element_type] : STAT_ROW_PID[k])
     // 伤害加成的属性名带元素前缀（冰属性伤害加成），太长会把权重徽章挤掉；
     // 元素已由图标颜色区分，标签统一用「伤害加成」（与喵喵面板一致）
-    if (k === 'dmgbonus') stat_rows.push({ label, icon: 'element', cls: elementStr, weight, base: v.base, add: v.add, final: v.final })
-    else stat_rows.push({ label, icon: 'prop', cls: k, weight, base: v.base, add: v.add, final: v.final })
+    const row = { pid: k === 'dmgbonus' ? ELEM_DMG_ID[a?.element_type] : STAT_ROW_PID[k], label, weight, base: v.base, add: v.add, final: v.final }
+    if (k === 'dmgbonus') stat_rows.push({ ...row, icon: 'element', cls: elementStr })
+    else stat_rows.push({ ...row, icon: 'prop', cls: k })
+  }
+  /* 接口只给生命/攻击/防御的 base，其余项用角色静态数据补出「基础 + 加成」，
+     这样穿透率 0% 也能显示成「0.0% + 24.0%」（主词条/副词条都在加成里） */
+  try {
+    fillBaseAdd(stat_rows, {
+      charId: a?.id,
+      level: a?.level,
+      promo: a?.promote_level ?? a?.promotion_level ?? 6,
+      weapon: w,
+    })
+  } catch (err) {
+    logger.debug?.(`[HoYoGet][zzz_panel] 属性基础值推算失败：${err?.message || err}`)
   }
 
   const apiPortrait = a?.role_vertical_painting_url || a?.role_square_url || ''
