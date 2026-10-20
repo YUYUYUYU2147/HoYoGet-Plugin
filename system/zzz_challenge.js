@@ -157,7 +157,8 @@ function pickBoss(item = {}) {
 
 /** BOSS 背景序号：接口给 boss_bg_3 这种文件名，取数字；没有就按序号循环 */
 function bossBgNum(boss = {}, idx = 0) {
-  const m = String(boss?.bg_icon || boss?.icon || '').match(/boss_bg_?(\d)/)
+  // 只看 bg_icon：boss.icon 是立绘地址，误匹配会把背景换成错的
+  const m = String(boss?.bg_icon || '').match(/boss_bg_?(\d)/)
   if (m) return m[1]
   return String((idx % 4) + 1)
 }
@@ -176,9 +177,11 @@ export function normalizeDeadly(raw = {}, meta = {}) {
       total_star: Number(v?.total_star) || 0,
       challenge_time: v?.challenge_time ? fmtDateTime(v.challenge_time) : '',
       boss: {
+        /* 先铺开接口原始字段（boss.icon / race_icon / bg_icon 都是接口给的），
+           只在缺失时补默认值——直接赋值会把已有的立绘地址覆盖成空 */
         ...boss,
         bg_num: bossBgNum(boss, idx),
-        icon: boss?.monster_pic || boss?.boss_pic || boss?.image || boss?.pic || '',
+        icon: boss?.icon || boss?.monster_pic || boss?.boss_pic || boss?.image || boss?.pic || '',
         name: boss?.name || boss?.monster_name || '',
         race_icon: boss?.race_icon || '',
         monster_weakness_tags: toElementTags(boss?.weakness || boss?.monster_weakness),
