@@ -1152,6 +1152,24 @@ body.game-sr .wq-passive {
   padding-top: 2px;
 }
 
+.set-effects {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .04);
+  border: 1px solid rgba(255, 255, 255, .08);
+}
+.set-eff + .set-eff {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(255, 255, 255, .1);
+}
+.se-head { display: flex; align-items: baseline; gap: 6px; }
+.se-name { font-size: 12px; font-weight: 800; color: #a9e6ff; }
+.se-count { font-size: 11px; font-weight: 700; color: rgba(169, 230, 255, .6); }
+.se-line { display: flex; gap: 6px; font-size: 11px; line-height: 1.5; margin-top: 2px; }
+.se-piece { flex: 0 0 auto; color: #d3bc8e; font-weight: 700; }
+.se-desc { color: rgba(255, 255, 255, .66); }
 .sets { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
 .set-pill {
   padding: 2px 9px;
