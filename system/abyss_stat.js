@@ -73,6 +73,12 @@ export function buildGsAbyss(raw = {}, ctx = {}) {
       }
       floor.levels.push(level)
     }
+    /* 模板的角色卡用 floor.display（三间里有一间有数据就拿来展示），
+       对应 miao Abyss 类的 display = levels[3] || levels[2] || levels[1] */
+    floor.display = floor.levels.find(l => l.index === 3)
+      || floor.levels.find(l => l.index === 2)
+      || floor.levels.find(l => l.index === 1)
+      || null
     out.floors[f.index] = floor
   }
   out.star = star
