@@ -1,0 +1,328 @@
+import fs from "node:fs"
+import lodash from "lodash"
+import { wikiPath } from "../components/index.js"
+import Base from "../../models/Base.js"
+import WeaponMeta from "./weapon/WeaponMeta.js"
+import { weaponTypeName } from "./weaponType.js"
+import { Data, Format, Meta } from "#hoyo.miao"
+
+let weaponSet
+
+class Weapon extends Base {
+  constructor(meta, game = "gs") {
+    if (!meta || !meta.name) return false
+    super()
+    let cache = this._getCache(`weapon:${game}:${meta.name}`)
+    if (cache) return cache
+
+    this.id = meta.id
+    this.name = meta.name
+    this.meta = meta
+    this.type = meta.type
+    this.star = meta.star
+    this.game = game
+    return this._cache()
+  }
+
+  get title() {
+    return this.name
+  }
+
+  get typeName() {
+    return weaponTypeName(this.type, this.isSr)
+  }
+
+  get img() {
+    return wikiPath.getRes(`meta-${this.isGs ? "gs" : "sr"}/weapon/${this.type}/${this.name}/icon.webp`)
+  }
+
+  get gacha() {
+    return wikiPath.getRes(`meta-${this.isGs ? "gs" : "sr"}/weapon/${this.type}/${this.name}/${this.isGs ? "gacha" : "icon"}.webp`)
+  }
+
+  get desc() {
+    return this.getDetail().desc.replace(/<\/br>|<br \/>/g, "")
+  }
+
+  get abbr() {
+    let name = this.name
+    let abbr = this.meta?.abbr
+    return name.length <= 4 ? name : (abbr || name)
+  }
+
+  get sName() {
+    let name = this.name
+    let abbr = this.meta?.abbr
+    name = name.replaceAll(/[「」]/g, "")
+    return name.length <= 8 ? name : (abbr || name)
+  }
+
+  get imgs() {
+    let iPath = `meta-${this.isGs ? "gs" : "sr"}/weapon/${this.type}/${this.name}`
+    return {
+      icon: wikiPath.getRes(`${iPath}/icon.webp`),
+      icon2: wikiPath.getRes(`${iPath}/${this.isGs ? "awaken.webp" : "icon-s.webp"}`),
+      gacha: wikiPath.getRes(`${iPath}/${this.isGs ? "gacha.webp" : "splash.webp"}`)
+    }
+  }
+
+  get icon() {
+    return this.img
+  }
+
+  get detail() {
+    return this.getDetail()
+  }
+
+  get maxLv() {
+    if (this.isGs) return this.star <= 2 ? 70 : 90
+    return 80
+  }
+
+  get maxPromote() {
+    if (this.isGs) return this.star <= 2 ? 4 : 6
+    return 6
+  }
+
+  get materials() {
+    return this.getDetail()?.materials || {}
+  }
+
+  get maxAffix() {
+    if (this.isSr) return 5
+    let data = this.detail?.affixData?.datas || {}
+    return (data["0"] && data["0"][4]) ? 5 : 1
+  }
+
+  static isWeaponSet(name) {
+    weaponSet = weaponSet || Meta.getMeta("gs", "weapon", "weaponSet")
+    return weaponSet.includes(name)
+  }
+
+  static get(name, game = "gs", type = "") {
+    if (!Array.isArray(game)) game = [ game ]
+    for (let g of game) {
+      let data = Meta.getData(g, "weapon", name)
+      if (data) return new Weapon(data, g)
+    }
+
+    if (type && game === "gs") {
+      const { weaponType } = Meta.getMeta(game, "weapon")
+      let name2 = name + (weaponType[type] || type)
+      let data = Meta.getData(game, "weapon", name2)
+      if (data) return new Weapon(data, game)
+    }
+    return false
+  }
+
+  static async forEach(fn, type = "", game = "gs") {
+    Meta.forEach(game, "weapon", async(ds, id) => {
+      let w = Weapon.get(ds.name)
+      if (!w || (type && type !== w.type)) return true
+      return await fn(w)
+    })
+  }
+
+  // 获取素材
+  getMaterials(type = "all") {
+    return WeaponMeta.getMaterials(this, type)
+  }
+
+  getDetail() {
+    if (this._detail) return this._detail
+
+    const path = `resources/meta-${this.isGs ? "gs" : "sr"}/weapon/${this.type}/${this.name}/data.json`
+    try {
+      if (fs.existsSync(`${wikiPath.getDir("wiki")}/${path}`)) {
+        this._detail = Data.readJSON(path, "wiki")
+      } else {
+        this._detail = Data.readJSON(path, "miao")
+      }
+    } catch (e) {
+      logger.error(e)
+    }
+    return this._detail
+  }
+
+  /**
+   * 计算武器主属性
+   * @param level 武器等级
+   * @param promote 武器突破
+   * @returns {{atkBase: number, attr: {value: *, key: *}}|{}|boolean}
+   */
+  calcAttr(level, promote = -1) {
+    let metaAttr = this.detail?.attr
+    if (!metaAttr) return false
+
+    if (this.isSr) {
+      let lvAttr = metaAttr[promote]
+      let ret = {}
+      lodash.forEach(lvAttr.attrs, (v, k) => {
+        ret[k] = v * 1
+      })
+      lodash.forEach(this.detail?.growAttr, (v, k) => {
+        ret[k] = ret[k] * 1 + v * (level - 1)
+      })
+      return ret
+    }
+
+    let lvLeft = 1
+    let lvRight = 20
+    let lvStep = [ 1, 20, 40, 50, 60, 70, 80, 90 ]
+    let currPromote = 0
+    for (let idx = 0; idx < lvStep.length - 1; idx++) {
+      if (promote === -1 || (currPromote === promote)) {
+        if (level >= lvStep[idx] && level <= lvStep[idx + 1]) {
+          lvLeft = lvStep[idx]
+          lvRight = lvStep[idx + 1]
+          break
+        }
+      }
+      currPromote++
+    }
+    let wAttr = this?.detail?.attr || {}
+    let wAtk = wAttr.atk || {}
+    let valueLeft = wAtk[lvLeft + "+"] || wAtk[lvLeft] || {}
+    let valueRight = wAtk[lvRight] || {}
+    let atkBase = valueLeft * 1 + ((valueRight - valueLeft) * (level - lvLeft) / (lvRight - lvLeft))
+    let wBonus = wAttr.bonusData || {}
+    valueLeft = wBonus[lvLeft + "+"] || wBonus[lvLeft]
+    valueRight = wBonus[lvRight]
+    let stepCount = Math.ceil((lvRight - lvLeft) / 5)
+    let valueStep = (valueRight - valueLeft) / stepCount
+    let value = valueLeft + (stepCount - Math.ceil((lvRight - level) / 5)) * valueStep
+    return {
+      atkBase,
+      attr: {
+        key: wAttr.bonusKey,
+        value
+      }
+    }
+  }
+
+  /**
+   * 获取武器精炼描述
+   * @param affix 精炼
+   * @returns {{name, desc: *}|{}}
+   */
+  getAffixDesc(affix = 1) {
+    if (this.isGs) {
+      let { text, datas } = this.detail?.affixData || {}
+      let { descFix } = Meta.getMeta("gs", "weapon")
+      let reg = /\$\[(\d)\]/g
+      let ret
+      let desc = affix == "all" ? (text || "") : (descFix[this.name] || text || "")
+      while ((ret = reg.exec(desc)) !== null) {
+        let idx = ret[1]
+        let value = affix == "all" ? datas?.[idx]?.join(/\//.test(datas?.[idx]?.[0]) ? ")(" : "/") : datas?.[idx]?.[affix - 1]
+        if (affix == "all" && /\//.test(datas?.[idx]?.[0])) value = `(${value})`
+        desc = desc.replaceAll(ret[0], `<nobr>${/%/.test(value) ? value.replace(/%/g, "") + "%" : value}</nobr>`)
+      }
+      return {
+        name: this.detail?.affixTitle || "",
+        desc
+      }
+    }
+    let skill = this.detail.skill
+    let { desc, tables } = skill
+    let reg = /\$(\d)\[(i|f1|f2)\](%?)/g
+    let ret
+    while ((ret = reg.exec(desc)) !== null) {
+      let [ txt, idx, format, pct ] = ret
+      let values = []
+      lodash.forEach(affix == "all" ? tables?.[idx] : [ tables?.[idx]?.[affix - 1] ], (value) => {
+        if (pct === "%") {
+          values.push(Format.pct(value, format === "f2" ? 2 : 1))
+        } else {
+          values.push(Format.comma(value))
+        }
+      })
+      let value = affix == "all" ? pct === "%" ? values.join("/").replace(/(.00?)?%/g, "") + "%" : values.join("/") : values[0]
+      desc = desc.replaceAll(txt, value)
+    }
+    return {
+      name: skill.name || "",
+      desc
+    }
+  }
+
+  /**
+   * 获取当前武器Buff配置
+   * @returns {*|boolean}
+   */
+  getWeaponBuffs() {
+    let { game } = this
+    let { weaponBuffs } = Meta.getMeta(game, "weapon")
+    let buffs = weaponBuffs[this.id] || weaponBuffs[this.name]
+    if (!buffs) return false
+    if (lodash.isPlainObject(buffs) || lodash.isFunction(buffs)) buffs = [ buffs ]
+
+    return buffs
+  }
+
+  /**
+   * 获取武器精炼 Buff
+   * @param affix
+   * @param isStatic
+   * @returns {*[]}
+   */
+  getWeaponAffixBuffs(affix, isStatic = true) {
+    let buffs = this.getWeaponBuffs()
+    let ret = []
+    let self = this
+    let { detail } = this
+
+    let tables = {}
+    lodash.forEach(detail?.skill?.tables || {}, (ds, idx) => {
+      tables[idx] = ds[affix - 1]
+    })
+
+    lodash.forEach(buffs, (ds) => {
+      if (lodash.isFunction(ds)) ds = ds(tables)
+      if (!!ds.isStatic !== !!isStatic) return true
+
+      // 静态属性
+      if (ds.isStatic) {
+        let tmp = {}
+        // 星铁武器格式
+        if (ds.idx && ds.key) {
+          if (!ds.idx || !ds.key) return true
+          if (!tables[ds.idx]) return true
+          tmp[ds.key] = tables[ds.idx]
+        }
+        if (ds.refine) {
+          lodash.forEach(ds.refine, (r, key) => {
+            tmp[key] = r[affix - 1] * (ds.buffCount || 1)
+          })
+        }
+        if (!lodash.isEmpty(tmp)) {
+          ret.push({
+            isStatic: true,
+            data: tmp
+          })
+        }
+        return true
+      }
+
+      // 自动拼接标题
+      if (!/：/.test(ds.title)) ds.title = `${self.name}：${ds.title}`
+
+      ds.data = ds.data || {}
+      // refine
+      if (ds.idx && ds.key) {
+        if (!ds.idx || !ds.key) return true
+        if (!tables[ds.idx]) return true
+        ds.data[ds.key] = tables[ds.idx]
+      } else if (ds.refine) {
+        lodash.forEach(ds.refine, (r, key) => {
+          ds.data[key] = ({ refine }) => r[refine] * (ds.buffCount || 1)
+        })
+      }
+
+      ret.push(ds)
+    })
+    return ret
+  }
+}
+
+export default Weapon

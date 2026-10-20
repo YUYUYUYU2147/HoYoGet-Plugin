@@ -11,7 +11,9 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
-const SKIP_DIRS = new Set(['node_modules', '.git', 'temp', 'data', 'logs', 'resources', 'service'])
+/* system/vendor 是第三方开源代码的内置副本（miao-plugin / wiki），
+   里面的数字多为官方示例 UID / 物品 ID，不是我们的凭据，跳过多余误报 */
+const SKIP_DIRS = new Set(['node_modules', '.git', 'temp', 'data', 'logs', 'resources', 'service', 'vendor'])
 const EXTS = new Set(['.js', '.mjs', '.json', '.yaml', '.yml', '.md'])
 
 // 明显是占位/示例的号段，忽略，避免把文档里的假数据当成泄露
@@ -70,10 +72,13 @@ function walk(dir, out = []) {
   return out
 }
 
+/** system/vendor/** 是第三方开源代码的内置副本，跳过 */
+const isVendor = rel => rel.split(/[\\/]/).includes('vendor')
+
 const tracked = trackedFiles()
 const files = tracked
-  ? tracked.map(f => path.join(ROOT, f)).filter(f => fs.existsSync(f))
-  : walk(ROOT)
+  ? tracked.filter(f => !isVendor(f)).map(f => path.join(ROOT, f)).filter(f => fs.existsSync(f))
+  : walk(ROOT).filter(f => !isVendor(path.relative(ROOT, f)))
 
 const problems = []
 for (const file of files) {

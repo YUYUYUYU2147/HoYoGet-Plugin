@@ -107,7 +107,8 @@ let _miaoModels = null;
 async function miaoModels() {
   if (_miaoModels !== null) return _miaoModels;
   try {
-    _miaoModels = await import('../../miao-plugin/models/index.js');
+    // 内置模型优先（不依赖外部插件），异常再退回 miao-plugin
+    _miaoModels = await import('#hoyo.miao.models').catch(() => import('../../miao-plugin/models/index.js'));
   } catch (err) {
     _miaoModels = false;
     if (config().debug) logger.mark(`[HoYoGet] 未加载 miao-plugin 模型，跳过喵喵别名兜底: ${err?.message || err}`);

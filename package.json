@@ -5,7 +5,13 @@
   "description": "小花火插件",
   "type": "module",
   "imports": {
-    "#HoYoGet": "./system/index.js"
+    "#HoYoGet": "./system/index.js",
+    "#hoyo.miao": "./system/vendor/miao/components/index.js",
+    "#hoyo.miao.models": "./system/vendor/miao/models/index.js",
+    "#hoyo.miao.path": "./system/vendor/miao/path.js",
+    "#miao": "./system/vendor/miao/components/index.js",
+    "#miao.models": "./system/vendor/miao/models/index.js",
+    "#miao.path": "./system/vendor/miao/path.js"
   },
   "scripts": {
     "ci": "node tools/ci/syntax-check.mjs && node tools/ci/config-check.mjs && node tools/ci/ppath-check.mjs && node tools/ci/extreme-preset-check.mjs && node tools/ci/privacy-scan.mjs"
