@@ -73,7 +73,7 @@ body {
 }
 
 .player-name {
-  font-family: "SR", "印品南征北战NZBZ体", NZBZ, "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  font-family: "SR", "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
   font-size: 38px;
   font-weight: 900;
   color: #fff;
@@ -260,7 +260,7 @@ body {
 }
 
 .boss-title-text {
-  font-family: "SR", "印品南征北战NZBZ体", NZBZ, "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  font-family: "SR", "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
   font-size: 34px;
   font-weight: bold;
   color: rgba(255, 255, 255, 0.7);
@@ -341,7 +341,7 @@ body {
 }
 
 .boss-title-name {
-  font-family: "SR", "印品南征北战NZBZ体", NZBZ, "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  font-family: "SR", "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
   font-size: 40px;
   font-weight: bold;
   color: #fff;
