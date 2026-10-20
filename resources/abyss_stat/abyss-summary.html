@@ -80,11 +80,11 @@
         </div>
       </div>
       <div class="abyss-detail">
-        {{each floor.levels level idx}}
+        {{each floor.levels level levelIdx}}
         <div class="abyss-level">
           <div class="info">
             <div class="title">
-              第{{idx}}间
+              第{{level.index}}间
             </div>
             <span class="star star{{level.star}}"></span>
             <div class="time">{{level?.up?.time}}</div>
