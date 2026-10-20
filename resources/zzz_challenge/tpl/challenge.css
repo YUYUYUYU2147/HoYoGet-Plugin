@@ -405,6 +405,8 @@ body {
     margin-top: 4px;
     line-height: 1.4;
     color: rgba(255, 255, 255, .7);
+    /* 防线效果是「· 一条一条」的多行文本，不保留换行会挤成一坨 */
+    white-space: pre-line;
 }
 
 .challenge-team {

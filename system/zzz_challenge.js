@@ -110,6 +110,9 @@ const stripTags = (s = '') => String(s)
   .replace(/<[^>]*>/g, '')
   .replace(/&nbsp;/g, ' ')
   .replace(/&amp;/g, '&')
+  /* 接口里的换行是「字面量 \n」（反斜杠 + n 两个字符），不是真换行，
+     不转义的话会原样显示成「\n· 代理人的…」 */
+  .replace(/\\n/g, '\n')
   .replace(/[ \t]+/g, ' ')
   .replace(/\n{3,}/g, '\n\n')
   .trim()
