@@ -593,10 +593,13 @@ function detailAttrRows(profile, game, weights = {}) {
        直接拼 % 即可；旧代码再乘 100 会变成 5944%。 */
     const pct = pctKeys.has(key)
     const int = key === 'hp'
-    const baseN = Number(b[key])
-    /* 充能是「100 + 额外」，基础值没有意义；其余项基础为 0 时不显示副行 */
-    const hasBase = key !== 'recharge' && Number.isFinite(baseN) && baseN > 0
-    const plusN = n - (hasBase ? baseN : 0)
+    /* 基础值：miao 的 base 是「角色自带 + 武器」那部分（圣遗物加成都在 plus 里）。
+       早先只在 base > 0 时才显示，结果只有生命/攻击/防御有这一列，
+       双爆/精通这些看着像没有基础面板；现在一律显示，缺值按 0 淡显（与喵喵一致）。 */
+    const rawBase = Number(b[key])
+    const hasBase = Number.isFinite(rawBase)
+    const baseN = hasBase ? rawBase : 0
+    const plusN = n - baseN
     /* 权重来自 miao 的 charWeight（0-100）：双爆 100、攻击 75 这种；
        0 或缺失就不显示徽章，避免满屏 0 */
     const weight = Number(weights[key] ?? weights[k]) || 0
@@ -607,8 +610,9 @@ function detailAttrRows(profile, game, weights = {}) {
       key: k,
       label: key === 'dmg' && dmgName ? dmgName : label,
       value: fmt(n, pct, int),
-      base: hasBase ? fmt(baseN, pct, int) : '',
-      plus: hasBase ? `${plusN >= 0 ? '+' : ''}${fmt(plusN, pct, int)}` : '',
+      base: fmt(baseN, pct, int),
+      baseZero: !(baseN > 0),
+      plus: `${plusN >= 0 ? '+' : ''}${fmt(plusN, pct, int)}`,
       weight,
       ...(isSr && key === 'dmg' && SR_ELEM_ICON[elem]
         ? SR_ELEM_ICON[elem]

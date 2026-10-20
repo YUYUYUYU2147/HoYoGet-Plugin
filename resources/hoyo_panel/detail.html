@@ -71,7 +71,7 @@
                 <span class="a-right">
                   <b class="a-value">{{a.value}}</b>
                   {{if a.base}}
-                  <span class="a-sub"><i>{{a.base}}</i><em>{{a.plus}}</em></span>
+                  <span class="a-sub{{if a.baseZero}} zero{{/if}}"><i>{{a.base}}</i><em>{{a.plus}}</em></span>
                   {{/if}}
                 </span>
               </div>

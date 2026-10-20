@@ -121,6 +121,7 @@ body {
 .a-weight.hi { color: var(--ap-orange); background: rgba(255, 159, 10, .16); }
 .a-sub i { color: var(--ap-mute); }
 .a-sub em { color: var(--ap-green); }
+.a-sub.zero i { color: rgba(255, 255, 255, .3); }
 .aicon { filter: none; opacity: .95; }
 
 /* ───── 通用玻璃卡 ───── */

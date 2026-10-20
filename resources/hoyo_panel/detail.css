@@ -406,6 +406,8 @@ body.elem-physical { --elem-line: rgba(207, 216, 227, .9); --elem-glow: rgba(180
 .a-sub { margin-top: 1px; display: flex; gap: 4px; font-size: 9.5px; }
 .a-sub i { font-style: normal; color: #7f9db4; }
 .a-sub em { font-style: normal; color: #9fe0c8; }
+/* 基础值为 0（miao 没给这一项的基础）时按喵喵的做法淡显，不再整列隐藏 */
+.a-sub.zero i { color: #5d6b80; }
 
 /* 雷达 */
 .side {
