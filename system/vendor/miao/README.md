@@ -30,8 +30,12 @@ system/vendor/miao/
 ## 资源
 
 - **数据**（`*.json` / `*.js`）已拷进本插件 `resources/meta-gs`、`resources/meta-sr`（约 12MB，入库）
-- **图片**（立绘/图标，约 295MB）**不入库**：`path.js` 的 `metaRoot()` 依次找
-  插件自身 resources → 外部 `plugins/miao-plugin/resources`，都没有时图片会被 `onerror` 隐藏
+- **图片**（立绘/图标，约 295MB）**不入库**：`path.js` 的 `metaRoot()` 按完整度给
+  插件自身 resources 与外部 `plugins/miao-plugin/resources` 打分，选更完整的一个。
+  只拷了数据 + 立绘（缺 `character/*/icons`、`common/`）的半套目录不会被误选；
+  两边都缺图时图片由 `onerror` 隐藏。
 
-以后要完全脱离 miao，把 `plugins/miao-plugin/resources` 里的图片拷到
-`plugins/HoYoGet-Plugin/resources/` 下即可，无需改代码。
+同步资源包（`#米哈游同步资源包`）时，如果本机装了 miao-plugin，会从它的
+`resources/common` 与 `resources/meta-*` 补齐缺失文件（不碰体积很大的
+`profile/normal-character` 自定义立绘）。以后要完全脱离 miao，把
+`plugins/miao-plugin/resources` 里的图片拷到 `plugins/HoYoGet-Plugin/resources/` 下即可。

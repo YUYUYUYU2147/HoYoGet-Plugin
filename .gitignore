@@ -32,6 +32,8 @@ resources/meta-gs/**/*.jpg
 resources/meta-sr/**/*.webp
 resources/meta-sr/**/*.png
 resources/meta-sr/**/*.jpg
+# 通用图标（元素/武器/属性），与 meta-* 图片同源：同步或从 miao 兜底补齐，不入库
+resources/common/
 # 同步版本标记（每台机器不一样，不入库）
 resources/meta-gs/.sha
 resources/meta-sr/.sha
