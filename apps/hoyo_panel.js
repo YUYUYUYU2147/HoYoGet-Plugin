@@ -5,7 +5,7 @@ import { config, pluginPriority, render, makeForwardMsg } from '#HoYoGet'
 import { listCategories, fetchLeaderboard, getUserCalculations, getDamageDistribution } from '../system/akasha.js'
 import { getRoleProfile } from '../system/roleProfile.js'
 import { srPanelExtras } from '../system/sr_panel.js'
-import { pickCustomPanelArt, pickUserPanelArt, ensureUserPanelDir, listUserPanelArt } from '../system/custom_panel.js'
+import { pickCustomPanelArt, pickUserPanelArt, ensureUserPanelDir, listUserPanelArt, cropCustomPanelArt } from '../system/custom_panel.js'
 import { metaResRel } from '#hoyo.miao.path'
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -834,6 +834,16 @@ function customArtEnabled() {
     const v = config()?.panel_custom_art
     return v === undefined || v === null ? true : !!v
   } catch { return true }
+}
+
+/** 自定义面板图左侧二维码栏的裁切比例：默认 24%，设 0 关闭 */
+function customArtCrop() {
+  try {
+    const raw = config()?.panel_custom_art_crop
+    if (raw === undefined || raw === null) return 0.24
+    const v = Number(raw)
+    return Number.isFinite(v) && v > 0 && v < 0.5 ? v : 0
+  } catch { return 0.24 }
 }
 
 /** 单角色详情 → 模板数据 */
@@ -1760,6 +1770,17 @@ export class hoyo_panel extends plugin {
         nickname: info.nickname || info.name || '',
         miaoPath: miaoResPath,
       })
+
+      /* 咕咕牛图库的面板图左侧带二维码/编号栏，出图前按比例裁掉；
+         裁切失败就保留原图，不影响面板。 */
+      const cropRatio = customArtCrop()
+      if (cropRatio && (data.splash || data.splashLocal)) {
+        const cropped = await cropCustomPanelArt(data.splash, data.splashLocal, game, cropRatio)
+        if (cropped) {
+          data.splashLocal = cropped
+          data.splash = ''
+        }
+      }
 
       /* 关键数据全空时不要出空白图：通常是 miao 版本差异导致字段名不同 */
       if (!data.attrs.length && !data.artis.length) {
