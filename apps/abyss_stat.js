@@ -126,6 +126,11 @@ export class abyss_stat extends plugin {
         }
       }
     }
+    /* 顶部统计（最强一击/最高承伤…）也是按角色 id 取立绘，
+       漏掉它们会导致对应那张卡被模板的 {{if avatar}} 过滤掉（少一项） */
+    for (const s of (abyss.stat || [])) {
+      if (s?.id) ids.add(Number(s.id) || s.id)
+    }
     if (!ids.size) return {}
     try {
       const miao = await import('#hoyo.miao.models')
