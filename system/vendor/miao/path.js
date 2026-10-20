@@ -38,6 +38,24 @@ function metaRoot() {
   } catch (_) { }
   candidates.push(path.join(pluginPath, 'resources'))
   candidates.push(path.join(rootPath, 'plugins', 'miao-plugin', 'resources'))
+  /* 优先选「数据和图片都在」的根；只有数据的根会让图片全部 404，
+     所以这里先按「有 meta-gs/character/<任一角色>/imgs」判一次 */
+  const hasImgs = dir => {
+    try {
+      const chars = path.join(dir, 'meta-gs', 'character')
+      if (!fs.existsSync(chars)) return false
+      for (const name of fs.readdirSync(chars).slice(0, 8)) {
+        if (fs.existsSync(path.join(chars, name, 'imgs'))) return true
+      }
+    } catch (_) { }
+    return false
+  }
+  for (const dir of candidates) {
+    try {
+      if (dir && fs.existsSync(path.join(dir, 'meta-gs')) && hasImgs(dir)) return dir
+    } catch (_) { }
+  }
+  // 没有完整的就退回「有 meta-gs」的第一个（数据可用，图可能缺）
   for (const dir of candidates) {
     try {
       if (dir && fs.existsSync(path.join(dir, 'meta-gs'))) return dir
