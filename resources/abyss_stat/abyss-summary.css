@@ -150,12 +150,12 @@ body,
 .abyss-floor-team {
   /* 队伍卡改用 mini（105px）后，8 张横排约 930px，1300 的左栏放得下，
      恢复「上半 | 下半」并排，避免一上一下把整层拉高一倍。
-     space-between 让下半贴住本层右边缘，和下面各间的下半队伍右对齐 */
+     整体居中而不是两端撑开：上下半挨在一起，不会中间空一大段；
+     下面三间也居中排，第三间下半和这里下半的右边缘仍然对得上 */
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
-  /* 和 .abyss-level 的左右 10px 内距对齐：上半贴第一间左侧、
-     下半贴第三间右侧（也就是通关时间的右边缘） */
+  justify-content: center;
+  /* 和 .abyss-level 的左右 10px 内距对齐，首间上半与本层上半左边缘一致 */
   padding: 0 10px;
   box-sizing: border-box;
 }
@@ -212,8 +212,10 @@ body,
 }
 .abyss-level {
   padding: 5px 10px 7px;
-  /* 三间正好铺满，第三间右边缘才和上面队伍行的右边缘对得上 */
-  width: 33.3333%;
+  /* 宽度跟内容走：上下半队伍挨着，不再把三间硬撑成 1/3 拉出空白。
+     三间由 .abyss-detail 的 space-between 分布，首尾贴住左右边缘 */
+  width: auto;
+  flex: 0 0 auto;
   box-sizing: border-box;
   box-shadow: 0 0 1px 0 #fff;
 }
@@ -431,6 +433,9 @@ body,
      分栏后左栏要和队伍左对齐，直接铺满并去掉负边距 */
   width: 100%;
   margin: 10px 0 0;
+  /* 三间按内容宽度排并整体居中：间内上下半队伍挨在一起，三间也连成一条，
+     不会被硬撑成 1/3 拉出一大段空白 */
+  justify-content: center;
 }
 .floor-main .abyss-level { box-sizing: border-box; }
 
