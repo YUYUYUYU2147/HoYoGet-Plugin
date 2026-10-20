@@ -83,22 +83,30 @@ body {
 .hero .uid { margin-top: 6px; color: #c3cad8; font-size: .82em; letter-spacing: .5px; }
 
 .stats { margin-top: 14px; display: grid; grid-template-columns: 1fr; gap: 0; }
-.stats .row { display: flex; align-items: center; gap: 7px; padding: 6px 2px; border-bottom: 1px solid rgba(255,255,255,.06); font-size: .9em; }
+/* 用 grid 固定四列（图标/属性名/权重/数值），不靠内容撑宽：
+   属性名一长（能量自动回复）或权重徽章缺失时，数字列都不会跟着漂 */
+.stats .row {
+  display: grid; align-items: center; gap: 7px;
+  grid-template-columns: 24px 104px 26px minmax(0, 1fr) auto;
+  padding: 6px 2px; border-bottom: 1px solid rgba(255,255,255,.06); font-size: .9em;
+}
 .stats .row:last-child { border-bottom: none; }
-.stats .label { color: #c0c8d6; white-space: nowrap; flex: none; width: 98px; }
+.stats .label { color: #c0c8d6; white-space: nowrap; overflow: hidden; }
 /* 属性名按权重上色（与右侧徽章同一口径）：>=80 金、50~79 蓝，其余保持灰 */
 .stats .label.w-hi { color: #ffe699; font-weight: 700; }
 .stats .label.w-mid { color: #9fd0ff; }
 /* 词条权重徽章（对齐喵喵面板：>=80 金色，0 不显示） */
 .stats .wt {
-  flex: none; width: 26px; height: 18px; line-height: 18px;
+  width: 26px; height: 18px; line-height: 18px;
   border-radius: 5px; background: rgba(0,0,0,.45);
   font-size: .68em; text-align: center; color: #9fb3cc;
 }
+/* 0 权重的行没有徽章内容，别留一块空底色 */
+.stats .wt:empty { background: transparent; }
 .stats .wt.gold { color: #ffe699; }
-.stats .mid { color: #c3cad8; font-size: .95em; white-space: nowrap; }
+.stats .mid { color: #c3cad8; font-size: .95em; white-space: nowrap; text-align: right; }
 .stats .mid .add { color: #6fe3b0; margin-left: 4px; }
-.stats .final { margin-left: auto; font-weight: 700; font-size: 1.05em; white-space: nowrap; }
+.stats .final { text-align: right; font-weight: 700; font-size: 1.05em; white-space: nowrap; }
 
 /* ============ 区块通用 ============ */
 .section { margin-top: 0; }

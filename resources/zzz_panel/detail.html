@@ -49,8 +49,9 @@
                 <span class="prop-icon {{r.cls}}"></span>
                 {{/if}}
                 <span class="label{{if r.weight >= 80}} w-hi{{else if r.weight >= 50}} w-mid{{/if}}">{{r.label}}</span>
-                {{if r.weight}}<span class="wt{{if r.weight >= 80}} gold{{/if}}">{{r.weight}}</span>{{/if}}
-                {{if r.base}}<span class="mid">{{r.base}}{{if r.add}}<span class="add">+{{r.add}}</span>{{/if}}</span>{{/if}}
+                <!-- 权重徽章/基础值即使为空也要占位，否则每行的数字列会随内容左右错位 -->
+                <span class="wt{{if r.weight >= 80}} gold{{/if}}">{{r.weight || ''}}</span>
+                <span class="mid">{{if r.base}}{{r.base}}{{if r.add}}<span class="add">+{{r.add}}</span>{{/if}}{{/if}}</span>
                 <span class="final">{{r.final}}</span>
               </div>
               {{/each}}
