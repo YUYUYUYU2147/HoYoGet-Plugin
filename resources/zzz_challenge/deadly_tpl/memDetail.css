@@ -543,3 +543,35 @@ body {
     opacity: .85;
     font-size: .92em;
 }
+
+/* 怪物面板数值：两列网格，标签在上、数值在下 */
+.boss-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px 10px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, .12);
+}
+
+.bs-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+    line-height: 1.2;
+}
+
+.bs-item i {
+    font-style: normal;
+    font-size: 10px;
+    color: rgba(255, 255, 255, .5);
+}
+
+.bs-item b {
+    font-size: 13px;
+    color: #fff;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}

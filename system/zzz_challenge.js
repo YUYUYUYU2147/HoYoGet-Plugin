@@ -124,6 +124,32 @@ export function toElementTags(list = [], kind = 'weak') {
     })
 }
 
+/**
+ * 怪物面板数值 → 模板用的中文条目。
+ * nanoka 字段：hp / attack / defence / stun（失衡值） / attribute_infliction（异常掌控）
+ */
+function formatMonsterStats(stats = {}) {
+  const s = stats || {}
+  const fmt = n => {
+    const v = Number(n)
+    if (!Number.isFinite(v)) return ''
+    // 生命值很大，取整加千分位；其余保留一位小数内的整数
+    return Math.round(v).toLocaleString('en-US')
+  }
+  const rows = [
+    ['生命', s.hp],
+    ['攻击', s.attack],
+    ['防御', s.defence],
+    ['失衡值', s.stun],
+    ['异常掌控', s.attribute_infliction],
+  ]
+  const out = rows
+    .map(([label, v]) => ({ label, value: fmt(v) }))
+    .filter(r => r.value !== '')
+  // 分成两行：前三个（生命/攻击/防御）一行，剩下的另一行，和游戏内面板一致
+  return { top: out.slice(0, 3), bottom: out.slice(3) }
+}
+
 const stripTags = (s = '') => String(s)
   .replace(/<br\s*\/?>/gi, '\n')
   .replace(/<\/(p|div|li)>/gi, '\n')
@@ -206,6 +232,7 @@ export async function normalizeShiyu(raw = {}, meta = {}) {
            不要写成 boss?.pic || ''，取不到 boss 时会把原字段清空，导致没图 */
         monster_pic: boss?.pic || item?.monster_pic || '',
         monster_name: boss?.name || item?.monster_name || nb?.name || bm.name || '',
+        monster_stats: formatMonsterStats(nb?.stats),
         monster_weakness_tags: toElementTags(
           boss?.weakness?.length ? boss.weakness
             : (item?.monster_weakness || nb?.weakness || bm.weakness), 'weak'),
@@ -348,6 +375,7 @@ async function nanokaDeadlyBosses(periodOffset = 0) {
           name: mon.name,
           weakness: pickBySign(mon.element, 1).join(' / '),
           resistance: pickBySign(mon.element, -1).join(' / '),
+          stats: mon.stats || {},
         })
       }
     }
@@ -411,6 +439,8 @@ async function nanokaShiyuBosses(periodOffset = 0) {
         name: mon.name,
         weakness: pickBySign(mon.element, 1).join(' / '),
         resistance: pickBySign(mon.element, -1).join(' / '),
+        // 怪物面板数值，模板里按中文标签展示
+        stats: mon.stats || {},
       })
     }
   }
@@ -465,6 +495,7 @@ export async function normalizeDeadly(raw = {}, meta = {}) {
         monster_weakness_tags: toElementTags(boss?.weakness || boss?.monster_weakness || nb?.weakness || bm.weakness, 'weak'),
         monster_resistance_tags: toElementTags(boss?.resistance || boss?.monster_resistance || nb?.resistance || bm.resistance, 'resist'),
       },
+      monster_stats: formatMonsterStats(nb?.stats),
       buffer: {
         icon: buff?.icon || '',
         name: buff?.name || '',
