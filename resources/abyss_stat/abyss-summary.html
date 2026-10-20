@@ -82,32 +82,6 @@
           {{/each}}
         </div>
       </div>
-      {{if floor.artisTeams && floor.artisTeams.length}}
-      <div class="abyss-artis">
-        <div class="artis-title">圣遗物详情</div>
-        {{each floor.artisTeams team}}
-        <div class="artis-char">
-          <div class="artis-char-name">{{team.name}}<span>{{team.setName}}</span></div>
-          <div class="artis-grid">
-            {{each team.artis art}}
-            <div class="artis-card">
-              <div class="artis-card-head">
-                {{if art.icon}}<img class="artis-icon" src="{{_miao_path}}{{art.icon}}" onerror="this.style.visibility='hidden'" />{{/if}}
-                <div class="artis-card-meta">
-                  <div class="artis-set">{{art.set}}</div>
-                  <div class="artis-lv">+{{art.level}}</div>
-                </div>
-              </div>
-              <div class="artis-main">{{art.main}}</div>
-              <div class="artis-sub">{{each art.attrs a i}}{{if i > 0}} · {{/if}}{{a}}{{/each}}</div>
-            </div>
-            {{/each}}
-          </div>
-        </div>
-        {{/each}}
-      </div>
-      {{/if}}
-
       <div class="abyss-detail">
         {{each floor.levels level levelIdx}}
         <div class="abyss-level">
@@ -132,6 +106,20 @@
           </div>
         </div>
         {{/each}}
+      {{if floor.artisTeams && floor.artisTeams.length}}
+      <div class="abyss-artis">
+        <div class="artis-title">圣遗物总评</div>
+        {{each floor.artisTeams team}}
+        <div class="artis-sum">
+          <span class="as-name">{{team.name}}</span>
+          <span class="as-set">{{team.setName}}</span>
+          {{if team.mark}}<span class="as-mark m-{{team.mark}}">{{team.mark}}</span>{{/if}}
+          {{if team.score}}<span class="as-score">{{team.score}}</span>{{/if}}
+        </div>
+        {{/each}}
+      </div>
+      {{/if}}
+
       </div>
     </div>
     </div>
