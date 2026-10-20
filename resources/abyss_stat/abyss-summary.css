@@ -6,8 +6,9 @@
 }
 body,
 .container {
-  /* 原版 970px；左右两栏等宽放「战绩 / 怪物BOSS」，加宽到 1800 */
-  width: 2000px;
+  /* 左栏内容收紧到 985px 后，整图宽度也跟着收，
+     去掉右栏和左栏内容之间那一大片空白；BOSS 栏保持 654px */
+  width: 1685px;
   background: url(./imgs/bg1.png) top left no-repeat #2a3860;
   background-size: 100% auto;
 }
@@ -148,7 +149,7 @@ body,
   margin-right: 5px;
 }
 .abyss-floor-team {
-  /* 队伍卡改用 mini（105px）后，8 张横排约 930px，1300 的左栏放得下，
+  /* 队伍卡改用 mini（105px）后，8 张横排约 930px，985 的左栏放得下，
      恢复「上半 | 下半」并排，避免一上一下把整层拉高一倍。
      整体靠左：和顶部的「第N层」标题左对齐，不再居中缩进；
      上下半之间只留分隔线两侧的间距，不再两端撑开 */
@@ -356,14 +357,14 @@ body,
   width: 100%;
   min-width: 0;
 }
-.floor-main { width: 1300px; min-width: 0; }
+.floor-main { width: 985px; min-width: 0; }
 
 .floor-boss {
   /* 绝对定位到左栏右侧，完全不参与这一层的高度计算 */
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 1316px;
+  left: 1001px;
   right: 0;
   min-width: 0;
   /* 高度跟随本层（左栏），超出部分裁掉 */
