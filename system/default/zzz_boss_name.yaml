@@ -1,0 +1,16 @@
+# 式舆防卫战 Boss 名称映射
+# 米游社防卫战接口目前通常只返回 monster_pic，不返回 Boss 名称。
+# 插件会取 monster_pic 文件名 hash 到这里查名称，识别不到则显示 BOSS。
+# 格式：图片hash: Boss名称
+# 弱点/抗性请写在 abyss_boss_meta.yaml，避免旧版代码把对象当成名称显示出来。
+17f5e0c39d34640f98da76cec5f70704: 秽蚀·多佩冈亚·「变节者」
+0e155bf60bb8cb2a865b636e659cb768: 秽蚀·蛮横力士
+88f46b168ebffe88b028d39a3a349ec5: 秽蚀·多佩冈亚·狛野真斗
+4dba90f6c3dc64842c9321dec3bc44d9: 黑比利
+8fcca877f246fdb1b978314e0df07c06: 缄枢
+280944f4e04dea73a92605a2f4ad2469: 秽蚀·多佩冈亚·「变节者」
+eeb1ad4ab2be38f802e96d67f5ab3c97: 秽蚀·蛮横力士
+a9f598219354ce6189e61be35e5e309b: 秽蚀·多佩冈亚·狛野真斗
+a409ce5bed844ede7d25b0cf2b0e4497: 蜕生·阿瓦鲁斯
+6b32f90beb8e567a4d1e5dc14919a977: 多佩冈亚·星徽·比利
+b54d5e9aefc998cf1a4956c875804086: 盘岳
