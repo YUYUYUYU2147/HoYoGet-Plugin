@@ -514,3 +514,25 @@ body {
     letter-spacing: .5px;
     margin: 10px 0 4px;
 }
+/* 弱点/抗性的元素徽章（原版靠模板内联样式，这里收进 CSS 便于统一） */
+.element-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 6px 1px 3px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .12);
+    white-space: nowrap;
+}
+
+.element-tag img {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.element-tag.resist-tag {
+    background: rgba(255, 80, 80, .16);
+}
