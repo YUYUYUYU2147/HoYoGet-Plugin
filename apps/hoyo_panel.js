@@ -42,7 +42,7 @@ const GAME_WORD = '(?:(原神|星铁|崩铁|gs|sr)\\s*)?'
 const PANEL_REG = new RegExp(`^#?米哈游\\s*${GAME_WORD}面板(?:\\s+(\\d{9}))?$`, 'i')
 const PANEL_LIST_REG = new RegExp(`^#?米哈游\\s*${GAME_WORD}面板列表$`, 'i')
 /* 带角色名 = 单角色详情图：#米哈游原神面板 桑多涅 / #米哈游雷神面板 */
-const PANEL_CHAR_REG = new RegExp(`^#?米哈游\\s*${GAME_WORD}面板\\s+(\\S+)$`, 'i')
+const PANEL_CHAR_REG = new RegExp(`^#?米哈游\\s*${GAME_WORD}面板\\s+(\\S+?)(?:\\s+(\\d{9}))?$`, 'i')
 /* 「#米哈游雷神面板」这种：面板前面直接跟角色名，没有游戏名 */
 const PANEL_SHORT_CHAR_REG = /^#?米哈游\s*([^\s]+?)\s*面板$/i
 /* 更新面板：#米哈游原神更新面板 / #米哈游星铁更新面板 [UID] */
@@ -59,6 +59,45 @@ const NO_PREFIX_PANEL_REG = new RegExp(`^#?\\s*${NO_PREFIX_GAME}\\s*面板(?:\\s
 const NO_PREFIX_LIST_REG = new RegExp(`^#?\\s*${NO_PREFIX_GAME}\\s*面板列表$`, 'i')
 const NO_PREFIX_CHAR_REG = new RegExp(`^#?\\s*${NO_PREFIX_GAME}\\s*面板\\s+(\\S+)$`, 'i')
 const NO_PREFIX_REFRESH_REG = new RegExp(`^#?\\s*${NO_PREFIX_GAME}\\s*(?:更新|刷新)(?:全部)?面板(?:\\s+(\\d{9}))?$`, 'i')
+
+/*
+ * 「完全取代喵喵」：不带任何前缀的角色面板，如 #雷神面板 / #星铁遐蝶面板 / #面板。
+ * 这些在 miao 里是 ProfileDetail / ProfileList，本插件优先级更高，先接走。
+ * 只在「名字确实能解析成 miao 角色」时才认领，避免把 #更新面板、#喵喵面板变换
+ * 这类同后缀指令抢掉；认不出来就返回空串，交回 miao。
+ */
+const BARE_OVERVIEW_REG = /^#?\s*(?:角色面板|面板角色|面板)(列表)?\s*(\d{9})?$/i
+const BARE_CHAR_REG = /^#?\s*(?:面板|角色面板)?\s*([^\s#*]+?)\s*(?:面板|面版)\s*(\d{9})?$/i
+/* 这些前缀不是角色名，直接放行给 miao */
+const BARE_DENY = /^(米哈游|米游社|喵喵|我的|更新|刷新|删除|加载|重载|全部|上传|添加|获取|查看)/
+const BARE_GAME = /^(星铁|崩铁|sr|原神|gs)\s*/i
+
+/** 裸面板指令 → 规范化成 #米哈游xx面板 形式；不是角色面板就返回空串 */
+async function normalizeBarePanel(msg) {
+  const text = String(msg || '').trim()
+  const overview = text.match(BARE_OVERVIEW_REG)
+  if (overview) return `#米哈游原神面板${overview[2] ? ' ' + overview[2] : ''}`
+  const m = text.match(BARE_CHAR_REG)
+  if (!m) return ''
+  let name = String(m[1] || '').trim()
+  const uid = m[2] || ''
+  if (!name || BARE_DENY.test(name)) return ''
+  let game = ''
+  const g = name.match(BARE_GAME)
+  if (g) {
+    game = ['星铁', '崩铁', 'sr'].includes(g[1].toLowerCase()) ? 'sr' : 'gs'
+    name = name.slice(g[0].length).trim()
+  }
+  const miao = await loadMiao()
+  if (!miao?.Character?.get) return ''
+  /* Character.get 的第二个参数只影响别名表，不校验游戏：遐蝶用 'gs' 也能取到实例。
+     真正的归属看实例自带的 isSr / game。 */
+  const found = miao.Character.get(name)
+  if (!found) return ''
+  if (!game) game = found.isSr || found.game === 'sr' ? 'sr' : 'gs'
+  if ((game === 'sr') !== !!(found.isSr || found.game === 'sr')) return ''
+  return `#米哈游${game === 'sr' ? '星铁' : '原神'}面板 ${name}${uid ? ' ' + uid : ''}`
+}
 
 /** 把「#原神面板」补成「#米哈游原神面板」；不匹配返回空串 */
 function withMhyPrefix(msg) {
@@ -1313,6 +1352,9 @@ export class hoyo_panel extends plugin {
         { reg: NO_PREFIX_PANEL_REG.source, fnc: 'panel' },
         { reg: NO_PREFIX_CHAR_REG.source, fnc: 'panel' },
         { reg: NO_PREFIX_LIST_REG.source, fnc: 'panel' },
+        /* 取代 miao 的裸面板指令（accept 里已规范化，这里留表项保持一致） */
+        { reg: BARE_OVERVIEW_REG.source, fnc: 'panel' },
+        { reg: BARE_CHAR_REG.source, fnc: 'panel' },
       ],
     })
   }
@@ -1331,9 +1373,16 @@ export class hoyo_panel extends plugin {
        优先级低于 miao 就会先被它接走，所以先把 e.msg 补回前缀，后面全走同一套逻辑 */
     const prefixed = withMhyPrefix(msg)
     if (prefixed) e.msg = prefixed
-    const text = String(e.msg || '')
+    let text = String(e.msg || '')
+    /* 完全取代 miao 的面板指令：#雷神面板 / #星铁遐蝶面板 / #面板 也归本插件。
+       只有名字能解析成 miao 角色时才认领，其它同后缀指令仍交回 miao。 */
     if (!PANEL_REG.test(text) && !PANEL_CHAR_REG.test(text) && !PANEL_REFRESH_REG.test(text)
-      && !PANEL_LIST_REG.test(text) && !PANEL_SHORT_CHAR_REG.test(text)) return
+      && !PANEL_LIST_REG.test(text) && !PANEL_SHORT_CHAR_REG.test(text)) {
+      const bare = await normalizeBarePanel(msg)
+      if (!bare) return
+      e.msg = bare
+      text = bare
+    }
     this.e = e
     if (PANEL_REFRESH_REG.test(text)) await this.refreshPanel(e)
     else await this.panel(e)
@@ -1466,7 +1515,7 @@ export class hoyo_panel extends plugin {
     const conf = GAME_CONF[game]
 
     // UID：指令里带的优先，其次绑定
-    let uid = m ? (m[2] || '') : ''
+    let uid = m ? (m[2] || '') : (cm?.[3] || '')
     if (!uid) uid = await readMysMainUid(e, game)
     if (!uid) uid = await readBoundUid(e, game)
     if (!uid) {
