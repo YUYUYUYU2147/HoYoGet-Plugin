@@ -48,7 +48,7 @@
                 {{else}}
                 <span class="prop-icon {{r.cls}}"></span>
                 {{/if}}
-                <span class="label">{{r.label}}</span>
+                <span class="label{{if r.weight >= 80}} w-hi{{else if r.weight >= 50}} w-mid{{/if}}">{{r.label}}</span>
                 {{if r.weight}}<span class="wt{{if r.weight >= 80}} gold{{/if}}">{{r.weight}}</span>{{/if}}
                 {{if r.base}}<span class="mid">{{r.base}}{{if r.add}}<span class="add">+{{r.add}}</span>{{/if}}</span>{{/if}}
                 <span class="final">{{r.final}}</span>

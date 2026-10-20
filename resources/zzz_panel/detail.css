@@ -86,6 +86,9 @@ body {
 .stats .row { display: flex; align-items: center; gap: 7px; padding: 6px 2px; border-bottom: 1px solid rgba(255,255,255,.06); font-size: .9em; }
 .stats .row:last-child { border-bottom: none; }
 .stats .label { color: #c0c8d6; white-space: nowrap; flex: none; width: 98px; }
+/* 属性名按权重上色（与右侧徽章同一口径）：>=80 金、50~79 蓝，其余保持灰 */
+.stats .label.w-hi { color: #ffe699; font-weight: 700; }
+.stats .label.w-mid { color: #9fd0ff; }
 /* 词条权重徽章（对齐喵喵面板：>=80 金色，0 不显示） */
 .stats .wt {
   flex: none; width: 26px; height: 18px; line-height: 18px;

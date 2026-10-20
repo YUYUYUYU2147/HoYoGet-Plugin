@@ -86,6 +86,9 @@ body {
 /* 属性：去底色，只留发丝分隔线；数字用等宽数字 */
 .stats .row { border-bottom-color: rgba(255, 255, 255, .07); }
 .stats .label { color: var(--ap-sub); font-weight: 500; }
+/* 属性名按权重上色：>=80 金、50~79 蓝，与徽章同色系，扫一眼就知道哪些词条值钱 */
+.stats .label.w-hi { color: var(--ap-yellow); font-weight: 600; }
+.stats .label.w-mid { color: #6cb6ff; }
 .stats .mid { color: var(--ap-sub); }
 .stats .mid .add { color: var(--ap-green); }
 .stats .final { color: var(--ap-text); font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.2px; }
