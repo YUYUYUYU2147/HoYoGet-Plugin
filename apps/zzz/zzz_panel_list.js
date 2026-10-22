@@ -1972,7 +1972,7 @@ export class zzz_panel_list extends plugin {
     const uidRecords = new Map()
     const scoreOne = (a) => {
       const name = a?.name_mi18n || a?.full_name_mi18n || ''
-      if (!name || uidRecords.has(name)) return
+      if (!name) return
       const equip = (a?.equip || []).map(d => ({
         slot: d.equipment_type ?? 0,
         level: d.level ?? 0,
@@ -1983,6 +1983,11 @@ export class zzz_panel_list extends plugin {
           count: p.level ?? 0,
         })),
       }))
+      const hasProps = equip.some(e => (e.properties || []).length > 0)
+      // 已有记录：只有「新数据带完整副词条、旧数据没有」时才覆盖，
+      // 避免补全后的完整数据被后续读到的裁剪数据盖回去。
+      const prev = uidRecords.get(name)
+      if (prev && !(hasProps && prev.hasProps === false)) return
       const basic_properties = {}
       for (const p of (a?.properties || [])) {
         const m = ZPROP[p.property_id]
@@ -1999,7 +2004,7 @@ export class zzz_panel_list extends plugin {
         ap: parseFloat(basic_properties.elementmystery?.final) || 0,
       }
       const scoreRes = calcEquipScore(equip, name, scoreStats, a?.avatar_profession, a?.element_type, basic_properties)
-      uidRecords.set(name, { score: scoreRes.score, rating: scoreRes.rating, ruleName: scoreRes.ruleName })
+      uidRecords.set(name, { score: scoreRes.score, rating: scoreRes.rating, ruleName: scoreRes.ruleName, hasProps })
     }
     // 1) 本插件自己的 records（单角色详情落盘，优先）
     try {
@@ -2032,11 +2037,18 @@ export class zzz_panel_list extends plugin {
       return { ...c, equip_score: rec?.score ?? null, equip_rating: rec?.rating ?? null }
     })
 
-    // 补全缺失评分：records 里没有详情的角色，并发调 avatar/info 拿驱动盘，
-    // 算评分并落盘，让列表页每个角色都能显示评分（不再依赖已删除的 ZZZ-Plugin data/panel）。
-    const missing = cards.filter(c => c.equip_score == null && c.id != null)
+    // 补全缺失评分：两类都要重拉 ——
+    //   ① records 里完全没有详情的角色（equip_score == null）
+    //   ② 有记录但驱动盘副词条被裁掉的角色（hasProps=false，need_wiki=false 的旧数据）
+    // 并发调 avatar/info（need_wiki=true）拿完整驱动盘，算评分并落盘。
+    const missing = cards.filter(c => {
+      if (c.id == null) return false
+      if (c.equip_score == null) return true
+      const rec = uidRecords.get(c.name)
+      return rec && rec.hasProps === false
+    })
     if (missing.length) {
-      await e.reply(`检测到 ${missing.length} 个角色暂无评分，正在并发补全，请稍候…`, true, { recallMsg: 0 })
+      await e.reply(`检测到 ${missing.length} 个角色评分数据不完整，正在并发补全，请稍候…`, true, { recallMsg: 0 })
       let gamePlayer = null
       try { gamePlayer = await this.fetchPlayer(e, uid, ck) } catch {}
       const concurrency = 4
@@ -3065,7 +3077,10 @@ export class zzz_panel_list extends plugin {
   async fetchDetail(e, uid, ck, id) {
     try {
       const server = mhy.getServer(uid, 'zzz')
-      const query = `lang=zh-cn&role_id=${uid}&server=${server}&need_wiki=false&id_list[]=${id}`
+      /* need_wiki 必须为 true：实测 need_wiki=false 时米游社只返回驱动盘基础信息，
+         equip 的 properties/main_properties 全为空（invalid_property_cnt 却仍有值），
+         评分因此缺副词条、明显偏低。改成 true 才会返回完整主/副词条。 */
+      const query = `lang=zh-cn&role_id=${uid}&server=${server}&need_wiki=true&id_list[]=${id}`
       const data = await zzzGet(e, uid, ck, 'info', query)
       if (!data) return { __error: '单角色详情为空，请稍后重试' }
       return { data }
