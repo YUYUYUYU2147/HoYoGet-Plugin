@@ -8,36 +8,53 @@
 
   <body {{sys.scale}}>
     <div class="container" id="container">
-      <div class="xkl_box">
-        <div class="tou">
-          <img src="{{xhhAvatar ? ppath + 'sign/xhh_avatar.png' : 'https://q1.qlogo.cn/g?b=qq&s=140&nk=' + qq + '.jpg'}}" />
-          <div class="t_box">
-            <p class="name">{{name ?? qq}}</p>
-            <hr />
-            <p>米游社签到</p>
-            <img class="mianju" src="{{ppath}}sign/mianju.png" />
+      <div class="sign-card">
+        <div class="sign-head">
+          <img class="avatar" src="{{xhhAvatar ? ppath + 'sign/xhh_avatar.png' : 'https://q1.qlogo.cn/g?b=qq&s=140&nk=' + qq + '.jpg'}}" />
+          <div class="head-text">
+            <div class="nick">{{name ?? qq}}</div>
+            <div class="sub">米游社签到</div>
           </div>
+          <div class="head-badge">签到结果</div>
         </div>
-        {{each msgs s}}
-        <div class="_box_">
-          {{if s.game}}
-          <img
-            class="{{s.game == '原神' ? 'gs' : s.game == '星铁' ? 'sr' : s.game == '崩坏3' ? 'bh3' : 'zzz'}}"
-            src="{{s.game == '崩坏3' ? ppath + 'bh3_note/bh3_icon.png' : ppath + 'sign/' + (s.game == '原神' ? 'gs' : s.game == '星铁' ? 'sr' : 'zzz') + '.png'}}"
-          />
-          {{/if}}
-          <p>{{s.title}}</p>
-          <p>{{s.tip}}</p>
-          {{if s.icon}}
-          <p class="jiang">第{{s.day}}天奖励：</p>
-          <img class="jiangli" src="{{s.icon}}" />
-          <p class="jiang_">x{{s.cnt}}</p>
-          {{/if}}
-        </div>
-        {{/each}}
-      </div>
 
-      <div class="logo">from 米哈游</div>
+        <div class="sign-list">
+          {{each msgs s}}
+          {{set st = (s.tip && s.tip.indexOf('今日已签') >= 0) ? 'signed' : ((s.tip && s.tip.indexOf('成功') >= 0) ? 'ok' : 'fail')}}
+          <div class="row {{st}}">
+            <div class="row-ico">
+              {{if s.game}}
+              <img src="{{s.game == '崩坏3' ? ppath + 'bh3_note/bh3_icon.png' : ppath + 'sign/' + (s.game == '原神' ? 'gs' : s.game == '星铁' ? 'sr' : 'zzz') + '.png'}}" />
+              {{else}}
+              <img src="{{ppath}}sign/xhh_avatar.png" />
+              {{/if}}
+            </div>
+            <div class="row-main">
+              <div class="row-title">{{s.title}}</div>
+              <div class="row-tip">{{s.tip}}</div>
+            </div>
+            <div class="row-state">
+              {{if st === 'ok'}}签到成功{{else if st === 'signed'}}今日已签{{else}}未完成{{/if}}
+            </div>
+            {{if s.icon}}
+            <div class="row-reward">
+              <div class="reward-icon"><img src="{{s.icon}}" /></div>
+              <div class="reward-text">
+                <div class="reward-day">第{{s.day}}天</div>
+                <div class="reward-cnt">×{{s.cnt}}</div>
+              </div>
+            </div>
+            {{else}}
+            <div class="row-reward empty"></div>
+            {{/if}}
+          </div>
+          {{/each}}
+        </div>
+
+        <div class="sign-foot">
+          <span class="src">from 米哈游</span>
+        </div>
+      </div>
     </div>
   </body>
 </html>

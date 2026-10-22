@@ -12,6 +12,7 @@ import {
     config
 } from '#HoYoGet';
 import { manualGeetest } from './manual_geetest.js';
+import { appendSignRecords } from './sign_history.js';
 import { mhyFetch } from './mhy_fetch.js';
 
 // genshin 的 NoteUser 必须动态加载：静态 import 在 genshin 缺失或版本变动时会让**整个插件**
@@ -340,6 +341,18 @@ async function MysSign(e, games) {
                 }
             }
         }
+    }
+    /* 落一份签到记录，供锅巴查看（不含 ck/stoken） */
+    try {
+        appendSignRecords(msgs.map(m => ({
+            qq: e.user_id,
+            name: e.sender?.card || e.sender?.nickname || '',
+            game: m.game,
+            uid: m.uid,
+            tip: m.tip,
+        })))
+    } catch (err) {
+        logger.debug?.(`[HoYoGet][sign] 写签到记录失败：${err?.message || err}`)
     }
     const data_ = {
         // 模板统一用 title 显示首行（游戏签到是「原神uid：123456789」）
@@ -1430,6 +1443,7 @@ async function bbsSignCore(e, accounts, title) {
                 rows.push({ name: forum.name, tip: '今日已签' });
             }
             markInvalid(account, rows);
+            bbsRecord(e, account, rows);
             msgs.push(bbsCardItem(account, rows));
             continue;
         }
@@ -1447,6 +1461,7 @@ async function bbsSignCore(e, accounts, title) {
         }
         await finishBbsAccount(e, account, ctx, rows, lines);
         markInvalid(account, rows);
+        bbsRecord(e, account, rows);
         msgs.push(bbsCardItem(account, rows));
     }
     return { msgs, lines };
@@ -1571,6 +1586,21 @@ function replyBbsResult(e, lines) {
     const ok = lines.slice(1).some(l => /签到成功|今日已签/.test(l));
     if (!ok) lines = lines.concat(bbsResultTips(lines));
     return e.reply(lines.join('\n'), false, ok ? {} : { recallMsg: 300 });
+}
+
+/** 社区签到落记录：一个版块一条，锅巴里能看到具体是哪个版块失败 */
+function bbsRecord(e, account, rows) {
+    try {
+        appendSignRecords(rows.map(r => ({
+            qq: e?.user_id,
+            name: e?.sender?.card || e?.sender?.nickname || '',
+            game: `米游社·${r.name}`,
+            uid: account?.stuid || '',
+            tip: r.tip,
+        })))
+    } catch (err) {
+        logger.debug?.(`[HoYoGet][bbs_sign] 写签到记录失败：${err?.message || err}`)
+    }
 }
 
 // 一个通行证出一张卡：正常时只写「今日已签 / 签到成功」，有异常才点名是哪个版块

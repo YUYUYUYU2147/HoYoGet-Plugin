@@ -16,6 +16,7 @@
 * {
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
 }
 
 body {
@@ -23,166 +24,212 @@ body {
   width: 1000px;
   transform-origin: 0 0;
   /* 截图区域若比内容大，露出的部分不会因透明被写成黑块 */
-  background-color: #ffffff;
+  background-color: #0d1117;
 }
 
 .container {
-  padding: 20px 15px 10px 15px;
-  background-image: url(./bg.jpg);
-  background-size: cover;
+  padding: 26px 24px 20px;
+  background-color: #0d1117;
+  background-image:
+    radial-gradient(720px 320px at 88% -12%, rgba(84, 148, 255, 0.22), transparent 62%),
+    radial-gradient(520px 260px at -8% 108%, rgba(255, 168, 96, 0.14), transparent 60%);
 }
 
-.xkl_box {
-  /*min-height: 500px;*/
-  margin: 150px 60px 10px 60px;
-  position: relative;
+/* ───── 主卡片 ───── */
+.sign-card {
+  border-radius: 20px;
+  padding: 20px 22px 14px;
+  background: rgba(28, 30, 36, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
 }
 
-.tou {
-  box-shadow: 0 5px 10px 0 rgb(0 0 0 / 15%);
-  /* 底色直接给足：原来靠 backdrop-filter 模糊，而服务器渲染环境下该属性
-     有概率把整块渲染成纯黑（本机新版 Chromium 已修复，复现不出来） */
-  background: rgba(255, 255, 255, 0.55);
-  border-radius: 15px;
-  position: relative;
-  font-family: '正';
-  font-weight: bolder;
-  font-size: 18px;
+/* ───── 头部 ───── */
+.sign-head {
   display: flex;
-  box-shadow:
-    2px 2px 4px 0 rgba(51, 51, 52, 0.5),
-    inset 3px 3px 10px 0px rgba(255, 255, 255, 0.8);
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 16px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.tou img {
+.sign-head .avatar {
+  width: 62px;
+  height: 62px;
   border-radius: 50%;
-  width: 74px;
-  height: 74px;
-  border-style: ridge;
-  border-color: #ace0f9;
-  border-width: 2px;
+  object-fit: cover;
+  flex: none;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18);
 }
 
-.tou .mianju {
-  border-radius: 0%;
-  width: 70px;
-  height: 70px;
-  border: none;
-  border-width: 0px;
-  position: absolute;
-  bottom: 0;
-  right: 0px;
+.head-text {
+  flex: 1;
+  min-width: 0;
 }
 
-.tou .t_box {
-  margin-left: 10px;
-  width: 800px;
-  padding: 10px 0px 0px 5px;
-  border-radius: 15px;
-  font-size: 22px;
-  color: #6fece6ea;
-  text-shadow: 1px 1px 2px #2b2b2b;
-}
-
-.tou .t_box p {
-  font-size: 20px;
-  position: relative;
-  top: 2px;
-}
-
-._box_ {
-  background: linear-gradient(
-    to right bottom,
-    rgba(255, 155, 180, 0.5),
-    rgba(255, 255, 255, 0.7)
-  );
-  border-radius: 15px;
-  position: relative;
+.head-text .nick {
   font-family: '正';
-  font-weight: bolder;
-  font-size: 22px;
-  color: #a1f78c;
-  display: flex;
-  margin-top: 10px;
-  padding: 10px 0 0px 10px;
-  text-shadow: 2px 2px 4px #3e3e3e;
-  box-shadow:
-    2px 2px 4px 0 rgba(51, 51, 52, 0.5),
-    inset 3px 3px 10px 0px rgba(255, 255, 255, 0.8);
-}
-
-._box_ .gs {
-  width: 56px;
-  height: 44px;
-  margin-right: 14px;
-}
-
-._box_ .sr {
-  width: 61px;
-  height: 44px;
-  margin-right: 9px;
-}
-
-._box_ .zzz {
-  width: 41px;
-  height: 44px;
-  margin-right: 15px;
-  margin-left: 14px;
-}
-
-._box_ .bh3 {
-  width: 44px;
-  height: 44px;
-  margin-right: 12px;
-  margin-left: 12px;
-  border-radius: 10px;
-}
-
-._box_ p {
-  margin: 20px 0 0 20px;
-  min-width: 240px;
-}
-
-._box_ p:nth-child(2) {
-  margin: 20px 40px 0 0;
-}
-
-._box_ .jiang {
-  margin: 20px 0 0 0;
-  min-width: 0px;
-  color: #70f7d1;
-  text-shadow: 1.5px 1.5px 3px #3e3e3e;
-}
-
-._box_ .jiang_ {
-  margin: 30px 0 0 0;
-  min-width: 0px;
-  font-size: 17px;
-  color: #33a1d3;
-  text-shadow: none;
-}
-
-.jiangli {
-  width: 40px;
-  height: 40px;
-  margin-top: 10px;
-}
-
-hr {
-  width: 95%;
-}
-
-.tou .t_box .name {
+  font-size: 26px;
+  font-weight: 700;
   color: #fff;
-  text-shadow: 1px 1px 2px #3e3e3e;
-  font-size: 24px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.logo {
-  font-size: 18px;
+.head-text .sub {
+  margin-top: 4px;
+  font-family: '宋';
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 1px;
+}
+
+.head-badge {
+  flex: none;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-family: '宋';
+  font-size: 13px;
+  color: #9cc4ff;
+  background: rgba(84, 148, 255, 0.16);
+  border: 1px solid rgba(84, 148, 255, 0.3);
+}
+
+/* ───── 列表 ───── */
+.sign-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0 8px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-left: 3px solid transparent;
+}
+
+.row.ok { border-left-color: #30d158; }
+.row.signed { border-left-color: #5b8cff; }
+.row.fail { border-left-color: #ff5d5d; background: rgba(255, 93, 93, 0.07); }
+
+.row-ico {
+  width: 46px;
+  height: 46px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.row-ico img {
+  max-width: 40px;
+  max-height: 34px;
+  object-fit: contain;
+}
+
+.row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.row-title {
+  font-family: '宋';
+  font-size: 16px;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row-tip {
+  margin-top: 3px;
+  font-family: '宋';
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.52);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row-state {
+  flex: none;
+  font-family: '宋';
+  font-size: 13px;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.row.ok .row-state { color: #30d158; background: rgba(48, 209, 88, 0.14); }
+.row.signed .row-state { color: #7fa4ff; background: rgba(91, 140, 255, 0.14); }
+.row.fail .row-state { color: #ff7b7b; background: rgba(255, 93, 93, 0.16); }
+
+.row-reward {
+  width: 128px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.row-reward.empty {
+  border-left-color: transparent;
+}
+
+.reward-icon {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.07);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reward-icon img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.reward-day {
+  font-family: '宋';
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.reward-cnt {
+  margin-top: 2px;
   font-family: '正';
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffd66b;
+}
+
+/* ───── 页脚 ───── */
+.sign-foot {
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   text-align: center;
-  text-shadow: 0.5px 0.5px 1px #999;
-  font-weight: bolder;
-  color: #ffffff;
+}
+
+.sign-foot .src {
+  font-family: '宋';
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: #ff4d4f;
 }
