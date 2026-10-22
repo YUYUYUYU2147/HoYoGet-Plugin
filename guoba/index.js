@@ -102,9 +102,10 @@ async function loadTaskHistory() {
 
 const CK_HTML = `
 <div class="hoyo-ck">
+  <div class="ck-stats" id="ck-stats"></div>
   <div class="ck-tip">CK / SK 属于敏感凭证，页面只显示掩码；点击卡片上的头像或「修改」可查看/编辑原文，保存后立即写回 data/Stoken/&lt;QQ&gt;.yaml。</div>
   <div class="ck-bar">
-    <input class="ck-input" id="ck-qq" placeholder="按 QQ 过滤（可空）" />
+    <input class="ck-input" id="ck-qq" placeholder="搜索 QQ" />
     <select class="ck-input" id="ck-game">
       <option value="">全部游戏</option>
       <option value="gs">原神</option>
@@ -112,7 +113,12 @@ const CK_HTML = `
       <option value="zzz">绝区零</option>
       <option value="bh3">崩坏3</option>
     </select>
-    <button class="ck-btn" id="ck-refresh">刷新</button>
+    <select class="ck-input" id="ck-status">
+      <option value="">全部状态</option>
+      <option value="ok">CK 可用</option>
+      <option value="nock">缺 CK</option>
+    </select>
+    <button class="ck-btn primary" id="ck-refresh">刷新</button>
     <span class="ck-meta" id="ck-meta"></span>
   </div>
 
@@ -141,16 +147,16 @@ const CK_HTML = `
 </div>
 `
 
-
 const PANEL_HTML = `
 <div class="hoyo-panel">
+  <div class="pn-stats" id="pn-stats"></div>
   <div class="pn-tip">管理本插件自定义面板图（resources/hoyo_panel/images/panel/&lt;游戏&gt;/&lt;角色&gt;/）。上传用命令「#米哈游上传&lt;角色&gt;面板图」，这里负责预览与删除。</div>
   <div class="pn-bar">
     <select class="pn-input" id="pn-game">
       <option value="gs">原神</option>
       <option value="sr">崩坏：星穹铁道</option>
     </select>
-    <button class="pn-btn" id="pn-refresh">刷新</button>
+    <button class="pn-btn primary" id="pn-refresh">刷新</button>
     <span class="pn-meta" id="pn-meta"></span>
   </div>
   <div class="pn-upload">
@@ -165,8 +171,9 @@ const PANEL_HTML = `
 
 const BIND_HTML = `
 <div class="hoyo-bind">
+  <div class="hb-stats" id="hb-stats"></div>
   <div class="hb-bar">
-    <input class="hb-input" id="hb-qq" placeholder="按 QQ 过滤（可空）" />
+    <input class="hb-input" id="hb-qq" placeholder="搜索 QQ" />
     <select class="hb-input" id="hb-game">
       <option value="">全部游戏</option>
       <option value="gs">原神</option>
@@ -174,7 +181,7 @@ const BIND_HTML = `
       <option value="zzz">绝区零</option>
       <option value="bh3">崩坏3</option>
     </select>
-    <button class="hb-btn" id="hb-refresh">刷新</button>
+    <button class="hb-btn primary" id="hb-refresh">刷新</button>
     <span class="hb-meta" id="hb-meta"></span>
   </div>
   <div id="hb-list"><div class="hb-empty">加载中…</div></div>

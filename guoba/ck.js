@@ -1,10 +1,18 @@
 (function () {
   const g = window.__GUOBA__ || {}
   const cards = document.getElementById('ck-cards')
+  const stats = document.getElementById('ck-stats')
   const meta = document.getElementById('ck-meta')
   const el = id => document.getElementById(id)
   const editor = el('ck-editor')
   let editing = null
+
+  const GAME = {
+    gs: { name: '原神', icon: '💠', cls: 'ck-g-gs' },
+    sr: { name: '崩坏：星穹铁道', icon: '🌌', cls: 'ck-g-sr' },
+    zzz: { name: '绝区零', icon: '⚡', cls: 'ck-g-zzz' },
+    bh3: { name: '崩坏3', icon: '⚔️', cls: 'ck-g-bh3' },
+  }
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
@@ -21,6 +29,31 @@
     return await res.json()
   }
   const qqAvatar = qq => 'https://q1.qlogo.cn/g?b=qq&s=140&nk=' + encodeURIComponent(qq) + '.jpg'
+  const PH = 'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2252%22 height=%2252%22><rect width=%2252%22 height=%2252%22 fill=%22%23eef2f7%22/></svg>'
+
+  let all = []
+
+  function gameBadge(a) {
+    const gm = GAME[a.game] || { name: '未知', icon: '❔', cls: '' }
+    return '<span class="ck-game ' + gm.cls + '" title="' + esc(gm.name) + '">' + gm.icon + '</span>'
+  }
+  function statusPills(a) {
+    const ck = a.hasCk ? '<span class="ck-pill ok">CK ✓</span>' : '<span class="ck-pill no">CK ✗</span>'
+    const sk = a.hasSk ? '<span class="ck-pill ok">SK ✓</span>' : '<span class="ck-pill no">SK ✗</span>'
+    return ck + sk
+  }
+
+  function renderStats(list) {
+    const total = list.length
+    const hasCk = list.filter(a => a.hasCk).length
+    const hasSk = list.filter(a => a.hasSk).length
+    const noCk = total - hasCk
+    stats.innerHTML =
+      '<div class="ck-stat total"><div class="k">账号总数</div><div class="v">' + total + '</div></div>'
+      + '<div class="ck-stat ok"><div class="k">CK 可用</div><div class="v">' + hasCk + '</div></div>'
+      + '<div class="ck-stat sk"><div class="k">SK 可用</div><div class="v">' + hasSk + '</div></div>'
+      + '<div class="ck-stat nock"><div class="k">缺 CK</div><div class="v">' + noCk + '</div></div>'
+  }
 
   async function load() {
     cards.innerHTML = '<div class="ck-empty">加载中…</div>'
@@ -29,22 +62,24 @@
     if (el('ck-game').value) p.set('game', el('ck-game').value)
     try {
       const json = await api('/ck/list?' + p.toString(), { headers: headers() })
-      const list = json?.result || []
+      all = json?.result || []
+      let list = all
+      const st = el('ck-status').value
+      if (st === 'ok') list = list.filter(a => a.hasCk)
+      else if (st === 'nock') list = list.filter(a => !a.hasCk)
       meta.textContent = '共 ' + list.length + ' 个账号'
+      renderStats(all)
       if (!list.length) {
         cards.innerHTML = '<div class="ck-empty">没有匹配的账号</div>'
         return
       }
       cards.innerHTML = list.map((a, i) => {
-        const ck = a.hasCk ? '<span class="ok">CK 有</span>' : '<span class="no">CK 无</span>'
-        const sk = a.hasSk ? '<span class="ok">SK 有</span>' : '<span class="no">SK 无</span>'
         return '<div class="ck-card">'
-          + '<img class="ck-avatar" data-i="' + i + '" src="' + qqAvatar(a.qq) + '" title="点击修改" '
-          + 'onerror="this.src=\'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2252%22 height=%2252%22><rect width=%2252%22 height=%2252%22 fill=%22%23eef2f7%22/></svg>\'" />'
+          + '<img class="ck-avatar" data-i="' + i + '" src="' + qqAvatar(a.qq) + '" title="点击修改" onerror="this.src=\'' + PH + '\'" />'
           + '<div class="ck-info">'
-          + '<div class="ck-name">' + esc(a.gameName) + ' · ' + esc(a.uid) + '</div>'
-          + '<div class="ck-sub">' + esc(a.region || '未知区服') + ' · 通行证 ' + esc(a.stuidMask) + '</div>'
-          + '<div class="ck-status">' + ck + ' · ' + sk + '</div>'
+          + '<div class="ck-name">' + gameBadge(a) + '<span>' + esc(a.gameName) + ' · ' + esc(a.uid) + '</span></div>'
+          + '<div class="ck-sub">' + esc(a.region || '未知区服') + ' · ' + esc(a.qq) + ' · 通行证 ' + esc(a.stuidMask) + '</div>'
+          + '<div class="ck-status">' + statusPills(a) + '</div>'
           + '</div>'
           + '<div class="ck-ops">'
           + '<button class="ck-btn" data-act="edit" data-i="' + i + '">修改</button>'
@@ -110,6 +145,7 @@
   el('ck-refresh').addEventListener('click', load)
   el('ck-qq').addEventListener('keydown', e => { if (e.key === 'Enter') load() })
   el('ck-game').addEventListener('change', load)
+  el('ck-status').addEventListener('change', load)
   el('ck-save').addEventListener('click', save)
   el('ck-cancel').addEventListener('click', () => { editor.classList.remove('on'); editing = null })
   load()

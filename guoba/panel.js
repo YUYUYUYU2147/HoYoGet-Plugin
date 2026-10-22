@@ -1,8 +1,10 @@
 (function () {
   const g = window.__GUOBA__ || {}
   const cards = document.getElementById('pn-cards')
+  const stats = document.getElementById('pn-stats')
   const meta = document.getElementById('pn-meta')
   const el = id => document.getElementById(id)
+  const GAME = { gs: { name: '原神', icon: '💠', cls: 'pn-g-gs' }, sr: { name: '崩坏：星穹铁道', icon: '🌌', cls: 'pn-g-sr' } }
   let currentGame = 'gs'
   let currentName = ''
   const modal = (() => {
@@ -20,8 +22,29 @@
   async function api(path, opts) { const r = await fetch(g.apiBase + path, opts); return await r.json() }
   function imgUrl(file) { return g.apiBase + '/panel/img?game=' + encodeURIComponent(currentGame) + '&name=' + encodeURIComponent(currentName) + '&file=' + encodeURIComponent(file) + '&token=' + encodeURIComponent(g.token || '') }
 
+  async function renderStats() {
+    try {
+      const [gs, sr] = await Promise.all([
+        api('/panel/list?game=gs', { headers: headers() }),
+        api('/panel/list?game=sr', { headers: headers() }),
+      ])
+      const gsList = gs?.result || []
+      const srList = sr?.result || []
+      const gsImgs = gsList.reduce((n, p) => n + (p.count || 0), 0)
+      const srImgs = srList.reduce((n, p) => n + (p.count || 0), 0)
+      const cells = [
+        { cls: 'chars', k: '角色总数', v: gsList.length + srList.length },
+        { cls: 'imgs', k: '图片总数', v: gsImgs + srImgs },
+        { cls: 'gs', k: '原神', v: gsList.length },
+        { cls: 'sr', k: '星穹铁道', v: srList.length },
+      ]
+      stats.innerHTML = cells.map(c => '<div class="pn-stat ' + c.cls + '"><div class="k">' + c.k + '</div><div class="v">' + c.v + '</div></div>').join('')
+    } catch (e) { stats.innerHTML = '' }
+  }
+
   async function load() {
     cards.innerHTML = '<div class="pn-empty">加载中…</div>'
+    renderStats()
     try {
       const json = await api('/panel/list?game=' + currentGame, { headers: headers() })
       const list = json?.result || []
@@ -29,7 +52,7 @@
       if (!list.length) { cards.innerHTML = '<div class="pn-empty">还没有上传面板图，用「#米哈游上传&lt;角色&gt;面板图」上传</div>'; return }
       cards.innerHTML = list.map(p => '<div class="pn-card" data-name="' + esc(p.name) + '" data-cover="' + esc(p.cover) + '">'
         + '<img class="pn-cover" src="' + imgUrl(p.cover) + '" loading="lazy" />'
-        + '<div class="pn-body"><div class="pn-name">' + esc(p.name) + '</div><div class="pn-count">' + p.count + ' 张</div></div>'
+        + '<div class="pn-body"><div class="pn-name"><span class="pn-game ' + (GAME[currentGame]?.cls || '') + '" title="' + esc(GAME[currentGame]?.name || currentGame) + '">' + (GAME[currentGame]?.icon || '') + '</span><span>' + esc(p.name) + '</span></div><div class="pn-count">' + p.count + ' 张</div></div>'
         + '</div>').join('')
       cards.querySelectorAll('.pn-card').forEach(c => c.addEventListener('click', () => open(c.dataset.name)))
     } catch (err) {
@@ -72,7 +95,7 @@
       const json = await res.json()
       el('pn-up-msg').className = 'pn-up-msg ' + (json?.ok ? 'ok' : 'err')
       el('pn-up-msg').textContent = json?.message || (json?.ok ? '上传成功' : '上传失败')
-      if (json?.ok) { el('pn-up-name').value = ''; fileInput.value = ''; load() }
+      if (json?.ok) { el('pn-up-name').value = ''; fileInput.value = ''; renderStats(); load() }
     } catch (err) {
       el('pn-up-msg').className = 'pn-up-msg err'
       el('pn-up-msg').textContent = '上传失败：' + (err && err.message || err)

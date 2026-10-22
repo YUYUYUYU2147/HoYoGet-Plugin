@@ -1,5 +1,17 @@
 .hoyo-ck { padding: 4px 2px 10px; }
 .ck-tip { margin-bottom: 12px; padding: 9px 12px; border-radius: 10px; font-size: 12px; line-height: 1.6; color: var(--g-muted, #8a93a3); background: rgba(255, 196, 92, 0.12); border-left: 3px solid rgba(240, 170, 60, 0.6); }
+
+/* ───── 统计卡 ───── */
+.ck-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.ck-stat { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--g-border, #e3e8ef); background: var(--g-card, #fff); }
+.ck-stat .k { font-size: 12px; color: var(--g-muted, #8a93a3); }
+.ck-stat .v { margin-top: 4px; font-size: 24px; font-weight: 700; color: var(--g-text, #333); line-height: 1; }
+.ck-stat.total .v { color: #2563eb; }
+.ck-stat.ok .v { color: #16a34a; }
+.ck-stat.nock .v { color: #dc2626; }
+.ck-stat.sk .v { color: #7c3aed; }
+
+/* ───── 工具条 ───── */
 .ck-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
 .ck-input { height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--g-border, #d8dde6); background: var(--g-card, #fff); color: var(--g-text, #333); font-size: 13px; outline: none; }
 .ck-input:focus { border-color: #4c8bf5; }
@@ -10,6 +22,8 @@
 .ck-btn.danger { color: #d43f3f; }
 .ck-btn.danger:hover { border-color: #d43f3f; }
 .ck-meta { font-size: 12px; color: var(--g-muted, #8a93a3); }
+
+/* ───── 编辑器 ───── */
 .ck-editor { display: none; margin-bottom: 14px; padding: 14px; border-radius: 12px; border: 1px solid var(--g-border, #e3e8ef); background: var(--g-card, #fff); }
 .ck-editor.on { display: block; }
 .ck-editor-title { margin-bottom: 10px; font-size: 14px; font-weight: 600; color: var(--g-text, #333); }
@@ -21,17 +35,28 @@
 .ck-actions { display: flex; gap: 8px; align-items: center; }
 .ck-msg { font-size: 12px; color: var(--g-muted, #8a93a3); }
 
-.ck-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
+/* ───── 卡片列表 ───── */
+.ck-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 10px; }
 .ck-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--g-border, #e3e8ef); background: var(--g-card, #fff); }
 .ck-card:hover { border-color: #4c8bf5; box-shadow: 0 2px 10px rgba(76, 139, 245, 0.12); }
+
 .ck-avatar { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; flex: none; background: #eef2f7; cursor: pointer; box-shadow: 0 0 0 2px #fff, 0 3px 8px rgba(96, 140, 200, 0.2); }
 .ck-avatar:hover { opacity: 0.85; }
+
 .ck-info { flex: 1; min-width: 0; }
-.ck-name { font-size: 14px; font-weight: 600; color: var(--g-text, #333); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ck-name { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--g-text, #333); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ck-sub { margin-top: 2px; font-size: 12px; color: var(--g-muted, #8a93a3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ck-status { margin-top: 3px; font-size: 12px; }
-.ck-status .ok { color: #1a7f37; }
-.ck-status .no { color: #d43f3f; }
-.ck-ops { display: flex; flex-direction: column; gap: 6px; }
-.ck-ops .ck-btn { height: 26px; padding: 0 10px; font-size: 12px; }
+.ck-status { margin-top: 5px; display: flex; gap: 6px; }
+.ck-pill { display: inline-flex; align-items: center; gap: 3px; padding: 1px 8px; border-radius: 999px; font-size: 11px; }
+.ck-pill.ok { color: #1a7f37; background: rgba(35, 178, 90, 0.13); }
+.ck-pill.no { color: #d43f3f; background: rgba(212, 63, 63, 0.13); }
+
+.ck-game { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; font-size: 12px; flex: none; color: #fff; }
+.ck-g-gs { background: #e9a23b; }
+.ck-g-sr { background: #6a7fd0; }
+.ck-g-zzz { background: #3aa6a0; }
+.ck-g-bh3 { background: #c26a9a; }
+
+.ck-ops { display: flex; gap: 6px; }
+.ck-ops .ck-btn { height: 28px; padding: 0 10px; font-size: 12px; }
 .ck-empty { text-align: center; color: var(--g-muted, #8a93a3); padding: 28px 0; grid-column: 1 / -1; }
