@@ -87,4 +87,46 @@ export function deletePanelFile(game, name, file) {
   }
 }
 
-export default { listPanels, listFiles, panelFilePath, deletePanelFile, GAME_NAMES }
+/**
+ * 把 multer 落盘的临时文件搬进目标角色的面板图目录。
+ * @param {string} game gs | sr
+ * @param {string} name 角色名
+ * @param {Array<{path:string, originalname:string}>} files multer 的 req.files
+ * @returns {{saved: string[], skipped: string[]}}
+ */
+export function saveUploadedFiles(game, name, files = []) {
+  const g = gameKey(game)
+  const n = safeName(name)
+  if (!n) throw new Error('角色名不能为空')
+  const dir = path.join(PANEL_ROOT, g, n)
+  fs.mkdirSync(dir, { recursive: true })
+  const list = Array.isArray(files) ? files : [files]
+  const saved = []
+  const skipped = []
+  for (const f of list) {
+    if (!f?.path || !f?.originalname) continue
+    const base = path.basename(String(f.originalname))
+    if (!/\.(png|jpe?g|webp)$/i.test(base)) {
+      skipped.push(base)
+      try { fs.unlinkSync(f.path) } catch { /* 清临时失败就算了 */ }
+      continue
+    }
+    let target = path.join(dir, base)
+    if (fs.existsSync(target)) {
+      const ext = path.extname(base)
+      target = path.join(dir, `${path.basename(base, ext)}-${Date.now().toString(36)}${ext}`)
+    }
+    try {
+      fs.renameSync(f.path, target)
+      saved.push(path.basename(target))
+    } catch {
+      // 跨文件系统 rename 失败时退回复制 + 删临时
+      fs.copyFileSync(f.path, target)
+      try { fs.unlinkSync(f.path) } catch { /* 忽略 */ }
+      saved.push(path.basename(target))
+    }
+  }
+  return { saved, skipped }
+}
+
+export default { listPanels, listFiles, panelFilePath, deletePanelFile, saveUploadedFiles, GAME_NAMES }

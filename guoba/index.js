@@ -312,6 +312,12 @@ const PANEL_HTML = `
     <button class="pn-btn" id="pn-refresh">刷新</button>
     <span class="pn-meta" id="pn-meta"></span>
   </div>
+  <div class="pn-upload">
+    <input class="pn-input" id="pn-up-name" placeholder="角色名（如 雷电将军）" />
+    <input type="file" id="pn-up-file" multiple accept="image/*" />
+    <button class="pn-btn primary" id="pn-up-btn">上传</button>
+    <span class="pn-up-msg" id="pn-up-msg"></span>
+  </div>
   <div class="pn-cards" id="pn-cards"><div class="pn-empty">加载中…</div></div>
 </div>
 `
@@ -332,6 +338,11 @@ const PANEL_STYLE = `
 .pn-name { font-size: 14px; font-weight: 600; color: var(--g-text, #333); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pn-count { margin-top: 2px; font-size: 12px; color: var(--g-muted, #8a93a3); }
 .pn-empty { text-align: center; color: var(--g-muted, #8a93a3); padding: 28px 0; grid-column: 1 / -1; }
+.pn-upload { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; padding: 10px 12px; border-radius: 10px; border: 1px dashed var(--g-border, #d8dde6); background: rgba(76, 139, 245, 0.04); }
+.pn-upload .pn-btn.primary { background: #4c8bf5; border-color: #4c8bf5; color: #fff; }
+.pn-up-msg { font-size: 12px; color: var(--g-muted, #8a93a3); }
+.pn-up-msg.ok { color: #1a7f37; }
+.pn-up-msg.err { color: #d43f3f; }
 .pn-modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 999; }
 .pn-modal-mask.on { display: flex; }
 .pn-modal { width: 640px; max-height: 80vh; overflow: auto; background: var(--g-card, #fff); border-radius: 14px; padding: 16px; }
@@ -404,6 +415,27 @@ const PANEL_SCRIPT = `
 
   el('pn-game').addEventListener('change', e => { currentGame = e.target.value; load() })
   el('pn-refresh').addEventListener('click', load)
+  el('pn-up-btn').addEventListener('click', async () => {
+    const name = el('pn-up-name').value.trim()
+    const fileInput = el('pn-up-file')
+    if (!name) { el('pn-up-msg').className = 'pn-up-msg err'; el('pn-up-msg').textContent = '请先填角色名'; return }
+    if (!fileInput.files.length) { el('pn-up-msg').className = 'pn-up-msg err'; el('pn-up-msg').textContent = '请选择图片'; return }
+    const fd = new FormData()
+    fd.append('game', currentGame)
+    fd.append('name', name)
+    for (const f of fileInput.files) fd.append('files', f)
+    el('pn-up-msg').className = 'pn-up-msg'; el('pn-up-msg').textContent = '上传中…'
+    try {
+      const res = await fetch(g.apiBase + '/panel/upload', { method: 'POST', headers: { [g.tokenKey || 'guoba-access-token']: g.token || '' }, body: fd })
+      const json = await res.json()
+      el('pn-up-msg').className = 'pn-up-msg ' + (json?.ok ? 'ok' : 'err')
+      el('pn-up-msg').textContent = json?.message || (json?.ok ? '上传成功' : '上传失败')
+      if (json?.ok) { el('pn-up-name').value = ''; fileInput.value = ''; load() }
+    } catch (err) {
+      el('pn-up-msg').className = 'pn-up-msg err'
+      el('pn-up-msg').textContent = '上传失败：' + (err && err.message || err)
+    }
+  })
   load()
 })();
 `
@@ -799,6 +831,18 @@ export function init(ctx) {
     } catch (err) {
       ctx.logger?.warn?.(`[HoYoGet][guoba] 读取面板图失败：${err?.message || err}`)
       res.status(404).end()
+    }
+  })
+
+  ctx.registerApi('post', '/panel/upload', async (req, res) => {
+    try {
+      const { saveUploadedFiles } = await import('../system/panel_store.js')
+      const b = req.body || {}
+      const r = saveUploadedFiles(b.game, b.name, req.files)
+      res.json({ ok: true, code: 0, message: `已保存 ${r.saved.length} 张` + (r.skipped.length ? `，跳过 ${r.skipped.length} 张非图片` : ''), result: r })
+    } catch (err) {
+      ctx.logger?.warn?.(`[HoYoGet][guoba] 上传面板图失败：${err?.message || err}`)
+      res.json({ ok: false, code: -1, message: err?.message || String(err), result: null })
     }
   })
 
