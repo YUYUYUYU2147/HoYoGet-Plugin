@@ -705,6 +705,10 @@ async function bbsVerifyJson(e, account, url, body = null, query = '', challenge
 // 不发请求、不带凭证，几秒就能判定，不可用就整轮跳过 /solve 直接走手动。
 let autoVerifyProbe = { at: 0, ok: false };
 const AUTO_VERIFY_PROBE_TTL = 5 * 60 * 1000;
+/* 探测失败时的重试间隔要短得多：服务常常是「签到撞码时才被手动拉起」，
+   若沿用 5 分钟，刚起好的服务会被判成不可用、整轮只能走手动。
+   成功结果仍缓存 5 分钟，避免每个板块都去连一次。 */
+const AUTO_VERIFY_PROBE_FAIL_TTL = 30 * 1000;
 const AUTO_VERIFY_PROBE_TIMEOUT = 2000;
 
 function probeTcp(host, port, timeout = AUTO_VERIFY_PROBE_TIMEOUT) {
@@ -729,7 +733,8 @@ async function autoVerifyAvailable() {
     // 显式配成空串 = 主动关掉了自动过码，别再退回默认端口去探
     if (!addr) return false;
     const now = Date.now();
-    if (now - autoVerifyProbe.at < AUTO_VERIFY_PROBE_TTL) return autoVerifyProbe.ok;
+    const ttl = autoVerifyProbe.ok ? AUTO_VERIFY_PROBE_TTL : AUTO_VERIFY_PROBE_FAIL_TTL;
+    if (now - autoVerifyProbe.at < ttl) return autoVerifyProbe.ok;
     let host = '127.0.0.1', port = 2149;
     try {
         const u = new URL(addr);

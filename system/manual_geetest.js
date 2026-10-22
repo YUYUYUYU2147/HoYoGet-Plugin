@@ -165,10 +165,15 @@ async function startQuickTunnel(port) {
       tunnelPromise = null;
       resolve(value);
     };
+    /* cloudflared 启动时会把同一个地址重复写好几遍（实测 1 秒内十几条），
+       这里按「第一条匹配」只处理一次：settled 之后直接忽略后续 chunk，
+       避免同一地址被反复打印、也避免重复 finish。 */
     const onData = (chunk) => {
+      if (settled) return;
       buf += String(chunk);
       const m = buf.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/);
       if (!m) return;
+      if (tunnelUrl === m[0]) return;
       tunnelUrl = m[0];
       logger.mark(`[HoYoGet][manual_gt] 临时公网地址：${tunnelUrl}（trycloudflare 隧道，重启后地址会变）`);
       finish(tunnelUrl);
