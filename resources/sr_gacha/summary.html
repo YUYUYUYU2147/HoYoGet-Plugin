@@ -6,6 +6,36 @@
   </head>
   <body {{sys.scale}}>
     <div class="container">
+      {{if pools && pools.length}}
+      <div class="ov_box">
+        <div class="ov_head">
+          <span class="ov_title">卡池总览</span>
+          <span class="ov_uid">UID: {{uid}}</span>
+        </div>
+        <div class="ov_table">
+          <div class="ov_row ov_th">
+            <span class="ov_c1">卡池</span>
+            <span class="ov_c2">抽数</span>
+            <span class="ov_c3">五星</span>
+            <span class="ov_c4">五星平均</span>
+            <span class="ov_c5">不歪率</span>
+            <span class="ov_c6">UP平均</span>
+            <span class="ov_c7">垫抽</span>
+          </div>
+          {{each pools pool}}
+          <div class="ov_row">
+            <span class="ov_c1"><i class="ov_dot label_{{pool.labelClass}}"></i>{{pool.name}}</span>
+            <span class="ov_c2">{{pool.allNumText}}</span>
+            <span class="ov_c3">{{pool.fiveNumText}}</span>
+            <span class="ov_c4">{{pool.fiveAvg}}</span>
+            <span class="ov_c5">{{pool.upRate}}</span>
+            <span class="ov_c6">{{pool.upAvgText}}</span>
+            <span class="ov_c7">{{pool.pityText}}</span>
+          </div>
+          {{/each}}
+        </div>
+      </div>
+      {{/if}}
       {{each pools pool}}
       <div class="info_box">
         <div class="head_box">

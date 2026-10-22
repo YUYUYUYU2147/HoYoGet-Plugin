@@ -692,6 +692,12 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
       fiveAvg,
       firstTime: fiveLog.length ? fiveLog[fiveLog.length - 1].fullDate : '--',
       lastTime: fiveLog.length ? fiveLog[0].fullDate : '--',
+      /* 总览表用的精简字段：模板不直接索引 line[1][1]，避免数据不全时炸模板 */
+      upAvgText: upAvg,
+      fourPityText: fourPity || '--',
+      allNumText: totalPulls || 0,
+      fiveNumText: fiveNum || 0,
+      pityText: pity || 0,
     }
   }).sort((a, b) => {
     const ia = conf.poolOrder.indexOf(a.key)
