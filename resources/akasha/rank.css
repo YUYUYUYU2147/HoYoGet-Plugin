@@ -21,8 +21,9 @@ body {
   justify-content: space-between;
   padding: 20px 24px;
   border-radius: 16px;
-  background: linear-gradient(120deg, rgba(211, 188, 142, .14), rgba(120, 160, 220, .08));
-  border: 1px solid rgba(211, 188, 142, .28);
+  background: linear-gradient(120deg, rgba(38, 33, 24, .88), rgba(18, 20, 24, .86));
+  border: 1px solid rgba(211, 188, 142, .3);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .35);
 }
 
 .title {
@@ -191,104 +192,6 @@ body {
 }
 .board-meta .count { font-size: 12px; color: rgba(231, 235, 243, .45); }
 
-/* 「我的全球排名」行：多一列头像 */
-/* 我的排名：名次 / 头像 / 角色 / 方案 / 全球名次 */
-.myrank .row { grid-template-columns: 50px 58px 1fr 260px 250px; }
-.row .avatar img {
-  width: 46px;
-  height: 46px;
-  border-radius: 10px;
-  object-fit: cover;
-  display: block;
-  background: rgba(255, 255, 255, .06);
-}
-
-.legend-tip {
-  margin-top: -4px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: rgba(211, 188, 142, .10);
-  border-left: 3px solid rgba(211, 188, 142, .55);
-  color: rgba(231, 235, 243, .62);
-  line-height: 1.6;
-}
-
-/* 「我的排名」行内的期望伤害 */
-.dmg-inline {
-  color: #ff9a76 !important;
-  font-weight: 900;
-  background: rgba(255, 154, 118, .12) !important;
-}
-
-/* 「我的排名」右列：第 N 名 / 共 N 人 / 超过 N% */
-.myrank .score .rank-line {
-  display: flex;
-  align-items: baseline;
-  justify-content: flex-end;
-  gap: 5px;
-  white-space: nowrap;
-}
-.myrank .score .dmg { font-size: 19px; }
-.dmg-sep { font-size: 13px; color: rgba(231, 235, 243, .35); }
-.dmg-total { font-size: 12px; color: rgba(231, 235, 243, .55); }
-.dmg-beat {
-  margin-top: 3px;
-  font-size: 11px;
-  font-weight: 800;
-  color: #6fe3b0;
-}
-
-/* 「我的排名」单行四段：角色 / 方案 / 伤害 / 名次 */
-.myrank .row {
-  grid-template-columns: 46px 54px 170px 1fr 110px 260px;
-  gap: 12px;
-}
-.char-cell {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-.char-cell .nick {
-  font-size: 17px;
-  font-weight: 900;
-  color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.cons-chip {
-  flex: none;
-  padding: 1px 7px;
-  border-radius: 5px;
-  font-size: 11px;
-  font-weight: 900;
-  color: #d3bc8e;
-  background: rgba(211, 188, 142, .14);
-  border: 1px solid rgba(211, 188, 142, .28);
-}
-.plan-cell {
-  font-size: 13px;
-  color: rgba(231, 235, 243, .72);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.dmg-cell {
-  text-align: right;
-  font-size: 17px;
-  font-weight: 900;
-  color: #ff9a76;
-  white-space: nowrap;
-}
-.score-cell {
-  text-align: right;
-  white-space: nowrap;
-}
-.score-cell .dmg { font-size: 16px; font-weight: 900; color: #fff; }
-.score-cell .dmg-total { font-size: 11px; color: rgba(231, 235, 243, .5); margin-left: 4px; }
-.score-cell .dmg-beat { display: block; margin-top: 2px; font-size: 11px; font-weight: 800; color: #6fe3b0; }
-
 /* ───── 我的幽境排名 ───── */
 .mystygian .hero {
   margin-top: 20px;
@@ -319,10 +222,12 @@ body {
 .stat {
   padding: 18px 20px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, .045);
-  border: 1px solid rgba(255, 255, 255, .08);
+  background: rgba(18, 20, 24, .84);
+  border: 1px solid rgba(255, 255, 255, .1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .35);
   text-align: center;
 }
+.stat, .stat * { text-shadow: 0 1px 3px rgba(0, 0, 0, .55); }
 .stat-value {
   font-size: 24px;
   font-weight: 900;
@@ -332,7 +237,7 @@ body {
 .stat-label {
   margin-top: 7px;
   font-size: 12px;
-  color: rgba(231, 235, 243, .5);
+  color: rgba(231, 235, 243, .8);
 }
 
 /* ───── 圣遗物排行 ───── */
@@ -342,14 +247,17 @@ body {
   grid-template-columns: 40px 60px 200px 130px 1fr 90px;
   align-items: center;
   gap: 12px;
-  padding: 9px 14px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, .04);
-  border: 1px solid rgba(255, 255, 255, .07);
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: rgba(18, 20, 24, .84);
+  border: 1px solid rgba(255, 255, 255, .1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .35);
 }
-.art-row.top1 { background: linear-gradient(90deg, rgba(255, 207, 92, .14), rgba(255,255,255,.04)); border-color: rgba(255, 207, 92, .30); }
-.art-row.top2 { background: linear-gradient(90deg, rgba(192, 200, 215, .10), rgba(255,255,255,.04)); border-color: rgba(192, 200, 215, .24); }
-.art-row.top3 { background: linear-gradient(90deg, rgba(205, 150, 100, .12), rgba(255,255,255,.04)); border-color: rgba(205, 150, 100, .24); }
+.art-row.top1 { background: linear-gradient(90deg, rgba(120, 96, 12, .92), rgba(18, 20, 24, .9)); border-color: rgba(255, 207, 92, .34); }
+.art-row.top2 { background: linear-gradient(90deg, rgba(86, 92, 104, .92), rgba(18, 20, 24, .9)); border-color: rgba(192, 200, 215, .3); }
+.art-row.top3 { background: linear-gradient(90deg, rgba(112, 66, 32, .92), rgba(18, 20, 24, .9)); border-color: rgba(205, 150, 100, .3); }
+/* 圣遗物行内文字加阴影，压在背景图上也能看清 */
+.art-row, .art-row * { text-shadow: 0 1px 3px rgba(0, 0, 0, .55); }
 .art-icon { position: relative; width: 48px; height: 48px; }
 .art-icon img { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; display: block; background: rgba(255,255,255,.06); }
 .art-stars {
@@ -359,16 +267,227 @@ body {
   color: #14131a; background: #ffcf5c;
 }
 .art-name { font-size: 14px; font-weight: 900; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.art-set { margin-top: 3px; font-size: 11px; color: rgba(231,235,243,.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.art-set { margin-top: 3px; font-size: 11.5px; color: rgba(231,235,243,.78); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .art-main { display: flex; flex-direction: column; }
-.main-name { font-size: 11px; color: rgba(231,235,243,.5); }
+.main-name { font-size: 11.5px; color: rgba(231,235,243,.78); }
 .main-value { font-size: 14px; font-weight: 900; color: #ffcf5c; }
 .art-subs { display: flex; flex-wrap: wrap; gap: 4px; }
 .sub-chip {
   padding: 1px 6px; border-radius: 4px;
-  font-size: 10px; color: rgba(231,235,243,.7);
-  background: rgba(255,255,255,.07);
+  font-size: 10.5px; color: rgba(245,247,250,.92);
+  background: rgba(255,255,255,.13);
 }
 .art-cv { text-align: right; }
 .cv-value { font-size: 19px; font-weight: 900; color: #ff9a76; line-height: 1.1; }
-.cv-label { margin-top: 2px; font-size: 10px; color: rgba(231,235,243,.45); }
+.cv-label { margin-top: 2px; font-size: 10.5px; color: rgba(231,235,243,.7); }
+
+/* ───── 我的全球排名：Apple 风格 ─────
+   shotium 无 JS，行内一律用 block/inline-block，不用 flex/grid */
+
+/* 我的排名：名次 / 头像 / 角色 / 方案 / 伤害 / 全球名次 */
+.myrank .row,
+.myrank .row * { text-shadow: 0 1px 3px rgba(0, 0, 0, .55); }
+.myrank .row {
+  display: block;
+  padding: 14px 20px;
+  margin-bottom: 8px;
+  border-radius: 16px;
+  background: rgba(18, 20, 24, .82);
+  border: 1px solid rgba(255, 255, 255, .1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .35);
+  white-space: nowrap;
+  line-height: 1;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.myrank .row.top1 { background: linear-gradient(90deg, rgba(120, 96, 12, .92), rgba(18, 20, 24, .88)); border-color: rgba(255, 214, 10, .38); }
+.myrank .row.top2 { background: linear-gradient(90deg, rgba(86, 92, 104, .92), rgba(18, 20, 24, .88)); border-color: rgba(209, 209, 214, .3); }
+.myrank .row.top3 { background: linear-gradient(90deg, rgba(112, 66, 32, .92), rgba(18, 20, 24, .88)); border-color: rgba(224, 138, 75, .3); }
+
+.myrank .row > * { display: inline-block; vertical-align: middle; }
+
+.myrank .rank {
+  width: 44px;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -1.2px;
+  color: var(--ap-mute, #98989d);
+  font-variant-numeric: tabular-nums;
+}
+.top1 .rank { color: #ffd60a; }
+.top2 .rank { color: #d1d1d6; }
+.top3 .rank { color: #e08a4b; }
+
+.myrank .avatar { width: 54px; }
+.row .avatar img {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  object-fit: cover;
+  display: block;
+  background: rgba(255, 255, 255, .06);
+  box-shadow: 0 0 0 .5px rgba(255, 255, 255, .18);
+}
+
+.myrank .char-cell {
+  width: 178px;
+  margin-left: 12px;
+}
+.char-cell .nick {
+  display: block;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -.3px;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.char-cell .cons-chip {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #ffd60a;
+  background: rgba(255, 214, 10, .12);
+}
+
+.myrank .plan-cell {
+  width: 210px;
+  padding-left: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ap-sub, #a1a1a6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.myrank .dmg-cell {
+  width: 116px;
+  text-align: right;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -.5px;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.myrank .score-cell {
+  width: 176px;
+  text-align: right;
+  white-space: nowrap;
+}
+.score-cell .rank-line {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+.score-cell .dmg { font-size: 15px; font-weight: 600; color: #fff; }
+.score-cell .dmg-total {
+  margin-left: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ap-mute, #98989d);
+}
+.score-cell .beat-line {
+  display: block;
+  margin-top: 7px;
+}
+/* 超越百分比：细进度条 + 数字，宽度由 --beat 驱动 */
+.score-cell .beat-bar {
+  display: inline-block;
+  vertical-align: middle;
+  width: 92px;
+  height: 3px;
+  margin-right: 7px;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, var(--ap-green, #30d158), rgba(48, 209, 88, .35)) no-repeat,
+    rgba(255, 255, 255, .12);
+  background-size: var(--beat, 100%) 100%, 100% 100%;
+}
+.score-cell .dmg-beat {
+  display: inline-block;
+  vertical-align: middle;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ap-green, #30d158);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 「我的排名」行内的期望伤害 */
+.dmg-inline {
+  color: #ff9a76 !important;
+  font-weight: 900;
+  background: rgba(255, 154, 118, .12) !important;
+}
+
+.legend-tip {
+  margin-top: -4px;
+  padding: 9px 14px;
+  border-radius: 12px;
+  background: rgba(18, 20, 24, .78);
+  border-left: 2px solid rgba(10, 132, 255, .7);
+  color: var(--ap-mute, #98989d);
+  line-height: 1.65;
+}
+
+/* ───── 随机背景图 ─────
+   图铺在 .page 里、所有内容之上方的底层：
+   .page 用半透明遮罩压暗，文字压在最上面，拿不到图就是原来的深色底。 */
+.page { position: relative; overflow: hidden; }
+.bg-random {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  opacity: .9;
+  filter: saturate(1.05);
+  pointer-events: none;
+}
+.page::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(8, 11, 16, .46) 0%, rgba(8, 11, 16, .58) 55%, rgba(8, 11, 16, .68) 100%);
+  pointer-events: none;
+}
+.page > *:not(.bg-random) { position: relative; z-index: 2; }
+
+/* ───── 顶部玩家头像 + 昵称 ───── */
+.head-user { display: block; }
+.head-avatar {
+  display: inline-block;
+  vertical-align: middle;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 14px;
+  background: rgba(255, 255, 255, .08);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, .18), 0 4px 14px rgba(0, 0, 0, .45);
+}
+.head-user-text {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* 玩家签名：跟在等级/区域下面一行，超长省略 */
+.head-user .signature {
+  margin-top: 5px;
+  max-width: 640px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(231, 235, 243, .62);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

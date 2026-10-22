@@ -2,7 +2,8 @@ import lodash from "lodash"
 import moment from "moment"
 import { installMeta } from "../../installMeta.js"
 import AvatarUtil from "./AvatarUtil.js"
-import { Format, Data } from "#hoyo.miao"
+import Format from "../../components/Format.js"
+import Data from "../../components/Data.js"
 
 let chestInfo
 try {

@@ -1,6 +1,6 @@
 import fs from "node:fs"
 import lodash from "lodash"
-import { Data } from "#hoyo.miao"
+import Data from "./Data.js"
 
 let packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"))
 
@@ -50,6 +50,9 @@ const readLogFile = function(root, versionCount = 4) {
           }
         } else {
           if (!line.trim()) return
+          /* miao 插件已卸载时 logPath 指向不存在的目录，temp.logs 可能还没建好，
+             这里补一个空对象，避免 Cannot read properties of undefined */
+          if (!temp || !Array.isArray(temp.logs)) temp = { version: '', logs: [] }
           if (/^\*/.test(line)) {
             lastLine = {
               title: getLine(line),

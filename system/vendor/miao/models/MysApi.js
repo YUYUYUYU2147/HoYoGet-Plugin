@@ -1,5 +1,5 @@
 import fetch from "node-fetch"
-import { Version } from "#hoyo.miao"
+import Version from "../components/Version.js"
 import { Button, User } from "#hoyo.miao.models"
 
 const PATCHED_GET_COOKIE = Symbol.for("miao-plugin.mysInfo.getCookie")

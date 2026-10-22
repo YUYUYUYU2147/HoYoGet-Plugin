@@ -86,6 +86,14 @@ function findFaceUrl(data, recursive = true) {
     return '';
 }
 
+/** 签名：原神/星铁 index 里叫 signature，崩三是 sign，绝区零在 role 下 */
+function findSignature(d) {
+    return String(
+        d?.signature || d?.sign || d?.role?.signature || d?.role?.sign ||
+        d?.player_info?.signature || d?.avatar_info?.signature || ''
+    ).trim();
+}
+
 /** 昵称：各游戏字段位置也不一样 */
 function findNickname(d) {
     return String(
@@ -101,10 +109,10 @@ function findNickname(d) {
  * @param {string|number} uid 该游戏的 uid（必须是当前游戏自己的，不能混用）
  * @param {string} game gs | sr | zzz | bh3
  * @param {object} auth 取崩三资料时必填：{ headers, server }
- * @returns {Promise<{nickname:string, avatar:string, serverName:string, userLevel:number}>}
+ * @returns {Promise<{nickname:string, avatar:string, signature:string, serverName:string, userLevel:number}>}
  */
 export async function getRoleProfile(e, uid, game, auth = {}) {
-    const out = { nickname: '', avatar: '', serverName: '', userLevel: 0 };
+    const out = { nickname: '', avatar: '', signature: '', serverName: '', userLevel: 0 };
     if (!uid) return out;
     out.serverName = serverName(mhy.getServer(String(uid), game));
     // e.game 必须先设好：(await getMysInfo()).get 内部靠它选游戏和对应的 hostRecord
@@ -135,6 +143,7 @@ export async function getRoleProfile(e, uid, game, auth = {}) {
         const d = res.data;
         out.nickname = findNickname(d);
         out.avatar = findFaceUrl(d);
+        out.signature = findSignature(d);
         out.userLevel = Number(d?.role?.level || d?.level || d?.player_info?.level || 0) || 0;
         // 接口回传的 region 比我们推算的更准（有B服/渠道服时推算不出来）
         const region = d.region || d.role?.region || '';
@@ -150,6 +159,7 @@ export async function getRoleProfile(e, uid, game, auth = {}) {
             if (bi?.retcode === 0 && bi?.data) {
                 out.nickname = findNickname(bi.data) || out.nickname;
                 out.avatar = findFaceUrl(bi.data) || out.avatar;
+                out.signature = out.signature || findSignature(bi.data);
                 out.userLevel = Number(bi.data?.level || 0) || out.userLevel;
             }
         }

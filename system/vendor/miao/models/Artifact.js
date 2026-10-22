@@ -5,7 +5,7 @@ import Base from "./Base.js"
 import ArtisMark from "./artis/ArtisMark.js"
 import ArtisAttr from "./artis/ArtisAttr.js"
 import { ArtifactSet } from "./index.js"
-import { Meta } from "#hoyo.miao"
+import Meta from "../components/Meta.js"
 
 class Artifact extends Base {
   constructor(data, game = "gs") {

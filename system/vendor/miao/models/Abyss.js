@@ -5,7 +5,7 @@
 import lodash from "lodash"
 import moment from "moment"
 import Base from "./Base.js"
-import { Data } from "#hoyo.miao"
+import Data from "../components/Data.js"
 
 moment.locale("zh-cn")
 

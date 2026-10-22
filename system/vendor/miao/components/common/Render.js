@@ -1,4 +1,5 @@
-import { Version, Cfg } from "#hoyo.miao"
+import Version from "../../wiki/components/Version.js"
+import Cfg from "../Cfg.js"
 import { miaoPath } from "#hoyo.miao.path"
 
 const Render = {

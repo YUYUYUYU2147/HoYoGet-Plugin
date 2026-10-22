@@ -1,6 +1,6 @@
 import lodash from "lodash"
 import Base from "../Base.js"
-import { Format } from "#hoyo.miao"
+import Format from "../../components/Format.js"
 
 const baseAttr = {
   gs: "atk,def,hp,mastery,recharge,cpct,cdmg,dmg,phy,heal,shield,diffelem".split(","),

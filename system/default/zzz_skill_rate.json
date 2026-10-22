@@ -2,7 +2,7 @@
  "_comment": "绝区零技能倍率数据。数值来源为社区依据官方数值整理的公开数据表（ZZZ-Plugin dist/model/damage/character/*/data.json），非米游社接口返回。仅为数值，不含其计算引擎与评分实现。",
  "_regenerate": "node tools/extract_zzz_skill_rate.mjs（需已安装 ZZZ-Plugin）",
  "_ops": "ops 是多段技能的组合关系：{op:\"add\",key} 表示该招伤害还要加上 key 那一招的完整伤害；{op:\"x\",n} 表示整条伤害乘 n。取自 calc.js 的 after 回调。",
- "generatedAt": "2026-10-17T09:18:45.044Z",
+ "generatedAt": "2026-10-22T11:04:38.369Z",
  "count": 45,
  "skillCount": 382,
  "chars": {

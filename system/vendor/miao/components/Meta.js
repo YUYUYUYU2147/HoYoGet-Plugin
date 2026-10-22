@@ -1,5 +1,5 @@
 import lodash from "lodash"
-import { Data } from "#hoyo.miao"
+import Data from "./Data.js"
 
 const MetaStore = {}
 

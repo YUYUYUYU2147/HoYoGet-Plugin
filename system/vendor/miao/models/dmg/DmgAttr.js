@@ -5,7 +5,8 @@ import lodash from "lodash"
 import AttrItem from "./AttrItem.js"
 import DmgMastery from "./DmgMastery.js"
 import { eleBaseDmg } from "./DmgCalcMeta.js"
-import { Format, Meta } from "#hoyo.miao"
+import Format from "../../components/Format.js"
+import Meta from "../../components/Meta.js"
 
 let DmgAttr = {
   // 计算并返回指定属性值

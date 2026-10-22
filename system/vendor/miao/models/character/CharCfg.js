@@ -1,7 +1,8 @@
 import fs from "node:fs"
 import lodash from "lodash"
 import { installPromise } from "../../installMeta.js"
-import { Cfg, Data } from "#hoyo.miao"
+import Cfg from "../../components/Cfg.js"
+import Data from "../../components/Data.js"
 import { miaoPath } from "#hoyo.miao.path"
 
 let cfgMap = {

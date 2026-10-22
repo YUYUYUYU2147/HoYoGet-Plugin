@@ -1,5 +1,6 @@
 import lodash from "lodash"
-import { Format, Meta } from "#hoyo.miao"
+import Format from "../../components/Format.js"
+import Meta from "../../components/Meta.js"
 
 let AttrGS = {
   getMain(id, level, star) {

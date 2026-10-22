@@ -2,7 +2,7 @@ import lodash from "lodash"
 import CharImg from "../character/CharImg.js"
 import Serv from "../serv/Serv.js"
 import AvatarUtil from "./AvatarUtil.js"
-import { Cfg } from "#hoyo.miao"
+import Cfg from "../../components/Cfg.js"
 
 const ProfileAvatar = {
 

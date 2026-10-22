@@ -1,6 +1,8 @@
 import lodash from "lodash"
 import { artifactMainIdMapping, propertyType2attrName, fixedAttrNames } from "./MysPanelMappings.js"
-import { Format, Meta, Data } from "#hoyo.miao"
+import Format from "../../../components/Format.js"
+import Meta from "../../../components/Meta.js"
+import Data from "../../../components/Data.js"
 import { Character, Artifact, Weapon } from "#hoyo.miao.models"
 
 let MysPanelData = {

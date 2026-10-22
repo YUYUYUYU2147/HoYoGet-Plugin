@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { createHash } from 'node:crypto'
-import { render, mhy, pluginPriority } from '#HoYoGet'
+import { render, mhy, pluginPriority, makeForwardMsg } from '#HoYoGet'
 import { buildIsUP } from '../../system/join_isup.mjs'
 // === 跨插件依赖：genshin 插件 ===
 //
@@ -134,8 +134,10 @@ async function getMiaoModels() {
   }
   if (!missingGenshinModules.has('miao-plugin/models')) {
     missingGenshinModules.add('miao-plugin/models')
-    logger.error(`[HoYoGet][sr_gacha] 未能在 miao-plugin 中找到 models/index.js（${lastErr?.message || lastErr}）。`
-      + '抽卡卡的图标将退回本地约定路径，不影响其他功能。')
+    /* 内部已内置 models（#hoyo.miao.models），只有连内置都失败才会走到这里。
+       miao-plugin 被卸载属于正常部署，记 debug 而不是 error，避免刷屏。 */
+    logger.debug?.(`[HoYoGet][sr_gacha] 外部 miao-plugin 不可用（${lastErr?.message || lastErr}），`
+      + '改用本地约定路径取图标。')
   }
   miaoModelsCache = { Character: null, Weapon: null }
   return miaoModelsCache
@@ -2145,11 +2147,14 @@ export class sr_gacha extends plugin {
       name: '[米哈游]星铁抽卡记录',
       dsc: '星铁抽卡记录查询与更新',
       event: 'message',
-      priority: pluginPriority('sr_gacha', 1),
+      priority: pluginPriority('sr_gacha', Number.MIN_SAFE_INTEGER),
       rule: [
         // 强制前缀模式：星铁抽卡链接必须带 #米哈游星铁抽卡链接 前缀才处理。
         // 不再兜底自动识别链接，原神/星铁等链接默认交给 genshin 插件，避免抢链接冲突
         { reg: '^#*米哈游(星铁|崩铁)?抽卡帮助$', fnc: 'help' },
+        // 不带「米哈游」前缀：#星铁抽卡帮助 / 星铁抽卡帮助 / %星铁抽卡帮助
+        // 必须带游戏名，否则会吃掉「抽卡帮助」这类无归属写法与绝区零的规则。
+        { reg: '^[#*%％]?[ \t]*(?:星铁|崩铁|星穹铁道|sr|SR)[ \t]*抽卡帮助$', fnc: 'help' },
         { reg: '^#*米哈游(星铁|崩铁)?抽卡链接', fnc: 'gachaLink' },
         { reg: '^#*米哈游(星铁|崩铁)?(刷新|更新)抽卡记录$', fnc: 'refresh' },
         { reg: '^#*米哈游(星铁|崩铁)?(抽卡记录|抽卡统计)$', fnc: 'summary' },
@@ -2655,29 +2660,36 @@ export class sr_gacha extends plugin {
   }
 
   async help(e) {
-    // 全角空格对齐在不同字体下会错位，改为「指令 —— 说明」单行式，同类指令用 / 合并
-    return e.reply([
-      '【#米哈游星铁抽卡帮助】',
-      '',
-      '更新数据',
-      '#米哈游星铁更新抽卡记录 —— 用 ck 刷新抽卡数据',
-      '#米哈游星铁抽卡链接 <链接> —— 官方链接拉最近几天的逐抽记录',
-      '#米哈游更新小助手抽卡记录 —— 小助手（lelaer）云端全量：直连其 gachabackup 库（含四星逐抽；需装 mysql2 且服务器 IP 在 RDS 白名单）',
-      '#米哈游星铁导入小助手记录 <UID> —— 小助手全量离线导入：读本机 data/sr_gacha/sr_<UID>_full.json',
-      '#米哈游更新工坊抽卡记录 / #米哈游星铁更新星穹工坊记录 —— 星穹工坊（lingyuan）云端，补历史五星与 is_up（与小助手非同一后端）',
-      '#米哈游绑定小助手 <id> —— 一般用不到，union_id 可选、不绑定也能同步',
-      '',
-      '查询',
-      '#米哈游星铁抽卡记录 —— 抽卡总览统计',
-      '#米哈游星铁角色记录 / #米哈游星铁武器记录 —— 角色、光锥卡池进度',
-      '#米哈游星铁角色统计 / #米哈游星铁武器统计 —— 工坊风格统计卡',
-      '#米哈游星铁联动角色记录 / #米哈游星铁联动武器记录 —— 联动卡池进度',
-      '#米哈游星铁常驻记录 —— 常驻卡池统计',
-      '',
-      '提示：米哈游即可（不再用旧前缀），星铁可写作 崩铁。',
-      '不带米哈游前缀的跃迁记录链接由 genshin 插件处理，互不冲突。',
-      '小助手（lelaer）云端全量含四星逐抽见 #米哈游星铁导入小助手记录（需先导出 data/sr_gacha/sr_<UID>_full.json）；工坊（lingyuan）在线同步见 #米哈游更新小助手抽卡记录 / #米哈游星铁更新星穹工坊记录。',
-    ].join('\n'))
+    /* 太多行，直接刷屏；改成合并转发，按「更新 / 查询 / 提示」分三节。
+       连接器不支持合并转发时 makeForwardMsg 会内部退回纯文本，不会发不出去。 */
+    const nodes = [
+      [
+        '【#米哈游星铁抽卡帮助】',
+        '',
+        '更新数据',
+        '#米哈游星铁更新抽卡记录 —— 用 ck 刷新抽卡数据',
+        '#米哈游星铁抽卡链接 <链接> —— 官方链接拉最近几天的逐抽记录',
+        '#米哈游更新小助手抽卡记录 —— 小助手（lelaer）云端全量：直连其 gachabackup 库（含四星逐抽；需装 mysql2 且服务器 IP 在 RDS 白名单）',
+        '#米哈游星铁导入小助手记录 <UID> —— 小助手全量离线导入：读本机 data/sr_gacha/sr_<UID>_full.json',
+        '#米哈游更新工坊抽卡记录 / #米哈游星铁更新星穹工坊记录 —— 星穹工坊（lingyuan）云端，补历史五星与 is_up（与小助手非同一后端）',
+        '#米哈游绑定小助手 <id> —— 一般用不到，union_id 可选、不绑定也能同步',
+      ].join('\n'),
+      [
+        '查询',
+        '#米哈游星铁抽卡记录 —— 抽卡总览统计',
+        '#米哈游星铁角色记录 / #米哈游星铁武器记录 —— 角色、光锥卡池进度',
+        '#米哈游星铁角色统计 / #米哈游星铁武器统计 —— 工坊风格统计卡',
+        '#米哈游星铁联动角色记录 / #米哈游星铁联动武器记录 —— 联动卡池进度',
+        '#米哈游星铁常驻记录 —— 常驻卡池统计',
+      ].join('\n'),
+      [
+        '提示',
+        '米哈游即可（不再用旧前缀），星铁可写作 崩铁。',
+        '不带米哈游前缀的跃迁记录链接由 genshin 插件处理，互不冲突。',
+        '小助手（lelaer）云端全量含四星逐抽见 #米哈游星铁导入小助手记录（需先导出 data/sr_gacha/sr_<UID>_full.json）；工坊（lingyuan）在线同步见 #米哈游更新小助手抽卡记录 / #米哈游星铁更新星穹工坊记录。',
+      ].join('\n'),
+    ]
+    return e.reply(await makeForwardMsg(e, nodes, '星铁抽卡帮助'))
   }
 }
 

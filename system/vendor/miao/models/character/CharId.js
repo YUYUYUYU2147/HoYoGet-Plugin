@@ -2,7 +2,9 @@
  * 角色别名及角色ID相关
  */
 import lodash from "lodash"
-import { Data, Format, Meta } from "#hoyo.miao"
+import Data from "../../components/Data.js"
+import Format from "../../components/Format.js"
+import Meta from "../../components/Meta.js"
 
 async function init() {
   let { diyCfg } = await Data.importCfg("character")

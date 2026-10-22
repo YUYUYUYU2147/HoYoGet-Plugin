@@ -1,6 +1,6 @@
 import lodash from "lodash"
 import { Character } from "#hoyo.miao.models"
-import { Data } from "#hoyo.miao"
+import Data from "../../../components/Data.js"
 
 let MiaoData = {
   setAvatar(player, ds) {

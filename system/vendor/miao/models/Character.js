@@ -11,7 +11,10 @@ import CharCfg from "./character/CharCfg.js"
 import CharImg from "./character/CharImg.js"
 import CharMeta from "./character/CharMeta.js"
 import CharTalent from "./character/CharTalent.js"
-import { Data, Format, Cfg, Meta } from "#hoyo.miao"
+import Data from "../components/Data.js"
+import Format from "../components/Format.js"
+import Cfg from "../components/Cfg.js"
+import Meta from "../components/Meta.js"
 
 let metaKey = "abbr,star,elem,weapon,talentId,talentCons,eta".split(",")
 const detailKey = "title,allegiance,birth,astro,desc,cncv,jpcv,costume,baseAttr,growAttr,materials,talent,talentData,cons,passive,attr,sp".split(",")

@@ -1,7 +1,9 @@
 import lodash from "lodash"
 import ArtisMarkCfg from "./ArtisMarkCfg.js"
 import { Artifact } from "#hoyo.miao.models"
-import { Data, Format, Meta } from "#hoyo.miao"
+import Data from "../../components/Data.js"
+import Format from "../../components/Format.js"
+import Meta from "../../components/Meta.js"
 
 let ArtisMark = {
   getKeyTitleMap(game = "gs") {

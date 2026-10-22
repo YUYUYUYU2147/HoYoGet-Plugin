@@ -1,6 +1,6 @@
 import lodash from "lodash"
 import MiaoData from "./MiaoData.js"
-import { Data } from "#hoyo.miao"
+import Data from "../../../components/Data.js"
 import { profileMd5Key, getMD5 } from '../../../redis-keys.js'
 
 export default {

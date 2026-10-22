@@ -1,6 +1,6 @@
 import lodash from "lodash"
 import ArtisMark from "./ArtisMark.js"
-import { Meta } from "#hoyo.miao"
+import Meta from "../../components/Meta.js"
 
 const weaponCfg = {
   磐岩结绿: {

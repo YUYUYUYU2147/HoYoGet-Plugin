@@ -9,7 +9,7 @@ import Base from "./Base.js"
 import MysAvatar from "./avatar/MysAvatar.js"
 import ProfileAvatar from "./avatar/ProfileAvatar.js"
 import { Avatar, ProfileRank, Character } from "./index.js"
-import { Data } from "#hoyo.miao"
+import Data from "../components/Data.js"
 
 Data.createDir("/data/UserData", "root")
 Data.createDir("/data/PlayerData/gs", "root")

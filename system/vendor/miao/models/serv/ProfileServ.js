@@ -1,6 +1,6 @@
 import lodash from "lodash"
 import Base from "../Base.js"
-import { Data } from "#hoyo.miao"
+import Data from "../../components/Data.js"
 
 let { sysCfg, diyCfg } = await Data.importCfg("profile")
 

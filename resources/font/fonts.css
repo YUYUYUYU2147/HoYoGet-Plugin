@@ -1,0 +1,22 @@
+/* 星铁/绝区零抽卡页、深渊摘要共用的字体入口。
+   原来这几个样式表 @import "../../../font/fonts.css"，指向插件根下的
+   font/ 目录，该目录并不存在，导致 Number / SR 字体全部回落系统字体。
+   这里在 resources/font/ 下补齐，路径与各样式表的相对位置一致。 */
+
+/* 数字字体（Comic Code / 米游社数字体） */
+@font-face {
+  font-family: "Number";
+  src: url("./tttgbnumber.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* 星铁正文字体 */
+@font-face {
+  font-family: "SR";
+  src: url("./SR.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}

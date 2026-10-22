@@ -6,7 +6,7 @@ import ArtisAttr from "../../models/artis/ArtisAttr.js"
 import { wikiPath } from "../components/index.js"
 import Base from "../../models/Base.js"
 import ArtifactSet from "../../models/ArtifactSet.js"
-import { Meta } from "#hoyo.miao"
+import Meta from "../../components/Meta.js"
 
 class Artifact extends Base {
   constructor(data, game = "gs") {

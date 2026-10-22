@@ -4,7 +4,7 @@
 import lodash from "lodash"
 import Base from "./Base.js"
 import { Artifact } from "./index.js"
-import { Meta } from "#hoyo.miao"
+import Meta from "../components/Meta.js"
 
 class ArtifactSet extends Base {
   constructor(data, game = "gs") {

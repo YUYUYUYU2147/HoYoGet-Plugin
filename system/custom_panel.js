@@ -20,10 +20,78 @@ export const CUSTOM_PANEL_ROOT = path.join(PLUGIN_ROOT, 'resources', 'hoyo_panel
 /** 裁掉左侧二维码信息栏后的缓存目录（自动生成，不入库） */
 export const CUSTOM_PANEL_CROP_ROOT = path.join(PLUGIN_ROOT, 'resources', 'hoyo_panel', 'images', 'panel_crop')
 
-const MIAO_RES = path.join(process.cwd(), 'plugins', 'miao-plugin', 'resources')
+/* 咕咕牛管理器（example/咕咕牛图库管理器.js）把面板图部署到 miao-plugin 的
+   resources/profile/normal-character/。miao 插件本身可能已被卸载，
+   但那个目录仍可能由咕咕牛管理器维护，所以这里做多候选：
+     1. config.panel_custom_art_dir（用户显式配置，优先）
+     2. plugins/miao-plugin/resources/profile/normal-character（咕咕牛默认位置）
+     3. 本插件 resources/hoyo_panel/images/panel/<game>（用户手动放图）
+   全部缺失时返回空串，调用方回落到官方立绘。 */
+/* 项目根：以插件根上推两级（plugins/<本插件>），不要依赖 process.cwd()
+   —— 从插件目录里跑脚本时 cwd 会变成插件根，路径就全错了。 */
+const YZ_ROOT = path.resolve(PLUGIN_ROOT, '..', '..')
+const MIAO_RES = path.join(YZ_ROOT, 'plugins', 'miao-plugin', 'resources')
+/** 咕咕牛图库目录候选（按优先级） */
+/* 配置通过 #HoYoGet 动态取，避免 system ↔ 入口的循环依赖 */
+let _cfgMod = null
+async function loadConfigFn() {
+  if (_cfgMod) return _cfgMod
+  try {
+    const m = await import('#HoYoGet')
+    _cfgMod = typeof m.config === 'function' ? m.config : () => ({})
+  } catch { _cfgMod = () => ({}) }
+  return _cfgMod
+}
+
+/* 同步版本：只读已缓存的配置；首次调用前由调用方预先 await primeCustomArtConfig() */
+let _cfgSnapshot = null
+export async function primeCustomArtConfig() {
+  if (_cfgSnapshot) return _cfgSnapshot
+  const fn = await loadConfigFn()
+  try { _cfgSnapshot = fn() || {} } catch { _cfgSnapshot = {} }
+  return _cfgSnapshot
+}
+function readConfigSafe() {
+  return _cfgSnapshot || {}
+}
+
+/* 咕咕牛图库在云崽 resources/CowCoos 下，按仓库分目录：
+     Miao-Plugin-MBT/{gs,sr}-character   主库
+     Miao-Plugin-MBT-2/gs-character      原神补充库
+     Miao-Plugin-MBT-3/sr-character      星铁补充库
+     Miao-Plugin-MBT-4/{gs,sr}-character 综合库
+     Communitys/<hash>/normal-character  社区投稿（不区分游戏）
+   另外 miao-plugin 被卸载前，咕咕牛管理器可能把图部署到它的 resources 下。 */
+const COWCOO_ROOT = path.join(YZ_ROOT, 'resources', 'CowCoos')
+const COWCOO_REPOS = ['Miao-Plugin-MBT', 'Miao-Plugin-MBT-2', 'Miao-Plugin-MBT-3', 'Miao-Plugin-MBT-4']
+
+function normalDirCandidates(game = 'gs') {
+  const g = game === 'sr' ? 'sr' : 'gs'
+  const out = []
+  try {
+    const conf = readConfigSafe() || {}
+    const custom = String(conf.panel_custom_art_dir || '').trim()
+    if (custom) out.push(path.resolve(YZ_ROOT, custom))
+  } catch { /* 配置读不到就跳过 */ }
+  // 咕咕牛图库主库与补充库
+  for (const repo of COWCOO_REPOS) {
+    out.push(path.join(COWCOO_ROOT, repo, `${g}-character`))
+  }
+  // 社区投稿（目录里没有游戏区分，gs/sr 都试）
+  try {
+    const community = path.join(COWCOO_ROOT, 'Communitys')
+    for (const name of fs.readdirSync(community)) {
+      if (name.endsWith('.json') || name.endsWith('.git')) continue
+      out.push(path.join(community, name, 'normal-character'))
+    }
+  } catch { /* 没有社区目录就跳过 */ }
+  // 老部署位置（miao 插件存在时咕咕牛管理器的目标）
+  out.push(path.join(MIAO_RES, 'profile', 'normal-character'))
+  return out
+}
 const NORMAL_DIR = path.join(MIAO_RES, 'profile', 'normal-character')
 
-/** 目录里挑一张图；没有返回空串 */
+/** 目录里挑一张图；没有返回空串。返回路径以 miao resources 为基准（`profile/normal-character/...`） */
 function pickInDir(dir) {
   try {
     if (!fs.statSync(dir).isDirectory()) return ''
@@ -31,6 +99,8 @@ function pickInDir(dir) {
     if (!files.length) return ''
     const file = files[Math.floor(Math.random() * files.length)]
     // 和 miao 一致：文件名里可能有空格/中文，拼进 src 前要编码
+    // 目录可能在插件外（咕咕牛自定义目录），统一按 basename 拼，
+    // 由 cropCustomPanelArt 用绝对路径实际读取
     return `profile/normal-character/${path.basename(dir)}/${encodeURIComponent(file)}`
   } catch {
     return ''
@@ -42,27 +112,31 @@ function pickInDir(dir) {
  * @param {string[]} names 依次尝试的角色名（正式名、别名）
  * @returns {string} 形如 profile/normal-character/雷电将军/%E9%9B%B7...webp
  */
-export function pickCustomPanelArt(names = []) {
+export function pickCustomPanelArt(names = [], game = 'gs') {
   const list = [...new Set(names.map(n => String(n || '').trim()).filter(Boolean))]
-  for (const name of list) {
-    for (const variant of [name, `「${name}」`, name.replace(/[「」]/g, '')]) {
-      const hit = pickInDir(path.join(NORMAL_DIR, variant))
-      if (hit) return hit
+  for (const base of normalDirCandidates(game)) {
+    for (const name of list) {
+      for (const variant of [name, `「${name}」`, name.replace(/[「」]/g, '')]) {
+        const hit = pickInDir(path.join(base, variant))
+        if (hit) return hit
+      }
     }
   }
   return ''
 }
 
 /** 该角色是否有自定义面板图（不随机，只判存在） */
-export function hasCustomPanelArt(names = []) {
+export function hasCustomPanelArt(names = [], game = 'gs') {
   const list = [...new Set(names.map(n => String(n || '').trim()).filter(Boolean))]
-  for (const name of list) {
-    for (const variant of [name, `「${name}」`, name.replace(/[「」]/g, '')]) {
-      try {
-        const dir = path.join(NORMAL_DIR, variant)
-        if (fs.statSync(dir).isDirectory()
-          && fs.readdirSync(dir).some(f => /\.(png|jpe?g|webp)$/i.test(f))) return true
-      } catch { /* 继续试下一个 */ }
+  for (const base of normalDirCandidates(game)) {
+    for (const name of list) {
+      for (const variant of [name, `「${name}」`, name.replace(/[「」]/g, '')]) {
+        try {
+          const dir = path.join(base, variant)
+          if (fs.statSync(dir).isDirectory()
+            && fs.readdirSync(dir).some(f => /\.(png|jpe?g|webp)$/i.test(f))) return true
+        } catch { /* 继续试下一个 */ }
+      }
     }
   }
   return false
@@ -132,9 +206,18 @@ export async function cropCustomPanelArt(splash = '', splashLocal = '', game = '
   if (!Number.isFinite(r) || r <= 0 || r >= 0.5) return ''
   const g = game === 'sr' ? 'sr' : 'gs'
   try {
-    const srcAbs = splashLocal
-      ? path.join(PLUGIN_ROOT, 'resources', decodeURIComponent(srcRel))
-      : path.join(MIAO_RES, decodeURIComponent(srcRel))
+    /* 咕咕牛目录可能被配置到插件外，按候选目录依次找原始文件 */
+    let srcAbs = ''
+    if (splashLocal) {
+      srcAbs = path.join(PLUGIN_ROOT, 'resources', decodeURIComponent(srcRel))
+    } else {
+      const rel = decodeURIComponent(srcRel).replace(/^profile\/normal-character\//, '')
+      for (const base of normalDirCandidates(g)) {
+        const candidate = path.join(base, rel)
+        if (fs.existsSync(candidate)) { srcAbs = candidate; break }
+      }
+      if (!srcAbs) srcAbs = path.join(MIAO_RES, decodeURIComponent(srcRel))
+    }
     if (!fs.existsSync(srcAbs)) return ''
     const stat = fs.statSync(srcAbs)
     const key = crypto.createHash('sha1')

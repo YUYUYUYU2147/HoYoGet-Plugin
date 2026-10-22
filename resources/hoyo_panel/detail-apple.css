@@ -129,7 +129,7 @@ body {
 .akasha .ak-rank, .akasha .ak-detail, .akasha .ak-board {
   background: var(--ap-glass);
   border: 1px solid var(--ap-line);
-  border-radius: 20px;
+  border-radius: 16px;
   box-shadow: var(--ap-shadow), inset 0 1px 0 rgba(255, 255, 255, .06);
   backdrop-filter: blur(22px) saturate(140%);
   -webkit-backdrop-filter: blur(22px) saturate(140%);
@@ -258,10 +258,216 @@ body {
 
 .flag-globe { color: var(--ap-mute); }
 
-.ak-rk { color: var(--ap-mute); }
-.ak-nick { color: #d1d1d6; font-weight: 400; }
-.ak-wq { color: var(--ap-mute); }
-.ak-rdmg { color: var(--ap-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+/* shotium 无 JS：detail.css 里这几层是 flex，会让整块塌成 0 高 */
+.akasha { gap: 8px; }
+.akasha,
+.akasha .ak-main,
+.akasha .ak-team-list { display: block; }
+.akasha .ak-main { line-height: 1; }
+.akasha .ak-no,
+.akasha .ak-of { display: inline-block; vertical-align: baseline; }
+.akasha .ak-of { margin-left: 7px; }
+.akasha .ak-trow {
+  display: inline-block;
+  vertical-align: top;
+  width: 48%;
+  line-height: 20px;
+  margin: 3px 1% 0 0;
+  box-sizing: border-box;
+}
+.akasha .ak-trow + .ak-trow { margin-top: 3px; }
+.akasha .ak-tname,
+.akasha .ak-tcons { margin-left: 6px; }
+
+/* ───── Akasha：Apple 排名版式 ─────
+   大号名次 + 超越百分比进度条 + 奖牌色排行榜 */
+.akasha .ak-rank {
+  padding: 12px 14px 12px;
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgba(10, 132, 255, .22) 0%, transparent 62%),
+    var(--ap-glass);
+}
+.akasha .ak-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: var(--ap-mute);
+  text-transform: uppercase;
+}
+.akasha .ak-main {
+  margin-top: 6px;
+  align-items: flex-end;
+  gap: 7px;
+}
+.akasha .ak-no {
+  font-family: "SF Pro Display", -apple-system, "Helvetica Neue", "Noto Sans SC", sans-serif;
+  font-size: 34px;
+  line-height: .95;
+  font-weight: 700;
+  letter-spacing: -1.6px;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 22px rgba(10, 132, 255, .45);
+}
+.akasha .ak-of {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ap-sub);
+  letter-spacing: 0;
+  padding-bottom: 5px;
+}
+.akasha .ak-beat {
+  margin-top: 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ap-green);
+  letter-spacing: .2px;
+}
+/* 超越百分比：进度条用渐变表现，宽度由 data-beat 驱动，缺省 100% */
+.akasha .ak-beat::before {
+  content: "";
+  display: block;
+  height: 3px;
+  margin-bottom: 5px;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, var(--ap-green), rgba(48, 209, 88, .25)) no-repeat,
+    rgba(255, 255, 255, .1);
+  background-size: min(100%, var(--ak-beat, 100%)) 100%, 100% 100%;
+}
+.akasha .ak-dmg-num {
+  margin-top: 5px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: -.2px;
+  font-variant-numeric: tabular-nums;
+}
+.akasha .ak-plan {
+  margin-top: 4px;
+  display: inline-block;
+  max-width: 100%;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--ap-sub);
+  background: rgba(255, 255, 255, .07);
+  border: 1px solid rgba(255, 255, 255, .08);
+}
+.akasha .ak-none {
+  margin-top: 10px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ap-mute);
+}
+
+/* 队伍配队：胶囊成员卡 */
+.akasha .ak-team { border-top: 1px solid var(--ap-line); margin-top: 9px; padding-top: 8px; }
+.akasha .ak-team .ak-title { margin-bottom: 5px; }
+.akasha .ak-team-list { gap: 4px; }
+.akasha .ak-trow {
+  padding: 1px 7px 1px 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .07);
+}
+.akasha .ak-tava {
+  border-radius: 999px;
+  border-color: rgba(255, 255, 255, .18);
+}
+.akasha .ak-tname { font-size: 12px; font-weight: 500; color: var(--ap-text); }
+.akasha .ak-tcons {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ap-yellow);
+  background: rgba(255, 214, 10, .12);
+  border-radius: 999px;
+  padding: 1px 6px;
+}
+
+/* 排行榜：前三名奖牌色，行间用细分隔线 */
+.akasha .ak-board { padding: 11px 13px; }
+.akasha .ak-board .ak-title { margin-bottom: 6px; }
+.akasha .ak-row {
+  padding: 4px 0;
+  font-size: 11.5px;
+  line-height: 16px;
+  border-top: 1px solid rgba(255, 255, 255, .055);
+  white-space: nowrap;
+}
+/* 全服前 10：用固定列宽排一行，名次 / 国旗 / 昵称 / 命座 / 伤害 */
+.akasha .ak-rk,
+.akasha .ak-flag,
+.akasha .ak-nick,
+.akasha .ak-wq,
+.akasha .ak-rdmg {
+  display: inline-block;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.akasha .ak-rk {
+  width: 26px;
+  font-family: "SF Pro Display", -apple-system, sans-serif;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ap-mute);
+  font-variant-numeric: tabular-nums;
+}
+.akasha .ak-flag {
+  width: 18px;
+  margin-left: 2px;
+  text-align: center;
+}
+.akasha .ak-nick {
+  width: 118px;
+  margin-left: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #e5e5ea;
+  font-weight: 400;
+  letter-spacing: .1px;
+}
+.akasha .ak-wq {
+  width: 42px;
+  margin-left: 4px;
+  font-size: 11px;
+  color: var(--ap-mute);
+  font-variant-numeric: tabular-nums;
+}
+.akasha .ak-rdmg {
+  width: 68px;
+  margin-left: 4px;
+  text-align: right;
+  font-family: "SF Pro Display", -apple-system, sans-serif;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ap-text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.2px;
+}
+/* 前三名：金 / 银 / 铜 */
+.akasha .ak-row:nth-child(2) .ak-rk { color: #ffd60a; }
+.akasha .ak-row:nth-child(3) .ak-rk { color: #d1d1d6; }
+.akasha .ak-row:nth-child(4) .ak-rk { color: #e08a4b; }
+.akasha .ak-row:nth-child(2) .ak-nick,
+.akasha .ak-row:nth-child(3) .ak-nick,
+.akasha .ak-row:nth-child(4) .ak-nick { color: #fff; font-weight: 500; }
+.akasha .ak-row:nth-child(2) { border-top: 0; }
+.akasha .flag-img { border-radius: 3px; box-shadow: 0 0 0 .5px rgba(255, 255, 255, .25); }
+
+/* 伤害计算表：Apple 列表风 */
+.akasha .ak-detail { padding: 11px 13px; }
+.akasha .ak-dcols,
+.akasha .ak-dfoot { border-color: var(--ap-line); }
+.akasha .ak-drow { border-radius: 8px; padding: 3px 0; }
+.akasha .ak-drow:nth-child(even) { background: rgba(255, 255, 255, .035); }
+.akasha .ak-dval {
+  font-family: "SF Pro Display", -apple-system, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.2px;
+}
+.akasha .ak-dtag { border-radius: 999px; }
 
 /* 星铁工坊模块（遗器排名 / 队伍配队） */
 .sw-note, .sw-cons, .sw-foot { color: var(--ap-mute); }

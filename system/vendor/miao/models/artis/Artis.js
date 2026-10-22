@@ -6,7 +6,8 @@ import Base from "../Base.js"
 import ArtisSet from "./ArtisSet.js"
 import ArtisMark from "./ArtisMark.js"
 import ArtisAttr from "./ArtisAttr.js"
-import { Data, Format } from "#hoyo.miao"
+import Data from "../../components/Data.js"
+import Format from "../../components/Format.js"
 import { Artifact, ArtifactSet } from "#hoyo.miao.models"
 
 export default class Artis extends Base {

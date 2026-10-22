@@ -5,7 +5,8 @@ import lodash from "lodash"
 import { wikiPath } from "../components/index.js"
 import { abbr } from "../resources/meta-gs/material/abbr.js"
 import Base from "../../models/Base.js"
-import { Data, Meta } from "#hoyo.miao"
+import Data from "../../components/Data.js"
+import Meta from "../../components/Meta.js"
 
 let data = Data.readJSON("resources/meta-gs/material/data.json", "wiki")
 

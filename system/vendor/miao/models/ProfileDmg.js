@@ -6,7 +6,9 @@ import DmgCalc from "./dmg/DmgCalc.js"
 import DmgBuffs from "./dmg/DmgBuffs.js"
 import CharCfg from "./character/CharCfg.js"
 import { Character } from "./index.js"
-import { Cfg, MiaoError, Meta } from "#hoyo.miao"
+import Cfg from "../components/Cfg.js"
+import MiaoError from "../components/MiaoError.js"
+import Meta from "../components/Meta.js"
 import { miaoPath } from "#hoyo.miao.path"
 
 export default class ProfileDmg extends Base {

@@ -32,7 +32,7 @@ body {
     radial-gradient(circle at 82% 8%, rgba(112, 220, 255, .30), transparent 34%),
     radial-gradient(circle at 18% 12%, rgba(255, 220, 130, .20), transparent 28%),
     linear-gradient(145deg, rgba(24, 39, 72, .96), rgba(17, 21, 42, .98)),
-    url(../../img/ledger/img.jpg) center top / cover no-repeat;
+    url(../img/ledger/img.jpg) center top / cover no-repeat;
 }
 
 .container::before {

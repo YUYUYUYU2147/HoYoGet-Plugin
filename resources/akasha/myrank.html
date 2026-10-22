@@ -6,10 +6,17 @@
   </head>
   <body>
     <div class="page">
+      {{if randomBg}}<img class="bg-random" src="{{randomBg}}" onerror="this.style.display='none'">{{/if}}
       <div class="head">
         <div class="head-left">
-          <div class="title">我的全球排名</div>
-          <div class="subtitle">UID {{uid}}{{if nickname}} · {{nickname}}{{/if}}{{if level}} · AR{{level}}{{/if}}{{if region}} · {{region}}{{/if}}</div>
+          <div class="head-user">
+            {{if ownerAvatar}}<img class="head-avatar" src="{{ownerAvatar}}" onerror="this.style.display='none'">{{/if}}
+            <div class="head-user-text">
+              <div class="title">我的全球排名</div>
+              <div class="subtitle">{{if nickname}}{{nickname}} · {{/if}}UID {{uid}}{{if level}} · AR{{level}}{{/if}}{{if region}} · {{region}}{{/if}}</div>
+              {{if signature}}<div class="signature">{{signature}}</div>{{/if}}
+            </div>
+          </div>
         </div>
         <div class="head-right">
           <div class="badge">AKASHA</div>
@@ -45,9 +52,8 @@
           <div class="dmg-cell">{{r.result}}</div>
 
           <div class="score-cell">
-            <span class="dmg">第 {{r.rank}} 名</span>
-            <span class="dmg-total">/ 共 {{r.outOf}} 人</span>
-            <span class="dmg-beat">超过 {{r.beatPercent}}%</span>
+            <div class="rank-line"><span class="dmg">#{{r.rank}}</span><span class="dmg-total">/ {{r.outOf}}</span></div>
+            <div class="beat-line"><span class="beat-bar" style="--beat: {{r.beatPercent}}%"></span><span class="dmg-beat">{{r.beatPercent}}%</span></div>
           </div>
         </div>
         {{/each}}

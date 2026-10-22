@@ -11,7 +11,8 @@ import mysPanelHSRApi from "./api/MysPanelHSRApi.js"
 
 import ProfileServ from "./ProfileServ.js"
 import ProfileReq from "./ProfileReq.js"
-import { Cfg, Data } from "#hoyo.miao"
+import Cfg from "../../components/Cfg.js"
+import Data from "../../components/Data.js"
 
 let { diyCfg } = await Data.importCfg("profile")
 

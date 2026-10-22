@@ -5,7 +5,8 @@
 import lodash from "lodash"
 import Base from "../Base.js"
 import AttrData from "./AttrData.js"
-import { Format, Meta } from "#hoyo.miao"
+import Format from "../../components/Format.js"
+import Meta from "../../components/Meta.js"
 import { Weapon, ArtifactSet } from "#hoyo.miao.models"
 
 class Attr extends Base {

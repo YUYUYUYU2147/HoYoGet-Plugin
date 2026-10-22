@@ -14,7 +14,7 @@
     "#miao.path": "./system/vendor/miao/path.js"
   },
   "scripts": {
-    "ci": "node tools/ci/syntax-check.mjs && node tools/ci/config-check.mjs && node tools/ci/ppath-check.mjs && node tools/ci/extreme-preset-check.mjs && node tools/ci/privacy-scan.mjs"
+    "ci": "node tools/ci/syntax-check.mjs && node tools/ci/config-check.mjs && node tools/ci/ppath-check.mjs && node tools/ci/assets-check.mjs && node tools/ci/extreme-preset-check.mjs && node tools/ci/privacy-scan.mjs"
   },
   "dependencies": {
     "jsdom": "^26.1.0",

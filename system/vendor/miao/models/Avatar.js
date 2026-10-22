@@ -8,7 +8,8 @@ import ArtisMark from "./artis/ArtisMark.js"
 import MysAvatar from "./avatar/MysAvatar.js"
 import ProfileAvatar from "./avatar/ProfileAvatar.js"
 import { Character, ProfileDmg, Weapon } from "./index.js"
-import { Data, Format } from "#hoyo.miao"
+import Data from "../components/Data.js"
+import Format from "../components/Format.js"
 
 const charKey = "name,abbr,sName,star,imgs,face,side,gacha,weaponTypeName".split(",")
 

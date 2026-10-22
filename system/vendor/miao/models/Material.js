@@ -3,7 +3,8 @@
 * */
 import lodash from "lodash"
 import Base from "./Base.js"
-import { Data, Meta } from "#hoyo.miao"
+import Data from "../components/Data.js"
+import Meta from "../components/Meta.js"
 
 let data = Data.readJSON("resources/meta-gs/material/data.json", "miao")
 let abbr = await Data.importDefault("resources/meta-gs/material/abbr.js", "miao")

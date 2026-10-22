@@ -1,6 +1,7 @@
 import lodash from "lodash"
 import { propertyType2attrName } from "./MysPanelHSRMappings.js"
-import { Data, Meta } from "#hoyo.miao"
+import Data from "../../../components/Data.js"
+import Meta from "../../../components/Meta.js"
 import { Character, Artifact } from "#hoyo.miao.models"
 
 let MysPanelHSRData = {

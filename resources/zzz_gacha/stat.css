@@ -3,7 +3,7 @@
    最终清晰度由渲染时的 sys.scale(zoom) 控制。行高做了压缩，
    避免长卡在渲染后端超出截图高度上限被截断。 */
 
-@import url("../../../font/fonts.css");
+@import url("../font/fonts.css");
 
 * {
   margin: 0;

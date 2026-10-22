@@ -6,7 +6,7 @@ import { listCategories, fetchLeaderboard, getUserCalculations, getDamageDistrib
 import { yshelperRankForChar } from '../../system/yshelper.js'
 import { getRoleProfile } from '../../system/roleProfile.js'
 import { srPanelExtras } from '../../system/sr_panel.js'
-import { pickCustomPanelArt, pickUserPanelArt, ensureUserPanelDir, listUserPanelArt, cropCustomPanelArt } from '../../system/custom_panel.js'
+import { pickCustomPanelArt, pickUserPanelArt, ensureUserPanelDir, listUserPanelArt, cropCustomPanelArt, primeCustomArtConfig } from '../../system/custom_panel.js'
 import { buildRadar } from '../../system/radar.js'
 import { metaResRel, metaRoot } from '#hoyo.miao.path'
 
@@ -923,7 +923,7 @@ function flattenCharDetail(profile, Character, game, meta = {}) {
     /* 立绘优先级：咕咕牛管理器（miao 的 normal-character 目录）→ 本插件自定义面板目录
        → 官方立绘。前两者都是随机取一张；可在配置里整体关掉。
        两处路径前缀不同（miao 用 _miao_path，本插件用 ppath），所以分开给模板两个字段。 */
-    splash: customArtEnabled() ? pickCustomPanelArt([char?.name, char?.abbr]) : '',
+    splash: customArtEnabled() ? pickCustomPanelArt([char?.name, char?.abbr], game) : '',
     splashLocal: customArtEnabled() ? pickUserPanelArt(game, [char?.name, char?.abbr]) : '',
     splashOfficial: stripSlash(imgs.splash || imgs.gacha || ''),
     attrs,
@@ -1894,6 +1894,8 @@ export class hoyo_panel extends plugin {
       }
 
       const info = player.getInfo?.() || {}
+      /* 先把配置读进 custom_panel 的快照，后面挑图时才知道咕咕牛目录配在哪 */
+      await primeCustomArtConfig()
       const miaoResPath = '../../../../..' + '/' + metaResRel()
       const data = flattenCharDetail(hit, miao.Character, game, {
         uid,

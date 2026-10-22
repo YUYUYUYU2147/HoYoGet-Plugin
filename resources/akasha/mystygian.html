@@ -6,10 +6,17 @@
   </head>
   <body>
     <div class="page mystygian">
+      {{if randomBg}}<img class="bg-random" src="{{randomBg}}" onerror="this.style.display='none'">{{/if}}
       <div class="head">
         <div class="head-left">
-          <div class="title">我的幽境排名</div>
-          <div class="subtitle">UID {{uid}}{{if nickname}} · {{nickname}}{{/if}}{{if region}} · {{region}}{{/if}}</div>
+          <div class="head-user">
+            {{if ownerAvatar}}<img class="head-avatar" src="{{ownerAvatar}}" onerror="this.style.display='none'">{{/if}}
+            <div class="head-user-text">
+              <div class="title">我的幽境排名</div>
+              <div class="subtitle">{{if nickname}}{{nickname}} · {{/if}}UID {{uid}}{{if level}} · AR{{level}}{{/if}}{{if region}} · {{region}}{{/if}}</div>
+              {{if signature}}<div class="signature">{{signature}}</div>{{/if}}
+            </div>
+          </div>
         </div>
         <div class="head-right">
           <div class="badge">AKASHA</div>

@@ -6,10 +6,17 @@
   </head>
   <body>
     <div class="page artifact">
+      {{if randomBg}}<img class="bg-random" src="{{randomBg}}" onerror="this.style.display='none'">{{/if}}
       <div class="head">
         <div class="head-left">
-          <div class="title">我的圣遗物排行</div>
-          <div class="subtitle">UID {{uid}} · 按暴击值排序</div>
+          <div class="head-user">
+            {{if ownerAvatar}}<img class="head-avatar" src="{{ownerAvatar}}" onerror="this.style.display='none'">{{/if}}
+            <div class="head-user-text">
+              <div class="title">我的圣遗物排行</div>
+              <div class="subtitle">{{if nickname}}{{nickname}} · {{/if}}UID {{uid}}{{if level}} · AR{{level}}{{/if}} · 按暴击值排序</div>
+              {{if signature}}<div class="signature">{{signature}}</div>{{/if}}
+            </div>
+          </div>
         </div>
         <div class="head-right">
           <div class="badge">AKASHA</div>

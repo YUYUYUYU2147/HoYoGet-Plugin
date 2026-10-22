@@ -2,7 +2,7 @@
  "_comment": "绝区零角色 Lv60 基础属性。base 为角色裸值（不含音擎/驱动盘/影画），extra 为突破累积加成，sigWeapon 仅供展示，legacy.atkWithSig 仅兼容旧调用。",
  "_source": "ZZZ-Plugin resources/map/PartnerId2Data.json（纯公式，无拟合）",
  "_formula": "atk/hp/def = 初始值 + Level[6] × 10/3；extra 取 ExtraLevel[6].Extra[*].Value",
- "count": 60,
+ "count": 62,
  "chars": {
   "安比": {
    "id": 1011,
@@ -2233,7 +2233,7 @@
   "佩洛伊斯": {
    "id": 1551,
    "fullName": "佩洛伊斯",
-   "enName": "(Test1)Pyrois",
+   "enName": "Pyrois",
    "rarity": "S",
    "elementType": 205,
    "profession": 1,
@@ -2442,7 +2442,7 @@
   },
   "克拉蕾": {
    "id": 1611,
-   "fullName": "...",
+   "fullName": "克拉蕾·弗林特",
    "enName": "Claret",
    "rarity": "S",
    "elementType": 203,
@@ -2484,7 +2484,7 @@
   },
   "洛克茜": {
    "id": 1621,
-   "fullName": "...",
+   "fullName": "洛克茜·伊芙莉塔·普莱斯",
    "enName": "Roxy",
    "rarity": "S",
    "elementType": 204,
@@ -2522,6 +2522,86 @@
    },
    "legacy": {
     "atkWithSig": 1450
+   }
+  },
+  "赛维里安": {
+   "id": 1631,
+   "fullName": "赛维里安·洛威尔",
+   "enName": "Severian",
+   "rarity": "S",
+   "elementType": 204,
+   "profession": 1,
+   "camp": "新艾利都治安局",
+   "sprite": "IconRole1631",
+   "base": {
+    "atk": 934,
+    "hp": 7825.67,
+    "def": 605.67,
+    "impact": 94,
+    "anomalyMastery": 91,
+    "anomalyProficiency": 90,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 28.8,
+    "anomalyMastery": 0,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": null,
+   "legacy": {
+    "atkWithSig": 934
+   }
+  },
+  "菲欧妮": {
+   "id": 1641,
+   "fullName": "菲欧妮·蕾法爱菈",
+   "enName": "Phoenix",
+   "rarity": "S",
+   "elementType": 201,
+   "profession": 3,
+   "camp": "坎卜斯黑枝",
+   "sprite": "IconRole1641",
+   "base": {
+    "atk": 872.67,
+    "hp": 7673.67,
+    "def": 612.33,
+    "impact": 86,
+    "anomalyMastery": 116,
+    "anomalyProficiency": 118,
+    "penRatio": 0,
+    "energyRegen": 1.2,
+    "crit": 20,
+    "critDmg": 50
+   },
+   "extra": {
+    "atk": 75,
+    "hp": 0,
+    "def": 0,
+    "impact": 0,
+    "crit": 0,
+    "critDmg": 0,
+    "anomalyMastery": 36,
+    "anomalyProficiency": 0,
+    "penRatio": 0,
+    "energyRegen": 0
+   },
+   "displayWeapon": {
+    "itemId": "14164",
+    "name": "涅槃初翎",
+    "atk": 713
+   },
+   "legacy": {
+    "atkWithSig": 1585.67
    }
   }
  }

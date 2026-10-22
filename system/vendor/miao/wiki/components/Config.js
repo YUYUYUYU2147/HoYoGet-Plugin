@@ -21,6 +21,12 @@ class Config {
 
   /** 初始化配置 */
   initCfg() {
+    /* wiki / miao 插件可能已被卸载，defSet 目录不存在时直接跳过，
+       不要抛 ENOENT 把整个插件加载流程带崩 */
+    if (!fs.existsSync(this.defPath)) {
+      logger.debug?.('[HoYoGet][wiki] 跳过配置初始化：defSet 目录不存在')
+      return
+    }
     const files = fs.readdirSync(this.defPath).filter(file => file.endsWith(".yaml"))
     if (!fs.existsSync(`${this.configPath}`)) fs.mkdirSync(`${this.configPath}`)
     for (let file of files) {

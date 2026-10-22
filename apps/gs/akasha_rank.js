@@ -9,6 +9,7 @@ import {
      「我的圣遗物排名」报 getArtifactsByUid is not defined */
   getArtifactsByUid,
 } from '../../system/akasha.js'
+import { getRoleProfile } from '../../system/roleProfile.js'
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const ARTIFACT_CN_FILE = path.join(PLUGIN_ROOT, 'system', 'default', 'gs_artifact_cn.json')
@@ -26,6 +27,30 @@ function artifactCn() {
 }
 const cnSetName = en => artifactCn().sets?.[en] || en || ''
 const cnPieceName = en => artifactCn().pieces?.[en] || en || ''
+/* 随机二次元背景：api.php 会 302 到 pc.php，再 302 到真实图片，
+   所以最多跟 3 跳；拿不到就退回纯色背景，不影响出图 */
+const RANDOM_BG_API = 'https://api.yppp.net/api.php'
+
+async function fetchRandomBg() {
+  try {
+    let url = RANDOM_BG_API
+    for (let i = 0; i < 3; i++) {
+      const res = await fetch(url, {
+        redirect: 'manual',
+        headers: { 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+        signal: AbortSignal.timeout(5000),
+      })
+      const loc = res.headers?.get?.('location')
+      if (!loc) break
+      url = new URL(loc, url).href
+    }
+    return /\.(png|jpe?g|webp|gif|avif)(\?|$)/i.test(url) ? url : ''
+  } catch (err) {
+    logger.debug?.(`[HoYoGet][akasha] 随机背景获取失败：${err?.message || err}`)
+    return ''
+  }
+}
+
 const CACHE_FILE = path.join(PLUGIN_ROOT, 'temp', 'akasha_categories.json')
 const CACHE_TTL = 6 * 3600 * 1000   // 分类（角色→方案）缓存 6 小时
 
@@ -161,34 +186,72 @@ const characterName = (id, fallback = '') =>
  */
 const PLAN_TERMS = [
   // 反应
-  [/Avg DMG|Average DMG/gi, '平均伤害'],
+  [/Avg\.? DMG|Average DMG|Avg DMG/gi, '平均伤害'],
   [/Lunar-Bloom/gi, '月绽放'], [/Lunar-Charged/gi, '月感电'], [/Lunar-Crystallize/gi, '月结晶'],
   [/Stellar-Conduct/gi, '星导'], [/Moonsign/gi, '月兆'],
+  [/Burnmelt/gi, '燃烧融化'], [/Burnvape/gi, '燃烧蒸发'], [/Overvape/gi, '超载蒸发'],
   [/Melt/gi, '融化'], [/Vape|Vaporize/gi, '蒸发'], [/Overload/gi, '超载'],
   [/Aggravate/gi, '激化'], [/Spread/gi, '蔓激化'], [/Hyperbloom/gi, '超绽放'],
   [/Quickbloom/gi, '激绽'], [/Bloom/gi, '绽放'], [/Burgeon/gi, '烈绽放'],
   [/Freeze|Frozen/gi, '冻结'], [/Superconduct/gi, '超导'], [/Electro-Charged/gi, '感电'],
   [/Shatter/gi, '碎冰'], [/Crystallize/gi, '结晶'], [/Swirl/gi, '扩散'],
-
+  [/Quicken/gi, '原激化'], [/Burning/gi, '燃烧'], [/Soup/gi, '乱炖'],
   // 队伍/打法
   [/Premium Team/gi, '高配队'], [/Basic Team/gi, '基础队'], [/Hyper Team/gi, '强化队'],
   [/Team/gi, '队'], [/Combo/gi, '连招'], [/Rotation/gi, '循环'],
   [/On-Field|On Field/gi, '站场'], [/Off-Field|Off Field/gi, '后台'],
   [/Main DPS/gi, '主C'], [/Sub DPS|Sub-DPS/gi, '副C'], [/DPS/gi, '输出'],
-  [/Skill/gi, '战技'], [/Burst/gi, '爆发'], [/Normal Attack/gi, '普攻'],
-  [/Charged Attack/gi, '重击'], [/Plunge/gi, '下落'], [/EQ/gi, '战技+爆发'],
-  [/Basic/gi, '基础'], [/Premium/gi, '高配'], [/Hyper/gi, '强化'],
+  [/Elemental Skill/gi, '元素战技'], [/Skill/gi, '战技'], [/Burst/gi, '爆发'],
+  [/Normal Attack/gi, '普攻'], [/Charged Attack/gi, '重击'], [/Plunge/gi, '下落'],
+  [/EQ/gi, '战技+爆发'], [/Basic/gi, '基础'], [/Premium/gi, '高配'], [/Hyper/gi, '强化'],
+  [/Solo/gi, '单人'], [/Hybrid Build/gi, '混合配装'], [/Nuke Build/gi, '爆发核弹'],
+  [/Shieldbot/gi, '纯护盾'], [/Healer/gi, '奶妈'], [/Heal/gi, '治疗'],
+  [/Damage Contribution/gi, '伤害占比'], [/Raw/gi, '裸伤'],
+  [/Balance formula/gi, '平衡公式'], [/Formula/gi, '公式'], [/balance/gi, '平衡'],
+  [/Simulated/gi, '模拟'], [/\bBuffs\b/gi, '满增益'], [/\bBuff\b/gi, '增益'],
+  [/\bHyperbuffed\b/gi, '强化增益'], [/\bHyperbuffed\b/gi, '强化增益'],
+  [/\bBuffed\b/gi, '有增益'],
+  [/Crit-fishing/gi, '赌暴击'], [/Minimal/gi, '低配'], [/Wanderer/gi, '流浪者'],
   // 数量/构成
   [/Triple/gi, '三'], [/Double/gi, '双'], [/Single/gi, '单'], [/Mono/gi, '纯色'],
+  [/Frontloaded/gi, '前置爆发'], [/Full Buffs?/gi, '满buff'], [/No Buffs?/gi, '无buff'],
+  [/Unbuff(?:ed)?/gi, '无增益'], [/Max Stacks?/gi, '满层'],
   // 元素
+  [/Geo\s*Construct/gi, '岩造物'], [/\bConstruct\b/gi, '造物'],
+  [/National Pyronado/gi, '香菱国家队'], [/Pyronado/gi, '风火轮'],
   [/Pyro/gi, '火'], [/Hydro/gi, '水'], [/Cryo/gi, '冰'], [/Electro/gi, '雷'],
-  [/Anemo/gi, '风'], [/Geo/gi, '岩'], [/Dendro/gi, '草'],
+  [/Anemo/gi, '风'], [/Geo/gi, '岩'], [/Dendro/gi, '草'], [/Physical/gi, '物理'],
   // 场景
+  [/Without Buffs?/gi, '无buff'], [/With Buffs?/gi, '满buff'], [/without/gi, '不带'],
+  [/Single Target|Single-Target/gi, '单体'], [/\bTarget\b/gi, '目标'],
   [/vs Boss/gi, '对单'], [/Boss/gi, '首领'], [/AoE/gi, '对群'],
-  [/Single Target/gi, '单体'], [/Unbuffed/gi, '无buff'], [/Full Buffs?/gi, '满buff'],
-  [/Max Stacks?/gi, '满层'], [/with/gi, '配'], [/without/gi, '不带'],
-  [/No Buffs?/gi, '无buff'], [/Balance/gi, '平衡'], [/Formula/gi, '公式'],
-  [/Energy Recharge|ER/gi, '充能'],
+  [/2H2D/gi, '双水双草'], [/with/gi, '配'], [/without/gi, '不带'],
+  [/Balance/gi, '平衡'], [/Energy Recharge|\bER\b/gi, '充能'],
+  [/Max HP/gi, '最大生命'], [/\bATK\b/gi, '攻击'], [/\bHP\b/gi, '生命'],
+  [/\bEM\b/gi, '精通'], [/\(\+ ?CR\)/gi, '(暴击)'], [/\bCrit DMG\b/gi, '暴击伤害'],
+  [/\bDMG\b/gi, '伤害'],
+  // 常见角色/武器昵称（akasha 榜单按角色习惯叫法）
+  [/Childe International/gi, '公子国际队'], [/National Raiden/gi, '雷神国家队'],
+  [/National Pyronado/gi, '香菱国家队'], [/Pyronado/gi, '风火轮'], [/Raikou/gi, '雷九'],
+  [/Morgana/gi, '莫甘娜'], [/Sunfire/gi, '日火'], [/Taser/gi, '感电队'],
+  [/Arataki Kesagiri/gi, '荒泷一斗'], [/Pyronado/gi, '风火轮'],
+  [/Tri-Karma Purification/gi, '灭净三业'], [/Shunsuiken/gi, '瞬水剑'],
+  [/Violet Arc/gi, '紫电'], [/Transient Blossom/gi, '瞬华'],
+  [/Wind's Grand Ode/gi, '风之诗'], [/Lightfall Sword/gi, '天街巡游'],
+  [/Ice Shard/gi, '冰棱'], [/Bake-Kurage/gi, '化海月'],
+  [/Sword Rain/gi, '剑雨'], [/Oz/gi, '奥兹'], [/Kazuha/gi, '万叶'],
+  [/Furina/gi, '芙宁娜'], [/Nahida/gi, '纳西妲'], [/Xilonen/gi, '希诺宁'],
+  [/Mona/gi, '莫娜'], [/Shenhe/gi, '申鹤'], [/Xiao/gi, '魈'],
+  [/Forward/gi, '正向'], [/Variant/gi, '变体'], [/Explosion/gi, '爆发'],
+  [/\bNA\b/gi, '普攻'], [/\bCarry\b/gi, '主C'], [/\bFull\b/gi, '完整'], [/\bOld\b/gi, '旧版'], [/\bNew\b/gi, '新版'],
+  [/Exquisite Throw/gi, '妙脆角'], [/FFXX/gi, '菲谢尔'],
+  [/\bwith\b/gi, '配'], [/(?<!Eu)National/gi, '国家队'],
+ [/Final Slash/gi, '终结斩'], [/1-Hit/gi, '单段'],
+  [/Childe International/gi, '公子国际队'], [/International/gi, '国际队'],
+  [/Taser/gi, '感电队'], [/Raiden/gi, '雷电将军'], [/Tao/gi, '胡桃'],
+  [/Kazuha/gi, '万叶'], [/\bVV\b/gi, '翠绿'], [/\bC2\b/gi, '2命'],
+  [/\bC4\b/gi, '4命'], [/\bC6\b/gi, '6命'], [/3CAQE/gi, '3段重击+战技+爆发'],
+  [/3CA/gi, '3段重击'],
 ]
 
 /** 把英文方案名翻成中文；不认识的部分保留原文 */
@@ -455,7 +518,8 @@ export class akasha_rank extends plugin {
           rows: b.rows,
         })),
         planCount: usable.length,
-      }, { e, ret: true })
+        randomBg: await fetchRandomBg(),
+      }, { e, ret: true, dsf: 3.2 })
       return img
     } catch (err) {
       logger.error?.(`[HoYoGet][akasha] 查询失败: ${err?.message || err}`)
@@ -481,9 +545,10 @@ export class akasha_rank extends plugin {
     }
 
     try {
-      const [list, profile] = await Promise.all([
+      const [list, profile, roleProfile] = await Promise.all([
         getUserCalculations(uid),
         getUserProfile(uid).catch(() => null),
+        getRoleProfile(e, uid, 'gs').catch(() => ({})),
       ])
       if (!list.length) {
         return e.reply(`Akasha 上没有 UID ${uid} 的数据。\n请先在 akasha.cv 更新一次展柜（角色详情需在游戏内公开）。`)
@@ -518,11 +583,14 @@ export class akasha_rank extends plugin {
 
       const img = await render('akasha/myrank', {
         uid,
-        nickname: profile?.account?.nickname || '',
-        level: profile?.account?.level || '',
+        nickname: roleProfile?.nickname || profile?.account?.nickname || '',
+        ownerAvatar: roleProfile?.avatar || '',
+        signature: roleProfile?.signature || '',
+        level: roleProfile?.userLevel || profile?.account?.level || '',
         region: profile?.account?.region || '',
         rows,
-      }, { e, ret: true })
+        randomBg: await fetchRandomBg(),
+      }, { e, ret: true, dsf: 3.2 })
       return img
     } catch (err) {
       logger.error?.(`[HoYoGet][akasha] 查我的排名失败: ${err?.message || err}`)
@@ -566,7 +634,10 @@ export class akasha_rank extends plugin {
         board = hit
       }
 
-      const res = await fetchStygianRankOfUser(board.version, uid)
+      const [res, roleProfile] = await Promise.all([
+        fetchStygianRankOfUser(board.version, uid),
+        getRoleProfile(e, uid, 'gs').catch(() => ({})),
+      ])
       if (!res) {
         return e.reply([
           `UID ${uid} 在幽境危战 ${board.version} 期没有查到成绩。`,
@@ -586,9 +657,13 @@ export class akasha_rank extends plugin {
         scoreText: formatNum(res.score),
         difficultyText: STYGIAN_DIFFICULTY[res.difficulty] || String(res.difficulty),
         seconds: res.seconds,
-        nickname: res.nickname,
-        region: res.region,
-      }, { e, ret: true })
+        nickname: roleProfile?.nickname || res.nickname,
+        ownerAvatar: roleProfile?.avatar || '',
+        signature: roleProfile?.signature || '',
+        level: roleProfile?.userLevel || '',
+        region: res.region || '',
+        randomBg: await fetchRandomBg(),
+      }, { e, ret: true, dsf: 3.2 })
       return img
     } catch (err) {
       logger.error?.(`[HoYoGet][akasha] 查我的幽境排名失败: ${err?.message || err}`)
@@ -614,7 +689,10 @@ export class akasha_rank extends plugin {
     }
 
     try {
-      const list = await getArtifactsByUid(uid)
+      const [list, roleProfile] = await Promise.all([
+        getArtifactsByUid(uid),
+        getRoleProfile(e, uid, 'gs').catch(() => ({})),
+      ])
       if (!list.length) {
         return e.reply([
           `Akasha 上没有 UID ${uid} 的圣遗物数据。`,
@@ -656,7 +734,12 @@ export class akasha_rank extends plugin {
         avg,
         bestValue: best?.critValue || 0,
         rows,
-      }, { e, ret: true })
+        nickname: roleProfile?.nickname || '',
+        ownerAvatar: roleProfile?.avatar || '',
+        signature: roleProfile?.signature || '',
+        level: roleProfile?.userLevel || '',
+        randomBg: await fetchRandomBg(),
+      }, { e, ret: true, dsf: 3.2 })
       return img
     } catch (err) {
       logger.error?.(`[HoYoGet][akasha] 圣遗物排行失败: ${err?.message || err}`)
@@ -730,7 +813,8 @@ export class akasha_rank extends plugin {
         sampleCount: board.count || 0,
         sampleText: formatNum(board.count),
         rows,
-      }, { e, ret: true })
+        randomBg: await fetchRandomBg(),
+      }, { e, ret: true, dsf: 3.2 })
       return img
     } catch (err) {
       logger.error?.(`[HoYoGet][akasha] 幽境查询失败: ${err?.message || err}`)

@@ -1,5 +1,6 @@
 import lodash from "lodash"
-import { Data, Meta } from "#hoyo.miao"
+import Data from "./Data.js"
+import Meta from "./Meta.js"
 
 export async function reloadAllMeta(game = "gs") {
   const resPath = `resources/meta-${game}`

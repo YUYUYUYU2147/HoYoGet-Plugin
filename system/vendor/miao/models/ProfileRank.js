@@ -1,6 +1,8 @@
 import lodash from "lodash"
 import moment from "moment"
-import { Cfg, Data, Version } from "#hoyo.miao"
+import Cfg from "../components/Cfg.js"
+import Data from "../components/Data.js"
+import Version from "../components/Version.js"
 
 /**
  * redis 键前缀：原先用 miao:rank:*，本插件内置后改 hoyo:rank:*。

@@ -1,7 +1,9 @@
 import lodash from "lodash"
 import WeaponMeta from "./weapon/WeaponMeta.js"
 import Base from "./Base.js"
-import { Data, Format, Meta } from "#hoyo.miao"
+import Data from "../components/Data.js"
+import Format from "../components/Format.js"
+import Meta from "../components/Meta.js"
 
 let weaponSet
 
