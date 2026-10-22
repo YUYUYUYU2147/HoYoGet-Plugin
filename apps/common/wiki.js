@@ -72,8 +72,8 @@ const ZZZ_PROP_NAMES = {
 // 它的别名同样是「正式名: [别名列表]」，但存在 config/alias.yaml（本地自定义）与 defSet/alias.yaml（默认）两处，
 // 且会随版本更新补充新角色/英文别名。这里读它做补充，本地表优先。
 const ZZZ_PLUGIN_ALIAS_FILES = [
-  './plugins/ZZZ-Plugin/config/alias.yaml',
-  './plugins/ZZZ-Plugin/defSet/alias.yaml'
+  './plugins/HoYoGet-Plugin/resources/zzz/alias.yaml',
+  './plugins/HoYoGet-Plugin/resources/zzz/alias.yaml'
 ];
 let _zzzPluginAlias = null;
 function zzzPluginAliasMap() {
@@ -1749,7 +1749,7 @@ export class Wiki extends plugin {
     const full = String(c.partner_info?.full_name || '');
     if (full.includes('·')) aliases.push(full.split('·')[0], full.split('·').slice(-1)[0]);
 
-    const mapPath = './plugins/ZZZ-Plugin/resources/map/WeaponId2Data.json';
+    const mapPath = './plugins/HoYoGet-Plugin/resources/zzz/map/WeaponId2Data.json';
     if (!fs.existsSync(mapPath)) return '';
     let weaponMap = {};
     try { weaponMap = JSON.parse(fs.readFileSync(mapPath, 'utf-8')); } catch (_) { return ''; }
@@ -2598,7 +2598,7 @@ export class Wiki extends plugin {
     } else {
       const js = JSON.parse(
         fs.readFileSync(
-          `./plugins/miao-plugin/resources/meta-sr/character/${data.content.title}/data.json`,
+          `./plugins/HoYoGet-Plugin/resources/meta-sr/character/${data.content.title}/data.json`,
           'utf-8'
         )
       );
@@ -3507,7 +3507,7 @@ export class Wiki extends plugin {
 
   /*
     getpath(name) {
-        let path = './plugins/miao-plugin/resources/meta-gs/weapon/'
+        let path = './plugins/HoYoGet-Plugin/resources/meta-gs/weapon/'
         const path_arr = fs.readdirSync(path).filter(file => {
             try {
                 return fs.lstatSync(`${path}/${file}`).isDirectory();

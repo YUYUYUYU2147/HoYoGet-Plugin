@@ -60,8 +60,8 @@ const YAML_SOURCES = [
      artifact → syw(原神) / yq(星铁)；character → js；weapon → wq / gz
    只读本地文件，不发请求；扫不到就当没有，不影响其它来源。 */
 const MIAO_ROOTS = [
-  { dir: './plugins/miao-plugin/resources/meta-gs', game: 'gs' },
-  { dir: './plugins/miao-plugin/resources/meta-sr', game: 'sr' }
+  { dir: './plugins/HoYoGet-Plugin/resources/meta-gs', game: 'gs' },
+  { dir: './plugins/HoYoGet-Plugin/resources/meta-sr', game: 'sr' }
 ];
 
 function inferMiaoType(relPath, game) {
@@ -106,8 +106,8 @@ function parseMiaoAliasJs(raw) {
 
 /** ZZZ-Plugin 的代理人别名（本地表优先，默认表兜底） */
 const ZZZ_ALIAS_FILES = [
-  './plugins/ZZZ-Plugin/config/alias.yaml',
-  './plugins/ZZZ-Plugin/defSet/alias.yaml'
+  './plugins/HoYoGet-Plugin/resources/zzz/alias.yaml',
+  './plugins/HoYoGet-Plugin/resources/zzz/alias.yaml'
 ];
 
 /* 纯关键词查询不做别名解析：这些词本身就是类别名（命令路由要靠它们判断

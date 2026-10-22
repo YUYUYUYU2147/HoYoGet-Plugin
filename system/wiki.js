@@ -635,7 +635,7 @@ export class Wiki extends plugin {
     const full = String(c.partner_info?.full_name || '');
     if (full.includes('·')) aliases.push(full.split('·')[0], full.split('·').slice(-1)[0]);
 
-    const mapPath = './plugins/ZZZ-Plugin/resources/map/WeaponId2Data.json';
+    const mapPath = './plugins/HoYoGet-Plugin/resources/zzz/map/WeaponId2Data.json';
     if (!fs.existsSync(mapPath)) return '';
     let weaponMap = {};
     try { weaponMap = JSON.parse(fs.readFileSync(mapPath, 'utf-8')); } catch (_) { return ''; }
@@ -1030,7 +1030,7 @@ export class Wiki extends plugin {
     } else {
       const js = JSON.parse(
         fs.readFileSync(
-          `./plugins/miao-plugin/resources/meta-sr/character/${data.content.title}/data.json`,
+          `./plugins/HoYoGet-Plugin/resources/meta-sr/character/${data.content.title}/data.json`,
           'utf-8'
         )
       );
@@ -1049,7 +1049,7 @@ export class Wiki extends plugin {
       //封面链接
       img:
         userinfo?.figurePath ||
-        `../../../../../plugins/miao-plugin/resources/meta-sr/character/${data.content.title}/imgs/splash.webp`,
+        `../../../../../plugins/HoYoGet-Plugin/resources/meta-sr/character/${data.content.title}/imgs/splash.webp`,
       //角色标签
       attr: attr,
       attr_: userinfo ? true : false,
@@ -1301,7 +1301,7 @@ export class Wiki extends plugin {
 
   /*
     getpath(name) {
-        let path = './plugins/miao-plugin/resources/meta-gs/weapon/'
+        let path = './plugins/HoYoGet-Plugin/resources/meta-gs/weapon/'
         const path_arr = fs.readdirSync(path).filter(file => {
             try {
                 return fs.lstatSync(`${path}/${file}`).isDirectory();

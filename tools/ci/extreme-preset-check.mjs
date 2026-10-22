@@ -22,18 +22,19 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const PRESET_FILE = path.join(ROOT, 'system', 'default', 'zzz_extreme.yaml')
 
 const ZZZ = [
+  path.join(ROOT, 'resources', 'zzz', 'map'),
   path.join(process.cwd(), 'plugins', 'ZZZ-Plugin'),
   path.join(ROOT, '..', 'ZZZ-Plugin'),
   '/root/TRSS_AllBot/TRSS-Yunzai/plugins/ZZZ-Plugin',
-].find(p => fs.existsSync(path.join(p, 'resources', 'map', 'PartnerId2Data.json')))
+].find(p => fs.existsSync(path.join(p, 'PartnerId2Data.json')))
 
 if (!ZZZ) {
-  console.error('找不到 ZZZ-Plugin 的 resources/map，跳过极限面板预设检查')
+  console.error('找不到 resources/zzz/map，跳过极限面板预设检查')
   process.exit(0)
 }
 
-const partners = JSON.parse(fs.readFileSync(path.join(ZZZ, 'resources', 'map', 'PartnerId2Data.json'), 'utf8'))
-const weapons = JSON.parse(fs.readFileSync(path.join(ZZZ, 'resources', 'map', 'WeaponId2Data.json'), 'utf8'))
+const partners = JSON.parse(fs.readFileSync(path.join(ZZZ, 'PartnerId2Data.json'), 'utf8'))
+const weapons = JSON.parse(fs.readFileSync(path.join(ZZZ, 'WeaponId2Data.json'), 'utf8'))
 
 // 专武：CodeName 形如 Weapon_S_<char_id>，属精确映射
 const sigWeapon = new Map()

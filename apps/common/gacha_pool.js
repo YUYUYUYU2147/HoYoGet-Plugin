@@ -93,7 +93,7 @@ const GS_MARK_ICON = 'gs_mark/paimon.png';
 // 星铁角标：优先用 miao-plugin 的三月七立绘，找不到就用插件自带的星铁图。
 // 不要写死别人机器上的绝对路径，否则换机就裂图。
 const SR_MARK_ICON = [
-  './plugins/miao-plugin/resources/meta-sr/character/三月七/imgs/splash.webp',
+  './plugins/HoYoGet-Plugin/resources/meta-sr/character/三月七/imgs/splash.webp',
   './plugins/HoYoGet-Plugin/resources/srlogs/imgs/sr/1.png',
   './plugins/HoYoGet-Plugin/resources/srlogs/imgs/h.png',
 ].find(p => { try { return fs.existsSync(p) } catch (_) { return false } })
@@ -971,8 +971,8 @@ export class xhh_gacha_pool extends plugin {
     const target = this.cleanZzzName(this.normalizeZzzName(name));
     if (!target) return '';
     const file = weapon
-      ? './plugins/ZZZ-Plugin/resources/map/WeaponId2Data.json'
-      : './plugins/ZZZ-Plugin/resources/map/PartnerId2Data.json';
+      ? './plugins/HoYoGet-Plugin/resources/zzz/map/WeaponId2Data.json'
+      : './plugins/HoYoGet-Plugin/resources/zzz/map/PartnerId2Data.json';
     try {
       const data = JSON.parse(fs.readFileSync(file, 'utf-8'));
       for (const info of Object.values(data)) {
@@ -1010,8 +1010,8 @@ export class xhh_gacha_pool extends plugin {
           }
         }
       };
-      collect('./plugins/ZZZ-Plugin/resources/map/PartnerId2Data.json', ['name', 'full_name', 'Name', 'FullName']);
-      collect('./plugins/ZZZ-Plugin/resources/map/WeaponId2Data.json', ['Name', 'name']);
+      collect('./plugins/HoYoGet-Plugin/resources/zzz/map/PartnerId2Data.json', ['name', 'full_name', 'Name', 'FullName']);
+      collect('./plugins/HoYoGet-Plugin/resources/zzz/map/WeaponId2Data.json', ['Name', 'name']);
       known = [...new Set(known)].sort((a, b) => b.length - a.length);
     } catch (_) {}
     for (const raw of names) {
@@ -3929,7 +3929,7 @@ ${r.summary || ''}`;
       if (this.cleanZzzName(agent) === agentClean) return weapon;
     }
     try {
-      const partner = JSON.parse(fs.readFileSync('./plugins/ZZZ-Plugin/resources/map/PartnerId2Data.json', 'utf-8'));
+      const partner = JSON.parse(fs.readFileSync('./plugins/HoYoGet-Plugin/resources/zzz/map/PartnerId2Data.json', 'utf-8'));
       const agents = [];
       for (const info of Object.values(partner)) {
         const names = [info?.name, info?.full_name, info?.Name, info?.FullName].filter(Boolean);
@@ -3937,7 +3937,7 @@ ${r.summary || ''}`;
       }
       if (!agents.length) agents.push(agentName);
       const agentTargets = [...new Set(agents.map(v => this.cleanZzzName(v)).filter(Boolean))];
-      const weapons = JSON.parse(fs.readFileSync('./plugins/ZZZ-Plugin/resources/map/WeaponId2Data.json', 'utf-8'));
+      const weapons = JSON.parse(fs.readFileSync('./plugins/HoYoGet-Plugin/resources/zzz/map/WeaponId2Data.json', 'utf-8'));
       for (const info of Object.values(weapons)) {
         const weaponName = info?.Name || info?.name || '';
         const text = [info?.Desc, info?.Desc3, info?.Talents && JSON.stringify(info.Talents)].filter(Boolean).join('');
@@ -3960,7 +3960,7 @@ ${r.summary || ''}`;
     };
     if (aliasMap[clean]) return aliasMap[clean];
     try {
-      const data = JSON.parse(fs.readFileSync('./plugins/ZZZ-Plugin/resources/map/PartnerId2Data.json', 'utf-8'));
+      const data = JSON.parse(fs.readFileSync('./plugins/HoYoGet-Plugin/resources/zzz/map/PartnerId2Data.json', 'utf-8'));
       for (const info of Object.values(data)) {
         const name = info?.name || '';
         const full = info?.full_name || '';
@@ -3974,7 +3974,7 @@ ${r.summary || ''}`;
     const target = this.cleanZzzName(name);
     if (!target) return false;
     try {
-      const data = JSON.parse(fs.readFileSync('./plugins/ZZZ-Plugin/resources/map/PartnerId2Data.json', 'utf-8'));
+      const data = JSON.parse(fs.readFileSync('./plugins/HoYoGet-Plugin/resources/zzz/map/PartnerId2Data.json', 'utf-8'));
       for (const info of Object.values(data)) {
         const name = this.cleanZzzName(info?.name || '');
         const full = this.cleanZzzName(info?.full_name || '');
@@ -3986,7 +3986,7 @@ ${r.summary || ''}`;
 
   getZzzCharSprite(name = '') {
     try {
-      const data = JSON.parse(fs.readFileSync('./plugins/ZZZ-Plugin/resources/map/PartnerId2Data.json', 'utf-8'));
+      const data = JSON.parse(fs.readFileSync('./plugins/HoYoGet-Plugin/resources/zzz/map/PartnerId2Data.json', 'utf-8'));
       const clean = s => String(s || '').replace(/[「」&]/g, '');
       const target = clean(name);
       for (const info of Object.values(data)) {
@@ -4091,7 +4091,7 @@ ${r.summary || ''}`;
   }
 
   getZzzPanelSplash(name = '') {
-    const root = './plugins/ZZZ-Plugin/resources/images/panel';
+    const root = './plugins/HoYoGet-Plugin/resources/zzz_panel/images/panel';
     if (!fs.existsSync(root)) return '';
     const clean = v => String(v || '').replace(/[「」&·•\s]/g, '');
     const target = clean(name) || '艾莲';
@@ -4136,7 +4136,7 @@ ${r.summary || ''}`;
   }
 
   getZzzPanelIcon(name = '') {
-    const root = './plugins/ZZZ-Plugin/resources/images/panel';
+    const root = './plugins/HoYoGet-Plugin/resources/zzz_panel/images/panel';
     if (!fs.existsSync(root)) return '';
     const clean = v => String(v || '').replace(/[「」&·•\s]/g, '');
     const target = clean(name);
@@ -4188,7 +4188,7 @@ ${r.summary || ''}`;
 
   getZzzIcon(name = '', weapon = false) {
     if (weapon) {
-      const mapPath = './plugins/ZZZ-Plugin/resources/map/WeaponId2Data.json';
+      const mapPath = './plugins/HoYoGet-Plugin/resources/zzz/map/WeaponId2Data.json';
       try {
         const data = JSON.parse(fs.readFileSync(mapPath, 'utf-8'));
         const clean = v => String(v || '').replace(/[「」&·•\s]/g, '');
@@ -4604,7 +4604,7 @@ ${r.summary || ''}`;
     for (const n of [...new Set(names)]) {
       const profile = this.getMiaoProfileImage(n);
       if (customFirst && profile) return profile;
-      const base = `./plugins/miao-plugin/resources/meta-sr/character/${n}/imgs`;
+      const base = `./plugins/HoYoGet-Plugin/resources/meta-sr/character/${n}/imgs`;
       for (const file of ['face.webp', 'face-q.webp', 'preview.webp', 'card.webp']) {
         const path = `${base}/${file}`;
         if (fs.existsSync(path)) return fs.realpathSync(path);
@@ -4621,7 +4621,7 @@ ${r.summary || ''}`;
     const profileFallback = [];
     for (const n of [...new Set(names)]) {
       const profile = this.getMiaoProfileImage(n, true);
-      const base = `./plugins/miao-plugin/resources/meta-sr/character/${n}/imgs`;
+      const base = `./plugins/HoYoGet-Plugin/resources/meta-sr/character/${n}/imgs`;
       for (const file of ['splash.webp', 'preview.webp']) {
         const path = `${base}/${file}`;
         if (fs.existsSync(path) && this.isSafeCornerSplashFile(path)) primary.push(fs.realpathSync(path));
@@ -4642,7 +4642,7 @@ ${r.summary || ''}`;
   }
 
   getSrWeaponIcon(name = '') {
-    const root = './plugins/miao-plugin/resources/meta-sr/weapon';
+    const root = './plugins/HoYoGet-Plugin/resources/meta-sr/weapon';
     if (!fs.existsSync(root)) return '';
     const raw = String(name || '');
     const clean = raw.includes('/') ? raw.split('/').pop() : raw;
@@ -5328,7 +5328,7 @@ ${r.summary || ''}`;
         if (fs.existsSync(p) && this.isSafeCornerSplashFile(p)) custom.push(fs.realpathSync(p));
       }
       const profile = this.getMiaoProfileImage(n, true);
-      const metaBase = `./plugins/miao-plugin/resources/meta-gs/character/${n}/imgs`;
+      const metaBase = `./plugins/HoYoGet-Plugin/resources/meta-gs/character/${n}/imgs`;
       for (const file of ['gacha.webp', 'splash.webp', 'side.webp']) {
         const path = `${metaBase}/${file}`;
         if (fs.existsSync(path) && this.isSafeCornerSplashFile(path)) primary.push(fs.realpathSync(path));
@@ -5352,7 +5352,7 @@ ${r.summary || ''}`;
   getGsCharacterIcon(name = '') {
     const profile = this.getMiaoProfileImage(name);
     if (this.useCustomGachaArt('up') && profile) return profile;
-    const base = `./plugins/miao-plugin/resources/meta-gs/character/${name}/imgs`;
+    const base = `./plugins/HoYoGet-Plugin/resources/meta-gs/character/${name}/imgs`;
     for (const file of ['face.webp', 'face-q.webp', 'face0.webp', 'card.webp']) {
       const path = `${base}/${file}`;
       if (fs.existsSync(path)) return fs.realpathSync(path);
@@ -5372,7 +5372,7 @@ ${r.summary || ''}`;
   }
 
   getGsWeaponBase(name = '') {
-    const root = './plugins/miao-plugin/resources/meta-gs/weapon';
+    const root = './plugins/HoYoGet-Plugin/resources/meta-gs/weapon';
     if (!fs.existsSync(root)) return '';
     try {
       for (const type of fs.readdirSync(root)) {
