@@ -1036,7 +1036,7 @@ let PARTNER_DATA_CACHE = null
 async function loadPartnerData() {
   if (PARTNER_DATA_CACHE !== null) return PARTNER_DATA_CACHE
   try {
-    const f = path.join(process.cwd(), 'plugins', 'ZZZ-Plugin', 'resources', 'map', 'PartnerId2Data.json')
+    const f = path.join(process.cwd(), 'plugins', 'HoYoGet-Plugin', 'resources', 'zzz', 'map', 'PartnerId2Data.json')
     PARTNER_DATA_CACHE = JSON.parse(fs.readFileSync(f, 'utf8'))
   } catch (_) {
     PARTNER_DATA_CACHE = {}

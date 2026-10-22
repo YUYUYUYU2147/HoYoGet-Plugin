@@ -136,10 +136,26 @@ const nameOf = pid => PROP_NAME[pid] || ''
 export function fillBaseAdd(rows = [], ctx = {}) {
   const char = readCharacter(ctx.charId)
   if (!char) return rows
+  // 面板属性 id 是完整的 5 位 id（如 12102 攻击%、20103 暴击率），
+  // 而 PROP_NAME / STATIC_KEY 用的是短 id（1/2/3/5/6…）。完整 id 前 3 位是
+  // 属性大类（111 生命 / 121 攻击 / 131 防御 / 122 冲击 / 201 暴击率 / 211 暴伤 /
+  // 314 异常掌控 / 312 异常精通 / 231 穿透率 / 305 能量回能 / 232 穿透值），
+  // 用映射表折算，不能直接除 100（20103/100=201 ≠ 5）。
+  const SHORT_PID = {
+    111: 1, 121: 2, 131: 3, 122: 4, 201: 5, 211: 6,
+    314: 7, 312: 8, 231: 9, 305: 11, 232: 232,
+  }
+  const shortPid = (pid) => {
+    const n = Number(pid)
+    if (!Number.isFinite(n)) return n
+    if (SHORT_PID[n] != null) return SHORT_PID[n]
+    const prefix = Math.floor(n / 100)
+    return SHORT_PID[prefix] != null ? SHORT_PID[prefix] : n
+  }
   for (const row of rows) {
     // 接口已经给了就不动
     if (row.base) continue
-    const pid = Number(row.pid)
+    const pid = shortPid(row.pid)
     const isPct = /%/.test(String(row.final))
     const finalN = num(row.final)
     const baseN = baseOf(pid, { char, level: ctx.level, promo: ctx.promo, weapon: ctx.weapon, final: finalN })
