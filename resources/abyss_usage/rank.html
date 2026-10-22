@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}abyss_usage/rank.css" />
+  </head>
+  <body>
+    <div class="page">
+      <div class="head">
+        <div class="head-left">
+          <div class="title">原神深渊使用率</div>
+          <div class="subtitle">{{title}} · {{scheduleText}}</div>
+        </div>
+        <div class="head-right">
+          <div class="badge">提瓦特小助手</div>
+          {{if topOwn}}<div class="own">{{topOwn}} 名玩家参与</div>{{/if}}
+        </div>
+      </div>
+
+      {{if offline}}<div class="offline-tip">⚠ 数据来自缓存，小助手接口暂不可用</div>{{/if}}
+
+      {{each groups g}}
+      <div class="group">
+        <div class="group-head">
+          <span class="rank-badge rank-{{g.rankClass}}">{{g.rankName}}</span>
+          <span class="group-count">{{g.list.length}} 名角色</span>
+        </div>
+        <div class="grid">
+          {{each g.list r}}
+          <div class="role">
+            <img class="avatar" src="{{r.avatar}}" loading="lazy" onerror="this.style.display='none'" />
+            <div class="role-info">
+              <div class="role-name">{{r.name}}{{if r.starStr}}<span class="star">{{r.starStr}}</span>{{/if}}</div>
+              <div class="bar"><div class="bar-fill" style="width:{{r.useRate}}%"></div></div>
+              <div class="role-meta">
+                <span class="use">{{r.useRate}}%</span>
+                <span class="own">持有 {{r.ownRate}}%</span>
+              </div>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+      </div>
+      {{/each}}
+
+      <div class="footer">
+        <span>数据来自提瓦特小助手 · 更新于 {{lastUpdate}}</span>
+        <span class="src">from 米哈游</span>
+      </div>
+    </div>
+  </body>
+</html>

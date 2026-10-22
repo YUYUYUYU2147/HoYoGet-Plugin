@@ -185,4 +185,88 @@ export async function yshelperRankForChar(name, { limit = 5 } = {}) {
   return task
 }
 
-export const __test = { roleSelect, yshelperRankForChar, rowsOf }
+const ABYSS_MEM = new Map()
+
+/**
+ * 原神深渊（深境螺旋）角色使用率统计。
+ * 数据源：提瓦特小助手 getAbyssRank.php。
+ * 返回按 S+/S/A/B/C 分级的角色使用率榜（头像 / 使用率 / 持有率 / 命座分布）。
+ * @param {object} opts
+ * @param {number} opts.schedule 1=本期 2=上期
+ */
+async function fetchAbyssRank({ schedule = 1 } = {}) {
+  const json = await request('getAbyssRank.php', {
+    body: { lang: 'zh-Hans', schedule: String(schedule) },
+  })
+  const rawResult = json?.result
+  // result 是 PHP 关联数组序列化：每个元素是 {0:{rank_name,list},1:{...}}，
+  // 真正分组在 Object.values 里，需展平一层。
+  const flat = []
+  if (Array.isArray(rawResult)) {
+    for (const item of rawResult) {
+      if (item && typeof item === 'object') flat.push(...Object.values(item))
+      else if (item?.rank_name) flat.push(item)
+    }
+  } else if (rawResult && typeof rawResult === 'object') {
+    flat.push(...Object.values(rawResult))
+  }
+  if (!flat.length) throw new Error('深渊使用率数据为空')
+  const groups = flat.map(g => ({
+    rankName: g?.rank_name || '',
+    rankClass: g?.rank_class || '',
+    list: (g?.list || []).map(r => ({
+      name: r?.name || '',
+      ename: r?.ename || '',
+      star: Number(r?.star) || 0,
+      useRate: Number(r?.use_rate) || 0,
+      ownRate: Number(r?.own_rate) || 0,
+      use: Number(r?.use) || 0,
+      avatar: r?.avatar || '',
+      c0Rate: Number(r?.c0_rate) || 0,
+      c6Rate: Number(r?.c6_rate) || 0,
+    })),
+  })).filter(g => g.list.length)
+  return {
+    title: json?.title || '',
+    version: json?.version || '',
+    lastUpdate: json?.last_update || '',
+    topOwn: Number(json?.top_own) || 0,
+    star36Rate: Number(json?.star36_rate) || 0,
+    groups,
+    historyList: Array.isArray(json?.history_list) ? json.history_list : [],
+    at: Date.now(),
+  }
+}
+
+export async function yshelperAbyssRank({ schedule = 1, force = false } = {}) {
+  const key = `abyss:${schedule}`
+  const mem = ABYSS_MEM.get(key)
+  if (!force && mem && Date.now() - mem.at < TTL) return mem.data
+
+  const file = path.join(CACHE_DIR, `abyss-${schedule}.json`)
+  const cached = readJson(file)
+  if (!force && cached?.data && Date.now() - Number(cached.at || 0) < TTL) {
+    ABYSS_MEM.set(key, { at: Number(cached.at) || Date.now(), data: cached.data })
+    return cached.data
+  }
+
+  if (INFLIGHT.has(key)) return INFLIGHT.get(key)
+  const task = (async () => {
+    try {
+      const data = await fetchAbyssRank({ schedule })
+      ABYSS_MEM.set(key, { at: data.at, data })
+      writeJson(file, { at: data.at, data })
+      return data
+    } catch (err) {
+      globalThis.logger?.mark?.(`[HoYoGet][yshelper] 深渊使用率获取失败，改用缓存：${err?.message || err}`)
+      if (cached?.data) return { ...cached.data, offline: true }
+      return null
+    } finally {
+      INFLIGHT.delete(key)
+    }
+  })()
+  INFLIGHT.set(key, task)
+  return task
+}
+
+export const __test = { roleSelect, yshelperRankForChar, rowsOf, yshelperAbyssRank }
