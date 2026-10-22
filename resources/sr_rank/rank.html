@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}sr_rank/rank.css" />
+  </head>
+  <body>
+    <div class="page">
+      <div class="head">
+        <div class="head-left">
+          <div class="title">{{roleName}}</div>
+          <div class="subtitle">星铁全球练度榜 · fort off fans · 按「{{statName}}」排序</div>
+        </div>
+        <div class="head-right">
+          <div class="badge">HSR GLOBAL</div>
+          <div class="total">{{total}} 份</div>
+        </div>
+      </div>
+
+      <div class="meta-strip">
+        {{if elemCn}}<span class="elem" style="color:{{elemColor}}">{{elemCn}}</span>{{/if}}
+        {{if pathCn}}<span class="path">{{pathCn}}</span>{{/if}}
+        {{if star}}<span class="stars">{{starStr}}</span>{{/if}}
+        <span class="stat-name">「{{statName}}」</span>
+      </div>
+
+      <div class="list">
+        {{each rows r}}
+        <div class="row {{if r.rank === 1}}top1{{else if r.rank === 2}}top2{{else if r.rank === 3}}top3{{/if}}">
+          <div class="rank">{{r.rank}}</div>
+          <div class="player">
+            <div class="nick">{{r.nickname}}</div>
+            <div class="meta">
+              {{if r.eidolon > 0}}<span class="eid">E{{r.eidolon}}</span>{{/if}}
+              {{if r.lcName}}<span class="lc">《{{r.lcName}}》{{if r.lcSuper}} S{{r.lcSuper}}{{/if}}</span>{{/if}}
+            </div>
+          </div>
+          <div class="stats">
+            <div class="stat main"><span class="v">{{r.main}}</span><span class="l">{{statName}}</span></div>
+            <div class="stat"><span class="v">{{r.critRate}}</span><span class="l">暴率</span></div>
+            <div class="stat"><span class="v">{{r.critDmg}}</span><span class="l">暴伤</span></div>
+            <div class="stat"><span class="v">{{r.spd}}</span><span class="l">速度</span></div>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+
+      <div class="footer">数据来源 hsr.fortoffans.com · 全球玩家上传面板</div>
+    </div>
+  </body>
+</html>
