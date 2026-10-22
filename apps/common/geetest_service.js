@@ -372,7 +372,8 @@ export class GeetestService extends plugin {
                 const boot = await ensurePm2Startup();
                 return boot ? `pm2 托管（${PM2_NAME}）· 已设开机自启` : `pm2 托管（${PM2_NAME}）（开机自启未设置，见日志）`;
             }
-            // 没有 pm2 就后台起，够用；重启后需要重新部署。
+            // 没有 pm2 就后台起。插件启动/撞码时会自动拉起（system/geetest_autostart.js），
+            // 所以重启后不用手动部署，只是要多等几秒。
             // POSIX 用 nohup + disown，Windows 用 start /b —— 那套 shell 语法在 cmd 下不成立。
             const script = `${SERVICE_DIR}/server.py`;
             if (IS_WIN) {
@@ -380,7 +381,7 @@ export class GeetestService extends plugin {
                 return '后台运行（本机没装 pm2，重启后需重新部署）';
             }
             await run(sh(`cd ${q(SERVICE_DIR)}`, `nohup ${q(pyPath)} server.py > ${q(`${SERVICE_DIR}/server.log`)} 2>&1 & disown`));
-            return 'nohup 后台运行（本机没装 pm2，重启后需重新部署）';
+            return 'nohup 后台运行（本机没装 pm2；重启后插件会自动拉起，装 pm2 更稳）';
         });
 
         // 5) 验活

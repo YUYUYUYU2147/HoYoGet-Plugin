@@ -741,8 +741,27 @@ async function autoVerifyAvailable() {
         host = u.hostname || host;
         port = Number(u.port) || port;
     } catch (_) { /* 地址写坏了就按默认端口探，探不到自然跳过 */ }
-    const ok = await probeTcp(host, port);
-    autoVerifyProbe = { at: now, ok };
+    let ok = await probeTcp(host, port);
+    if (!ok) {
+        /* 服务可能只是掉了（机器重启 / 崩溃 / pm2 没设自启）。
+           只要用户部署过（venv + server.py 在），就自动拉起来再探一次，
+           不必让人重新发 #过码部署 —— 那正是「每次都要手动拉」的根源。 */
+        try {
+            const { ensureStarted } = await import('./geetest_autostart.js');
+            const r = await ensureStarted({ logger });
+            if (r.started) {
+                // 冷启动要加载依赖，给几秒
+                for (let i = 0; i < 12 && !ok; i++) {
+                    await new Promise(res => setTimeout(res, 1000));
+                    ok = await probeTcp(host, port, 1000);
+                }
+                logger.mark(`[HoYoGet][bbs_sign] 过码服务已自动拉起（${r.reason}）`);
+            }
+        } catch (err) {
+            logger.debug?.(`[HoYoGet][bbs_sign] 自动拉起过码服务失败：${err?.message || err}`);
+        }
+    }
+    autoVerifyProbe = { at: Date.now(), ok };
     if (config().debug) logger.mark(`[HoYoGet][bbs_sign] 本地过码服务 ${host}:${port} ${ok ? '可用' : '不可用，跳过自动过码'}`);
     return ok;
 }

@@ -168,6 +168,31 @@ try {
   logger.error(`[HoYoGet] 自举热重载启动异常：${err?.message || err}`);
 }
 
+/* 过码服务自愈：用户部署过（venv + server.py 在）但服务没在跑时自动拉起。
+   pm2 没设开机自启、进程崩溃、机器重启都会导致掉线，原来只能手动重发
+   #过码部署 —— 启动时先兜一次，撞码时 system/sign.js 还会再兜一次。 */
+setTimeout(async () => {
+  try {
+    const { deployed, ensureStarted } = await import('./system/geetest_autostart.js');
+    if (!deployed()) return;
+    // 入口没有 config()，按上面的既有约定走 yaml.get
+    const cfg = yaml.get('./plugins/HoYoGet-Plugin/config/config.yaml') || {};
+    const addr = String(cfg.auto_verify_addr ?? 'http://127.0.0.1:2149/solve').trim();
+    if (!addr) return; // 显式关掉了自动过码
+    let up = false;
+    try {
+      const resp = await fetch(`${addr.replace(/\/solve\/?$/, '')}/health`, { signal: AbortSignal.timeout(3000) });
+      up = (await resp.json())?.ok === true;
+    } catch { up = false; }
+    if (up) return;
+    logger.mark('[HoYoGet][geetest] 过码服务未在运行，尝试自动拉起…');
+    const r = await ensureStarted({ force: true });
+    logger[r.started ? 'mark' : 'warn'](`[HoYoGet][geetest] 自动拉起${r.started ? '成功' : '失败'}：${r.reason}`);
+  } catch (err) {
+    logger.warn(`[HoYoGet][geetest] 启动自愈失败：${err?.message || err}`);
+  }
+}, 12000);
+
 /* 启动后台补齐 meta 资源（角色立绘/武器/圣遗物图片）。
    以前这些图只存在于 miao-plugin 的 resources，卸载 miao 后全空；
    现在从作者的服务增量同步到本插件 resources，首次装/缺图时自动补。
