@@ -1217,7 +1217,7 @@ function loadCustomPortrait(names) {
 }
 
 let zzzPartnerMap = null
-function getZzzSprite(avatar) {
+function getZzzPartnerMap() {
   if (!zzzPartnerMap) {
     try {
       zzzPartnerMap = JSON.parse(fs.readFileSync('./plugins/HoYoGet-Plugin/resources/zzz/map/PartnerId2Data.json', 'utf8'))
@@ -1225,7 +1225,28 @@ function getZzzSprite(avatar) {
       zzzPartnerMap = {}
     }
   }
-  const data = zzzPartnerMap || {}
+  return zzzPartnerMap || {}
+}
+
+/**
+ * 按名字/别名从全量角色表里解析角色 id。
+ * avatar/basic 只返回部分角色（展示柜），`米游社<角色>面板` 若从该列表里找，
+ * 会找不到不在列表里的角色（如叶瞬光）。这里用本地全量表兜底。
+ */
+function resolveZzzIdByName(raw = '') {
+  const clean = s => String(s || '').replace(/[「」&·\s]/g, '').toLowerCase()
+  const want = clean(raw)
+  if (!want) return null
+  const data = getZzzPartnerMap()
+  const entries = Object.entries(data)
+  const hit = entries.find(([, info]) => clean(info?.name) === want || clean(info?.full_name) === want)
+    || entries.find(([, info]) => clean(info?.name).includes(want) || want.includes(clean(info?.name)) || clean(info?.full_name).includes(want))
+  if (!hit) return null
+  return { id: Number(hit[0]) || hit[0], name_mi18n: hit[1]?.name || hit[1]?.full_name || raw, full_name_mi18n: hit[1]?.full_name || '' }
+}
+
+function getZzzSprite(avatar) {
+  const data = getZzzPartnerMap()
   const id = String(avatar?.id || '')
   if (id && data[id]?.sprite_id) return String(data[id].sprite_id)
   const clean = s => String(s || '').replace(/[「」&·\s]/g, '')
@@ -2183,6 +2204,11 @@ export class zzz_panel_list extends plugin {
       target = list.find(it => (it.name_mi18n || '').toLowerCase().includes(lower))
         || list.find(it => (it.full_name_mi18n || '').toLowerCase().includes(lower))
         || list.find(it => (it.name_mi18n || '').toLowerCase().includes(lower.slice(0, 1)))
+    }
+    // avatar/basic 只返回部分角色（展示柜），不在列表里的角色（如叶瞬光）
+    // 用本地全量角色表解析出 id，直接查 avatar/info。
+    if ((!target || target.id == null) && !/^\d+$/.test(arg)) {
+      target = resolveZzzIdByName(arg)
     }
     if (!target || target.id == null) {
       const names = list.slice(0, 12).map((it, i) => `${i + 1}.${it.name_mi18n || it.full_name_mi18n}`).join('  ')
