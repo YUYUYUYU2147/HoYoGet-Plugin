@@ -6,15 +6,206 @@
  * 数据来自 system/task_history.js 落盘的 data/task_history.json，
  * 覆盖 游戏签到 / 社区签到 / 体力推送 / 抽卡更新。
  */
+import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import YAML from 'yaml'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const STOKEN_DIR = path.join(ROOT, 'data', 'Stoken')
+
+/** 通行证脱敏：只留后 4 位，面板里不该出现完整 stuid */
+function maskStuid(stuid) {
+  const s = String(stuid || '').trim()
+  if (!s) return '默认'
+  return s.length <= 4 ? s : `****${s.slice(-4)}`
+}
+
+/** UID 也做半掩码：前 2 后 4，够核对、不暴露完整号 */
+function maskUid(uid) {
+  const s = String(uid || '').trim()
+  if (s.length <= 6) return s
+  return `${s.slice(0, 2)}****${s.slice(-4)}`
+}
+
+/**
+ * 扫描 data/Stoken/<QQ>.yaml，聚合成「QQ → 账号 → 游戏」的绑定总览。
+ * 只读本地文件，不发任何请求；不含 stoken/cookie 原文。
+ */
+/* 游戏判定与 system/sign.js 的 gameOfEntry 保持同一口径，但这里不 import
+   那个模块 —— 它顶部会读 config，在锅巴侧加载没必要，还会把异常带进来。 */
+const GAME_BIZ = { hk4e_cn: 'gs', hkrpg_cn: 'sr', nap_cn: 'zzz', bh3_cn: 'bh3' }
+const REGION_NAME = { 天空岛: 'gs', 世界树: 'gs', 星穹列车: 'sr', 新艾利都: 'zzz' }
+const BH3_REGIONS = new Set(['android01', 'ios01', 'pc01', 'bb01', 'yyb01', 'hun01', 'hun02'])
+
+function gameOfEntry(entry) {
+  const byBiz = GAME_BIZ[String(entry?.game_biz || '')]
+  if (byBiz) return byBiz
+  const byName = REGION_NAME[String(entry?.region_name || '')]
+  if (byName) return byName
+  return BH3_REGIONS.has(String(entry?.region || '')) ? 'bh3' : ''
+}
+
+async function collectBindings() {
+  let files = []
+  try {
+    files = fs.readdirSync(STOKEN_DIR).filter(f => f.endsWith('.yaml'))
+  } catch {
+    return []
+  }
+  const users = []
+  for (const file of files) {
+    const qq = file.replace(/\.yaml$/, '')
+    let data = {}
+    try {
+      data = YAML.parse(fs.readFileSync(path.join(STOKEN_DIR, file), 'utf8')) || {}
+    } catch {
+      continue
+    }
+    const accounts = []
+    for (const entry of Object.values(data)) {
+      if (!entry || typeof entry !== 'object') continue
+      // uid 为 "0" / 纯占位的不算有效绑定
+      if (!entry.uid || !/^\d+(\.\d+)?$/.test(String(entry.uid)) || Number(entry.uid) <= 0) continue
+      const game = gameOfEntry(entry)
+      accounts.push({
+        uid: String(entry.uid),
+        uidMask: maskUid(entry.uid),
+        stuidMask: maskStuid(entry.stuid),
+        game,
+        gameName: { gs: '原神', sr: '崩坏：星穹铁道', zzz: '绝区零', bh3: '崩坏3' }[game] || '未知',
+        region: String(entry.region_name || entry.region || ''),
+      })
+    }
+    if (!accounts.length) continue
+    users.push({
+      qq,
+      total: accounts.length,
+      // 去重统计每个游戏有几个号
+      byGame: accounts.reduce((m, a) => {
+        m[a.game] = (m[a.game] || 0) + 1
+        return m
+      }, {}),
+      accounts,
+    })
+  }
+  users.sort((a, b) => b.total - a.total)
+  return users
+}
 
 async function loadTaskHistory() {
   const mod = await import('../system/task_history.js')
   return mod
 }
+
+
+const BIND_HTML = `
+<div class="hoyo-bind">
+  <div class="hb-bar">
+    <input class="hb-input" id="hb-qq" placeholder="按 QQ 过滤（可空）" />
+    <select class="hb-input" id="hb-game">
+      <option value="">全部游戏</option>
+      <option value="gs">原神</option>
+      <option value="sr">崩坏：星穹铁道</option>
+      <option value="zzz">绝区零</option>
+      <option value="bh3">崩坏3</option>
+    </select>
+    <button class="hb-btn" id="hb-refresh">刷新</button>
+    <span class="hb-meta" id="hb-meta"></span>
+  </div>
+  <div id="hb-list"><div class="hb-empty">加载中…</div></div>
+</div>
+`
+
+const BIND_STYLE = `
+.hoyo-bind { padding: 4px 2px 10px; }
+.hb-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+.hb-input { height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--g-border, #d8dde6); background: var(--g-card, #fff); color: var(--g-text, #333); font-size: 13px; outline: none; }
+.hb-input:focus { border-color: #4c8bf5; }
+.hb-btn { height: 32px; padding: 0 16px; border-radius: 8px; border: none; background: #4c8bf5; color: #fff; font-size: 13px; cursor: pointer; }
+.hb-btn:hover { background: #3b78e0; }
+.hb-meta { font-size: 12px; color: var(--g-muted, #8a93a3); }
+.hb-card { border: 1px solid var(--g-border, #e3e8ef); border-radius: 12px; margin-bottom: 12px; overflow: hidden; background: var(--g-card, #fff); }
+.hb-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: rgba(120, 150, 200, 0.06); border-bottom: 1px solid var(--g-border, #e3e8ef); }
+.hb-qq { font-size: 15px; font-weight: 600; color: var(--g-text, #333); }
+.hb-tags { display: flex; gap: 6px; margin-left: auto; }
+.hb-tag { font-size: 12px; padding: 1px 8px; border-radius: 999px; background: rgba(76, 139, 245, 0.12); color: #3b78e0; }
+.hb-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.hb-table th, .hb-table td { padding: 8px 14px; text-align: left; white-space: nowrap; }
+.hb-table thead th { color: var(--g-muted, #6b7280); font-weight: 600; border-bottom: 1px solid var(--g-border, #e3e8ef); }
+.hb-table tbody tr:hover { background: rgba(76, 139, 245, 0.06); }
+.hb-game { font-weight: 600; }
+.hb-gs { color: #c0893c; }
+.hb-sr { color: #5b7ec9; }
+.hb-zzz { color: #4a9a8f; }
+.hb-bh3 { color: #b06a9a; }
+.hb-empty { text-align: center; color: var(--g-muted, #8a93a3); padding: 28px 0; }
+`
+
+const BIND_SCRIPT = `
+(function () {
+  const g = window.__GUOBA__ || {}
+  const list = document.getElementById('hb-list')
+  const meta = document.getElementById('hb-meta')
+  const qqEl = document.getElementById('hb-qq')
+  const gameEl = document.getElementById('hb-game')
+  const NAME = { gs: '原神', sr: '崩坏：星穹铁道', zzz: '绝区零', bh3: '崩坏3' }
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]))
+  }
+
+  async function load() {
+    list.innerHTML = '<div class="hb-empty">加载中…</div>'
+    try {
+      const res = await fetch(g.apiBase + '/bindings', {
+        headers: { [g.tokenKey || 'guoba-access-token']: g.token || '' },
+      })
+      const json = await res.json()
+      let users = json?.result?.users || []
+      const qq = qqEl.value.trim()
+      if (qq) users = users.filter(u => u.qq.includes(qq))
+      const game = gameEl.value
+      if (game) {
+        users = users
+          .map(u => ({ ...u, accounts: u.accounts.filter(a => a.game === game) }))
+          .filter(u => u.accounts.length)
+      }
+      meta.textContent = '共 ' + users.length + ' 个 QQ'
+      if (!users.length) {
+        list.innerHTML = '<div class="hb-empty">暂无绑定</div>'
+        return
+      }
+      list.innerHTML = users.map(u => {
+        const tags = Object.entries(u.byGame)
+          .map(([k, n]) => '<span class="hb-tag">' + esc(NAME[k] || k) + ' ' + n + '</span>')
+          .join('')
+        const rows = u.accounts.map(a => '<tr>'
+          + '<td class="hb-game hb-' + esc(a.game) + '">' + esc(a.gameName) + '</td>'
+          + '<td>' + esc(a.uidMask) + '</td>'
+          + '<td>' + esc(a.region) + '</td>'
+          + '<td>' + esc(a.stuidMask) + '</td>'
+          + '</tr>').join('')
+        return '<div class="hb-card">'
+          + '<div class="hb-head"><span class="hb-qq">' + esc(u.qq) + '</span>'
+          + '<span class="hb-tag">共 ' + u.total + ' 个号</span>'
+          + '<span class="hb-tags">' + tags + '</span></div>'
+          + '<table class="hb-table"><thead><tr><th>游戏</th><th>UID</th><th>区服</th><th>通行证</th></tr></thead>'
+          + '<tbody>' + rows + '</tbody></table></div>'
+      }).join('')
+    } catch (err) {
+      list.innerHTML = '<div class="hb-empty">加载失败：' + esc(err && err.message || err) + '</div>'
+    }
+  }
+
+  document.getElementById('hb-refresh').addEventListener('click', load)
+  qqEl.addEventListener('keydown', e => { if (e.key === 'Enter') load() })
+  gameEl.addEventListener('change', load)
+  load()
+})();
+`
 
 const PAGE_HTML = `
 <div class="hoyo-task-hist">
@@ -209,6 +400,26 @@ export function init(ctx) {
       ctx.logger?.error?.(`[HoYoGet][guoba] 汇总任务记录失败：${err?.message || err}`)
       res.json({ ok: false, code: -1, message: err?.message || String(err), result: [] })
     }
+  })
+
+  ctx.registerApi('get', '/bindings', async (req, res) => {
+    try {
+      const users = await collectBindings()
+      res.json({ ok: true, code: 0, message: 'ok', result: { total: users.length, users } })
+    } catch (err) {
+      ctx.logger?.error?.(`[HoYoGet][guoba] 读取绑定失败：${err?.message || err}`)
+      res.json({ ok: false, code: -1, message: err?.message || String(err), result: { total: 0, users: [] } })
+    }
+  })
+
+  ctx.registerPage({
+    id: 'hoyo-bindings',
+    title: '米哈游绑定总览',
+    icon: '🔗',
+    priority: 61,
+    html: BIND_HTML,
+    style: BIND_STYLE,
+    script: BIND_SCRIPT,
   })
 
   ctx.registerPage({
