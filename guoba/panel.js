@@ -23,7 +23,11 @@
   const modal = (() => {
     const m = document.createElement('div')
     m.className = 'pn-modal-mask'
-    m.innerHTML = '<div class="pn-modal"><div class="pn-modal-head"><span class="pn-modal-title"></span><button class="pn-close">×</button></div><div class="pn-imgs"></div></div>'
+    m.innerHTML = '<div class="pn-modal">'
+      + '<div class="pn-modal-head"><span class="pn-modal-title"></span><span class="pn-modal-count"></span><button class="pn-close">×</button></div>'
+      + '<div class="pn-viewer"><img class="pn-viewer-img" alt="" /><button class="pn-nav pn-prev">‹</button><button class="pn-nav pn-next">›</button></div>'
+      + '<div class="pn-thumbs"></div>'
+      + '</div>'
     document.body.appendChild(m)
     m.querySelector('.pn-close').addEventListener('click', () => m.classList.remove('on'))
     m.addEventListener('click', e => { if (e.target === m) m.classList.remove('on') })
@@ -100,26 +104,61 @@
     }
   }
 
+  let viewerFiles = []
+  let viewerIndex = 0
+
+  function renderViewer() {
+    const f = viewerFiles[viewerIndex]
+    if (!f) return
+    const viewer = modal.querySelector('.pn-viewer-img')
+    viewer.src = imgUrl(f, currentGame, currentSource)
+    modal.querySelector('.pn-modal-count').textContent = (viewerIndex + 1) + ' / ' + viewerFiles.length
+    const thumbs = modal.querySelectorAll('.pn-thumb')
+    thumbs.forEach((t, i) => t.classList.toggle('on', i === viewerIndex))
+    const on = modal.querySelector('.pn-thumb.on')
+    if (on) on.scrollIntoView({ block: 'nearest', inline: 'center' })
+  }
+  function viewerStep(d) {
+    if (!viewerFiles.length) return
+    viewerIndex = (viewerIndex + d + viewerFiles.length) % viewerFiles.length
+    renderViewer()
+  }
+
   async function open(name) {
     currentName = name
     const json = await api('/panel/files?source=' + currentSource + '&game=' + currentGame + '&name=' + encodeURIComponent(name), { headers: headers() })
     const files = json?.result || []
-    modal.querySelector('.pn-modal-title').textContent = name + ' · ' + files.length + ' 张'
-    const wrap = modal.querySelector('.pn-imgs')
+    viewerFiles = files
+    viewerIndex = 0
+    modal.querySelector('.pn-modal-title').textContent = name
     const isReadonly = currentSource === 'cowcoo'
-    wrap.innerHTML = files.map(f => '<div class="pn-img-wrap"><img class="pn-img" src="' + imgUrl(f, currentGame, currentSource) + '" loading="lazy" />'
-      + (isReadonly ? '' : '<button class="pn-del" data-file="' + esc(f) + '">删除</button>')
+    const thumbs = modal.querySelector('.pn-thumbs')
+    thumbs.innerHTML = files.map((f, i) => '<div class="pn-thumb' + (i === 0 ? ' on' : '') + '" data-i="' + i + '">'
+      + '<img src="' + imgUrl(f, currentGame, currentSource) + '" loading="lazy" />'
+      + (isReadonly ? '' : '<button class="pn-del" data-file="' + esc(f) + '" title="删除">×</button>')
       + '</div>').join('')
+    thumbs.querySelectorAll('.pn-thumb').forEach(t => {
+      t.addEventListener('click', e => {
+        if (e.target.classList.contains('pn-del')) return
+        viewerIndex = Number(t.dataset.i)
+        renderViewer()
+      })
+    })
     if (!isReadonly) {
-      wrap.querySelectorAll('.pn-del').forEach(b => b.addEventListener('click', async e => {
+      thumbs.querySelectorAll('.pn-del').forEach(b => b.addEventListener('click', async e => {
         e.stopPropagation()
         if (!confirm('删除这张图？')) return
         const d = await api('/panel/delete', { method: 'POST', headers: headers(true), body: JSON.stringify({ game: currentGame, name, file: b.dataset.file }) })
         if (!d?.ok) { alert(d?.message || '删除失败'); return }
+        viewerFiles.splice(viewerFiles.indexOf(b.dataset.file), 1)
+        if (viewerIndex >= viewerFiles.length) viewerIndex = Math.max(0, viewerFiles.length - 1)
         open(name)
         load()
       }))
     }
+    modal.querySelector('.pn-prev').onclick = () => viewerStep(-1)
+    modal.querySelector('.pn-next').onclick = () => viewerStep(1)
+    renderViewer()
     modal.classList.add('on')
   }
 
