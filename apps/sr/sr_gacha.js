@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { createHash } from 'node:crypto'
 import { render, mhy, pluginPriority, makeForwardMsg } from '#HoYoGet'
+import { appendTaskRecords } from '../../system/task_history.js'
 import { buildIsUP } from '../../system/join_isup.mjs'
 // === 跨插件依赖：genshin 插件 ===
 //
@@ -2270,6 +2271,10 @@ export class sr_gacha extends plugin {
         return `【${pool.name}】记录获取成功，更新${updated}条`
       }).join('\n')
       const commonText = result.pools?.common?.recent?.length ? `\n【常驻跃迁】记录获取成功，更新${result.pools.common.recent.length}条` : ''
+      try {
+        const updated = Object.values(result.addedByPool || {}).reduce((a, b) => a + (Number(b) || 0), 0)
+        appendTaskRecords([{ task: 'gacha', qq: e.user_id, name: e.sender?.card || e.sender?.nickname || '', game: '崩坏：星穹铁道', uid: auth.uid, tip: `更新 ${updated} 条`, source: e?.msg ? 'manual' : 'cron' }])
+      } catch (err) { logger.debug?.(`[HoYoGet][sr_gacha] 写抽卡记录失败：${err?.message || err}`) }
       await e.reply(`${text}${commonText}\n抽卡记录更新完成`)
       // 更新完成后自动输出抽卡记录总览图
       await this.renderSummary(e, [], 'grid')

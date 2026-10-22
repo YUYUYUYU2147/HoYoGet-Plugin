@@ -3,6 +3,7 @@ import { segment } from 'oicq';
 import Runtime from '../../../../lib/plugins/runtime.js';
 import { TL } from './TL.js';
 import { yaml, pluginPriority } from '#HoYoGet';
+import { appendTaskRecords } from '../../system/task_history.js';
 
 // genshin 的 NoteUser 必须动态加载：静态 import 在 genshin 缺失或版本变动时会让**整个插件**
 // 加载失败（ESM 解析阶段抛 ERR_MODULE_NOT_FOUND，没有 try/catch 兜底）。
@@ -420,6 +421,19 @@ export class stamina_remind extends plugin {
             await sendGroup(groupId, message);
             for (const record of records) {
               await redis.set(record.stateKey, '1', { EX: 7 * 24 * 3600 });
+            }
+            try {
+              const rows = records.map(record => ({
+                qq,
+                name: '',
+                game: GAME_META[record.game]?.name || record.game,
+                uid: record.uid || '',
+                tip: `已推送至群 ${groupId}`,
+                source: 'cron',
+              }))
+              appendTaskRecords(rows.map(r => ({ ...r, task: 'stamina' })))
+            } catch (err) {
+              logger.debug?.(`[stamina_remind] 写推送记录失败：${err?.message || err}`)
             }
             logger.mark(`[stamina_remind] 已推送群${groupId} 用户${qq}`);
           } catch (err) {

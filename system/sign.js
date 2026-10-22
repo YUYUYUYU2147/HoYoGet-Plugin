@@ -344,12 +344,14 @@ async function MysSign(e, games) {
     }
     /* 落一份签到记录，供锅巴查看（不含 ck/stoken） */
     try {
+        const src = e?.msg ? 'manual' : 'cron'
         appendSignRecords(msgs.map(m => ({
             qq: e.user_id,
             name: e.sender?.card || e.sender?.nickname || '',
             game: m.game,
             uid: m.uid,
             tip: m.tip,
+            source: src,
         })))
     } catch (err) {
         logger.debug?.(`[HoYoGet][sign] 写签到记录失败：${err?.message || err}`)
@@ -1597,6 +1599,7 @@ function bbsRecord(e, account, rows) {
             game: `米游社·${r.name}`,
             uid: account?.stuid || '',
             tip: r.tip,
+            source: e?.msg ? 'manual' : 'cron',
         })))
     } catch (err) {
         logger.debug?.(`[HoYoGet][bbs_sign] 写签到记录失败：${err?.message || err}`)

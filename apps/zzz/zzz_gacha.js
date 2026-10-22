@@ -16,6 +16,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { mhy, render, pluginPriority, makeForwardMsg } from '#HoYoGet'
+import { appendTaskRecords } from '../../system/task_history.js'
 import { guardModuleByFile } from '../../system/modules.js'
 
 // ESM 作用域没有 __dirname，按仓库既有写法（apps/custom_guide.js）从 import.meta 取
@@ -999,6 +1000,9 @@ export class zzz_gacha extends plugin {
       const pools = old?.pools ? mergeWorkshopPools(old.pools, cloudPools) : cloudPools
       saveData(getDataFile(auth.uid, auth.qq), { ...(old || {}), uid: String(auth.uid), pools: fillZzzIcons(pools), update_time: formatNow(), source: 'workshop' })
       const stats = Object.values(pools).filter(p => p.fiveNum || p.totalPulls).map(p => `【${p.name}】共${p.totalPulls}抽｜五星${p.fiveNum}`).join('\n')
+      try {
+        appendTaskRecords([{ task: 'gacha', qq: e.user_id, name: e.sender?.card || e.sender?.nickname || '', game: '绝区零', uid: auth.uid, tip: '工坊云端同步完成', source: e?.msg ? 'manual' : 'cron' }])
+      } catch (err) { logger.debug?.(`[HoYoGet][zzz_gacha] 写抽卡记录失败：${err?.message || err}`) }
       await e.reply(`工坊云端记录同步完成！\n${stats}`)
       await this.render(e, [], 'grid')
       return e.reply('发送【#米哈游绝区零抽卡帮助】查看全部指令')
