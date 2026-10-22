@@ -23,6 +23,8 @@
 .pn-game { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 6px; flex: none; object-fit: cover; background: #f0f3f8; }
 .pn-g-gs { background: #e9a23b; }
 .pn-g-sr { background: #6a7fd0; }
+.pn-g-zzz { background: #3aa6a0; }
+.pn-g-waves { background: #4b6a9e; }
 .pn-empty { text-align: center; color: var(--g-muted, #8a93a3); padding: 28px 0; grid-column: 1 / -1; }
 .pn-upload { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; padding: 10px 12px; border-radius: 10px; border: 1px dashed var(--g-border, #d8dde6); background: rgba(76, 139, 245, 0.04); }
 .pn-upload .pn-btn.primary { background: #4c8bf5; border-color: #4c8bf5; color: #fff; }

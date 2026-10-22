@@ -150,16 +150,17 @@ const CK_HTML = `
 const PANEL_HTML = `
 <div class="hoyo-panel">
   <div class="pn-stats" id="pn-stats"></div>
-  <div class="pn-tip">管理本插件自定义面板图（resources/hoyo_panel/images/panel/&lt;游戏&gt;/&lt;角色&gt;/）。上传用命令「#米哈游上传&lt;角色&gt;面板图」，这里负责预览与删除。</div>
+  <div class="pn-tip">「本插件面板图」放在 resources/hoyo_panel/images/panel/&lt;游戏&gt;/&lt;角色&gt;/，可上传、预览、删除；「咕咕牛图库」浏览宿主仓库 resources/CowCoos/ 的角色图库，只读预览，不做修改。</div>
   <div class="pn-bar">
-    <select class="pn-input" id="pn-game">
-      <option value="gs">原神</option>
-      <option value="sr">崩坏：星穹铁道</option>
+    <select class="pn-input" id="pn-source">
+      <option value="panel">本插件面板图</option>
+      <option value="cowcoo">咕咕牛图库</option>
     </select>
+    <select class="pn-input" id="pn-game"></select>
     <button class="pn-btn primary" id="pn-refresh">刷新</button>
     <span class="pn-meta" id="pn-meta"></span>
   </div>
-  <div class="pn-upload">
+  <div class="pn-upload" id="pn-upload">
     <input class="pn-input" id="pn-up-name" placeholder="角色名（如 雷电将军）" />
     <input type="file" id="pn-up-file" multiple accept="image/*" />
     <button class="pn-btn primary" id="pn-up-btn">上传</button>
@@ -323,9 +324,15 @@ export function init(ctx) {
 
   ctx.registerApi('get', '/panel/list', async (req, res) => {
     try {
-      const { listPanels } = await import('../system/panel_store.js')
+      const store = await import('../system/panel_store.js')
       const q = req.query || {}
-      const list = listPanels(q.game || 'gs')
+      const game = q.game || 'gs'
+      let list
+      if (q.source === 'cowcoo') {
+        list = store.listCowCooPanels(game)
+      } else {
+        list = store.listPanels(game)
+      }
       res.json({ ok: true, code: 0, message: 'ok', result: list.map(p => ({ game: p.game, name: p.name, count: p.files.length, cover: p.files[0] })) })
     } catch (err) {
       ctx.logger?.error?.(`[HoYoGet][guoba] 读取面板图列表失败：${err?.message || err}`)
@@ -335,9 +342,12 @@ export function init(ctx) {
 
   ctx.registerApi('get', '/panel/files', async (req, res) => {
     try {
-      const { listFiles } = await import('../system/panel_store.js')
+      const store = await import('../system/panel_store.js')
       const q = req.query || {}
-      res.json({ ok: true, code: 0, message: 'ok', result: listFiles(q.game, q.name) })
+      const files = q.source === 'cowcoo'
+        ? store.listCowCooFiles(q.game, q.name)
+        : store.listFiles(q.game, q.name)
+      res.json({ ok: true, code: 0, message: 'ok', result: files })
     } catch (err) {
       res.json({ ok: false, code: -1, message: err?.message || String(err), result: [] })
     }
@@ -345,9 +355,11 @@ export function init(ctx) {
 
   ctx.registerApi('get', '/panel/img', async (req, res) => {
     try {
-      const { panelFilePath } = await import('../system/panel_store.js')
+      const store = await import('../system/panel_store.js')
       const q = req.query || {}
-      const abs = panelFilePath(q.game, q.name, q.file)
+      const abs = q.source === 'cowcoo'
+        ? store.cowCooFilePath(q.game, q.name, q.file)
+        : store.panelFilePath(q.game, q.name, q.file)
       if (!abs) return res.status(404).end()
       res.sendFile(abs)
     } catch (err) {
