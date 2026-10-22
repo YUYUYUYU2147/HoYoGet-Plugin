@@ -358,10 +358,15 @@ function panelBoard(values) {
   const num = key => Number(values?.[key]) || 0
   const num1 = key => num(key).toFixed(1)
   const pct = key => `${(num(key) * 100).toFixed(1)}%`
+  /* 生命/攻击/防御可能上万，超过 10000 用「万」缩写，避免数字撑破格子 */
+  const big = key => {
+    const n = num(key)
+    return n >= 10000 ? `${(n / 10000).toFixed(1)}万` : String(Math.round(n))
+  }
   const items = [
-    { label: '生命', value: String(Math.round(num('hpFinal'))) },
-    { label: '攻击', value: String(Math.round(num('attackFinal'))) },
-    { label: '防御', value: String(Math.round(num('defenseFinal'))) },
+    { label: '生命', value: big('hpFinal') },
+    { label: '攻击', value: big('attackFinal') },
+    { label: '防御', value: big('defenseFinal') },
     { label: '速度', value: num1('speedFinal') },
     { label: '暴击率', value: pct('criticalChance') },
     { label: '暴击伤害', value: pct('criticalDamage') },
