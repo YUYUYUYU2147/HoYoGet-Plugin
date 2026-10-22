@@ -102,7 +102,7 @@ async function loadTaskHistory() {
 
 const CK_HTML = `
 <div class="hoyo-ck">
-  <div class="ck-tip">CK / SK 属于敏感凭证，页面只显示掩码；需要查看原文或修改时点对应行的按钮。修改后立即写回 data/Stoken/&lt;QQ&gt;.yaml。</div>
+  <div class="ck-tip">CK / SK 属于敏感凭证，页面只显示掩码；点击卡片上的头像或「修改」可查看/编辑原文，保存后立即写回 data/Stoken/&lt;QQ&gt;.yaml。</div>
   <div class="ck-bar">
     <input class="ck-input" id="ck-qq" placeholder="按 QQ 过滤（可空）" />
     <select class="ck-input" id="ck-game">
@@ -137,14 +137,7 @@ const CK_HTML = `
     </div>
   </div>
 
-  <div class="ck-table-wrap">
-    <table class="ck-table">
-      <thead>
-        <tr><th>QQ</th><th>游戏</th><th>UID</th><th>区服</th><th>通行证</th><th>CK</th><th>SK</th><th>操作</th></tr>
-      </thead>
-      <tbody id="ck-body"><tr><td colspan="8" class="ck-empty">加载中…</td></tr></tbody>
-    </table>
-  </div>
+  <div class="ck-cards" id="ck-cards"><div class="ck-empty">加载中…</div></div>
 </div>
 `
 
@@ -171,23 +164,27 @@ const CK_STYLE = `
 .ck-area:focus { border-color: #4c8bf5; }
 .ck-actions { display: flex; gap: 8px; align-items: center; }
 .ck-msg { font-size: 12px; color: var(--g-muted, #8a93a3); }
-.ck-table-wrap { border-radius: 10px; overflow: auto; border: 1px solid var(--g-border, #e3e8ef); }
-.ck-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.ck-table th, .ck-table td { padding: 8px 12px; text-align: left; white-space: nowrap; }
-.ck-table thead th { position: sticky; top: 0; background: var(--g-card, #f7f9fc); color: var(--g-muted, #6b7280); font-weight: 600; border-bottom: 1px solid var(--g-border, #e3e8ef); }
-.ck-table tbody tr:nth-child(even) { background: rgba(120, 150, 200, 0.05); }
-.ck-table tbody tr:hover { background: rgba(76, 139, 245, 0.08); }
-.ck-ok { color: #1a7f37; }
-.ck-no { color: #d43f3f; }
-.ck-ops { display: flex; gap: 6px; }
+
+.ck-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
+.ck-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--g-border, #e3e8ef); background: var(--g-card, #fff); }
+.ck-card:hover { border-color: #4c8bf5; box-shadow: 0 2px 10px rgba(76, 139, 245, 0.12); }
+.ck-avatar { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; flex: none; background: #eef2f7; cursor: pointer; box-shadow: 0 0 0 2px #fff, 0 3px 8px rgba(96, 140, 200, 0.2); }
+.ck-avatar:hover { opacity: 0.85; }
+.ck-info { flex: 1; min-width: 0; }
+.ck-name { font-size: 14px; font-weight: 600; color: var(--g-text, #333); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ck-sub { margin-top: 2px; font-size: 12px; color: var(--g-muted, #8a93a3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ck-status { margin-top: 3px; font-size: 12px; }
+.ck-status .ok { color: #1a7f37; }
+.ck-status .no { color: #d43f3f; }
+.ck-ops { display: flex; flex-direction: column; gap: 6px; }
 .ck-ops .ck-btn { height: 26px; padding: 0 10px; font-size: 12px; }
-.ck-empty { text-align: center; color: var(--g-muted, #8a93a3); padding: 24px 0; }
+.ck-empty { text-align: center; color: var(--g-muted, #8a93a3); padding: 28px 0; grid-column: 1 / -1; }
 `
 
 const CK_SCRIPT = `
 (function () {
   const g = window.__GUOBA__ || {}
-  const body = document.getElementById('ck-body')
+  const cards = document.getElementById('ck-cards')
   const meta = document.getElementById('ck-meta')
   const el = id => document.getElementById(id)
   const editor = el('ck-editor')
@@ -207,9 +204,10 @@ const CK_SCRIPT = `
     const res = await fetch(g.apiBase + path, opts)
     return await res.json()
   }
+  const qqAvatar = qq => 'https://q1.qlogo.cn/g?b=qq&s=140&nk=' + encodeURIComponent(qq) + '.jpg'
 
   async function load() {
-    body.innerHTML = '<tr><td colspan="8" class="ck-empty">加载中…</td></tr>'
+    cards.innerHTML = '<div class="ck-empty">加载中…</div>'
     const p = new URLSearchParams()
     if (el('ck-qq').value.trim()) p.set('qq', el('ck-qq').value.trim())
     if (el('ck-game').value) p.set('game', el('ck-game').value)
@@ -218,31 +216,39 @@ const CK_SCRIPT = `
       const list = json?.result || []
       meta.textContent = '共 ' + list.length + ' 个账号'
       if (!list.length) {
-        body.innerHTML = '<tr><td colspan="8" class="ck-empty">没有匹配的账号</td></tr>'
+        cards.innerHTML = '<div class="ck-empty">没有匹配的账号</div>'
         return
       }
-      body.innerHTML = list.map((a, i) => '<tr>'
-        + '<td>' + esc(a.qq) + '</td>'
-        + '<td>' + esc(a.gameName) + '</td>'
-        + '<td>' + esc(a.uid) + '</td>'
-        + '<td>' + esc(a.region) + '</td>'
-        + '<td>' + esc(a.stuidMask) + '</td>'
-        + '<td class="' + (a.hasCk ? 'ck-ok' : 'ck-no') + '">' + (a.hasCk ? '有 ' + esc(a.ckMask) : '无') + '</td>'
-        + '<td class="' + (a.hasSk ? 'ck-ok' : 'ck-no') + '">' + (a.hasSk ? '有 ' + esc(a.skMask) : '无') + '</td>'
-        + '<td><div class="ck-ops">'
-        + '<button class="ck-btn" data-act="edit" data-i="' + i + '">修改</button>'
-        + '<button class="ck-btn danger" data-act="del" data-i="' + i + '">删除</button>'
-        + '</div></td>'
-        + '</tr>').join('')
-      body.querySelectorAll('button[data-act]').forEach(btn => {
+      cards.innerHTML = list.map((a, i) => {
+        const ck = a.hasCk ? '<span class="ok">CK 有</span>' : '<span class="no">CK 无</span>'
+        const sk = a.hasSk ? '<span class="ok">SK 有</span>' : '<span class="no">SK 无</span>'
+        return '<div class="ck-card">'
+          + '<img class="ck-avatar" data-i="' + i + '" src="' + qqAvatar(a.qq) + '" title="点击修改" '
+          + 'onerror="this.src=\'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2252%22 height=%2252%22><rect width=%2252%22 height=%2252%22 fill=%22%23eef2f7%22/></svg>\'" />'
+          + '<div class="ck-info">'
+          + '<div class="ck-name">' + esc(a.gameName) + ' · ' + esc(a.uid) + '</div>'
+          + '<div class="ck-sub">' + esc(a.region || '未知区服') + ' · 通行证 ' + esc(a.stuidMask) + '</div>'
+          + '<div class="ck-status">' + ck + ' · ' + sk + '</div>'
+          + '</div>'
+          + '<div class="ck-ops">'
+          + '<button class="ck-btn" data-act="edit" data-i="' + i + '">修改</button>'
+          + '<button class="ck-btn danger" data-act="del" data-i="' + i + '">删除</button>'
+          + '</div>'
+          + '</div>'
+      }).join('')
+      cards.querySelectorAll('[data-act]').forEach(btn => {
         const a = list[Number(btn.dataset.i)]
         btn.addEventListener('click', () => {
           if (btn.dataset.act === 'edit') openEditor(a)
           else remove(a)
         })
       })
+      cards.querySelectorAll('.ck-avatar').forEach(av => {
+        const a = list[Number(av.dataset.i)]
+        av.addEventListener('click', () => openEditor(a))
+      })
     } catch (err) {
-      body.innerHTML = '<tr><td colspan="8" class="ck-empty">加载失败：' + esc(err && err.message || err) + '</td></tr>'
+      cards.innerHTML = '<div class="ck-empty">加载失败：' + esc(err && err.message || err) + '</div>'
     }
   }
 
@@ -266,8 +272,7 @@ const CK_SCRIPT = `
   async function save() {
     if (!editing) return
     const payload = {
-      qq: editing.qq,
-      uid: editing.uid,
+      qq: editing.qq, uid: editing.uid,
       stuid: el('ck-f-stuid').value.trim(),
       mid: el('ck-f-mid').value.trim(),
       ck: el('ck-f-ck').value.trim(),
