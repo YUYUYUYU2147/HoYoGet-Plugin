@@ -106,7 +106,7 @@ export async function zzzPanelExtras({ name, uid = '', level = 0 } = {}) {
 
     const allRows = Array.isArray(rankData?.rows) ? rankData.rows : []
     const myIndex = uid ? allRows.findIndex(row => String(row?.uid ?? '') === String(uid)) : -1
-    const rankRows = allRows.slice(0, 3).map((row, index) => ({
+    const rankRows = allRows.slice(0, 10).map((row, index) => ({
       rank: index + 1,
       nickname: row?.user_case?.nick_name || String(row?.uid ?? '') || '未知',
       consText: Number(row?.rank) ? `影画${Number(row.rank)}` : '',

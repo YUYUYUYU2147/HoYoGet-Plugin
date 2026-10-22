@@ -273,9 +273,23 @@ body {
 
 /* —— 伤害计算段 —— */
 .dmg-wrap { padding: 12px 12px 10px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.09); border-radius: 12px; }
-.dmg-head { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 12px; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,.08); }
+.dmg-head {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding-bottom: 12px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
 .dmg-mul, .dmg-atk { font-size: 13px; color: #c0c8d6; }
+.dmg-mul {
+  min-width: 0;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
 .dmg-mul b { margin-left: 8px; color: #cfd6e6; font-weight: 500; }
+.dmg-atk { align-self: flex-end; white-space: nowrap; text-align: right; }
 .dmg-atk b { margin-left: 4px; color: #ffcf5c; font-size: 17px; font-weight: 700; }
 .dmg-table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
 .dmg-table th { font-weight: 500; color: #c3cad8; font-size: 11px; padding: 4px 5px; text-align: left; }

@@ -70,9 +70,18 @@ function renderCalls(src) {
 const problems = []
 let checked = 0
 
-for (const file of fs.readdirSync(APPS)) {
-  if (!file.endsWith('.js')) continue
-  const full = path.join(APPS, file)
+function walkJs(dir, out = []) {
+  for (const name of fs.readdirSync(dir)) {
+    const full = path.join(dir, name)
+    const st = fs.statSync(full)
+    if (st.isDirectory()) walkJs(full, out)
+    else if (name.endsWith('.js')) out.push(full)
+  }
+  return out
+}
+
+for (const full of walkJs(APPS)) {
+  const file = path.relative(APPS, full).replace(/\\/g, '/')
   const src = fs.readFileSync(full, 'utf8')
   for (const call of renderCalls(src)) {
     // name 形如 '小花火/bh3_ledger/uid_switch'，取出资源目录段 bh3_ledger

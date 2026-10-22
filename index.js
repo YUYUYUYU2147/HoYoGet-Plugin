@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import NodeModule from 'node:module';
 
 /* 全模块热重载：框架热重载只给插件入口加 cache bust，插件内部的 import 都是
@@ -90,9 +91,22 @@ for (const _path of paths_) {
   }
 }
 
-const files = fs
-  .readdirSync('./plugins/HoYoGet-Plugin/apps')
-  .filter(file => file.endsWith('.js'));
+const APP_ROOT = './plugins/HoYoGet-Plugin/apps'
+const APP_SKIP_DIRS = new Set(['wiki', 'lib'])
+/** 递归收集 apps 下的插件文件，返回相对 apps/ 的 POSIX 路径；wiki/、lib/ 是辅助模块目录，不是插件入口 */
+function collectAppFiles(dir, prefix = '') {
+  const out = []
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      if (APP_SKIP_DIRS.has(entry.name)) continue
+      out.push(...collectAppFiles(path.join(dir, entry.name), `${prefix}${entry.name}/`))
+    } else if (entry.name.endsWith('.js')) {
+      out.push(`${prefix}${entry.name}`)
+    }
+  }
+  return out
+}
+const files = collectAppFiles(APP_ROOT).sort()
 
 let ret = [];
 

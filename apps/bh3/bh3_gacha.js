@@ -1,0 +1,1353 @@
+import { yaml, mhy, api, pluginPriority } from '#HoYoGet';
+import fs from 'fs';
+import path from 'path';
+import YAML from 'yaml';
+import moment from 'moment';
+import puppeteer from '../../../../lib/puppeteer/puppeteer.js';
+import { guardModuleByFile } from '../../system/modules.js'
+
+// genshin 的 NoteUser 必须动态加载：静态 import 在 genshin 缺失或版本变动时会让**整个插件**
+// 加载失败（ESM 解析阶段抛 ERR_MODULE_NOT_FOUND，没有 try/catch 兜底）。
+import { makeGenshinLoader } from '../../system/genshin_loader.js'
+const getNoteUser = makeGenshinLoader('model/mys/NoteUser.js', ['model/mys/NoteUser.js'])
+const getMhyFetch = makeGenshinLoader('model/mys/mhyFetch.js', ['model/mys/mhyFetch.js'])
+
+const DATA_DIR = './plugins/HoYoGet-Plugin/data/bh3_gacha';
+const BH3_POOL_HISTORY_PATH = './plugins/HoYoGet-Plugin/system/default/bh3_gacha_pool_history.yaml';
+// 抽卡记录观测文件：纯派生数据，随时可以从 data/bh3_gacha/*/gacha_logs.json 重建。
+// 与人工整理的 bh3_gacha_pool_history.yaml 完全分开——那份是 85 个版本攒出来的，
+// 绝不能被个人抽卡样本改写；这份只负责「记录抽卡能证明的事实 + 与主库的比对结果」。
+// 放在 data/ 下而不是 system/default/：它由 data/bh3_gacha/ 派生而来，而 data/ 整个
+// 已被 .gitignore 且不受版本控制，每个 bot 的抽卡记录不同，进仓库没有意义。
+const BH3_OBSERVED_PATH = './plugins/HoYoGet-Plugin/data/bh3_gacha_observed.yaml';
+// 只有这些槽位是真正的抽卡池。实测各槽位性质：
+//   角色补给A/B  角色池（含角色/武器/圣痕/材料）
+//   装备补给A/B  武器池（无角色掉落）
+//   协同补给     协同池（无角色掉落）
+//   家园补给     家园商店买东西，不是卡池 —— 里面的[角色]是兑换来的，算进去全是误报
+//   武器 ≡ 礼包币记录  两者内容逐条完全相同（实测均 106 条），是同一份数据的两个名字
+const GACHA_POOL_SLOT_RE = /^(角色|装备)补给[A-Z]$|^协同补给$/;
+const GET_AUTHKEY_URL = 'https://api-takumi.mihoyo.com/binding/api/genAuthKey';
+const GACHA_MENUS_URL = 'https://public-operation-common.mihoyo.com/common/bh3_self_help_query/UserMenuQuery/GetMenus';
+const GACHA_LOG_URL = 'https://public-operation-common.mihoyo.com/common/bh3_self_help_query/UserGachaQuery/GetUserGacha';
+const RECHARGE_LOG_URLS = [
+  'https://public-operation-common.mihoyo.com/common/bh3_self_help_query/UserRechargeRecordQuery/GetUserRechargeRecord',
+];
+const BH3_WIKI_BASE = 'https://api-takumi-static.mihoyo.com/common/blackboard/bh3_wiki/v1/home/content/list?app_sn=bh3_wiki';
+let starMapCache = null;
+const ICON_CACHE_DIR = './plugins/HoYoGet-Plugin/data/bh3_gacha/icons';
+
+
+async function sendMsg(e, msg) {
+  if (e.group) return e.group.sendMsg([{ type: 'text', data: { text: msg } }]);
+  if (e.friend) return e.friend.sendMsg([{ type: 'text', data: { text: msg } }]);
+  return e.reply(msg);
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function gachaHeaders() {
+  return {
+    'x-rpc-app_version': '2.73.1',
+    'X-Requested-With': 'com.mihoyo.hyperion',
+    'User-Agent': 'Mozilla/5.0 (Linux; Android 13; PHK110 Build/SKQ1.221119.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/126.0.6478.133 Mobile Safari/537.36 miHoYoBBS/2.73.1',
+    'x-rpc-client_type': '5',
+    Referer: 'https://webstatic.mihoyo.com/',
+    Origin: 'https://webstatic.mihoyo.com/',
+  };
+}
+
+// 米游社出口：默认裸 fetch，被风控拦下时改走 genshin 的 mhyFetch（自动切代理）。
+// 崩三这几个接口都在 mhyFetch 的白名单域内：api-takumi 与 public-operation-common。
+// genshin 缺失时退回裸 fetch，功能仍可用，只是没有代理兜底。
+async function bh3Fetch(url, opts = {}) {
+  const fn = await getMhyFetch();
+  return (fn || fetch)(url, opts);
+}
+
+/**
+ * 安全解析米游社响应。
+ *
+ * 之前各处直接 .then(r => r.json())，本机 IP 被 WAF 拦下时拿到的是 HTTP 405
+ * 加一段 HTML 阻断页，JSON.parse 抛 `SyntaxError: Unexpected token '<'` ——
+ * 用户只看到「开始更新抽卡记录」就没有下文，完全看不出是风控。
+ * 这里把「拿不到 JSON」翻译成能读懂的提示。
+ */
+async function bh3Json(res, what = '米游社接口') {
+  let text = '';
+  try {
+    text = await res.text();
+  } catch (err) {
+    throw new Error(`${what} 响应读取失败：${err?.message || err}`);
+  }
+  if (!text.trim().startsWith('{')) {
+    const hint = [ 405, 412, 429 ].includes(Number(res.status))
+      ? '疑似 IP 被米游社风控拦截（未配置米游社接口代理时会出现），请稍后重试'
+      : '返回内容不是 JSON';
+    throw new Error(`${what} HTTP ${res.status} ${hint}`);
+  }
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    throw new Error(`${what} 返回内容无法解析：${err?.message || err}`);
+  }
+}
+
+export class bh3_gacha extends plugin {
+  constructor(e) {
+    super({
+      name: '[米哈游]崩三抽卡记录',
+      dsc: '崩坏3抽卡记录查询与刷新',
+      event: 'message',
+      priority: pluginPriority('bh3_gacha', 100),
+      rule: [
+        { reg: '^#*(崩三|崩坏3|崩坏三|BH3)?(抽卡记录|抽卡统计)$', fnc: 'gachaSummary' },
+        { reg: '^#*(崩三|崩坏3|崩坏三|BH3)?(刷新|更新)抽卡记录$', fnc: 'refreshGacha' },
+        { reg: '^#*(崩三|崩坏3|崩坏三|BH3)?全量(刷新|更新)抽卡记录$', fnc: 'fullRefreshGacha' },
+        { reg: '^#*(崩三|崩坏3|崩坏三|BH3)?(充值记录|充值查询|充值流水|氪金记录)$', fnc: 'rechargeRecord' },
+        { reg: '^#*(崩三|崩坏3|崩坏三|BH3)?(卡池)?(核对|校验)$', fnc: 'showCrossCheck' },
+      ],
+    });
+  }
+
+  getGachaPath(uid) {
+    return path.join(DATA_DIR, String(uid), 'gacha_logs.json');
+  }
+
+  loadGacha(uid) {
+    const file = this.getGachaPath(uid);
+    if (!fs.existsSync(file)) return null;
+    try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; }
+  }
+
+  saveGacha(uid, data) {
+    const file = this.getGachaPath(uid);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8');
+  }
+
+  // ── 抽卡记录 × 历史卡池 交叉核对 ──
+  // 历史卡池 bh3_gacha_pool_history.yaml 是人工+社区整理的数据（159 个池里只有 14 个带
+  // start/end 时间窗），纯靠公告解析容易漏 UP、也容易写错名字。而抽卡记录里 [角色] 开头的
+  // 条目就是真实抽到的角色，恰好能反过来验证这份人工数据。
+  // 注意抽卡记录没有星级字段（parseRecord 只留了 time/content），4 星角色和女武神各形态也会
+  // 混在里面，所以这个核对只出「候选」给人看，绝不自动改 yaml。
+
+  /** 汇总所有账号的抽卡记录，按 [类别]名称 归一 */
+  collectAllGachaItems() {
+    const items = new Map();   // name → { name, cat, slots:Set, times:[], count }
+    let files = 0, total = 0;
+    let dirs = [];
+    try { dirs = fs.readdirSync(DATA_DIR); } catch { return { items, files: 0, total: 0 }; }
+    for (const d of dirs) {
+      const file = path.join(DATA_DIR, d, 'gacha_logs.json');
+      if (!fs.existsSync(file)) continue;
+      let g = null;
+      try { g = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { continue; }
+      if (!g?.data) continue;
+      files++;
+      for (const [slot, records] of Object.entries(g.data)) {
+        if (!Array.isArray(records)) continue;
+        // 只认真实卡池槽位，家园商店和重复的「武器/礼包币记录」不算
+        if (!GACHA_POOL_SLOT_RE.test(slot)) continue;
+        for (const r of records) {
+          const raw = String(r?.content || '');
+          const m = raw.match(/^\[(角色|武器|圣痕|材料)\](.+)$/);
+          if (!m) continue;
+          total++;
+          // 「圣仪装·今样角色卡」要还原成「圣仪装·今样」，否则和 yaml 里的 UP 名对不上
+          const name = m[2].replace(/角色卡$/, '').trim();
+          if (!name) continue;
+          let it = items.get(name);
+          if (!it) {
+            it = { name, cat: m[1], slots: new Set(), times: [], count: 0 };
+            items.set(name, it);
+          }
+          it.slots.add(slot);
+          it.count++;
+          if (r?.time) it.times.push(r.time);
+        }
+      }
+    }
+    return { items, files, total };
+  }
+
+  /** 读历史卡池，取出所有记账过的 UP 名，以及带时间窗的版本区间 */
+  loadPoolHistoryNames() {
+    let data = null;
+    try { data = yaml.get(BH3_POOL_HISTORY_PATH); } catch (_) {}
+    if (!data) {
+      try { data = JSON.parse(fs.readFileSync(BH3_POOL_HISTORY_PATH.replace(/\.yaml$/, '.json'), 'utf8')); } catch (_) {}
+    }
+    const ups = new Set();
+    const windows = [];
+    for (const v of data?.pools || []) {
+      for (const q of v.pools || []) {
+        if (q?.s) ups.add(String(q.s).trim());
+        for (const a of q?.a || []) if (a) ups.add(String(a).trim());
+        const st = this.toDate(q?.start), en = this.toDate(q?.end);
+        if (st && en) windows.push({ version: v.version, name: q?.name || '', s: q?.s || '', type: q?.type || '', start: st, end: en });
+      }
+    }
+    return { ups, windows, count: windows.length, total: Object.values(ups).length };
+  }
+
+  toDate(v) {
+    if (!v) return null;
+    if (v instanceof Date) return v;
+    const d = new Date(String(v).replace(/-/g, '/'));
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  /**
+   * 核对结果。分三段：
+   *   confirmed  抽到过且 yaml 有记账 —— 证明这份人工数据没错
+   *   missing    抽到过但 yaml 查无此 UP —— 疑似漏记（人工确认是不是 5 星）
+   *   unverified yaml 记了但没人抽到过 —— 可能是拼写错，也可能是冷门/4 星，仅供参考
+   */
+  crossCheckPoolHistory() {
+    const { items, files, total } = this.collectAllGachaItems();
+    const { ups, windows } = this.loadPoolHistoryNames();
+    const chars = [...items.values()].filter(i => i.cat === '角色');
+
+    const confirmed = [], missing = [];
+    for (const c of chars) {
+      const hit = ups.has(c.name);
+      (hit ? confirmed : missing).push(c);
+    }
+    // 漏记候选里，能靠时间窗定位到具体版本的最有价值，排前面
+    for (const m of missing) {
+      const t = m.times.map(x => new Date(String(x).replace(/-/g, '/'))).filter(x => !Number.isNaN(x.getTime()));
+      m.nearest = null;
+      if (t.length && windows.length) {
+        const t0 = Math.max(...t);
+        const w = windows
+          .filter(w => t0 >= w.start && t0 <= w.end)
+          .sort((a, b) => (b.end - b.start) - (a.end - a.start))[0];
+        if (w) m.nearest = `v${w.version}（${w.s || w.name}）`;
+      }
+    }
+    missing.sort((a, b) => (b.nearest ? 1 : 0) - (a.nearest ? 1 : 0));
+
+    const charNames = new Set(chars.map(c => c.name));
+    const unverified = [...ups].filter(n => !charNames.has(n));
+
+    return { files, total, confirmed, missing, unverified, charCount: chars.length };
+  }
+
+  async showCrossCheck(e) {
+    let r;
+    try { r = this.crossCheckPoolHistory(); } catch (err) {
+      logger.warn('[HoYoGet][bh3_gacha] 卡池核对失败:', err?.message || err);
+      return e.reply(`崩三卡池核对失败：${err?.message || err}`);
+    }
+    if (!r.files) return e.reply('还没有任何崩三抽卡记录，先用「#刷新抽卡记录」拉一次再来核对。');
+
+    const lines = [];
+    lines.push(`📋 崩三卡池核对（${r.files} 个账号 / ${r.total} 条记录 / ${r.charCount} 个不同角色）`);
+    lines.push('');
+    lines.push(`✅ 抽到过且 yaml 有记账：${r.confirmed.length} 个`);
+    if (r.confirmed.length) {
+      lines.push('   ' + r.confirmed.map(c => c.name).join('、'));
+    }
+    lines.push('');
+    lines.push(`⚠️ 抽到过但 yaml 查无此 UP：${r.missing.length} 个（疑似漏记，需人工确认是否 5 星）`);
+    if (r.missing.length) {
+      for (const m of r.missing.slice(0, 20)) {
+        const slot = [...m.slots].join('/');
+        const t = m.times.length ? m.times.sort().at(-1) : '?';
+        lines.push(`   · ${m.name}  最近 ${t}  槽位 ${slot}${m.nearest ? `  落在 ${m.nearest}` : ''}`);
+      }
+      if (r.missing.length > 20) lines.push(`   …… 另有 ${r.missing.length - 20} 个`);
+    }
+    lines.push('');
+    lines.push(`❓ yaml 记了但无人抽到过：${r.unverified.length} 个`);
+    lines.push('   （可能是拼写错误，也可能是冷门/4 星 UP，仅供人工扫一眼）');
+    if (r.unverified.length) {
+      lines.push('   ' + r.unverified.slice(0, 40).join('、'));
+      if (r.unverified.length > 40) lines.push(`   …… 另有 ${r.unverified.length - 40} 个`);
+    }
+
+    // 顺带把观测快照刷一份。它是纯派生数据、写在 data/ 下、随时可重建，
+    // 刷新它没有副作用，所以不再单开一条指令。wiki 接口挂了只跳过这步，报告照常。
+    const obsNote = await this.refreshObservation();
+    if (obsNote) {
+      lines.push('');
+      lines.push('──────────');
+      lines.push(...obsNote);
+    }
+    return sendMsg(e, lines.join('\n'));
+  }
+
+  /** 重刷观测快照，返回要附在报告后面的说明行；失败返回空数组（不打扰报告） */
+  async refreshObservation() {
+    let roles = {};
+    try { roles = (await this.getStarMaps()).char || {}; }
+    catch (err) { logger.warn('[HoYoGet][bh3_gacha] 拉取角色稀有度失败:', err?.message || err); }
+    if (!Object.keys(roles).length) return ['（观测快照未更新：崩三 wiki 接口不可用）'];
+
+    const obs = this.buildObservation(roles);
+    if (!obs || !obs.versions.length) return [];
+    let backup = '';
+    if (fs.existsSync(BH3_OBSERVED_PATH)) {
+      backup = BH3_OBSERVED_PATH.replace(/\.yaml$/, '') + '.prev.yaml';
+      try { fs.copyFileSync(BH3_OBSERVED_PATH, backup); } catch (_) {}
+    }
+    try {
+      fs.writeFileSync(BH3_OBSERVED_PATH, YAML.stringify(obs), 'utf-8');
+    } catch (err) {
+      logger.warn('[HoYoGet][bh3_gacha] 观测快照写入失败:', err?.message || err);
+      return [`（观测快照写入失败：${err?.message || err}）`];
+    }
+    const s = obs.stats;
+    const out = [
+      `📝 观测快照已刷新：${BH3_OBSERVED_PATH}`,
+      backup ? `   上一份：${backup}` : '',
+      `   账号 ${s.accounts} / 记录 ${s.records} / 角色 ${s.characters} / ${s.versions} 个版本段`,
+    ];
+    for (const v of obs.versions) {
+      const main = v.observed_main_up.map(m => `${m.name}${m.in_history ? '' : ' ⚠️主库无'}`).join('、');
+      out.push(`   · ${v.version}  S级女武神：${main || '无'}` +
+        (v.not_in_history.length ? `  ｜主库查无：${v.not_in_history.join('、')}` : ''));
+    }
+    out.push('   这份只记抽卡能证明的事实，人工主库 bh3_gacha_pool_history.yaml 未被改动。');
+    return out.filter(x => x !== '');
+  }
+
+
+  async getAuth(e) {
+    let qq = e.user_id;
+    for (const msg of e.message || []) {
+      if (msg.type === 'at') { qq = msg.qq; break; }
+    }
+
+    let uid = await redis.get(`xhh:bh3_uid:${qq}`);
+    let region = uid ? await redis.get(`xhh:bh3_region:${qq}`) : null;
+    let stokenCookie = null;
+    let ck = null;
+
+    const stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${qq}.yaml`;
+    if (fs.existsSync(stokenPath)) {
+      const stokenData = yaml.get(stokenPath) || {};
+      if (!uid) {
+        for (const key of Object.keys(stokenData)) {
+          const entry = stokenData[key];
+          if (entry?.region?.includes('cn_') || entry?.region) {
+            uid = key;
+            region = entry.region || region;
+            break;
+          }
+        }
+      }
+      const entry = stokenData[uid];
+      if (entry) {
+        region = entry.region || region;
+        stokenCookie = entry.ck_stoken || (entry.stuid && entry.stoken ? `stuid=${entry.stuid};stoken=${entry.stoken};${entry.mid ? `mid=${entry.mid};` : ''}` : null);
+        if (entry.stuid) {
+          try {
+            const nu = await (await getNoteUser()).create(qq);
+            for (const ltuid in nu.mysUsers || {}) {
+              if (String(ltuid) === String(entry.stuid)) {
+                ck = nu.mysUsers[ltuid].ck;
+                break;
+              }
+            }
+          } catch (_) {}
+        }
+      }
+    }
+
+    if (!uid) {
+      try { uid = (await (await getNoteUser()).create(qq)).getUid('bh3'); } catch (_) {}
+    }
+    if (!region) region = 'cn_gf01';
+
+    if (!stokenCookie) {
+      return { error: '未找到 stoken，抽卡记录需要先扫码绑定/保存 stoken 后才能生成 authkey。' };
+    }
+    if (!ck) {
+      try {
+        const nu = await (await getNoteUser()).create(qq);
+        for (const ltuid in nu.mysUsers || {}) {
+          if (nu.mysUsers[ltuid]?.ck) {
+            ck = nu.mysUsers[ltuid].ck;
+            break;
+          }
+        }
+      } catch (_) {}
+    }
+    return { qq, uid, region, stokenCookie, ck };
+  }
+
+  async getAuthKey(uid, region, stokenCookie) {
+    const body = {
+      auth_appid: 'webview_gacha',
+      game_biz: 'bh3_cn',
+      game_uid: String(uid),
+      region,
+    };
+    const bodyStr = JSON.stringify(body);
+    let res = await bh3Fetch(GET_AUTHKEY_URL, {
+      method: 'POST',
+      headers: {
+        Cookie: stokenCookie,
+        DS: mhy.getDs2('', bodyStr, 4),
+        'Content-Type': 'application/json',
+        'User-Agent': 'okhttp/4.8.0',
+        'x-rpc-app_version': '2.73.1',
+        'x-rpc-sys_version': '12',
+        'x-rpc-client_type': '5',
+        'x-rpc-channel': 'mihoyo',
+        'x-rpc-device_id': mhy.getDeviceGuid().replace(/-/g, ''),
+        'x-rpc-device_name': 'Mi 10',
+        'x-rpc-device_model': 'Mi 10',
+        Referer: 'https://app.mihoyo.com',
+        Host: 'api-takumi.mihoyo.com',
+      },
+      body: bodyStr,
+    });
+    res = await bh3Json(res, 'genAuthKey');
+    if (res?.retcode === 0 && res.data?.authkey) return res.data.authkey;
+    logger.warn('[HoYoGet][bh3_gacha] genAuthKey failed:', JSON.stringify(res));
+    return null;
+  }
+
+  gachaBaseParams(uid, authkey, type = '1') {
+    return new URLSearchParams({
+      page_id: '5',
+      auth_appid: 'csc',
+      game_biz: 'bh3_cn',
+      lang: 'zh-cn',
+      authkey,
+      authkey_ver: '1',
+      sign_type: '2',
+      community_select_uid: String(uid),
+      bbs_auth_required: 'true',
+      bbs_game_role_required: 'bh3_cn',
+      app_client: 'bbs',
+      source: 'service-center',
+      source_point: 'SvcCenterSelf',
+      win_direction: 'portrait',
+      type: String(type),
+    });
+  }
+
+  isValidGachaMenuName(name = '') {
+    name = String(name);
+    if (!name) return false;
+    // GetMenus 的不同 type 会混入自助查询菜单，例如水晶记录/充值记录/礼包币记录/材料等，
+    // 这些不是补给卡池，不能作为抽卡池统计。
+    if (/水晶|充值|礼包币|材料/.test(name)) return false;
+    if (/^(角色|武器|圣痕)$/.test(name)) return false;
+    return /补给|扩充|精准|家园|协同者|人偶|服装|时装|皮肤|服饰/.test(name);
+  }
+
+
+  async getRawMenus(uid, authkey, menuTypes = ['1', '2', '3', '4']) {
+    const menus = [];
+    const seen = new Set();
+    for (const menuType of menuTypes) {
+      const params = this.gachaBaseParams(uid, authkey, menuType);
+      const res = await bh3Json(await bh3Fetch(`${GACHA_MENUS_URL}?${params.toString()}`, {
+        headers: gachaHeaders(),
+      }), 'GetMenus');
+      logger.mark(`[HoYoGet][bh3_gacha] GetMenus raw type=${menuType} response:`, JSON.stringify(res));
+      const list = Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.list) ? res.data.list : Array.isArray(res?.data?.menus) ? res.data.menus : [];
+      for (const menu of list) {
+        const label = menu.label || menu.name || '';
+        const key = `${menuType}:${menu.type || ''}:${label}`;
+        if (!label || seen.has(key)) continue;
+        seen.add(key);
+        menus.push({ ...menu, label, menu_type: menuType });
+      }
+    }
+    return menus;
+  }
+
+  async getMenus(uid, authkey) {
+    const menus = [];
+    // 新版自助查询按产出分类裸列抽卡记录：角色/武器/圣痕（材料不是抽卡，排除），
+    // 内层 type 就是记录接口的 type。部分账号（如 PC 端）不出现「XX补给」池名条目，
+    // 只有这组裸分类——过滤后一个池都没有时，退回按分类拉取。
+    const bareCats = [];
+    const seen = new Set();
+    // BBBUID 默认从 type=1 开始；实测不同账号/服务器可用菜单分布在 2/3/4，
+    // 服装补给等特殊池可能挂在更大的 menuType 下，多探测几档。
+    // 这里逐个探测并合并，避免 type=1 返回空数组时误判失败。
+    for (const menuType of ['1', '2', '3', '4', '5', '6']) {
+      const params = this.gachaBaseParams(uid, authkey, menuType);
+      const res = await bh3Json(await bh3Fetch(`${GACHA_MENUS_URL}?${params.toString()}`, {
+        headers: gachaHeaders(),
+      }), 'GetMenus');
+      logger.mark(`[HoYoGet][bh3_gacha] GetMenus type=${menuType} response:`, JSON.stringify(res));
+      const list = Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.list) ? res.data.list : Array.isArray(res?.data?.menus) ? res.data.menus : [];
+      for (const menu of list) {
+        const label = menu.label || menu.name || '';
+        const key = `${menu.type || ''}:${label}`;
+        if (this.isValidGachaMenuName(label)) {
+          if (!seen.has(key)) {
+            seen.add(key);
+            menus.push({ ...menu, label });
+          }
+        } else if (/^(角色|武器|圣痕)$/.test(label) && !bareCats.some(m => m.label === label)) {
+          bareCats.push({ ...menu, label });
+        }
+      }
+    }
+    // 池名条目一个都没剩下：退回裸分类（实测 type=1 即吐出补给时间/补给内容记录）
+    if (!menus.length && bareCats.length) {
+      logger.mark(`[HoYoGet][bh3_gacha] 未发现补给池名菜单，回退按产出分类拉取: ${bareCats.map(m => `${m.label}(type=${m.type})`).join(' | ')}`);
+      return bareCats;
+    }
+    if (menus.length) {
+      logger.mark(`[HoYoGet][bh3_gacha] 可用卡池菜单: ${menus.map(m => `${m.label}(type=${m.type},menu=${m.menu_type})`).join(' | ')}`);
+    }
+    return menus;
+  }
+
+  parseRecord(item = []) {
+    const ret = {};
+    for (const pair of item) {
+      if (pair.label === '补给时间') ret.time = pair.value;
+      if (pair.label === '补给内容') ret.content = pair.value;
+    }
+    return ret.time && ret.content ? ret : null;
+  }
+
+  async fetchGachaType(uid, authkey, gachaType) {
+    const records = [];
+    for (let page = 1; page < 999; page++) {
+      const params = this.gachaBaseParams(uid, authkey, gachaType);
+      params.set('page', String(page));
+      params.set('size', '20');
+      params.set('end_id', '0');
+      const res = await bh3Json(await bh3Fetch(`${GACHA_LOG_URL}?${params.toString()}`, {
+        headers: gachaHeaders(),
+      }), 'GetUserGacha');
+      if (res?.retcode !== 0) {
+        // 失败必须和「这个池没有记录」区分开。原先只打一行日志就 break，返回空数组后
+        // 调用方按「没有新增」处理——1034 验证码、-100 authkey 失效、1103 限流、网络抖动
+        // 全都表现成一句「没有新增抽卡数据」，看不出问题出在哪。
+        // 抛出去交给调用方单独处理这个池，不影响其余池子。
+        const captcha = [1034, 10035, 10041].includes(Number(res?.retcode));
+        const hint = captcha ? '（米游社要求验证码，authkey 未过期也可能要重新过码）' : '';
+        logger.warn(`[HoYoGet][bh3_gacha] GetUserGacha 失败 type=${gachaType} page=${page} retcode=${res?.retcode}${captcha ? ' 验证码' : ''} message=${res?.message || ''}${hint}`);
+        throw new Error(`GetUserGacha retcode=${res?.retcode}${captcha ? '(验证码)' : ''}${res?.message ? ' ' + res.message : ''}`);
+      }
+      const list = res?.data?.list || [];
+      if (!list.length) break;
+      for (const raw of list) {
+        const record = this.parseRecord(raw.item || []);
+        if (record) records.push(record);
+      }
+      if (list.length < 10) break;
+      await sleep(900);
+    }
+    return records;
+  }
+
+
+  parseSelfHelpPairs(item = []) {
+    const map = {};
+    for (const pair of item || []) {
+      const label = pair?.label || pair?.name || pair?.key || '';
+      if (!label) continue;
+      const value = pair?.value ?? pair?.content ?? pair?.text ?? '';
+      map[label] = value;
+    }
+    return map;
+  }
+
+  normalizeRechargeRecord(raw = {}) {
+    const data = this.parseSelfHelpPairs(raw.item || raw.items || []);
+    const pick = (...keys) => keys.map(k => data[k]).find(v => v !== undefined && v !== null && String(v).trim() !== '') || '';
+    const time = pick('充值时间', '支付时间', '创建时间', '时间', '发放时间');
+    const product = pick('充值内容', '商品名称', '商品', '内容', '订单内容', '道具名称') || raw.title || raw.name || '';
+    const amount = pick('充值金额', '金额', '实付金额', '订单金额', '支付金额');
+    const status = pick('订单状态', '状态', '支付状态');
+    const orderNo = pick('订单号', '订单编号', '流水号');
+    if (!time && !product && !amount) return null;
+    return { time, product, amount, status, orderNo, raw: data };
+  }
+
+  async fetchSelfHelpRecordsByUrls(uid, authkey, menuType, urls = []) {
+    const result = { records: [], endpoint: '', lastError: null };
+    for (const url of urls) {
+      const records = [];
+      let ok = false;
+      let lastError = null;
+      for (let page = 1; page < 200; page++) {
+        const params = this.gachaBaseParams(uid, authkey, menuType);
+        params.set('page', String(page));
+        params.set('size', '20');
+        params.set('end_id', '0');
+        let res;
+        try {
+          res = await bh3Json(await bh3Fetch(`${url}?${params.toString()}`, { headers: gachaHeaders() }), 'GetUserGacha');
+        } catch (err) {
+          lastError = err?.message || String(err);
+          break;
+        }
+        if (res?.retcode !== 0) {
+          lastError = res?.message || res?.msg || JSON.stringify(res);
+          logger.mark('[HoYoGet][bh3_gacha] self-help record response:', url, JSON.stringify(res));
+          break;
+        }
+        ok = true;
+        const list = res?.data?.list || res?.data?.items || res?.data?.records || [];
+        if (!Array.isArray(list) || !list.length) break;
+        for (const raw of list) {
+          const record = this.normalizeRechargeRecord(raw);
+          if (record) records.push(record);
+        }
+        if (list.length < 20) break;
+        await sleep(500);
+      }
+      if (ok) return { records, endpoint: url, lastError };
+      result.lastError = lastError;
+    }
+    return result;
+  }
+
+  formatMoneyValue(value = '') {
+    const text = String(value || '').replace(/,/g, '');
+    const m = text.match(/(?:¥|￥)?\s*(-?\d+(?:\.\d+)?)/);
+    return m ? Number(m[1]) : null;
+  }
+
+  async rechargeRecord(e) {
+    const auth = await this.getAuth(e);
+    if (auth.error) return sendMsg(e, auth.error.replace('抽卡记录', '充值记录'));
+    const { uid, region, stokenCookie } = auth;
+    const authkey = await this.getAuthKey(uid, region, stokenCookie);
+    if (!authkey) return sendMsg(e, `UID${uid} 获取 authkey 失败，请确认 stoken 有效。`);
+
+    const menus = await this.getRawMenus(uid, authkey, ['3']);
+    const menu = menus.find(m => /充值记录/.test(m.label || '')) || { label: '充值记录', type: 1, menu_type: '3' };
+    const queryType = String(menu.type || '1');
+    const { records, lastError } = await this.fetchSelfHelpRecordsByUrls(uid, authkey, queryType, RECHARGE_LOG_URLS);
+    if (!records.length) {
+      return sendMsg(e, `UID${uid} 暂未查询到崩坏3充值记录${lastError ? `\n接口返回：${lastError}` : ''}\n提示：官方自助查询可能只返回近期记录，且需要当前账号 stoken 对应此UID。`);
+    }
+
+    records.sort((a, b) => String(b.time).localeCompare(String(a.time)));
+    const sumList = records.map(r => this.formatMoneyValue(r.amount)).filter(v => Number.isFinite(v));
+    const total = sumList.length ? sumList.reduce((a, b) => a + b, 0) : null;
+    const lines = [
+      `💳 崩坏3充值记录 UID${uid}`,
+      `共 ${records.length} 条${total !== null ? `，可识别金额合计 ￥${total.toFixed(2)}` : ''}`,
+      '────────────────',
+    ];
+    for (const r of records.slice(0, 30)) {
+      const parts = [r.product || '未知商品'];
+      if (r.amount) parts.push(String(r.amount));
+      if (r.status) parts.push(String(r.status));
+      lines.push(`${r.time || '未知时间'}  ${parts.join(' / ')}`);
+    }
+    if (records.length > 30) lines.push(`……仅展示最近30条，其余 ${records.length - 30} 条已省略`);
+    lines.push('from 米哈游');
+    return sendMsg(e, lines.join('\n'));
+  }
+
+  // ── 观测文件（纯派生，不改人工库）──
+  // 为什么另开一个文件：bh3_gacha_pool_history.yaml 是人工+社区整理 85 个版本攒出来的，
+  // 而抽卡记录只反映「本机这几个账号抽到过什么」，直接改它等于用个人样本覆盖集体数据。
+  // 实测也确实会写错 —— 受控测试里清空「镇×偃月叩晓」的 a 让算法补，算法填了「极地战刃」：
+  // 该池窗口 06-13 10:00 起，而「女武神·重机」实际抽到时间是 06-12 13:39~06-13 00:52，
+  // 全在窗口外，窗口内的「极地战刃」就被当成了答案。所以自动改主库这条路走不通。
+  //
+  // 改成只写观测文件：只记录「抽卡能证明的事实」（谁、什么时候、从哪个槽位抽到哪个角色、
+  // 稀有度多少），再附上与主库的比对结论（已记账为主UP/副UP，还是主库查无此记录）。
+  // 定位池与版本沿用主库的版本时间窗，不做槽位到具体池的猜测——A/B 槽位无法归属。
+  // 这份文件随时可从 data/bh3_gacha/*/gacha_logs.json 重建，删了也不影响任何功能。
+
+  /** 载入完整 yaml 对象（比对要用） */
+  loadPoolHistoryRaw() {
+    let data = null;
+    try { data = yaml.get(BH3_POOL_HISTORY_PATH); } catch (_) {}
+    if (!data) {
+      try { data = JSON.parse(fs.readFileSync(BH3_POOL_HISTORY_PATH.replace(/\.yaml$/, '.json'), 'utf8')); } catch (_) {}
+    }
+    if (!data) return null;
+    // 主库里每个名字记在什么位置：s=主UP / a=副UP
+    const where = new Map();
+    for (const v of data.pools || []) {
+      for (const q of v.pools || []) {
+        if (q?.s && !where.has(String(q.s).trim())) where.set(String(q.s).trim(), { version: v.version, field: 'main_up', pool: q.name || '' });
+        for (const a of q?.a || []) {
+          if (a && !where.has(String(a).trim())) where.set(String(a).trim(), { version: v.version, field: 'sub_up', pool: q.name || '' });
+        }
+      }
+    }
+    return { data, where };
+  }
+
+  /**
+   * 构建观测数据。要 roles = {角色名: rank}（来自 getStarMaps().char）
+   * 不写主库，只产出「版本 → 观测到的角色（含证据）」。
+   */
+  buildObservation(roles = {}) {
+    const raw = this.loadPoolHistoryRaw();
+    if (!raw) return null;
+    const { data, where } = raw;
+    const { items, files, total } = this.collectAllGachaItems();
+
+    // 版本时间窗
+    const vWindows = [];
+    for (const v of data.pools || []) {
+      const st = this.toDate(v.start), en = this.toDate(v.end);
+      vWindows.push({ version: String(v.version), phase: v.phase || '', start: st, end: en });
+    }
+
+    const byVersion = new Map();
+    let noRank = 0;
+    for (const it of items.values()) {
+      if (it.cat !== '角色') continue;
+      const rank = roles[it.name];
+      if (!rank) { noRank++; continue; }
+      const times = it.times.slice().sort();
+      const first = this.toDate(times[0]);
+      const last = this.toDate(times.at(-1));
+      // 归属版本：取第一个覆盖首次抽卡时间的版本窗，覆盖不了就如实标「未归版本」。
+      // 不做「取起点最早的窗口」这种兜底 —— 崩三版本从 4.6(2021) 到 9.1(2026) 都在库里，
+      // 那样兜会把 2026 年的抽卡归到 2021 年的 4.6 去（实测踩过）。
+      let hit = vWindows.find(w => w.start && w.end && first >= w.start && first <= w.end);
+      if (!hit) hit = vWindows.find(w => w.start && w.end && last >= w.start && last <= w.end);
+      const key = hit ? `${hit.version}${hit.phase ? ' ' + hit.phase : ''}` : '未归版本';
+      if (!byVersion.has(key)) byVersion.set(key, []);
+      const rec = where.get(it.name);
+      byVersion.get(key).push({
+        name: it.name,
+        rank,
+        rank_label: rank === 4 ? '初始阶级/S' : rank === 3 ? '初始阶级/A或SP' : '初始阶级/B',
+        tier: rank === 4 ? 'S级女武神' : rank === 3 ? 'A级/SP' : 'B级',
+        count: it.count,
+        slots: [...it.slots].sort(),
+        first: times[0],
+        last: times.at(-1),
+        in_history: !!rec,
+        recorded_as: rec ? (rec.field === 'main_up' ? '主UP(s)' : '副UP(a)') : '',
+        recorded_pool: rec ? rec.pool : '',
+        version_window: hit ? [times[0], hit.end] : []
+      });
+    }
+
+    const versions = [...byVersion.entries()].map(([key, list]) => {
+      list.sort((a, b) => b.rank - a.rank || a.name.localeCompare(b.name, 'zh'));
+      const sRank = list.filter(r => r.rank === 4);
+      const aRank = list.filter(r => r.rank === 3);
+      return {
+        version: key,
+        observed_main_up: sRank.map(r => ({ name: r.name, first: r.first, last: r.last, in_history: r.in_history })),
+        observed_sub_up: aRank.map(r => ({ name: r.name, first: r.first, last: r.last, in_history: r.in_history })),
+        not_in_history: list.filter(r => !r.in_history).map(r => r.name),
+        detail: list
+      };
+    }).sort((a, b) => (a.version > b.version ? 1 : -1));
+
+    return {
+      version: '1.0',
+      updated: new Date().toISOString().slice(0, 10),
+      source: '抽卡记录观测（data/bh3_gacha/*/gacha_logs.json）自动生成',
+      note: '本文件是派生数据，只记录抽卡记录能证明的事实。人工整理的主库是 bh3_gacha_pool_history.yaml，本文件不会、也不应去改它。version 归属沿用主库的版本时间窗；角色补给A/B 槽位无法对应到具体池，故不做池级归属。',
+      stats: { accounts: files, records: total, characters: items.size, no_rank: noRank, versions: versions.length },
+      versions
+    };
+  }
+
+  async saveGachaLogs(e, force = false) {
+    const auth = await this.getAuth(e);
+    if (auth.error) return auth.error;
+    const { uid, region, stokenCookie } = auth;
+    const authkey = await this.getAuthKey(uid, region, stokenCookie);
+    if (!authkey) return `UID${uid} 获取 authkey 失败，请确认 stoken 有效。`;
+    const menus = await this.getMenus(uid, authkey);
+    if (!menus.length) return `UID${uid} 获取卡池列表失败。`;
+
+    const old = this.loadGacha(uid) || { uid, data: {} };
+    const history = old.data || {};
+    let totalAdd = 0;
+    const deltas = [];
+
+    const failedPools = [];
+
+    for (const menu of menus) {
+      const gachaType = String(menu.type || '');
+      const gachaName = menu.label || `卡池${gachaType}`;
+      if (!gachaType) continue;
+      let newRecords = [];
+      try {
+        newRecords = await this.fetchGachaType(uid, authkey, gachaType);
+      } catch (err) {
+        // 单个池取失败只跳过这个池，不能让整次同步中断
+        logger.warn(`[HoYoGet][bh3_gacha] 「${gachaName}」取数失败：${err?.message || err}`);
+        failedPools.push(`${gachaName}：${err?.message || err}`);
+        continue;
+      }
+      const add = this.mergeInto(history, gachaName, newRecords, force);
+      if (add > 0) deltas.push(`${gachaName} 新增 ${add} 条`);
+      totalAdd += add;
+    }
+
+    // 官方 GetMenus 只列出近期有记录的池，服装补给这类池不会出现在菜单里。
+    // 对菜单没覆盖的 gacha type 逐个探测，命中就按内容前缀反推池名一起入库。
+    const probed = await this.probeUnknownPools(uid, authkey, menus.map(m => String(m.type || '')), menus.map(m => m.label));
+    for (const pool of probed) {
+      const add = this.mergeInto(history, pool.label, pool.records, force);
+      if (add > 0) deltas.push(`${pool.label} 新增 ${add} 条`);
+      totalAdd += add;
+    }
+
+    this.saveGacha(uid, { uid, data_time: moment().format('YYYY-MM-DD HH:mm:ss'), data: history });
+    // 取数失败的池要单独说清楚，不能让「没有新增」把真实原因盖掉
+    const failNote = failedPools.length
+      ? `\n\n⚠️ ${failedPools.length} 个卡池取数失败（已跳过，其余数据已正常入库）：\n` +
+        failedPools.map(f => `· ${f}`).join('\n')
+      : '';
+    if (!totalAdd) return `🌱UID${uid} 没有新增抽卡数据！${failNote}`;
+    return [`✅UID${uid} 抽卡记录更新成功，本次新增 ${totalAdd} 条`, ...deltas].join('\n') + failNote;
+  }
+
+  // 把接口返回的记录并入本地历史，返回新增条数
+  mergeInto(history, gachaName, newRecords = [], force = false) {
+    if (!history[gachaName]) history[gachaName] = [];
+    const oldCount = history[gachaName].length;
+    if (force) {
+      if (newRecords.length) {
+        const minTime = newRecords.reduce((m, r) => !m || r.time < m ? r.time : m, '');
+        const older = history[gachaName].filter(r => r.time < minTime);
+        history[gachaName] = [...older, ...newRecords];
+      }
+    } else {
+      // 不能只用 time+content 当 Set 去重：崩三十连会出现同一秒抽到多个相同材料，
+      // 例如 40 抽里有多条“同一时间 + [材料]金币*50000”。用 Set 会把真实重复抽数吞掉。
+      // 这里按“同键出现次数”做多重集合合并，只补本次接口比本地多出来的 occurrence。
+      const oldKeyCounts = new Map();
+      for (const r of history[gachaName]) {
+        const key = this.getGachaRecordBaseKey(r);
+        oldKeyCounts.set(key, (oldKeyCounts.get(key) || 0) + 1);
+      }
+      const incomingKeyCounts = new Map();
+      for (const r of newRecords) {
+        const key = this.getGachaRecordBaseKey(r);
+        const incomingCount = (incomingKeyCounts.get(key) || 0) + 1;
+        incomingKeyCounts.set(key, incomingCount);
+        if (incomingCount > (oldKeyCounts.get(key) || 0)) {
+          history[gachaName].push(r);
+        }
+      }
+    }
+    history[gachaName].sort((a, b) => String(b.time).localeCompare(String(a.time)));
+    return Math.max(history[gachaName].length - oldCount, 0);
+  }
+
+  // 探测 GetMenus 没给的卡池：逐个试 gacha type，只登记能明确识别为服装池的，
+  // 其余仅打日志，避免把角色/装备池误建成重名池。
+  async probeUnknownPools(uid, authkey, knownTypes = [], existingLabels = []) {
+    const known = new Set(knownTypes.filter(Boolean));
+    const exists = new Set(existingLabels.filter(Boolean));
+    const result = [];
+    for (let t = 1; t <= 12; t++) {
+      const type = String(t);
+      if (known.has(type)) continue;
+      let records = [];
+      try {
+        records = await this.fetchGachaType(uid, authkey, type);
+      } catch (err) {
+        logger.warn(`[HoYoGet][bh3_gacha] 探测 type=${type} 失败: ${err?.message || err}`);
+        continue;
+      }
+      await sleep(250);
+      if (!records.length) continue;
+      const sample = records.slice(0, 3).map(r => r.content).join(' / ');
+      const label = this.guessPoolLabel(records, type);
+      if (!label) {
+        logger.mark(`[HoYoGet][bh3_gacha] type=${type} 有 ${records.length} 条记录但无法归类，样本: ${sample}`);
+        continue;
+      }
+      if (exists.has(label)) {
+        logger.mark(`[HoYoGet][bh3_gacha] type=${type} 归类为「${label}」，该池已存在，跳过`);
+        continue;
+      }
+      logger.mark(`[HoYoGet][bh3_gacha] 探测到未登记卡池 type=${type} => 「${label}」${records.length} 条，样本: ${sample}`);
+      result.push({ label, type, records });
+    }
+    logger.mark(`[HoYoGet][bh3_gacha] 未登记卡池探测完成：命中 ${result.length} 个（菜单已给 ${known.size} 个 type）`);
+    return result;
+  }
+
+  guessPoolLabel(records = [], type = '') {
+    let costume = 0, partner = 0;
+    for (const r of records) {
+      const c = String(r?.content || '');
+      if (/^\[(服装|皮肤|时装|服饰)\]/.test(c)) costume++;
+      else if (/^\[协同(者)?\]/.test(c)) partner++;
+    }
+    if (costume) return '服装补给';
+    if (partner) return '协同补给';
+    return '';
+  }
+
+  extractCharacterName(content = '') {
+    if (!content.startsWith('[角色]')) return '';
+    return content.replace('[角色]', '').replace('角色卡', '').trim();
+  }
+
+  extractWeaponName(content = '') {
+    if (!content.startsWith('[武器]')) return '';
+    return content.replace('[武器]', '').trim();
+  }
+
+  getPoolType(gachaName = '') {
+    // 服装池优先判定：部分服装池名会带“装备/特典”字样，避免被误判成武器池
+    if (/服装|时装|皮肤/.test(gachaName)) return 'costume';
+    if (/武器|装备/.test(gachaName)) return 'weapon';
+    // 官方菜单名可能是“协同补给”也可能是“协同者补给”，只匹配“协同者”会漏判成角色池
+    if (/协同/.test(gachaName)) return 'partner';
+    return 'char';
+  }
+
+  // 服装池出金判定：官方记录前缀常见 [服装]，不同版本也可能是 [皮肤]/[时装]/[服饰]；
+  // 材料/角色/武器等非服装产出一律不算，其余（含未知前缀）按“获得服装”计。
+  isCostumeRecord(content = '') {
+    const c = String(content || '').trim();
+    if (!c) return false;
+    return !/^\[(材料|角色|武器|圣痕|协同者|人偶)\]/.test(c);
+  }
+
+  // 协同者记录形如「[协同者]晨雪」，部分带「协作者」写法
+  extractPartnerName(content = '') {
+    return String(content || '').replace(/^\[协(?:同者|作者)\]\s*/, '').trim();
+  }
+
+  /**
+   * 协同者图标查表。
+   *
+   * 百科 218 频道用的是全名（当前 8 条：希娜狄雅、白鹿游云、晨雪、
+   * 德丽莎·阿波卡利斯、瑟拉珮姆、松雀、寻梦者·2P、寻梦者·1P），
+   * 而抽卡记录里是简写：例如「[协同者]游云」对应百科的「白鹿游云」，
+   * 精确匹配必然落空 -> 图标取不到 -> 模板渲染成文字占位块。
+   * 所以这里分两级：先精确，再双向「包含」（取最长的那个），与服装按
+   * 女武神名反查的处理思路一致。
+   */
+  lookupPartnerIcon(name = '', map = {}) {
+    const key = String(name || '').trim();
+    if (!key) return '';
+    if (map[key]) return map[key];
+    // 长度门槛 2：单字名包含匹配太容易误伤（「云」→「白鹿游云」并不代表同一个协同者）
+    if (key.length >= 2) {
+      const hit = Object.keys(map)
+        .filter(n => n && n.length >= 2 && (n.includes(key) || key.includes(n)))
+        .sort((a, b) => b.length - a.length)[0];
+      if (hit) return map[hit];
+      logger.debug(`[HoYoGet][bh3_gacha] 协同者图标未命中：${key}（百科 218 频道共 ${Object.keys(map).length} 条）`);
+    }
+    return '';
+  }
+
+  extractCostumeName(content = '') {
+    return String(content || '').replace(/^\[[^\]]*\]\s*/, '').trim();
+  }
+
+  async getStarMaps() {
+    if (starMapCache) return starMapCache;
+    const char = {};
+    const weapon = {};
+    const charIcon = {};
+    const weaponIcon = {};
+    // 协同者频道取 218：这是「当前可抽协同者」频道（8 条），图标是 115×116 的
+    // 标准半身立绘，和角色/武器同一量级。另有 36 号频道是历史全量（43 条），
+    // 图标是 840×920 的 Q 版大头透明底 —— 套进方框里头像很小、四周还露空，
+    // 不要用那个。之前 getItemIcon 没有 partner 分支，协同者一律返回空 URL，
+    // 模板就渲染成文字占位块。
+    const partnerIcon = {};
+    try {
+      const [chars, weapons, partners] = await Promise.all([
+        fetch(`${BH3_WIKI_BASE}&channel_id=18`).then(r => r.json()),
+        fetch(`${BH3_WIKI_BASE}&channel_id=20`).then(r => r.json()),
+        fetch(`${BH3_WIKI_BASE}&channel_id=218`).then(r => r.json()).catch(() => null),
+      ]);
+      for (const item of chars?.data?.list?.[0]?.list || []) {
+        let rank = 0;
+        try {
+          const ext = JSON.parse(item.ext || '{}');
+          const filters = JSON.parse(ext.c_18?.filter?.text || '[]');
+          if (filters.some(v => v === '初始阶级/S')) rank = 4;
+          else if (filters.some(v => v === '初始阶级/A' || v === '初始阶级/SP')) rank = 3;
+          else if (filters.some(v => v === '初始阶级/B')) rank = 2;
+        } catch (_) {}
+        if (rank) char[item.title] = rank;
+        if (item.icon) charIcon[item.title] = item.icon;
+      }
+      for (const item of weapons?.data?.list?.[0]?.list || []) {
+        let rank = 0;
+        try {
+          const ext = JSON.parse(item.ext || '{}');
+          const filters = JSON.parse(ext.c_20?.filter?.text || '[]');
+          for (const v of filters) {
+            const m = String(v).match(/(?:武器)?星级\/(\d)星|(?:武器)?星级\/(五星|四星|三星)/);
+            if (m) {
+              rank = m[1] ? Number(m[1]) : ({ 五星: 5, 四星: 4, 三星: 3 }[m[2]] || 0);
+              break;
+            }
+          }
+        } catch (_) {}
+        if (rank) weapon[item.title] = rank;
+        if (item.icon) weaponIcon[item.title] = item.icon;
+      }
+      for (const item of partners?.data?.list?.[0]?.list || []) {
+        if (item.icon && item.title) partnerIcon[item.title] = item.icon;
+      }
+      logger.mark(`[HoYoGet][bh3_gacha] star maps: char=${Object.keys(char).length}, weapon=${Object.keys(weapon).length}, partner=${Object.keys(partnerIcon).length}`);
+    } catch (err) {
+      logger.warn?.('[HoYoGet][bh3_gacha] 获取出金星级映射失败:', err);
+    }
+    starMapCache = { char, weapon, charIcon, weaponIcon, partnerIcon };
+    return starMapCache;
+  }
+
+  async getPlayerInfo(e, auth = {}) {
+    const uid = auth.uid;
+    const server = auth.region || mhy.getServer(uid, 'bh3');
+    const info = {
+      avatarUrl: '',
+      nickname: '',
+      userLevel: 0,
+      serverName: '',
+    };
+    if (!uid || !auth.ck) return info;
+    try {
+      const headers = mhy.getHeaders(e, auth.ck);
+      const res = await api(e, {
+        type: 'bh3_index',
+        uid,
+        headers,
+        game: 'bh3',
+        server,
+      });
+      if (res?.retcode === 0 && res.data?.role) {
+        info.avatarUrl = res.data.role.AvatarUrl || '';
+        info.nickname = res.data.role.nickname || '';
+        info.userLevel = res.data.role.level || 0;
+        const region = res.data.role.region || server || '';
+        const serverMap = {
+          cn_gf01: '官服',
+          cn_qd01: 'B服',
+          os_usa: '美服',
+          os_euro: '欧服',
+          os_asia: '亚服',
+          os_cht: '港澳台服',
+          android01: '安卓官服',
+          ios01: 'iOS服',
+          bb01: '哔哩哔哩',
+          pc01: '全平台（桌面）服',
+          yyb01: '应用宝服',
+          hun01: '渠道1服',
+          hun02: '渠道2服',
+        };
+        info.serverName = serverMap[region] || region || '';
+      }
+      if (!info.avatarUrl) {
+        const char = await api(e, {
+          type: 'bh3_character',
+          uid,
+          headers,
+          game: 'bh3',
+          server,
+        });
+        if (char?.retcode === 0 && char.data?.characters?.length) {
+          info.avatarUrl = char.data.characters[0].character?.avatar?.icon_path || '';
+        }
+      }
+      if (info.avatarUrl) {
+        info.avatarUrl = await this.cacheIcon(`player_${uid}`, info.avatarUrl, 'avatar') || await this.ensureAbsoluteUrl(info.avatarUrl) || info.avatarUrl;
+      }
+    } catch (err) {
+      logger.warn?.('[HoYoGet][bh3_gacha] 获取玩家头像失败:', err);
+    }
+    return info;
+  }
+
+  async ensureAbsoluteUrl(url) {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    if (url.startsWith('//')) return `https:${url}`;
+    if (url.startsWith('/')) return `https://api-takumi-static.mihoyo.com${url}`;
+    return `https://${url}`;
+  }
+
+  async cacheIcon(name, url, type = 'item') {
+    if (!url) return '';
+    const absUrl = await this.ensureAbsoluteUrl(url);
+    try {
+      fs.mkdirSync(ICON_CACHE_DIR, { recursive: true });
+      const safe = `${type}_${name}`.replace(/[\\/:*?"<>|\s]/g, '_');
+      const ext = new URL(absUrl).pathname.split('.').pop()?.split('?')[0] || 'png';
+      const file = path.join(ICON_CACHE_DIR, `${safe}.${ext}`);
+      if (!fs.existsSync(file)) {
+        const res = await fetch(absUrl);
+        if (!res.ok) return absUrl;
+        const buf = Buffer.from(await res.arrayBuffer());
+        fs.writeFileSync(file, buf);
+      }
+      const relPath = path.relative(process.cwd(), file);
+      return `../../../../../${relPath}`;
+    } catch (err) {
+      logger.warn?.('[HoYoGet][bh3_gacha] icon cache failed:', name, err);
+      return absUrl;
+    }
+  }
+
+  async getItemIcon(content = '', poolType = 'char', maps = {}) {
+    if (poolType === 'char') {
+      const name = this.extractCharacterName(content);
+      return this.cacheIcon(name, maps.charIcon?.[name], 'char');
+    }
+    if (poolType === 'weapon') {
+      const name = this.extractWeaponName(content);
+      return this.cacheIcon(name, maps.weaponIcon?.[name], 'weapon');
+    }
+    if (poolType === 'partner') {
+      const name = this.extractPartnerName(content);
+      return this.cacheIcon(name, this.lookupPartnerIcon(name, maps.partnerIcon || {}), 'partner');
+    }
+    if (poolType === 'costume') {
+      // 百科没有服装频道，用服装名去反查所属女武神的头像（如「雾都丽影」→ 幽兰黛尔）
+      const name = this.extractCostumeName(content);
+      const key = Object.keys(maps.charIcon || {})
+        .filter(n => n && n.length >= 2 && name.includes(n))
+        .sort((a, b) => b.length - a.length)[0];
+      return this.cacheIcon(name, key ? maps.charIcon[key] : '', 'costume');
+    }
+    return '';
+  }
+
+  isRareRecord(content = '', poolType = 'char', maps = { char: {}, weapon: {} }) {
+    if (poolType === 'partner') return /^\[协同(者)?\]/.test(content);
+    if (poolType === 'costume') return this.isCostumeRecord(content);
+    if (poolType === 'weapon') {
+      const name = this.extractWeaponName(content);
+      return !!name && (maps.weapon[name] || 0) >= 5;
+    }
+    const name = this.extractCharacterName(content);
+    return !!name && (maps.char[name] || 0) >= 4;
+  }
+
+  getSharedPityGroup(gachaName = '', poolType = 'char') {
+    if (poolType === 'partner' || poolType === 'costume') return '';
+    const name = String(gachaName || '').replace(/\s+/g, '');
+    // 崩三的角色/装备补给 A/B 共用保底/垫数；统计时去掉 A/B 标记后归为同一组。
+    if (!/补给[ABＡＢ]/i.test(name)) return '';
+    const normalizedName = name
+      .replace(/补给[ABＡＢ]/gi, '补给AB')
+      .replace(/[（(]?[ABＡＢ][）)]?$/i, 'AB');
+    return `${poolType}:${normalizedName}`;
+  }
+
+  getGachaRecordBaseKey(record = {}) {
+    return `${record.time || ''}\u0000${record.content || ''}`;
+  }
+
+  getGachaRecordKey(poolName = '', record = {}, seq = 1) {
+    return `${poolName}\u0000${record.time || ''}\u0000${record.content || ''}\u0000${seq || 1}`;
+  }
+
+  withOccurrenceKeys(poolName = '', records = []) {
+    const counts = new Map();
+    return [...(Array.isArray(records) ? records : [])]
+      .sort((a, b) => String(a.time).localeCompare(String(b.time)))
+      .map(record => {
+        const base = this.getGachaRecordBaseKey(record);
+        const seq = (counts.get(base) || 0) + 1;
+        counts.set(base, seq);
+        return {
+          record,
+          key: this.getGachaRecordKey(poolName, record, seq),
+        };
+      });
+  }
+
+  getLegacyGachaRecordKey(poolName = '', record = {}) {
+    return `${poolName}\u0000${record.time || ''}\u0000${record.content || ''}`;
+  }
+
+  buildSharedPityMap(poolEntries = [], maps) {
+    const groupBuckets = new Map();
+    for (const entry of poolEntries) {
+      const group = this.getSharedPityGroup(entry.name, entry.poolType);
+      if (!group) continue;
+      if (!groupBuckets.has(group)) groupBuckets.set(group, []);
+      for (const record of entry.records || []) {
+        groupBuckets.get(group).push({
+          poolName: entry.name,
+          poolType: entry.poolType,
+          record,
+        });
+      }
+    }
+
+    const result = new Map();
+    for (const [group, list] of groupBuckets) {
+      const perPoolCounts = new Map();
+      const sorted = [...list].sort((a, b) => String(a.record.time).localeCompare(String(b.record.time)));
+      let pullSinceLast = 0;
+      const pullByRecord = new Map();
+      const pullCounts = [];
+      for (const item of sorted) {
+        const base = `${item.poolName}\u0000${this.getGachaRecordBaseKey(item.record)}`;
+        const seq = (perPoolCounts.get(base) || 0) + 1;
+        perPoolCounts.set(base, seq);
+        pullSinceLast++;
+        if (this.isRareRecord(item.record.content, item.poolType, maps)) {
+          pullByRecord.set(this.getGachaRecordKey(item.poolName, item.record, seq), pullSinceLast);
+          // 兼容旧逻辑：非重复记录也写一份旧 key，避免其它调用没有带 occurrence 时查不到。
+          if (seq === 1) pullByRecord.set(this.getLegacyGachaRecordKey(item.poolName, item.record), pullSinceLast);
+          pullCounts.push(pullSinceLast);
+          pullSinceLast = 0;
+        }
+      }
+      result.set(group, {
+        currentPity: pullSinceLast,
+        pullByRecord,
+        pullCounts,
+      });
+    }
+    return result;
+  }
+
+  async makeSummaryData(uid) {
+    const log = this.loadGacha(uid);
+    if (!log?.data || !Object.keys(log.data).length) return null;
+    const maps = await this.getStarMaps();
+    const poolEntries = Object.entries(log.data)
+      .filter(([name]) => this.isValidGachaMenuName(name))
+      .map(([name, records]) => ({
+        name,
+        records: Array.isArray(records) ? records : [],
+        poolType: this.getPoolType(name),
+      }));
+    const sharedPityMap = this.buildSharedPityMap(poolEntries, maps);
+    const pools = await Promise.all(poolEntries.map(async ({ name, records, poolType }) => {
+      const sorted = this.withOccurrenceKeys(name, records);
+      const items = [];
+      let pullSinceLast = 0;
+      const pullCounts = [];
+      const sharedGroup = this.getSharedPityGroup(name, poolType);
+      const sharedPity = sharedGroup ? sharedPityMap.get(sharedGroup) : null;
+      const goldLabel = poolType === 'costume' ? '获得服装' : '出金次数';
+      const emptyText = poolType === 'costume' ? '暂未记录到获得服装' : '暂未记录到出金';
+      for (const row of sorted) {
+        const r = row.record;
+        pullSinceLast++;
+        if (this.isRareRecord(r.content, poolType, maps)) {
+          const sharedPulls = sharedPity?.pullByRecord?.get(row.key) || sharedPity?.pullByRecord?.get(this.getLegacyGachaRecordKey(name, r));
+          const pulls = sharedPulls || pullSinceLast;
+          items.push({
+            ...r,
+            pulls,
+            display: poolType === 'char' ? this.extractCharacterName(r.content)
+              : poolType === 'weapon' ? this.extractWeaponName(r.content)
+                // 协同者去掉「[协同者]」前缀，占位文字才不至于把标签也显示出来
+                : poolType === 'partner' ? this.extractPartnerName(r.content)
+                  : poolType === 'costume' ? this.extractCostumeName(r.content)
+                    : r.content,
+            icon: await this.getItemIcon(r.content, poolType, maps),
+          });
+          pullCounts.push(pulls);
+          pullSinceLast = 0;
+        }
+      }
+      items.reverse();
+      const goldCount = items.length;
+      const avgPulls = pullCounts.length ? (pullCounts.reduce((a, b) => a + b, 0) / pullCounts.length).toFixed(1) : '0';
+      return {
+        name,
+        type: poolType,
+        goldLabel,
+        emptyText,
+        count: records.length,
+        goldCount,
+        currentPity: sharedPity ? sharedPity.currentPity : pullSinceLast,
+        avgPulls,
+        maxPulls: pullCounts.length ? Math.max(...pullCounts) : 0,
+        latest: records[0]?.time || '',
+        items: items.slice(0, 12),
+      };
+    }));
+    const total = pools.reduce((sum, p) => sum + p.count, 0);
+    if (!pools.length) return null;
+    return { uid, total, data_time: log.data_time || '未知', pools };
+  }
+
+  async makeSummary(uid) {
+    const data = await this.makeSummaryData(uid);
+    if (!data) return `UID${uid} 还没有抽卡记录，请先使用 #刷新抽卡记录`;
+    const hintMap = { char: 'S角色', weapon: '5星武器', partner: '协同者', costume: '服装' };
+    const lines = [`📊 UID${uid} 抽卡记录（共 ${data.total} 条）`, `更新时间：${data.data_time}`];
+    for (const pool of data.pools) {
+      lines.push('', `【${pool.name}】共 ${pool.count} 抽`);
+      if (!pool.items.length) {
+        lines.push(`  未抽到${hintMap[pool.type] || '高价值物品'}`);
+        if (pool.currentPity > 0) lines.push(`  已连续 ${pool.currentPity} 抽未出`);
+      } else {
+        for (const item of pool.items) lines.push(`  ${item.content}  (${item.pulls}抽)  ${item.time}`);
+        if (pool.currentPity > 0) lines.push(`  ---- 已连续 ${pool.currentPity} 抽未出 ----`);
+      }
+    }
+    return lines.join('\n');
+  }
+
+  async renderSummary(e, uid, auth = {}) {
+    const data = await this.makeSummaryData(uid);
+    if (!data) return sendMsg(e, `UID${uid} 还没有抽卡记录，请先使用 #刷新抽卡记录`);
+    try {
+      const player = await this.getPlayerInfo(e, { ...auth, uid });
+      const buf = await puppeteer.render('米哈游/bh3_gacha/gacha', {
+        ...data,
+        ...player,
+        bg: ['bg', 'bg1', 'IMG_20250717_034154'][Math.floor(Math.random() * 3)],
+        sys: { scale: 'style=transform:scale(1)' },
+        // 这里直接调 puppeteer.render，绕过了 system/render.js 里注入 ppath 的
+        // beforeRender，模板里的 {{ppath}} 会被渲染成空串：CSS 与背景图全部 404，
+        // 页面退化成没有样式的裸 HTML（文字纵向堆叠、原图按原始尺寸铺开）。
+        // 层数 = 资源目录段数 + 3：HTML 落在 temp/html/小花火/bh3_gacha/gacha/，
+        // 从那里回到 TRSS-Yunzai 根要上跳 5 层，再进 plugins/HoYoGet-Plugin/resources/。
+        ppath: '../../../../../plugins/HoYoGet-Plugin/resources/',
+        tplFile: process.cwd() + '/plugins/HoYoGet-Plugin/resources/bh3_gacha/gacha.html',
+        saveId: 'gacha',
+      });
+      if (buf && Buffer.isBuffer(buf)) {
+        const seg = segment.image(buf);
+        if (e.group) return e.group.sendMsg([seg]);
+        if (e.friend) return e.friend.sendMsg([seg]);
+        return e.reply(seg);
+      }
+    } catch (err) {
+      logger.error('[HoYoGet][bh3_gacha] render failed:', err);
+    }
+    return sendMsg(e, await this.makeSummary(uid));
+  }
+
+  async gachaSummary(e) {
+    const auth = await this.getAuth(e);
+    if (auth.error) return sendMsg(e, auth.error);
+    return this.renderSummary(e, auth.uid, auth);
+  }
+
+  async refreshGacha(e) {
+    await sendMsg(e, '开始更新抽卡记录，需要一定时间，请勿重复更新；官方通常只能更新最近30天记录。');
+    const msg = await this.saveGachaLogs(e, false);
+    return sendMsg(e, msg);
+  }
+
+  async fullRefreshGacha(e) {
+    await sendMsg(e, '开始全量刷新抽卡记录，需要一定时间，请勿重复更新。');
+    const msg = await this.saveGachaLogs(e, true);
+    return sendMsg(e, msg);
+  }
+}
+
+// 模块开关：锅巴里关掉「bh3_gacha」后，本文件所有指令静默不响应
+guardModuleByFile(bh3_gacha, 'bh3_gacha', 'bh3/bh3_gacha.js')

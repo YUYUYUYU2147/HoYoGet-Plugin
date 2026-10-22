@@ -5,7 +5,7 @@ import {
 } from '#xhh';
 import YAML from 'yaml';
 // Bwiki 绝区零角色页（列表页头像最高优先级来源）。该文件零 import，不构成循环依赖。
-import { fetchZzzBwikiChar, zzzKey } from '../apps/wiki/bwiki_zzz.js';
+import { fetchZzzBwikiChar, zzzKey } from './apps/common/wiki/bwiki_zzz.js';
 
 // 绝区零 nanoka 目录只保留当前版本，旧版本号过一段时间就会整目录 404
 // （3.3.3+19110104 已下架，四个数据文件全部 404，表现为新出的驱动盘套装查不到，

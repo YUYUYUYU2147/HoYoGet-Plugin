@@ -29,7 +29,7 @@
       </div>
     </div>
     <div class="head-right">
-      <img class="game-logo-img" src="{{ppath}}abyss_stat/stat/imgs/challenge/peak/logo.png" alt="崩坏：星穹铁道">
+      <img class="game-logo-img" src="{{ppath}}abyss_stat/imgs/challenge/peak/logo.png" alt="崩坏：星穹铁道">
     </div>
   </div>
 
@@ -48,8 +48,8 @@
     <div class="overview-info">
       <div class="overview-info-top">
         <div class="overview-stars-col">
-          <span class="star-row"><img class="star-icon" src="{{ppath}}abyss_stat/stat/imgs/challenge/peak/boss_star.png" /><span class="star-count">×{{record_brief?.boss_stars || "-"}}</span></span>
-          <span class="star-row"><img class="star-icon" src="{{ppath}}abyss_stat/stat/imgs/challenge/peak/mob_star.png" /><span class="star-count">×{{record_brief?.mob_stars || "-"}}</span></span>
+          <span class="star-row"><img class="star-icon" src="{{ppath}}abyss_stat/imgs/challenge/peak/boss_star.png" /><span class="star-count">×{{record_brief?.boss_stars || "-"}}</span></span>
+          <span class="star-row"><img class="star-icon" src="{{ppath}}abyss_stat/imgs/challenge/peak/mob_star.png" /><span class="star-count">×{{record_brief?.mob_stars || "-"}}</span></span>
         </div>
         <div class="overview-text-col">
           <span class="overview-version">{{record?.group?.name_mi18n}}</span>
@@ -93,11 +93,11 @@
                 已通关
               </span>
               <span class="boss-stars-inline">
-                {{each Array(boss_record.star_num) i}}
-                <img class="star-img-xs" src="{{ppath}}abyss_stat/stat/imgs/challenge/peak/boss_star.png" />
+                {{each repeat(boss_record.star_num) i}}
+                <img class="star-img-xs" src="{{ppath}}abyss_stat/imgs/challenge/peak/boss_star.png" />
                 {{/each}}
-                {{each Array(3 - boss_record.star_num) i}}
-                <img class="star-img-xs star-img-dim" src="{{ppath}}abyss_stat/stat/imgs/challenge/peak/boss_star_fail.png" />
+                {{each repeat(3 - boss_record.star_num) i}}
+                <img class="star-img-xs star-img-dim" src="{{ppath}}abyss_stat/imgs/challenge/peak/boss_star_fail.png" />
                 {{/each}}
               </span>
             </span>
@@ -122,7 +122,7 @@
           {{if av || a}}
           <div class="avatar-card rarity-{{av?.star || a?.rarity || 5}}">
             <div class="avatar-inner">
-              {{if a.element}}<span class="avatar-elem"><img src="{{ppath}}abyss_stat/{{elemIcon(a.element)}}" alt=""></span>{{/if}}
+              {{if a.element && elemIcon(a.element)}}<span class="avatar-elem"><img src="{{ppath}}{{elemIcon(a.element)}}" alt=""></span>{{/if}}
               <span class="avatar-life life-{{av?.cons || a?.rank || 0}}">{{av?.cons || a?.rank || 0}}</span>
               {{if av?.face}}<img class="avatar-img" src="{{_miao_path}}{{av.face}}" alt="">{{else if a?.icon}}<img class="avatar-img" src="{{a.icon}}" alt="">{{/if}}
               <div class="avatar-bottom">
@@ -227,11 +227,11 @@
             已通关
           </span>
           <span class="mob-stars-inline">
-            {{each Array(mob_record.star_num) i}}
-            <img class="star-img-xs" src="{{ppath}}abyss_stat/stat/imgs/challenge/peak/mob_star.png" />
+            {{each repeat(mob_record.star_num) i}}
+            <img class="star-img-xs" src="{{ppath}}abyss_stat/imgs/challenge/peak/mob_star.png" />
             {{/each}}
-            {{each Array(3 - mob_record.star_num) i}}
-            <img class="star-img-xs star-img-dim" src="{{ppath}}abyss_stat/stat/imgs/challenge/peak/mob_star_fail.png" />
+            {{each repeat(3 - mob_record.star_num) i}}
+            <img class="star-img-xs star-img-dim" src="{{ppath}}abyss_stat/imgs/challenge/peak/mob_star_fail.png" />
             {{/each}}
           </span>
         </span>
@@ -247,7 +247,7 @@
         {{if av || a}}
         <div class="avatar-card rarity-{{av?.star || a?.rarity || 5}}">
           <div class="avatar-inner">
-            {{if a.element}}<span class="avatar-elem"><img src="{{ppath}}abyss_stat/{{elemIcon(a.element)}}" alt=""></span>{{/if}}
+            {{if a.element && elemIcon(a.element)}}<span class="avatar-elem"><img src="{{ppath}}{{elemIcon(a.element)}}" alt=""></span>{{/if}}
             <span class="avatar-life life-{{av?.cons || a?.rank || 0}}">{{av?.cons || a?.rank || 0}}</span>
             {{if av?.face}}<img class="avatar-img" src="{{_miao_path}}{{av.face}}" alt="">{{else if a?.icon}}<img class="avatar-img" src="{{a.icon}}" alt="">{{/if}}
             <div class="avatar-bottom">

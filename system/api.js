@@ -4,7 +4,7 @@ import {
 } from '#HoYoGet';
 import {
     user
-} from '../apps/user.js';
+} from '../apps/common/user.js';
 import { mhyFetch } from './mhy_fetch.js';
 
 async function api(e, data = {}) {

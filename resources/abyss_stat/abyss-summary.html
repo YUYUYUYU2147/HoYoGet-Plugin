@@ -11,7 +11,13 @@
 {{ set upDown = {up:'上半', down:'下半'} }}
 <div class="head-box type">
   <div class="title">#{{msg}}深渊<span>{{abyss.schedule}} · {{abyss.total}}次战斗</span></div>
-  <div class="uid">UID:{{uid}}</div>
+  <div class="head-user">
+    {{if profile.avatar}}<img class="head-avatar" src="{{profile.avatar}}" alt="" />{{/if}}
+    <div class="head-user-info">
+      {{if profile.nickname}}<div class="head-nick">{{profile.nickname}}</div>{{/if}}
+      <div class="uid">UID:{{uid}}</div>
+    </div>
+  </div>
 </div>
 {{if upTip}}
 <div class="cont abyss-notice">
@@ -168,16 +174,22 @@
           <div class="boss-info">
             <div class="boss-name">{{m.name}}</div>
             {{if m.hp}}<div class="boss-hp">{{m.hp}}</div>{{/if}}
+            {{if m.shield && m.shield.length}}
+            <div class="boss-tags shield">
+              <i class="tag-label">护盾</i>
+              {{each m.shield s}}<i>{{each s.elems e}}<span class="elem">{{if e.icon}}<img src="{{e.icon}}" alt="" />{{/if}}{{e.cn}}</span>{{/each}}{{if s.value}}<em>{{s.value}}</em>{{/if}}</i>{{/each}}
+            </div>
+            {{/if}}
             {{if m.weak && m.weak.length}}
             <div class="boss-tags weak">
               <i class="tag-label">弱点</i>
-              {{each m.weak e}}<i>{{if e.icon}}<img src="{{e.icon}}" alt="" />{{/if}}{{e.cn}}</i>{{/each}}
+              {{each m.weak e}}<i><span class="elem">{{if e.icon}}<img src="{{e.icon}}" alt="" />{{/if}}{{e.cn}}</span></i>{{/each}}
             </div>
             {{/if}}
             {{if m.res && m.res.length}}
             <div class="boss-tags res">
               <i class="tag-label">抗性</i>
-              {{each m.res r}}<i>{{each r.elems e}}{{if e.icon}}<img src="{{e.icon}}" alt="" />{{/if}}{{e.cn}}{{/each}} <em>{{r.value}}</em></i>{{/each}}
+              {{each m.res r}}<i>{{each r.elems e}}<span class="elem">{{if e.icon}}<img src="{{e.icon}}" alt="" />{{else if e.key === 'All'}}<span class="elem-all"></span>{{/if}}{{e.cn}}</span>{{/each}}<em>{{r.value}}</em></i>{{/each}}
             </div>
             {{/if}}
             {{if m.mech}}<div class="boss-mech">{{m.mech}}</div>{{/if}}
@@ -212,6 +224,7 @@
         <li>每期深渊仅可通过<strong>#上传深渊</strong>上传<strong>1</strong>次<strong>当期12层满星</strong>数据，重复提交将不计入统计</li>
         <li>角色装备与圣遗物为当前最新状态</li>
       </ul>
+      <div class="from-mhy">from 米哈游</div>
     </div>
   </div>
 </div>

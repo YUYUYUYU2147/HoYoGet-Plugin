@@ -277,13 +277,15 @@ export default class Avatar extends Base {
     ds.talent && this.setTalent(ds.talent, "original", source)
     let artis = ds.mysArtis || ds.artis
     // 只要具备圣遗物信息，就更新mysArtis
-    this._mysArtis.setArtisData(artis)
+    /* Character.get 失败时构造函数会提前 return，实例没有 _mysArtis。
+       这里判空，避免一个未知角色把整批 getAvatarData 打断（头像/立绘全空）。 */
+    if (this._mysArtis) this._mysArtis.setArtisData(artis)
     delete this._now
   }
 
   setAvatar(ds, source = "") {
     this.setAvatarBase(ds, source)
-    if (ds.artis && source !== "mys") this._artis.setArtisData(ds.artis)
+    if (ds.artis && source !== "mys" && this._artis) this._artis.setArtisData(ds.artis)
     this.calcAttr()
   }
 

@@ -1,5 +1,5 @@
 /* 插件自举热重载：改完文件自动生效，不用 `#重启`、也不用框架的 `#重载插件`
- * （实测框架那条命令不会重新 import ESM 入口，对 xhh 完全无效）。
+ * （实测框架那条命令不会重新 import ESM 入口，对 米哈游 完全无效）。
  *
  * 原理（三步）：
  *   1. fs.watch 递归监听 apps/ 与 system/，文件一改（防抖后）就重新 import 每个
@@ -52,7 +52,7 @@ function patchClass(oldC, NewC) {
 
 /**
  * @param {object} o
- * @param {Record<string, Function>} o.apps  index.js 的 apps 映射（文件名 → 类）
+ * @param {Record<string, Function>} o.apps  index.js 的 apps 映射（相对 apps/ 的路径 → 类）
  * @param {string[]} o.files                apps 目录下的文件名列表
  * @param {string}   o.root                 插件根目录 URL（file:///…/plugins/HoYoGet-Plugin/）
  * @param {object}   o.logger               日志对象
@@ -76,11 +76,14 @@ export function startAutoReload({ apps = {}, files = [], root = '', logger } = {
         let changed = 0
         try {
             for (const file of files) {
-                const name = file.replace(/\.js$/, '')
+                // index.js 传进来的 file 是相对 apps/ 的 POSIX 路径（如 gs/foo.js），
+                // apps 的 key 也必须是同一条路径，不能只取 basename。
+                const rel = String(file).replace(/\\/g, '/')
+                const name = rel.replace(/\.js$/, '')
                 const oldC = apps[name]
                 if (!oldC) continue
                 try {
-                    const url = new URL(`./apps/${file}`, root).href + `?t=${Date.now()}`
+                    const url = new URL(`./apps/${rel}`, root).href + `?t=${Date.now()}`
                     const mod = await import(url)
                     /* 不能取「第一个导出」：app 文件现在会导出工具函数
                        （如 zzz_panel_list.js 导出 buildBasicProperties / calcDamage 给排名页复用），

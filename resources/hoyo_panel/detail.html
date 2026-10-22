@@ -193,6 +193,19 @@
             </div>
             {{/each}}
           </div>
+
+          {{if setEffects.length}}
+          <div class="set-effects">
+            {{each setEffects s}}
+            <div class="set-eff">
+              <div class="se-head"><span class="se-name">{{s.name}}</span><span class="se-count">×{{s.count}}</span></div>
+              {{each s.effects e}}
+              <div class="se-line"><span class="se-piece">{{e.piece}}件套</span><span class="se-desc">{{e.text}}</span></div>
+              {{/each}}
+            </div>
+            {{/each}}
+          </div>
+          {{/if}}
         </div>
 
         <div class="col-right">
@@ -260,18 +273,6 @@
             </div>
             {{/if}}
 
-            {{if setEffects.length}}
-            <div class="set-effects">
-              {{each setEffects s}}
-              <div class="set-eff">
-                <div class="se-head"><span class="se-name">{{s.name}}</span><span class="se-count">×{{s.count}}</span></div>
-                {{each s.effects e idx}}
-                <div class="se-line"><span class="se-piece">{{idx === 0 ? '2件套' : '4件套'}}</span><span class="se-desc">{{e}}</span></div>
-                {{/each}}
-              </div>
-              {{/each}}
-            </div>
-            {{/if}}
           </div>
 
           {{if miaoDmg}}
@@ -350,11 +351,30 @@
           </div>
           {{/if}}
 
+          {{if groupRank && groupRank.rank}}
+          <div class="akasha">
+            <div class="ak-rank">
+              <div class="ak-title">本群排名</div>
+              <div class="ak-main">
+                <span class="ak-no">#{{groupRank.rank}}</span>
+                <span class="ak-of">/ {{rankLimit}}</span>
+              </div>
+              <div class="ak-beat">{{groupRank.type === 'dmg' ? '期望伤害' : '圣遗物评分'}}排名</div>
+            </div>
+          </div>
+          {{/if}}
+
           {{if akasha}}
           <div class="akasha">
             <div class="ak-rank">
               <div class="ak-title">AKASHA 全球排名</div>
-              {{if akasha.mine}}
+              {{if akasha.offline}}
+              {{if ysRank}}
+              <div class="ak-none">Akasha 暂不可用（Cloudflare 拦截），下方补充提瓦特小助手排行</div>
+              {{else}}
+              <div class="ak-none">Akasha 暂不可用（Cloudflare 拦截），以下为本地缓存配队</div>
+              {{/if}}
+              {{else if akasha.mine}}
               <div class="ak-main">
                 <span class="ak-no">#{{akasha.mine.rank}}</span>
                 <span class="ak-of">/ {{akasha.mine.outOf}}</span>
@@ -437,6 +457,55 @@
               {{/each}}
             </div>
             {{/if}}
+          </div>
+          {{/if}}
+
+          {{if ysRank}}
+          <div class="akasha">
+            {{if ysRank.damage.length}}
+            <div class="ak-board">
+              <div class="ak-title">提瓦特小助手 · 练度排行<span class="sw-note">伤害前 5{{if ysRank.offline}} · 缓存{{/if}}</span></div>
+              <div class="ys-cols">
+                <span>排名</span>
+                <span>UID</span>
+                <span>命座</span>
+                <span>圣遗物分</span>
+                <span>伤害</span>
+              </div>
+              {{each ysRank.damage r}}
+              <div class="ys-row">
+                <span class="ys-rk">{{r.rank}}</span>
+                <span class="ys-uid">{{r.uid}}</span>
+                <span class="ys-cons">{{r.consText}}</span>
+                <span class="ys-art">{{r.artifact}}</span>
+                <span class="ys-dmg">{{r.damageText}}</span>
+              </div>
+              {{/each}}
+            </div>
+            {{/if}}
+
+            {{if ysRank.artifacts.length}}
+            <div class="ak-board">
+              <div class="ak-title">提瓦特小助手 · 圣遗物分排行<span class="sw-note">前 5{{if ysRank.offline}} · 缓存{{/if}}</span></div>
+              <div class="ys-cols">
+                <span>排名</span>
+                <span>UID</span>
+                <span>命座</span>
+                <span>圣遗物分</span>
+                <span>伤害</span>
+              </div>
+              {{each ysRank.artifacts r}}
+              <div class="ys-row">
+                <span class="ys-rk">{{r.rank}}</span>
+                <span class="ys-uid">{{r.uid}}</span>
+                <span class="ys-cons">{{r.consText}}</span>
+                <span class="ys-art">{{r.artifact}}</span>
+                <span class="ys-dmg">{{r.damageText}}</span>
+              </div>
+              {{/each}}
+            </div>
+            {{/if}}
+            <div class="ys-foot">数据来源：提瓦特小助手（用户自主上传）</div>
           </div>
           {{/if}}
         </div>

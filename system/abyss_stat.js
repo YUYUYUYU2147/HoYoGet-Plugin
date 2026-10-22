@@ -20,13 +20,29 @@ export function timeCalc(t) {
 /** 星铁元素图标（模板里 elemIcon 用） */
 export function elemIcon(element) {
   const map = {
-    physical: 'elem-phy', fire: 'elem-fire', ice: 'elm-ice', lightning: 'elem-elec',
-    wind: 'elem-wind', quantum: 'elem-auantum', imaginary: 'elem-imaginary',
+    physical: 'elem-phy', phy: 'elem-phy', 物理: 'elem-phy',
+    fire: 'elem-fire', 火: 'elem-fire',
+    ice: 'elm-ice', 冰: 'elm-ice',
+    lightning: 'elem-elec', elec: 'elem-elec', 雷: 'elem-elec',
+    wind: 'elem-wind', 风: 'elem-wind',
+    quantum: 'elem-auantum', 量子: 'elem-auantum',
+    imaginary: 'elem-imaginary', 虚数: 'elem-imaginary',
   }
-  return map[element] ? `meta-sr/public/icons/${map[element]}.webp` : ''
+  const key = String(element || '').trim().toLowerCase()
+  return map[key] ? `meta-sr/public/icons/${map[key]}.webp` : ''
 }
 
 /* ───────────── 原神 · 深境螺旋 ───────────── */
+
+function abyssSchedule(raw = {}) {
+  const ts = Number(raw?.start_time)
+  if (Number.isFinite(ts) && ts > 0) {
+    const ms = ts > 1e12 ? ts : ts * 1000
+    return `${moment(new Date(ms)).format('M')}月`
+  }
+  const start = raw?.start_time ? moment(raw.start_time) : null
+  return start?.isValid?.() ? `${start.format('M')}月` : ''
+}
 
 /**
  * @param {object} raw spiralAbyss 返回的 data
@@ -42,8 +58,11 @@ export function buildGsAbyss(raw = {}, ctx = {}) {
     floors: {},
     totalStar: raw.total_star || 0,
     maxFloor: raw.max_floor || '',
-    battleNum: (raw.total_battle_times || 0),
-    schedule: raw.schedule_id || '',
+    battleNum: (raw.total_battle_times || raw.total || 0),
+    /* 模板沿用 miao 的 Abyss 字段名：total = total_battle_times。
+       之前只写了 battleNum，标题里的 {{abyss.total}} 就是空的。 */
+    total: (raw.total_battle_times ?? raw.total ?? 0),
+    schedule: abyssSchedule(raw),
   }
   let star = 0
   for (const f of floors) {
@@ -111,38 +130,74 @@ export function buildGsAbyss(raw = {}, ctx = {}) {
 /* ───────────── 星铁 · 混沌 / 虚构 / 末日 / 王棋 ───────────── */
 
 /** 星铁挑战通用：groups → floors */
-function buildSrChallenge(raw = {}, cfg = {}) {
+function buildSrChallenge(raw = {}, cfg = {}, period = 1) {
   const type = cfg.type
-  let group
-  if (type === 'story') group = raw?.groups?.[0] || raw?.groups?.find(Boolean)
-  else if (type === 'boss') group = raw?.groups?.[0]
-  else group = raw?.groups?.[0] || raw?.groups?.find(Boolean)
+  const groups = raw?.groups
+  let group = {}
+  if (Array.isArray(groups)) group = groups[period === 2 ? 1 : 0] || groups[0] || groups.find(Boolean) || {}
+  else if (groups && typeof groups === 'object') {
+    /* 虚构/末日接口的 groups 是按 time 索引的对象：0=本期，1=上期。
+       之前直接取 groups[0]，对象没有数字下标，group 为空，
+       结果所有楼层都被丢掉，只剩顶部的 star/battle 统计。 */
+    group = groups[String(period === 2 ? 1 : 0)] || Object.values(groups).find(Boolean) || {}
+  }
 
-  const rawFloors = group?.floors || raw?.floors || []
-  let floors = rawFloors.map((f, i) => ({
-    index: f.index ?? (i + 1),
-    name: f.name || `第${(f.index ?? i + 1)}层`,
-    star: f.star || 0,
-    extraStar: f.extra_star || 0,
-    score: f.score || 0,
-    roundNum: f.round_num || 0,
-    isFast: !!f.is_fast,
-    nodes: [f.node_1, f.node_2, f.node_3].filter(Boolean).map((n, idx) => ({
+  /* 虚构/末日接口的楼层在 all_floor_detail；groups[time].floors 不存在 */
+  const detailFloors = (type === 'story' || type === 'boss' || type === 'chaos') && Array.isArray(raw?.all_floor_detail)
+    ? raw.all_floor_detail
+    : null
+  let rawFloors = detailFloors || group?.floors || raw?.floors || []
+  if (type === 'story') rawFloors = rawFloors.filter(f => f?.node_1 || f?.node_2)
+  else if (type === 'boss') rawFloors = rawFloors.filter(f => f?.is_fast || f?.node_1?.avatars?.length || f?.node_2?.avatars?.length || f?.node_3?.avatars?.length)
+  else if (type === 'chaos') rawFloors = rawFloors.filter(f => !f?.is_fast && (f?.node_1 || f?.node_2))
+  const makeNode = (n, idx) => {
+    if (!n) return null
+    return {
       index: idx + 1,
+      score: Number(n.score) || 0,
+      time: n.challenge_time ? timeCalc(n.challenge_time) : '',
       avatars: (n.avatars || []).map(a => ({
         id: a.id,
         level: a.level,
         rarity: a.rarity,
         element: a.element,
         rank: a.rank,
+        name: a.name,
+        abbr: a.abbr,
+        icon: a.icon,
       })),
-    })),
-  }))
+    }
+  }
+  let floors = rawFloors.map((f, i) => {
+    const index = f.index ?? (i + 1)
+    const node1 = makeNode(f.node_1, 0)
+    const node2 = makeNode(f.node_2, 1)
+    const node3 = makeNode(f.node_3, 2)
+    const nodes = [node1, node2, node3].filter(Boolean)
+    const extraStar = Number(f.extra_star_num) || 0
+    const starNum = Number(f.star_num) || 0
+    const isFast = !!f.is_fast
+    /* 虚构快速通关不计分数；其余按三个节点的积分求和（与 miao 同口径） */
+    const score = isFast && type === 'story' ? 0 : nodes.reduce((sum, n) => sum + n.score, 0)
+    return {
+      index,
+      name: f.name || cfg.title || `第${index}层`,
+      star: Math.max(0, starNum - extraStar),
+      extraStar,
+      score,
+      roundNum: isFast && type === 'story' ? 0 : (Number(f.round_num) || 0),
+      isFast,
+      node1,
+      node2,
+      node3,
+      nodes,
+    }
+  })
 
   if (cfg.filterFloors) floors = cfg.filterFloors(floors)
 
-  const totalStar = group?.star_num ?? raw?.star_num ?? floors.reduce((s, f) => s + f.star, 0)
-  const extraStar = group?.extra_star_num ?? raw?.extra_star_num ?? 0
+  const totalStar = raw?.star_num ?? group?.star_num ?? floors.reduce((s, f) => s + f.star, 0)
+  const extraStar = raw?.extra_star_num ?? group?.extra_star_num ?? 0
   return {
     type,
     title: cfg.title,
@@ -150,8 +205,8 @@ function buildSrChallenge(raw = {}, cfg = {}) {
     floors,
     totalStar,
     extraStar,
-    bestFloor: group?.name || floors[floors.length - 1]?.name || '',
-    battleNum: group?.battle_num ?? raw?.battle_num ?? 0,
+    bestFloor: raw?.max_floor ?? group?.name ?? floors[floors.length - 1]?.name ?? '',
+    battleNum: raw?.battle_num ?? group?.battle_num ?? 0,
     hasData: floors.length > 0 || !!raw?.has_data,
   }
 }
@@ -163,7 +218,7 @@ export const SR_CFG = {
   peak: { type: 'peak', title: '王棋（异相仲裁）', api: 'getChallengePeak', tpl: 'challenge-peak' },
 }
 
-export function buildSrChallengeData(raw, cfg) {
-  const data = buildSrChallenge(raw, cfg)
+export function buildSrChallengeData(raw, cfg, period = 1) {
+  const data = buildSrChallenge(raw, cfg, period)
   return data.hasData ? data : null
 }

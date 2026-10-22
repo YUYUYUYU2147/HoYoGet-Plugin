@@ -104,7 +104,9 @@ function metaRoot() {
       }
     } catch (_) { }
   }
-  _metaRoot = candidates[1]
+  /* 两个候选都没有 meta-gs 时优先指回本插件 resources：
+     miao-plugin 可能已经卸载，不能再把路径钉在它身上。 */
+  _metaRoot = candidates[0]
   return _metaRoot
 }
 
