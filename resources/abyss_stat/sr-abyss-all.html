@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-cn">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/sr-abyss-all.css" />
+    <title>HoYoGet</title>
+  </head>
+  <body>
+    <div class="page">
+      <div class="head">
+        <div class="head-left">
+          <div class="title">星铁深渊总览</div>
+          <div class="subtitle">{{period}} · 混沌回忆 / 虚构叙事 / 末日幻影 / 王棋</div>
+        </div>
+        <div class="head-right">
+          <div class="uid">UID {{uid}}</div>
+        </div>
+      </div>
+
+      <div class="cards">
+        {{each cards c}}
+        <div class="card {{if !c.ok}}empty{{/if}}">
+          <div class="card-title">{{c.title}}</div>
+          {{if c.ok}}
+          <div class="card-star">
+            <span class="star-num">{{c.totalStar}}</span>
+            <span class="star-label">星</span>
+            {{if c.extraStar}}<span class="extra">+{{c.extraStar}}</span>{{/if}}
+          </div>
+          <div class="card-meta">
+            {{if c.bestFloor}}<span>{{c.bestFloor}}</span>{{/if}}
+            {{if c.battleNum}}<span>{{c.battleNum}} 场</span>{{/if}}
+          </div>
+          {{else}}
+          <div class="card-empty-text">暂无数据{{if c.err}}<span class="err">{{c.err}}</span>{{/if}}</div>
+          {{/if}}
+        </div>
+        {{/each}}
+      </div>
+
+      <div class="footer">数据来自米游社战绩 · 未公开面板的玩法会显示「暂无数据」</div>
+    </div>
+  </body>
+</html>

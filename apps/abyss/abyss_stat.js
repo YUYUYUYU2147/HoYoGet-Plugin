@@ -59,10 +59,11 @@ import { buildRadar } from '../../system/radar.js'
 import { getRoleProfile } from '../../system/roleProfile.js'
 
 export const GS_SPIRAL_RULE = {
-  reg: /^#?(?:米哈游)?\s*(?:原神)?\s*(上期|往期)?\s*(深境螺旋|深境|深渊)$/i.source,
+  reg: /^#?(?:米哈游)?\s*(?:原神)?\s*(上期|往期)?\s*(深境螺旋|深境|原神深渊)$/i.source,
   fnc: 'gsSpiral',
 }
 const RULES = [
+  { reg: /^[*#]?(?:米哈游)?\s*(?:星铁|崩铁|星穹)?\s*(上期|往期)?\s*(深渊|逐光捡金|逐光)$/i.source, fnc: 'srAbyss' },
   { reg: /^[*#]?(?:米哈游)?\s*(?:星铁|崩铁|星穹)?\s*(上期|往期)?\s*(混沌回忆|混沌|忘却之庭|忘却)$/i.source, fnc: 'srChaos' },
   { reg: /^[*#]?(?:米哈游)?\s*(?:星铁|崩铁|星穹)?\s*(上期|往期)?\s*(虚构叙事|虚构)$/i.source, fnc: 'srStory' },
   { reg: /^[*#]?(?:米哈游)?\s*(?:星铁|崩铁|星穹)?\s*(上期|往期)?\s*(末日幻影|末日)$/i.source, fnc: 'srBoss' },
@@ -395,4 +396,39 @@ export class abyss_stat extends plugin {
   srStory(e) { return this.srChallenge(e, 'story') }
   srBoss(e) { return this.srChallenge(e, 'boss') }
   srPeak(e) { return this.srChallenge(e, 'peak') }
+
+  /** 星铁深渊总览：混沌 + 虚构 + 末日 + 王棋 四类一次拉全，汇总成一张卡 */
+  async srAbyss(e) {
+    const type = /(上期|往期)/.test(String(e.msg || '')) ? 2 : 1
+    const mys = await this.mys(e, 'sr')
+    if (!mys) return
+    const keys = ['chaos', 'story', 'boss', 'peak']
+    const cards = []
+    for (const key of keys) {
+      const cfg = SR_CFG[key]
+      try {
+        const raw = await mys[cfg.api](type)
+        const data = buildSrChallengeData(raw, cfg, type)
+        cards.push({
+          key,
+          title: cfg.title,
+          ok: !!data,
+          totalStar: data?.totalStar ?? 0,
+          extraStar: data?.extraStar ?? 0,
+          bestFloor: data?.bestFloor ?? '',
+          battleNum: data?.battleNum ?? 0,
+        })
+      } catch (err) {
+        cards.push({ key, title: cfg.title, ok: false, err: err?.message || String(err) })
+      }
+    }
+    const anyData = cards.some(c => c.ok)
+    if (!anyData) return e.reply('没有查到本期星铁深渊数据，可能还没打或面板未公开。')
+
+    return render('abyss_stat/sr-abyss-all', {
+      period: type === 2 ? '上期' : '当期',
+      cards,
+      uid: mys.uid,
+    }, { e, ret: true, dsf: 3.2 })
+  }
 }

@@ -1,0 +1,98 @@
+body {
+  width: 1000px;
+  margin: 0;
+  background: #0b0d15;
+  font-family: 'HelpSans', 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', sans-serif;
+}
+
+.page {
+  width: 1000px;
+  padding: 26px;
+  box-sizing: border-box;
+  background:
+    radial-gradient(900px 320px at 82% -8%, rgba(122, 140, 255, .14), transparent 62%),
+    radial-gradient(700px 300px at 5% 110%, rgba(90, 200, 180, .10), transparent 60%),
+    linear-gradient(168deg, #171a2b 0%, #12141f 55%, #0b0d15 100%);
+  color: #e7ebf3;
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-radius: 16px;
+  background: linear-gradient(120deg, rgba(34, 32, 56, .92), rgba(18, 20, 32, .9));
+  border: 1px solid rgba(150, 160, 255, .28);
+}
+.title {
+  font-family: 'HelpBold', sans-serif;
+  font-size: 34px;
+  letter-spacing: 3px;
+  color: #c8cfff;
+}
+.subtitle {
+  margin-top: 8px;
+  font-size: 14px;
+  color: rgba(231, 235, 243, .6);
+}
+.head-right { text-align: right; }
+.uid { font-size: 14px; color: rgba(231, 235, 243, .6); }
+
+.cards {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.card {
+  padding: 18px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .03);
+  border: 1px solid rgba(150, 160, 255, .14);
+  text-align: center;
+}
+.card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #e7ebf3;
+}
+.card-star {
+  margin-top: 12px;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+}
+.star-num {
+  font-family: 'HelpBold', sans-serif;
+  font-size: 44px;
+  font-weight: 900;
+  color: #ffd66b;
+  text-shadow: 0 0 16px rgba(255, 200, 90, .3);
+}
+.star-label { font-size: 14px; color: #8fa9cd; }
+.extra { font-size: 16px; color: #7fd4c0; }
+.card-meta {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: rgba(231, 235, 243, .55);
+}
+.card.empty { opacity: .6; }
+.card-empty-text {
+  margin-top: 20px;
+  font-size: 13px;
+  color: rgba(231, 235, 243, .5);
+}
+.err { display: block; margin-top: 4px; font-size: 11px; color: #ffb0a0; }
+
+.footer {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 12px;
+  color: rgba(231, 235, 243, .4);
+}
