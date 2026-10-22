@@ -38,6 +38,24 @@ function looksBlocked(text) {
  */
 const PROXY_RETCODES = new Set([10041, 1034, 10035, 5003]);
 
+/**
+ * 这些路径不能走代理：
+ *   · 社区签到（apihub/app/api/signIn）命中 1034 时要拿服务端返回的
+ *     data.gt / challenge 去走验证码流程。代理会把响应换成它自己的
+ *     「暂不不支持 https://bbs-api.miyoushe.com」（retcode -1），
+ *     验证参数就丢了，签到永远过不了码。
+ * 代理本身也只是游戏记录接口的转发，对 miyoushe 社区域名一律不支持。
+ */
+const NO_PROXY_PATHS = [
+    '/apihub/app/api/signIn',
+    '/apihub/wapi/getUserMissionsState',
+];
+
+function isNoProxyUrl(url) {
+    const s = String(url || '');
+    return NO_PROXY_PATHS.some(p => s.includes(p));
+}
+
 function looksBlockedJson(text) {
     if (!text) return false;
     const t = String(text).trim();
@@ -83,7 +101,7 @@ export function proxyEnabled() {
 async function viaProxy(url, obj) {
     // 地址和 key 必须都在才算启用 —— 只配地址就发请求等于白发一次，
     // 还把 Cookie 交给一个根本不会鉴权的端点。
-    if (!proxyEnabled() || !isMhyUrl(url)) return null;
+    if (!proxyEnabled() || !isMhyUrl(url) || isNoProxyUrl(url)) return null;
     const payload = {
         url,
         headers: obj?.headers || {},
@@ -113,7 +131,13 @@ async function viaProxy(url, obj) {
         clearTimeout(timer);
         const text = await resp.text();
         try {
-            JSON.parse(text);
+            const j = JSON.parse(text);
+            // 代理不认识这个域名时会返回「暂不不支持 <url>」(retcode -1)，
+            // 那是代理的免责话术，不是米游社的响应。丢掉它，让调用方
+            // 继续处理直连拿到的那份（比如 1034 + data.gt 的过码参数）。
+            if (Number(j?.retcode) === -1 && /暂不(支持|不支持)|暂不不支持/.test(String(j?.message || ''))) {
+                return null;
+            }
         } catch (_) {
             // 代理自己出问题时也会吐非 JSON，那就当没代理到
             return null;
