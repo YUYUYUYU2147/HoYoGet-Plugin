@@ -677,6 +677,33 @@ async function buildSrDetail(arg) {
   const panel = panelBoard(itemJson?.combatValues)
   const rawPanel = itemJson?.combatValues || {}
 
+  // 全球排名（fort off fans）：靠玩家昵称 + 角色 id + 星魂档位匹配。
+  // 工坊 item_id 与 fort off fans 的 avatar_id 是同一套 id，可直接复用。
+  let globalRank = null
+  try {
+    const { fetchPersonalRank } = await import('../../system/fortoffans.js')
+    const pr = await fetchPersonalRank({
+      nickname: nick,
+      char: String(role.item_id),
+      eidolon: itemJson?.rank ?? 0,
+    })
+    if (pr && pr.rank != null) {
+      // 网站配装是否比工坊旧：早于工坊更新时间则提示可能未同步
+      const siteAt = pr.entry?.updated_at ? new Date(pr.entry.updated_at).getTime() : 0
+      const workAt = row?.updated_at ? new Date(row.updated_at).getTime() : 0
+      globalRank = {
+        rank: pr.rank,
+        total: pr.total ?? null,
+        bracket: pr.bracket || '',
+        statTcv: pr.entry?.stat_tcv != null ? Number(pr.entry.stat_tcv).toFixed(1) : '',
+        statCritRate: pr.entry?.stat_crit_rate != null ? (Number(pr.entry.stat_crit_rate) * 100).toFixed(1) + '%' : '',
+        statCritDmg: pr.entry?.stat_crit_dmg != null ? (Number(pr.entry.stat_crit_dmg) * 100).toFixed(1) + '%' : '',
+        statSpd: pr.entry?.stat_spd != null ? Number(pr.entry.stat_spd).toFixed(0) : '',
+        stale: workAt > siteAt && siteAt > 0,
+      }
+    }
+  } catch (_) { /* 全球排名查询失败不影响面板主流程 */ }
+
   return {
     view: 'detail',
     title: role.nick_name,
@@ -695,6 +722,7 @@ async function buildSrDetail(arg) {
     updatedAt,
     elem: role.elem || '',
     path: role.path || '',
+    globalRank,
   }
 }
 
@@ -709,6 +737,13 @@ function detailText(view) {
     `光锥：${view.weapon}${view.refine ? `　叠影 ${view.refine}` : ''}`,
     `遗器：${view.sets}`,
     '',
+    ...(view.globalRank
+      ? [
+        `全球练度榜（fort off fans，${view.globalRank.bracket} 星魂）：第 ${view.globalRank.rank} 名${view.globalRank.total ? ` / 共 ${view.globalRank.total} 人` : ''}`,
+        ...(view.globalRank.stale ? ['⚠ 网站配装可能未同步，名次对应旧面板'] : []),
+        '',
+      ]
+      : []),
     '面板：',
     ...panelText(view.rawPanel || {}),
   ]

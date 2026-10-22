@@ -32,7 +32,7 @@ const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 const ORIGIN = 'https://hsr.fortoffans.com'
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
 const CACHE_DIR = path.join(PLUGIN_ROOT, 'data', 'fortoffans')
-const CACHE_TTL = 5 * 60 * 1000 // 5 分钟，全球榜变动不频繁
+const CACHE_TTL = 24 * 3600 * 1000 // 24 小时，全球榜变动不频繁
 
 /** 可排序属性：key → 中文名（与页面「Stat」下拉对应） */
 export const STAT_NAMES = {
@@ -185,4 +185,62 @@ export async function fetchCharacterMap() {
   return map
 }
 
-export default { fetchLeaderboard, fetchCharacterMap, STAT_NAMES, DEFAULT_STAT }
+/** 星魂档位归一化：0 → '0'，1-2 → '1-2'，3-5 → '3-5'，6 → '6' */
+export function eidolonBracket(eidolon) {
+  const n = Number(eidolon)
+  if (!Number.isFinite(n) || n < 0) return null
+  if (n === 0) return '0'
+  if (n >= 1 && n <= 2) return '1-2'
+  if (n >= 3 && n <= 5) return '3-5'
+  if (n >= 6) return '6'
+  return '0'
+}
+
+/**
+ * 查某玩家（按昵称）某角色在某星魂档位下的全球名次与参榜数。
+ *
+ * 通过两个接口组合：
+ *   /api/leaderboard/search?nickname=<昵称>&char=<avatar_id>&eid=<档位>
+ *       → 该玩家该角色该档位的记录，含 searchRank（同角色同档位名次）
+ *   /leaderboard?char=<avatar_id>&eid=<档位>  → total（该档位参榜数）
+ *
+ * @param {object} opts
+ * @param {string} opts.nickname  玩家昵称（须与网站展柜昵称一致）
+ * @param {string} opts.char  avatar id
+ * @param {number} opts.eidolon  星魂 0-6
+ * @returns {{rank:number, total:number, entry:object}|null}
+ */
+export async function fetchPersonalRank({ nickname, char, eidolon } = {}) {
+  if (!nickname || !char) return null
+  const bracket = eidolonBracket(eidolon)
+  const ck = `pr:${nickname}:${char}:${bracket}`
+  const cached = readCache(ck)
+  if (cached) return cached
+
+  // 1) 个人名次
+  const sqs = new URLSearchParams({ nickname, char, eid: bracket })
+  const sres = await fetch(`${ORIGIN}/api/leaderboard/search?${sqs.toString()}`, {
+    signal: AbortSignal.timeout(15000),
+    headers: { 'User-Agent': UA, Accept: 'application/json' },
+  })
+  if (!sres.ok) throw new Error(`fortoffans search HTTP ${sres.status}`)
+  const list = await sres.json()
+  const entry = (Array.isArray(list) ? list : []).find(r => String(r?.avatar_id) === String(char))
+  if (!entry) return null // 该玩家没在这个角色上提交过展柜
+
+  // 2) 参榜数（带缓存，5 分钟内的榜单 total 可复用）
+  const { total } = await fetchLeaderboard({ char, eid: bracket, page: 1 })
+  const out = {
+    rank: entry.searchRank ?? null,
+    total: total ?? null,
+    entry,
+    bracket,
+  }
+  writeCache(ck, out)
+  return out
+}
+
+export default {
+  fetchLeaderboard, fetchCharacterMap, fetchPersonalRank, eidolonBracket,
+  STAT_NAMES, DEFAULT_STAT,
+}
