@@ -165,7 +165,11 @@ export class zzz_panel_accel extends plugin {
     const msg = String(e?.msg || '').replace(/\s+/g, '')
     if (!ACCEL_RE.test(msg)) return
     if (!fs.existsSync(path.join(ZZZ_ROOT, 'dist', 'lib', 'mysapi.js'))) {
-      return e.reply('未检测到 ZZZ-Plugin，跳过面板列表')
+      // ZZZ-Plugin 已卸载：本插件自研的 zzz_panel_list 有独立更新能力，
+      // 把消息改写成它认识的「米游社更新面板」并放行，交给它处理，
+      // 不再报「跳过面板列表」。
+      e.msg = '米游社更新面板'
+      return false
     }
     e.msg = msg
     await this.triggerMysPanel(e)
