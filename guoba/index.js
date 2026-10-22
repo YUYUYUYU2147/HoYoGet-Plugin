@@ -141,165 +141,6 @@ const CK_HTML = `
 </div>
 `
 
-const CK_STYLE = `
-.hoyo-ck { padding: 4px 2px 10px; }
-.ck-tip { margin-bottom: 12px; padding: 9px 12px; border-radius: 10px; font-size: 12px; line-height: 1.6; color: var(--g-muted, #8a93a3); background: rgba(255, 196, 92, 0.12); border-left: 3px solid rgba(240, 170, 60, 0.6); }
-.ck-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
-.ck-input { height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--g-border, #d8dde6); background: var(--g-card, #fff); color: var(--g-text, #333); font-size: 13px; outline: none; }
-.ck-input:focus { border-color: #4c8bf5; }
-.ck-btn { height: 32px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--g-border, #d8dde6); background: var(--g-card, #fff); color: var(--g-text, #333); font-size: 13px; cursor: pointer; }
-.ck-btn:hover { border-color: #4c8bf5; color: #3b78e0; }
-.ck-btn.primary { background: #4c8bf5; border-color: #4c8bf5; color: #fff; }
-.ck-btn.primary:hover { background: #3b78e0; color: #fff; }
-.ck-btn.danger { color: #d43f3f; }
-.ck-btn.danger:hover { border-color: #d43f3f; }
-.ck-meta { font-size: 12px; color: var(--g-muted, #8a93a3); }
-.ck-editor { display: none; margin-bottom: 14px; padding: 14px; border-radius: 12px; border: 1px solid var(--g-border, #e3e8ef); background: var(--g-card, #fff); }
-.ck-editor.on { display: block; }
-.ck-editor-title { margin-bottom: 10px; font-size: 14px; font-weight: 600; color: var(--g-text, #333); }
-.ck-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 10px; }
-.ck-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--g-muted, #8a93a3); }
-.ck-block { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; font-size: 12px; color: var(--g-muted, #8a93a3); }
-.ck-area { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--g-border, #d8dde6); background: var(--g-card, #fff); color: var(--g-text, #333); font-size: 12px; font-family: ui-monospace, Menlo, Consolas, monospace; resize: vertical; outline: none; }
-.ck-area:focus { border-color: #4c8bf5; }
-.ck-actions { display: flex; gap: 8px; align-items: center; }
-.ck-msg { font-size: 12px; color: var(--g-muted, #8a93a3); }
-
-.ck-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
-.ck-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--g-border, #e3e8ef); background: var(--g-card, #fff); }
-.ck-card:hover { border-color: #4c8bf5; box-shadow: 0 2px 10px rgba(76, 139, 245, 0.12); }
-.ck-avatar { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; flex: none; background: #eef2f7; cursor: pointer; box-shadow: 0 0 0 2px #fff, 0 3px 8px rgba(96, 140, 200, 0.2); }
-.ck-avatar:hover { opacity: 0.85; }
-.ck-info { flex: 1; min-width: 0; }
-.ck-name { font-size: 14px; font-weight: 600; color: var(--g-text, #333); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ck-sub { margin-top: 2px; font-size: 12px; color: var(--g-muted, #8a93a3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ck-status { margin-top: 3px; font-size: 12px; }
-.ck-status .ok { color: #1a7f37; }
-.ck-status .no { color: #d43f3f; }
-.ck-ops { display: flex; flex-direction: column; gap: 6px; }
-.ck-ops .ck-btn { height: 26px; padding: 0 10px; font-size: 12px; }
-.ck-empty { text-align: center; color: var(--g-muted, #8a93a3); padding: 28px 0; grid-column: 1 / -1; }
-`
-
-const CK_SCRIPT = `
-(function () {
-  const g = window.__GUOBA__ || {}
-  const cards = document.getElementById('ck-cards')
-  const meta = document.getElementById('ck-meta')
-  const el = id => document.getElementById(id)
-  const editor = el('ck-editor')
-  let editing = null
-
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[c]))
-  }
-  function headers(json) {
-    const h = { [g.tokenKey || 'guoba-access-token']: g.token || '' }
-    if (json) h['Content-Type'] = 'application/json'
-    return h
-  }
-  async function api(path, opts) {
-    const res = await fetch(g.apiBase + path, opts)
-    return await res.json()
-  }
-  const qqAvatar = qq => 'https://q1.qlogo.cn/g?b=qq&s=140&nk=' + encodeURIComponent(qq) + '.jpg'
-
-  async function load() {
-    cards.innerHTML = '<div class="ck-empty">加载中…</div>'
-    const p = new URLSearchParams()
-    if (el('ck-qq').value.trim()) p.set('qq', el('ck-qq').value.trim())
-    if (el('ck-game').value) p.set('game', el('ck-game').value)
-    try {
-      const json = await api('/ck/list?' + p.toString(), { headers: headers() })
-      const list = json?.result || []
-      meta.textContent = '共 ' + list.length + ' 个账号'
-      if (!list.length) {
-        cards.innerHTML = '<div class="ck-empty">没有匹配的账号</div>'
-        return
-      }
-      cards.innerHTML = list.map((a, i) => {
-        const ck = a.hasCk ? '<span class="ok">CK 有</span>' : '<span class="no">CK 无</span>'
-        const sk = a.hasSk ? '<span class="ok">SK 有</span>' : '<span class="no">SK 无</span>'
-        return '<div class="ck-card">'
-          + '<img class="ck-avatar" data-i="' + i + '" src="' + qqAvatar(a.qq) + '" title="点击修改" '
-          + 'onerror="this.src=\'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2252%22 height=%2252%22><rect width=%2252%22 height=%2252%22 fill=%22%23eef2f7%22/></svg>\'" />'
-          + '<div class="ck-info">'
-          + '<div class="ck-name">' + esc(a.gameName) + ' · ' + esc(a.uid) + '</div>'
-          + '<div class="ck-sub">' + esc(a.region || '未知区服') + ' · 通行证 ' + esc(a.stuidMask) + '</div>'
-          + '<div class="ck-status">' + ck + ' · ' + sk + '</div>'
-          + '</div>'
-          + '<div class="ck-ops">'
-          + '<button class="ck-btn" data-act="edit" data-i="' + i + '">修改</button>'
-          + '<button class="ck-btn danger" data-act="del" data-i="' + i + '">删除</button>'
-          + '</div>'
-          + '</div>'
-      }).join('')
-      cards.querySelectorAll('[data-act]').forEach(btn => {
-        const a = list[Number(btn.dataset.i)]
-        btn.addEventListener('click', () => {
-          if (btn.dataset.act === 'edit') openEditor(a)
-          else remove(a)
-        })
-      })
-      cards.querySelectorAll('.ck-avatar').forEach(av => {
-        const a = list[Number(av.dataset.i)]
-        av.addEventListener('click', () => openEditor(a))
-      })
-    } catch (err) {
-      cards.innerHTML = '<div class="ck-empty">加载失败：' + esc(err && err.message || err) + '</div>'
-    }
-  }
-
-  async function openEditor(a) {
-    el('ck-msg').textContent = ''
-    const json = await api('/ck/get?qq=' + encodeURIComponent(a.qq) + '&uid=' + encodeURIComponent(a.uid), { headers: headers() })
-    if (!json?.ok) { el('ck-msg').textContent = json?.message || '读取失败'; return }
-    const d = json.result
-    editing = { qq: d.qq, uid: d.uid }
-    el('ck-editor-title').textContent = '修改账号 · ' + d.gameName + ' · ' + d.uid
-    el('ck-f-qq').value = d.qq
-    el('ck-f-uid').value = d.uid
-    el('ck-f-stuid').value = d.stuid || ''
-    el('ck-f-mid').value = d.mid || ''
-    el('ck-f-ck').value = d.ck_stoken || ''
-    el('ck-f-sk').value = d.stoken || ''
-    editor.classList.add('on')
-    editor.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-  }
-
-  async function save() {
-    if (!editing) return
-    const payload = {
-      qq: editing.qq, uid: editing.uid,
-      stuid: el('ck-f-stuid').value.trim(),
-      mid: el('ck-f-mid').value.trim(),
-      ck: el('ck-f-ck').value.trim(),
-      stoken: el('ck-f-sk').value.trim(),
-    }
-    el('ck-msg').textContent = '保存中…'
-    const json = await api('/ck/save', { method: 'POST', headers: headers(true), body: JSON.stringify(payload) })
-    el('ck-msg').textContent = json?.message || (json?.ok ? '已保存' : '保存失败')
-    if (json?.ok) { editor.classList.remove('on'); editing = null; load() }
-  }
-
-  async function remove(a) {
-    if (!confirm('确定删除 ' + a.gameName + ' UID ' + a.uid + ' 的绑定？删除后需要重新扫码或手动填 CK。')) return
-    const json = await api('/ck/delete', { method: 'POST', headers: headers(true), body: JSON.stringify({ qq: a.qq, uid: a.uid }) })
-    if (!json?.ok) alert(json?.message || '删除失败')
-    load()
-  }
-
-  el('ck-refresh').addEventListener('click', load)
-  el('ck-qq').addEventListener('keydown', e => { if (e.key === 'Enter') load() })
-  el('ck-game').addEventListener('change', load)
-  el('ck-save').addEventListener('click', save)
-  el('ck-cancel').addEventListener('click', () => { editor.classList.remove('on'); editing = null })
-  load()
-})();
-`
-
 
 const PANEL_HTML = `
 <div class="hoyo-panel">
@@ -322,124 +163,6 @@ const PANEL_HTML = `
 </div>
 `
 
-const PANEL_STYLE = `
-.hoyo-panel { padding: 4px 2px 10px; }
-.pn-tip { margin-bottom: 12px; padding: 9px 12px; border-radius: 10px; font-size: 12px; line-height: 1.6; color: var(--g-muted, #8a93a3); background: rgba(255, 196, 92, 0.12); border-left: 3px solid rgba(240, 170, 60, 0.6); }
-.pn-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
-.pn-input { height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--g-border, #d8dde6); background: var(--g-card, #fff); color: var(--g-text, #333); font-size: 13px; outline: none; }
-.pn-btn { height: 32px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--g-border, #d8dde6); background: var(--g-card, #fff); color: var(--g-text, #333); font-size: 13px; cursor: pointer; }
-.pn-btn:hover { border-color: #4c8bf5; color: #3b78e0; }
-.pn-meta { font-size: 12px; color: var(--g-muted, #8a93a3); }
-.pn-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
-.pn-card { border: 1px solid var(--g-border, #e3e8ef); border-radius: 12px; overflow: hidden; background: var(--g-card, #fff); cursor: pointer; }
-.pn-card:hover { border-color: #4c8bf5; box-shadow: 0 2px 10px rgba(76, 139, 245, 0.14); }
-.pn-cover { width: 100%; height: 140px; object-fit: cover; background: #eef2f7; display: block; }
-.pn-body { padding: 8px 10px; }
-.pn-name { font-size: 14px; font-weight: 600; color: var(--g-text, #333); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pn-count { margin-top: 2px; font-size: 12px; color: var(--g-muted, #8a93a3); }
-.pn-empty { text-align: center; color: var(--g-muted, #8a93a3); padding: 28px 0; grid-column: 1 / -1; }
-.pn-upload { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; padding: 10px 12px; border-radius: 10px; border: 1px dashed var(--g-border, #d8dde6); background: rgba(76, 139, 245, 0.04); }
-.pn-upload .pn-btn.primary { background: #4c8bf5; border-color: #4c8bf5; color: #fff; }
-.pn-up-msg { font-size: 12px; color: var(--g-muted, #8a93a3); }
-.pn-up-msg.ok { color: #1a7f37; }
-.pn-up-msg.err { color: #d43f3f; }
-.pn-modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 999; }
-.pn-modal-mask.on { display: flex; }
-.pn-modal { width: 640px; max-height: 80vh; overflow: auto; background: var(--g-card, #fff); border-radius: 14px; padding: 16px; }
-.pn-modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.pn-modal-title { font-size: 15px; font-weight: 600; color: var(--g-text, #333); }
-.pn-close { border: none; background: none; font-size: 20px; cursor: pointer; color: var(--g-muted, #8a93a3); }
-.pn-imgs { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
-.pn-img-wrap { position: relative; }
-.pn-img { width: 100%; height: 200px; object-fit: cover; border-radius: 10px; background: #eef2f7; border: 1px solid var(--g-border, #e3e8ef); }
-.pn-del { position: absolute; top: 6px; right: 6px; border: none; border-radius: 6px; background: rgba(212, 63, 63, 0.9); color: #fff; font-size: 12px; padding: 2px 8px; cursor: pointer; }
-`
-
-const PANEL_SCRIPT = `
-(function () {
-  const g = window.__GUOBA__ || {}
-  const cards = document.getElementById('pn-cards')
-  const meta = document.getElementById('pn-meta')
-  const el = id => document.getElementById(id)
-  let currentGame = 'gs'
-  let currentName = ''
-  const modal = (() => {
-    const m = document.createElement('div')
-    m.className = 'pn-modal-mask'
-    m.innerHTML = '<div class="pn-modal"><div class="pn-modal-head"><span class="pn-modal-title"></span><button class="pn-close">×</button></div><div class="pn-imgs"></div></div>'
-    document.body.appendChild(m)
-    m.querySelector('.pn-close').addEventListener('click', () => m.classList.remove('on'))
-    m.addEventListener('click', e => { if (e.target === m) m.classList.remove('on') })
-    return m
-  })()
-
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) }
-  function headers(json) { const h = { [g.tokenKey || 'guoba-access-token']: g.token || '' }; if (json) h['Content-Type'] = 'application/json'; return h }
-  async function api(path, opts) { const r = await fetch(g.apiBase + path, opts); return await r.json() }
-  function imgUrl(file) { return g.apiBase + '/panel/img?game=' + encodeURIComponent(currentGame) + '&name=' + encodeURIComponent(currentName) + '&file=' + encodeURIComponent(file) + '&token=' + encodeURIComponent(g.token || '') }
-
-  async function load() {
-    cards.innerHTML = '<div class="pn-empty">加载中…</div>'
-    try {
-      const json = await api('/panel/list?game=' + currentGame, { headers: headers() })
-      const list = json?.result || []
-      meta.textContent = '共 ' + list.length + ' 个角色'
-      if (!list.length) { cards.innerHTML = '<div class="pn-empty">还没有上传面板图，用「#米哈游上传&lt;角色&gt;面板图」上传</div>'; return }
-      cards.innerHTML = list.map(p => '<div class="pn-card" data-name="' + esc(p.name) + '" data-cover="' + esc(p.cover) + '">'
-        + '<img class="pn-cover" src="' + imgUrl(p.cover) + '" loading="lazy" />'
-        + '<div class="pn-body"><div class="pn-name">' + esc(p.name) + '</div><div class="pn-count">' + p.count + ' 张</div></div>'
-        + '</div>').join('')
-      cards.querySelectorAll('.pn-card').forEach(c => c.addEventListener('click', () => open(c.dataset.name)))
-    } catch (err) {
-      cards.innerHTML = '<div class="pn-empty">加载失败：' + esc(err && err.message || err) + '</div>'
-    }
-  }
-
-  async function open(name) {
-    currentName = name
-    const json = await api('/panel/files?game=' + currentGame + '&name=' + encodeURIComponent(name), { headers: headers() })
-    const files = json?.result || []
-    modal.querySelector('.pn-modal-title').textContent = name + ' · ' + files.length + ' 张'
-    const wrap = modal.querySelector('.pn-imgs')
-    wrap.innerHTML = files.map(f => '<div class="pn-img-wrap"><img class="pn-img" src="' + imgUrl(f) + '" loading="lazy" /><button class="pn-del" data-file="' + esc(f) + '">删除</button></div>').join('')
-    wrap.querySelectorAll('.pn-del').forEach(b => b.addEventListener('click', async e => {
-      e.stopPropagation()
-      if (!confirm('删除这张图？')) return
-      const d = await api('/panel/delete', { method: 'POST', headers: headers(true), body: JSON.stringify({ game: currentGame, name, file: b.dataset.file }) })
-      if (!d?.ok) { alert(d?.message || '删除失败'); return }
-      open(name)
-      load()
-    }))
-    modal.classList.add('on')
-  }
-
-  el('pn-game').addEventListener('change', e => { currentGame = e.target.value; load() })
-  el('pn-refresh').addEventListener('click', load)
-  el('pn-up-btn').addEventListener('click', async () => {
-    const name = el('pn-up-name').value.trim()
-    const fileInput = el('pn-up-file')
-    if (!name) { el('pn-up-msg').className = 'pn-up-msg err'; el('pn-up-msg').textContent = '请先填角色名'; return }
-    if (!fileInput.files.length) { el('pn-up-msg').className = 'pn-up-msg err'; el('pn-up-msg').textContent = '请选择图片'; return }
-    const fd = new FormData()
-    fd.append('game', currentGame)
-    fd.append('name', name)
-    for (const f of fileInput.files) fd.append('files', f)
-    el('pn-up-msg').className = 'pn-up-msg'; el('pn-up-msg').textContent = '上传中…'
-    try {
-      const res = await fetch(g.apiBase + '/panel/upload', { method: 'POST', headers: { [g.tokenKey || 'guoba-access-token']: g.token || '' }, body: fd })
-      const json = await res.json()
-      el('pn-up-msg').className = 'pn-up-msg ' + (json?.ok ? 'ok' : 'err')
-      el('pn-up-msg').textContent = json?.message || (json?.ok ? '上传成功' : '上传失败')
-      if (json?.ok) { el('pn-up-name').value = ''; fileInput.value = ''; load() }
-    } catch (err) {
-      el('pn-up-msg').className = 'pn-up-msg err'
-      el('pn-up-msg').textContent = '上传失败：' + (err && err.message || err)
-    }
-  })
-  load()
-})();
-`
-
 const BIND_HTML = `
 <div class="hoyo-bind">
   <div class="hb-bar">
@@ -456,96 +179,6 @@ const BIND_HTML = `
   </div>
   <div id="hb-list"><div class="hb-empty">加载中…</div></div>
 </div>
-`
-
-const BIND_STYLE = `
-.hoyo-bind { padding: 4px 2px 10px; }
-.hb-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
-.hb-input { height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--g-border, #d8dde6); background: var(--g-card, #fff); color: var(--g-text, #333); font-size: 13px; outline: none; }
-.hb-input:focus { border-color: #4c8bf5; }
-.hb-btn { height: 32px; padding: 0 16px; border-radius: 8px; border: none; background: #4c8bf5; color: #fff; font-size: 13px; cursor: pointer; }
-.hb-btn:hover { background: #3b78e0; }
-.hb-meta { font-size: 12px; color: var(--g-muted, #8a93a3); }
-.hb-card { border: 1px solid var(--g-border, #e3e8ef); border-radius: 12px; margin-bottom: 12px; overflow: hidden; background: var(--g-card, #fff); }
-.hb-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: rgba(120, 150, 200, 0.06); border-bottom: 1px solid var(--g-border, #e3e8ef); }
-.hb-qq { font-size: 15px; font-weight: 600; color: var(--g-text, #333); }
-.hb-tags { display: flex; gap: 6px; margin-left: auto; }
-.hb-tag { font-size: 12px; padding: 1px 8px; border-radius: 999px; background: rgba(76, 139, 245, 0.12); color: #3b78e0; }
-.hb-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.hb-table th, .hb-table td { padding: 8px 14px; text-align: left; white-space: nowrap; }
-.hb-table thead th { color: var(--g-muted, #6b7280); font-weight: 600; border-bottom: 1px solid var(--g-border, #e3e8ef); }
-.hb-table tbody tr:hover { background: rgba(76, 139, 245, 0.06); }
-.hb-game { font-weight: 600; }
-.hb-gs { color: #c0893c; }
-.hb-sr { color: #5b7ec9; }
-.hb-zzz { color: #4a9a8f; }
-.hb-bh3 { color: #b06a9a; }
-.hb-empty { text-align: center; color: var(--g-muted, #8a93a3); padding: 28px 0; }
-`
-
-const BIND_SCRIPT = `
-(function () {
-  const g = window.__GUOBA__ || {}
-  const list = document.getElementById('hb-list')
-  const meta = document.getElementById('hb-meta')
-  const qqEl = document.getElementById('hb-qq')
-  const gameEl = document.getElementById('hb-game')
-  const NAME = { gs: '原神', sr: '崩坏：星穹铁道', zzz: '绝区零', bh3: '崩坏3' }
-
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[c]))
-  }
-
-  async function load() {
-    list.innerHTML = '<div class="hb-empty">加载中…</div>'
-    try {
-      const res = await fetch(g.apiBase + '/bindings', {
-        headers: { [g.tokenKey || 'guoba-access-token']: g.token || '' },
-      })
-      const json = await res.json()
-      let users = json?.result?.users || []
-      const qq = qqEl.value.trim()
-      if (qq) users = users.filter(u => u.qq.includes(qq))
-      const game = gameEl.value
-      if (game) {
-        users = users
-          .map(u => ({ ...u, accounts: u.accounts.filter(a => a.game === game) }))
-          .filter(u => u.accounts.length)
-      }
-      meta.textContent = '共 ' + users.length + ' 个 QQ'
-      if (!users.length) {
-        list.innerHTML = '<div class="hb-empty">暂无绑定</div>'
-        return
-      }
-      list.innerHTML = users.map(u => {
-        const tags = Object.entries(u.byGame)
-          .map(([k, n]) => '<span class="hb-tag">' + esc(NAME[k] || k) + ' ' + n + '</span>')
-          .join('')
-        const rows = u.accounts.map(a => '<tr>'
-          + '<td class="hb-game hb-' + esc(a.game) + '">' + esc(a.gameName) + '</td>'
-          + '<td>' + esc(a.uidMask) + '</td>'
-          + '<td>' + esc(a.region) + '</td>'
-          + '<td>' + esc(a.stuidMask) + '</td>'
-          + '</tr>').join('')
-        return '<div class="hb-card">'
-          + '<div class="hb-head"><span class="hb-qq">' + esc(u.qq) + '</span>'
-          + '<span class="hb-tag">共 ' + u.total + ' 个号</span>'
-          + '<span class="hb-tags">' + tags + '</span></div>'
-          + '<table class="hb-table"><thead><tr><th>游戏</th><th>UID</th><th>区服</th><th>通行证</th></tr></thead>'
-          + '<tbody>' + rows + '</tbody></table></div>'
-      }).join('')
-    } catch (err) {
-      list.innerHTML = '<div class="hb-empty">加载失败：' + esc(err && err.message || err) + '</div>'
-    }
-  }
-
-  document.getElementById('hb-refresh').addEventListener('click', load)
-  qqEl.addEventListener('keydown', e => { if (e.key === 'Enter') load() })
-  gameEl.addEventListener('change', load)
-  load()
-})();
 `
 
 const PAGE_HTML = `
@@ -591,124 +224,6 @@ const PAGE_HTML = `
     </table>
   </div>
 </div>
-`
-
-const PAGE_STYLE = `
-.hoyo-task-hist { padding: 4px 2px 10px; }
-.hth-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-bottom: 14px; }
-.hth-card { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--g-border, #e3e8ef); background: var(--g-card, #fff); }
-.hth-card .k { font-size: 12px; color: var(--g-muted, #8a93a3); }
-.hth-card .v { margin-top: 6px; font-size: 22px; font-weight: 600; color: var(--g-text, #333); }
-.hth-card .s { margin-top: 4px; font-size: 12px; }
-.hth-card .s .ok { color: #1a7f37; }
-.hth-card .s .fail { color: #d43f3f; }
-.hth-card .s .signed { color: #4c6ef5; }
-.hth-card .s .skip { color: #8a93a3; }
-.hth-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
-.hth-input { height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--g-border, #d8dde6); background: var(--g-card, #fff); color: var(--g-text, #333); font-size: 13px; outline: none; }
-.hth-input:focus { border-color: #4c8bf5; }
-.hth-btn { height: 32px; padding: 0 16px; border-radius: 8px; border: none; background: #4c8bf5; color: #fff; font-size: 13px; cursor: pointer; }
-.hth-btn:hover { background: #3b78e0; }
-.hth-meta { font-size: 12px; color: var(--g-muted, #8a93a3); }
-.hth-table-wrap { border-radius: 10px; overflow: auto; border: 1px solid var(--g-border, #e3e8ef); }
-.hth-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.hth-table th, .hth-table td { padding: 8px 12px; text-align: left; white-space: nowrap; }
-.hth-table thead th { position: sticky; top: 0; background: var(--g-card, #f7f9fc); color: var(--g-muted, #6b7280); font-weight: 600; border-bottom: 1px solid var(--g-border, #e3e8ef); }
-.hth-table tbody tr:nth-child(even) { background: rgba(120, 150, 200, 0.05); }
-.hth-table tbody tr:hover { background: rgba(76, 139, 245, 0.08); }
-.hth-badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; line-height: 18px; }
-.hth-ok { color: #1a7f37; background: rgba(35, 178, 90, 0.14); }
-.hth-signed { color: #4c6ef5; background: rgba(76, 110, 245, 0.14); }
-.hth-fail { color: #d43f3f; background: rgba(212, 63, 63, 0.14); }
-.hth-skip { color: #6b7280; background: rgba(107, 114, 128, 0.14); }
-.hth-src { font-size: 12px; color: var(--g-muted, #8a93a3); }
-.hth-tip { color: var(--g-muted, #8a93a3); max-width: 320px; overflow: hidden; text-overflow: ellipsis; }
-.hth-empty { text-align: center; color: var(--g-muted, #8a93a3); padding: 24px 0; }
-`
-
-const PAGE_SCRIPT = `
-(function () {
-  const g = window.__GUOBA__ || {}
-  const body = document.getElementById('hth-body')
-  const cards = document.getElementById('hth-cards')
-  const meta = document.getElementById('hth-meta')
-  const el = id => document.getElementById(id)
-  const STATUS = { ok: '成功', signed: '已完成', fail: '失败', skip: '跳过' }
-  const SOURCE = { manual: '手动', cron: '定时', event: '事件' }
-
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[c]))
-  }
-  function fmt(at) {
-    const d = new Date(Number(at) || 0)
-    const p = n => String(n).padStart(2, '0')
-    return p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes())
-  }
-  function headers() { return { [g.tokenKey || 'guoba-access-token']: g.token || '' } }
-  function query() {
-    const p = new URLSearchParams()
-    if (el('hth-qq').value.trim()) p.set('qq', el('hth-qq').value.trim())
-    if (el('hth-task').value) p.set('task', el('hth-task').value)
-    if (el('hth-status').value) p.set('status', el('hth-status').value)
-    p.set('days', el('hth-days').value)
-    p.set('limit', el('hth-limit').value)
-    return p.toString()
-  }
-
-  async function loadSummary() {
-    try {
-      const res = await fetch(g.apiBase + '/summary?days=' + el('hth-days').value, { headers: headers() })
-      const json = await res.json()
-      const list = json?.result || []
-      if (!list.length) { cards.innerHTML = ''; return }
-      cards.innerHTML = list.map(t => '<div class="hth-card">'
-        + '<div class="k">' + esc(t.taskName) + '</div>'
-        + '<div class="v">' + t.total + '</div>'
-        + '<div class="s">'
-        + '<span class="ok">成功 ' + t.ok + '</span> · '
-        + '<span class="signed">已签 ' + t.signed + '</span> · '
-        + '<span class="fail">失败 ' + t.fail + '</span>'
-        + (t.skip ? ' · <span class="skip">跳过 ' + t.skip + '</span>' : '')
-        + '</div></div>').join('')
-    } catch (e) { cards.innerHTML = '' }
-  }
-
-  async function load() {
-    body.innerHTML = '<tr><td colspan="9" class="hth-empty">加载中…</td></tr>'
-    loadSummary()
-    try {
-      const res = await fetch(g.apiBase + '/history?' + query(), { headers: headers() })
-      const json = await res.json()
-      const list = json?.result?.records || []
-      const total = json?.result?.total || 0
-      meta.textContent = '共 ' + total + ' 条' + (json?.result?.updatedAt ? ' · 更新于 ' + fmt(json.result.updatedAt) : '')
-      if (!list.length) {
-        body.innerHTML = '<tr><td colspan="9" class="hth-empty">暂无记录</td></tr>'
-        return
-      }
-      body.innerHTML = list.map(r => '<tr>'
-        + '<td>' + fmt(r.at) + '</td>'
-        + '<td>' + esc(r.taskName) + '</td>'
-        + '<td class="hth-src">' + esc(SOURCE[r.source] || r.source || '') + '</td>'
-        + '<td>' + esc(r.qq) + '</td>'
-        + '<td>' + esc(r.name) + '</td>'
-        + '<td>' + esc(r.game) + '</td>'
-        + '<td>' + esc(r.uid) + '</td>'
-        + '<td><span class="hth-badge hth-' + esc(r.status) + '">' + esc(STATUS[r.status] || r.status) + '</span></td>'
-        + '<td class="hth-tip" title="' + esc(r.tip) + '">' + esc(r.tip) + '</td>'
-        + '</tr>').join('')
-    } catch (err) {
-      body.innerHTML = '<tr><td colspan="9" class="hth-empty">加载失败：' + esc(err && err.message || err) + '</td></tr>'
-    }
-  }
-
-  el('hth-refresh').addEventListener('click', load)
-  el('hth-qq').addEventListener('keydown', e => { if (e.key === 'Enter') load() })
-  ;['hth-task', 'hth-status', 'hth-days', 'hth-limit'].forEach(id => el(id).addEventListener('change', load))
-  load()
-})();
 `
 
 export function init(ctx) {
@@ -863,8 +378,8 @@ export function init(ctx) {
     icon: '🖼',
     priority: 63,
     html: PANEL_HTML,
-    style: PANEL_STYLE,
-    script: PANEL_SCRIPT,
+    style: 'panel.css',
+    script: 'panel.js',
   })
 
   ctx.registerPage({
@@ -873,8 +388,8 @@ export function init(ctx) {
     icon: '🔑',
     priority: 62,
     html: CK_HTML,
-    style: CK_STYLE,
-    script: CK_SCRIPT,
+    style: 'ck.css',
+    script: 'ck.js',
   })
 
   ctx.registerPage({
@@ -883,8 +398,8 @@ export function init(ctx) {
     icon: '🔗',
     priority: 61,
     html: BIND_HTML,
-    style: BIND_STYLE,
-    script: BIND_SCRIPT,
+    style: 'bind.css',
+    script: 'bind.js',
   })
 
   ctx.registerPage({
@@ -893,8 +408,8 @@ export function init(ctx) {
     icon: '🗂',
     priority: 60,
     html: PAGE_HTML,
-    style: PAGE_STYLE,
-    script: PAGE_SCRIPT,
+    style: 'task.css',
+    script: 'task.js',
   })
 }
 

@@ -1,0 +1,30 @@
+.hoyo-task-hist { padding: 4px 2px 10px; }
+.hth-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.hth-card { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--g-border, #e3e8ef); background: var(--g-card, #fff); }
+.hth-card .k { font-size: 12px; color: var(--g-muted, #8a93a3); }
+.hth-card .v { margin-top: 6px; font-size: 22px; font-weight: 600; color: var(--g-text, #333); }
+.hth-card .s { margin-top: 4px; font-size: 12px; }
+.hth-card .s .ok { color: #1a7f37; }
+.hth-card .s .fail { color: #d43f3f; }
+.hth-card .s .signed { color: #4c6ef5; }
+.hth-card .s .skip { color: #8a93a3; }
+.hth-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+.hth-input { height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--g-border, #d8dde6); background: var(--g-card, #fff); color: var(--g-text, #333); font-size: 13px; outline: none; }
+.hth-input:focus { border-color: #4c8bf5; }
+.hth-btn { height: 32px; padding: 0 16px; border-radius: 8px; border: none; background: #4c8bf5; color: #fff; font-size: 13px; cursor: pointer; }
+.hth-btn:hover { background: #3b78e0; }
+.hth-meta { font-size: 12px; color: var(--g-muted, #8a93a3); }
+.hth-table-wrap { border-radius: 10px; overflow: auto; border: 1px solid var(--g-border, #e3e8ef); }
+.hth-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.hth-table th, .hth-table td { padding: 8px 12px; text-align: left; white-space: nowrap; }
+.hth-table thead th { position: sticky; top: 0; background: var(--g-card, #f7f9fc); color: var(--g-muted, #6b7280); font-weight: 600; border-bottom: 1px solid var(--g-border, #e3e8ef); }
+.hth-table tbody tr:nth-child(even) { background: rgba(120, 150, 200, 0.05); }
+.hth-table tbody tr:hover { background: rgba(76, 139, 245, 0.08); }
+.hth-badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; line-height: 18px; }
+.hth-ok { color: #1a7f37; background: rgba(35, 178, 90, 0.14); }
+.hth-signed { color: #4c6ef5; background: rgba(76, 110, 245, 0.14); }
+.hth-fail { color: #d43f3f; background: rgba(212, 63, 63, 0.14); }
+.hth-skip { color: #6b7280; background: rgba(107, 114, 128, 0.14); }
+.hth-src { font-size: 12px; color: var(--g-muted, #8a93a3); }
+.hth-tip { color: var(--g-muted, #8a93a3); max-width: 320px; overflow: hidden; text-overflow: ellipsis; }
+.hth-empty { text-align: center; color: var(--g-muted, #8a93a3); padding: 24px 0; }
