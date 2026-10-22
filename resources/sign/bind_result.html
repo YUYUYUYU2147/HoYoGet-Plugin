@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}sign/bind_result.css" />
+  </head>
+
+  <body {{sys.scale}}>
+    <div class="container" id="container">
+      <div class="card">
+        <div class="head">
+          <img class="avatar" src="{{ppath}}sign/xhh_avatar.png" />
+          <div class="head-text">
+            <div class="brand">米哈游</div>
+            <div class="sub">{{title}}</div>
+          </div>
+          <div class="badge {{statusClass}}">{{statusText}}</div>
+        </div>
+
+        <div class="list">
+          {{each accounts item}}
+          <div class="row">
+            <div class="row-ico"><img src="{{item.game == 'bh3' ? ppath + 'bh3_note/bh3_icon.png' : ppath + 'sign/' + (item.game == 'sr' ? 'sr' : item.game == 'zzz' ? 'zzz' : 'gs') + '.png'}}" /></div>
+            {{if item.avatar}}<img class="row-avatar" src="{{item.avatar}}" />{{/if}}
+            <div class="row-main">
+              <div class="row-name">{{item.name || ('UID ' + item.uid)}}</div>
+              <div class="row-sub">{{item.gameName}} · UID {{item.uid}}{{if item.level}} · Lv.{{item.level}}{{/if}}</div>
+            </div>
+            <div class="row-state {{item.ok ? '' : 'fail'}}">{{item.ok ? '成功' : '失败'}}</div>
+          </div>
+          {{/each}}
+          {{if !accounts.length}}
+          <div class="empty">没有绑定成功任何账号</div>
+          {{/if}}
+        </div>
+      </div>
+
+      <div class="footer">from 米哈游</div>
+    </div>
+  </body>
+</html>

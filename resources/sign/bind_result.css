@@ -1,0 +1,201 @@
+@font-face {
+  font-family: '正';
+  src: url('../font/yuan.ttf');
+}
+
+@font-face {
+  font-family: '宋';
+  src: url('../font/宋.ttf');
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 900px;
+  font-size: 16px;
+  transform-origin: 0 0;
+  background-color: #eaf3ff;
+}
+
+.container {
+  min-height: 300px;
+  padding: 30px 28px 60px;
+  position: relative;
+  background:
+    radial-gradient(circle at 82% -10%, rgba(255, 255, 255, 0.9), transparent 44%),
+    radial-gradient(circle at 14% 112%, rgba(150, 200, 255, 0.4), transparent 46%),
+    linear-gradient(160deg, #eef6ff 0%, #e2efff 55%, #d8e8ff 100%);
+}
+
+.card {
+  border-radius: 22px;
+  padding: 22px 24px 16px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 14px 36px rgba(96, 140, 200, 0.18);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(150, 185, 225, 0.35);
+}
+
+.head .avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+  background: #fff;
+  box-shadow: 0 0 0 3px #fff, 0 4px 12px rgba(96, 140, 200, 0.25);
+}
+
+.head-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.head-text .brand {
+  font-family: '正';
+  font-size: 26px;
+  font-weight: 700;
+  color: #1f3350;
+  letter-spacing: 0.5px;
+}
+
+.head-text .sub {
+  margin-top: 4px;
+  font-family: '宋';
+  font-size: 14px;
+  color: #7b8fa8;
+  letter-spacing: 1px;
+}
+
+.badge {
+  flex: none;
+  padding: 4px 14px;
+  border-radius: 999px;
+  font-family: '宋';
+  font-size: 14px;
+  color: #15803d;
+  background: #e7f9ee;
+  border: 1px solid rgba(60, 190, 110, 0.4);
+}
+
+.badge.warn {
+  color: #b45309;
+  background: #fff4e5;
+  border-color: rgba(240, 170, 60, 0.5);
+}
+
+.badge.fail {
+  color: #dc2626;
+  background: #ffeaea;
+  border-color: rgba(220, 60, 60, 0.4);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 0 6px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid rgba(200, 220, 245, 0.7);
+  box-shadow: 0 2px 8px rgba(96, 140, 200, 0.08);
+}
+
+.row-ico {
+  width: 46px;
+  height: 46px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: #f2f7ff;
+  border: 1px solid rgba(200, 220, 245, 0.7);
+}
+
+.row-ico img {
+  max-width: 40px;
+  max-height: 34px;
+}
+
+.row-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+  background: #f2f7ff;
+  box-shadow: 0 0 0 2px #fff, 0 3px 8px rgba(96, 140, 200, 0.2);
+}
+
+.row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.row-name {
+  font-family: '宋';
+  font-size: 17px;
+  font-weight: 700;
+  color: #24384f;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row-sub {
+  margin-top: 3px;
+  font-family: '宋';
+  font-size: 14px;
+  color: #7b8fa8;
+}
+
+.row-state {
+  flex: none;
+  font-family: '宋';
+  font-size: 13px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  color: #15803d;
+  background: #e7f9ee;
+}
+
+.row-state.fail {
+  color: #dc2626;
+  background: #ffeaea;
+}
+
+.empty {
+  padding: 6px 2px 2px;
+  font-family: '宋';
+  font-size: 14px;
+  color: #a8b8cc;
+}
+
+.footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 22px;
+  text-align: center;
+  color: #93a6bd;
+  font-size: 16px;
+}

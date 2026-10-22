@@ -8,8 +8,10 @@ import {
     makeForwardMsg,
     api,
     config,
-    pluginPriority
+    pluginPriority,
+    render
 } from '#HoYoGet';
+import { getRoleProfile } from '../../system/roleProfile.js';
 import YAML from 'yaml';
 import fs from 'fs';
 import moment from 'moment';
@@ -22,6 +24,63 @@ const BH3_LEGACY_REGIONS = ['android01', 'ios01', 'pc01', 'bb01', 'yyb01', 'hun0
 function isBh3Role(entry = {}) {
     if (entry.game_biz) return entry.game_biz === 'bh3_cn';
     return BH3_LEGACY_REGIONS.includes(entry.region || '');
+}
+
+const GAME_BIZ = { hk4e_cn: 'gs', hkrpg_cn: 'sr', nap_cn: 'zzz', bh3_cn: 'bh3' };
+const REGION_NAME = { 天空岛: 'gs', 世界树: 'gs', 星穹列车: 'sr', 新艾利都: 'zzz' };
+const GAME_NAME = { gs: '原神', sr: '崩坏：星穹铁道', zzz: '绝区零', bh3: '崩坏3' };
+
+function gameOfEntry(entry = {}) {
+    if (GAME_BIZ[entry.game_biz]) return GAME_BIZ[entry.game_biz];
+    if (REGION_NAME[entry.region_name]) return REGION_NAME[entry.region_name];
+    return BH3_LEGACY_REGIONS.includes(entry.region || '') ? 'bh3' : '';
+}
+
+/* 从 Stoken 结构（<uid> → 条目）收集出图用账号，逐个查昵称头像。
+   查不到就回退「UID xxx」与空头像，不阻塞。 */
+async function collectBindAccounts(e, stokenData) {
+    const accounts = [];
+    for (const uid of Object.keys(stokenData || {})) {
+        const entry = stokenData[uid] || {};
+        if (!/^\d+$/.test(String(uid)) || Number(uid) <= 0) continue;
+        const game = gameOfEntry(entry);
+        if (!game) continue;
+        let profile = { nickname: '', avatar: '', userLevel: 0 };
+        try {
+            const headers = mhy.getHeaders(e, entry.ck_stoken || `stuid=${entry.stuid};stoken=${entry.stoken};`);
+            profile = await getRoleProfile(e, uid, game, game === 'bh3' ? { headers, server: entry.region } : {});
+        } catch { /* 忽略，回退 */ }
+        accounts.push({
+            uid: String(uid),
+            game,
+            gameName: GAME_NAME[game] || '未知',
+            name: profile.nickname,
+            avatar: profile.avatar,
+            level: profile.userLevel,
+            ok: true,
+        });
+    }
+    return accounts;
+}
+
+/* 出图；渲染失败就回退文字，保证绑定/刷新本身不受影响 */
+async function replyBindImage(e, accounts, title) {
+    if (!accounts.length) return false;
+    try {
+        const buf = await render('sign/bind_result', {
+            title,
+            statusText: '成功',
+            statusClass: '',
+            accounts,
+            sys: { scale: '' },
+            saveId: 'bind_result',
+        }, { e, ret: true });
+        if (buf && Buffer.isBuffer(buf)) return e.reply(segment.image(buf));
+        return false;
+    } catch (err) {
+        logger.warn(`[HoYoGet][user] 绑定结果出图失败，回退文字：${err?.message || err}`);
+        return false;
+    }
 }
 
 async function fetchJson(url, options = {}, label = '米游社接口') {
@@ -321,6 +380,10 @@ export class user extends plugin {
                     const bh3BindInfo = await this.prepareBh3BindInfo(e, data_);
                     if (bh3BindInfo) sendMsg.push(bh3BindInfo);
                 }
+                const bindAccounts = await collectBindAccounts(e, data_);
+                if (bindAccounts.length && await replyBindImage(e, bindAccounts, '米哈游扫码绑定结果')) {
+                    break;
+                }
                 await this.replyBindResult(e, sendMsg, '米哈游扫码绑定结果');
                 break;
             }
@@ -391,6 +454,10 @@ export class user extends plugin {
         msgs.map((v, i) => {
             if (typeof msgs[i] === 'string') msgs[i] = msgs[i].replace(/绑定Cookie/g, '刷新Cookie');
         })
+        const refreshAccounts = await collectBindAccounts(e, data);
+        if (refreshAccounts.length && await replyBindImage(e, refreshAccounts, '米哈游刷新Cookie结果')) {
+            return;
+        }
         await this.replyBindResult(e, msgs, '米哈游刷新Cookie结果');
     }
 
