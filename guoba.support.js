@@ -1833,7 +1833,9 @@ export const supportGuoba = () => {
           for (const group of groups) {
             for (const qq of (yamlData.sign[group] || [])) {
               const e = await makeTaskEvent(qq, group)
-              await MysSign(e)
+              // 显式传四个游戏：MysSign 的第二个参数决定签哪些，
+              // 不传虽然现在有默认值兜底，写清楚更好排查
+              await MysSign(e, ['gs', 'sr', 'zzz', 'bh3'])
               count++
             }
           }

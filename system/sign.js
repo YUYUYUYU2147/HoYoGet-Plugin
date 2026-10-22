@@ -177,7 +177,13 @@ async function getSignCookieAndServer(e, game, uid, ck) {
     return { ck, server };
 }
 
-async function MysSign(e, games) {
+/* 默认签全部四个游戏。guoba 的「立即游戏签到」按钮、以及其它内部调用
+   可能只传 e，不传 games —— 之前就会在这里 games.includes 直接抛
+   Cannot read properties of undefined。 */
+const DEFAULT_SIGN_GAMES = ['gs', 'sr', 'zzz', 'bh3'];
+
+async function MysSign(e, games = DEFAULT_SIGN_GAMES) {
+    if (!Array.isArray(games) || !games.length) games = DEFAULT_SIGN_GAMES;
     const hasBh3Xhh = games.includes('bh3') && await hasXhhBh3Stoken(e.user_id);
     const xiaoyaoAll = getXiaoyaoEntries(e.user_id);
     if (
