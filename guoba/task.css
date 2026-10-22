@@ -26,5 +26,7 @@
 .hth-fail { color: #d43f3f; background: rgba(212, 63, 63, 0.14); }
 .hth-skip { color: #6b7280; background: rgba(107, 114, 128, 0.14); }
 .hth-src { font-size: 12px; color: var(--g-muted, #8a93a3); }
+.hth-game { white-space: nowrap; }
+.hth-game-icon { width: 18px; height: 18px; border-radius: 5px; object-fit: cover; vertical-align: -4px; }
 .hth-tip { color: var(--g-muted, #8a93a3); max-width: 320px; overflow: hidden; text-overflow: ellipsis; }
 .hth-empty { text-align: center; color: var(--g-muted, #8a93a3); padding: 24px 0; }

@@ -20,7 +20,7 @@
 .pn-body { padding: 8px 10px; }
 .pn-name { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--g-text, #333); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pn-count { margin-top: 2px; font-size: 12px; color: var(--g-muted, #8a93a3); }
-.pn-game { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 6px; font-size: 11px; flex: none; color: #fff; }
+.pn-game { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 6px; flex: none; object-fit: cover; background: #f0f3f8; }
 .pn-g-gs { background: #e9a23b; }
 .pn-g-sr { background: #6a7fd0; }
 .pn-empty { text-align: center; color: var(--g-muted, #8a93a3); padding: 28px 0; grid-column: 1 / -1; }

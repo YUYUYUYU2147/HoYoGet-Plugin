@@ -8,11 +8,12 @@
   let editing = null
 
   const GAME = {
-    gs: { name: '原神', icon: '💠', cls: 'ck-g-gs' },
-    sr: { name: '崩坏：星穹铁道', icon: '🌌', cls: 'ck-g-sr' },
-    zzz: { name: '绝区零', icon: '⚡', cls: 'ck-g-zzz' },
-    bh3: { name: '崩坏3', icon: '⚔️', cls: 'ck-g-bh3' },
+    gs: { name: '原神', cls: 'ck-g-gs' },
+    sr: { name: '崩坏：星穹铁道', cls: 'ck-g-sr' },
+    zzz: { name: '绝区零', cls: 'ck-g-zzz' },
+    bh3: { name: '崩坏3', cls: 'ck-g-bh3' },
   }
+  const iconUrl = game => g.apiBase + '/game/icon?game=' + encodeURIComponent(game) + '&token=' + encodeURIComponent(g.token || '')
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
@@ -34,8 +35,8 @@
   let all = []
 
   function gameBadge(a) {
-    const gm = GAME[a.game] || { name: '未知', icon: '❔', cls: '' }
-    return '<span class="ck-game ' + gm.cls + '" title="' + esc(gm.name) + '">' + gm.icon + '</span>'
+    const gm = GAME[a.game] || { name: '未知', cls: '' }
+    return '<img class="ck-game ' + gm.cls + '" src="' + iconUrl(a.game) + '" title="' + esc(gm.name) + '" alt="' + esc(gm.name) + '" />'
   }
   function statusPills(a) {
     const ck = a.hasCk ? '<span class="ck-pill ok">CK ✓</span>' : '<span class="ck-pill no">CK ✗</span>'

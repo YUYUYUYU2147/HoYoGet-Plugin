@@ -379,6 +379,20 @@ export function init(ctx) {
     }
   })
 
+  ctx.registerApi('get', '/game/icon', async (req, res) => {
+    try {
+      const q = req.query || {}
+      const game = ['gs', 'sr', 'zzz', 'bh3'].includes(q.game) ? q.game : null
+      if (!game) return res.status(404).end()
+      const abs = path.join(ROOT, 'resources', 'game_icons', `${game}.webp`)
+      if (!fs.existsSync(abs)) return res.status(404).end()
+      res.sendFile(abs)
+    } catch (err) {
+      ctx.logger?.warn?.(`[HoYoGet][guoba] 读取游戏图标失败：${err?.message || err}`)
+      res.status(404).end()
+    }
+  })
+
   ctx.registerPage({
     id: 'hoyo-panel-art',
     title: '角色面板图管理',

@@ -4,7 +4,8 @@
   const stats = document.getElementById('pn-stats')
   const meta = document.getElementById('pn-meta')
   const el = id => document.getElementById(id)
-  const GAME = { gs: { name: '原神', icon: '💠', cls: 'pn-g-gs' }, sr: { name: '崩坏：星穹铁道', icon: '🌌', cls: 'pn-g-sr' } }
+  const GAME = { gs: { name: '原神', cls: 'pn-g-gs' }, sr: { name: '崩坏：星穹铁道', cls: 'pn-g-sr' } }
+  const iconUrl = game => g.apiBase + '/game/icon?game=' + encodeURIComponent(game) + '&token=' + encodeURIComponent(g.token || '')
   let currentGame = 'gs'
   let currentName = ''
   const modal = (() => {
@@ -52,7 +53,7 @@
       if (!list.length) { cards.innerHTML = '<div class="pn-empty">还没有上传面板图，用「#米哈游上传&lt;角色&gt;面板图」上传</div>'; return }
       cards.innerHTML = list.map(p => '<div class="pn-card" data-name="' + esc(p.name) + '" data-cover="' + esc(p.cover) + '">'
         + '<img class="pn-cover" src="' + imgUrl(p.cover) + '" loading="lazy" />'
-        + '<div class="pn-body"><div class="pn-name"><span class="pn-game ' + (GAME[currentGame]?.cls || '') + '" title="' + esc(GAME[currentGame]?.name || currentGame) + '">' + (GAME[currentGame]?.icon || '') + '</span><span>' + esc(p.name) + '</span></div><div class="pn-count">' + p.count + ' 张</div></div>'
+        + '<div class="pn-body"><div class="pn-name"><img class="pn-game ' + (GAME[currentGame]?.cls || '') + '" src="' + iconUrl(currentGame) + '" title="' + esc(GAME[currentGame]?.name || currentGame) + '" alt="" /><span>' + esc(p.name) + '</span></div><div class="pn-count">' + p.count + ' 张</div></div>'
         + '</div>').join('')
       cards.querySelectorAll('.pn-card').forEach(c => c.addEventListener('click', () => open(c.dataset.name)))
     } catch (err) {

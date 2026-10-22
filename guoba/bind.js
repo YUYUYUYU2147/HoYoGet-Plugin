@@ -6,11 +6,12 @@
   const qqEl = document.getElementById('hb-qq')
   const gameEl = document.getElementById('hb-game')
   const GAME = {
-    gs: { name: '原神', icon: '💠', cls: 'hb-gs' },
-    sr: { name: '崩坏：星穹铁道', icon: '🌌', cls: 'hb-sr' },
-    zzz: { name: '绝区零', icon: '⚡', cls: 'hb-zzz' },
-    bh3: { name: '崩坏3', icon: '⚔️', cls: 'hb-bh3' },
+    gs: { name: '原神', cls: 'hb-gs' },
+    sr: { name: '崩坏：星穹铁道', cls: 'hb-sr' },
+    zzz: { name: '绝区零', cls: 'hb-zzz' },
+    bh3: { name: '崩坏3', cls: 'hb-bh3' },
   }
+  const iconUrl = game => g.apiBase + '/game/icon?game=' + encodeURIComponent(game) + '&token=' + encodeURIComponent(g.token || '')
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
@@ -62,10 +63,10 @@
       }
       list.innerHTML = users.map(u => {
         const tags = Object.entries(u.byGame)
-          .map(([k, n]) => '<span class="hb-tag ' + esc(k) + '">' + (GAME[k]?.icon || '') + ' ' + esc(GAME[k]?.name || k) + ' ' + n + '</span>')
+          .map(([k, n]) => '<span class="hb-tag ' + esc(k) + '"><img class="hb-tag-icon" src="' + iconUrl(k) + '" alt="" /> ' + esc(GAME[k]?.name || k) + ' ' + n + '</span>')
           .join('')
         const rows = u.accounts.map(a => '<tr>'
-          + '<td class="hb-game ' + esc(a.game) + '"><span class="hb-game-badge">' + (GAME[a.game]?.icon || '') + ' ' + esc(a.gameName) + '</span></td>'
+          + '<td class="hb-game ' + esc(a.game) + '"><span class="hb-game-badge"><img class="hb-game-icon" src="' + iconUrl(a.game) + '" alt="" /> ' + esc(a.gameName) + '</span></td>'
           + '<td class="hb-mask">' + esc(a.uidMask) + '</td>'
           + '<td>' + esc(a.region) + '</td>'
           + '<td class="hb-mask">' + esc(a.stuidMask) + '</td>'

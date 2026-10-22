@@ -51,7 +51,7 @@
 .ck-pill.ok { color: #1a7f37; background: rgba(35, 178, 90, 0.13); }
 .ck-pill.no { color: #d43f3f; background: rgba(212, 63, 63, 0.13); }
 
-.ck-game { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; font-size: 12px; flex: none; color: #fff; }
+.ck-game { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; flex: none; object-fit: cover; background: #f0f3f8; }
 .ck-g-gs { background: #e9a23b; }
 .ck-g-sr { background: #6a7fd0; }
 .ck-g-zzz { background: #3aa6a0; }

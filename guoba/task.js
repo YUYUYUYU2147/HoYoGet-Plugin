@@ -6,7 +6,8 @@
   const el = id => document.getElementById(id)
   const STATUS = { ok: '成功', signed: '已完成', fail: '失败', skip: '跳过' }
   const SOURCE = { manual: '手动', cron: '定时', event: '事件' }
-  const GAME = { gs: '💠', sr: '🌌', zzz: '⚡', bh3: '⚔️' }
+  const GAME = { gs: 1, sr: 1, zzz: 1, bh3: 1 }
+  const iconUrl = game => g.apiBase + '/game/icon?game=' + encodeURIComponent(game) + '&token=' + encodeURIComponent(g.token || '')
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
@@ -66,7 +67,7 @@
         + '<td class="hth-src">' + esc(SOURCE[r.source] || r.source || '') + '</td>'
         + '<td>' + esc(r.qq) + '</td>'
         + '<td>' + esc(r.name) + '</td>'
-        + '<td>' + (GAME[r.game] || '') + ' ' + esc(r.game) + '</td>'
+        + '<td class="hth-game">' + (GAME[r.game] ? '<img class="hth-game-icon" src="' + iconUrl(r.game) + '" alt="" /> ' : '') + esc(r.game) + '</td>'
         + '<td>' + esc(r.uid) + '</td>'
         + '<td><span class="hth-badge hth-' + esc(r.status) + '">' + esc(STATUS[r.status] || r.status) + '</span></td>'
         + '<td class="hth-tip" title="' + esc(r.tip) + '">' + esc(r.tip) + '</td>'
