@@ -1927,8 +1927,46 @@ export class zzz_panel_list extends plugin {
       return e.reply(`已取到响应，但没识别出角色列表。原始数据已存到：\n${basicFile}\n请检查接口返回结构。`)
     }
 
+    // 合并历史落盘角色：米游社 avatar/basic 只返回「展示柜」里的角色，
+    // 玩家没勾选的老角色不会出现在响应里。这里把本地历次落盘的全量列表
+    // （data/zzz_panel/avatar_basic_<uid>.json 与 records/ 详情）补进来，
+    // 按 id 去重，避免「更新面板」后老角色消失。
+    let mergedList = [...list]
+    try {
+      const seen = new Set(mergedList.map(a => String(a?.id)))
+      const addFrom = (arr) => {
+        if (!Array.isArray(arr)) return
+        for (const a of arr) {
+          const id = String(a?.id ?? a?.data?.id ?? '')
+          if (!id || seen.has(id)) continue
+          seen.add(id)
+          mergedList.push(a?.data || a)
+        }
+      }
+      // 1) 本 uid 的历史全量列表（批量更新落盘）
+      const histFile = path.join(OUT_DIR, `avatar_basic_${uid}.json`)
+      if (fs.existsSync(histFile)) {
+        try {
+          const hist = JSON.parse(fs.readFileSync(histFile, 'utf8'))
+          addFrom(hist?.data?.avatar_list || hist?.data || hist?.avatar_list)
+        } catch { /* 忽略损坏 */ }
+      }
+      // 2) 本 uid 的单角色详情记录（米游社<角色>面板落盘）
+      try {
+        for (const f of fs.readdirSync(RECORDS_DIR).filter(f => f.endsWith('.json'))) {
+          if (!f.startsWith(`${uid}_`) && !f.startsWith(`${uid}.`)) continue
+          try {
+            const obj = JSON.parse(fs.readFileSync(path.join(RECORDS_DIR, f), 'utf8'))
+            if (obj?.data) addFrom([obj.data])
+          } catch { /* 忽略损坏 */ }
+        }
+      } catch { /* records 目录不存在 */ }
+    } catch (err) {
+      logger.debug?.(`[HoYoGet][zzz_panel] 合并历史角色失败：${err?.message || err}`)
+    }
+
     // 归一化后交模板渲染（自研，不复用 ZZZ-Plugin 模板）
-    let cards = list.map(it => normalizeAvatar(it))
+    let cards = mergedList.map(it => normalizeAvatar(it))
 
     // 从本插件 records + ZZZ-Plugin 已落盘数据加载评分，用于排序与展示
     const uidRecords = new Map()
@@ -1993,6 +2031,49 @@ export class zzz_panel_list extends plugin {
       const rec = uidRecords.get(c.name)
       return { ...c, equip_score: rec?.score ?? null, equip_rating: rec?.rating ?? null }
     })
+
+    // 补全缺失评分：records 里没有详情的角色，并发调 avatar/info 拿驱动盘，
+    // 算评分并落盘，让列表页每个角色都能显示评分（不再依赖已删除的 ZZZ-Plugin data/panel）。
+    const missing = cards.filter(c => c.equip_score == null && c.id != null)
+    if (missing.length) {
+      await e.reply(`检测到 ${missing.length} 个角色暂无评分，正在并发补全，请稍候…`, true, { recallMsg: 0 })
+      let gamePlayer = null
+      try { gamePlayer = await this.fetchPlayer(e, uid, ck) } catch {}
+      const concurrency = 4
+      const intervalMs = 400
+      let idx = 0
+      const worker = async () => {
+        while (idx < missing.length) {
+          const c = missing[idx++]
+          try {
+            const info = await this.fetchDetail(e, uid, ck, c.id)
+            if (!info?.__error) {
+              const avatar = this.pickInfo(info?.data)
+              if (avatar) {
+                scoreOne(avatar)
+                // 落盘详情，供下次列表/排名/极限面板复用
+                try {
+                  fs.mkdirSync(RECORDS_DIR, { recursive: true })
+                  const recRole = String(avatar?.name_mi18n || c.name || 'unknown').replace(/[\\/:*?"<>|\s·・]/g, '') || 'unknown'
+                  fs.writeFileSync(path.join(RECORDS_DIR, `${uid}_${recRole}.json`), JSON.stringify({
+                    uid, data: avatar, player: gamePlayer || null, updatedAt: Date.now(),
+                  }))
+                } catch { /* 落盘失败不影响本次 */ }
+              }
+            }
+          } catch (err) {
+            logger.debug?.(`[HoYoGet][zzz_panel] 补评分失败 ${c.name}：${err?.message || err}`)
+          }
+          await new Promise(resolve => setTimeout(resolve, intervalMs))
+        }
+      }
+      await Promise.all(Array.from({ length: Math.min(concurrency, missing.length) }, () => worker()))
+      // 重新注入评分
+      cards = cards.map(c => {
+        const rec = uidRecords.get(c.name)
+        return { ...c, equip_score: rec?.score ?? null, equip_rating: rec?.rating ?? null }
+      })
+    }
 
     // 获取全角色上线时间排序表
     let ordMap = null
