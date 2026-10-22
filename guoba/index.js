@@ -333,7 +333,10 @@ export function init(ctx) {
       } else {
         list = store.listPanels(game)
       }
-      res.json({ ok: true, code: 0, message: 'ok', result: list.map(p => ({ game: p.game, name: p.name, count: p.files.length, cover: p.files[0] })) })
+      res.json({ ok: true, code: 0, message: 'ok', result: list.map(p => ({
+        game: p.game, name: p.name, count: p.files.length, cover: p.files[0],
+        splash: store.splashOf(p.game, p.name),
+      })) })
     } catch (err) {
       ctx.logger?.error?.(`[HoYoGet][guoba] 读取面板图列表失败：${err?.message || err}`)
       res.json({ ok: false, code: -1, message: err?.message || String(err), result: [] })
@@ -401,6 +404,21 @@ export function init(ctx) {
       res.sendFile(abs)
     } catch (err) {
       ctx.logger?.warn?.(`[HoYoGet][guoba] 读取游戏图标失败：${err?.message || err}`)
+      res.status(404).end()
+    }
+  })
+
+  ctx.registerApi('get', '/panel/splash', async (req, res) => {
+    try {
+      const store = await import('../system/panel_store.js')
+      const q = req.query || {}
+      const rel = store.splashOf(q.game, q.name)
+      if (!rel) return res.status(404).end()
+      const abs = path.join(ROOT, 'resources', rel)
+      if (!fs.existsSync(abs)) return res.status(404).end()
+      res.sendFile(abs)
+    } catch (err) {
+      ctx.logger?.warn?.(`[HoYoGet][guoba] 读取角色立绘失败：${err?.message || err}`)
       res.status(404).end()
     }
   })

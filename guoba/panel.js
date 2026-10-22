@@ -37,8 +37,11 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) }
   function headers(json) { const h = { [g.tokenKey || 'guoba-access-token']: g.token || '' }; if (json) h['Content-Type'] = 'application/json'; return h }
   async function api(path, opts) { const r = await fetch(g.apiBase + path, opts); return await r.json() }
-  function imgUrl(file, game, source) {
-    return g.apiBase + '/panel/img?source=' + encodeURIComponent(source) + '&game=' + encodeURIComponent(game) + '&name=' + encodeURIComponent(currentName) + '&file=' + encodeURIComponent(file) + '&token=' + encodeURIComponent(g.token || '')
+  function imgUrl(file, game, source, name) {
+    return g.apiBase + '/panel/img?source=' + encodeURIComponent(source) + '&game=' + encodeURIComponent(game) + '&name=' + encodeURIComponent(name || currentName) + '&file=' + encodeURIComponent(file) + '&token=' + encodeURIComponent(g.token || '')
+  }
+  function splashUrl(game, name) {
+    return g.apiBase + '/panel/splash?game=' + encodeURIComponent(game) + '&name=' + encodeURIComponent(name) + '&token=' + encodeURIComponent(g.token || '')
   }
 
   function fillGameSelect() {
@@ -94,10 +97,14 @@
         cards.innerHTML = '<div class="pn-empty">' + (currentSource === 'cowcoo' ? '咕咕牛图库没有这个游戏的图库' : '还没有上传面板图，用「#米哈游上传&lt;角色&gt;面板图」上传') + '</div>'
         return
       }
-      cards.innerHTML = list.map(p => '<div class="pn-card" data-name="' + esc(p.name) + '">'
-        + '<img class="pn-cover" src="' + imgUrl(p.cover, currentGame, currentSource) + '" loading="lazy" />'
-        + '<div class="pn-body"><div class="pn-name">' + gameBadge(currentGame) + '<span>' + esc(p.name) + '</span></div><div class="pn-count">' + p.count + ' 张</div></div>'
-        + '</div>').join('')
+      cards.innerHTML = list.map(p => {
+        const coverSrc = p.splash ? splashUrl(currentGame, p.name) : imgUrl(p.cover, currentGame, currentSource, p.name)
+        const fallback = p.splash ? " onerror=\"this.onerror=null;this.src='" + imgUrl(p.cover, currentGame, currentSource, p.name) + "'\"" : ''
+        return '<div class="pn-card" data-name="' + esc(p.name) + '">'
+          + '<img class="pn-cover" src="' + coverSrc + '" loading="lazy"' + fallback + ' />'
+          + '<div class="pn-body"><div class="pn-name">' + gameBadge(currentGame) + '<span>' + esc(p.name) + '</span></div><div class="pn-count">' + p.count + ' 张</div></div>'
+          + '</div>'
+      }).join('')
       cards.querySelectorAll('.pn-card').forEach(c => c.addEventListener('click', () => open(c.dataset.name)))
     } catch (err) {
       cards.innerHTML = '<div class="pn-empty">加载失败：' + esc(err && err.message || err) + '</div>'

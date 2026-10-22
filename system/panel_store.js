@@ -22,6 +22,21 @@ const PANEL_ROOT = path.join(ROOT, 'resources', 'hoyo_panel', 'images', 'panel')
 const YZ_ROOT = path.resolve(ROOT, '..', '..')
 const COWCOO_ROOT = path.join(YZ_ROOT, 'resources', 'CowCoos')
 
+/** 游戏键 → meta 资源目录名 */
+const META_DIR = { gs: 'meta-gs', sr: 'meta-sr' }
+
+/** 取某角色在 meta 资源里的立绘相对路径（splash 优先，其次 banner），没有返回空 */
+export function splashOf(game, name) {
+  const meta = META_DIR[game]
+  const n = safeName(name)
+  if (!meta || !n) return ''
+  const base = path.join(ROOT, 'resources', meta, 'character', n, 'imgs')
+  for (const f of ['splash.webp', 'banner.webp', 'preview.webp', 'face.webp']) {
+    if (fs.existsSync(path.join(base, f))) return `${meta}/character/${n}/imgs/${f}`
+  }
+  return ''
+}
+
 export const GAME_NAMES = { gs: '原神', sr: '崩坏：星穹铁道', zzz: '绝区零' }
 
 export const PANEL_GAMES = ['gs', 'sr', 'zzz']
@@ -217,6 +232,6 @@ export function cowCooFilePath(game, name, file) {
 
 export default {
   listPanels, listFiles, panelFilePath, deletePanelFile, saveUploadedFiles,
-  listCowCooPanels, listCowCooFiles, cowCooFilePath,
+  listCowCooPanels, listCowCooFiles, cowCooFilePath, splashOf,
   GAME_NAMES, PANEL_GAMES, COWCOO_GAMES,
 }
