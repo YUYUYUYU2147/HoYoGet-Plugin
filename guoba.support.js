@@ -1825,21 +1825,27 @@ export const supportGuoba = () => {
       runSign() {
         runTaskInBackground('游戏签到', async () => {
           const yamlData = yaml.get(_path + 'sign.yaml') || {}
-          const groups = Object.keys(yamlData.sign || {})
-          if (!groups.length) return { skipped: '没有登记自动签到群' }
-          const { MysSign } = await import('./system/sign.js')
-          const { makeTaskEvent } = await import('./system/task_event.js')
-          let count = 0
-          for (const group of groups) {
-            for (const qq of (yamlData.sign[group] || [])) {
-              const e = await makeTaskEvent(qq, group)
-              // 显式传四个游戏：MysSign 的第二个参数决定签哪些，
-              // 不传虽然现在有默认值兜底，写清楚更好排查
-              await MysSign(e, ['gs', 'sr', 'zzz', 'bh3'])
-              count++
-            }
-          }
-          return { count }
+          const qqs = [...new Set(
+            Object.values(yamlData.sign || {}).flat().map(v => String(v).trim()).filter(Boolean),
+          )]
+          if (!qqs.length) return { skipped: '没有登记自动签到成员' }
+          /* 走定时任务那条批处理路径（zd_MysSign），而不是合成事件调 MysSign：
+             后者依赖 e.user.getMysUser()，合成事件里没有这个方法；
+             zd_MysSign 本来就是给「没有消息上下文、按 QQ 批量签」写的。 */
+          const { zd_MysSign } = await import('./system/sign.js')
+          const r = await zd_MysSign(qqs)
+          const fail = r?.sbai_qqs?.length || 0
+          const okCount = (r?.num || 0) + (r?.z_num || 0)
+          try {
+            const { appendTaskRecords } = await import('./system/task_history.js')
+            appendTaskRecords([{
+              task: 'sign',
+              source: 'manual',
+              tip: `手动批量签到：成功 ${okCount}，失败 ${fail}`,
+              status: fail > 0 ? 'fail' : (okCount > 0 ? 'ok' : 'skip'),
+            }])
+          } catch { /* 记录失败不影响签到 */ }
+          return { ok: okCount, fail }
         })
         return { ok: true, code: 0, message: '已开始签到，结果见「米哈游任务记录」', result: true }
       },
