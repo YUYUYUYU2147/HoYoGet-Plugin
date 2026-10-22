@@ -1930,8 +1930,51 @@ export class zzz_panel_list extends plugin {
     // 归一化后交模板渲染（自研，不复用 ZZZ-Plugin 模板）
     let cards = list.map(it => normalizeAvatar(it))
 
-    // 尝试从 ZZZ-Plugin 已落盘数据加载评分，用于排序与展示
+    // 从本插件 records + ZZZ-Plugin 已落盘数据加载评分，用于排序与展示
     const uidRecords = new Map()
+    const scoreOne = (a) => {
+      const name = a?.name_mi18n || a?.full_name_mi18n || ''
+      if (!name || uidRecords.has(name)) return
+      const equip = (a?.equip || []).map(d => ({
+        slot: d.equipment_type ?? 0,
+        level: d.level ?? 0,
+        rarity: d.rarity || 'A',
+        main_properties: (d.main_properties || []).map(p => ({ pid: p.property_id })),
+        properties: (d.properties || []).map(p => ({
+          pid: p.property_id,
+          count: p.level ?? 0,
+        })),
+      }))
+      const basic_properties = {}
+      for (const p of (a?.properties || [])) {
+        const m = ZPROP[p.property_id]
+        if (m && m.k !== 'dmgbonus') {
+          const final = (p.final !== undefined && p.final !== '' && p.final !== '0') ? p.final : p.base
+          basic_properties[m.k] = { base: p.base || '', final }
+        }
+      }
+      const scoreStats = {
+        atk: parseFloat(basic_properties.attack?.final) || 0,
+        crit: toRatio(basic_properties.crit?.final),
+        critdmg: toRatio(basic_properties.critdam?.final),
+        am: parseFloat(basic_properties.elementabnormalpower?.final) || 0,
+        ap: parseFloat(basic_properties.elementmystery?.final) || 0,
+      }
+      const scoreRes = calcEquipScore(equip, name, scoreStats, a?.avatar_profession, a?.element_type, basic_properties)
+      uidRecords.set(name, { score: scoreRes.score, rating: scoreRes.rating, ruleName: scoreRes.ruleName })
+    }
+    // 1) 本插件自己的 records（单角色详情落盘，优先）
+    try {
+      if (fs.existsSync(RECORDS_DIR)) {
+        for (const f of fs.readdirSync(RECORDS_DIR).filter(f => f.endsWith('.json'))) {
+          try {
+            const obj = JSON.parse(fs.readFileSync(path.join(RECORDS_DIR, f), 'utf8'))
+            scoreOne(obj?.data || obj)
+          } catch { /* 跳过损坏文件 */ }
+        }
+      }
+    } catch { /* records 目录不存在 */ }
+    // 2) ZZZ-Plugin 旧落盘（数组格式，回退兼容）
     try {
       const zzzPanelDir = path.join(ZZZ_ROOT, 'data', 'panel')
       if (fs.existsSync(zzzPanelDir)) {
@@ -1939,37 +1982,7 @@ export class zzz_panel_list extends plugin {
           try {
             const list = JSON.parse(fs.readFileSync(path.join(zzzPanelDir, f), 'utf8'))
             if (!Array.isArray(list)) continue
-            for (const a of list) {
-              const name = a?.name_mi18n || a?.full_name_mi18n || ''
-              if (!name || uidRecords.has(name)) continue
-              const equip = (a?.equip || []).map(d => ({
-                slot: d.equipment_type ?? 0,
-                level: d.level ?? 0,
-                rarity: d.rarity || 'A',
-                main_properties: (d.main_properties || []).map(p => ({ pid: p.property_id })),
-                properties: (d.properties || []).map(p => ({
-                  pid: p.property_id,
-                  count: p.level ?? 0,
-                })),
-              }))
-              const basic_properties = {}
-              for (const p of (a?.properties || [])) {
-                const m = ZPROP[p.property_id]
-                if (m && m.k !== 'dmgbonus') {
-                  const final = (p.final !== undefined && p.final !== '' && p.final !== '0') ? p.final : p.base
-                  basic_properties[m.k] = { base: p.base || '', final }
-                }
-              }
-              const scoreStats = {
-                atk: parseFloat(basic_properties.attack?.final) || 0,
-                crit: toRatio(basic_properties.crit?.final),
-                critdmg: toRatio(basic_properties.critdam?.final),
-                am: parseFloat(basic_properties.elementabnormalpower?.final) || 0,
-                ap: parseFloat(basic_properties.elementmystery?.final) || 0,
-              }
-              const scoreRes = calcEquipScore(equip, name, scoreStats, a?.avatar_profession, a?.element_type, basic_properties)
-              uidRecords.set(name, { score: scoreRes.score, rating: scoreRes.rating, ruleName: scoreRes.ruleName })
-            }
+            for (const a of list) scoreOne(a)
           } catch { /* 跳过损坏文件 */ }
         }
       }
