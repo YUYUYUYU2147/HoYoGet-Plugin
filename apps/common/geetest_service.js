@@ -133,6 +133,45 @@ async function pm2HasProcess() {
     }
 }
 
+/**
+ * 确保 pm2 已注册为开机自启，否则机器重启后进程表无人恢复。
+ *
+ * 做法：先看有没有 systemd 的 pm2-<user>.service（或 pm2 自己记录的 init 状态），
+ * 没有就执行 pm2 startup。用 systemctl is-enabled 判断，比解析 pm2 文本输出可靠。
+ * 非 systemd 环境（如容器）下失败也无所谓，返回 false 让调用方提示即可。
+ */
+async function pm2StartupEnabled() {
+    if (!await has('pm2 -v')) return false;
+    const user = process.env.PM2_USER || 'root';
+    try {
+        await run(`systemctl is-enabled pm2-${user}`, 15000);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+async function ensurePm2Startup() {
+    if (!await has('pm2 -v')) return false;
+    const user = process.env.PM2_USER || 'root';
+    const unit = `pm2-${user}`;
+    try {
+        await run(`systemctl is-enabled ${unit}`, 15000);
+        return true; // 已 enabled，systemctl 退出码 0
+    } catch { /* 没装，继续走 startup */ }
+    try {
+        // --hp 指定用户 home，避免 pm2 在 systemd 里找不到 ~/.pm2
+        const hp = process.env.HOME || `/root`;
+        await run(`pm2 startup systemd -u ${user} --hp ${hp}`, 60000);
+        await run(`systemctl start ${unit}`, 60000);
+        await run(`systemctl is-enabled ${unit}`, 15000);
+        return true;
+    } catch (err) {
+        logger.warn(`[HoYoGet][geetest] 设置 pm2 开机自启失败（不影响本次运行）：${err?.message || err}`);
+        return false;
+    }
+}
+
 async function pipInstall(pyPath) {
     if (!pyPath) throw new Error('找不到 venv 里的 python，装不了依赖');
     const tries = [];
@@ -207,6 +246,7 @@ export class GeetestService extends plugin {
         // 这时点 pm2 restart 只会去动一个不存在的进程，而实际在答的还是那个野生的。
         const managed = await pm2HasProcess();
         const orphan = managed === false;
+        const autoStart = managed ? await pm2StartupEnabled() : false;
         return e.reply(
             `过码服务地址：${addr()}\n运行中\n` +
             `累计成功 ${s.success ?? '-'}，失败 ${s.failed ?? '-'}，成功率 ${s.successRate ?? '-'}` +
@@ -217,7 +257,11 @@ export class GeetestService extends plugin {
                 ? `\n⚠️ 服务在跑，但不在本插件的进程表里（pm2 里没有 ${PM2_NAME}）\n` +
                   `多半是旧版本部署或手工起（nohup / start /b）留下的。想让本插件接管：\n` +
                   `· 执行 pm2 delete ${PM2_NAME} 后重发 #过码部署\n` +
-                  '· 或直接重启一次机器（过码服务不会自启）\n'
+                  '· 或直接重启一次机器后重发 #过码部署\n'
+                : '') +
+            (managed && !autoStart
+                ? `\n⚠️ 未设置开机自启：机器重启后过码服务不会自己回来。\n`
+                  + `重发 #过码部署 会自动补上（pm2 startup + save）。\n`
                 : '') +
             `${platform}`,
             true
@@ -239,14 +283,20 @@ export class GeetestService extends plugin {
                         '',
                         '这多半是旧版本部署或手工启动留下的进程。要让本插件接管：',
                         `· 机器人所在设备执行：pm2 delete ${PM2_NAME}`,
-                        '· 或直接重启一次机器（过码服务不会自启）',
+                        '· 或直接重启一次机器，再重发本指令',
                         '',
                         '停掉之后再发一次本指令。',
                     ].join('\n'),
                     true
                 );
             }
-            return e.reply(`过码服务已经在跑了（${addr()}）。\n发「#过码服务状态」看统计`, true);
+            const autoStart = await pm2StartupEnabled();
+            return e.reply(
+                `过码服务已经在跑了（${addr()}）。\n` +
+                (autoStart ? '已设开机自启，机器重启后会自动恢复。' : '⚠️ 未设开机自启，机器重启后会掉线。\n重发一次本指令即可补上。') +
+                '\n发「#过码服务状态」看统计',
+                true
+            );
         }
 
         const steps = [];
@@ -317,7 +367,10 @@ export class GeetestService extends plugin {
                 try { await run(`pm2 delete ${PM2_NAME}`, 30000); } catch { /* 本来就没有，忽略 */ }
                 await run(`pm2 start ${q(pyPath)} --name ${PM2_NAME} -- ${q(`${SERVICE_DIR}/server.py`)}`, 120000);
                 try { await run('pm2 save', 60000); } catch { /* save 失败不影响运行 */ }
-                return `pm2 托管（${PM2_NAME}）`;
+                // 只 save 不 startup 的话，机器一重启 pm2 守护进程本身不会起来，
+                // 进程表也就没人恢复 —— 这正是「昨天还能用，重启后过码服务掉线」的原因。
+                const boot = await ensurePm2Startup();
+                return boot ? `pm2 托管（${PM2_NAME}）· 已设开机自启` : `pm2 托管（${PM2_NAME}）（开机自启未设置，见日志）`;
             }
             // 没有 pm2 就后台起，够用；重启后需要重新部署。
             // POSIX 用 nohup + disown，Windows 用 start /b —— 那套 shell 语法在 cmd 下不成立。
