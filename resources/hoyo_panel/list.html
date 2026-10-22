@@ -12,8 +12,11 @@
       {{/if}}
       <div class="head">
         <div class="head-left">
-          <div class="title">{{gameCn}}</div>
-          <div class="subtitle">{{if nickname}}{{nickname}} · {{/if}}UID {{uid}}{{if level}} · AR{{level}}{{/if}}</div>
+          {{if ownerAvatar}}<img class="owner-avatar" src="{{ownerAvatar}}" alt="" />{{/if}}
+          <div class="head-copy">
+            <div class="title">{{gameCn}}</div>
+            <div class="subtitle">{{if nickname}}<span class="head-nick">{{nickname}}</span> · {{/if}}UID {{uid}}{{if level}} · AR{{level}}{{/if}}</div>
+          </div>
         </div>
         <div class="head-right">
           <div class="stat-pill">

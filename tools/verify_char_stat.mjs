@@ -29,9 +29,9 @@ globalThis.logger = { mark(){}, debug(){}, info(){}, warn(){}, error(){} }
 
 /* 直接复用插件的 http 实现：两套代码容易出现签名/头不一致，且接口有限流，
    行为不同会让人误判成公式错误。 */
-const PLUGIN_APP = path.join(ROOT, 'apps', 'zzz_workshop.js')
+const PLUGIN_APP = path.join(ROOT, 'apps', 'zzz', 'zzz_workshop.js')
 async function loadPluginIO() {
-  const panelList = await import(new URL('../apps/zzz_panel_list.js', import.meta.url))
+  const panelList = await import(new URL('../apps/zzz/zzz_panel_list.js', import.meta.url))
   let src = fs.readFileSync(PLUGIN_APP, 'utf8')
     .replace(/^import[\s\S]*?from '[^']*'$/gm, '')
     .replace(/export class[\s\S]*$/, '')

@@ -162,7 +162,7 @@ export function disabledModuleLabels() {
  *
  * @param {Function} cls 插件类
  * @param {string} id 模块 id
- * @param {string} file apps/ 下的文件名，如 'sr_gacha.js'
+ * @param {string} file apps/ 下的相对路径，如 'sr/sr_gacha.js'
  */
 export function guardModuleByFile(cls, id, file) {
   let names = []

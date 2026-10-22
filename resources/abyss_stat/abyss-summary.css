@@ -36,6 +36,47 @@ body,
   padding-right: 10px;
   font-size: 25px;
 }
+.head-user {
+  width: 30%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 8px 10px 0 0;
+  box-sizing: border-box;
+}
+.head-user-info {
+  min-width: 0;
+  text-align: right;
+}
+.head-avatar {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  object-fit: cover;
+  background: rgba(255, 255, 255, .12);
+  border: 2px solid rgba(255, 255, 255, .68);
+  box-shadow: 0 0 8px rgba(0, 0, 0, .35);
+}
+.head-nick {
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #fff;
+  text-shadow: 0 0 3px rgba(0, 0, 0, .6);
+}
+.head-box .head-user .uid {
+  width: auto;
+  padding: 0;
+  font-size: 20px;
+  line-height: 1.3;
+  color: #fff;
+}
 .abyss-stat-cont {
   display: flex;
   padding: 5px;
@@ -320,6 +361,14 @@ body,
 .abyss-notice .cont-body {
   font-size: 16px;
 }
+.abyss-notice .from-mhy {
+  margin-top: 6px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  color: #ff4d4f;
+}
 .avatar-banner.avatar-枫原万叶,
 .img.wide.avatar-枫原万叶 {
   background-position: 0 -13%;
@@ -363,45 +412,51 @@ body,
 /*# sourceMappingURL=abyss-summary.css.map */
 /* 每层卡片：左栏保持原来的战绩内容，右栏补该层深渊怪物/BOSS 信息 */
 .floor-split {
-  /* 右栏必须脱离文档流：flex 的 stretch 只是把左栏拉到和右栏一样高，
-     整行仍会被右栏（BOSS 条目很长）撑高，左栏底部就留出一大片空白。
-     这里让右栏绝对定位，层高只由左栏战绩决定。 */
-  position: relative;
+  /* 两栏用 grid 排版，行高取左右两栏的较大值：
+     右栏怪物多时整行跟着长高，不再把 BOSS 列表裁掉。 */
+  display: grid;
+  grid-template-columns: 985px minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
   width: 100%;
   min-width: 0;
 }
-.floor-main { width: 985px; min-width: 0; }
+.floor-main {
+  width: auto;
+  min-width: 0;
+  display: flex;
+}
+.floor-main > .cont-body {
+  flex: 1;
+  box-sizing: border-box;
+}
 
 .floor-boss {
-  /* 绝对定位到左栏右侧，完全不参与这一层的高度计算 */
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 1001px;
-  right: 0;
   min-width: 0;
-  /* 高度跟随本层（左栏），超出部分裁掉 */
-  overflow: hidden;
+  overflow: visible;
   box-sizing: border-box;
   /* 左栏「第N层」标题在 .cont-body 内，比卡片顶部低 14px；
      右栏顶部直接是卡片边缘，所以 padding-top 要补足这 14px，
      让「本层怪物/BOSS」和「第N层」在同一条水平线上 */
   padding: 7px 15px 15px;
-  border-radius: 14px;
-  background: #f8fafc;
-  border: 1px solid #e6ebf2;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, .5);
+  border: 1px solid rgba(255, 255, 255, .12);
+  box-shadow: 0 0 1px 0 rgba(255, 255, 255, .35);
+  color: #fff;
 }
 .floor-boss .boss-title {
   font-size: 18px;
   font-weight: 400;
+  font-family: Number, "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
   color: #d3bc8e;
   line-height: 1.3;
   margin: 0 0 4px;
 }
 .boss-half { margin-bottom: 4px; }
 .boss-half:last-child { margin-bottom: 0; }
-.boss-half-title { font-size: 12px; color: #7c8aa0; margin-bottom: 2px; }
-.boss-wave { font-size: 12px; color: #8b7fd0; margin: 0; }
+.boss-half-title { font-size: 12.5px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+.boss-wave { font-size: 12px; color: #b9a8ff; margin: 0; }
 
 .boss-monsters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px 6px; margin-bottom: 0; }
 .boss-item {
@@ -412,19 +467,19 @@ body,
   padding: 5px 6px;
   margin-bottom: 0;
   border-radius: 9px;
-  background: #fff;
-  border: 1px solid #e9edf3;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .1);
   flex-wrap: nowrap;
   min-width: 0;
 }
 .boss-item:last-child { margin-bottom: 0; }
 .boss-icon {
   width: 22px; height: 22px; flex: 0 0 auto;
-  border-radius: 9px; background: #f1f5f9;
+  border-radius: 9px; background: rgba(255, 255, 255, .08);
   display: flex; align-items: center; justify-content: center; overflow: hidden;
 }
 .boss-icon img { width: 100%; height: 100%; object-fit: contain; }
-.boss-icon span { font-size: 15px; font-weight: 800; color: #94a3b8; }
+.boss-icon span { font-size: 15px; font-weight: 800; color: rgba(255, 255, 255, .55); }
 .boss-info {
   min-width: 0;
   flex: 1;
@@ -439,25 +494,53 @@ body,
 .boss-name {
   font-size: 11.5px;
   font-weight: 700;
-  color: #334155;
+  color: #fff;
   flex: 1 1 100%;
   white-space: nowrap;
   overflow: visible;
   text-overflow: clip;
 }
-.boss-hp { font-size: 11px; color: #64748b; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.boss-tags { display: inline-flex; align-items: center; gap: 2px; font-size: 9.5px; white-space: nowrap; flex: 0 0 auto; }
+.boss-hp { font-size: 11px; color: rgba(255, 255, 255, .55); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.boss-tags {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 9.5px;
+  white-space: normal;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+}
 .boss-tags .tag-label { display: none; }
 .boss-tags i {
-  display: inline-flex; align-items: center; gap: 3px;
+  display: inline-block;
   font-style: normal; padding: 1px 6px; border-radius: 999px;
-  background: #eef2f7; color: #475569;
+  background: rgba(255, 255, 255, .08); color: #cfe4f2;
+  white-space: nowrap;
+  line-height: 1.25;
 }
-.boss-tags.weak i { background: #fff7e6; color: #b45309; }
-.boss-tags.res i { background: #fdeeee; color: #b91c1c; }
+.boss-tags .elem { display: inline-block; }
+.boss-tags .elem + .elem { margin-left: 3px; }
+.boss-tags i img,
+.boss-tags .elem-all {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 3px;
+}
+.boss-tags .elem-all {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: conic-gradient(#ff5a5a 0 25%, #f5b942 0 50%, #35c98b 0 75%, #3d9dff 0 100%);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .3);
+}
+.boss-tags.weak i { background: rgba(255, 190, 90, .16); color: #ffd27a; }
+.boss-tags.res i { background: rgba(255, 100, 100, .16); color: #ff9e9e; }
+.boss-tags.shield i { background: rgba(100, 170, 255, .18); color: #9fd4ff; border: 1px solid rgba(120, 180, 255, .35); }
 .boss-tags img { width: 12px; height: 12px; object-fit: contain; }
-.boss-tags em { font-style: normal; font-weight: 700; }
-.boss-mech { font-size: 10.5px; color: #7c8aa0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.boss-tags em { display: inline; margin-left: 4px; font-style: normal; font-weight: 700; }
+.boss-mech { font-size: 10.5px; color: rgba(255, 255, 255, .55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 
 /* 分栏时左栏内容不能撑破（.abyss-detail 原本用 calc(100% + 40px) 抵消内距，
    在 flex 子项里会把左栏撑宽，导致左右不等宽） */
@@ -477,7 +560,12 @@ body,
    层卡本身要放开 overflow，否则 BOSS 栏上半截会被裁掉 */
 .info_box > .abyss-stat-cont + .cont { overflow: visible; }
 .info_box > .abyss-stat-cont + .cont .cont-body { border-radius: 10px; }
-.info_box > .abyss-stat-cont + .cont .floor-boss { top: -320px; }
+/* 第一层右栏上移，顶部和统计行对齐；负 margin 只改绘制位置，
+   行高仍由内容撑开，列表底部不会被裁。 */
+.info_box > .abyss-stat-cont + .cont .floor-boss {
+  margin-top: -320px;
+  align-self: stretch;
+}
 /* 层卡右边距去掉：右边缘和顶部统计行/UID 对齐 */
 .info_box > .cont { margin-right: 0; }
 
@@ -549,11 +637,7 @@ body,
    需要完整攻略时用单独的命令输出 */
 .boss-guide { display: none; }
 
-/* 第二层 BOSS 内容（3 间怪物列表）比楼层高，给第二层留出高度，
-   让怪物列表完整显示；左侧多出来的部分用卡片深色底填充 */
-.info_box > .cont + .cont:not(.abyss-notice) { min-height: 560px; }
-.info_box > .cont + .cont:not(.abyss-notice) .floor-split { min-height: 560px; }
-.info_box > .cont + .cont:not(.abyss-notice) .cont-body { min-height: 560px; box-sizing: border-box; }
+/* 行高由 grid 按左右两栏内容自动取最大值，不再给第二层写死 560px。 */
 
 /* BOSS 技能应对：跨满整行，避免挤在 1/3 列里 */
 .boss-guide {
@@ -602,7 +686,7 @@ body,
 .abyss-level .avatars { padding-bottom: 16px; }
 
 /* 第 12 层下方：顶部五位角色的培养雷达 + 圣遗物评分。
-   填补左栏在 BOSS 栏 560px 高度下留出的空白，一行五张卡。 */
+   右栏变高时左栏会跟着拉长，底部用这张卡补内容，一行五张。 */
 .abyss-build {
   margin-top: 8px;
   padding-top: 8px;

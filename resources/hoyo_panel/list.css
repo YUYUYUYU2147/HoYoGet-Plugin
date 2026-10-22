@@ -60,6 +60,18 @@ body.game-sr .page {
   box-shadow: 0 8px 22px rgba(120, 145, 185, .14);
   border: 1px solid rgba(180, 200, 230, .45);
 }
+.head-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.owner-avatar {
+  width: 54px;
+  height: 54px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  object-fit: cover;
+  background: rgba(150, 180, 225, .18);
+  border: 2px solid rgba(255, 255, 255, .9);
+  box-shadow: 0 2px 10px rgba(60, 90, 140, .2);
+}
+.head-copy { min-width: 0; }
 .title {
   font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
   font-size: 26px;
@@ -67,6 +79,7 @@ body.game-sr .page {
   line-height: 1.15;
 }
 .subtitle { margin-top: 5px; font-size: 12px; color: #7c8698; }
+.head-nick { color: #2c3444; font-weight: 700; }
 .head-right { display: flex; gap: 10px; }
 .stat-pill {
   min-width: 76px;

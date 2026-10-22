@@ -1,0 +1,5874 @@
+{
+  "at": 1792359962318,
+  "data": [
+    {
+      "characterId": 10000128,
+      "characterName": "Varka",
+      "name": "Double Pyro, Avg DMG",
+      "short": "PYRO",
+      "count": 161948,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Varka",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Varka.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Prune",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Prune.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Durin",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Durin.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Nicole",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nicole.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000128,
+      "characterName": "Varka",
+      "name": "C2 Double Pyro, Avg DMG",
+      "short": "C2 PYRO",
+      "count": 161948,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Varka",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Varka.png",
+                "constellation": 2
+              }
+            },
+            {
+              "character": {
+                "name": "Prune",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Prune.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Durin",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Durin.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Nicole",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nicole.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000150,
+      "characterName": "Odette",
+      "name": "Stellar-Conduct Triple Cryo, Avg DMG",
+      "short": "STELLAR",
+      "count": 298782,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Odette",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Odette.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Sandrone",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_MarionetteNew.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Yae Miko",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Yae.png",
+                "constellation": 1
+              }
+            },
+            {
+              "character": {
+                "name": "Qiqi",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Qiqi.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000150,
+      "characterName": "Odette",
+      "name": "Stellar-Conduct Double Cryo, Avg DMG",
+      "short": "STELLAR",
+      "count": 298782,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Odette",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Odette.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Sandrone",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_MarionetteNew.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Yae Miko",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Yae.png",
+                "constellation": 1
+              }
+            },
+            {
+              "character": {
+                "name": "Alyosha",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Alyosha.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000125,
+      "characterName": "Columbina",
+      "name": "Lunar-Charged Team, Avg DMG",
+      "short": "LUNAR",
+      "count": 857579,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Columbina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Columbina.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Flins",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Flins.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Ineffa",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Ineffa.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Sucrose",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Sucrose.png",
+                "constellation": 0
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000125,
+      "characterName": "Columbina",
+      "name": "Lunar-Bloom Team, Avg DMG",
+      "short": "LUNAR",
+      "count": 857579,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Columbina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Columbina.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Nefer",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nefer.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Lauma",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Lauma.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Nahida",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nahida.png",
+                "constellation": 0
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000125,
+      "characterName": "Columbina",
+      "name": "Lunar-Bloom Team with C2 Nahida, Avg DMG",
+      "short": "LUNAR",
+      "count": 857579,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Columbina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Columbina.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Nefer",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nefer.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Lauma",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Lauma.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Nahida",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nahida.png",
+                "constellation": 2
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000125,
+      "characterName": "Columbina",
+      "name": "Lunar-Crystallize Team, Avg DMG",
+      "short": "LUNAR",
+      "count": 857579,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Columbina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Columbina.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Zibai",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Zibai.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Linnea",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Linnea.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Illuga",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Illuga.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000125,
+      "characterName": "Columbina",
+      "name": "On-Field Main DPS Team, Avg DMG",
+      "short": "ON-FIELD",
+      "count": 857579,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Columbina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Columbina.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Lauma",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Lauma.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Ineffa",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Ineffa.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Aino",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Aino.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000058,
+      "characterName": "Yae Miko",
+      "name": "Stellar-Conduct Triple Cryo, Avg DMG",
+      "short": "STELLAR",
+      "count": 699610,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Yae Miko",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Yae.png",
+                "constellation": 1
+              }
+            },
+            {
+              "character": {
+                "name": "Sandrone",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_MarionetteNew.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Qiqi",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Qiqi.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Cryo",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000133,
+      "characterName": "Sandrone",
+      "name": "Stellar-Conduct Basic Team, Avg DMG",
+      "short": "STELLAR",
+      "count": 261979,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Sandrone",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_MarionetteNew.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Yae Miko",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Yae.png",
+                "constellation": 1
+              }
+            },
+            {
+              "character": {
+                "name": "Qiqi",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Qiqi.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Escoffier",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Escoffier.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000126,
+      "characterName": "Zibai",
+      "name": "Premium Lunar-Crystallize Team, Avg DMG",
+      "short": "LUNAR",
+      "count": 281358,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Zibai",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Zibai.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Linnea",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Linnea.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Illuga",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Illuga.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Columbina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Columbina.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000130,
+      "characterName": "Linnea",
+      "name": "Moonsign Carry Team, Avg DMG",
+      "short": "LUNAR",
+      "count": 228084,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Linnea",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Linnea.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Zibai",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Zibai.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Illuga",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Illuga.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Columbina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Columbina.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000116,
+      "characterName": "Ineffa",
+      "name": "Basic Lunar-Charged Team, Avg DMG",
+      "short": "LUNAR",
+      "count": 474019,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Ineffa",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Ineffa.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Flins",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Flins.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Sucrose",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Sucrose.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Aino",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Aino.png",
+                "constellation": 1
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000122,
+      "characterName": "Nefer",
+      "name": "Triple Dendro, Avg DMG",
+      "short": "HYPER",
+      "count": 383273,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Nefer",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nefer.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Lauma",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Lauma.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Nahida",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nahida.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Aino",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Aino.png",
+                "constellation": 1
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000122,
+      "characterName": "Nefer",
+      "name": "Triple Dendro with C2 Nahida, Avg DMG",
+      "short": "HYPER",
+      "count": 383273,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Nefer",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nefer.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Lauma",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Lauma.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Nahida",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nahida.png",
+                "constellation": 2
+              }
+            },
+            {
+              "character": {
+                "name": "Aino",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Aino.png",
+                "constellation": 1
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000120,
+      "characterName": "Flins",
+      "name": "Basic Lunar-Charged Team, Avg DMG",
+      "short": "LUNAR",
+      "count": 665474,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Flins",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Flins.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Ineffa",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Ineffa.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Sucrose",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Sucrose.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Aino",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Aino.png",
+                "constellation": 1
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000114,
+      "characterName": "Skirk",
+      "name": "Double Hydro, Avg DMG",
+      "short": "COMBO",
+      "count": 738333,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Skirk",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_SkirkNew.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Furina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Furina.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Yelan",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Yelan.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Escoffier",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Escoffier.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000114,
+      "characterName": "Skirk",
+      "name": "Triple Cryo, Avg DMG",
+      "short": "COMBO",
+      "count": 738333,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Skirk",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_SkirkNew.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Furina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Furina.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Shenhe",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Shenhe.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Escoffier",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Escoffier.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000096,
+      "characterName": "Arlecchino",
+      "name": "Melt Combo, Avg DMG",
+      "short": "MELT",
+      "count": 1250320,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Arlecchino",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Arlecchino.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Citlali",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Citlali.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Xilonen",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xilonen.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000026,
+      "characterName": "Xiao",
+      "name": "FFXX Premium Team, Avg DMG",
+      "short": "FFXX",
+      "count": 672334,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Xiao",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xiao.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Faruzan",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Faruzan.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Xianyun",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Liuyun.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Furina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Furina.png",
+                "constellation": 0
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000112,
+      "characterName": "Escoffier",
+      "name": "Skill + Burst Combo, Avg DMG",
+      "short": "FREEZE",
+      "count": 479991,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Escoffier",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Escoffier.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Furina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Furina.png",
+                "constellation": 2
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Cryo",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Cryo",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000002,
+      "characterName": "Kamisato Ayaka",
+      "name": "Premium Team vs Frozen, Avg DMG",
+      "short": "FREEZE",
+      "count": 863469,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Kamisato Ayaka",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Ayaka.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Escoffier",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Escoffier.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Shenhe",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Shenhe.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Furina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Furina.png",
+                "constellation": 2
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000002,
+      "characterName": "Kamisato Ayaka",
+      "name": "Premium Team vs Boss, Avg DMG",
+      "short": "BOSS",
+      "count": 863469,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Kamisato Ayaka",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Ayaka.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Escoffier",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Escoffier.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Shenhe",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Shenhe.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Furina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Furina.png",
+                "constellation": 2
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000111,
+      "characterName": "Varesa",
+      "name": "Overload Combo, Avg DMG",
+      "short": "OVERLOAD",
+      "count": 380605,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Varesa",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Varesa.png",
+                "constellation": 1
+              }
+            },
+            {
+              "character": {
+                "name": "Iansan",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Iansan.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Pyro",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Chevreuse",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Chevreuse.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000111,
+      "characterName": "Varesa",
+      "name": "Hyper Combo, Avg DMG",
+      "short": "HYPER",
+      "count": 380605,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Varesa",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Varesa.png",
+                "constellation": 1
+              }
+            },
+            {
+              "character": {
+                "name": "Iansan",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Iansan.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Furina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Furina.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Xianyun",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Liuyun.png",
+                "constellation": 0
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000106,
+      "characterName": "Mavuika",
+      "name": "Premium Melt Combo, Avg DMG",
+      "short": "MELT",
+      "count": 942138,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Mavuika",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Mavuika.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Citlali",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Citlali.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Xilonen",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xilonen.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000106,
+      "characterName": "Mavuika",
+      "name": "Furina Vape Combo, Avg DMG",
+      "short": "VAPE",
+      "count": 942138,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Mavuika",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Mavuika.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Furina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Furina.png",
+                "constellation": 2
+              }
+            },
+            {
+              "character": {
+                "name": "Xilonen",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xilonen.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000106,
+      "characterName": "Mavuika",
+      "name": "Overload Combo, Avg DMG",
+      "short": "OVERLOAD",
+      "count": 942138,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Mavuika",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Mavuika.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Chevreuse",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Chevreuse.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Ororon",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Olorun.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000024,
+      "characterName": "Beidou",
+      "name": "Unbuffed EQ Combo, Avg DMG",
+      "short": "COMBO",
+      "count": 153641,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Beidou",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Beidou.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000024,
+      "characterName": "Beidou",
+      "name": "Buffed EQ Combo, Avg DMG",
+      "short": "COMBO",
+      "count": 153641,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Beidou",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Beidou.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Electro",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Chevreuse",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Chevreuse.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000024,
+      "characterName": "Beidou",
+      "name": "Aggravate EQ Combo, Avg DMG",
+      "short": "AGGR.",
+      "count": 153641,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Beidou",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Beidou.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Dendro",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000078,
+      "characterName": "Alhaitham",
+      "name": "Quicken Combo, Avg DMG",
+      "short": "QUICKEN",
+      "count": 518660,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Alhaitham",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Alhatham.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Dendro",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Electro",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Electro",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000078,
+      "characterName": "Alhaitham",
+      "name": "Quickbloom Combo, Avg DMG",
+      "short": "QB COMBO",
+      "count": 518660,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Alhaitham",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Alhatham.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Nahida",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nahida.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Furina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Furina.png",
+                "constellation": 2
+              }
+            },
+            {
+              "character": {
+                "name": "Kuki Shinobu",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Shinobu.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000002,
+      "characterName": "Kamisato Ayaka",
+      "name": "Shenhe Team vs Frozen, Avg DMG",
+      "short": "FREEZE",
+      "count": 863469,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Kamisato Ayaka",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Ayaka.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Shenhe",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Shenhe.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Sangonomiya Kokomi",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kokomi.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000002,
+      "characterName": "Kamisato Ayaka",
+      "name": "Shenhe Team vs Boss, Avg DMG",
+      "short": "BOSS",
+      "count": 863469,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Kamisato Ayaka",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Ayaka.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Shenhe",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Shenhe.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Sangonomiya Kokomi",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kokomi.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000102,
+      "characterName": "Mualani",
+      "name": "Forward Vaporize with Xilonen, Avg DMG",
+      "short": "VAPE",
+      "count": 468019,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Mualani",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Mualani.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Candace",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Candace.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Xilonen",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xilonen.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Xiangling",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xiangling.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000102,
+      "characterName": "Mualani",
+      "name": "Burnvape with Nahida, Avg DMG",
+      "short": "BURNVAPE",
+      "count": 468019,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Mualani",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Mualani.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Zhongli",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Zhongli.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Nahida",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nahida.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Xiangling",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xiangling.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000087,
+      "characterName": "Neuvillette",
+      "name": "Hyper Premium Double Hydro, Avg DMG",
+      "short": "HYPER",
+      "count": 1201148,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Neuvillette",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Neuvillette.png",
+                "constellation": 1
+              }
+            },
+            {
+              "character": {
+                "name": "Furina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Furina.png",
+                "constellation": 2
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Xilonen",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xilonen.png",
+                "constellation": 0
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000096,
+      "characterName": "Arlecchino",
+      "name": "Mono Pyro Combo, Avg DMG",
+      "short": "MONO",
+      "count": 1250320,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Arlecchino",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Arlecchino.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Xilonen",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xilonen.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000101,
+      "characterName": "Kinich",
+      "name": "Burning Team Combo, Avg DMG",
+      "short": "COMBO",
+      "count": 410375,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Kinich",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kinich.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Dendro",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Pyro",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000102,
+      "characterName": "Mualani",
+      "name": "Burnvape with Furina, Avg DMG",
+      "short": "BURNVAPE",
+      "count": 468019,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Mualani",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Mualani.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Furina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Furina.png",
+                "constellation": 2
+              }
+            },
+            {
+              "character": {
+                "name": "Baizhu",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Baizhuer.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Xiangling",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xiangling.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000098,
+      "characterName": "Clorinde",
+      "name": "Aggravate Combo, DPS",
+      "short": "AGGR.",
+      "count": 485749,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Clorinde",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Clorinde.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Fischl",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Fischl.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Nahida",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nahida.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000098,
+      "characterName": "Clorinde",
+      "name": "Quickbloom Combo, DPS",
+      "short": "QB COMBO",
+      "count": 485749,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Clorinde",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Clorinde.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Fischl",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Fischl.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Nahida",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nahida.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Furina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Furina.png",
+                "constellation": 2
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000098,
+      "characterName": "Clorinde",
+      "name": "Overload Combo, DPS",
+      "short": "OVERLOAD",
+      "count": 485749,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Clorinde",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Clorinde.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Fischl",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Fischl.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Chevreuse",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Chevreuse.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Thoma",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Tohma.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000099,
+      "characterName": "Emilie",
+      "name": "Skill + Burst Burning Combo, Avg DMG",
+      "short": "COMBO",
+      "count": 155275,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Emilie",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Emilie.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Pyro",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000003,
+      "characterName": "Jean",
+      "name": "Sunfire combo, Avg DMG",
+      "short": "SUNFIRE",
+      "count": 566184,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Jean",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Qin.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Hydro",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Electro",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000003,
+      "characterName": "Jean",
+      "name": "Skill + Burst, Avg DMG",
+      "short": "E+Q",
+      "count": 566184,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Jean",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Qin.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000003,
+      "characterName": "Jean",
+      "name": "EQ + Heal + ER balance formula",
+      "short": "SUPPORT",
+      "count": 566184,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Jean",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Qin.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000096,
+      "characterName": "Arlecchino",
+      "name": "Vape Combo, Avg DMG",
+      "short": "VAPE",
+      "count": 1250320,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Arlecchino",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Arlecchino.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Yelan",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Yelan.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000096,
+      "characterName": "Arlecchino",
+      "name": "Overload Combo, Avg DMG",
+      "short": "OVERLOAD",
+      "count": 1250320,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Arlecchino",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Arlecchino.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Chevreuse",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Chevreuse.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Electro",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000052,
+      "characterName": "Raiden Shogun",
+      "name": "Double Hydro Burst, Avg DMG",
+      "short": "TASER",
+      "count": 1641819,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Raiden Shogun",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Shougun.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Furina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Furina.png",
+                "constellation": 2
+              }
+            },
+            {
+              "character": {
+                "name": "Yelan",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Yelan.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Jean",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Qin.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000069,
+      "characterName": "Tighnari",
+      "name": "Quicken/Spread Team Combo, Avg DMG",
+      "short": "SPREAD",
+      "count": 689721,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Tighnari",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Tighnari.png",
+                "constellation": 1
+              }
+            },
+            {
+              "character": {
+                "name": "Nahida",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nahida.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Electro",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Electro",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000094,
+      "characterName": "Chiori",
+      "name": "EQ with Geo Construct, Avg DMG",
+      "short": "COMBO",
+      "count": 198775,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Chiori",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Chiori.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Zhongli",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Zhongli.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000042,
+      "characterName": "Keqing",
+      "name": "C6 Quickbloom Combo, Avg DMG",
+      "short": "C6 COMBO",
+      "count": 611811,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Keqing",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Keqing.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Fischl",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Fischl.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Furina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Furina.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Nahida",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nahida.png",
+                "constellation": 2
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000042,
+      "characterName": "Keqing",
+      "name": "Aggravate Combo with EM buff, Avg DMG",
+      "short": "AGGR.",
+      "count": 611811,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Keqing",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Keqing.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Fischl",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Fischl.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Nahida",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nahida.png",
+                "constellation": 0
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000042,
+      "characterName": "Keqing",
+      "name": "Aggravate Combo, Avg DMG",
+      "short": "AGGR.",
+      "count": 611811,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Keqing",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Keqing.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Fischl",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Fischl.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Dendro",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000042,
+      "characterName": "Keqing",
+      "name": "Hyper Combo, Avg DMG",
+      "short": "HYPER",
+      "count": 611811,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Keqing",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Keqing.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Kujou Sara",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Sara.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 5
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000091,
+      "characterName": "Navia",
+      "name": "Double Pyro Double Geo, Avg DMG",
+      "short": "COMBO",
+      "count": 736510,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Navia",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Navia.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Zhongli",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Zhongli.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Xiangling",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xiangling.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000091,
+      "characterName": "Navia",
+      "name": "C2 Double Pyro Double Geo, Avg DMG",
+      "short": "C2 COMBO",
+      "count": 736510,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Navia",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Navia.png",
+                "constellation": 2
+              }
+            },
+            {
+              "character": {
+                "name": "Zhongli",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Zhongli.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Xiangling",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xiangling.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000046,
+      "characterName": "Hu Tao",
+      "name": "Furina Variant Combo, Avg DMG",
+      "short": "COMBO",
+      "count": 1042910,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Hu Tao",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Hutao.png",
+                "constellation": 1
+              }
+            },
+            {
+              "character": {
+                "name": "Furina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Furina.png",
+                "constellation": 2
+              }
+            },
+            {
+              "character": {
+                "name": "Yelan",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Yelan.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000089,
+      "characterName": "Furina",
+      "name": "Elemental Skill, Avg DMG",
+      "short": "SKILL",
+      "count": 1801457,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Furina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Furina.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Hydro",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000089,
+      "characterName": "Furina",
+      "name": "Elemental Skill with C2 buffs, Avg DMG",
+      "short": "C2 SKILL",
+      "count": 1801457,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Furina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Furina.png",
+                "constellation": 2
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Hydro",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000089,
+      "characterName": "Furina",
+      "name": "Forward Vaporize Combo, Avg DMG",
+      "short": "VAPE",
+      "count": 1801457,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Furina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Furina.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Xiangling",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xiangling.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000089,
+      "characterName": "Furina",
+      "name": "Forward Vaporize Combo with C2 buffs, Avg DMG",
+      "short": "C2 VAPE",
+      "count": 1801457,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Furina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Furina.png",
+                "constellation": 2
+              }
+            },
+            {
+              "character": {
+                "name": "Xiangling",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xiangling.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000089,
+      "characterName": "Furina",
+      "name": "C6 Frontloaded Combo, Avg DMG",
+      "short": "C6 HYPER",
+      "count": 1801457,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Furina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Furina.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Yelan",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Yelan.png",
+                "constellation": 4
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 2
+              }
+            },
+            {
+              "character": {
+                "name": "Zhongli",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Zhongli.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000086,
+      "characterName": "Wriothesley",
+      "name": "Solo Combo, Avg. DMG",
+      "short": "SOLO",
+      "count": 365622,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Wriothesley",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Wriothesley.png",
+                "constellation": 1
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000086,
+      "characterName": "Wriothesley",
+      "name": "Freeze Team Combo, Avg. DMG",
+      "short": "FREEZE",
+      "count": 365622,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Wriothesley",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Wriothesley.png",
+                "constellation": 1
+              }
+            },
+            {
+              "character": {
+                "name": "Furina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Furina.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Mika",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Mika.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000086,
+      "characterName": "Wriothesley",
+      "name": "Vape-Melt Team Combo, Avg. DMG",
+      "short": "VAPEMELT",
+      "count": 365622,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Wriothesley",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Wriothesley.png",
+                "constellation": 1
+              }
+            },
+            {
+              "character": {
+                "name": "Furina",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Furina.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Xiangling",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xiangling.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000086,
+      "characterName": "Wriothesley",
+      "name": "Burnmelt Team Combo, Avg. DMG",
+      "short": "BURNMELT",
+      "count": 365622,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Wriothesley",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Wriothesley.png",
+                "constellation": 1
+              }
+            },
+            {
+              "character": {
+                "name": "Nahida",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nahida.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Thoma",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Tohma.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000070,
+      "characterName": "Nilou",
+      "name": "C6 Vape Hyperbuffed, Avg DMG",
+      "short": "C6 VAPE",
+      "count": 399074,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Nilou",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nilou.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Yelan",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Yelan.png",
+                "constellation": 4
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 2
+              }
+            },
+            {
+              "character": {
+                "name": "Xiangling",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xiangling.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000070,
+      "characterName": "Nilou",
+      "name": "Vape Minimal Buffs, Avg DMG",
+      "short": "VAPE",
+      "count": 399074,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Nilou",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nilou.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000087,
+      "characterName": "Neuvillette",
+      "name": "EQ3CA Without Buffs, Avg DMG",
+      "short": "COMBO",
+      "count": 1201148,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Neuvillette",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Neuvillette.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000087,
+      "characterName": "Neuvillette",
+      "name": "Hyper Double Hydro, Avg DMG",
+      "short": "HYPER",
+      "count": 1201148,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Neuvillette",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Neuvillette.png",
+                "constellation": 1
+              }
+            },
+            {
+              "character": {
+                "name": "Tartaglia",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Tartaglia.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Zhongli",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Zhongli.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000029,
+      "characterName": "Klee",
+      "name": "Overvape Combo, Avg DMG",
+      "short": "OVERVAPE",
+      "count": 203644,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Klee",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Klee.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Xingqiu",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xingqiu.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Fischl",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Fischl.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000084,
+      "characterName": "Lyney",
+      "name": "Mono Pyro 3CAQE, Avg DMG",
+      "short": "MONO",
+      "count": 267890,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Lyney",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Liney.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Zhongli",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Zhongli.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000073,
+      "characterName": "Nahida",
+      "name": "Off-field Tri-Karma Purification Spread",
+      "short": "OFF-FIELD",
+      "count": 1375125,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Nahida",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nahida.png",
+                "constellation": 2
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Dendro",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Electro",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Electro",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000073,
+      "characterName": "Nahida",
+      "name": "Off-field Tri-Karma Purification",
+      "short": "OFF-FIELD",
+      "count": 1375125,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Nahida",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nahida.png",
+                "constellation": 2
+              }
+            },
+            {
+              "character": {
+                "name": "Xingqiu",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xingqiu.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Kuki Shinobu",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Shinobu.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000037,
+      "characterName": "Ganyu",
+      "name": "Burnmelt Bloom, Avg DMG",
+      "short": "BURNMELT",
+      "count": 656210,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Ganyu",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Ganyu.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Nahida",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nahida.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Dehya",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Dehya.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000033,
+      "characterName": "Tartaglia",
+      "name": "Childe International, Avg DMG",
+      "short": "COMBO",
+      "count": 419318,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Tartaglia",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Tartaglia.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Xiangling",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xiangling.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000054,
+      "characterName": "Sangonomiya Kokomi",
+      "name": "Heal + ER balance formula",
+      "short": "HEAL+ER",
+      "count": 431973,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Sangonomiya Kokomi",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kokomi.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000054,
+      "characterName": "Sangonomiya Kokomi",
+      "name": "2N3 + Bake-Kurage, Avg DMG",
+      "short": "BURST",
+      "count": 431973,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Sangonomiya Kokomi",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kokomi.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000048,
+      "characterName": "Yanfei",
+      "name": "Vape Combo, Avg DMG",
+      "short": "VAPE",
+      "count": 175095,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Yanfei",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Feiyan.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Xingqiu",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xingqiu.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000029,
+      "characterName": "Klee",
+      "name": "Mono Pyro Combo, Avg DMG",
+      "short": "MONO",
+      "count": 203644,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Klee",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Klee.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Xiangling",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xiangling.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000047,
+      "characterName": "Kaedehara Kazuha",
+      "name": "EM + ER (+ CR) balance formula",
+      "short": "EM+ER+CR",
+      "count": 1447394,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000079,
+      "characterName": "Dehya",
+      "name": "Mono Pyro EQ, Avg DMG",
+      "short": "MONO",
+      "count": 328450,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Dehya",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Dehya.png",
+                "constellation": 1
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Xiangling",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xiangling.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000058,
+      "characterName": "Yae Miko",
+      "name": "Raikou Skill + Burst Combo, Avg DMG",
+      "short": "RAIKOU",
+      "count": 699610,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Yae Miko",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Yae.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Raiden Shogun",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Shougun.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000058,
+      "characterName": "Yae Miko",
+      "name": "Aggravate Skill + Burst Combo, Avg DMG",
+      "short": "AGGR.",
+      "count": 699610,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Yae Miko",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Yae.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Nahida",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nahida.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Zhongli",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Zhongli.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Electro",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000022,
+      "characterName": "Venti",
+      "name": "Wind's Grand Ode Single Target, Avg DMG",
+      "short": "COMBO",
+      "count": 512400,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Venti",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Venti.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000022,
+      "characterName": "Venti",
+      "name": "Wind's Grand Ode AoE, Avg DMG",
+      "short": "AOE",
+      "count": 512400,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Venti",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Venti.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000070,
+      "characterName": "Nilou",
+      "name": "Off-field Bloom Team 2H2D Damage Contribution",
+      "short": "BLOOM",
+      "count": 399074,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Nilou",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nilou.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Sangonomiya Kokomi",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kokomi.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Nahida",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nahida.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Dendro",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000070,
+      "characterName": "Nilou",
+      "name": "C6 On-field Bloom Team 2H2D Damage Contribution",
+      "short": "C6 BLOOM",
+      "count": 399074,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Nilou",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nilou.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Sangonomiya Kokomi",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kokomi.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Nahida",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nahida.png",
+                "constellation": 2
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Dendro",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000063,
+      "characterName": "Shenhe",
+      "name": "Simulated Buff",
+      "short": "BUFF",
+      "count": 408066,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Shenhe",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Shenhe.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Kamisato Ayaka",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Ayaka.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Sangonomiya Kokomi",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kokomi.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000063,
+      "characterName": "Shenhe",
+      "name": "ATK + ER (+ CR) balance formula",
+      "short": "ATK+ER+CR",
+      "count": 408066,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Shenhe",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Shenhe.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000060,
+      "characterName": "Yelan",
+      "name": "C6 Combo with C4 Mona, Avg DMG",
+      "short": "C6 COMBO",
+      "count": 1261270,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Yelan",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Yelan.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Mona",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Mona.png",
+                "constellation": 4
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Zhongli",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Zhongli.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000026,
+      "characterName": "Xiao",
+      "name": "Solo Full Burst, Avg DMG",
+      "short": "SOLO",
+      "count": 672334,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Xiao",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xiao.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "x",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "x",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "x",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000026,
+      "characterName": "Xiao",
+      "name": "Old Hyper Xiao Team, Avg DMG",
+      "short": "HYPER",
+      "count": 672334,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Xiao",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xiao.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Faruzan",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Faruzan.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Zhongli",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Zhongli.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000038,
+      "characterName": "Albedo",
+      "name": "Transient Blossom, Avg DMG",
+      "short": "BLOSSOM",
+      "count": 264418,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Albedo",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Albedo.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Zhongli",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Zhongli.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Gorou",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Gorou.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000051,
+      "characterName": "Eula",
+      "name": "Basic Combo, Avg DMG",
+      "short": "COMBO",
+      "count": 367280,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Eula",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Eula.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Cryo",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Electro",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Electro",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000051,
+      "characterName": "Eula",
+      "name": "Basic Combo with Crit-fishing, Avg DMG",
+      "short": "CRITFISH",
+      "count": 367280,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Eula",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Eula.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Raiden Shogun",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Shougun.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Rosaria",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Rosaria.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Zhongli",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Zhongli.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000051,
+      "characterName": "Eula",
+      "name": "C6 Lightfall Sword Explosion Crit DMG",
+      "short": "C6 CRIT HIT",
+      "count": 367280,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Eula",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Eula.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Razor",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Razor.png",
+                "constellation": 5
+              }
+            },
+            {
+              "character": {
+                "name": "Nahida",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nahida.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000006,
+      "characterName": "Lisa",
+      "name": "Aggravate Violet Arc, Avg DMG",
+      "short": "AGGR.",
+      "count": 115847,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Lisa",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Lisa.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Nahida",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nahida.png",
+                "constellation": 2
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000006,
+      "characterName": "Lisa",
+      "name": "Violet Arc, Avg DMG",
+      "short": "NUKE",
+      "count": 115847,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Lisa",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Lisa.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Kujou Sara",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Sara.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000049,
+      "characterName": "Yoimiya",
+      "name": "Vape Combo, Double Geo, Avg DMG",
+      "short": "VAPE",
+      "count": 463477,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Yoimiya",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Yoimiya.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Xingqiu",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xingqiu.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Yun Jin",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Yunjin.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Zhongli",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Zhongli.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000049,
+      "characterName": "Yoimiya",
+      "name": "Raw Pyro Combo, Mono Pyro, Avg DMG",
+      "short": "MONO",
+      "count": 463477,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Yoimiya",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Yoimiya.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Zhongli",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Zhongli.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000075,
+      "characterName": "Wanderer",
+      "name": "Taser with simulated team, Avg DMG",
+      "short": "TASER",
+      "count": 659356,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Wanderer",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Wanderer.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Xingqiu",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xingqiu.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Electro",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Electro",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000075,
+      "characterName": "Wanderer",
+      "name": "Hyper Wanderer, Avg DMG",
+      "short": "HYPER",
+      "count": 659356,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Wanderer",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Wanderer.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Faruzan",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Faruzan.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Zhongli",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Zhongli.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000066,
+      "characterName": "Kamisato Ayato",
+      "name": "Burst + Shunsuiken, Soup Team, Avg DMG",
+      "short": "SOUP",
+      "count": 404588,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Kamisato Ayato",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Ayato.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Electro",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000066,
+      "characterName": "Kamisato Ayato",
+      "name": "Shunsuiken 1-Hit DMG, Double Geo, Avg DMG",
+      "short": "HYPER",
+      "count": 404588,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Kamisato Ayato",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Ayato.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Zhongli",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Zhongli.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Yun Jin",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Yunjin.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000002,
+      "characterName": "Kamisato Ayaka",
+      "name": "Basic Team vs Frozen, Avg DMG",
+      "short": "FREEZE",
+      "count": 863469,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Kamisato Ayaka",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Ayaka.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Mona",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Mona.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Diona",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Diona.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000002,
+      "characterName": "Kamisato Ayaka",
+      "name": "Basic Team vs Boss, Avg DMG",
+      "short": "BOSS",
+      "count": 863469,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Kamisato Ayaka",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Ayaka.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Mona",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Mona.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Diona",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Diona.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000016,
+      "characterName": "Diluc",
+      "name": "Full Combo, Avg DMG",
+      "short": "COMBO",
+      "count": 551375,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Diluc",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Diluc.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Xingqiu",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xingqiu.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000016,
+      "characterName": "Diluc",
+      "name": "Full Combo with C2 Kazuha, Avg DMG",
+      "short": "COMBO",
+      "count": 551375,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Diluc",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Diluc.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Xingqiu",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xingqiu.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 2
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000073,
+      "characterName": "Nahida",
+      "name": "On-field Tri-Karma Purification Spread",
+      "short": "ON-FIELD",
+      "count": 1375125,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Nahida",
+                "element": "Dendro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Nahida.png",
+                "constellation": 2
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Electro",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Electro",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000057,
+      "characterName": "Arataki Itto",
+      "name": "Mono Geo Arataki Kesagiri Final Slash, Avg DMG",
+      "short": "HYPER",
+      "count": 296877,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Arataki Itto",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Itto.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Gorou",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Gorou.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Albedo",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Albedo.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Zhongli",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Zhongli.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000034,
+      "characterName": "Noelle",
+      "name": "Hyper Mono Geo NA combo, Avg DMG",
+      "short": "HYPER",
+      "count": 192690,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Noelle",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Noel.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Gorou",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Gorou.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Yun Jin",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Yunjin.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Zhongli",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Zhongli.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000031,
+      "characterName": "Fischl",
+      "name": "Raw Oz Avg DMG",
+      "short": "OZ",
+      "count": 542166,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Fischl",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Fischl.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000031,
+      "characterName": "Fischl",
+      "name": "Aggravate Oz Combo Avg DMG",
+      "short": "AGGR.",
+      "count": 542166,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Fischl",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Fischl.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Dendro",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000023,
+      "characterName": "Xiangling",
+      "name": "National Pyronado Vape Avg DMG",
+      "short": "VAPE",
+      "count": 729719,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Xiangling",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xiangling.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Raiden Shogun",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Shougun.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Xingqiu",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xingqiu.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000023,
+      "characterName": "Xiangling",
+      "name": "Mono Pyro Pyronado Avg DMG",
+      "short": "MONO",
+      "count": 729719,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Xiangling",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xiangling.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Pyro",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000052,
+      "characterName": "Raiden Shogun",
+      "name": "Hyper Raiden Burst, Avg DMG",
+      "short": "HYPER",
+      "count": 1641819,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Raiden Shogun",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Shougun.png",
+                "constellation": 2
+              }
+            },
+            {
+              "character": {
+                "name": "Kujou Sara",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Sara.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000052,
+      "characterName": "Raiden Shogun",
+      "name": "National Raiden Burst, Avg DMG",
+      "short": "BURST",
+      "count": 1641819,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Raiden Shogun",
+                "element": "Electro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Shougun.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Xingqiu",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xingqiu.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Xiangling",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xiangling.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000039,
+      "characterName": "Diona",
+      "name": "HP + ER balance formula",
+      "short": "HP+ER",
+      "count": 170202,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Diona",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Diona.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000025,
+      "characterName": "Xingqiu",
+      "name": "Sword Rain, Avg DMG",
+      "short": "BURST",
+      "count": 758594,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Xingqiu",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xingqiu.png",
+                "constellation": 6
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000060,
+      "characterName": "Yelan",
+      "name": "Exquisite Throw Double Hydro, Avg DMG",
+      "short": "BURST",
+      "count": 1261270,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Yelan",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Yelan.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Hydro",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Dendro",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Electro",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000030,
+      "characterName": "Zhongli",
+      "name": "Shieldbot, Max HP",
+      "short": "MAX HP",
+      "count": 1088776,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Zhongli",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Zhongli.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000030,
+      "characterName": "Zhongli",
+      "name": "Nuke Build, Burst Avg DMG",
+      "short": "BURST",
+      "count": 1088776,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Zhongli",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Zhongli.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000030,
+      "characterName": "Zhongli",
+      "name": "Hybrid Build, Burst DMG + HP balance formula",
+      "short": "HYBRID",
+      "count": 1088776,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Zhongli",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Zhongli.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000047,
+      "characterName": "Kaedehara Kazuha",
+      "name": "Swirl DMG",
+      "short": "SWIRL",
+      "count": 1447394,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Flex",
+                "element": "",
+                "icon": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000037,
+      "characterName": "Ganyu",
+      "name": "Bloom Melt, Avg DMG",
+      "short": "MELT",
+      "count": 656210,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Ganyu",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Ganyu.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Zhongli",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Zhongli.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Xiangling",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xiangling.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Bennett",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Bennett.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000037,
+      "characterName": "Ganyu",
+      "name": "Ice Shard, Morgana Team, Avg DMG",
+      "short": "FREEZE",
+      "count": 656210,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Ganyu",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Ganyu.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Mona",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Mona.png",
+                "constellation": 0
+              }
+            },
+            {
+              "character": {
+                "name": "Venti",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Venti.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Diona",
+                "element": "Cryo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Diona.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000046,
+      "characterName": "Hu Tao",
+      "name": "Double Hydro Combo, Avg DMG",
+      "short": "COMBO",
+      "count": 1042910,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Hu Tao",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Hutao.png",
+                "constellation": 1
+              }
+            },
+            {
+              "character": {
+                "name": "Xingqiu",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Xingqiu.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Yelan",
+                "element": "Hydro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Yelan.png",
+                "constellation": null
+              }
+            },
+            {
+              "character": {
+                "name": "Zhongli",
+                "element": "Geo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Zhongli.png",
+                "constellation": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "characterId": 10000046,
+      "characterName": "Hu Tao",
+      "name": "VV Swirl Hyper Tao Combo, Avg DMG",
+      "short": "HYPER",
+      "count": 1042910,
+      "weapons": [
+        {
+          "teammates": [
+            {
+              "character": {
+                "name": "Hu Tao",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Hutao.png",
+                "constellation": 1
+              }
+            },
+            {
+              "character": {
+                "name": "",
+                "element": "Hydro",
+                "icon": ""
+              }
+            },
+            {
+              "character": {
+                "name": "Kaedehara Kazuha",
+                "element": "Anemo",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Kazuha.png",
+                "constellation": 2
+              }
+            },
+            {
+              "character": {
+                "name": "Amber",
+                "element": "Pyro",
+                "icon": "https://enka.network/ui/UI_AvatarIcon_Ambor.png",
+                "constellation": 6
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

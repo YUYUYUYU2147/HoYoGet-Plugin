@@ -373,8 +373,10 @@ body,
 
 .avatar-card {
   width: 137px;
+  min-width: 0;
+  max-width: 137px;
+  flex: 1 1 0;
   overflow: hidden;
-  flex-shrink: 0;
   border: 1px solid rgba(130, 165, 210, 0.38);
   border-radius: 4px 13px 9px 9px;
   background: rgba(12, 17, 28, 0.42);

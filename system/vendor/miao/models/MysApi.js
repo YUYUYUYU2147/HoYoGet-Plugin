@@ -5,6 +5,15 @@ import { Button, User } from "#hoyo.miao.models"
 const PATCHED_GET_COOKIE = Symbol.for("miao-plugin.mysInfo.getCookie")
 const MAX_COOKIE_SELECTIONS = 50
 
+/* 新版 miao 用驼峰 api 名，旧版 Yunzai/genshin 的 apiTool 只注册了下划线名。
+   这里做一层别名，避免「未定义MysApi: challengeBoss」把星铁挑战图整块吞掉。 */
+const MYS_API_ALIAS = {
+  spiralAbyss: "challenge_chaos",
+  challengeStory: "challenge_story",
+  challengeBoss: "challenge_boss",
+  challengePeak: "challenge_peak",
+}
+
 function getGameKey (game) {
   if (game && typeof game === "object") {
     game = game.game || game.key || (game.isSr ? "sr" : "gs")
@@ -262,13 +271,20 @@ export default class MysApi {
       }
     }
     e._reqCount++
-    if ([ "challengeStory", "challengeBoss", "challengePeak" ].includes(api) && !mys.getUrl?.(api, data)) {
+    /* 旧版 apiTool 只有下划线名（challenge_boss / challenge_story /
+       challenge_peak / challenge_chaos），新版 miao 传的是驼峰名。
+       先按原名找，找不到再换别名，避免整张挑战图直接返回 false。 */
+    let reqApi = api
+    if (!mys.getUrl?.(reqApi, data) && MYS_API_ALIAS[api] && mys.getUrl?.(MYS_API_ALIAS[api], data)) {
+      reqApi = MYS_API_ALIAS[api]
+    }
+    if ([ "challengeStory", "challengeBoss", "challengePeak" ].includes(api) && !mys.getUrl?.(reqApi, data)) {
       logger.error(`未定义MysApi: ${api}，请参考 https://gitee.com/qsyhh/Miao-Yunzai/compare/536c1389d4a72a91af833abe226c46c2fb7ccb47...ffc258932af00a31cb676640778683e68bb2b16b 修改`)
       return false
     }
     let ret
     try {
-      ret = await mys.getData(api, data)
+      ret = await mys.getData(reqApi, data)
       if (mysInfo && mysInfo.checkCode) ret = await mysInfo.checkCode(ret, api, this.mys, data)
     } finally {
       e._reqCount--

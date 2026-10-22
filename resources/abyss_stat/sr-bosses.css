@@ -1,0 +1,178 @@
+/* 星铁战绩右栏：本层怪物 / BOSS
+   shotium 不执行 JS：图片尺寸必须写死，否则远程图加载后会把右栏撑得极长。
+   怪物卡片必须 inline-flex + 定高，display:flex 在无 JS 布局下会各占一行。 */
+/* common.css 给 body 加了 width:600px + scale(1.4)；两栏页必须去掉，否则被裁 */
+body:has(.has-sr-boss) {
+  width: 1200px !important;
+  transform: none !important;
+}
+body .container.has-sr-boss { width: 1200px !important; }
+body .story-body:not(.no-boss) { width: 1200px; }
+
+/* 两栏定宽，避免 minmax 被内容挤变形 */
+#container .story-main { display: flex; gap: 16px; align-items: flex-start; }
+#container .story-main.no-boss { display: block; }
+/* 左栏含 .floor-card 左右各 8px margin，这里减去让两栏边界对齐 */
+#container .story-floors { width: 574px; flex: none; min-width: 0; }
+
+#container .sr-bosses {
+  width: 574px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  color: #fff;
+}
+.sr-bosses,
+.sr-bosses * { box-sizing: border-box; }
+
+.sr-boss-title {
+  font-size: 20px;
+  font-weight: 900;
+  color: #f2f7ff;
+  line-height: 1.3;
+  padding: 0 2px 2px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, .35);
+}
+/* 与左栏 .floor-card 对齐：同色系边框、右上大圆角、深蓝底 + 顶部蓝色渐变头 */
+.sr-boss-floor {
+  overflow: hidden;
+  margin: 0 8px 22px;
+  border: 1px solid rgba(92, 145, 210, .58);
+  border-radius: 0 36px 0 0;
+  background: url("./imgs/challenge/story/floor.png") center -30px / 100% auto repeat-y rgba(27, 36, 58, .92);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .22);
+}
+.sr-boss-floor-name {
+  position: relative;
+  min-height: 44px;
+  padding: 12px 20px;
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 20px;
+  color: #e9f7ff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, .35);
+  background: linear-gradient(180deg, rgba(42, 120, 187, .58) 0%, rgba(31, 99, 163, .58) 100%);
+  border-bottom: 1px solid rgba(172, 213, 255, .28);
+  border-top-right-radius: 36px;
+}
+.sr-boss-floor-name::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border: 1px solid rgba(206, 230, 255, .28);
+  border-top-right-radius: 36px;
+  pointer-events: none;
+}
+.sr-boss-body {
+  padding: 12px 16px 14px;
+}
+
+/* shotium 无 JS：这里不能用 flex（会让整栏塌陷成 0 高），用 block + 行内元素 */
+.sr-boss-half {
+  display: block;
+}
+.sr-boss-half + .sr-boss-half {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, .1);
+}
+.sr-boss-half-head {
+  display: inline;
+  margin-right: 6px;
+}
+.sr-boss-half-title { font-size: 15px; font-weight: 900; color: #f2f7ff; }
+.sr-boss-wave { font-size: 13px; color: #b9a8ff; font-weight: 700; }
+
+/* 怪物：单行横排，定高避免被图片撑开 */
+.sr-boss-monsters {
+  display: block;
+  line-height: 0;
+}
+/* 单只怪：第一行图标+名字+血量，弱点/抗性另起一行贴底 */
+.sr-boss-mon {
+  display: inline-block;
+  vertical-align: top;
+  margin: 0 6px 6px 0;
+  padding: 3px 10px 4px 5px;
+  border-radius: 0 12px 0 0;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(140, 165, 200, .28);
+  white-space: nowrap;
+}
+.sr-boss-main {
+  display: block;
+  line-height: 30px;
+  white-space: nowrap;
+}
+.sr-boss-tags {
+  display: block;
+  padding-top: 1px;
+  line-height: 15px;
+  white-space: nowrap;
+}
+/* shotium 里 img 会把父容器撑塌，图标改用背景图占位 */
+.sr-boss-ico {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  vertical-align: middle;
+  margin-right: 4px;
+  border-radius: 5px;
+  background-color: rgba(255, 255, 255, .06);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.sr-boss-name {
+  display: inline;
+  font-size: 14px;
+  font-weight: 900;
+  color: #f2f7ff;
+}
+.sr-boss-hpv {
+  display: inline;
+  margin-left: 6px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, .72);
+}
+.sr-boss-elem,
+.sr-boss-res {
+  display: inline-block;
+  margin-right: 3px;
+  padding: 0 3px;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 16px;
+  vertical-align: 2px;
+  white-space: nowrap;
+}
+.sr-boss-elem {
+  color: #ffd27a;
+  background: rgba(255, 190, 90, .18);
+}
+.sr-boss-res {
+  color: #9fd6ff;
+  background: rgba(90, 170, 255, .18);
+}
+.sr-boss-elem .sr-boss-ico,
+.sr-boss-res .sr-boss-ico {
+  width: 10px;
+  height: 10px;
+  margin-right: 1px;
+  vertical-align: -1px;
+  border-radius: 2px;
+}
+
+/* shotium 默认视窗只有 800px；即使调用方没传 viewport，也把两栏压进 800px，
+   避免右栏在截图时被裁掉。宽视窗/渲染器支持 viewport 时仍走上面的 1180px 布局。 */
+@media (max-width: 900px) {
+  body:has(.has-sr-boss) { width: 800px !important; }
+  body .story-body:not(.no-boss) { width: 800px; }
+  body .container.has-sr-boss { width: 800px !important; }
+  #container .story-main { gap: 12px; }
+  #container .story-floors { width: 384px; }
+  #container .sr-bosses { width: 404px; }
+  .sr-boss-name { max-width: 76px; }
+}

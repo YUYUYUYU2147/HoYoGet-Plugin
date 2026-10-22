@@ -9,12 +9,12 @@
     
 <link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/tpl.css?v=1.0"/>
 <link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/abyss-challenge.css?v=1.0"/>
-
-  </head>
+  <link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/sr-bosses.css"/>
+</head>
   <body class="elem-hydro" {{sys.scale}}>
-    <div class="container" id="container">
+    <div class="container{{if srBosses && srBosses.length}} has-sr-boss{{/if}}" id="container">
       
-<div class="story-body">
+<div class="story-body{{if !srBosses || !srBosses.length}} no-boss{{/if}}">
   <div class="story-header">
     <div class="story-head-left">
       <div class="story-title">混沌回忆·挑战回顾</div>
@@ -30,13 +30,13 @@
     <div class="summary-title">混沌回忆挑战回顾</div>
     <div class="summary-panel">
       <div class="summary-cell summary-icon">
-        <img src="{{ppath}}abyss_stat/stat/imgs/challenge/peak/mob_star.png" alt="">
+        <img src="{{ppath}}abyss_stat/imgs/challenge/peak/mob_star.png" alt="">
         <span>× {{story.totalStar || 0}}</span>
         {{if story.extraStar}}
         <span class="summary-star-sep"></span>
         {{/if}}
-        {{each Array(story.extraStar || 0) i}}
-        <img class="summary-abyss-star" src="{{ppath}}abyss_stat/stat/imgs/challenge/boss/abyss_star.png" alt="">
+        {{each repeat(story.extraStar || 0) i}}
+        <img class="summary-abyss-star" src="{{ppath}}abyss_stat/imgs/challenge/boss/abyss_star.png" alt="">
         {{/each}}
       </div>
       <div class="summary-cell summary-text">
@@ -46,6 +46,8 @@
     </div>
   </div>
 
+  <div class="story-main{{if !srBosses || !srBosses.length}} no-boss{{/if}}">
+    <div class="story-floors">
   {{each story.floors floor floorIndex}}
   <div class="floor-card">
     <div class="floor-head">
@@ -55,14 +57,14 @@
       </div>
       <div class="floor-meta">
         <div class="floor-stars">
-          {{each Array(floor.star || 0) i}}
-          <img src="{{ppath}}abyss_stat/stat/imgs/challenge/peak/mob_star.png" alt="">
+          {{each repeat(floor.star || 0) i}}
+          <img src="{{ppath}}abyss_stat/imgs/challenge/peak/mob_star.png" alt="">
           {{/each}}
           {{if floor.extraStar}}
           <span class="star-sep"></span>
           {{/if}}
-          {{each Array(floor.extraStar || 0) i}}
-          <img class="abyss-star" src="{{ppath}}abyss_stat/stat/imgs/challenge/boss/abyss_star.png" alt="">
+          {{each repeat(floor.extraStar || 0) i}}
+          <img class="abyss-star" src="{{ppath}}abyss_stat/imgs/challenge/boss/abyss_star.png" alt="">
           {{/each}}
         </div>
       </div>
@@ -85,7 +87,7 @@
         {{if av || a}}
         <div class="avatar-card rarity-{{av?.star || a?.rarity || 5}}">
           <div class="avatar-inner">
-            {{if a.element}}<span class="avatar-elem"><img src="{{ppath}}abyss_stat/{{elemIcon(a.element)}}" alt=""></span>{{/if}}
+            {{if a.element && elemIcon(a.element)}}<span class="avatar-elem"><img src="{{ppath}}{{elemIcon(a.element)}}" alt=""></span>{{/if}}
             <span class="avatar-life life-{{av?.cons || a?.rank || 0}}">{{av?.cons || a?.rank || 0}}</span>
             {{if av?.face}}<img class="avatar-img" src="{{_miao_path}}{{av.face}}" alt="">{{else if a?.icon}}<img class="avatar-img" src="{{a.icon}}" alt="">{{/if}}
             <div class="avatar-bottom">
@@ -148,6 +150,35 @@
     {{/each}}
   </div>
   {{/each}}
+    </div>
+    {{if srBosses && srBosses.length}}
+    <aside class="sr-bosses">
+      <div class="sr-boss-title">本层怪物 / BOSS</div>
+      {{each srBosses b}}
+      <div class="sr-boss-floor">
+        <div class="sr-boss-floor-name">第{{b.index}}层</div>
+        <div class="sr-boss-body">
+        {{each b.halves half}}
+        <div class="sr-boss-half">
+          {{each half.waves w}}
+          <div class="sr-boss-half-head">
+            <div class="sr-boss-half-title">{{half.label}}{{if half.level}} · Lv.{{half.level}}{{/if}}</div>
+            {{if w.name}}<div class="sr-boss-wave">{{w.name}}</div>{{/if}}
+          </div>
+          <div class="sr-boss-monsters">
+            {{each w.monsters m}}
+            <span class="sr-boss-mon"><span class="sr-boss-main">{{if m.icon}}<span class="sr-boss-ico" style="background-image:url('{{m.icon}}')"></span>{{/if}}<span class="sr-boss-name">{{m.name}}</span>{{if m.hp}}<span class="sr-boss-hpv">{{m.hp}}{{if m.hpMult}} ×{{m.hpMult}}{{/if}}</span>{{/if}}</span>{{if (m.weak && m.weak.length) || (m.res && m.res.length)}}<span class="sr-boss-tags">{{each m.weak e}}<span class="sr-boss-elem">{{if e.icon}}<span class="sr-boss-ico" style="background-image:url('{{e.icon}}')"></span>{{/if}}{{e.cn}}</span>{{/each}}{{each m.res r}}{{if r.value}}<span class="sr-boss-res">{{each r.elems e}}{{if e.icon}}<span class="sr-boss-ico" style="background-image:url('{{e.icon}}')"></span>{{/if}}{{e.cn}}{{/each}}{{r.value}}</span>{{/if}}{{/each}}</span>{{/if}}</span>
+            {{/each}}
+          </div>
+          {{/each}}
+        </div>
+        {{/each}}
+        </div>
+      </div>
+      {{/each}}
+    </aside>
+    {{/if}}
+  </div>
 </div>
 
     </div>
