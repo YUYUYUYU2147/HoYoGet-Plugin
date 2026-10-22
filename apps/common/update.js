@@ -4,6 +4,7 @@ import { createRequire } from 'module';
 import lodash from 'lodash';
 import fs from 'node:fs';
 import { yaml, config, pluginPriority } from '#HoYoGet';
+import { runCronTask } from '../../system/task_history.js';
 
 const require = createRequire(import.meta.url);
 const { exec, execSync } = require('child_process');
@@ -37,7 +38,7 @@ export class update extends plugin {
     this.task = {
       cron: '0 30 3 * * *', //凌晨3.30自动更新
       name: '[米哈游]检查是否需要自动更新',
-      fnc: () => this.zd(),
+      fnc: () => runCronTask('自动更新检查', () => this.zd()),
       log: true,
     };
   }

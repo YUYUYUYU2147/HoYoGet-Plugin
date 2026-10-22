@@ -34,6 +34,7 @@ export const TASK_NAMES = {
   stamina: '体力推送',
   gacha: '抽卡更新',
   panel: '面板生成',
+  cron: '定时任务',
 }
 
 const STATUS_NAMES = { ok: '成功', signed: '已完成', fail: '失败', skip: '跳过' }
@@ -146,4 +147,47 @@ export function summarizeTaskRecords({ days = 1 } = {}) {
   return Object.values(out).sort((a, b) => b.total - a.total)
 }
 
-export default { appendTaskRecords, readTaskRecords, summarizeTaskRecords, statusOf, TASK_NAMES }
+/**
+ * 包一层定时任务：记录开始/结束（含耗时与结果），异常原文入 tip。
+ * 用法：
+ *   await runCronTask('签到', () => scheduled_sign())
+ * 返回 fn 的结果；异常会照常抛出（不吞掉既有错误处理）。
+ *
+ * @param {string} label 任务中文名（显示在记录里）
+ * @param {Function} fn 实际执行体
+ * @param {{qq?:string, game?:string, uid?:string}} [meta]
+ */
+export async function runCronTask(label, fn, meta = {}) {
+  const started = Date.now()
+  try {
+    const ret = await fn()
+    const ms = Date.now() - started
+    // 返回 false 的定时任务通常是「条件不满足，跳过」，与失败区分开
+    const skipped = ret === false || ret == null
+    appendTaskRecords([{
+      task: 'cron',
+      taskName: `${label}`,
+      source: 'cron',
+      qq: meta.qq || '',
+      game: meta.game || '',
+      uid: meta.uid || '',
+      tip: `${skipped ? '跳过（条件不满足）' : '执行完成'} · ${ms}ms`,
+      status: skipped ? 'skip' : 'ok',
+    }])
+    return ret
+  } catch (err) {
+    appendTaskRecords([{
+      task: 'cron',
+      taskName: `${label}`,
+      source: 'cron',
+      qq: meta.qq || '',
+      game: meta.game || '',
+      uid: meta.uid || '',
+      tip: `执行异常：${String(err?.message || err).slice(0, 160)}`,
+      status: 'fail',
+    }])
+    throw err
+  }
+}
+
+export default { appendTaskRecords, readTaskRecords, summarizeTaskRecords, statusOf, runCronTask, TASK_NAMES }

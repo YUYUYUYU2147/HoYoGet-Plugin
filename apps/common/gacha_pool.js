@@ -3,6 +3,7 @@ import fs from 'fs';
 import YAML from 'yaml';
 import { bh3_gacha } from '../bh3/bh3_gacha.js';
 import officialPool from '../../system/gacha_pool_official.js';
+import { runCronTask } from '../../system/task_history.js';
 
 const ZZZ_HISTORY_URL = 'https://raw.githubusercontent.com/iaoongin/GachaClock/main/spider/data/zzz/history.json';
 const ZZZ_META_URL = 'https://raw.githubusercontent.com/iaoongin/GachaClock/main/spider/data/meta.json';
@@ -216,7 +217,7 @@ export class xhh_gacha_pool extends plugin {
     this.task = {
       cron: String(cfg.gacha_pool_cron || '0 */30 * * * *').trim() || '0 */30 * * *',
       name: '[米哈游]全游戏卡池数据自动刷新',
-      fnc: () => this.autoRefreshPools(),
+      fnc: () => runCronTask('卡池数据刷新', () => this.autoRefreshPools()),
       log: true
     };
   }

@@ -150,7 +150,7 @@ export class Sign extends plugin {
             name: '[米哈游]米游社签到',
             log: true,
             fnc: async () => {
-                await this.scheduled_sign();
+                await runCronTask('米游社签到', () => this.scheduled_sign());
             },
         },
         {
@@ -158,7 +158,7 @@ export class Sign extends plugin {
             name: '[米哈游]米游社社区签到',
             log: true,
             fnc: async () => {
-                await this.scheduled_bbs_sign();
+                await runCronTask('米游社社区签到', () => this.scheduled_bbs_sign());
             },
         }];
     }

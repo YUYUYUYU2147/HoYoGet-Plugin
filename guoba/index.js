@@ -27,6 +27,7 @@ const PAGE_HTML = `
       <option value="bbs_sign">社区签到</option>
       <option value="stamina">体力推送</option>
       <option value="gacha">抽卡更新</option>
+      <option value="cron">定时任务</option>
     </select>
     <select class="hth-input" id="hth-status">
       <option value="">全部状态</option>
