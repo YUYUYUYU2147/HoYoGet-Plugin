@@ -1833,19 +1833,60 @@ export const supportGuoba = () => {
              后者依赖 e.user.getMysUser()，合成事件里没有这个方法；
              zd_MysSign 本来就是给「没有消息上下文、按 QQ 批量签」写的。 */
           const { zd_MysSign } = await import('./system/sign.js')
-          const r = await zd_MysSign(qqs)
-          const fail = r?.sbai_qqs?.length || 0
-          const okCount = (r?.num || 0) + (r?.z_num || 0)
-          try {
-            const { appendTaskRecords } = await import('./system/task_history.js')
-            appendTaskRecords([{
-              task: 'sign',
-              source: 'manual',
-              tip: `手动批量签到：成功 ${okCount}，失败 ${fail}`,
-              status: fail > 0 ? 'fail' : (okCount > 0 ? 'ok' : 'skip'),
-            }])
-          } catch { /* 记录失败不影响签到 */ }
-          return { ok: okCount, fail }
+          const { default: Runtime } = await import('../../lib/plugins/runtime.js')
+          let okAll = 0, failAll = 0
+          // 按群分别签、分别出图，和定时任务完全一致（sign/end_list 是名单式结果图）
+          for (const group of Object.keys(yamlData.sign || {})) {
+            const members = (yamlData.sign[group] || []).map(v => String(v).trim()).filter(Boolean)
+            if (!members.length) continue
+            const r = await zd_MysSign(members)
+            const fail = r?.sbai_qqs?.length || 0
+            const okCount = (r?.num || 0) + (r?.z_num || 0)
+            okAll += okCount
+            failAll += fail
+            try {
+              /* 锅巴里没有消息事件，不能走 system/render.js（它要 cfg.e）。
+                 按 apps/common/sign.js 的做法用 new Runtime() 直接渲染，
+                 ppath 按「路径段数 + 3」算，与其它模板保持一致。 */
+              const tplPath = 'sign/end_list'
+              const depth = tplPath.split('/').filter(Boolean).length + 3
+              const view = {
+                num: r?.num || 0,
+                z_num: r?.z_num || 0,
+                cg_qqs: r?.cg_qqs || [],
+                sbai_qqs: r?.sbai_qqs || [],
+              }
+              /* 必须走 beforeRender：Runtime.render 会在合并 data 之后又把
+                 tplFile/saveId 覆盖成它自己的默认值（插件名会变成「米哈游」，
+                 模板路径直接 404）。beforeRender 是最后一道，才能定死这几个字段。 */
+              const img = await new Runtime().render('米哈游', tplPath, view, {
+                retType: 'base64',
+                beforeRender({ data }) {
+                  return {
+                    ...data,
+                    sys: { scale: `style=zoom:${(getCfg().img_quality / 100) * 2.4 || 1.92}` },
+                    ...view,
+                    ppath: '../'.repeat(depth) + 'plugins/HoYoGet-Plugin/resources/',
+                    tplFile: process.cwd() + '/plugins/HoYoGet-Plugin/resources/' + tplPath + '.html',
+                    saveId: tplPath.split('/').pop(),
+                  }
+                },
+              })
+              if (img) await Bot.pickGroup(Number(group)).sendMsg(segment.image(img))
+            } catch (err) {
+              logger.warn(`[HoYoGet][guoba] 群${group} 签到结果出图失败：${err?.message || err}`)
+            }
+            try {
+              const { appendTaskRecords } = await import('./system/task_history.js')
+              appendTaskRecords([{
+                task: 'sign',
+                source: 'manual',
+                tip: `手动批量签到（群 ${group}）：成功 ${okCount}，失败 ${fail}`,
+                status: fail > 0 ? 'fail' : (okCount > 0 ? 'ok' : 'skip'),
+              }])
+            } catch { /* 记录失败不影响签到 */ }
+          }
+          return { ok: okAll, fail: failAll }
         })
         return { ok: true, code: 0, message: '已开始签到，结果见「米哈游任务记录」', result: true }
       },
@@ -1855,10 +1896,38 @@ export const supportGuoba = () => {
           const yamlData = yaml.get(_path + 'sign.yaml') || {}
           const groups = Object.keys(yamlData.bbs_sign || {})
           if (!groups.length) return { skipped: '没有登记社区签到群' }
-          const { BbsAutoSign } = await import('./system/sign.js')
+          const { BbsAutoSign, sendBbsAutoResult, collapseMsgs } = await import('./system/sign.js')
+          const { default: Runtime } = await import('../../lib/plugins/runtime.js')
           let count = 0
           for (const group of groups) {
-            await BbsAutoSign(yamlData.bbs_sign[group], group)
+            const result = await BbsAutoSign(yamlData.bbs_sign[group], group)
+            // 和定时任务一致：出 sign/sign 结果图，失败再退回文字（sendBbsAutoResult 内部处理）
+            let img = ''
+            try {
+              const tplPath = 'sign/sign'
+              const depth = tplPath.split('/').filter(Boolean).length + 3
+              const view = {
+                msgs: collapseMsgs(result.msgs || []),
+                qq: '',
+                xhhAvatar: true,
+              }
+              img = await new Runtime().render('米哈游', tplPath, view, {
+                retType: 'base64',
+                beforeRender({ data }) {
+                  return {
+                    ...data,
+                    sys: { scale: `style=zoom:${(getCfg().img_quality / 100) * 2.4 || 1.92}` },
+                    ...view,
+                    ppath: '../'.repeat(depth) + 'plugins/HoYoGet-Plugin/resources/',
+                    tplFile: process.cwd() + '/plugins/HoYoGet-Plugin/resources/' + tplPath + '.html',
+                    saveId: 'bbs_auto_sign',
+                  }
+                },
+              })
+            } catch (err) {
+              logger.warn(`[HoYoGet][guoba] 群${group} 社区签到出图失败，退回文字：${err?.message || err}`)
+            }
+            await sendBbsAutoResult(group, result, img, yamlData)
             count++
           }
           return { count }
