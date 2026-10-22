@@ -136,40 +136,13 @@ export const supportGuoba = () => {
     iconPath: process.cwd() + '/plugins/HoYoGet-Plugin/resources/Tl/imgs/米哈游.png',
   },
   configInfo: {
-    schemas: [
-      {
+    schemas: [      {
         component: 'SOFT_GROUP_BEGIN',
         label: '基本设置',
       },
       {
-        field: 'data_mode',
-        label: '图鉴数据模式',
-        helpMessage: 'official=正式服（列表/查询都不出测试服条目）；test=测试服（只显示测试服条目）。也可用群指令 #切换正式服模式 / #切换测试服模式。改动实时生效',
-        component: 'RadioGroup',
-        componentProps: {
-          options: [
-            { label: '正式服', value: 'official' },
-            { label: '测试服', value: 'test' },
-          ],
-        },
-      },
-      {
-        field: 'update',
-        label: '凌晨自动更新',
-        helpMessage: '凌晨3:30强制更新（会覆盖文件）',
-        component: 'Switch',
-      },
-      {
-        field: 'img_quality',
-        label: '图片渲染精度',
-        helpMessage: '数字，单位%',
-        component: 'InputNumber',
-        componentProps: { min: 1, max: 100, step: 1 },
-      },
-      {
-        field: 'wiki',
-        label: '图鉴启用',
-        component: 'Switch',
+        component: 'SOFT_GROUP_BEGIN',
+        label: '模块开关',
       },
       // 模块总开关：关掉后对应指令静默不响应（不提示、不报错），
       // 与 system/modules.js 的 MODULES 一一对应
@@ -235,6 +208,36 @@ export const supportGuoba = () => {
         component: 'Switch',
       },
       {
+        field: 'data_mode',
+        label: '图鉴数据模式',
+        helpMessage: 'official=正式服（列表/查询都不出测试服条目）；test=测试服（只显示测试服条目）。也可用群指令 #切换正式服模式 / #切换测试服模式。改动实时生效',
+        component: 'RadioGroup',
+        componentProps: {
+          options: [
+            { label: '正式服', value: 'official' },
+            { label: '测试服', value: 'test' },
+          ],
+        },
+      },
+      {
+        field: 'update',
+        label: '凌晨自动更新',
+        helpMessage: '凌晨3:30强制更新（会覆盖文件）',
+        component: 'Switch',
+      },
+      {
+        field: 'img_quality',
+        label: '图片渲染精度',
+        helpMessage: '数字，单位%',
+        component: 'InputNumber',
+        componentProps: { min: 1, max: 100, step: 1 },
+      },
+      {
+        field: 'wiki',
+        label: '图鉴启用',
+        component: 'Switch',
+      },
+      {
         field: 'gs_bg',
         label: '角色图鉴随机背景',
         helpMessage: '用随机图接口给原神角色图鉴加一层底纹背景（接口失败自动退回纯色）',
@@ -254,66 +257,28 @@ export const supportGuoba = () => {
       },
       {
         component: 'SOFT_GROUP_BEGIN',
-        label: '游戏攻略',
-      },
-      {
-        field: 'gs_logs',
-        label: '原神历史卡池',
-        component: 'Switch',
-      },
-      {
-        field: 'sr_logs',
-        label: '星铁历史卡池',
-        component: 'Switch',
-      },
-      {
-        field: 'zzz_logs',
-        label: '绝区零历史卡池',
-        component: 'Switch',
-      },
-      {
-        field: 'bh3_logs',
-        label: '崩坏3历史卡池',
-        component: 'Switch',
-      },
-      {
-        field: 'gacha_pool_cron',
-        label: '卡池自动刷新间隔',
-        helpMessage:
-          'cron 表达式，保存后需重启插件生效。默认 0 */30 * * * * 即每 30 分钟一次。间隔太长时，若某一轮撞上米游社风控就要等到下一轮才同步',
-        component: 'Input',
-      },
-      {
-        field: 'all_voice',
-        label: '角色语音总开关',
-        helpMessage: '关闭后四个游戏语音全部停用',
-        component: 'Switch',
-      },
-      {
-        field: 'gs_voice',
-        label: '原神语音',
-        component: 'Switch',
-      },
-      {
-        field: 'sr_voice',
-        label: '星铁语音',
-        component: 'Switch',
-      },
-      {
-        field: 'zzz_voice',
-        label: '绝区零语音',
-        helpMessage: '开关已预留；当前仓库暂无绝区零角色语音数据源',
-        component: 'Switch',
-      },
-      {
-        field: 'bh3_voice',
-        label: '崩坏3语音',
-        helpMessage: '开关已预留；当前仓库暂无崩坏3角色语音数据源',
-        component: 'Switch',
-      },
-      {
-        component: 'SOFT_GROUP_BEGIN',
         label: '签到设置',
+      },
+      {
+        component: 'GButtons',
+        componentProps: {
+          buttons: [
+            {
+              label: '立即游戏签到',
+              action: 'runSign',
+              type: 'primary',
+              confirm: '将按 sign.yaml 登记的群与成员立即签一次，确定继续？',
+              tooltip: { title: '不等定时任务，马上执行一轮游戏签到' },
+            },
+            {
+              label: '立即社区签到',
+              action: 'runBbsSign',
+              type: 'primary',
+              confirm: '将按 sign.yaml 的社区签到名单立即执行，确定继续？',
+              tooltip: { title: '马上执行一轮米游社社区签到' },
+            },
+          ],
+        },
       },
       {
         field: 'sign',
@@ -540,157 +505,6 @@ export const supportGuoba = () => {
       },
       {
         component: 'SOFT_GROUP_BEGIN',
-        label: 'B站设置',
-      },
-      {
-        field: 'bilibili',
-        label: 'B站功能开关',
-        component: 'Switch',
-      },
-      {
-        field: 'list_num',
-        label: '评论区显示条数',
-        helpMessage: '1-20条',
-        component: 'InputNumber',
-        componentProps: { min: 1, max: 20, step: 1 },
-      },
-      {
-        field: 'qn',
-        label: '视频下载清晰度',
-        component: 'Select',
-        componentProps: {
-          options: [
-            { label: '360P', value: 0 },
-            { label: '480P', value: 1 },
-            { label: '720P', value: 2 },
-            { label: '1080P', value: 3 },
-            { label: '1080P+高码率', value: 4 },
-            { label: '4K超清', value: 5 },
-          ],
-        },
-      },
-      {
-        field: 'dow_size',
-        label: '自动下载大小阈值',
-        helpMessage: '小于此MB数自动下载，0代表不自动下载；超过99MB会作为群文件发送',
-        component: 'InputNumber',
-        componentProps: { min: 0, max: 2048, step: 1 },
-      },
-      {
-        field: 'b_lj',
-        label: '解析时弹出原链接',
-        component: 'Switch',
-      },
-      {
-        field: 'b_cd',
-        label: '同视频/动态3分钟CD',
-        component: 'Switch',
-      },
-      {
-        field: 'b_img_num',
-        label: '图片合并阈值',
-        helpMessage: '小于几张图片时不合并消息，0表示始终合并',
-        component: 'InputNumber',
-        componentProps: { min: 0, max: 20, step: 1 },
-      },
-      {
-        component: 'SOFT_GROUP_BEGIN',
-        label: 'B站直播解析',
-      },
-      {
-        field: 'bili_live',
-        label: '自动解析直播间',
-        helpMessage: '消息里出现直播间链接/b23短链时自动解析，默认开启；关闭后仍可用「#直播解析 房间号」手动解析',
-        component: 'Switch',
-      },
-      {
-        field: 'bili_live_only_live',
-        label: '仅回复开播中的',
-        helpMessage: '开启后，未开播的直播间自动解析时不回复',
-        component: 'Switch',
-      },
-      {
-        field: 'bili_live_cd',
-        label: '同一直播间CD',
-        helpMessage: '单位秒，0表示不限制；手动解析不受限制',
-        component: 'InputNumber',
-        componentProps: { min: 0, max: 3600, step: 10 },
-      },
-      {
-        field: 'bili_live_video',
-        label: '手动解析后录制视频',
-        helpMessage: '手动「#直播解析」时，解析完再录一段直播直接发出去',
-        component: 'Switch',
-      },
-      {
-        field: 'bili_live_video_auto',
-        label: '自动解析也录制视频',
-        helpMessage: '群里每条直播链接都录一段会很吃带宽，默认关；想全自动就开',
-        component: 'Switch',
-      },
-      {
-        field: 'bili_live_video_time',
-        label: '录制时长',
-        helpMessage: '单位秒，默认60（1分钟）；录满就发',
-        component: 'InputNumber',
-        componentProps: { min: 5, max: 600, step: 5 },
-      },
-      {
-        field: 'bili_live_video_size',
-        label: '录制大小上限',
-        helpMessage: '单位MB，录到这个大小就停（默认99）；0表示只按时长停',
-        component: 'InputNumber',
-        componentProps: { min: 0, max: 2048, step: 1 },
-      },
-      {
-        field: 'bili_live_dm',
-        label: '直播间发弹幕',
-        helpMessage: '开启后可用「#弹幕 内容」往直播间发弹幕，需要先「#米哈游b站登录」',
-        component: 'Switch',
-      },
-      {
-        field: 'bili_live_dm_perm',
-        label: '发弹幕权限',
-        helpMessage: '默认「群管理」；私聊不受限制',
-        component: 'Select',
-        componentProps: {
-          options: [
-            { label: '所有人', value: 'all' },
-            { label: '群管理(含主人)', value: 'admin' },
-            { label: '仅主人', value: 'master' },
-          ],
-        },
-      },
-      {
-        field: 'bili_live_dm_cd',
-        label: '弹幕冷却',
-        helpMessage: '单位秒，默认5；0表示不限制。主人不受限制',
-        component: 'InputNumber',
-        componentProps: { min: 0, max: 600, step: 1 },
-      },
-      {
-        field: 'bili_live_qn',
-        label: '录制清晰度',
-        helpMessage: '房间没开该档会自动降级到可用档位',
-        component: 'Select',
-        componentProps: {
-          options: [
-            { label: '原画', value: 10000 },
-            { label: '蓝光', value: 400 },
-            { label: '超清', value: 250 },
-            { label: '高清', value: 150 },
-            { label: '流畅', value: 80 },
-          ],
-        },
-      },
-      {
-        field: 'emoji',
-        label: 'Emoji CDN渲染',
-        helpMessage: '浏览器不支持emoji时用CDN渲染',
-        component: 'Switch',
-      },
-      {
-        component: 'SOFT_GROUP_BEGIN',
         label: '卡池/图鉴外观',
       },
       {
@@ -719,209 +533,78 @@ export const supportGuoba = () => {
       },
       {
         component: 'SOFT_GROUP_BEGIN',
-        label: '崩坏3扩展',
+        label: '面板',
       },
       {
-        field: 'bh3_all_note_enable',
-        label: '启用四游戏体力聚合',
-        helpMessage: '控制 #体力/#米哈游体力 等四游戏总览；关闭后仍可使用 #原神体力/#星铁体力 等单游戏查询',
-        component: 'Switch',
-      },
-      {
-        field: 'bh3_all_note_groups',
-        label: '四游戏体力推送群',
-        helpMessage: '直接选择推送群，留空则不推送',
-        component: 'Select',
-        componentProps: {
-          mode: 'multiple',
-          allowAdd: true,
-          allowDel: true,
-          options: groupList,
-        },
-      },
-      {
-        field: 'stamina_push_enable',
-        label: '启用体力自动推送',
-        helpMessage: '按群成员的绑定账号检查原神/星铁/绝区零/崩坏3体力，达到阈值后推送一次',
-        component: 'Switch',
-      },
-      {
-        field: 'stamina_push_interval',
-        label: '体力检查间隔（分钟）',
-        helpMessage: '插件每分钟轮询一次，按这里的间隔实际请求；建议 5 分钟以上',
-        component: 'InputNumber',
-        componentProps: { min: 1, max: 60, step: 1 },
-      },
-      {
-        field: 'stamina_push_at_user',
-        label: '体力推送艾特用户',
-        helpMessage: '推送某位群成员的体力时，是否在消息开头艾特该成员',
-        component: 'Switch',
-      },
-      {
-        field: 'stamina_push_gs_threshold',
-        label: '原神体力推送阈值',
-        helpMessage: '原粹树脂达到该数值后推送；默认 200',
-        component: 'InputNumber',
-        componentProps: { min: 1, max: 300, step: 1 },
-      },
-      {
-        field: 'stamina_push_sr_threshold',
-        label: '星铁体力推送阈值',
-        helpMessage: '开拓力达到该数值后推送；默认 240',
-        component: 'InputNumber',
-        componentProps: { min: 1, max: 500, step: 1 },
-      },
-      {
-        field: 'stamina_push_zzz_threshold',
-        label: '绝区零体力推送阈值',
-        helpMessage: '电量达到该数值后推送；默认 240',
-        component: 'InputNumber',
-        componentProps: { min: 1, max: 500, step: 1 },
-      },
-      {
-        field: 'stamina_push_bh3_threshold',
-        label: '崩坏3体力推送阈值',
-        helpMessage: '体力达到该数值后推送；默认 240',
-        component: 'InputNumber',
-        componentProps: { min: 1, max: 500, step: 1 },
-      },
-      {
-        field: 'bh3_remind_enable',
-        label: '崩三周期提醒',
-        helpMessage: '深渊/战场/乐土开始和结算提醒',
-        component: 'Switch',
-      },
-      {
-        field: 'bh3_remind_groups',
-        label: '崩三提醒群',
-        helpMessage: '直接选择提醒群，也可群内发送 #米哈游开启崩三提醒',
-        component: 'Select',
-        componentProps: {
-          mode: 'multiple',
-          allowAdd: true,
-          allowDel: true,
-          options: groupList,
-        },
-      },
-      {
-        field: 'bh3_remind_at_mode',
-        label: '崩三提醒艾特',
-        helpMessage: '控制深渊/战场/乐土提醒是否艾特全体或指定成员',
-        component: 'Select',
+        field: 'panel_style',
+        label: '单角色面板风格',
+        helpMessage: 'dark=暗色霓虹（默认）；apple=Apple 深色玻璃（半透明卡片 + 背景模糊，保留立绘）。只影响单角色长图（#米哈游xx面板 / 米游社xx面板，含绝区零），改完即生效',
+        component: 'RadioGroup',
         componentProps: {
           options: [
-            { label: '不艾特', value: 'none' },
-            { label: '艾特全体', value: 'all' },
-            { label: '艾特指定QQ', value: 'users' },
+            { label: '暗色霓虹', value: 'dark' },
+            { label: 'Apple 玻璃', value: 'apple' },
           ],
         },
-      },
-      {
-        field: 'bh3_remind_at_users',
-        label: '崩三提醒指定QQ',
-        helpMessage: '艾特指定QQ时生效，多个QQ用英文逗号/换行分隔',
-        component: 'InputTextArea',
-      },
-      {
-        field: 'bh3_remind_image',
-        label: '崩三提醒附图',
-        helpMessage: '支持网络图片URL或本地图片路径，留空则不发送图片',
-        component: 'InputTextArea',
       },
       {
         component: 'SOFT_GROUP_BEGIN',
-        label: '活动到期提醒',
+        label: '游戏攻略',
       },
       {
-        field: 'activity_remind_enable',
-        label: '活动到期提醒总开关',
-        helpMessage: '原神/星铁/绝区零/崩三活动到期推送',
+        field: 'gs_logs',
+        label: '原神历史卡池',
         component: 'Switch',
       },
       {
-        field: 'activity_remind_hours_before',
-        label: '提前提醒小时数',
-        helpMessage: '默认24；活动结束前多少小时内推送一次',
-        component: 'InputNumber',
-        componentProps: { min: 1, max: 168, step: 1 },
-      },
-      {
-        field: 'activity_remind_push_image',
-        label: '推送公告图片',
+        field: 'sr_logs',
+        label: '星铁历史卡池',
         component: 'Switch',
       },
       {
-        field: 'activity_remind_at_mode',
-        label: '活动提醒艾特',
-        component: 'Select',
-        componentProps: {
-          options: [
-            { label: '不艾特', value: 'none' },
-            { label: '艾特全体', value: 'all' },
-            { label: '艾特指定QQ', value: 'users' },
-          ],
-        },
+        field: 'zzz_logs',
+        label: '绝区零历史卡池',
+        component: 'Switch',
       },
       {
-        field: 'activity_remind_at_users',
-        label: '活动提醒指定QQ',
-        helpMessage: '艾特指定QQ时生效，多个QQ用英文逗号/换行分隔',
-        component: 'InputTextArea',
+        field: 'bh3_logs',
+        label: '崩坏3历史卡池',
+        component: 'Switch',
       },
       {
-        field: 'activity_remind_ban_words',
-        label: '活动提醒屏蔽关键词',
-        helpMessage: '正则写法，使用 | 分隔；标题包含则不推送',
-        component: 'InputTextArea',
+        field: 'gacha_pool_cron',
+        label: '卡池自动刷新间隔',
+        helpMessage:
+          'cron 表达式，保存后需重启插件生效。默认 0 */30 * * * * 即每 30 分钟一次。间隔太长时，若某一轮撞上米游社风控就要等到下一轮才同步',
+        component: 'Input',
       },
       {
-        field: 'activity_remind_gs_groups',
-        label: '原神活动到期提醒群',
-        helpMessage: '直接选择提醒群，留空则不推送；也可群内发送 #原神开启活动到期推送',
-        component: 'Select',
-        componentProps: {
-          mode: 'multiple',
-          allowAdd: true,
-          allowDel: true,
-          options: groupList,
-        },
+        field: 'all_voice',
+        label: '角色语音总开关',
+        helpMessage: '关闭后四个游戏语音全部停用',
+        component: 'Switch',
       },
       {
-        field: 'activity_remind_sr_groups',
-        label: '星铁活动到期提醒群',
-        helpMessage: '直接选择提醒群，留空则不推送；也可群内发送 #星铁开启活动到期推送',
-        component: 'Select',
-        componentProps: {
-          mode: 'multiple',
-          allowAdd: true,
-          allowDel: true,
-          options: groupList,
-        },
+        field: 'gs_voice',
+        label: '原神语音',
+        component: 'Switch',
       },
       {
-        field: 'activity_remind_zzz_groups',
-        label: '绝区零活动到期提醒群',
-        helpMessage: '直接选择提醒群，留空则不推送；也可群内发送 #绝区零开启活动到期推送',
-        component: 'Select',
-        componentProps: {
-          mode: 'multiple',
-          allowAdd: true,
-          allowDel: true,
-          options: groupList,
-        },
+        field: 'sr_voice',
+        label: '星铁语音',
+        component: 'Switch',
       },
       {
-        field: 'activity_remind_bh3_groups',
-        label: '崩三活动到期提醒群',
-        helpMessage: '直接选择提醒群，留空则不推送；也可群内发送 #崩三开启活动到期推送',
-        component: 'Select',
-        componentProps: {
-          mode: 'multiple',
-          allowAdd: true,
-          allowDel: true,
-          options: groupList,
-        },
+        field: 'zzz_voice',
+        label: '绝区零语音',
+        helpMessage: '开关已预留；当前仓库暂无绝区零角色语音数据源',
+        component: 'Switch',
+      },
+      {
+        field: 'bh3_voice',
+        label: '崩坏3语音',
+        helpMessage: '开关已预留；当前仓库暂无崩坏3角色语音数据源',
+        component: 'Switch',
       },
       {
         component: 'SOFT_GROUP_BEGIN',
@@ -1101,6 +784,363 @@ export const supportGuoba = () => {
             { label: '全部期', value: 'all' },
           ],
         },
+      },
+      {
+        component: 'SOFT_GROUP_BEGIN',
+        label: '活动到期提醒',
+      },
+      {
+        field: 'activity_remind_enable',
+        label: '活动到期提醒总开关',
+        helpMessage: '原神/星铁/绝区零/崩三活动到期推送',
+        component: 'Switch',
+      },
+      {
+        field: 'activity_remind_hours_before',
+        label: '提前提醒小时数',
+        helpMessage: '默认24；活动结束前多少小时内推送一次',
+        component: 'InputNumber',
+        componentProps: { min: 1, max: 168, step: 1 },
+      },
+      {
+        field: 'activity_remind_push_image',
+        label: '推送公告图片',
+        component: 'Switch',
+      },
+      {
+        field: 'activity_remind_at_mode',
+        label: '活动提醒艾特',
+        component: 'Select',
+        componentProps: {
+          options: [
+            { label: '不艾特', value: 'none' },
+            { label: '艾特全体', value: 'all' },
+            { label: '艾特指定QQ', value: 'users' },
+          ],
+        },
+      },
+      {
+        field: 'activity_remind_at_users',
+        label: '活动提醒指定QQ',
+        helpMessage: '艾特指定QQ时生效，多个QQ用英文逗号/换行分隔',
+        component: 'InputTextArea',
+      },
+      {
+        field: 'activity_remind_ban_words',
+        label: '活动提醒屏蔽关键词',
+        helpMessage: '正则写法，使用 | 分隔；标题包含则不推送',
+        component: 'InputTextArea',
+      },
+      {
+        field: 'activity_remind_gs_groups',
+        label: '原神活动到期提醒群',
+        helpMessage: '直接选择提醒群，留空则不推送；也可群内发送 #原神开启活动到期推送',
+        component: 'Select',
+        componentProps: {
+          mode: 'multiple',
+          allowAdd: true,
+          allowDel: true,
+          options: groupList,
+        },
+      },
+      {
+        field: 'activity_remind_sr_groups',
+        label: '星铁活动到期提醒群',
+        helpMessage: '直接选择提醒群，留空则不推送；也可群内发送 #星铁开启活动到期推送',
+        component: 'Select',
+        componentProps: {
+          mode: 'multiple',
+          allowAdd: true,
+          allowDel: true,
+          options: groupList,
+        },
+      },
+      {
+        field: 'activity_remind_zzz_groups',
+        label: '绝区零活动到期提醒群',
+        helpMessage: '直接选择提醒群，留空则不推送；也可群内发送 #绝区零开启活动到期推送',
+        component: 'Select',
+        componentProps: {
+          mode: 'multiple',
+          allowAdd: true,
+          allowDel: true,
+          options: groupList,
+        },
+      },
+      {
+        field: 'activity_remind_bh3_groups',
+        label: '崩三活动到期提醒群',
+        helpMessage: '直接选择提醒群，留空则不推送；也可群内发送 #崩三开启活动到期推送',
+        component: 'Select',
+        componentProps: {
+          mode: 'multiple',
+          allowAdd: true,
+          allowDel: true,
+          options: groupList,
+        },
+      },
+      {
+        component: 'SOFT_GROUP_BEGIN',
+        label: '崩坏3扩展',
+      },
+      {
+        field: 'bh3_all_note_enable',
+        label: '启用四游戏体力聚合',
+        helpMessage: '控制 #体力/#米哈游体力 等四游戏总览；关闭后仍可使用 #原神体力/#星铁体力 等单游戏查询',
+        component: 'Switch',
+      },
+      {
+        field: 'bh3_all_note_groups',
+        label: '四游戏体力推送群',
+        helpMessage: '直接选择推送群，留空则不推送',
+        component: 'Select',
+        componentProps: {
+          mode: 'multiple',
+          allowAdd: true,
+          allowDel: true,
+          options: groupList,
+        },
+      },
+      {
+        field: 'stamina_push_enable',
+        label: '启用体力自动推送',
+        helpMessage: '按群成员的绑定账号检查原神/星铁/绝区零/崩坏3体力，达到阈值后推送一次',
+        component: 'Switch',
+      },
+      {
+        field: 'stamina_push_interval',
+        label: '体力检查间隔（分钟）',
+        helpMessage: '插件每分钟轮询一次，按这里的间隔实际请求；建议 5 分钟以上',
+        component: 'InputNumber',
+        componentProps: { min: 1, max: 60, step: 1 },
+      },
+      {
+        field: 'stamina_push_at_user',
+        label: '体力推送艾特用户',
+        helpMessage: '推送某位群成员的体力时，是否在消息开头艾特该成员',
+        component: 'Switch',
+      },
+      {
+        field: 'stamina_push_gs_threshold',
+        label: '原神体力推送阈值',
+        helpMessage: '原粹树脂达到该数值后推送；默认 200',
+        component: 'InputNumber',
+        componentProps: { min: 1, max: 300, step: 1 },
+      },
+      {
+        field: 'stamina_push_sr_threshold',
+        label: '星铁体力推送阈值',
+        helpMessage: '开拓力达到该数值后推送；默认 240',
+        component: 'InputNumber',
+        componentProps: { min: 1, max: 500, step: 1 },
+      },
+      {
+        field: 'stamina_push_zzz_threshold',
+        label: '绝区零体力推送阈值',
+        helpMessage: '电量达到该数值后推送；默认 240',
+        component: 'InputNumber',
+        componentProps: { min: 1, max: 500, step: 1 },
+      },
+      {
+        field: 'stamina_push_bh3_threshold',
+        label: '崩坏3体力推送阈值',
+        helpMessage: '体力达到该数值后推送；默认 240',
+        component: 'InputNumber',
+        componentProps: { min: 1, max: 500, step: 1 },
+      },
+      {
+        field: 'bh3_remind_enable',
+        label: '崩三周期提醒',
+        helpMessage: '深渊/战场/乐土开始和结算提醒',
+        component: 'Switch',
+      },
+      {
+        field: 'bh3_remind_groups',
+        label: '崩三提醒群',
+        helpMessage: '直接选择提醒群，也可群内发送 #米哈游开启崩三提醒',
+        component: 'Select',
+        componentProps: {
+          mode: 'multiple',
+          allowAdd: true,
+          allowDel: true,
+          options: groupList,
+        },
+      },
+      {
+        field: 'bh3_remind_at_mode',
+        label: '崩三提醒艾特',
+        helpMessage: '控制深渊/战场/乐土提醒是否艾特全体或指定成员',
+        component: 'Select',
+        componentProps: {
+          options: [
+            { label: '不艾特', value: 'none' },
+            { label: '艾特全体', value: 'all' },
+            { label: '艾特指定QQ', value: 'users' },
+          ],
+        },
+      },
+      {
+        field: 'bh3_remind_at_users',
+        label: '崩三提醒指定QQ',
+        helpMessage: '艾特指定QQ时生效，多个QQ用英文逗号/换行分隔',
+        component: 'InputTextArea',
+      },
+      {
+        field: 'bh3_remind_image',
+        label: '崩三提醒附图',
+        helpMessage: '支持网络图片URL或本地图片路径，留空则不发送图片',
+        component: 'InputTextArea',
+      },
+      {
+        component: 'SOFT_GROUP_BEGIN',
+        label: 'B站设置',
+      },
+      {
+        field: 'bilibili',
+        label: 'B站功能开关',
+        component: 'Switch',
+      },
+      {
+        field: 'list_num',
+        label: '评论区显示条数',
+        helpMessage: '1-20条',
+        component: 'InputNumber',
+        componentProps: { min: 1, max: 20, step: 1 },
+      },
+      {
+        field: 'qn',
+        label: '视频下载清晰度',
+        component: 'Select',
+        componentProps: {
+          options: [
+            { label: '360P', value: 0 },
+            { label: '480P', value: 1 },
+            { label: '720P', value: 2 },
+            { label: '1080P', value: 3 },
+            { label: '1080P+高码率', value: 4 },
+            { label: '4K超清', value: 5 },
+          ],
+        },
+      },
+      {
+        field: 'dow_size',
+        label: '自动下载大小阈值',
+        helpMessage: '小于此MB数自动下载，0代表不自动下载；超过99MB会作为群文件发送',
+        component: 'InputNumber',
+        componentProps: { min: 0, max: 2048, step: 1 },
+      },
+      {
+        field: 'b_lj',
+        label: '解析时弹出原链接',
+        component: 'Switch',
+      },
+      {
+        field: 'b_cd',
+        label: '同视频/动态3分钟CD',
+        component: 'Switch',
+      },
+      {
+        field: 'b_img_num',
+        label: '图片合并阈值',
+        helpMessage: '小于几张图片时不合并消息，0表示始终合并',
+        component: 'InputNumber',
+        componentProps: { min: 0, max: 20, step: 1 },
+      },
+      {
+        component: 'SOFT_GROUP_BEGIN',
+        label: 'B站直播解析',
+      },
+      {
+        field: 'bili_live',
+        label: '自动解析直播间',
+        helpMessage: '消息里出现直播间链接/b23短链时自动解析，默认开启；关闭后仍可用「#直播解析 房间号」手动解析',
+        component: 'Switch',
+      },
+      {
+        field: 'bili_live_only_live',
+        label: '仅回复开播中的',
+        helpMessage: '开启后，未开播的直播间自动解析时不回复',
+        component: 'Switch',
+      },
+      {
+        field: 'bili_live_cd',
+        label: '同一直播间CD',
+        helpMessage: '单位秒，0表示不限制；手动解析不受限制',
+        component: 'InputNumber',
+        componentProps: { min: 0, max: 3600, step: 10 },
+      },
+      {
+        field: 'bili_live_video',
+        label: '手动解析后录制视频',
+        helpMessage: '手动「#直播解析」时，解析完再录一段直播直接发出去',
+        component: 'Switch',
+      },
+      {
+        field: 'bili_live_video_auto',
+        label: '自动解析也录制视频',
+        helpMessage: '群里每条直播链接都录一段会很吃带宽，默认关；想全自动就开',
+        component: 'Switch',
+      },
+      {
+        field: 'bili_live_video_time',
+        label: '录制时长',
+        helpMessage: '单位秒，默认60（1分钟）；录满就发',
+        component: 'InputNumber',
+        componentProps: { min: 5, max: 600, step: 5 },
+      },
+      {
+        field: 'bili_live_video_size',
+        label: '录制大小上限',
+        helpMessage: '单位MB，录到这个大小就停（默认99）；0表示只按时长停',
+        component: 'InputNumber',
+        componentProps: { min: 0, max: 2048, step: 1 },
+      },
+      {
+        field: 'bili_live_dm',
+        label: '直播间发弹幕',
+        helpMessage: '开启后可用「#弹幕 内容」往直播间发弹幕，需要先「#米哈游b站登录」',
+        component: 'Switch',
+      },
+      {
+        field: 'bili_live_dm_perm',
+        label: '发弹幕权限',
+        helpMessage: '默认「群管理」；私聊不受限制',
+        component: 'Select',
+        componentProps: {
+          options: [
+            { label: '所有人', value: 'all' },
+            { label: '群管理(含主人)', value: 'admin' },
+            { label: '仅主人', value: 'master' },
+          ],
+        },
+      },
+      {
+        field: 'bili_live_dm_cd',
+        label: '弹幕冷却',
+        helpMessage: '单位秒，默认5；0表示不限制。主人不受限制',
+        component: 'InputNumber',
+        componentProps: { min: 0, max: 600, step: 1 },
+      },
+      {
+        field: 'bili_live_qn',
+        label: '录制清晰度',
+        helpMessage: '房间没开该档会自动降级到可用档位',
+        component: 'Select',
+        componentProps: {
+          options: [
+            { label: '原画', value: 10000 },
+            { label: '蓝光', value: 400 },
+            { label: '超清', value: 250 },
+            { label: '高清', value: 150 },
+            { label: '流畅', value: 80 },
+          ],
+        },
+      },
+      {
+        field: 'emoji',
+        label: 'Emoji CDN渲染',
+        helpMessage: '浏览器不支持emoji时用CDN渲染',
+        component: 'Switch',
       },
       {
         component: 'SOFT_GROUP_BEGIN',
@@ -1299,22 +1339,6 @@ export const supportGuoba = () => {
         label: '主人保护',
         helpMessage: '制作对象是主人时改用发送者本人头像',
         component: 'Switch',
-      },
-      {
-        component: 'SOFT_GROUP_BEGIN',
-        label: '面板',
-      },
-      {
-        field: 'panel_style',
-        label: '单角色面板风格',
-        helpMessage: 'dark=暗色霓虹（默认）；apple=Apple 深色玻璃（半透明卡片 + 背景模糊，保留立绘）。只影响单角色长图（#米哈游xx面板 / 米游社xx面板，含绝区零），改完即生效',
-        component: 'RadioGroup',
-        componentProps: {
-          options: [
-            { label: '暗色霓虹', value: 'dark' },
-            { label: 'Apple 玻璃', value: 'apple' },
-          ],
-        },
       },
       {
         component: 'SOFT_GROUP_BEGIN',
@@ -1787,6 +1811,53 @@ export const supportGuoba = () => {
 
       return Result.ok({}, '保存成功，部分配置需重启生效')
     },
+
+    /**
+     * 面板上「立即执行」按钮的后端。
+     * 锅巴前端点 GButtons 会 POST /plugin/do/<插件>/action 到这里，
+     * 按钮定义里写 action: 'runSign' 即可。
+     *
+     * 签到耗时较长（逐个号请求米游社），这里只负责**发起**，立刻返回，
+     * 进度与结果看「米哈游任务记录」页。
+     */
+    actions: {
+      /** 立即执行游戏签到（按 sign.yaml 的群与成员） */
+      runSign() {
+        runTaskInBackground('游戏签到', async () => {
+          const yamlData = yaml.get(_path + 'sign.yaml') || {}
+          const groups = Object.keys(yamlData.sign || {})
+          if (!groups.length) return { skipped: '没有登记自动签到群' }
+          const { MysSign } = await import('./system/sign.js')
+          const { makeTaskEvent } = await import('./system/task_event.js')
+          let count = 0
+          for (const group of groups) {
+            for (const qq of (yamlData.sign[group] || [])) {
+              const e = await makeTaskEvent(qq, group)
+              await MysSign(e)
+              count++
+            }
+          }
+          return { count }
+        })
+        return { ok: true, code: 0, message: '已开始签到，结果见「米哈游任务记录」', result: true }
+      },
+      /** 立即执行社区签到（按 sign.yaml 的 bbs_sign） */
+      runBbsSign() {
+        runTaskInBackground('社区签到', async () => {
+          const yamlData = yaml.get(_path + 'sign.yaml') || {}
+          const groups = Object.keys(yamlData.bbs_sign || {})
+          if (!groups.length) return { skipped: '没有登记社区签到群' }
+          const { BbsAutoSign } = await import('./system/sign.js')
+          let count = 0
+          for (const group of groups) {
+            await BbsAutoSign(yamlData.bbs_sign[group], group)
+            count++
+          }
+          return { count }
+        })
+        return { ok: true, code: 0, message: '已开始社区签到，结果见「米哈游任务记录」', result: true }
+      },
+    },
   },
   })
 }
@@ -1848,4 +1919,21 @@ function parseGroupConfig(value = '') {
     if (games.length) result[gid] = games
   }
   return result
+}
+
+/**
+ * 在后台跑一个「立即执行」任务。
+ * 锅巴的 action 是同步返回的，签到一跑就是几分钟，所以不 await，
+ * 只把启动/完成写进任务记录，异常也只记日志，不抛给前端。
+ */
+function runTaskInBackground(name, fn) {
+  logger.mark(`[HoYoGet][guoba] 手动触发：${name}`)
+  Promise.resolve()
+    .then(fn)
+    .then(ret => {
+      logger.mark(`[HoYoGet][guoba] ${name} 执行完成：${JSON.stringify(ret || {}).slice(0, 160)}`)
+    })
+    .catch(err => {
+      logger.error(`[HoYoGet][guoba] ${name} 执行失败：${err?.message || err}`)
+    })
 }
