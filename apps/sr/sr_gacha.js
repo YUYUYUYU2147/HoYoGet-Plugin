@@ -2157,6 +2157,10 @@ export class sr_gacha extends plugin {
         { reg: '^[#*%％]?[ \t]*(?:星铁|崩铁|星穹铁道|sr|SR)[ \t]*抽卡帮助$', fnc: 'help' },
         { reg: '^#*米哈游(星铁|崩铁)?抽卡链接', fnc: 'gachaLink' },
         { reg: '^#*米哈游(星铁|崩铁)?(刷新|更新)抽卡记录$', fnc: 'refresh' },
+        // 不带「米哈游」前缀：星铁更新抽卡记录 / #星铁更新抽卡记录 / *更新抽卡记录
+        // 不接管的话会落到 genshin 的 sr_update，它出图依赖已被卸载的 miao。
+        { reg: '^[#*%％]?[ \t]*(?:星铁|崩铁|星穹铁道|sr|SR)[ \t]*(刷新|更新)抽卡记录$', fnc: 'refresh' },
+        { reg: '^[#*%％][ \t]*(刷新|更新)抽卡记录$', fnc: 'refresh' },
         { reg: '^#*米哈游(星铁|崩铁)?(抽卡记录|抽卡统计)$', fnc: 'summary' },
         { reg: '^#*米哈游(星铁|崩铁)?角色记录$', fnc: 'roleRecord' },
         { reg: '^#*米哈游(星铁|崩铁)?武器记录$', fnc: 'weaponRecord' },

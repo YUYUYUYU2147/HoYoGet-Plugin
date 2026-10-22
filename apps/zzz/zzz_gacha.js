@@ -837,6 +837,8 @@ export class zzz_gacha extends plugin {
         { reg: '^[#*%％]?[ \t]*(?:绝区零|绝区|zzz|ZZZ)[ \t]*(抽卡|调频)帮助$', fnc: 'help' },
         { reg: '^#*米哈游(绝区零|zzz)?抽卡链接(\\s+.*)?$', fnc: 'gachaLink' },
         { reg: '^#*米哈游(绝区零|zzz)?(刷新|更新)抽卡记录$', fnc: 'refresh' },
+        // 不带「米哈游」前缀的写法，同样由本插件接管
+        { reg: '^[#*%％]?[ \t]*(?:绝区零|绝区|zzz|ZZZ)[ \t]*(刷新|更新)抽卡记录$', fnc: 'refresh' },
         { reg: '^#*米哈游(绝区零|zzz)?(抽卡|调频)(记录|统计|分析)$', fnc: 'summary' },
         { reg: '^#*米哈游(绝区零|zzz)?角色记录$', fnc: 'roleRecord' },
         { reg: '^#*米哈游(绝区零|zzz)?角色统计$', fnc: 'roleStat' },
