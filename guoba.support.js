@@ -1872,7 +1872,10 @@ export const supportGuoba = () => {
                   }
                 },
               })
-              if (img) await Bot.pickGroup(Number(group)).sendMsg(segment.image(img))
+              /* Runtime.render(retType:'base64') 返回的已经是 segment.image(...)，
+                 不能再包一层 segment.image —— 那会得到 uri 为空的图片段，
+                 发送时报「识别URL失败, uri=」。 */
+              if (img) await Bot.pickGroup(Number(group)).sendMsg(img)
             } catch (err) {
               logger.warn(`[HoYoGet][guoba] 群${group} 签到结果出图失败：${err?.message || err}`)
             }
