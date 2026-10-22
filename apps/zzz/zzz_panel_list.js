@@ -1990,6 +1990,23 @@ export class zzz_panel_list extends plugin {
       logger.debug?.(`[HoYoGet][zzz_panel] 合并历史角色失败：${err?.message || err}`)
     }
 
+    // 3) Enka 展示柜（公开接口）：补齐米游社 avatar/basic 没返回、本地也没有的角色
+    //    （叶瞬光/雅/艾莲等），并带上完整驱动盘用于评分。
+    let enkaById = null
+    try {
+      const { fetchEnkaPanel } = await import('../../system/zzz_enka.js')
+      const enka = await fetchEnkaPanel(uid)
+      enkaById = new Map(enka.avatars.map(a => [String(a.id), a]))
+      const seen = new Set(mergedList.map(a => String(a?.id)))
+      for (const a of enka.avatars) {
+        if (!a?.id || seen.has(String(a.id))) continue
+        seen.add(String(a.id))
+        mergedList.push(a)
+      }
+    } catch (err) {
+      logger.debug?.(`[HoYoGet][zzz_panel] Enka 展示柜合并失败：${err?.message || err}`)
+    }
+
     // 归一化后交模板渲染（自研，不复用 ZZZ-Plugin 模板）
     let cards = mergedList.map(it => normalizeAvatar(it))
 
@@ -2084,19 +2101,18 @@ export class zzz_panel_list extends plugin {
           const c = missing[idx++]
           try {
             const info = await this.fetchDetail(e, uid, ck, c.id)
-            if (!info?.__error) {
-              const avatar = this.pickInfo(info?.data)
-              if (avatar) {
-                scoreOne(avatar)
-                // 落盘详情，供下次列表/排名/极限面板复用
-                try {
-                  fs.mkdirSync(RECORDS_DIR, { recursive: true })
-                  const recRole = String(avatar?.name_mi18n || c.name || 'unknown').replace(/[\\/:*?"<>|\s·・]/g, '') || 'unknown'
-                  fs.writeFileSync(path.join(RECORDS_DIR, `${uid}_${recRole}.json`), JSON.stringify({
-                    uid, data: avatar, player: gamePlayer || null, updatedAt: Date.now(),
-                  }))
-                } catch { /* 落盘失败不影响本次 */ }
-              }
+            let avatar = info && !info?.__error ? this.pickInfo(info?.data) : null
+            if (!avatar && enkaById) avatar = enkaById.get(String(c.id)) || null
+            if (avatar) {
+              scoreOne(avatar)
+              // 落盘详情，供下次列表/排名/极限面板复用
+              try {
+                fs.mkdirSync(RECORDS_DIR, { recursive: true })
+                const recRole = String(avatar?.name_mi18n || c.name || 'unknown').replace(/[\\/:*?"<>|\s·・]/g, '') || 'unknown'
+                fs.writeFileSync(path.join(RECORDS_DIR, `${uid}_${recRole}.json`), JSON.stringify({
+                  uid, data: avatar, player: gamePlayer || null, updatedAt: Date.now(),
+                }))
+              } catch { /* 落盘失败不影响本次 */ }
             }
           } catch (err) {
             logger.debug?.(`[HoYoGet][zzz_panel] 补评分失败 ${c.name}：${err?.message || err}`)
@@ -2216,10 +2232,28 @@ export class zzz_panel_list extends plugin {
     }
 
     const info = await this.fetchDetail(e, uid, ck, target.id)
-    if (info?.__error) return e.reply(info.__error)
+    let avatar = info && !info.__error ? this.pickInfo(info?.data) : null
 
-    const avatar = this.pickInfo(info?.data)
-    if (!avatar) return e.reply('取到详情响应，但没识别到角色数据')
+    // 米游社 avatar/info 只返回展示柜里的部分角色，老角色（叶瞬光/雅/艾莲等）
+    // 常常查不到。回退 Enka（公开接口，含展示柜完整驱动盘）：从 ShowcaseDetail
+    // 里找该角色，补齐面板与评分。
+    if (!avatar) {
+      try {
+        const { fetchEnkaPanel } = await import('../../system/zzz_enka.js')
+        const enka = await fetchEnkaPanel(uid)
+        avatar = enka.avatars.find(a => String(a.id) === String(target.id))
+          || enka.avatars.find(a => {
+            const n = String(arg).replace(/[「」·\s]/g, '')
+            const an = String(a.name_mi18n || '').replace(/[「」·\s]/g, '')
+            return an && (an.includes(n) || n.includes(an))
+          })
+      } catch (err) {
+        logger.debug?.(`[HoYoGet][zzz_panel] Enka 兜底失败：${err?.message || err}`)
+      }
+    }
+    if (!avatar) {
+      return e.reply(`米游社与 Enka 都没有「${target.name_mi18n || arg}」的面板数据。\n可能是该角色未在游戏内公开面板，或展柜未展示该角色。`)
+    }
 
     const detail = normalizeDetail(avatar, uid)
     const charData = detail.charData
