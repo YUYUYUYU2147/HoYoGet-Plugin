@@ -99,6 +99,202 @@ async function loadTaskHistory() {
 }
 
 
+
+const CK_HTML = `
+<div class="hoyo-ck">
+  <div class="ck-tip">CK / SK 属于敏感凭证，页面只显示掩码；需要查看原文或修改时点对应行的按钮。修改后立即写回 data/Stoken/&lt;QQ&gt;.yaml。</div>
+  <div class="ck-bar">
+    <input class="ck-input" id="ck-qq" placeholder="按 QQ 过滤（可空）" />
+    <select class="ck-input" id="ck-game">
+      <option value="">全部游戏</option>
+      <option value="gs">原神</option>
+      <option value="sr">崩坏：星穹铁道</option>
+      <option value="zzz">绝区零</option>
+      <option value="bh3">崩坏3</option>
+    </select>
+    <button class="ck-btn" id="ck-refresh">刷新</button>
+    <span class="ck-meta" id="ck-meta"></span>
+  </div>
+
+  <div class="ck-editor" id="ck-editor">
+    <div class="ck-editor-title" id="ck-editor-title">修改账号</div>
+    <div class="ck-grid">
+      <label>QQ<input class="ck-input" id="ck-f-qq" readonly /></label>
+      <label>UID<input class="ck-input" id="ck-f-uid" readonly /></label>
+      <label>通行证 stuid<input class="ck-input" id="ck-f-stuid" placeholder="米游社通行证 id" /></label>
+      <label>mid<input class="ck-input" id="ck-f-mid" placeholder="可空" /></label>
+    </div>
+    <label class="ck-block">CK（完整 cookie 串，或只粘贴 cookie_token）
+      <textarea class="ck-area" id="ck-f-ck" rows="4" placeholder="stuid=...;stoken=...;ltoken=...;cookie_token=...;mid=..."></textarea>
+    </label>
+    <label class="ck-block">SK（stoken，用于刷新 CK）
+      <textarea class="ck-area" id="ck-f-sk" rows="2" placeholder="v2_..."></textarea>
+    </label>
+    <div class="ck-actions">
+      <button class="ck-btn primary" id="ck-save">保存</button>
+      <button class="ck-btn" id="ck-cancel">取消</button>
+      <span class="ck-msg" id="ck-msg"></span>
+    </div>
+  </div>
+
+  <div class="ck-table-wrap">
+    <table class="ck-table">
+      <thead>
+        <tr><th>QQ</th><th>游戏</th><th>UID</th><th>区服</th><th>通行证</th><th>CK</th><th>SK</th><th>操作</th></tr>
+      </thead>
+      <tbody id="ck-body"><tr><td colspan="8" class="ck-empty">加载中…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+`
+
+const CK_STYLE = `
+.hoyo-ck { padding: 4px 2px 10px; }
+.ck-tip { margin-bottom: 12px; padding: 9px 12px; border-radius: 10px; font-size: 12px; line-height: 1.6; color: var(--g-muted, #8a93a3); background: rgba(255, 196, 92, 0.12); border-left: 3px solid rgba(240, 170, 60, 0.6); }
+.ck-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+.ck-input { height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--g-border, #d8dde6); background: var(--g-card, #fff); color: var(--g-text, #333); font-size: 13px; outline: none; }
+.ck-input:focus { border-color: #4c8bf5; }
+.ck-btn { height: 32px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--g-border, #d8dde6); background: var(--g-card, #fff); color: var(--g-text, #333); font-size: 13px; cursor: pointer; }
+.ck-btn:hover { border-color: #4c8bf5; color: #3b78e0; }
+.ck-btn.primary { background: #4c8bf5; border-color: #4c8bf5; color: #fff; }
+.ck-btn.primary:hover { background: #3b78e0; color: #fff; }
+.ck-btn.danger { color: #d43f3f; }
+.ck-btn.danger:hover { border-color: #d43f3f; }
+.ck-meta { font-size: 12px; color: var(--g-muted, #8a93a3); }
+.ck-editor { display: none; margin-bottom: 14px; padding: 14px; border-radius: 12px; border: 1px solid var(--g-border, #e3e8ef); background: var(--g-card, #fff); }
+.ck-editor.on { display: block; }
+.ck-editor-title { margin-bottom: 10px; font-size: 14px; font-weight: 600; color: var(--g-text, #333); }
+.ck-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 10px; }
+.ck-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--g-muted, #8a93a3); }
+.ck-block { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; font-size: 12px; color: var(--g-muted, #8a93a3); }
+.ck-area { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--g-border, #d8dde6); background: var(--g-card, #fff); color: var(--g-text, #333); font-size: 12px; font-family: ui-monospace, Menlo, Consolas, monospace; resize: vertical; outline: none; }
+.ck-area:focus { border-color: #4c8bf5; }
+.ck-actions { display: flex; gap: 8px; align-items: center; }
+.ck-msg { font-size: 12px; color: var(--g-muted, #8a93a3); }
+.ck-table-wrap { border-radius: 10px; overflow: auto; border: 1px solid var(--g-border, #e3e8ef); }
+.ck-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ck-table th, .ck-table td { padding: 8px 12px; text-align: left; white-space: nowrap; }
+.ck-table thead th { position: sticky; top: 0; background: var(--g-card, #f7f9fc); color: var(--g-muted, #6b7280); font-weight: 600; border-bottom: 1px solid var(--g-border, #e3e8ef); }
+.ck-table tbody tr:nth-child(even) { background: rgba(120, 150, 200, 0.05); }
+.ck-table tbody tr:hover { background: rgba(76, 139, 245, 0.08); }
+.ck-ok { color: #1a7f37; }
+.ck-no { color: #d43f3f; }
+.ck-ops { display: flex; gap: 6px; }
+.ck-ops .ck-btn { height: 26px; padding: 0 10px; font-size: 12px; }
+.ck-empty { text-align: center; color: var(--g-muted, #8a93a3); padding: 24px 0; }
+`
+
+const CK_SCRIPT = `
+(function () {
+  const g = window.__GUOBA__ || {}
+  const body = document.getElementById('ck-body')
+  const meta = document.getElementById('ck-meta')
+  const el = id => document.getElementById(id)
+  const editor = el('ck-editor')
+  let editing = null
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]))
+  }
+  function headers(json) {
+    const h = { [g.tokenKey || 'guoba-access-token']: g.token || '' }
+    if (json) h['Content-Type'] = 'application/json'
+    return h
+  }
+  async function api(path, opts) {
+    const res = await fetch(g.apiBase + path, opts)
+    return await res.json()
+  }
+
+  async function load() {
+    body.innerHTML = '<tr><td colspan="8" class="ck-empty">加载中…</td></tr>'
+    const p = new URLSearchParams()
+    if (el('ck-qq').value.trim()) p.set('qq', el('ck-qq').value.trim())
+    if (el('ck-game').value) p.set('game', el('ck-game').value)
+    try {
+      const json = await api('/ck/list?' + p.toString(), { headers: headers() })
+      const list = json?.result || []
+      meta.textContent = '共 ' + list.length + ' 个账号'
+      if (!list.length) {
+        body.innerHTML = '<tr><td colspan="8" class="ck-empty">没有匹配的账号</td></tr>'
+        return
+      }
+      body.innerHTML = list.map((a, i) => '<tr>'
+        + '<td>' + esc(a.qq) + '</td>'
+        + '<td>' + esc(a.gameName) + '</td>'
+        + '<td>' + esc(a.uid) + '</td>'
+        + '<td>' + esc(a.region) + '</td>'
+        + '<td>' + esc(a.stuidMask) + '</td>'
+        + '<td class="' + (a.hasCk ? 'ck-ok' : 'ck-no') + '">' + (a.hasCk ? '有 ' + esc(a.ckMask) : '无') + '</td>'
+        + '<td class="' + (a.hasSk ? 'ck-ok' : 'ck-no') + '">' + (a.hasSk ? '有 ' + esc(a.skMask) : '无') + '</td>'
+        + '<td><div class="ck-ops">'
+        + '<button class="ck-btn" data-act="edit" data-i="' + i + '">修改</button>'
+        + '<button class="ck-btn danger" data-act="del" data-i="' + i + '">删除</button>'
+        + '</div></td>'
+        + '</tr>').join('')
+      body.querySelectorAll('button[data-act]').forEach(btn => {
+        const a = list[Number(btn.dataset.i)]
+        btn.addEventListener('click', () => {
+          if (btn.dataset.act === 'edit') openEditor(a)
+          else remove(a)
+        })
+      })
+    } catch (err) {
+      body.innerHTML = '<tr><td colspan="8" class="ck-empty">加载失败：' + esc(err && err.message || err) + '</td></tr>'
+    }
+  }
+
+  async function openEditor(a) {
+    el('ck-msg').textContent = ''
+    const json = await api('/ck/get?qq=' + encodeURIComponent(a.qq) + '&uid=' + encodeURIComponent(a.uid), { headers: headers() })
+    if (!json?.ok) { el('ck-msg').textContent = json?.message || '读取失败'; return }
+    const d = json.result
+    editing = { qq: d.qq, uid: d.uid }
+    el('ck-editor-title').textContent = '修改账号 · ' + d.gameName + ' · ' + d.uid
+    el('ck-f-qq').value = d.qq
+    el('ck-f-uid').value = d.uid
+    el('ck-f-stuid').value = d.stuid || ''
+    el('ck-f-mid').value = d.mid || ''
+    el('ck-f-ck').value = d.ck_stoken || ''
+    el('ck-f-sk').value = d.stoken || ''
+    editor.classList.add('on')
+    editor.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }
+
+  async function save() {
+    if (!editing) return
+    const payload = {
+      qq: editing.qq,
+      uid: editing.uid,
+      stuid: el('ck-f-stuid').value.trim(),
+      mid: el('ck-f-mid').value.trim(),
+      ck: el('ck-f-ck').value.trim(),
+      stoken: el('ck-f-sk').value.trim(),
+    }
+    el('ck-msg').textContent = '保存中…'
+    const json = await api('/ck/save', { method: 'POST', headers: headers(true), body: JSON.stringify(payload) })
+    el('ck-msg').textContent = json?.message || (json?.ok ? '已保存' : '保存失败')
+    if (json?.ok) { editor.classList.remove('on'); editing = null; load() }
+  }
+
+  async function remove(a) {
+    if (!confirm('确定删除 ' + a.gameName + ' UID ' + a.uid + ' 的绑定？删除后需要重新扫码或手动填 CK。')) return
+    const json = await api('/ck/delete', { method: 'POST', headers: headers(true), body: JSON.stringify({ qq: a.qq, uid: a.uid }) })
+    if (!json?.ok) alert(json?.message || '删除失败')
+    load()
+  }
+
+  el('ck-refresh').addEventListener('click', load)
+  el('ck-qq').addEventListener('keydown', e => { if (e.key === 'Enter') load() })
+  el('ck-game').addEventListener('change', load)
+  el('ck-save').addEventListener('click', save)
+  el('ck-cancel').addEventListener('click', () => { editor.classList.remove('on'); editing = null })
+  load()
+})();
+`
+
 const BIND_HTML = `
 <div class="hoyo-bind">
   <div class="hb-bar">
@@ -410,6 +606,62 @@ export function init(ctx) {
       ctx.logger?.error?.(`[HoYoGet][guoba] 读取绑定失败：${err?.message || err}`)
       res.json({ ok: false, code: -1, message: err?.message || String(err), result: { total: 0, users: [] } })
     }
+  })
+
+  ctx.registerApi('get', '/ck/list', async (req, res) => {
+    try {
+      const { listAccounts } = await import('../system/ck_store.js')
+      const q = req.query || {}
+      res.json({ ok: true, code: 0, message: 'ok', result: listAccounts({ qq: q.qq, game: q.game }) })
+    } catch (err) {
+      ctx.logger?.error?.(`[HoYoGet][guoba] 读取 CK 列表失败：${err?.message || err}`)
+      res.json({ ok: false, code: -1, message: err?.message || String(err), result: [] })
+    }
+  })
+
+  ctx.registerApi('get', '/ck/get', async (req, res) => {
+    try {
+      const { getAccount } = await import('../system/ck_store.js')
+      const q = req.query || {}
+      const acc = getAccount(q.qq, q.uid)
+      if (!acc) return res.json({ ok: false, code: -1, message: '没有这个账号', result: null })
+      res.json({ ok: true, code: 0, message: 'ok', result: acc })
+    } catch (err) {
+      res.json({ ok: false, code: -1, message: err?.message || String(err), result: null })
+    }
+  })
+
+  ctx.registerApi('post', '/ck/save', async (req, res) => {
+    try {
+      const { saveAccount } = await import('../system/ck_store.js')
+      const b = req.body || {}
+      const r = saveAccount(b.qq, b.uid, b)
+      res.json({ ok: true, code: 0, message: r.changed ? '已保存' : '内容没有变化', result: r.account })
+    } catch (err) {
+      ctx.logger?.warn?.(`[HoYoGet][guoba] 保存 CK 失败：${err?.message || err}`)
+      res.json({ ok: false, code: -1, message: err?.message || String(err), result: null })
+    }
+  })
+
+  ctx.registerApi('post', '/ck/delete', async (req, res) => {
+    try {
+      const { deleteAccount } = await import('../system/ck_store.js')
+      const b = req.body || {}
+      const ok = deleteAccount(b.qq, b.uid)
+      res.json({ ok: true, code: 0, message: ok ? '已删除' : '条目不存在', result: ok })
+    } catch (err) {
+      res.json({ ok: false, code: -1, message: err?.message || String(err), result: false })
+    }
+  })
+
+  ctx.registerPage({
+    id: 'hoyo-ck-manage',
+    title: '米哈游 CK / SK 管理',
+    icon: '🔑',
+    priority: 62,
+    html: CK_HTML,
+    style: CK_STYLE,
+    script: CK_SCRIPT,
   })
 
   ctx.registerPage({
