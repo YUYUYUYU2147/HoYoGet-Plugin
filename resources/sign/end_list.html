@@ -2,40 +2,78 @@
 <html>
   <head>
     <meta http-equiv="content-type" content="text/html;charset=utf-8" />
-    <link rel="stylesheet" type="text/css" href="{{ppath}}sign/list.css" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}sign/group_sign.css" />
   </head>
 
   <body {{sys.scale}}>
     <div class="container" id="container">
-      <div class="tou">
-        <img src="{{ppath}}sign/xhh_avatar.png" />
-        <div class="t_box">
-          <p>米哈游</p>
+      <div class="gs-card">
+        <div class="gs-head">
+          <img class="avatar" src="{{ppath}}sign/xhh_avatar.png" />
+          <div class="gs-head-text">
+            <div class="brand">米哈游</div>
+            <div class="sub">本群签到完成</div>
+          </div>
+          <div class="gs-badge done">已完成</div>
         </div>
-        <img class="mianju" src="{{ppath}}sign/mianju.png" />
-      </div>
-      <div class="colorful-embossed">
-        <div class="title"></div>
-        <div class="content">
-          <div class="qd"><strong>本群签到完成</strong></div>
-          <p>
-            共<span>{{z_num}}</span>个游戏账号参与签到，成功了<span>{{num}}</span>个
-          </p>
-          <div class="qqs">
-            <div class="tag">签到成功的用户</div>
+
+        <div class="gs-stats">
+          <div class="gs-stat total">
+            <div class="k">参与账号</div>
+            <div class="v">{{z_num}}</div>
+          </div>
+          <div class="gs-stat ok">
+            <div class="k">签到成功</div>
+            <div class="v">{{num}}</div>
+          </div>
+          <div class="gs-stat fail">
+            <div class="k">签到失败</div>
+            <div class="v">{{sbai_qqs.length}}</div>
+          </div>
+        </div>
+
+        <div class="gs-group">
+          <div class="gs-group-title">
+            <span class="dot"></span>
+            <span>签到成功的用户</span>
+            <span class="count">共 {{cg_qqs.length}} 人</span>
+          </div>
+          {{if cg_qqs.length}}
+          <div class="gs-users">
             {{each cg_qqs qq}}
-            <img src="https://q1.qlogo.cn/g?b=qq&s=140&nk={{qq}}.jpg" />
+            <div class="gs-user">
+              <img src="https://q1.qlogo.cn/g?b=qq&s=140&nk={{qq}}.jpg" />
+              <div class="qq">{{qq}}</div>
+            </div>
             {{/each}}
           </div>
-          <div class="qqs">
-            <div class="tag"><p class="red">签到失败的用户</p></div>
+          {{else}}
+          <div class="gs-empty">没有成功记录</div>
+          {{/if}}
+        </div>
+
+        {{if sbai_qqs.length}}
+        <div class="gs-group fail">
+          <div class="gs-group-title">
+            <span class="dot"></span>
+            <span>签到失败的用户</span>
+            <span class="count">共 {{sbai_qqs.length}} 人</span>
+          </div>
+          <div class="gs-users">
             {{each sbai_qqs qq}}
-            <img src="https://q1.qlogo.cn/g?b=qq&s=140&nk={{qq}}.jpg" />
+            <div class="gs-user">
+              <img src="https://q1.qlogo.cn/g?b=qq&s=140&nk={{qq}}.jpg" />
+              <div class="qq">{{qq}}</div>
+            </div>
             {{/each}}
           </div>
         </div>
+        {{/if}}
+
+        <div class="gs-foot">
+          <span class="src">from 米哈游</span>
+        </div>
       </div>
-      <div class="logo">from 米哈游</div>
     </div>
   </body>
 </html>

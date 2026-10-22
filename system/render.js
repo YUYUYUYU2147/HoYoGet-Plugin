@@ -1,5 +1,6 @@
 import { config } from '#HoYoGet';
 import fs from 'node:fs';
+import { bustTplCache } from './tpl_cache.js';
 // 临时自测：验证 system/ 下的模块是否随热重载重新求值。
 // 置于模块顶层 —— 只要本模块被重新加载就会输出一行，无需触发任何指令。
 // 日志之外再落盘一份标记，避免日志被过滤或 console 未被捕获导致误判。
@@ -9,6 +10,9 @@ try { fs.appendFileSync('./plugins/HoYoGet-Plugin/temp/hot_reload.log', `${new D
 async function render(path, data_, cfg) {
   let tplFile =
     data_.tplFile || process.cwd() + '/plugins/HoYoGet-Plugin/resources/' + path + '.html';
+  /* 框架缓存了模板内容，chokidar 监听在部分环境失效 —— 改完 html 出图还是旧样子。
+     按 mtime/size 主动失效，改模板即时生效。 */
+  bustTplCache(tplFile);
   let { e } = cfg;
   if (!e.runtime) {
     logger.error('未找到e.runtime');

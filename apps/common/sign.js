@@ -503,6 +503,8 @@ function removeCommonElements(arr1, arr2) {
 
 async function render(path, data_, cfg = {}) {
     let tplFile = process.cwd() + '/plugins/HoYoGet-Plugin/resources/' + path + '.html';
+    // 同 system/render.js：主动失效模板缓存，改完 html 不必重启
+    try { const { bustTplCache } = await import('../../system/tpl_cache.js'); bustTplCache(tplFile); } catch (_) {}
     const img = await new Runtime().render('米哈游', path, data_, {
         retType: 'base64',
         beforeRender({

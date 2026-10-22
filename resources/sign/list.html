@@ -2,33 +2,52 @@
 <html>
   <head>
     <meta http-equiv="content-type" content="text/html;charset=utf-8" />
-    <link rel="stylesheet" type="text/css" href="{{ppath}}sign/list.css" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}sign/group_sign.css" />
   </head>
 
   <body {{sys.scale}}>
     <div class="container" id="container">
-      <div class="tou">
-        <img src="{{ppath}}sign/xhh_avatar.png" />
-        <div class="t_box">
-          <p>米哈游</p>
+      <div class="gs-card">
+        <div class="gs-head">
+          <img class="avatar" src="{{ppath}}sign/xhh_avatar.png" />
+          <div class="gs-head-text">
+            <div class="brand">米哈游</div>
+            <div class="sub">本群开始签到</div>
+          </div>
+          <div class="gs-badge">准备中</div>
         </div>
-        <img class="mianju" src="{{ppath}}sign/mianju.png" />
-      </div>
-      <div class="colorful-embossed">
-        <div class="title"></div>
-        <div class="content">
-          <div class="qd"><strong>本群开始签到</strong></div>
-          <p>
-            当前群聊共<span>{{qqs.length}}</span>个用户，预计签到<span>{{qqs.length*3}}</span>个游戏账号
-          </p>
-          <div class="qqs">
+
+        <div class="gs-stats">
+          <div class="gs-stat total">
+            <div class="k">参与用户</div>
+            <div class="v">{{qqs.length}}</div>
+          </div>
+          <div class="gs-stat">
+            <div class="k">预计签到账号</div>
+            <div class="v">{{qqs.length * 3}}</div>
+          </div>
+        </div>
+
+        <div class="gs-group">
+          <div class="gs-group-title">
+            <span class="dot"></span>
+            <span>本次参与的用户</span>
+            <span class="count">共 {{qqs.length}} 人</span>
+          </div>
+          <div class="gs-users">
             {{each qqs qq}}
-            <img src="https://q1.qlogo.cn/g?b=qq&s=140&nk={{qq}}.jpg" />
+            <div class="gs-user">
+              <img src="https://q1.qlogo.cn/g?b=qq&s=140&nk={{qq}}.jpg" />
+              <div class="qq">{{qq}}</div>
+            </div>
             {{/each}}
           </div>
         </div>
+
+        <div class="gs-foot">
+          <span class="src">from 米哈游</span>
+        </div>
       </div>
-      <div class="logo">from 米哈游</div>
     </div>
   </body>
 </html>
