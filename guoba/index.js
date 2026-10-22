@@ -300,6 +300,114 @@ const CK_SCRIPT = `
 })();
 `
 
+
+const PANEL_HTML = `
+<div class="hoyo-panel">
+  <div class="pn-tip">管理本插件自定义面板图（resources/hoyo_panel/images/panel/&lt;游戏&gt;/&lt;角色&gt;/）。上传用命令「#米哈游上传&lt;角色&gt;面板图」，这里负责预览与删除。</div>
+  <div class="pn-bar">
+    <select class="pn-input" id="pn-game">
+      <option value="gs">原神</option>
+      <option value="sr">崩坏：星穹铁道</option>
+    </select>
+    <button class="pn-btn" id="pn-refresh">刷新</button>
+    <span class="pn-meta" id="pn-meta"></span>
+  </div>
+  <div class="pn-cards" id="pn-cards"><div class="pn-empty">加载中…</div></div>
+</div>
+`
+
+const PANEL_STYLE = `
+.hoyo-panel { padding: 4px 2px 10px; }
+.pn-tip { margin-bottom: 12px; padding: 9px 12px; border-radius: 10px; font-size: 12px; line-height: 1.6; color: var(--g-muted, #8a93a3); background: rgba(255, 196, 92, 0.12); border-left: 3px solid rgba(240, 170, 60, 0.6); }
+.pn-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+.pn-input { height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--g-border, #d8dde6); background: var(--g-card, #fff); color: var(--g-text, #333); font-size: 13px; outline: none; }
+.pn-btn { height: 32px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--g-border, #d8dde6); background: var(--g-card, #fff); color: var(--g-text, #333); font-size: 13px; cursor: pointer; }
+.pn-btn:hover { border-color: #4c8bf5; color: #3b78e0; }
+.pn-meta { font-size: 12px; color: var(--g-muted, #8a93a3); }
+.pn-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+.pn-card { border: 1px solid var(--g-border, #e3e8ef); border-radius: 12px; overflow: hidden; background: var(--g-card, #fff); cursor: pointer; }
+.pn-card:hover { border-color: #4c8bf5; box-shadow: 0 2px 10px rgba(76, 139, 245, 0.14); }
+.pn-cover { width: 100%; height: 140px; object-fit: cover; background: #eef2f7; display: block; }
+.pn-body { padding: 8px 10px; }
+.pn-name { font-size: 14px; font-weight: 600; color: var(--g-text, #333); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pn-count { margin-top: 2px; font-size: 12px; color: var(--g-muted, #8a93a3); }
+.pn-empty { text-align: center; color: var(--g-muted, #8a93a3); padding: 28px 0; grid-column: 1 / -1; }
+.pn-modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 999; }
+.pn-modal-mask.on { display: flex; }
+.pn-modal { width: 640px; max-height: 80vh; overflow: auto; background: var(--g-card, #fff); border-radius: 14px; padding: 16px; }
+.pn-modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.pn-modal-title { font-size: 15px; font-weight: 600; color: var(--g-text, #333); }
+.pn-close { border: none; background: none; font-size: 20px; cursor: pointer; color: var(--g-muted, #8a93a3); }
+.pn-imgs { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.pn-img-wrap { position: relative; }
+.pn-img { width: 100%; height: 200px; object-fit: cover; border-radius: 10px; background: #eef2f7; border: 1px solid var(--g-border, #e3e8ef); }
+.pn-del { position: absolute; top: 6px; right: 6px; border: none; border-radius: 6px; background: rgba(212, 63, 63, 0.9); color: #fff; font-size: 12px; padding: 2px 8px; cursor: pointer; }
+`
+
+const PANEL_SCRIPT = `
+(function () {
+  const g = window.__GUOBA__ || {}
+  const cards = document.getElementById('pn-cards')
+  const meta = document.getElementById('pn-meta')
+  const el = id => document.getElementById(id)
+  let currentGame = 'gs'
+  let currentName = ''
+  const modal = (() => {
+    const m = document.createElement('div')
+    m.className = 'pn-modal-mask'
+    m.innerHTML = '<div class="pn-modal"><div class="pn-modal-head"><span class="pn-modal-title"></span><button class="pn-close">×</button></div><div class="pn-imgs"></div></div>'
+    document.body.appendChild(m)
+    m.querySelector('.pn-close').addEventListener('click', () => m.classList.remove('on'))
+    m.addEventListener('click', e => { if (e.target === m) m.classList.remove('on') })
+    return m
+  })()
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) }
+  function headers(json) { const h = { [g.tokenKey || 'guoba-access-token']: g.token || '' }; if (json) h['Content-Type'] = 'application/json'; return h }
+  async function api(path, opts) { const r = await fetch(g.apiBase + path, opts); return await r.json() }
+  function imgUrl(file) { return g.apiBase + '/panel/img?game=' + encodeURIComponent(currentGame) + '&name=' + encodeURIComponent(currentName) + '&file=' + encodeURIComponent(file) + '&token=' + encodeURIComponent(g.token || '') }
+
+  async function load() {
+    cards.innerHTML = '<div class="pn-empty">加载中…</div>'
+    try {
+      const json = await api('/panel/list?game=' + currentGame, { headers: headers() })
+      const list = json?.result || []
+      meta.textContent = '共 ' + list.length + ' 个角色'
+      if (!list.length) { cards.innerHTML = '<div class="pn-empty">还没有上传面板图，用「#米哈游上传&lt;角色&gt;面板图」上传</div>'; return }
+      cards.innerHTML = list.map(p => '<div class="pn-card" data-name="' + esc(p.name) + '" data-cover="' + esc(p.cover) + '">'
+        + '<img class="pn-cover" src="' + imgUrl(p.cover) + '" loading="lazy" />'
+        + '<div class="pn-body"><div class="pn-name">' + esc(p.name) + '</div><div class="pn-count">' + p.count + ' 张</div></div>'
+        + '</div>').join('')
+      cards.querySelectorAll('.pn-card').forEach(c => c.addEventListener('click', () => open(c.dataset.name)))
+    } catch (err) {
+      cards.innerHTML = '<div class="pn-empty">加载失败：' + esc(err && err.message || err) + '</div>'
+    }
+  }
+
+  async function open(name) {
+    currentName = name
+    const json = await api('/panel/files?game=' + currentGame + '&name=' + encodeURIComponent(name), { headers: headers() })
+    const files = json?.result || []
+    modal.querySelector('.pn-modal-title').textContent = name + ' · ' + files.length + ' 张'
+    const wrap = modal.querySelector('.pn-imgs')
+    wrap.innerHTML = files.map(f => '<div class="pn-img-wrap"><img class="pn-img" src="' + imgUrl(f) + '" loading="lazy" /><button class="pn-del" data-file="' + esc(f) + '">删除</button></div>').join('')
+    wrap.querySelectorAll('.pn-del').forEach(b => b.addEventListener('click', async e => {
+      e.stopPropagation()
+      if (!confirm('删除这张图？')) return
+      const d = await api('/panel/delete', { method: 'POST', headers: headers(true), body: JSON.stringify({ game: currentGame, name, file: b.dataset.file }) })
+      if (!d?.ok) { alert(d?.message || '删除失败'); return }
+      open(name)
+      load()
+    }))
+    modal.classList.add('on')
+  }
+
+  el('pn-game').addEventListener('change', e => { currentGame = e.target.value; load() })
+  el('pn-refresh').addEventListener('click', load)
+  load()
+})();
+`
+
 const BIND_HTML = `
 <div class="hoyo-bind">
   <div class="hb-bar">
@@ -657,6 +765,62 @@ export function init(ctx) {
     } catch (err) {
       res.json({ ok: false, code: -1, message: err?.message || String(err), result: false })
     }
+  })
+
+  ctx.registerApi('get', '/panel/list', async (req, res) => {
+    try {
+      const { listPanels } = await import('../system/panel_store.js')
+      const q = req.query || {}
+      const list = listPanels(q.game || 'gs')
+      res.json({ ok: true, code: 0, message: 'ok', result: list.map(p => ({ game: p.game, name: p.name, count: p.files.length, cover: p.files[0] })) })
+    } catch (err) {
+      ctx.logger?.error?.(`[HoYoGet][guoba] 读取面板图列表失败：${err?.message || err}`)
+      res.json({ ok: false, code: -1, message: err?.message || String(err), result: [] })
+    }
+  })
+
+  ctx.registerApi('get', '/panel/files', async (req, res) => {
+    try {
+      const { listFiles } = await import('../system/panel_store.js')
+      const q = req.query || {}
+      res.json({ ok: true, code: 0, message: 'ok', result: listFiles(q.game, q.name) })
+    } catch (err) {
+      res.json({ ok: false, code: -1, message: err?.message || String(err), result: [] })
+    }
+  })
+
+  ctx.registerApi('get', '/panel/img', async (req, res) => {
+    try {
+      const { panelFilePath } = await import('../system/panel_store.js')
+      const q = req.query || {}
+      const abs = panelFilePath(q.game, q.name, q.file)
+      if (!abs) return res.status(404).end()
+      res.sendFile(abs)
+    } catch (err) {
+      ctx.logger?.warn?.(`[HoYoGet][guoba] 读取面板图失败：${err?.message || err}`)
+      res.status(404).end()
+    }
+  })
+
+  ctx.registerApi('post', '/panel/delete', async (req, res) => {
+    try {
+      const { deletePanelFile } = await import('../system/panel_store.js')
+      const b = req.body || {}
+      const ok = deletePanelFile(b.game, b.name, b.file)
+      res.json({ ok: true, code: 0, message: ok ? '已删除' : '文件不存在', result: ok })
+    } catch (err) {
+      res.json({ ok: false, code: -1, message: err?.message || String(err), result: false })
+    }
+  })
+
+  ctx.registerPage({
+    id: 'hoyo-panel-art',
+    title: '角色面板图管理',
+    icon: '🖼',
+    priority: 63,
+    html: PANEL_HTML,
+    style: PANEL_STYLE,
+    script: PANEL_SCRIPT,
   })
 
   ctx.registerPage({
