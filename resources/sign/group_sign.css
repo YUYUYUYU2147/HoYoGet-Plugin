@@ -23,25 +23,26 @@ body {
   width: 1000px;
   font-size: 16px;
   transform-origin: 0 0;
-  /* 截图区域比内容大时，露出的部分不会因透明被写成黑块 */
-  background-color: #0d1117;
+  /* 浅蓝底：截图区域比内容大时，露出的部分不会因透明被写成黑块 */
+  background-color: #eaf3ff;
 }
 
 .container {
   padding: 26px 24px 20px;
-  background-color: #0d1117;
+  background-color: #eaf3ff;
   background-image:
-    radial-gradient(720px 320px at 88% -12%, rgba(84, 148, 255, 0.22), transparent 62%),
-    radial-gradient(520px 260px at -8% 108%, rgba(255, 168, 96, 0.14), transparent 60%);
+    radial-gradient(760px 340px at 88% -14%, rgba(255, 255, 255, 0.9), transparent 62%),
+    radial-gradient(620px 300px at -10% 108%, rgba(150, 200, 255, 0.45), transparent 62%),
+    linear-gradient(160deg, #eef6ff 0%, #e2efff 55%, #d8e8ff 100%);
 }
 
 /* ───── 主卡片 ───── */
 .gs-card {
-  border-radius: 20px;
+  border-radius: 22px;
   padding: 20px 22px 16px;
-  background: rgba(28, 30, 36, 0.86);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 14px 36px rgba(96, 140, 200, 0.18);
 }
 
 /* ───── 头部 ───── */
@@ -50,17 +51,16 @@ body {
   align-items: center;
   gap: 14px;
   padding-bottom: 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(150, 185, 225, 0.35);
 }
 
 .gs-head .avatar {
   width: 62px;
   height: 62px;
   border-radius: 50%;
-  object-fit: cover;
   flex: none;
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18);
+  background: #fff;
+  box-shadow: 0 0 0 3px #fff, 0 4px 12px rgba(96, 140, 200, 0.25);
 }
 
 .gs-head-text {
@@ -72,7 +72,7 @@ body {
   font-family: '正';
   font-size: 26px;
   font-weight: 700;
-  color: #fff;
+  color: #1f3350;
   letter-spacing: 0.5px;
 }
 
@@ -80,7 +80,7 @@ body {
   margin-top: 4px;
   font-family: '宋';
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.55);
+  color: #7b8fa8;
   letter-spacing: 1px;
 }
 
@@ -90,15 +90,15 @@ body {
   border-radius: 999px;
   font-family: '宋';
   font-size: 13px;
-  color: #9cc4ff;
-  background: rgba(84, 148, 255, 0.16);
-  border: 1px solid rgba(84, 148, 255, 0.3);
+  color: #2f6fd0;
+  background: #e8f2ff;
+  border: 1px solid rgba(120, 170, 235, 0.45);
 }
 
 .gs-badge.done {
-  color: #7ff0a8;
-  background: rgba(48, 209, 88, 0.16);
-  border-color: rgba(48, 209, 88, 0.32);
+  color: #15803d;
+  background: #e7f9ee;
+  border-color: rgba(60, 190, 110, 0.4);
 }
 
 /* ───── 统计 ───── */
@@ -112,14 +112,14 @@ body {
   flex: 1;
   padding: 12px 14px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: #f5f9ff;
+  border: 1px solid rgba(200, 220, 245, 0.8);
 }
 
 .gs-stat .k {
   font-family: '宋';
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.55);
+  color: #7b8fa8;
 }
 
 .gs-stat .v {
@@ -127,19 +127,19 @@ body {
   font-family: '正';
   font-size: 26px;
   font-weight: 700;
-  color: #fff;
+  color: #1f3350;
   line-height: 1.1;
 }
 
-.gs-stat.ok .v { color: #30d158; }
-.gs-stat.fail .v { color: #ff7b7b; }
-.gs-stat.total .v { color: #9cc4ff; }
+.gs-stat.ok .v { color: #16a34a; }
+.gs-stat.fail .v { color: #dc2626; }
+.gs-stat.total .v { color: #2563eb; }
 
 /* ───── 用户分组 ───── */
 .gs-group {
   margin-top: 14px;
   padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(150, 185, 225, 0.35);
 }
 
 .gs-group-title {
@@ -149,23 +149,23 @@ body {
   margin-bottom: 10px;
   font-family: '宋';
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.72);
+  color: #4a6485;
 }
 
 .gs-group-title .dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #30d158;
+  background: #22c55e;
   flex: none;
 }
 
-.gs-group.fail .gs-group-title .dot { background: #ff5d5d; }
+.gs-group.fail .gs-group-title .dot { background: #ef4444; }
 
 .gs-group-title .count {
   margin-left: auto;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.45);
+  color: #93a6bd;
 }
 
 .gs-users {
@@ -183,22 +183,21 @@ body {
   width: 58px;
   height: 58px;
   border-radius: 50%;
-  object-fit: cover;
   display: block;
   margin: 0 auto;
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.14);
+  background: #f2f7ff;
+  box-shadow: 0 0 0 3px #fff, 0 3px 10px rgba(96, 140, 200, 0.22);
 }
 
 .gs-group.fail .gs-user img {
-  box-shadow: 0 0 0 2px rgba(255, 93, 93, 0.55);
+  box-shadow: 0 0 0 3px #fff, 0 0 0 5px rgba(239, 68, 68, 0.35), 0 3px 10px rgba(200, 96, 96, 0.22);
 }
 
 .gs-user .qq {
   margin-top: 5px;
   font-family: '宋';
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.45);
+  color: #93a6bd;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -208,14 +207,14 @@ body {
   padding: 6px 2px 2px;
   font-family: '宋';
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.4);
+  color: #a8b8cc;
 }
 
 /* ───── 页脚 ───── */
 .gs-foot {
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(150, 185, 225, 0.35);
   text-align: center;
 }
 
@@ -223,5 +222,5 @@ body {
   font-family: '宋';
   font-size: 13px;
   letter-spacing: 1px;
-  color: #ff4d4f;
+  color: #e5484d;
 }
