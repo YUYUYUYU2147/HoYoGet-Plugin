@@ -2026,6 +2026,8 @@ export class zzz_panel_list extends plugin {
         })),
       }))
       const hasProps = equip.some(e => (e.properties || []).length > 0)
+      // hasEquip：是否装了驱动盘。空号（equip 为空）即使没词条也不该反复重拉。
+      const hasEquip = equip.length > 0
       // 已有记录：只有「新数据带完整副词条、旧数据没有」时才覆盖，
       // 避免补全后的完整数据被后续读到的裁剪数据盖回去。
       const prev = uidRecords.get(name)
@@ -2046,7 +2048,7 @@ export class zzz_panel_list extends plugin {
         ap: parseFloat(basic_properties.elementmystery?.final) || 0,
       }
       const scoreRes = calcEquipScore(equip, name, scoreStats, a?.avatar_profession, a?.element_type, basic_properties)
-      uidRecords.set(name, { score: scoreRes.score, rating: scoreRes.rating, ruleName: scoreRes.ruleName, hasProps })
+      uidRecords.set(name, { score: scoreRes.score, rating: scoreRes.rating, ruleName: scoreRes.ruleName, hasProps, hasEquip })
     }
     // 1) 本插件自己的 records（单角色详情落盘，优先）
     try {
@@ -2079,15 +2081,16 @@ export class zzz_panel_list extends plugin {
       return { ...c, equip_score: rec?.score ?? null, equip_rating: rec?.rating ?? null }
     })
 
-    // 补全缺失评分：两类都要重拉 ——
-    //   ① records 里完全没有详情的角色（equip_score == null）
-    //   ② 有记录但驱动盘副词条被裁掉的角色（hasProps=false，need_wiki=false 的旧数据）
-    // 并发调 avatar/info（need_wiki=true）拿完整驱动盘，算评分并落盘。
+    // 补全缺失评分：只在「有驱动盘但没拿到词条」时重拉 ——
+    //   ① records 里完全没有详情的角色（equip_score == null，未知有没有装备）→ 拉一次
+    //   ② 有记录、装了驱动盘、但副词条被裁（hasEquip=true && hasProps=false）→ 重拉
+    // 空号（hasEquip=false，游戏里本就没装驱动盘）不再反复重拉，避免每次更新都跑一遍。
     const missing = cards.filter(c => {
       if (c.id == null) return false
-      if (c.equip_score == null) return true
       const rec = uidRecords.get(c.name)
-      return rec && rec.hasProps === false
+      if (!rec) return true                    // 没有记录，拉一次
+      if (rec.hasProps) return false           // 词条完整，跳过
+      return rec.hasEquip === true             // 有驱动盘但没词条 → 重拉
     })
     if (missing.length) {
       await e.reply(`检测到 ${missing.length} 个角色评分数据不完整，正在并发补全，请稍候…`, true, { recallMsg: 0 })
