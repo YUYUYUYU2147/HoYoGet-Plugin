@@ -584,7 +584,10 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
       // 显示钳到 0 避免负百分比；分母为小保底总场数，为 0（全歪）时置 '--'
       upRate = noWai.noWaiDen > 0 ? pct(Math.max(0, noWai.noWaiNum), noWai.noWaiDen) : '--'
     }
-    const MIAO_RES = '../../../../../plugins/miao-plugin/resources'
+    /* 图标资源根：原来指向 plugins/miao-plugin/resources，miao 卸载后
+       Character/Weapon 查到的相对路径全部 404（常驻池等没有自带 icon 的记录
+       就完全没有图标）。改用本插件 resources，meta-sr 里 face/icon 都在。 */
+    const MIAO_RES = '../../../../../plugins/HoYoGet-Plugin/resources'
     const miaoGame = game === 'zzz' ? 'zzz' : 'sr'
     // 绝区零：官方物品配置接口忽略 game 参数只返回星铁数据，miao-plugin 也无绝区零资源，
     // 且图源站点在本机不可达，因此这里只认记录自带的 icon，不做任何猜测性拼接
@@ -612,7 +615,7 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
       if (game === 'sr' && item?.item_type === '角色' && name) {
         const local = `meta-sr/character/${name}/imgs/face.webp`
         try {
-          if (fs.existsSync(path.join(process.cwd(), 'plugins/miao-plugin/resources', local))) {
+          if (fs.existsSync(path.join(process.cwd(), 'plugins/HoYoGet-Plugin/resources', local))) {
             return `${MIAO_RES}/${local}`
           }
         } catch {}

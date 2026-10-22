@@ -1,6 +1,26 @@
 import { yaml, render, config, pluginPriority } from '#HoYoGet';
+import { Character, Weapon } from '#hoyo.miao.models';
 
 const path = '../../../../..';
+/* 卡池图标的资源根与查表：miao 插件已卸载，直接用本插件 resources/meta-sr。
+   光锥在 meta-sr/weapon/<职业>/<名字>/icon.webp，路径带职业段，模板无法靠
+   名字拼出来，所以这里用模型解析成完整路径再交给模板。 */
+const RES_ROOT = `${path}/plugins/HoYoGet-Plugin/resources`;
+const srCharIcon = (name) => {
+  try {
+    const face = Character.get(name, 'sr')?.imgs?.face || '';
+    if (!face) return '';
+    return `${RES_ROOT}${face.startsWith('/') ? '' : '/'}${face}`;
+  } catch { return ''; }
+};
+const srWeaponIcon = (name) => {
+  try {
+    const w = Weapon.get(name, 'sr');
+    const img = w?.getData?.('img')?.img || w?.img || '';
+    if (!img) return '';
+    return `${RES_ROOT}/${String(img).replace(/^\//, '')}`;
+  } catch { return ''; }
+};
 function latestSrVersion(data = []) {
   return (Array.isArray(data) ? data : [])
     .map(item => String(item?.ver || '').match(/(\d+\.\d+)/)?.[1])
@@ -108,8 +128,11 @@ export class sr_logs extends plugin {
 
     let _data_ = {
       data,
-      js_path: `${path}/plugins/miao-plugin/resources/meta-sr/character/`,
-      gz_path: `${path}/plugins/miao-plugin/resources/meta-sr/weapon/`,
+      /* miao 插件可能已卸载：图标改指本插件 resources（meta-sr 下都有） */
+      js_path: `${path}/plugins/HoYoGet-Plugin/resources/meta-sr/character/`,
+      gz_path: `${path}/plugins/HoYoGet-Plugin/resources/meta-sr/weapon/`,
+      js_icon: srCharIcon,
+      gz_icon: srWeaponIcon,
     };
     render('srlogs/logs', _data_, { e, ret: true });
   }

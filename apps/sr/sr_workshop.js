@@ -33,7 +33,8 @@ import { SR_HOST, request, signedPost, parseSetInfo } from '../../system/worksho
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const NAMES_FILE = path.join(PLUGIN_ROOT, 'system', 'default', 'sr_workshop_names.json')
-const MIAO_RES = '../../../../../plugins/miao-plugin/resources'
+/* 图标资源根：miao 卸载后指向本插件 resources（meta-sr 内角色/光锥图标齐全） */
+const MIAO_RES = '../../../../../plugins/HoYoGet-Plugin/resources'
 const CACHE_TTL = 6 * 3600 * 1000
 
 // 指令正则：规则表与参数提取共用，避免两处写法不一致

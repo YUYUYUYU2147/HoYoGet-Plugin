@@ -19,22 +19,22 @@
             <div class="js_box">
               {{each v.js_five js_f}}
               <div class="five">
-                <img class="face" src="{{js_path}}{{js_f}}/imgs/face.webp" />
+                <img class="face" src="{{js_icon js_f}}" onerror="this.style.visibility='hidden'" />
               </div>
               {{/each}} {{each v.js_four js_f}}
               <div class="four">
-                <img class="face" src="{{js_path}}{{js_f}}/imgs/face.webp" />
+                <img class="face" src="{{js_icon js_f}}" onerror="this.style.visibility='hidden'" />
               </div>
               {{/each}}
             </div>
             <div class="gz_box">
               {{each v.gz_five gz_f}}
               <div class="five">
-                <img class="face" src="{{gz_path}}{{gz_f}}/icon.webp" />
+                <img class="face" src="{{gz_icon gz_f}}" onerror="this.style.visibility='hidden'" />
               </div>
               {{/each}} {{each v.gz_four gz_f}}
               <div class="four">
-                <img class="face" src="{{gz_path}}{{gz_f}}/icon.webp" />
+                <img class="face" src="{{gz_icon gz_f}}" onerror="this.style.visibility='hidden'" />
               </div>
               {{/each}}
             </div>
