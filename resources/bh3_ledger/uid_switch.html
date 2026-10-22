@@ -6,7 +6,6 @@
 </head>
 <body {{sys.scale}}>
   <div class="container">
-    <img class="role" src="{{ppath}}img/ledger/Senadina.png" draggable="false">
     <div class="header">
       <div class="eyebrow">HONKAI IMPACT 3RD</div>
       <div class="title">{{headline}}</div>
@@ -17,9 +16,10 @@
       {{each accounts item}}
       <div class="card {{if item.isCurrent}}current{{/if}} {{if item.isSelected}}selected{{/if}}">
         <div class="idx">#{{item.index}}</div>
+        <img class="avatar" src="{{item.avatar || ppath + 'sign/xhh_avatar.png'}}" />
         <div class="main">
-          <div class="uid">UID {{item.uid}}</div>
-          <div class="server">{{item.server}}</div>
+          <div class="uid">{{item.nickname || ('UID ' + item.uid)}}</div>
+          <div class="sub">{{item.nickname ? 'UID ' + item.uid : item.server}}{{if item.level}} · Lv.{{item.level}}{{/if}}</div>
         </div>
         <div class="tag">
           {{if item.isSelected}}已切换{{else if item.isCurrent}}当前{{else if mode === 'delete'}}已绑定{{else}}可选{{/if}}

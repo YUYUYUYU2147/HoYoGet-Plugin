@@ -502,7 +502,28 @@ export class bh3_ledger extends plugin {
 
     async renderSwitchUidCard(e, uidList = [], current = '', action = null) {
         const selected = action?.account || null;
-        const accounts = uidList.map((item, i) => ({
+        // 拉昵称/头像：崩三 index 接口需要 headers（stoken 构造的 ck），逐个查，
+        // 查不到就回退到模板里的默认头像与「UID xxx」文案，不阻塞出图。
+        let enriched = uidList;
+        try {
+            const stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${e.user_id}.yaml`;
+            let stokenData = {};
+            if (fs.existsSync(stokenPath)) { try { stokenData = await yaml.get(stokenPath) || {}; } catch (_) {} }
+            enriched = await Promise.all(uidList.map(async item => {
+                const entry = stokenData[item.uid] || {};
+                if (!entry?.ck_stoken && !entry?.stoken) return item;
+                try {
+                    const headers = mhy.getHeaders(e, entry.ck_stoken || `stuid=${entry.stuid};stoken=${entry.stoken};`);
+                    const p = await getRoleProfile(e, item.uid, 'bh3', { headers, server: entry.region });
+                    return { ...item, nickname: p.nickname, avatar: p.avatar, level: p.userLevel };
+                } catch {
+                    return item;
+                }
+            }));
+        } catch (err) {
+            logger.debug?.(`[HoYoGet][bh3_ledger] 拉取崩三昵称头像失败：${err?.message || err}`);
+        }
+        const accounts = enriched.map((item, i) => ({
             ...item,
             index: i + 1,
             server: item.name || BH3_REGION_LABELS[item.region] || item.region || '未知服务器',
