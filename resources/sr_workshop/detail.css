@@ -139,3 +139,13 @@
   font-size: 12px;
   color: #ffb0a0;
 }
+
+.global-miss {
+  margin-top: 14px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #8fa9cd;
+  background: rgba(16, 32, 62, .5);
+  border: 1px dashed rgba(100, 150, 230, .2);
+}

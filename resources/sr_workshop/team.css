@@ -63,12 +63,23 @@
   gap: 6px;
 }
 .member {
-  padding: 4px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 4px;
   border-radius: 999px;
   font-size: 13px;
   color: #e3eeff;
   background: rgba(18, 36, 70, .70);
   border: 1px solid rgba(110, 160, 240, .26);
+}
+.member-face {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+  background: #1a2c4e;
 }
 
 .swaps {

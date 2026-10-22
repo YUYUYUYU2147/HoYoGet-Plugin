@@ -67,6 +67,8 @@
         </div>
         {{if globalRank.stale}}<div class="global-warn">⚠ 网站配装可能未同步，名次对应的是旧面板</div>{{/if}}
       </div>
+      {{else if globalRankMiss}}
+      <div class="global-miss">该玩家未在 fort off fans 提交展柜，无法查询全球名次</div>
       {{/if}}
 
       {{if panel.length}}

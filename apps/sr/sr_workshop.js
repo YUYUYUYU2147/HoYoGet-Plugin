@@ -160,11 +160,11 @@ function localNames() {
   return NAMES
 }
 
-/** 本地角色头像：miao 的 face.webp 按角色名存放，缺失返回空串 */
+/** 本地角色头像：本插件 meta-sr 的 face.webp 按角色名存放，缺失返回空串 */
 function localFace(name) {
   const clean = String(name || '').trim()
   if (!clean) return ''
-  const file = path.join(PLUGIN_ROOT, '..', 'miao-plugin', 'resources', 'meta-sr', 'character', clean, 'imgs', 'face.webp')
+  const file = path.join(PLUGIN_ROOT, 'resources', 'meta-sr', 'character', clean, 'imgs', 'face.webp')
   try {
     if (!fs.existsSync(file)) return ''
   } catch (_) {
@@ -704,6 +704,9 @@ async function buildSrDetail(arg) {
     }
   } catch (_) { /* 全球排名查询失败不影响面板主流程 */ }
 
+  // 记录匹配结果供模板提示（matched=匹配到 / miss=未匹配 / error=接口失败）
+  const globalRankMiss = globalRank ? false : (nick && nick !== '未知玩家')
+
   return {
     view: 'detail',
     title: role.nick_name,
@@ -723,6 +726,7 @@ async function buildSrDetail(arg) {
     elem: role.elem || '',
     path: role.path || '',
     globalRank,
+    globalRankMiss,
   }
 }
 
@@ -944,12 +948,20 @@ async function buildSrTeam(arg) {
 
   const list = sorted.slice(0, count).map(row => {
     const lowers = Array.isArray(row?.more_config?.lowers) ? row.more_config.lowers : []
+    const memberIds = String(row?.team_members || '').split(',').filter(Boolean)
+    const memberNames = String(row?.team_member_names || '').split(',').filter(Boolean)
+    const members = memberNames.map((n, i) => {
+      const id = memberIds[i] || ''
+      const role = roles.find(r => String(r?.item_id) === id) || roles.find(r => r?.nick_name === n)
+      const cnName = role?.nick_name || n
+      return { name: cnName, face: localFace(cnName) || '' }
+    })
     return {
       name: row?.team_name || '未命名队伍',
       system: systems.get(String(row?.team_system || '')) || row?.team_system || '其他',
       stars: starText(row?.level),
       starNum: Number(row?.level) || 0,
-      members: String(row?.team_member_names || '').split(',').filter(Boolean).map(nameOf),
+      members,
       swaps: lowers
         .map(item => {
           const main = nameOf(item?.item_id)

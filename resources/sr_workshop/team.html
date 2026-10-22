@@ -30,7 +30,7 @@
           <div class="team-system">{{r.system}}</div>
           <div class="members">
             {{each r.members m}}
-            <span class="member">{{m}}</span>
+            <span class="member">{{if m.face}}<img class="member-face" src="{{m.face}}" onerror="this.style.display='none'" />{{/if}}{{m.name}}</span>
             {{/each}}
           </div>
           {{if r.swaps.length}}
