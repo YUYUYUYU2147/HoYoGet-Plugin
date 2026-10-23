@@ -132,7 +132,8 @@ function normalizeAvatar(item) {
     typeCn: ZZZ_TYPE_MAP[item?.avatar_profession] || '',
     camp: item?.camp_name_mi18n || '',
     rank: item?.rank ?? 0,
-    icon: item?.role_square_url || item?.hollow_icon_path || item?.group_icon_path || '',
+    icon: item?.role_square_url || item?.hollow_icon_path || item?.group_icon_path
+      || (item?.id ? `https://act-webstatic.mihoyo.com/game_record/zzzv2/role_square_avatar/role_square_avatar_${item.id}.png` : ''),
   }
 }
 

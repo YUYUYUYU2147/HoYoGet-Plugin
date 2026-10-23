@@ -51,13 +51,13 @@ function fmtProp(propId, value, pct) {
   return String(Math.trunc(n))
 }
 
-/** 米游社列表用方形头像；Enka 不返回图标，这里用本地 ZZZ-Plugin 立绘或 nanoka 镜像补上 */
-function roleIcon(info) {
-  const sprite = info?.sprite_id
-  if (!sprite) return ''
-  const local = path.join(process.cwd(), 'plugins', 'ZZZ-Plugin', 'resources', 'images', 'nanoka', 'role', `IconRole${sprite}_01.webp`)
-  try { return `data:image/webp;base64,${fs.readFileSync(local).toString('base64')}` } catch { /* 没装 ZZZ-Plugin 就用镜像 */ }
-  return `https://static.nanoka.cc/assets/zzz/IconRole${sprite}_01.webp`
+/**
+ * 米游社列表用方形头像。Enka 不返回图标，但官方静态资源可按角色 id 直接取；
+ * 不要用 IconRole<sprite>_01（那是全身立绘，且部分角色没有 _01 变体，会 404 留空）。
+ */
+function roleIcon(id) {
+  if (!id) return ''
+  return `https://act-webstatic.mihoyo.com/game_record/zzzv2/role_square_avatar/role_square_avatar_${id}.png`
 }
 
 let _weapon = null
@@ -153,7 +153,7 @@ export async function fetchEnkaPanel(uid, { timeout = 15000 } = {}) {
       rarity: info.Rarity || 'A',
       rank,
       ranks: [],
-      role_square_url: roleIcon(info),
+      role_square_url: roleIcon(id),
       equip: equips,
       weapon,
       skills,
