@@ -28,7 +28,7 @@
   }
 
   function normalize(raw) {
-    const list = Array.isArray(raw) ? raw : (raw?.list || raw?.data || [])
+    const list = Array.isArray(raw) ? raw : (raw?.groups || raw?.list || raw?.data || [])
     return list.map(group => ({
       group: String(group?.group || '未分组'),
       auth: group?.auth || '',
@@ -131,7 +131,12 @@
       })
       const json = await res.json()
       if (!json?.ok) throw new Error(json?.message || '加载失败')
-      groups = normalize(json.result)
+      const payload = json.result || {}
+      groups = normalize(payload)
+      const titleEl = el('hp-title')
+      const subEl = el('hp-sub')
+      if (titleEl && payload.title) titleEl.textContent = payload.title
+      if (subEl && payload.subtitle) subEl.textContent = payload.subtitle
       const options = groups.map(group => '<option value="' + esc(group.group) + '">' + esc(group.group) + '</option>').join('')
       groupSel.innerHTML = '<option value="">全部板块</option>' + options
       render()

@@ -1,0 +1,45 @@
+# 全局帮助内容。可复制到 config/global_help.yaml 后自行修改（优先读取 config 下的版本）。
+# 结构：title / subtitle / groups[].group / groups[].list[].title / desc
+title: 全局帮助
+subtitle: 米哈游插件 · 全部指令速查
+groups:
+  - group: 全局帮助
+    list:
+      - title: 问题反馈
+        desc: 私聊 bot 或群里发送 #联系主人+消息 即可
+  - group: mys-plugin
+    list:
+      - title: 所有功能必须艾特机器人或 +q/q
+        desc: 不会开启自动回复，不会开启私聊功能
+      - title: "#扫码登录"
+        desc: 确保米游社是最新版才能扫码
+      - title: "#云崽帮助"
+        desc: 米游全家桶
+      - title: 米哈游帮助
+        desc: 米游功能集合处
+      - title: "%帮助"
+        desc: 绝区零帮助
+  - group: 小插件
+    list:
+      - title: "#母带/水晶，%母带，#上月水晶（米哈游帮助）"
+        desc: 查询资源存量，仅限绝区零和 bbb
+      - title: "#/%更新抽卡记录（米哈游帮助）"
+        desc: 详情看抽卡帮助
+      - title: "#[原石|星琼|菲林|水晶|深渊]速报（米哈游帮助）"
+        desc: 资源预估
+      - title: "#点歌+歌曲（暂时停用）"
+        desc: 点歌成功后发送 #听几「n=1,2,3,...」，不满意就发送 #下一页
+      - title: 攻略帮助（迁移到米哈游帮助）
+        desc: 游戏前缀【#，*，%】+角色名字+攻略
+      - title: "#meme帮助（米哈游帮助）"
+        desc: 表情帮助
+      - title: 戳一戳/单独艾特 bot（chatgpt帮助）
+        desc: 提供情绪价值神秘小代码
+      - title: B站帮助
+        desc: b站相关功能
+      - title: y帮助
+        desc: 娱乐小功能
+      - title: 米游社社区签到|米哈游签到（米哈游帮助）
+        desc: 免费米游社社区签到和游戏
+      - title: "#core帮助"
+        desc: 增加鸣潮和战双帮助

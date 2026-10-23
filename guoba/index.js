@@ -239,8 +239,8 @@ const HELP_HTML = `
   <div class="hp-hero">
     <div class="hp-hero-copy">
       <span class="hp-kicker">HoYoGet · Global Help</span>
-      <h2>全局帮助</h2>
-      <p>原神 / 星铁 / 绝区零 / 崩坏3 全部指令速查。点击任意卡片即可复制指令，也可以直接搜索关键词。</p>
+      <h2 id="hp-title">全局帮助</h2>
+      <p id="hp-sub">原神 / 星铁 / 绝区零 / 崩坏3 全部指令速查。点击任意卡片即可复制指令，也可以直接搜索关键词。</p>
       <div class="hp-hero-tags">
         <span># 原神</span><span>* 星铁</span><span>% 绝区零</span><span>! 崩坏3</span><span>+ 通用</span>
       </div>
@@ -449,11 +449,18 @@ export function init(ctx) {
 
   ctx.registerApi('get', '/help', async (req, res) => {
     try {
-      const file = path.join(ROOT, 'system', 'default', 'help-detail.yaml')
+      // 优先自定义全局帮助，其次完整帮助
+      const custom = path.join(ROOT, 'config', 'global_help.yaml')
+      const customDefault = path.join(ROOT, 'system', 'default', 'global_help.yaml')
+      const detail = path.join(ROOT, 'system', 'default', 'help-detail.yaml')
       const fallback = path.join(ROOT, 'system', 'default', 'help.yaml')
-      const target = fs.existsSync(file) ? file : fallback
+      let target = ''
+      if (fs.existsSync(custom)) target = custom
+      else if (fs.existsSync(customDefault)) target = customDefault
+      else if (fs.existsSync(detail)) target = detail
+      else target = fallback
       const raw = YAML.parse(fs.readFileSync(target, 'utf8')) || []
-      const result = Array.isArray(raw) ? raw : (raw.list || raw.data || [])
+      const result = Array.isArray(raw) ? { groups: raw } : raw
       res.json({ ok: true, code: 0, message: 'ok', result })
     } catch (err) {
       ctx.logger?.error?.(`[HoYoGet][guoba] 读取全局帮助失败：${err?.message || err}`)

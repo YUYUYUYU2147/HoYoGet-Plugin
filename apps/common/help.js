@@ -1,8 +1,11 @@
+import fs from 'node:fs';
 import { render, pluginPriority, yaml } from '#HoYoGet';
 
 const HELP_PATH = './plugins/HoYoGet-Plugin/system/default/help.yaml';
 const DETAIL_HELP_PATH = './plugins/HoYoGet-Plugin/system/default/help-detail.yaml';
 const HELP_URL = 'https://yuyu2147.dpdns.org/';
+const GLOBAL_HELP_PATH = './plugins/HoYoGet-Plugin/system/default/global_help.yaml';
+const GLOBAL_HELP_CFG = './plugins/HoYoGet-Plugin/config/global_help.yaml';
 const GAME_HELP_ALIASES = {
   原神: ['原神'],
   星铁: ['星铁', '崩铁'],
@@ -37,6 +40,20 @@ const THEME_HEAD = {
   default: { title: '米哈游插件', sub: '命令帮助 · 指令速查' },
 };
 
+function readGlobalHelp() {
+  const file = fs.existsSync(GLOBAL_HELP_CFG) ? GLOBAL_HELP_CFG
+    : (fs.existsSync(GLOBAL_HELP_PATH) ? GLOBAL_HELP_PATH : '');
+  if (!file) return null;
+  const raw = yaml.get(file) || {};
+  const groups = Array.isArray(raw) ? raw : (raw.groups || raw.list || raw.data || []);
+  if (!Array.isArray(groups) || !groups.length) return null;
+  return {
+    title: String(raw.title || '全局帮助'),
+    subtitle: String(raw.subtitle || '米哈游插件 · 全部指令速查'),
+    groups,
+  };
+}
+
 export class help extends plugin {
   constructor(e) {
     super({
@@ -65,12 +82,20 @@ export class help extends plugin {
 
   async globalHelp(e) {
     try {
-      const raw = yaml.get(DETAIL_HELP_PATH) || [];
-      const data = Array.isArray(raw) ? raw : (raw.list || raw.data || []);
+      // 优先使用自定义全局帮助（config/global_help.yaml），否则回退完整帮助
+      const custom = readGlobalHelp();
+      let data;
+      let head = THEME_HEAD.global;
+      if (custom) {
+        data = custom.groups;
+        head = { title: custom.title, sub: custom.subtitle };
+      } else {
+        const raw = yaml.get(DETAIL_HELP_PATH) || [];
+        data = Array.isArray(raw) ? raw : (raw.list || raw.data || []);
+      }
       if (!data.length) {
         return e.reply('帮助内容为空，可在线查看：' + HELP_URL, true, { recallMsg: 60 });
       }
-      const head = THEME_HEAD.global;
       const img = await render('help/help', {
         data,
         au: !!e.isMaster,
