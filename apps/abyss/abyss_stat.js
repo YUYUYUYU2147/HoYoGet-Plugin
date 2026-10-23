@@ -447,6 +447,14 @@ export class abyss_stat extends plugin {
       let raw = null
       try {
         raw = await mys[cfg.api](type)
+        /* 米游社对短时间内的重复请求会限流，返回 -10001 invalid request
+           （连原本正常的接口也会一起挂）。这种要等一下重试，
+           否则一次限流就表现为「深渊数据全空」。 */
+        if (!raw && Number(e?._retcode) === -10001) {
+          await new Promise(r => setTimeout(r, 3000))
+          const retry = await mys[cfg.api](type)
+          if (retry) raw = retry
+        }
       } catch (err) {
         errors.push(`${cfg.title}: ${err?.message || err}`)
         continue

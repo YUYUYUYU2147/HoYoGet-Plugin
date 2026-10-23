@@ -8,7 +8,9 @@ const MAX_COOKIE_SELECTIONS = 50
 /* 新版 miao 用驼峰 api 名，旧版 Yunzai/genshin 的 apiTool 只注册了下划线名。
    这里做一层别名，避免「未定义MysApi: challengeBoss」把星铁挑战图整块吞掉。 */
 const MYS_API_ALIAS = {
-  challenge_brief: "challenge_brief",
+  /* apiTool 里逐光捡金概览的 key 是 'brief'（不是 challenge_brief），
+     写错会 getUrl 返回 false → 概览永远拿不到，兜底形同虚设。 */
+  challenge_brief: "brief",
   spiralAbyss: "challenge_chaos",
   challengeStory: "challenge_story",
   challengeBoss: "challenge_boss",
