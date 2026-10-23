@@ -12,7 +12,10 @@ import { fileURLToPath } from 'node:url'
 import { SR_HOST, request } from './workshop_api.js'
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const MIAO_ROOT = path.join(PLUGIN_ROOT, '..', 'miao-plugin', 'resources')
+const MIAO_ROOTS = [
+  path.join(PLUGIN_ROOT, 'resources'),
+  path.join(PLUGIN_ROOT, '..', 'miao-plugin', 'resources'),
+]
 const CACHE_TTL = 6 * 3600 * 1000
 
 const cache = { roles: null, rolesAt: 0, teams: null, teamsAt: 0 }
@@ -35,17 +38,36 @@ async function srTeams() {
   return cache.teams
 }
 
-/** 角色头像：miao 的 meta-sr 里按角色名存放，返回相对 _miao_path 的路径 */
+/** 角色头像：meta-sr 里按角色名存放，返回相对 _miao_path 的路径 */
+let _faceDirs = null
+function faceDirMap() {
+  if (_faceDirs) return _faceDirs
+  const map = new Map()
+  for (const root of MIAO_ROOTS) {
+    try {
+      for (const dir of fs.readdirSync(path.join(root, 'meta-sr', 'character'))) {
+        map.set(dir.replace(/[·•・\s「」『』]/g, ''), dir)
+      }
+    } catch (_) { /* 继续下一个根 */ }
+  }
+  _faceDirs = map
+  return map
+}
 function srFace(name) {
   const clean = String(name || '').trim()
   if (!clean) return ''
   /* 工坊写「开拓者·记忆」，miao 按性别分成「星·记忆 / 穹·记忆」 */
   const candidates = [clean, clean.replace(/^开拓者/, '星'), clean.replace(/^开拓者/, '穹')]
+  if (/记忆主|开拓者/.test(clean)) candidates.push('星·记忆', '穹·记忆')
+  const norm = s => s.replace(/[·•・\s「」『』]/g, '')
   for (const candidate of candidates) {
-    const rel = `meta-sr/character/${candidate}/imgs/face.webp`
-    try {
-      if (fs.existsSync(path.join(MIAO_ROOT, rel))) return rel
-    } catch (_) { /* 继续试下一个 */ }
+    const dir = faceDirMap().get(norm(candidate)) || candidate
+    const rel = `meta-sr/character/${dir}/imgs/face.webp`
+    for (const root of MIAO_ROOTS) {
+      try {
+        if (fs.existsSync(path.join(root, rel))) return rel
+      } catch (_) { /* 继续 */ }
+    }
   }
   return ''
 }

@@ -158,6 +158,14 @@ export async function readBoundUid(e, game) {
  * **不会改 Users.games.<game>.uid**。只读后者的话，用户切了 UID 这里仍拿旧的。
  * 所以先看 MysUsers（uid 列表第一项即当前生效），拿不到再回落 Users。
  */
+/** 本地 PlayerData 的游戏昵称（fort off fans 昵称常与工坊不同） */
+function localSrName(uid) {
+  try {
+    const d = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'data', 'PlayerData', 'sr', `${uid}.json`), 'utf8'))
+    return String(d?.name || '').trim()
+  } catch (_) { return '' }
+}
+
 async function readMysMainUid(e, game) {
   const qq = String(e?.user_id || e?.sender?.user_id || '').trim()
   if (!qq) return ''
@@ -2007,6 +2015,47 @@ export class hoyo_panel extends plugin {
         getRoleProfile(e, uid, game).catch(() => ({})),
       ])
 
+      /* 星铁：fort off fans 的遗器评分（wrqs）个人名次，补在右栏工坊数据上方 */
+      let srGlobalRank = null
+      if (game === 'sr') {
+        try {
+          const { fetchPersonalRank, fetchLeaderboardRank } = await import(`../../system/fortoffans.js?t=${Date.now()}`)
+          const names = [...new Set([
+            roleInfo?.nickname,
+            info.nickname,
+            info.name,
+            localSrName(uid),
+          ].map(v => String(v || '').trim()).filter(Boolean))]
+          let pr = null
+          for (const nm of names) {
+            pr = await fetchPersonalRank({ nickname: nm, char: String(hit.id), eidolon: data.rank || 0 })
+            if (pr?.rank != null) break
+          }
+          if (pr?.rank != null) {
+            let wrqs = null
+            if (pr.entry?.uid) {
+              try {
+                wrqs = await fetchLeaderboardRank({
+                  char: String(hit.id),
+                  eid: pr.bracket,
+                  stat: 'wrqs',
+                  uid: pr.entry.uid,
+                  maxPages: 40,
+                })
+              } catch (_) { /* 回退 CRIT */ }
+            }
+            srGlobalRank = {
+              rank: wrqs?.rank ?? pr.rank,
+              total: wrqs?.total ?? pr.total ?? null,
+              rankStat: wrqs ? 'wrqs' : 'tcv',
+              wrqs: pr.entry?.wrqs != null ? Number(pr.entry.wrqs).toFixed(2) : '',
+            }
+          }
+        } catch (err) {
+          logger.debug?.(`[HoYoGet][hoyo_panel] fort off fans 名次失败：${err?.message || err}`)
+        }
+      }
+
       /* Akasha 被 Cloudflare 拦时，至少用 miao 的群排名补一个「本群排名」，
          不让右栏整块空掉；私聊或未开启群排名时保持 null。 */
       let groupRank = null
@@ -2040,6 +2089,7 @@ export class hoyo_panel extends plugin {
         rankLimit,
         ysRank,
         srWorkshop,
+        srGlobalRank,
         miaoDmg,
         randomBg,
         appleStyle: style === 'apple',

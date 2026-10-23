@@ -307,6 +307,17 @@
           </div>
           {{/if}}
 
+          {{if srGlobalRank}}
+          <div class="akasha sw">
+            <div class="ak-title">fort off fans · {{if srGlobalRank.rankStat === 'wrqs'}}遗器评分榜{{else}}CRIT 值榜{{/if}}</div>
+            <div class="ak-rank">
+              <span class="ak-no">#{{srGlobalRank.rank}}</span>
+              <span class="ak-of">/ {{srGlobalRank.total || '?'}}</span>
+            </div>
+            {{if srGlobalRank.wrqs}}<div class="ak-plan">遗器评分 {{srGlobalRank.wrqs}}</div>{{/if}}
+          </div>
+          {{/if}}
+
           {{if srWorkshop}}
           <div class="akasha sw">
             {{if srWorkshop.rank}}
