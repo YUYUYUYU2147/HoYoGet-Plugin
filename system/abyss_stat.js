@@ -132,27 +132,26 @@ export function buildGsAbyss(raw = {}, ctx = {}) {
 /** 星铁挑战通用：groups → floors */
 function buildSrChallenge(raw = {}, cfg = {}, period = 1) {
   const type = cfg.type
+  /* 与 genshin 的 StarRail/model/abyss.js 同口径：
+     虚构/末日/混沌的楼层都在 data.all_floor_detail，groups 只提供期数与时间，
+     groups 既可能是数组也可能是 {0:..,1:..}（虚构/末日按 time 索引）。 */
   const groups = raw?.groups
   let group = {}
-  if (Array.isArray(groups)) group = groups[period === 2 ? 1 : 0] || groups[0] || groups.find(Boolean) || {}
+  if (Array.isArray(groups)) group = groups[period === 2 ? 1 : 0] || groups.find(Boolean) || {}
   else if (groups && typeof groups === 'object') {
-    /* 虚构/末日接口的 groups 是按 time 索引的对象：0=本期，1=上期。
-       之前直接取 groups[0]，对象没有数字下标，group 为空，
-       结果所有楼层都被丢掉，只剩顶部的 star/battle 统计。 */
     group = groups[String(period === 2 ? 1 : 0)] || Object.values(groups).find(Boolean) || {}
   }
 
-  /* 虚构/末日接口的楼层在 all_floor_detail；groups[time].floors 不存在 */
-  const detailFloors = (type === 'story' || type === 'boss' || type === 'chaos') && Array.isArray(raw?.all_floor_detail)
+  let rawFloors = Array.isArray(raw?.all_floor_detail) && raw.all_floor_detail.length
     ? raw.all_floor_detail
-    : null
-  let rawFloors = detailFloors || group?.floors || raw?.floors || []
-  if (type === 'story') rawFloors = rawFloors.filter(f => f?.node_1 || f?.node_2)
-  else if (type === 'boss') rawFloors = rawFloors.filter(f => f?.is_fast || f?.node_1?.avatars?.length || f?.node_2?.avatars?.length || f?.node_3?.avatars?.length)
-  else if (type === 'chaos') rawFloors = rawFloors.filter(f => !f?.is_fast && (f?.node_1 || f?.node_2))
+    : (group?.floors || raw?.floors || [])
+  /* 只要节点上真有出战角色的楼层；快速通关层保留（虚构会单独标「快速通关」） */
+  const hasAvatars = f => (f?.node_1?.avatars?.length || f?.node_2?.avatars?.length || f?.node_3?.avatars?.length)
+  rawFloors = rawFloors.filter(f => hasAvatars(f) || f?.is_fast)
   const makeNode = (n, idx) => {
     if (!n) return null
     return {
+      raw: n,
       index: idx + 1,
       score: Number(n.score) || 0,
       time: n.challenge_time ? timeCalc(n.challenge_time) : '',
@@ -175,7 +174,8 @@ function buildSrChallenge(raw = {}, cfg = {}, period = 1) {
     const node3 = makeNode(f.node_3, 2)
     const nodes = [node1, node2, node3].filter(Boolean)
     const extraStar = Number(f.extra_star_num) || 0
-    const starNum = Number(f.star_num) || 0
+    /* 混沌/虚构/末日有时只给 star_num，有时给 node 级 star；优先楼层值 */
+    const starNum = Number(f.star_num ?? nodes.reduce((sum, n) => sum + (Number(n.raw?.star_num) || 0), 0)) || 0
     const isFast = !!f.is_fast
     /* 虚构快速通关不计分数；其余按三个节点的积分求和（与 miao 同口径） */
     const score = isFast && type === 'story' ? 0 : nodes.reduce((sum, n) => sum + n.score, 0)
@@ -196,8 +196,9 @@ function buildSrChallenge(raw = {}, cfg = {}, period = 1) {
 
   if (cfg.filterFloors) floors = cfg.filterFloors(floors)
 
-  const totalStar = raw?.star_num ?? group?.star_num ?? floors.reduce((s, f) => s + f.star, 0)
-  const extraStar = raw?.extra_star_num ?? group?.extra_star_num ?? 0
+  const sumStar = floors.reduce((s, f) => s + f.star, 0)
+  const totalStar = Number(raw?.star_num ?? group?.star_num ?? 0) || sumStar
+  const extraStar = Number(raw?.extra_star_num ?? group?.extra_star_num) || 0
   /* 期数名：混沌/虚构/末日接口在 group.name（如「来生洄渡其十二」），
      末日幻影有时只在 group 的 mem/name_mi18n 上；都没有就留空。 */
   const periodName = group?.name || group?.name_mi18n || raw?.name || ''
@@ -215,6 +216,9 @@ function buildSrChallenge(raw = {}, cfg = {}, period = 1) {
     extraStar,
     bestFloor: raw?.max_floor ?? group?.name ?? floors[floors.length - 1]?.name ?? '',
     battleNum: raw?.battle_num ?? group?.battle_num ?? 0,
+    /* 兼容 miao/genshin 的字段名 */
+    total: raw?.battle_num ?? group?.battle_num ?? 0,
+    /* 有楼层就算有数据；接口的 has_data 在各玩法上并不一致 */
     hasData: floors.length > 0 || !!raw?.has_data,
   }
 }

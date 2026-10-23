@@ -433,6 +433,10 @@ export class abyss_stat extends plugin {
       const cfg = SR_CFG[key]
       try {
         const raw = await mys[cfg.api](type)
+        if (!raw) {
+          cards.push({ key, title: cfg.title, ok: false, err: '接口未返回数据（可能该玩法本期未参与）' })
+          continue
+        }
         const data = buildSrChallengeData(raw, cfg, type)
         cards.push({
           key,
@@ -455,7 +459,12 @@ export class abyss_stat extends plugin {
       }
     }
     const anyData = cards.some(c => c.ok)
-    if (!anyData) return e.reply('没有查到本期星铁深渊数据，可能还没打或面板未公开。')
+    if (!anyData) {
+      const errs = cards.filter(c => c.err).map(c => `${c.title}: ${c.err}`).slice(0, 4)
+      logger.mark?.(`[HoYoGet][abyss_stat] *深渊 四类都无数据：${errs.join(' | ') || '接口未返回楼层'}`)
+      return e.reply('没有查到本期星铁深渊数据，可能还没打或面板未公开。'
+        + (errs.length ? `\n${errs.join('\n')}` : ''))
+    }
 
     return render('abyss_stat/sr-abyss-all', {
       period: type === 2 ? '上期' : '当期',

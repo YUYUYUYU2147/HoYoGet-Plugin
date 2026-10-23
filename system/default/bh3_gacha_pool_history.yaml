@@ -1,5 +1,5 @@
 version: "1.0"
-updated: 2026-09-30
+updated: 2026-10-21
 source: 米游社官方公告+社区整理
 pools:
   - version: "9.1"
@@ -56,14 +56,6 @@ pools:
           - 午夜苦艾
         imgs:
           - https://upload-bbs.miyoushe.com/upload/2026/09/29/73565430/e10b7d3d51f0fc4128096ad24d4d99cc_4470633074547902847.png
-      - name: 【补给】庆典装备补给丨晦夜麟光、澄爱挚语等装备限时UP
-        type: weapon
-        s: 镇×偃月叩晓
-        a: []
-        imgs:
-          - https://upload-bbs.miyoushe.com/upload/2026/09/28/73565430/1d894389bf3512c73de7e4ecba1c8b7d_4561011412889576727.png
-        start: 2026-10-01 12:00:00
-        end: 2026-10-22 12:00:00
       - name: 【补给】庆典角色补给丨镇×偃月叩晓等目标限时UP
         type: char
         s: 镇×偃月叩晓
@@ -72,6 +64,14 @@ pools:
           - https://upload-bbs.miyoushe.com/upload/2026/09/28/73565430/f824bef729901e58cbde30a6222fc5aa_5535078192456554353.png
         start: 2026-10-01 12:00:00
         end: 2026-10-22 12:00:00
+      - name: 【补给】装备补给丨相偕之契&无冕独裁官
+        type: weapon
+        s: 相偕之契
+        a:
+          - 无冕独裁官
+        target: 予爱以心
+        imgs:
+          - https://upload-bbs.miyoushe.com/upload/2026/10/21/73565430/85eb46d621f3fe93437c168242841642_2496375179384353086.png
   - version: "9.0"
     start: 2026-07-23 12:00:00
     end: 2026-09-24 04:00:00
