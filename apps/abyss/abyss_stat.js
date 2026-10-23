@@ -434,7 +434,15 @@ export class abyss_stat extends plugin {
       try {
         const raw = await mys[cfg.api](type)
         if (!raw) {
-          cards.push({ key, title: cfg.title, ok: false, err: '接口未返回数据（可能该玩法本期未参与）' })
+          /* getData 在 retcode!==0 时返回 false，并把 retcode 记到 e._retcode */
+          const code = e?._retcode
+          cards.push({
+            key,
+            title: cfg.title,
+            ok: false,
+            private: code === 10102,
+            err: code === 10102 ? '米游社数据未公开' : '接口未返回数据（可能该玩法本期未参与）',
+          })
           continue
         }
         const data = buildSrChallengeData(raw, cfg, type)
@@ -452,7 +460,7 @@ export class abyss_stat extends plugin {
             : '',
           /* 四类玩法的满星基准：混沌/虚构 12，末日 10，王棋按额外星 */
           fullStar: { chaos: 12, story: 12, boss: 10, peak: 0 }[key] || 0,
-          floors: collectSrFloors(data),
+          floors: this.collectSrFloors(data),
         })
       } catch (err) {
         cards.push({ key, title: cfg.title, ok: false, err: err?.message || String(err) })
@@ -460,6 +468,9 @@ export class abyss_stat extends plugin {
     }
     const anyData = cards.some(c => c.ok)
     if (!anyData) {
+      if (cards.every(c => c.private)) {
+        return e.reply('米游社战绩未公开，读不到深渊数据。\n请到米游社「我的 → 战绩」把隐藏战绩关掉后再试。')
+      }
       const errs = cards.filter(c => c.err).map(c => `${c.title}: ${c.err}`).slice(0, 4)
       logger.mark?.(`[HoYoGet][abyss_stat] *深渊 四类都无数据：${errs.join(' | ') || '接口未返回楼层'}`)
       return e.reply('没有查到本期星铁深渊数据，可能还没打或面板未公开。'

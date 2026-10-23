@@ -140,6 +140,17 @@ body {
   max-height: 34px;
 }
 
+/* 社区签到：通行证头像（放在行首，比版块图标更能区分账号） */
+.row-avatar {
+  width: 46px;
+  height: 46px;
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #f2f7ff;
+  border: 2px solid rgba(147, 180, 230, 0.55);
+}
+
 .row-main {
   flex: 1;
   min-width: 0;

@@ -1476,7 +1476,7 @@ async function bbsSignCore(e, accounts, title) {
             }
             markInvalid(account, rows);
             bbsRecord(e, account, rows);
-            msgs.push(bbsCardItem(account, rows));
+            msgs.push(await bbsCardItem(account, rows, await bbsPassportAvatar(account)));
             continue;
         }
         const ctx = {};
@@ -1494,7 +1494,7 @@ async function bbsSignCore(e, accounts, title) {
         await finishBbsAccount(e, account, ctx, rows, lines);
         markInvalid(account, rows);
         bbsRecord(e, account, rows);
-        msgs.push(bbsCardItem(account, rows));
+        msgs.push(await bbsCardItem(account, rows, await bbsPassportAvatar(account)));
     }
     return { msgs, lines };
 }
@@ -1523,6 +1523,41 @@ async function bbsSignForEvent(e, all = false) {
     return { msgs, lines };
 }
 
+/**
+ * 米游社通行证头像：社区签到卡片用它代替固定的花火立绘。
+ * 接口返回 avatar 是数字 ID，图片地址在 https://upload-bbs.miyoushe.com/upload/avatar/<id>.png。
+ * 取不到时返回空串，模板回退默认图。
+ */
+const _passportAvatar = new Map();
+async function bbsPassportAvatar(account = {}) {
+    const key = String(account.stuid || '').trim();
+    if (!key) return '';
+    if (_passportAvatar.has(key)) return _passportAvatar.get(key);
+    let out = '';
+    try {
+        const ck = account.ck || `stuid=${key};stoken=${account.stoken || ''};mid=${account.mid || ''}`;
+        const r = await mhyFetch(`https://bbs-api.miyoushe.com/user/wapi/getUserFullInfo?uid=${key}`, {
+            headers: {
+                Cookie: ck,
+                'User-Agent': 'Mozilla/5.0 (Linux; Android 12) miHoYoBBS/2.73.1',
+                'x-rpc-client_type': '5',
+                'x-rpc-app_version': '2.73.1',
+                Referer: 'https://www.miyoushe.com/',
+            },
+            signal: AbortSignal.timeout(12000),
+        });
+        const json = await r.json().catch(() => null);
+        const info = json?.data?.user_info || {};
+        const avatar = String(info.avatar || '').trim();
+        if (/^https?:\/\//.test(avatar)) out = avatar;
+        else if (/^\d+$/.test(avatar)) out = `https://upload-bbs.miyoushe.com/upload/avatar/${avatar}.png`;
+    } catch (_) {
+        out = '';
+    }
+    _passportAvatar.set(key, out);
+    return out;
+}
+
 async function BbsSign(e) {
     const all = /全部/.test(e.msg || '');
     // 社区签到必须用 Stoken 文件里的 stoken（米游社 bbs-api 认 stoken，getMysUser 只有 ltoken 无法签社区）
@@ -1545,7 +1580,9 @@ async function BbsAutoSign(qqs = [], group = 0) {
     for (const qq of users) {
         const e = {
             user_id: qq,
-            msg: '社区签到',
+            // 定时任务伪造的 e 不能带 msg：bbsRecord 用 `e.msg ? manual : cron` 判来源，
+            // 这里填了「社区签到」会让锅巴里所有自动签到都显示成「手动」。
+            msg: '',
             isGroup: !!group,
             group_id: group,
             sender: { nickname: String(qq) },
@@ -1637,7 +1674,7 @@ function bbsRecord(e, account, rows) {
 }
 
 // 一个通行证出一张卡：正常时只写「今日已签 / 签到成功」，有异常才点名是哪个版块
-function bbsCardItem(account, rows) {
+async function bbsCardItem(account, rows, avatar = '') {
     const failed = rows.filter(r => !/签到成功|今日已签/.test(r.tip));
     let tip;
     if (!failed.length) {
@@ -1656,6 +1693,7 @@ function bbsCardItem(account, rows) {
     return {
         title: `通行证 ${maskStuid(account.stuid)}`,
         tip,
+        avatar,
     };
 }
 
@@ -1713,6 +1751,28 @@ function getSecondsToMidnight() {
 
     // 计算时间差并转换为秒（取整）
     return Math.floor((midnight - now) / 1000);
+}
+
+const GAME_CN_SIGN = { gs: '原神', sr: '星铁', zzz: '绝区零', bh3: '崩坏3' };
+
+/**
+ * 游戏签到落记录。以前 zd_MysSign（定时/批量）完全不写 task_history，
+ * 锅巴的「游戏签到」卡片只有手动那几次，看起来像「今天没签」。
+ * 定时任务没有 e，来源固定记 cron；手动发指令走 MysSign 那条路同样会落到这里。
+ */
+function recordGameSign(qq, game, uid, tip) {
+    try {
+        appendSignRecords([{
+            qq: String(qq),
+            name: '',
+            game: GAME_CN_SIGN[game] || game,
+            uid: String(uid || ''),
+            tip: String(tip || '').slice(0, 120),
+            source: 'cron',
+        }]);
+    } catch (err) {
+        logger.debug?.(`[HoYoGet][sign] 写游戏签到记录失败：${err?.message || err}`);
+    }
 }
 
 async function zd_MysSign(qqs) {
@@ -1810,6 +1870,7 @@ async function zd_MysSign(qqs) {
                  * 报错
                  */
                 if (typeof res == 'string') {
+                    recordGameSign(qq, game, uid, res);
                     diag.push(`[${game}/${uid.slice(-4)} 查询] ${res}`);
                     // 这次请求已经打过了，才验一次是死是活：验明过期就记进
                     // data/ck_state.json，下一轮开局直接跳过这个号。
@@ -1828,6 +1889,7 @@ async function zd_MysSign(qqs) {
                      */
                     //已经签到
                     if (res.data.is_sign == true) {
+                        recordGameSign(qq, game, uid, '今日已签');
                         // 同一 QQ 可能有的账号成功、有的失败。只要有一项失败就该留在失败列表；
                         // 原来这里不看 sbai_qqs，会把已拉黑的 QQ 又塞回成功段，
                         // 结果一张卡里同一个 QQ 同时出现在成功和失败两段。
@@ -1842,6 +1904,7 @@ async function zd_MysSign(qqs) {
                         const sign_res = await api(e, data);
                         //签到成功
                         if (sign_res.retcode == 0) {
+                            recordGameSign(qq, game, uid, '签到成功');
                             if (!cg_qqs.includes(qq) && !sbai_qqs.includes(qq)) {
                                 cg_qqs.push(qq);
                             }
@@ -1850,6 +1913,7 @@ async function zd_MysSign(qqs) {
                         }
                         //签到失败
                         else if (typeof sign_res == 'string') {
+                            recordGameSign(qq, game, uid, sign_res);
                             diag.push(`[${game}/${uid.slice(-4)} 签到] ${sign_res}`);
                             if (!sbai_qqs.includes(qq)) {
                                 if (cg_qqs.includes(qq)) {

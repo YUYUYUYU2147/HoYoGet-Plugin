@@ -148,10 +148,12 @@ export class Sign extends plugin {
         const signCfg = yaml.get('./plugins/HoYoGet-Plugin/config/sign.yaml') || {};
         this.task = [{
             cron: buildSignCron(signCfg.sign_hour, signCfg.sign_minute),
-            name: '[米哈游]米游社签到',
+            // 名字带「游戏」：这条跑的是原神/星铁/绝区零/崩三的游戏内签到，
+            // 之前叫「米游社签到」容易和社区签到混淆
+            name: '[米哈游]游戏签到',
             log: true,
             fnc: async () => {
-                await runCronTask('米游社签到', () => this.scheduled_sign());
+                await runCronTask('游戏签到', () => this.scheduled_sign());
             },
         },
         {
