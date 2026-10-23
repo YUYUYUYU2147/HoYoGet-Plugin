@@ -341,7 +341,8 @@ body.elem-physical { --elem-line: rgba(207, 216, 227, .9); --elem-glow: rgba(180
   width: 262px;
   z-index: 2;
   align-content: center;
-  padding: 8px 8px 10px;
+  padding: 10px 8px 12px;
+  gap: 2px;
   border-radius: 12px 0 12px 0;
   background: linear-gradient(90deg, rgba(6, 20, 34, 0), rgba(6, 20, 34, .3) 30%, rgba(6, 20, 34, .5) 100%);
 }
@@ -351,7 +352,7 @@ body.elem-physical { --elem-line: rgba(207, 216, 227, .9); --elem-glow: rgba(180
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 6px;
-  padding: 4px 8px 4px 7px;
+  padding: 6px 8px 6px 7px;
   border-radius: 7px;
   background: rgba(6, 24, 40, .26);
 }
