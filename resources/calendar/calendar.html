@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}calendar/calendar.css" />
+  </head>
+  <body class="game-{{game}}" {{sys.scale}}>
+    <div class="page">
+      <div class="head">
+        <img class="gicon" src="{{ppath}}game_icons/{{game}}.webp" onerror="this.style.display='none'" />
+        <div class="head-copy">
+          <div class="title">{{gameCn}}活动日历</div>
+          <div class="sub">当前时间 {{nowText}} · 数据来自米游社公告</div>
+        </div>
+        <div class="stats">
+          <div class="stat"><span class="k">进行中</span><b>{{active}}</b></div>
+          <div class="stat"><span class="k">即将开始</span><b>{{soon}}</b></div>
+          <div class="stat"><span class="k">共</span><b>{{total}}</b></div>
+        </div>
+      </div>
+
+      <div class="table">
+        <div class="tr th">
+          <span>状态</span><span>活动</span><span>类型</span><span>开始</span><span>结束</span><span>剩余</span>
+        </div>
+        {{each list a}}
+        <div class="tr">
+          <span><i class="pill {{a.statusClass}}">{{a.status}}</i></span>
+          <span class="name" title="{{a.title}}">{{a.title}}</span>
+          <span class="tag">{{a.tag || '活动'}}</span>
+          <span class="time">{{a.startText}}</span>
+          <span class="time">{{a.endText}}</span>
+          <span class="remain">{{a.remain}}</span>
+        </div>
+        {{/each}}
+      </div>
+
+      <div class="foot">
+        <span>仅列出今天起仍未结束的活动 · 最多 40 条</span>
+        <span class="from">from 米哈游</span>
+      </div>
+    </div>
+  </body>
+</html>

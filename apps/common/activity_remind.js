@@ -226,6 +226,8 @@ function flattenAnnList(json, game) {
       title,
       subtitle,
       banner: item.banner || item.img || item.cover || '',
+      start: parseEndTime(item.start_time),
+      startText: item.start_time || '',
       end: parseEndTime(item.end_time),
       endText: item.end_time || '',
       tag: item.tag_label || item.type_label || '',
@@ -328,6 +330,12 @@ function getBh3VersionStart(version = '', createdAt = 0) {
 
 async function getActivities(game) {
   if (game === 'bh3') return await getBh3Activities();
+  return await getOfficialActivities(game);
+}
+
+/** 日历用：返回公告接口里的活动（含开始/结束时间），不需要 CK */
+export async function getCalendarActivities(game) {
+  if (game === 'bh3') return [];
   return await getOfficialActivities(game);
 }
 
