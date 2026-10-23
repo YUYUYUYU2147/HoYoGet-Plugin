@@ -236,6 +236,12 @@ function safeSize(value, min, max) {
   return `${Math.min(max, Math.max(min, n))}px`;
 }
 
+function safePx(value, max = 20) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '';
+  return `${Math.min(max, Math.max(0, n))}px`;
+}
+
 function globalStyle(helpCfg, themeStyle = {}) {
   // 默认 → 主题 → 用户在锅巴里改的样式（用户优先）
   const rawStyle = { ...GLOBAL_THEME_STYLE, ...(themeStyle || {}), ...(helpCfg.style || {}) };
@@ -345,6 +351,8 @@ function webStyleCss(helpCfg, themeStyle = {}) {
     --w-item-size: ${size('itemSize', '15px', 60)};
     --w-desc-size: ${size('descSize', '12px', 60)};
     --w-blur: ${blur};
+    --w-page-dim: ${Number.isFinite(Number(raw.pageDim)) ? Math.min(100, Math.max(0, Number(raw.pageDim))) / 100 : 0.58};
+    --w-page-blur: ${safePx(raw.pageBlur, 20) || '5px'};
   }`
   return `<style>${css}</style>`
 }

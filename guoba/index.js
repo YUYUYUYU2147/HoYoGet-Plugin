@@ -533,7 +533,7 @@ export function init(ctx) {
       if (typeof cfg.bgBlur === 'boolean') cleanCfg.bgBlur = cfg.bgBlur
       if (cfg.style && typeof cfg.style === 'object') {
         const colorKeys = ['fontColor', 'descColor', 'titleColor', 'subTitleColor', 'fontShadow', 'contBgColor', 'headerBgColor', 'rowBgColor1', 'rowBgColor2', 'tagRed', 'tagAmber', 'tagGreen', 'tagGray']
-        const sizeKeys = ['titleSize', 'groupSize', 'itemSize', 'descSize', 'contBgBlur']
+        const sizeKeys = ['titleSize', 'groupSize', 'itemSize', 'descSize', 'contBgBlur', 'pageDim', 'pageBlur']
         const style = {}
         for (const key of colorKeys) {
           const v = str(cfg.style[key], 120).trim()
