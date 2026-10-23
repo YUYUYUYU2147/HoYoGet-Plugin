@@ -27,6 +27,66 @@ function isBh3NameSegment(seg = '') {
 const BH3_POOL_HISTORY_PATH = './plugins/HoYoGet-Plugin/system/default/bh3_gacha_pool_history.yaml';
 /* 官方 wiki「女武神」列表：拿装甲头像给生日用 */
 const BH3_WIKI_BASE = 'https://api-takumi-static.mihoyo.com/common/blackboard/bh3_wiki/v1/home/content/list?app_sn=bh3_wiki';
+
+/* 女武神立绘：wiki「女武神」频道（channel 18）给的是 115×116 半身立绘，
+   拿来当日历行的缩略图正合适。
+   立绘是远程 URL，截图时可能还没加载完（渲染出来是空白格），
+   所以先缓存到 data/bh3_calendar_icons/<名字>.png，模板用本地路径。 */
+const BH3_ICON_CACHE_DIR = './plugins/HoYoGet-Plugin/resources/bh3_calendar/icons';
+let _bh3CharIcons = null;
+async function bh3CharIcons() {
+  if (_bh3CharIcons !== null) return _bh3CharIcons;
+  _bh3CharIcons = {};
+  try {
+    const res = await fetch(`${BH3_WIKI_BASE}&channel_id=18`, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(12000) });
+    const json = await res.json();
+    for (const item of json?.data?.list?.[0]?.list || []) {
+      if (!item?.title || !item?.icon) continue;
+      const local = await cacheBh3Icon(item.title, item.icon);
+      _bh3CharIcons[item.title] = local || item.icon;
+    }
+  } catch (_) {}
+  return _bh3CharIcons;
+}
+
+/** 下一个女武神立绘到本地，返回可直接给 <img src> 用的路径 */
+async function cacheBh3Icon(name, url) {
+  try {
+    if (!fs.existsSync(BH3_ICON_CACHE_DIR)) fs.mkdirSync(BH3_ICON_CACHE_DIR, { recursive: true });
+    const file = `${String(name).replace(/[\\/:*?"<>|]/g, '_')}.png`;
+    const abs = `${BH3_ICON_CACHE_DIR}/${file}`;
+    if (fs.existsSync(abs)) return `bh3_calendar_icons/${file}`;
+    const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(12000) });
+    if (!r.ok) return '';
+    const buf = Buffer.from(await r.arrayBuffer());
+    if (!buf.length || buf.length > 2 * 1024 * 1024) return '';
+    fs.writeFileSync(abs, buf);
+    return `bh3_calendar/icons/${file}`;
+  } catch (_) {
+    return '';
+  }
+}
+
+/* 名称清洗：去掉书名号与「X之律者」的前缀差异 */
+function bh3CleanName(name = '') {
+  return String(name || '')
+    .replace(/[\s「」『』【】（）()·・•!！♪♫♥❤☆★]/g, '')
+    .replace(/^(真我|薪炎|终焉|始源|空之|理之|雷之|识之|死生|人之|天元|月下|戒律|螺旋|黄金|繁星|无限|浮生|鏖灭|旭光|刹那|救世)之律者/g, '$1律者')
+    .trim();
+}
+
+/** 在立绘表里找最接近的一条（精确 → 包含） */
+function bh3FindCharIcon(icons = {}, name = '') {
+  const target = bh3CleanName(name);
+  if (!target) return '';
+  const keys = Object.keys(icons);
+  for (const k of keys) if (bh3CleanName(k) === target) return icons[k];
+  for (const k of keys) {
+    const c = bh3CleanName(k);
+    if (c && (c.includes(target) || target.includes(c))) return icons[k];
+  }
+  return '';
+}
 // 崩三公告/活动更新较频繁；原先缓存 10 分钟会让日历看起来不像实时更新。
 // 保留 60 秒短缓存，避免同一分钟内重复请求米游社过多。
 const CACHE_TTL = 60;
@@ -184,8 +244,38 @@ export class bh3_calendar extends plugin {
       });
       if (list.length >= 18) break;
     }
+    /* 官方公告列表接口固定只返回 20 条（page_size 无效、无分页），
+       09-21 那批「镜见之钥 / 时序之律者」直接被漏掉，日历里就没这两个池子。
+       这里用卡池库做补充：把库里当前有效的补给都补进列表，
+       公告列表有的条目按原样保留（时间/封面更准），库里多出来的补上。 */
+    this.fillMissingSupplyPools(list, now);
     // 补给/服装的时间改用卡池库（公告正文拿不到准确日期），与「崩三当前卡池」保持一致
     this.applyBh3PoolTimes(list);
+    // 给每条补上立绘：优先用卡池库里的 UP 名去 wiki 女武神列表匹配
+    {
+      const icons = await bh3CharIcons();
+      if (Object.keys(icons).length) {
+        const poolNames = this.loadBh3PoolNames();
+        for (const item of list) {
+          const title = String(item.title || '');
+          // 从「【补给】名称丨类型」里取名字段
+          const segs = title.replace(/^【[^】]*】/, '').split(/[丨｜|]/).map(x => x.replace(/[「」『』]/g, '').trim()).filter(Boolean);
+          let icon = '';
+          for (const seg of segs) {
+            const hit = bh3FindCharIcon(icons, seg) || bh3FindCharIcon(icons, seg.replace(/主题补给.*$/, '').trim());
+            if (hit) { icon = hit; break; }
+          }
+          if (!icon) {
+            for (const nm of poolNames) {
+              if (!title.includes(nm)) continue;
+              const hit = bh3FindCharIcon(icons, nm);
+              if (hit) { icon = hit; break; }
+            }
+          }
+          if (icon) item.icon = icon;
+        }
+      }
+    }
 
     /* 与米哈游三游戏日历同一套甘特模板：今天前后各 7 天，条带按起止铺开 */
     const winStart = now.clone().startOf('day').subtract(7, 'days');
@@ -481,6 +571,92 @@ export class bh3_calendar extends plugin {
       }
     } catch (_) {}
     return '';
+  }
+
+  /** 卡池库里所有补给/服装的名字（用于按名字匹配立绘） */
+  loadBh3PoolNames() {
+    const out = new Set();
+    try {
+      if (!fs.existsSync(BH3_POOL_HISTORY_PATH)) return [];
+      const data = YAML.parse(fs.readFileSync(BH3_POOL_HISTORY_PATH, 'utf-8'));
+      for (const vp of data?.pools || []) {
+        for (const p of vp.pools || []) {
+          if (p.s) out.add(String(p.s).trim());
+          const raw = String(p.name || '').replace(/^【[^】]*】/, '');
+          for (const seg of raw.split(/[丨｜|]/)) {
+            const t = seg.replace(/[「」『』]/g, '').trim();
+            if (t) out.add(t);
+          }
+        }
+      }
+    } catch (_) {}
+    return [...out];
+  }
+
+  /**
+   * 用卡池库补齐公告列表里缺的补给条目。
+   * 公告列表只有 20 条，早一批的补给（镜见之钥/时序之律者等）会整批消失；
+   * 这里把卡池库里「当前仍在进行」的补给补上，标题统一成公告的写法。
+   */
+  fillMissingSupplyPools(list = [], now = moment()) {
+    const data = this.loadBh3PoolEntries();
+    if (!data.length) return list;
+    const has = new Set(list.map(i => this.normalizeSupplyTitle(i.title || '')));
+    for (const p of data) {
+      const end = moment(p.end, 'YYYY-MM-DD HH:mm:ss');
+      const start = moment(p.start, 'YYYY-MM-DD HH:mm:ss');
+      if (!end.isValid() || end.isBefore(now)) continue;
+      const title = String(p.name || '').replace(/^【[^】]*】/, '');
+      const key = this.normalizeSupplyTitle(title);
+      if (!key || has.has(key)) continue;
+      has.add(key);
+      const type = /服装|时装|皮肤/.test(title) ? 'outfit'
+        : /装备补给/.test(title) ? 'weapon'
+          : /协同/.test(title) ? 'partner' : 'char';
+      list.push({
+        id: `pool:${p.s || key}`,
+        title,
+        rawTitle: p.name || '',
+        type: type === 'weapon' || type === 'partner' ? 'supply' : type,
+        typeName: { supply: '补给', outfit: '服装', event: '活动', normal: '公告' }[type === 'weapon' || type === 'partner' ? 'supply' : type] || '补给',
+        start: start.isValid() ? start : now.clone(),
+        end,
+        startFull: start.isValid() ? start.format('YYYY-MM-DD HH:mm') : now.format('YYYY-MM-DD HH:mm'),
+        endFull: end.format('YYYY-MM-DD HH:mm'),
+        leftTime: this.leftLabel(now, start.isValid() ? start : now.clone(), end),
+        banner: Array.isArray(p.imgs) ? (p.imgs.filter(Boolean)[0] || '') : '',
+        fromPool: true,
+      });
+    }
+    return list;
+  }
+
+  /** 标题归一：去掉类型前缀与书名号，只留主体名，用于判重 */
+  normalizeSupplyTitle(title = '') {
+    const segs = String(title || '').replace(/^【[^】]*】/, '')
+      .split(/[丨｜|]/).map(x => x.replace(/[「」『』【】]/g, '').trim()).filter(Boolean);
+    const generic = /^(装备补给|角色补给|服装补给|主题补给|协同补给|协同者补给|补给|限时开启|开启)$/;
+    for (const seg of segs) {
+      const core = seg.replace(/主题补给.*$/, '').replace(/限时开启[!！]*$/, '').trim();
+      if (core && !generic.test(core)) return core;
+    }
+    return segs[0] || '';
+  }
+
+  /** 卡池库里所有带时间的补给条目 */
+  loadBh3PoolEntries() {
+    const out = [];
+    try {
+      if (!fs.existsSync(BH3_POOL_HISTORY_PATH)) return out;
+      const data = YAML.parse(fs.readFileSync(BH3_POOL_HISTORY_PATH, 'utf-8'));
+      for (const vp of data?.pools || []) {
+        for (const p of vp.pools || []) {
+          if (!p.start || !p.end) continue;
+          out.push({ ...p, version: vp.version });
+        }
+      }
+    } catch (_) {}
+    return out;
   }
 
   /** 用卡池库里的时间覆盖日历里该补给的起止（对不上就保持公告解析的结果） */

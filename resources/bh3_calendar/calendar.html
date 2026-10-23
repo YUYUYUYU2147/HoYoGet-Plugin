@@ -46,6 +46,7 @@
           {{each list a}}
           <div class="tl-row">
             <div class="tl-label">
+              {{if a.icon}}<img class="tl-thumb" src="{{if a.icon.indexOf('http') === 0}}{{a.icon}}{{else}}{{ppath}}{{a.icon}}{{/if}}" />{{/if}}
               <div class="tl-txt">
                 <div class="tl-name" title="{{a.title}}">{{a.title}}</div>
                 <div class="tl-meta"><i class="pill {{a.statusClass}}">{{a.status}}</i><span class="tag kind-{{a.kind}}">{{a.kindLabel}}</span></div>

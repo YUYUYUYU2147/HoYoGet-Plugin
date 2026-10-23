@@ -114,3 +114,15 @@ body {
 .foot { position: relative; display: block; padding: 11px 2px 2px; font-size: 10px; color: #64748b; text-align: left; }
 .foot-note { display: inline-block; }
 .foot-from { position: absolute; left: 50%; transform: translateX(-50%); color: #ff4d4f; font-weight: 700; }
+
+/* 行首立绘（女武神半身立绘） */
+.tl-row .tl-label .tl-thumb {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 10px;
+  object-fit: cover;
+  object-position: top center;
+  background: rgba(15, 23, 42, .06);
+  border: 1px solid rgba(15, 23, 42, .08);
+}

@@ -29,7 +29,7 @@ pools:
         start: 2026-10-16 12:00:00
         end: 2026-10-30 12:00:00
         imgs:
-          - https://upload-bbs.miyoushe.com/upload/2026/10/14/73565430/15fa2fe0ef9671007addbd1185bc96d3_71643158520134326.png
+          - https://upload-bbs.miyoushe.com/upload/2026/10/14/73565430/224cf7a01f5c1ac071e3c3d8d0b9443a_6404642857581868923.png
       - name: 【补给】装备补给丨镜见之钥&名以时序
         type: weapon
         s: 镜见之钥
