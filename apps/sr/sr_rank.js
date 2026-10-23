@@ -138,7 +138,7 @@ export class sr_global_rank extends plugin {
       .filter(([, a]) => a && (a.artis || a._source))
       .slice(0, 60)
     if (!avatars.length) return e.reply(`UID ${uid} 暂无可查询的角色面板。`)
-    await e.reply(`正在查询 ${nickname}（UID ${uid}）的星铁全球排名，请稍候…`)
+    await e.reply(`正在查询 ${nickname}（UID ${uid}）的星铁全球排名，请稍候…`, true, { recallMsg: 60 })
     const chars = loadCharNames()
     let Character = null
     try { ({ Character } = await import('#hoyo.miao.models')) } catch (_) { /* ignore */ }
