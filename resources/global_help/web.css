@@ -268,3 +268,20 @@ body {
 .w-layout-app .w-tag.green { color: var(--w-tag-green, #15803d); background: color-mix(in srgb, var(--w-tag-green, #15803d) 10%, transparent); }
 .w-layout-app .w-tag.gray { color: var(--w-tag-gray, #6b7280); background: color-mix(in srgb, var(--w-tag-gray, #6b7280) 10%, transparent); }
 .w-layout-app .w-foot { color: #8e8e93; }
+
+/* iOS 版的主题装饰图：让换主题能看出来 */
+.w-layout-app .w-theme-art {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 38%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 26%;
+  opacity: .28;
+  pointer-events: none;
+  mask-image: linear-gradient(90deg, transparent, #000 38%);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 38%);
+  z-index: 0;
+}
+.w-layout-app .w-kicker { color: var(--w-theme-accent, #007aff); }

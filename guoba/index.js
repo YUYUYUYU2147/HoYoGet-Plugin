@@ -589,7 +589,8 @@ export function init(ctx) {
     try {
       const name = String(req.query?.name || '')
       if (!helpThemeNames().includes(name)) return res.status(404).end()
-      const src = [path.join(HELP_THEME_ROOT, name, 'bg.jpg'), path.join(HELP_THEME_ROOT, name, 'main.png')]
+      // 主题差异主要在 main.png（背景图 37 套是同一张），缩略图必须用 main
+      const src = [path.join(HELP_THEME_ROOT, name, 'main.png'), path.join(HELP_THEME_ROOT, name, 'bg.jpg')]
         .find(f => fs.existsSync(f))
       if (!src) return res.status(404).end()
       const st = fs.statSync(src)
@@ -598,7 +599,38 @@ export function init(ctx) {
       const cache = globalThis.__xhhThemeThumbCache
       if (!cache.has(key)) {
         const sharp = (await import('sharp')).default
-        const buf = await sharp(src).resize(320, 180, { fit: 'cover' }).webp({ quality: 72 }).toBuffer()
+        const base = await sharp(src).resize({ width: 320 }).removeAlpha().raw().toBuffer({ resolveWithObject: true })
+        const { data, info } = base
+        const W = info.width
+        const H = info.height
+        const C = info.channels
+        const bandH = Math.min(180, H)
+        // 选细节最多的一段（主题的 main.png 是长图，顶部往往是纯色）
+        let bestY = 0
+        let bestVar = -1
+        for (let y = 0; y <= H - bandH; y += 8) {
+          let n = 0
+          let sum = 0
+          let sum2 = 0
+          for (let yy = y; yy < y + bandH; yy += 4) {
+            for (let xx = 0; xx < W; xx += 4) {
+              const i = (yy * W + xx) * C
+              const v = (data[i] + data[i + 1] + data[i + 2]) / 3
+              sum += v
+              sum2 += v * v
+              n++
+            }
+          }
+          const mean = sum / n
+          const varr = sum2 / n - mean * mean
+          if (varr > bestVar) { bestVar = varr; bestY = y }
+        }
+        const buf = await sharp(src)
+          .resize({ width: 320 })
+          .extract({ left: 0, top: bestY, width: W, height: bandH })
+          .flatten({ background: '#0f172a' })
+          .webp({ quality: 78 })
+          .toBuffer()
         cache.set(key, buf)
         if (cache.size > 80) cache.delete(cache.keys().next().value)
       }

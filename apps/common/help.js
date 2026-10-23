@@ -359,12 +359,14 @@ function webStyleCss(helpCfg, themeStyle = {}, pageWidth = 1000) {
 }
 
 function appStyleCss(helpCfg, themeStyle = {}, pageWidth = 1000) {
-  const raw = { ...GLOBAL_THEME_STYLE, ...(themeStyle || {}), ...(helpCfg.style || {}) }
-  const color = key => safeCssValue(raw[key])
-  const size = (key, def, max) => safeSize(raw[key], 8, max) || def
-  const dimNum = Number(raw.pageDim)
+  // iOS 浅色只认用户在锅巴里改的样式，主题的深色字体不参与，避免白底白字
+  const user = helpCfg.style || {}
+  const color = key => safeCssValue(user[key])
+  const size = (key, def, max) => safeSize(user[key], 8, max) || def
+  const dimNum = Number(user.pageDim)
   const dim = Number.isFinite(dimNum) ? Math.min(100, Math.max(0, dimNum)) / 100 : 0.88
-  const blur = safePx(raw.pageBlur, 20) || '18px'
+  const blur = safePx(user.pageBlur, 20) || '18px'
+  const themeAccent = safeCssValue(themeStyle?.fontColor)
   const css = `body {
     width: ${pageWidth}px;
     --w-head: ${color('titleColor') || '#111827'};
@@ -381,6 +383,7 @@ function appStyleCss(helpCfg, themeStyle = {}, pageWidth = 1000) {
     --w-desc-size: ${size('descSize', '14px', 60)};
     --w-page-dim: ${dim};
     --w-page-blur: ${blur};
+    --w-theme-accent: ${themeAccent || '#007aff'};
   }`
   return `<style>${css}</style>`
 }
