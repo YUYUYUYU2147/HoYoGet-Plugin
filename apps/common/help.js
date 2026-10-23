@@ -283,7 +283,7 @@ function webGameOf(text) {
   const hit = []
   if (/原神|提瓦特|原石|七圣|尘歌壶|深境螺旋|幻想真境/.test(text)) hit.push('gs')
   if (/星铁|星穹|崩铁|星琼|模拟宇宙|忘却之庭|虚构叙事|末日幻影|差分宇宙|货币战争|寰宇蝗灾/.test(text)) hit.push('sr')
-  if (/绝区零|ZZZ|%|菲林|邦布|音擎|驱动盘|调频|式舆|危局|临界推演|空洞/.test(text)) hit.push('zzz')
+  if (/绝区零|ZZZ|菲林|邦布|音擎|驱动盘|调频|式舆|危局|临界推演|空洞/i.test(text) || /%[A-Za-z\u4e00-\u9fa5]/.test(text)) hit.push('zzz')
   if (/崩三|崩坏3|崩坏三|bbb|往世乐土|超弦空间|记忆战场|休伯利安|母带/.test(text)) hit.push('bh3')
   return hit.length === 1 ? hit[0] : 'common'
 }
