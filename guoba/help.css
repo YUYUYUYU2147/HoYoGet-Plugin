@@ -684,3 +684,13 @@
 .he-prev-row { display: flex; flex-direction: column; gap: 2px; padding: 7px 8px; }
 .he-prev-row strong { font-size: 14px; font-weight: 700; }
 .he-prev-row span { font-size: 12px; opacity: .92; }
+.he-prev-tag {
+  align-self: flex-start;
+  margin-top: 3px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  line-height: 15px;
+  font-style: normal;
+  border: 1px solid transparent;
+}

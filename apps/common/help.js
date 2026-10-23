@@ -84,6 +84,22 @@ function iconCss(icon) {
   return `background-position:-${x * 100}px -${y * 100}px`;
 }
 
+/** 手写状态标签 → 颜色分类（与锅巴页同一套关键词） */
+function tagClass(text) {
+  if (/免CK|免费|无需|公开|自动|推送|定时|每天/i.test(text)) return 'green';
+  if (/需CK|需要CK|需扫码|需登录|需绑定|限时/i.test(text)) return 'amber';
+  if (/主人|仅主人|失效|停用/i.test(text)) return 'red';
+  return 'gray';
+}
+
+function imageTags(item) {
+  return String(item?.tag || '')
+    .split(/[,，|｜]/)
+    .map(v => v.trim())
+    .filter(Boolean)
+    .map(text => ({ text, cls: tagClass(text) }));
+}
+
 /** 预先把每行补齐成 colCount 列，模板只负责渲染，不再做取模运算 */
 function buildHelpGroups(helpList, colCount) {
   return helpList.map(group => {
@@ -91,6 +107,7 @@ function buildHelpGroups(helpList, colCount) {
       title: item.title || '',
       desc: item.desc || '',
       css: iconCss(item.icon),
+      tags: imageTags(item),
     }));
     const rows = [];
     for (let i = 0; i < items.length; i += colCount) {
@@ -228,6 +245,7 @@ function globalStyle(helpCfg, themeStyle = {}) {
     `.cont-box { background: ${style.contBgColor || 'rgba(6, 21, 31, .5)'}; backdrop-filter: ${blur}; }`,
     `.help-table .tr:nth-child(odd) { background: ${style.rowBgColor1 || 'rgba(6, 21, 31, .2)'}; }`,
     `.help-table .tr:nth-child(even) { background: ${style.rowBgColor2 || 'rgba(6, 21, 31, .35)'}; }`,
+    `.container { --help-tag-red: ${style.tagRed || '#dc2626'}; --help-tag-amber: ${style.tagAmber || '#b45309'}; --help-tag-green: ${style.tagGreen || '#15803d'}; --help-tag-gray: ${style.tagGray || '#6b7280'}; }`,
   ].join('\n');
   return { style: `<style>${css}</style>`, colCount, width };
 }

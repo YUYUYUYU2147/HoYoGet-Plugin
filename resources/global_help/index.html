@@ -37,6 +37,9 @@
               <span class="help-icon" style="{{cell.css}}"></span>
               <strong class="help-title">{{cell.title}}</strong>
               <span class="help-desc">{{cell.desc}}</span>
+              {{if cell.tags.length}}
+              <span class="help-tags">{{each cell.tags t}}<i class="help-tag {{t.cls}}">{{t.text}}</i>{{/each}}</span>
+              {{/if}}
               {{/if}}
             </div>
             {{/each}}

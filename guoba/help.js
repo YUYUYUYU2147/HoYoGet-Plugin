@@ -514,6 +514,13 @@
       group.style.fontSize = (Number(get('groupSize')) || 14) + 'px'
     }
     if (rows[0]) rows[0].style.background = get('rowBgColor1') || 'rgba(6,21,31,.2)'
+    const tag = el('he-prev-tag')
+    if (tag) {
+      const tc = get('tagAmber') || '#b45309'
+      tag.style.color = tc
+      tag.style.background = 'color-mix(in srgb, ' + tc + ' 12%, transparent)'
+      tag.style.borderColor = 'color-mix(in srgb, ' + tc + ' 22%, transparent)'
+    }
     if (rows[1]) rows[1].style.background = get('rowBgColor2') || 'rgba(6,21,31,.35)'
     rows.forEach(row => {
       if (!row) return
@@ -589,7 +596,7 @@
       + '<div class="he-prev-title" id="he-prev-title">帮助标题</div>'
       + '<div class="he-prev-sub" id="he-prev-sub">副标题示例</div>'
       + '<div class="he-prev-group" id="he-prev-group">板块标题</div>'
-      + '<div class="he-prev-row he-prev-odd" id="he-prev-row1"><strong>#示例指令</strong><span>说明文字效果</span></div>'
+      + '<div class="he-prev-row he-prev-odd" id="he-prev-row1"><strong>#示例指令</strong><span>说明文字效果</span><i class="he-prev-tag" id="he-prev-tag">需CK</i></div>'
       + '<div class="he-prev-row he-prev-even" id="he-prev-row2"><strong>%示例指令</strong><span>第二行效果</span></div>'
       + '</div></div>'
       + '</div>'
