@@ -16,6 +16,7 @@
           <div class="head-copy">
             <div class="title">{{gameCn}}</div>
             <div class="subtitle">{{if nickname}}<span class="head-nick">{{nickname}}</span> · {{/if}}UID {{uid}}{{if level}} · AR{{level}}{{/if}}</div>
+            {{if serviceLabel}}<div class="head-svc">本次更新服务：{{serviceLabel}}</div>{{/if}}
           </div>
         </div>
         <div class="head-right">
@@ -45,6 +46,7 @@
             <span class="lv-badge">{{c.level}}</span>
           </div>
           <div class="cell-name">{{if c.updated}}<i class="new-dot"></i>{{/if}}{{c.abbr}}</div>
+          {{if c.source}}<span class="cell-src {{c.srcClass}}">{{c.source}}</span>{{/if}}
         </div>
         {{/each}}
       </div>

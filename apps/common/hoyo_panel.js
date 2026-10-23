@@ -245,6 +245,28 @@ async function loadMiao() {
   }
 }
 
+/** 面板来源 → 显示名 / 颜色 class */
+const PANEL_SOURCE_LABEL = {
+  enka: 'Enka', enkaapi: 'Enka',
+  enkahsr: 'EnkaHSR',
+  mgg: 'MiniGG', mggapi: 'MiniGG',
+  miao: '喵 API', miaoapi: '喵 API',
+  hanxuan: 'X-Enka', lyln: 'Lyln',
+  homo: 'Mihomo', mihomo: 'Mihomo',
+  avocado: 'Avocado', 'avocado.wiki': 'Avocado',
+  myspanel: '米游社', myspanelhsr: '米游社',
+  change: '本地面板', customize: '本地预设',
+}
+function panelSourceLabel(source) {
+  return PANEL_SOURCE_LABEL[String(source || '').toLowerCase()] || String(source || '')
+}
+function panelSourceClass(source) {
+  const s = String(source || '').toLowerCase()
+  if (s === 'enka' || s === 'enkahsr') return 'enka'
+  if (s.startsWith('myspanel')) return 'mys'
+  return 'other'
+}
+
 /**
  * 把一个 miao 的 profile（Avatar 实例）压成模板用的扁平结构。
  * 只取展示需要的字段，避免模板直接依赖 miao 的内部结构。
@@ -1643,6 +1665,10 @@ export class hoyo_panel extends plugin {
         const pick = game === 'gs' ? config().panel_service_gs : config().panel_service_sr
         restoreService = await applyPanelService(game, pick)
       }
+      let actualService = isMys ? '米游社' : ''
+      if (!isMys) {
+        try { actualService = panelSourceLabel(miao.Player.getProfileServName?.(uid, game)) || '展示柜' } catch (_) {}
+      }
       // 只有刷新这一段静音，避免 miao 的「开始获取uid…」等中间提示
       const realReply = e.reply.bind(e)
       let refreshed
@@ -1669,7 +1695,7 @@ export class hoyo_panel extends plugin {
         ].join('\n'))
       }
       logger.mark?.(`[HoYoGet][hoyo_panel] ${uid} 刷新完成，开始渲染（avatars=${avatarCount}，refreshProfile=${refreshed}）`)
-      return this.renderPanel(e, game, uid, miao, true, fresh, player._update || [])
+      return this.renderPanel(e, game, uid, miao, true, fresh, player._update || [], actualService)
     } catch (err) {
       logger.error?.(`[HoYoGet][hoyo_panel] 更新面板失败: ${err?.message || err}`)
       return e.reply(`更新面板失败：${err?.message || err}`)
@@ -2069,7 +2095,7 @@ export class hoyo_panel extends plugin {
   }
 
   /** 把 player 的面板渲染成总览图（panel 与 refreshPanel 共用） */
-  async renderPanel(e, game, uid, miao, isRefresh, prePlayer = null, updatedIds = []) {
+  async renderPanel(e, game, uid, miao, isRefresh, prePlayer = null, updatedIds = [], serviceLabel = '') {
     const conf = GAME_CONF[game]
     try {
       const player = prePlayer || new miao.Player(uid, game)
@@ -2088,6 +2114,8 @@ export class hoyo_panel extends plugin {
           const item = flattenProfile(av, miao.Character)
           if (item.name) {
             item.updated = updatedSet.has(String(id)) || updatedSet.has(String(av?.id))
+            item.source = panelSourceLabel(av?._source)
+            item.srcClass = panelSourceClass(av?._source)
             chars.push(item)
             pairs.push({ item, av })
           }
@@ -2138,6 +2166,7 @@ export class hoyo_panel extends plugin {
         groupRank,
         rankLimit: groupRank?.limit || 15,
         randomBg,
+        serviceLabel,
       }, { e, ret: true })
       return img
     } catch (err) {
