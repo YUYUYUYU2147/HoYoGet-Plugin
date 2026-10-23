@@ -1,185 +1,72 @@
 # 全局帮助（喵喵风格，独立于 miao-plugin）
 # 可复制到 config/global_help.yaml 后自行修改，优先读取 config 下的版本。
-# theme 支持 all / 单个名称 / 名称数组；主题目录：resources/global_help/theme
 helpCfg:
-  title: Genshin-Help
-  subTitle: '姬姬人提醒：这里是原神帮助 (o゜▽゜)o☆，星铁功能请发送命令 [#星铁帮助] '
+  themeSet: false
+  title: 琪宝帮助
+  subTitle: 琪宝帮助 · 全部指令速查
   colCount: 3
   colWidth: 265
   theme: all
   themeExclude:
   - default
-  bgBlur: false
-  # 背景：theme=只用本地主题，api=只用随机接口，mix=两者随机
+  bgBlur: true
   background: mix
   backgroundApi: https://api.yppp.net/pc.php
 helpList:
-- group: ═════════════════ TRSS Yunzai-Bot ════════════════
+- group: 全局帮助
   list:
-  - icon: 31
-    title: '#体力 #体力帮助'
-    desc: 体力委托周本宝钱查询，需扫码
-  - icon: 32
-    title: '#原石 #原石七月 #原石统计'
-    desc: 以柱状图显示月份原石收入
-  - icon: 33
-    title: '#签到 #社区签到'
-    desc: 可爱的姬姬人已经每天自动签到了
-  - icon: 34
-    title: '#深渊 #深渊12层'
-    desc: 统计深渊中最强一击和最高承伤
-  - icon: 35
-    title: '#五星 #武器 #角色卡片'
-    desc: 地区探索进度和已拥有角色一览
-  - icon: 36
-    title: '#今日材料 #明日材料'
-    desc: 对应已有角色武器查询可刷材料
-  - icon: 37
-    title: '#角色 #探索 #练度统计'
-    desc: 显示探索百分比和全角色套装评分
-  - icon: 38
-    title: '#刷新天赋 #天赋统计'
-    desc: '#周三天赋 #四/五星练度统计'
-  - icon: 39
-    title: '#全部抽卡记录 #全部统计'
-    desc: '请先发送命令 #更新抽卡记录'
-  - icon: 40
-    title: '#导出记录 #导出记录json'
-    desc: xlsx表格文件和json文件的导出
-  - icon: 41
-    title: '#十连 #百连 #定轨'
-    desc: 高概率出金，给你欧皇般的享受
-  - icon: 42
-    title: '#添加哈哈 #删除哈哈'
-    desc: '查记录请发 #消息列表 #消息哈哈'
-  - icon: 43
-    title: '#米游社飘浮灵路线'
-    desc: 你居然在企鹅上查米游社的帖子
-  - icon: 44
-    title: '#原石预估'
-    desc: 预估下一版本可获取的原石数量
-  - icon: 45
-    title: '#优菈别名 #设置优菈别名'
-    desc: 给心爱的角色设置最喜欢的称呼
-  - icon: 46
-    title: '#公告 #资讯 #活动'
-    desc: 官方发布后将自动推送到群内
-  - icon: 47
-    title: '#兑换码'
-    desc: 获取前瞻中的300原石兑换码
-  - icon: 48
-    title: '#芭芭拉攻略'
-    desc: 来源于米游社各作者的角色攻略
-- group: ═════════════════ Miaomiao-Plugin ════════════════
+  - icon: 63
+    title: 问题反馈
+    desc: 私聊bot或者群里发送#联系主人+消息即可
+- group: mys-plugin
   list:
-  - icon: 50
-    title: '#老婆 #老公 #女儿'
-    desc: '选择老婆请发 #老婆设置香菱'
-  - icon: 51
-    title: '#角色持有率 #深渊出场率'
-    desc: 以上的统计数据来源于胡桃网站
-  - icon: 52
-    title: '#九条天赋 #九条裟罗命座'
-    desc: 角色天赋详情和命座数据详情
-  - icon: 53
-    title: '#上传深渊数据 #深渊配队'
-    desc: 当前版本深渊数据/角色配队
-  - icon: 54
-    title: '#更新面板 #托马面板/伤害'
-    desc: 面板可参与排名，命令看后面
-  - icon: 55
-    title: '#五郎排名 #最强/最高分五郎'
-    desc: '#重置排名 #刷新排名 单群PVP'
-  - icon: 56
-    title: '#最强排名 #最高分排名'
-    desc: 该排名仅排列本群内玩家数据
-  - icon: 57
-    title: '#云堇图鉴 #云堇养成'
-    desc: 都看图鉴了，顺便来看看养成吧
-  - icon: 58
-    title: '#圣遗物列表'
-    desc: 该死的欧皇，决战的时刻到了！
-  - icon: 59
-    title: '#日历'
-    desc: 活动版本倒计时以及活动信息
-  - icon: 60
-    title: '#申鹤面板换追忆'
-    desc: '其他更换命令请发送 #面板帮助'
-- group: ═════════════════ xiaoyao-cvs-Plugin ═══════════════
-  list:
-  - icon: 65
-    title: '#行秋信息 #祭礼剑'
-    desc: 角色信息和武器信息一图流
+  - icon: 93
+    title: 所有功能必须艾特机器人或 +q/q
+    desc: 不会开启自动回复，不会开启私聊功能
   - icon: 66
-    title: '#海乱鬼 #泡泡机 #仙跳墙'
-    desc: 原魔/小道具/食物信息一览
-  - icon: 67
-    title: '#冰套 #绝缘本'
-    desc: 圣遗物/秘境信息一览
-  - icon: 68
-    title: '#ck查询 #米币查询'
-    desc: ck绑定的游戏账号和米游币数量
-  - icon: 69
-    title: '#扫码登陆 #刷新ck'
-    desc: 也就第一个命令经常用到，嘿嘿
-  - icon: 70
-    title: '#更新抽卡记录'
-    desc: 无需上传文件，直接获取抽卡记录
-  - icon: 71
-    title: '#鸣草在哪'
-    desc: 由米游社观测枢的地图资源生成
-  - icon: 72
-    title: '#七圣鹿野院平藏'
-    desc: 动态卡面请选择图片并回复 动态
-  - icon: 73
-    title: '#原神充值 6'
-    desc: '#商品列表 #订单查询，建议别用'
-- group: ═════════════════ achievements-Plugin ══════════════
-  list:
-  - icon: 75
-    title: '#成就录入 #成就查漏'
-    desc: 从椰羊导入Json 手动输入成就ID
-  - icon: 76
-    title: '#成就查询 #成就重置'
-    desc: 根据成就ID精准查询 重置成就数据
-- group: ═════════════════ 来源于各群大佬的插件 ══════════════
-  list:
-  - icon: 77
-    title: '#极限雷泽面板'
-    desc: '更多参考面板请发送 #预设面板'
-  - icon: 78
-    title: '#七圣查询角色牌/行动牌'
-    desc: '牌组命令请发送 #七圣查询牌组1'
+    title: '#扫码登录'
+    desc: 确保米游社是最新版才能扫码
+  - icon: 65
+    title: '#云崽帮助'
+    desc: 米游全家桶
+  - icon: 108
+    title: 米哈游帮助
+    desc: 米游功能集合处
   - icon: 79
-    title: '#复刻表'
-    desc: 原神和星铁的历史卡池总览
-  - icon: 80
-    title: '#原神开启体力推送12345678'
-    desc: '设置提醒值 #原神体力推送120'
-  - icon: 81
-    title: '#更新小助手记录'
-    desc: 从提瓦特小助手获取抽卡记录
-  - icon: 82
-    title: '#队伍伤害草神，妮露，海森'
-    desc: 非常好用，使我提瓦特物种灭绝
-  - icon: 83
-    title: '#看世界'
-    desc: 每天起床看一眼，感觉心都凉了
-  - icon: 84
-    title: '#点歌 让风告诉你'
-    desc: 虽然可能没原唱，但歌是那首歌
-  - icon: 85
-    title: 谁艾特我
-    desc: 翻不到艾特消息的必备功能
-  - icon: 86
-    title: '#表情包列表'
-    desc: 艾特他人使用，群友用了都说好
-  - icon: 87
-    title: 姬姬人你好
-    desc: 如果没反应，不出意外是死了
-- group: ═══════════════════ Guoba-Plugin ════════════════
-  auth: master
+    title: '%帮助'
+    desc: 绝区零帮助
+- group: 小插件
   list:
-  - icon: 229
-    title: '#锅巴登陆'
-    desc: 小小的命令，解决大大的麻烦
+  - icon: 64
+    title: '#母带/水晶，%母带，#上月水晶（米哈游帮助）'
+    desc: 查询资源存量，仅限绝区零和bbb
+  - icon: 12
+    title: '#/%更新抽卡记录（米哈游帮助）'
+    desc: 详情看抽卡帮助
+  - icon: 55
+    title: '#[原石|星琼|菲林|水晶|深渊]速报（米哈游帮助）'
+    desc: 资源预估
+  - icon: 35
+    title: '#点歌+歌曲（暂时停用）'
+    desc: 点歌成功后发送#听几「n=1,2,3,...」，不满意就发送#下一页
+  - icon: 67
+    title: 攻略帮助（迁移到米哈游帮助）
+    desc: 游戏前缀【#，*，%】+角色名字+攻略
+  - icon: 62
+    title: '#meme帮助（米哈游帮助）'
+    desc: 表情帮助
+  - icon: 77
+    title: 戳一戳/单独艾特bot（chatgpt帮助）
+    desc: 提供情绪价值神秘小代码
+  - icon: 58
+    title: B站帮助
+    desc: b站相关功能
+  - icon: 59
+    title: y帮助
+    desc: 娱乐小功能
+  - icon: 88
+    title: 米游社社区签到|米哈游签到（米哈游帮助）
+    desc: 免费米游社社区签到和游戏
+  - icon: 53
+    title: '#core帮助'
+    desc: 增加鸣潮和战双帮助

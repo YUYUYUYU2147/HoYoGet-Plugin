@@ -117,7 +117,13 @@ function globalThemeNames() {
 function pickGlobalTheme(helpCfg) {
   const all = globalThemeNames();
   let names = all;
-  const theme = helpCfg.theme;
+  const rawTheme = helpCfg.theme;
+  // 支持 theme: all / '31' / '1,2' / ['1','2']
+  const theme = Array.isArray(rawTheme)
+    ? rawTheme
+    : (typeof rawTheme === 'string' && rawTheme.includes(',')
+      ? rawTheme.split(',').map(v => v.trim()).filter(Boolean)
+      : rawTheme);
   if (Array.isArray(theme) && theme.length) names = all.filter(n => theme.includes(n));
   else if (theme && theme !== 'all') names = all.filter(n => n === String(theme));
   const exclude = Array.isArray(helpCfg.themeExclude) ? helpCfg.themeExclude : [];
