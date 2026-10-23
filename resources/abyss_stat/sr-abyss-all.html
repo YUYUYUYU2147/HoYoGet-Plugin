@@ -1,117 +1,163 @@
-<!doctype html>
-<html lang="zh-cn">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width" />
-    <link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/sr-abyss-all.css" />
-    <title>HoYoGet</title>
-  </head>
-  <body>
-    <div class="page">
-      <div class="head">
-        <div class="head-left">
-          <div class="title">逐光捡金挑战回顾</div>
-          <div class="subtitle">{{period}} · 混沌回忆 / 虚构叙事 / 末日幻影 / 异相仲裁</div>
-        </div>
-        <div class="head-right">
-          <div class="uid">UID {{uid}}</div>
-        </div>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+  <link rel="shortcut icon" href="#" />
+  <link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/sr-abyss-all.css" />
+</head>
+<body>
+  <div class="container" id="container" style="width: {{totalWidth}}px;">
+    <div class="hoyo-head" style="width: {{contentWidth}}px;">
+      <img class="hoyo-icon" src="{{ppath}}game_icons/sr.webp" onerror="this.style.display='none'" />
+      <div class="hoyo-head-copy">
+        <div class="hoyo-title">逐光捡金挑战回顾</div>
+        <div class="hoyo-sub">{{period}} · 混沌回忆 / 虚构叙事 / 末日幻影 / 异相仲裁</div>
       </div>
-
-      <div class="cards">
-        {{each cards c}}
-        <div class="card {{if !c.ok}}empty{{/if}}">
-          <div class="card-title">{{c.title}}</div>
-          {{if c.ok}}
-          <div class="card-star">
-            <span class="star-num">{{c.totalStar}}</span>
-            <span class="star-label">星</span>
-            {{if c.extraStar}}<span class="extra">+{{c.extraStar}}</span>{{/if}}
-          </div>
-          <div class="card-period-name">{{c.periodName || '—'}}</div>
-          <div class="card-meta">
-            {{if c.fullStar}}<span>满星 {{c.fullStar}}</span>{{/if}}
-            {{if c.bestFloor}}<span>{{c.bestFloor}}</span>{{/if}}
-            {{if c.battleNum}}<span>{{c.battleNum}} 场</span>{{/if}}
-          </div>
-          {{if c.period}}<div class="card-period">{{c.period}}</div>{{/if}}
-          {{else}}
-          <div class="card-empty-text">暂无数据{{if c.err}}<span class="err">{{c.err}}</span>{{/if}}</div>
-          {{/if}}
-        </div>
-        {{/each}}
-      </div>
-
-      <div class="sections">
-        {{each cards c}}
-        {{if c.ok && c.floors.length}}
-        <section class="section sec-{{c.key}}">
-          <div class="sec-head">
-            <div class="sec-title">{{c.title}}</div>
-            <div class="sec-sub">
-              {{if c.periodName}}<span>{{c.periodName}}</span>{{/if}}
-              <span>{{c.totalStar}} 星{{if c.extraStar}} +{{c.extraStar}}{{/if}}</span>
-              {{if c.battleNum}}<span>{{c.battleNum}} 场</span>{{/if}}
+      <div class="hoyo-uid">UID {{uid}}</div>
+    </div>
+    <div class="columns" style="width: {{contentWidth}}px;">
+      {{each columns col}}
+      <div class="column {{col.type}}">
+        <div class="column-title">{{col.title}}</div>
+        <div class="overview-card">
+          <div class="overview-main">
+            <div class="star-summary">
+              <span class="star-mark">★</span>
+              <span class="star-count">× {{col.list.star_num}}</span>
+              {{if col.hasStarMode}}
+              <span class="floor-star-sep">|</span>
+              <img class="summary-star4" src="{{ppath}}abyss_stat/genshin_img/other/abyss_star4.png" />
+              {{/if}}
+            </div>
+            <div class="overview-stats">
+              <div><span>{{col.maxLabel}}：</span><b>{{col.list.max_floor}}</b>{{if col.hasStarMode}}<img class="mini-star4" src="{{ppath}}abyss_stat/genshin_img/other/abyss_star4.png" />{{/if}}</div>
+              <div><span>挑战次数：</span><b>{{col.list.battle_num}}</b></div>
             </div>
           </div>
-
-          <div class="floors">
-            {{each c.floors f}}
-            <div class="floor">
-              <div class="floor-head">
-                <div class="floor-name">{{f.name}}</div>
-                <div class="floor-right">
-                  <span class="stars">{{each repeat(f.star) s}}★{{/each}}{{if f.extraStar}}<i>+{{f.extraStar}}</i>{{/if}}</span>
-                  {{if !f.isFast}}<span class="floor-score">{{f.score}}</span>{{/if}}
-                </div>
+          {{if col.type === "boss"}}
+          <div class="boss-brief">
+            {{if col.group?.upper_boss}}
+            <div class="boss-item">
+              <span>节点1</span>
+              <img src="{{col.group.upper_boss.icon}}" />
+              <p>{{col.group.upper_boss.name_mi18n}}</p>
+            </div>
+            {{/if}}
+            {{if col.group?.lower_boss}}
+            <div class="boss-item">
+              <span>节点2</span>
+              <img src="{{col.group.lower_boss.icon}}" />
+              <p>{{col.group.lower_boss.name_mi18n}}</p>
+            </div>
+            {{/if}}
+            {{if col.group?.tierce_boss}}
+            <div class="boss-item">
+              <span>节点3</span>
+              <img src="{{col.group.tierce_boss.icon}}" />
+              <p>{{col.group.tierce_boss.name_mi18n}}</p>
+            </div>
+            {{/if}}
+          </div>
+          {{/if}}
+          <div class="period-info">{{col.periodText}}</div>
+        </div>
+        <div class="floor-list">
+          {{each col.floors floor}}
+          <div class="floor-card">
+            <div class="floor-head">
+              <div class="floor-name">{{floor.name}}</div>
+              <div class="floor-stars">
+                <span class="{{if floor.star_num<1}}nostar{{/if}}">★</span>
+                <span class="{{if floor.star_num<2}}nostar{{/if}}">★</span>
+                <span class="{{if floor.star_num<3}}nostar{{/if}}">★</span>
+                {{if floor.hasTierceRecord}}
+                <span class="floor-star-sep">|</span>
+                <img class="star4 {{if floor.star_num<4}}nostar-img{{/if}}" src="{{ppath}}abyss_stat/genshin_img/other/abyss_star4.png" />
+                {{/if}}
               </div>
-
-              {{each f.nodes node}}
-              {{if node.avatars.length}}
-              <div class="node">
-                <div class="node-head">
-                  <span class="node-name">节点{{node.index}}</span>
-                  {{if node.time}}<span class="node-time">{{node.time}}</span>{{/if}}
-                  {{if node.score}}<span class="node-score">{{node.score}}</span>{{/if}}
-                </div>
-                <div class="avatars">
-                  {{each node.avatars a}}
-                  <div class="av rarity-{{a.rarity || 5}}">
-                    <div class="av-pic">
-                      {{if a.icon}}<img src="{{a.icon}}" alt="" />{{/if}}
-                      {{if a.element && elemIcon(a.element)}}<img class="av-elem" src="{{ppath}}{{elemIcon(a.element)}}" alt="" />{{/if}}
-                      <span class="av-cons">{{a.rank ?? 0}}</span>
-                    </div>
-                    <div class="av-name">{{a.abbr || a.name || ''}}</div>
-                    <div class="av-lv">Lv{{a.level || 80}}</div>
-                  </div>
-                  {{/each}}
-                </div>
-              </div>
+            </div>
+            <div class="floor-meta">
+              <span class="round-info">{{if col.showRound}}轮次：{{floor.round_num || 0}}{{/if}}</span>
+              {{if col.showTotalScore && floor.allscore !== undefined}}
+              <span class="total-info">总分：<b>{{floor.allscore}}</b></span>
               {{/if}}
-              {{/each}}
+            </div>
 
-              {{if f.buffs.length}}
-              <div class="buffs">
-                {{each f.buffs b}}
-                <div class="buff">
-                  {{if b.icon}}<img class="buff-icon" src="{{b.icon}}" alt="" />{{/if}}
-                  <div class="buff-text">
-                    {{if b.name}}<b>{{b.name}}：</b>{{/if}}<span>{{b.desc}}</span>
-                  </div>
+            {{if floor.node_1?.hasData}}
+            <div class="node-card">
+              <div class="node-head">
+                <span>节点1</span>
+                <em>{{floor.node_1.challenge_time_str}}</em>
+                {{if col.showNodeScore && floor.node_1.score !== undefined}}<b>积分：{{floor.node_1.score}}</b>{{/if}}
+              </div>
+              {{if floor.node_1.buff?.id}}
+              <div class="buff"><img src="{{floor.node_1.buff.icon}}" /><span>{{floor.node_1.buff.name_mi18n}}：{{floor.node_1.buff.desc_mi18n}}</span></div>
+              {{/if}}
+              <div class="avatars-grid">
+                {{each floor.node_1.avatars v}}
+                <div class="avatar-wrapper bg{{v.rarity}}">
+                  {{if v.rank>0}}<span class="avatar-rank">{{v.rank}}</span>{{/if}}
+                  <img class="avatar-img" src="{{v.icon}}" onerror="whenError(this)" />
+                  <div class="avatar-level">Lv.{{v.level}}</div>
+                  <div class="element-icon"><img src="{{ppath}}abyss_stat/genshin_img/element/{{v.element}}.png" /></div>
                 </div>
                 {{/each}}
               </div>
-              {{/if}}
             </div>
-            {{/each}}
-          </div>
-        </section>
-        {{/if}}
-        {{/each}}
-      </div>
+            {{/if}}
 
-      <div class="footer">数据来自米游社战绩 · 未公开面板的玩法会显示「暂无数据」</div>
+            {{if floor.node_2?.hasData}}
+            <div class="node-card">
+              <div class="node-head">
+                <span>节点2</span>
+                <em>{{floor.node_2.challenge_time_str}}</em>
+                {{if col.showNodeScore && floor.node_2.score !== undefined}}<b>积分：{{floor.node_2.score}}</b>{{/if}}
+              </div>
+              {{if floor.node_2.buff?.id}}
+              <div class="buff"><img src="{{floor.node_2.buff.icon}}" /><span>{{floor.node_2.buff.name_mi18n}}：{{floor.node_2.buff.desc_mi18n}}</span></div>
+              {{/if}}
+              <div class="avatars-grid">
+                {{each floor.node_2.avatars v}}
+                <div class="avatar-wrapper bg{{v.rarity}}">
+                  {{if v.rank>0}}<span class="avatar-rank">{{v.rank}}</span>{{/if}}
+                  <img class="avatar-img" src="{{v.icon}}" onerror="whenError(this)" />
+                  <div class="avatar-level">Lv.{{v.level}}</div>
+                  <div class="element-icon"><img src="{{ppath}}abyss_stat/genshin_img/element/{{v.element}}.png" /></div>
+                </div>
+                {{/each}}
+              </div>
+            </div>
+            {{/if}}
+
+            {{if floor.node_3?.hasData}}
+            <div class="node-card node3">
+              <div class="node-head">
+                <span><img class="node3-crown" src="{{ppath}}abyss_stat/genshin_img/boss/node3top.png" />节点3</span>
+                <em>{{floor.node_3.challenge_time_str}}</em>
+                {{if col.showNodeScore && floor.node_3.score !== undefined}}<b>积分：{{floor.node_3.score}}</b>{{/if}}
+              </div>
+              {{if floor.node_3.buff?.id}}
+              <div class="buff"><img src="{{floor.node_3.buff.icon}}" /><span>{{floor.node_3.buff.name_mi18n}}：{{floor.node_3.buff.desc_mi18n}}</span></div>
+              {{/if}}
+              <div class="avatars-grid">
+                {{each floor.node_3.avatars v}}
+                <div class="avatar-wrapper bg{{v.rarity}}">
+                  {{if v.rank>0}}<span class="avatar-rank">{{v.rank}}</span>{{/if}}
+                  <img class="avatar-img" src="{{v.icon}}" onerror="whenError(this)" />
+                  <div class="avatar-level">Lv.{{v.level}}</div>
+                  <div class="element-icon"><img src="{{ppath}}abyss_stat/genshin_img/element/{{v.element}}.png" /></div>
+                </div>
+                {{/each}}
+              </div>
+            </div>
+            {{/if}}
+          </div>
+          {{/each}}
+        </div>
+      </div>
+      {{/each}}
     </div>
-  </body>
+    <div class="logo">{{layoutcopyright}}</div>
+  </div>
+</body>
 </html>

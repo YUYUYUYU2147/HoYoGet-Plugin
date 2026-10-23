@@ -1,300 +1,463 @@
-body {
-  width: 1000px;
+@import url("../font/fonts.css");
+
+* {
   margin: 0;
-  background: #0b0d15;
-  font-family: 'HelpSans', 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', sans-serif;
-}
-
-.page {
-  width: 1000px;
-  padding: 26px;
+  padding: 0;
   box-sizing: border-box;
-  background:
-    radial-gradient(900px 320px at 82% -8%, rgba(122, 140, 255, .14), transparent 62%),
-    radial-gradient(700px 300px at 5% 110%, rgba(90, 200, 180, .10), transparent 60%),
-    linear-gradient(168deg, #171a2b 0%, #12141f 55%, #0b0d15 100%);
-  color: #e7ebf3;
+  user-select: none;
 }
 
-.head {
+body {
+  font-size: 14px;
+  color: #fff;
+  width: max-content;
+  transform: scale(2);
+  transform-origin: 0 0;
+}
+
+.container {
+  font-family: "Number", "SR";
+  padding: 16px;
+  background:
+    linear-gradient(rgba(8, 10, 18, 0.78), rgba(8, 10, 18, 0.9)),
+    url("genshin_img/abyss/chaos_bg.png");
+  background-size: cover;
+}
+
+.summary-header {
+  height: 58px;
   display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.46);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.title {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.columns {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: flex-start;
+  gap: 12px;
+}
+
+.column {
+  width: 430px;
+  flex: 0 0 430px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.column-title {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: bold;
+  color: #ffc870;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.48);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.overview-card,
+.floor-card {
+  border-radius: 10px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.overview-card {
+  background:
+    linear-gradient(rgba(0, 0, 0, 0.36), rgba(0, 0, 0, 0.48)),
+    url("genshin_img/story/top_bg.png");
+  background-size: cover;
+}
+
+.overview-main {
+  display: flex;
   justify-content: space-between;
-  padding: 20px 24px;
-  border-radius: 16px;
+  align-items: center;
+  gap: 12px;
+}
+
+.star-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.star-mark {
+  color: #ffc870;
+  font-size: 30px;
+  line-height: 1;
+  text-shadow: 0 0 8px rgba(255, 200, 112, 0.65);
+}
+
+.star-count {
+  font-size: 22px;
+  font-weight: bold;
+}
+
+.summary-star4 {
+  width: 30px;
+  height: 30px;
+}
+
+.mini-star4 {
+  width: 16px;
+  height: 16px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.overview-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  text-align: right;
+}
+
+.overview-stats span {
+  color: #ccc;
+}
+
+.overview-stats b,
+.floor-meta b {
+  color: #ffc870;
+}
+
+.boss-brief {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.boss-item {
+  min-width: 0;
+  padding: 6px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.34);
+  text-align: center;
+}
+
+.boss-item span {
+  display: block;
+  font-size: 11px;
+  color: #fff;
+}
+
+.boss-item img {
+  width: 42px;
+  height: 42px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin: 4px 0;
+}
+
+.boss-item p {
+  font-size: 10px;
+  color: #ccc;
+  line-height: 1.2;
+}
+
+.period-info {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  text-align: center;
+  color: #ffc870;
+  font-size: 11px;
+}
+
+.floor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.floor-card {
+  background:
+    linear-gradient(rgba(0, 0, 0, 0.24), rgba(0, 0, 0, 0.46)),
+    url("genshin_img/abyss/floor.png");
+  background-size: cover;
+}
+
+.floor-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  margin: -12px -12px 8px;
+  border-radius: 10px 10px 0 0;
+  background: #724d80;
+}
+
+.floor-name {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.floor-stars {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: #ffc870;
+  font-size: 14px;
+}
+
+.nostar {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.floor-star-sep {
+  color: rgba(255, 255, 255, 0.45);
+  margin: 0 3px;
+}
+
+.star4 {
+  width: 17px;
+  height: 17px;
+}
+
+.nostar-img {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
+.floor-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 16px;
+  margin-bottom: 8px;
+  color: #ccc;
+  font-size: 11px;
+}
+
+.round-info {
+  min-width: 0;
+}
+
+.total-info {
+  margin-left: auto;
+  text-align: right;
+}
+
+.node-card {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.node3 {
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(82, 56, 102, 0.3);
+}
+
+.node3 .node-head {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background-image: url("genshin_img/story/memory_node3.png);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+
+.node-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 11px;
+}
+
+.node-head span {
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.node-head em {
+  font-style: normal;
+  color: #ccc;
+  text-align: right;
+}
+
+.node-head b {
+  color: #ffc870;
+  font-weight: bold;
+}
+
+.node3-crown {
+  width: 17px;
+  height: auto;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+.buff {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.34);
+}
+
+.buff img {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.buff span {
+  flex: 1;
+  font-size: 9px;
+  line-height: 1.35;
+  color: #ddd;
+}
+
+.avatars-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.avatar-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: 0 6px 0 0;
+}
+
+.avatar-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 82%;
+  object-fit: cover;
+}
+
+.avatar-level {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 18%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+  font-size: 10px;
+}
+
+.avatar-rank {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0 6px 0 0;
+  background: rgba(0, 0, 0, 0.62);
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.element-icon {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  z-index: 2;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  padding: 2px;
+  background: rgba(0, 0, 0, 0.62);
+}
+
+.element-icon img {
+  width: 12px;
+  height: 12px;
+  object-fit: contain;
+}
+
+.bg4 {
+  background-image: url("genshin_img/other/4.png);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+
+.bg5 {
+  background-image: url("genshin_img/other/5.png);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+
+.logo {
+  font-size: 10px;
+  text-align: center;
+  color: #7994a7;
+  padding: 12px 0 0;
+  margin-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 顶部：本插件自己的标题栏（套用 genshin abyss_all 的列布局，只在最上面加一条） */
+.hoyo-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding: 16px 22px;
+  border-radius: 14px;
   background: linear-gradient(120deg, rgba(34, 32, 56, .92), rgba(18, 20, 32, .9));
   border: 1px solid rgba(150, 160, 255, .28);
 }
-.title {
-  font-family: 'HelpBold', sans-serif;
-  font-size: 34px;
+.hoyo-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  object-fit: cover;
+  flex: none;
+}
+.hoyo-head-copy { flex: 1; min-width: 0; }
+.hoyo-title {
+  font-size: 28px;
+  font-weight: 900;
   letter-spacing: 3px;
   color: #c8cfff;
 }
-.subtitle {
-  margin-top: 8px;
+.hoyo-sub {
+  margin-top: 4px;
+  font-size: 13px;
+  color: rgba(231, 235, 243, .55);
+}
+.hoyo-uid {
+  flex: none;
   font-size: 14px;
   color: rgba(231, 235, 243, .6);
-}
-.head-right { text-align: right; }
-.uid { font-size: 14px; color: rgba(231, 235, 243, .6); }
-
-.cards {
-  margin-top: 16px;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-}
-
-.card {
-  padding: 18px 16px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, .03);
-  border: 1px solid rgba(150, 160, 255, .14);
-  text-align: center;
-}
-.card-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: #e7ebf3;
-}
-.card-star {
-  margin-top: 12px;
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 4px;
-}
-.star-num {
-  font-family: 'HelpBold', sans-serif;
-  font-size: 44px;
-  font-weight: 900;
-  color: #ffd66b;
-  text-shadow: 0 0 16px rgba(255, 200, 90, .3);
-}
-.star-label { font-size: 14px; color: #8fa9cd; }
-.extra { font-size: 16px; color: #7fd4c0; }
-.card-period-name {
-  margin-top: 8px;
-  font-size: 13px;
-  font-weight: 700;
-  color: #dfe5f5;
-}
-.card-meta {
-  margin-top: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 12px;
-  color: rgba(231, 235, 243, .55);
-}
-.card-period {
-  margin-top: 6px;
-  font-size: 11px;
-  color: rgba(231, 235, 243, .42);
   font-variant-numeric: tabular-nums;
-}
-.card.empty { opacity: .6; }
-.card-empty-text {
-  margin-top: 20px;
-  font-size: 13px;
-  color: rgba(231, 235, 243, .5);
-}
-.err { display: block; margin-top: 4px; font-size: 11px; color: #ffb0a0; }
-
-/* ── 挑战详情 ─────────────────────────────────────────── */
-.sections {
-  margin-top: 18px;
-  display: grid;
-  gap: 18px;
-}
-
-.section {
-  border-radius: 16px;
-  border: 1px solid rgba(150, 160, 255, .16);
-  background: linear-gradient(180deg, rgba(28, 30, 48, .9), rgba(16, 18, 30, .9));
-  padding: 16px 16px 6px;
-}
-.sec-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  padding: 0 4px 12px;
-  border-bottom: 1px solid rgba(150, 160, 255, .14);
-}
-.sec-title {
-  font-family: 'HelpBold', sans-serif;
-  font-size: 20px;
-  letter-spacing: 2px;
-  color: #d6dcff;
-}
-.sec-sub {
-  display: flex;
-  gap: 12px;
-  font-size: 12px;
-  color: rgba(231, 235, 243, .55);
-}
-
-.floors {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  padding-top: 12px;
-}
-
-.floor {
-  border-radius: 12px;
-  border: 1px solid rgba(150, 160, 255, .12);
-  background: rgba(255, 255, 255, .025);
-  padding: 12px;
-}
-.floor-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(150, 160, 255, .10);
-}
-.floor-name {
-  font-size: 13px;
-  font-weight: 700;
-  color: #ecf0ff;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.floor-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: none;
-}
-.stars {
-  font-size: 11px;
-  letter-spacing: 1px;
-  color: #ffd66b;
-}
-.stars i { font-style: normal; color: #7fd4c0; margin-left: 2px; }
-.floor-score {
-  font-size: 12px;
-  font-weight: 700;
-  color: #ffd66b;
-  font-variant-numeric: tabular-nums;
-}
-
-.node {
-  margin-top: 10px;
-}
-.node-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  color: rgba(231, 235, 243, .55);
-  margin-bottom: 6px;
-}
-.node-name { color: #b9c2e0; font-weight: 700; }
-.node-score {
-  margin-left: auto;
-  color: #ffd66b;
-  font-variant-numeric: tabular-nums;
-}
-
-.avatars {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-}
-.av {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  min-width: 0;
-}
-.av-pic {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  border-radius: 8px;
-  overflow: hidden;
-  background: rgba(0, 0, 0, .35);
-  border: 1px solid rgba(255, 255, 255, .10);
-}
-.av-pic img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-.av.rarity-5 .av-pic { border-color: rgba(255, 200, 90, .55); }
-.av.rarity-4 .av-pic { border-color: rgba(180, 140, 255, .45); }
-.av-elem {
-  position: absolute !important;
-  left: 3px;
-  top: 3px;
-  width: 16px !important;
-  height: 16px !important;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, .55);
-}
-.av-cons {
-  position: absolute;
-  right: 3px;
-  top: 3px;
-  min-width: 14px;
-  height: 14px;
-  padding: 0 3px;
-  border-radius: 7px;
-  font-size: 9px;
-  line-height: 14px;
-  text-align: center;
-  color: #ffe9b0;
-  background: rgba(0, 0, 0, .62);
-}
-.av-name {
-  font-size: 10px;
-  color: #dfe5f5;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.av-lv {
-  font-size: 9px;
-  color: rgba(231, 235, 243, .45);
-}
-
-.buffs {
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.buff {
-  display: flex;
-  gap: 6px;
-  padding: 6px 8px;
-  border-radius: 8px;
-  background: rgba(120, 140, 255, .07);
-  border: 1px solid rgba(150, 160, 255, .10);
-  font-size: 10px;
-  line-height: 1.5;
-  color: rgba(231, 235, 243, .68);
-}
-.buff-icon {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  flex: none;
-}
-.buff-text b { color: #c8cfff; font-weight: 700; }
-
-.footer {
-  margin-top: 14px;
-  text-align: center;
-  font-size: 12px;
-  color: rgba(231, 235, 243, .4);
 }

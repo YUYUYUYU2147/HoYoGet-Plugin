@@ -409,6 +409,134 @@ export class abyss_stat extends plugin {
   srPeak(e) { return this.srChallenge(e, 'peak') }
 
   /**
+   * 星铁深渊总览：混沌 + 虚构 + 末日 + 王棋。
+   * 版式直接套 genshin 的 abyss_all：每类一列长图，几列横向拼成一张宽图，
+   * 顶部只额外加一条本插件自己的标题栏。
+   */
+  async srAbyss(e) {
+    const type = /(上期|往期)/.test(String(e.msg || '')) ? 2 : 1
+    const mys = await this.mys(e, 'sr')
+    if (!mys) return
+    const keys = ['chaos', 'story', 'boss', 'peak']
+    const columns = []
+    const errors = []
+    let priv = 0
+    for (const key of keys) {
+      const cfg = SR_CFG[key]
+      let raw = null
+      try {
+        raw = await mys[cfg.api](type)
+      } catch (err) {
+        errors.push(`${cfg.title}: ${err?.message || err}`)
+        continue
+      }
+      if (!raw) {
+        if (e?._retcode === 10102) priv++
+        errors.push(`${cfg.title}: ${e?._retcode === 10102 ? '米游社数据未公开' : '接口未返回数据'}`)
+        continue
+      }
+      const data = buildSrChallengeData(raw, cfg, type)
+      if (!data) continue
+      const col = this.buildSrColumn(data, cfg, raw, key)
+      if (col) columns.push(col)
+    }
+
+    if (!columns.length) {
+      if (priv === keys.length) {
+        return e.reply('米游社返回「数据未公开」，通常是这两个原因：\n'
+          + '1) 用的是公共 CK 而不是你自己的：日志里出现「分配查询ck」就属于这种，重新 #扫码绑定 后再试；\n'
+          + '2) 确实在米游社「我的 → 战绩」里隐藏了战绩，关掉即可。')
+      }
+      logger.mark?.(`[HoYoGet][abyss_stat] *深渊 四类都无数据：${errors.join(' | ') || '接口未返回楼层'}`)
+      return e.reply('没有查到本期星铁深渊数据，可能还没打或面板未公开。'
+        + (errors.length ? `\n${errors.join('\n')}` : ''))
+    }
+
+    /* 与 genshin 同款：每列 430 CSS 宽，列间距 12，容器左右各 16 */
+    const totalWidth = columns.length * 430 + 32 + Math.max(columns.length - 1, 0) * 12
+    return render('abyss_stat/sr-abyss-all', {
+      period: type === 2 ? '上期' : '当期',
+      uid: mys.uid,
+      columns,
+      totalWidth,
+      contentWidth: totalWidth - 32,
+      layoutcopyright: 'from 米哈游',
+      sys: { copyright: '' },
+    }, { e, ret: true, dsf: 3.2, viewport: { width: Math.max(1000, totalWidth), height: 900 } })
+  }
+
+  /**
+   * 一类玩法 → 一列。字段名保持 genshin abyss_all 模板的约定
+   * （list.star_num / list.max_floor / list.battle_num / floors[].node_1 …），
+   * 这样模板可以原样复用，不用改写。
+   */
+  buildSrColumn(data, cfg, raw, key) {
+    if (!data) return null
+    const type = cfg.type
+    const group = data.group || {}
+    const floors = (data.floors || [])
+      .filter(f => (f.nodes || []).some(n => n?.avatars?.length) || f.isFast)
+      .map(f => {
+        const node = n => {
+          if (!n || !n.avatars?.length) return null
+          const b = n.raw?.buff || n.raw?.maze_buff
+            || (Array.isArray(n.raw?.buff_list) ? n.raw.buff_list[0] : null)
+          return {
+            hasData: true,
+            score: n.score,
+            challenge_time_str: n.time || '',
+            buff: b ? { id: b.id || b.name || 'buff', icon: b.icon || '', name_mi18n: b.name_mi18n || b.name || '', desc_mi18n: String(b.desc_mi18n || b.desc || '').replace(/<[^>]+>/g, '').trim() } : null,
+            avatars: (n.avatars || []).map(a => ({
+              icon: a.icon || '',
+              rarity: a.rarity || 5,
+              rank: a.rank || 0,
+              level: a.level || 80,
+              element: a.element || '',
+            })),
+          }
+        }
+        const allscore = (f.nodes || []).reduce((sum, n) => sum + (Number(n?.score) || 0), 0)
+        return {
+          name: f.name,
+          star_num: f.star,
+          round_num: f.roundNum || 0,
+          allscore,
+          hasTierceRecord: !!f.extraStar,
+          node_1: node(f.node1),
+          node_2: node(f.node2),
+          node_3: node(f.node3),
+        }
+      })
+    if (!floors.length) return null
+
+    return {
+      key,
+      type: key === 'chaos' ? 'abyss' : key,
+      title: cfg.title,
+      hasStarMode: floors.some(f => f.hasTierceRecord),
+      maxLabel: key === 'boss' ? '最高难度' : '最高关卡',
+      showRound: key !== 'boss',
+      showTotalScore: key !== 'chaos',
+      showNodeScore: true,
+      periodText: data.beginTime && data.endTime
+        ? `${timeCalc(data.beginTime)} - ${timeCalc(data.endTime)}`
+        : '',
+      group,
+      list: {
+        star_num: data.totalStar ?? 0,
+        max_floor: data.bestFloor || data.periodName || '',
+        battle_num: data.battleNum ?? 0,
+      },
+      floors,
+    }
+  }
+
+  srChaos(e) { return this.srChallenge(e, 'chaos') }
+  srStory(e) { return this.srChallenge(e, 'story') }
+  srBoss(e) { return this.srChallenge(e, 'boss') }
+  srPeak(e) { return this.srChallenge(e, 'peak') }
+
+  /**
    * 把一期的楼层整理成总览页可渲染的结构：
    * 每层带星数/分数、各节点的角色，以及节点上的关卡效果（buff）。
    */
