@@ -19,7 +19,7 @@ const RE_RANK = new RegExp(
 )
 /* *我的全球排名 [UID]：查自己每个角色的 fort off fans 名次 */
 const RE_MY_RANK = new RegExp(
-  `^[#%＊*]*\\s*(?:${SR_PREFIX}\\s*)?我的\\s*${RANK_WORD}(?:\\s+(\\d{9}))?$`,
+  `^[#%＊*]*\\s*(?:${SR_PREFIX}\\s*)?我的\\s*${RANK_WORD}(?:\\s+(\\d{9}))?(?:\\s+(.+))?$`,
   'i',
 )
 
@@ -116,6 +116,7 @@ export class sr_global_rank extends plugin {
   async myRank(e) {
     const m = String(e.msg || '').match(RE_MY_RANK)
     let uid = m?.[1] || ''
+    const nicknameOverride = String(m?.[2] || '').replace(/^昵称[:：]\s*/, '').trim()
     if (!uid) {
       try {
         const { readBoundUid } = await import('../common/hoyo_panel.js')
@@ -128,7 +129,7 @@ export class sr_global_rank extends plugin {
     const file = path.join(process.cwd(), 'data', 'PlayerData', 'sr', `${uid}.json`)
     let data = {}
     try { data = JSON.parse(fs.readFileSync(file, 'utf8')) } catch (_) { /* ignore */ }
-    const nickname = String(data?.name || '').trim()
+    const nickname = nicknameOverride || String(data?.name || '').trim()
     if (!nickname) {
       return e.reply(`还没读到 UID ${uid} 的面板数据。\n请先发「*更新面板」或「*米游社更新面板」，把角色放进游戏内展柜后再试。`)
     }
@@ -156,7 +157,12 @@ export class sr_global_rank extends plugin {
       results.push(...part.filter(Boolean))
     }
     if (!results.length) {
-      return e.reply(`没有在 fort off fans 查到 ${nickname} 的星铁角色排名。\n请确认游戏昵称与提交面板时一致，或稍后再试。`)
+      return e.reply([
+        `没有在 fort off fans 查到 ${nickname} 的星铁角色排名。`,
+        '这个站只收录玩家主动提交的展柜，且昵称必须与网站显示一致。',
+        '可先在 hsr.fortoffans.com 搜索你的昵称确认；如果游戏昵称不同，可以这样指定：',
+        '*我的全球排名 <UID> 昵称:网站上显示的昵称',
+      ].join('\n'))
     }
     results.sort((a, b) => a.rank - b.rank)
     const lines = results.map((r, i) => `${i + 1}. ${r.name}：第 ${r.rank} / 共 ${r.total ?? '?'}${r.eidolon ? `（${r.eidolon}魂）` : ''}`)

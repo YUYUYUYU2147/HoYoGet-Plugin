@@ -212,13 +212,15 @@ export function eidolonBracket(eidolon) {
  */
 export async function fetchPersonalRank({ nickname, char, eidolon } = {}) {
   if (!nickname || !char) return null
-  const bracket = eidolonBracket(eidolon)
-  const ck = `pr:${nickname}:${char}:${bracket}`
+  const ck = `pr:${nickname}:${char}:v2`
   const cached = readCache(ck)
   if (cached) return cached
 
-  // 1) 个人名次
-  const sqs = new URLSearchParams({ nickname, char, eid: bracket })
+  // 1) 个人名次。
+  // 注意：search 接口不能带 eid！带 eid=0/1-2 会按档位过滤，
+  // 而很多玩家的实际档位不是传入值，结果直接空数组。
+  // 不带 eid 会返回该昵称+角色的记录，entry.eidolon 才是真实星魂。
+  const sqs = new URLSearchParams({ nickname, char })
   const sres = await fetch(`${ORIGIN}/api/leaderboard/search?${sqs.toString()}`, {
     signal: AbortSignal.timeout(15000),
     headers: { 'User-Agent': UA, Accept: 'application/json' },
@@ -228,11 +230,15 @@ export async function fetchPersonalRank({ nickname, char, eidolon } = {}) {
   const entry = (Array.isArray(list) ? list : []).find(r => String(r?.avatar_id) === String(char))
   if (!entry) return null // 该玩家没在这个角色上提交过展柜
 
-  // 2) 参榜数（带缓存，5 分钟内的榜单 total 可复用）
-  const { total } = await fetchLeaderboard({ char, eid: bracket, page: 1 })
+  // 2) 参榜数：用记录里的真实星魂档位
+  const bracket = eidolonBracket(entry.eidolon ?? eidolon)
+  let total = null
+  try {
+    total = (await fetchLeaderboard({ char, eid: bracket, page: 1 }))?.total ?? null
+  } catch (_) { /* 总数失败不影响个人名次 */ }
   const out = {
     rank: entry.searchRank ?? null,
-    total: total ?? null,
+    total,
     entry,
     bracket,
   }
