@@ -358,6 +358,33 @@ function webStyleCss(helpCfg, themeStyle = {}, pageWidth = 1000) {
   return `<style>${css}</style>`
 }
 
+function appStyleCss(helpCfg, themeStyle = {}, pageWidth = 1000) {
+  const raw = { ...GLOBAL_THEME_STYLE, ...(themeStyle || {}), ...(helpCfg.style || {}) }
+  const color = key => safeCssValue(raw[key])
+  const size = (key, def, max) => safeSize(raw[key], 8, max) || def
+  const dimNum = Number(raw.pageDim)
+  const dim = Number.isFinite(dimNum) ? Math.min(100, Math.max(0, dimNum)) / 100 : 0.82
+  const blur = safePx(raw.pageBlur, 20) || '14px'
+  const css = `body {
+    width: ${pageWidth}px;
+    --w-head: ${color('titleColor') || '#ffffff'};
+    --w-sub: ${color('subTitleColor') || 'rgba(255,255,255,.9)'};
+    --w-item: ${color('fontColor') || '#111827'};
+    --w-desc: ${color('descColor') || '#4b5563'};
+    --w-tag-red: ${color('tagRed') || '#dc2626'};
+    --w-tag-amber: ${color('tagAmber') || '#b45309'};
+    --w-tag-green: ${color('tagGreen') || '#15803d'};
+    --w-tag-gray: ${color('tagGray') || '#64748b'};
+    --w-title-size: ${size('titleSize', '48px', 120)};
+    --w-group-size: ${size('groupSize', '18px', 60)};
+    --w-item-size: ${size('itemSize', '17px', 60)};
+    --w-desc-size: ${size('descSize', '14px', 60)};
+    --w-page-dim: ${dim};
+    --w-page-blur: ${blur};
+  }`
+  return `<style>${css}</style>`
+}
+
 export class help extends plugin {
   constructor(e) {
     super({
@@ -396,8 +423,9 @@ export class help extends plugin {
         const { style, colCount } = globalStyle(helpCfg, themeStyle);
         const bg = await pickGlobalBackground(helpCfg, themeName);
         const bgLabel = bg.mode === 'api' ? '随机背景' : `主题 ${themeName}`;
-        // 默认网页版布局；需要旧版可把 helpCfg.layout 设为 classic
-        if (helpCfg.layout !== 'classic') {
+        // 默认 App 浅色版；可选 web 深色 / classic 喵喵
+        const layout = helpCfg.layout === 'classic' ? 'classic' : (helpCfg.layout === 'web' ? 'web' : 'app');
+        if (layout !== 'classic') {
           const web = buildWebData(helpList, colCount);
           // 纵向：板块上下排列，板块内按 colCount 分列
           for (const group of web.groups) group.cols = colCount;
@@ -406,14 +434,15 @@ export class help extends plugin {
             helpCfg,
             ...web,
             colCount,
+            layout,
             groupCols: 1,
             pageWidth,
             themeName,
             bgMode: bg.mode,
             bgUrl: bg.url,
             bgLabel,
-            style: webStyleCss(helpCfg, themeStyle, pageWidth),
-          }, { e, pct: 1 });
+            style: layout === 'app' ? appStyleCss(helpCfg, themeStyle, pageWidth) : webStyleCss(helpCfg, themeStyle, pageWidth),
+          }, { e, pct: 1, dsf: 2 });
           return e.reply(img);
         }
         const img = await render('global_help/index', {
@@ -425,7 +454,7 @@ export class help extends plugin {
           bgUrl: bg.url,
           bgLabel,
           style,
-        }, { e, pct: 1 });
+        }, { e, pct: 1, dsf: 2 });
         return e.reply(img);
       }
       const raw = yaml.get(DETAIL_HELP_PATH) || [];

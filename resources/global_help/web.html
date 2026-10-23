@@ -11,12 +11,16 @@
       {{else}}
       body { --w-bg: url("{{ppath}}global_help/theme/{{themeName}}/bg.jpg"); }
       {{/if}}
+      {{if layout === 'app'}}
+      .w-hero { background-image: linear-gradient(135deg, rgba(20,184,166,.96), rgba(59,130,246,.96) 55%, rgba(139,92,246,.96)), url("{{ppath}}global_help/theme/{{themeName}}/main.png"); }
+      {{else}}
       .w-hero { background-image: linear-gradient(135deg, rgba(7,12,24,.88), rgba(9,16,32,.92)), url("{{ppath}}global_help/theme/{{themeName}}/main.png"); }
+      {{/if}}
     </style>
     {{@style}}
     <title>{{helpCfg.title || '全局帮助'}}</title>
   </head>
-  <body {{sys.scale}}>
+  <body class="w-layout-{{layout}}" {{sys.scale}}>
     <div class="w-bg"><div class="w-bg-blur"></div><div class="w-bg-full"></div></div>
     <div class="w-page">
       <header class="w-hero">

@@ -528,7 +528,7 @@ export function init(ctx) {
         if (cfg[key] != null) cleanCfg[key] = str(cfg[key], 500)
       }
       if (cfg.colCount != null) cleanCfg.colCount = Math.min(5, Math.max(2, Number(cfg.colCount) || 3))
-      if (cfg.layout != null) cleanCfg.layout = cfg.layout === 'classic' ? 'classic' : 'web'
+      if (cfg.layout != null) cleanCfg.layout = ['app', 'web', 'classic'].includes(cfg.layout) ? cfg.layout : 'app'
       if (Array.isArray(cfg.themeExclude)) cleanCfg.themeExclude = cfg.themeExclude.map(v => str(v, 40)).slice(0, 60)
       if (typeof cfg.bgBlur === 'boolean') cleanCfg.bgBlur = cfg.bgBlur
       if (cfg.style && typeof cfg.style === 'object') {
