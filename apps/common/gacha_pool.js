@@ -6002,7 +6002,9 @@ ${r.summary || ''}`;
       }
     }
     if (missing) {
-      logger.mark(`[HoYoGet][gacha_pool] 崩三 ${missing} 个补给暂用版本窗口（公告正文里没定位到唯一一段开放时间）`);
+      /* 公告正文/配图都没日期时是正常情况，降到 debug，避免每次刷新都刷错误日志；
+         能推断的已在上面按同版本同类补给补齐，这里只剩确实无法判定的。 */
+      logger.debug?.(`[HoYoGet][gacha_pool] 崩三 ${missing} 个补给未能定位开放时间，暂用版本窗口`);
     }
     return { times, covers };
   }

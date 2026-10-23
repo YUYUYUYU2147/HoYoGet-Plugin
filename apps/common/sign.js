@@ -12,6 +12,7 @@ import {
 } from '#HoYoGet';
 import lodash from 'lodash';
 import Runtime from '../../../../lib/plugins/runtime.js';
+import { runCronTask } from '../../system/task_history.js';
 
 /**
  * 跨天去重的状态挂到 globalThis，而不是模块级 let。
