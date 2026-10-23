@@ -85,7 +85,13 @@ export class abyss_stat extends plugin {
     })
   }
 
-  /** 取 MysApi 实例（失败时回复并返回 null） */
+  /**
+   * 取 MysApi 实例（失败时回复并返回 null）。
+   *
+   * 必须用 'cookie' 而不是 'all'：'all' 允许回落到公共 CK 池，拿别人的 CK 查你的 UID，
+   * 米游社统一返回 10102「Data is not public for the user」——看着像战绩被隐藏，
+   * 实际是 CK 不是本人的。genshin 的深渊走的也是只认自身 CK 的那条路。
+   */
   async mys(e, game) {
     e.isSr = game === 'sr'
     let miao
@@ -95,7 +101,9 @@ export class abyss_stat extends plugin {
       await e.reply(`内置数据层加载失败：${err?.message || err}`)
       return null
     }
-    const mys = await miao.MysApi.init(e, 'all')
+    let mys = null
+    try { mys = await miao.MysApi.init(e, 'cookie') } catch (_) { mys = null }
+    if (!mys) mys = await miao.MysApi.init(e, 'all')
     if (!mys) {
       await e.reply(`请先绑定${game === 'sr' ? '星铁' : '原神'}账号，并确认 Cookie 有效`)
       return null
@@ -469,7 +477,9 @@ export class abyss_stat extends plugin {
     const anyData = cards.some(c => c.ok)
     if (!anyData) {
       if (cards.every(c => c.private)) {
-        return e.reply('米游社战绩未公开，读不到深渊数据。\n请到米游社「我的 → 战绩」把隐藏战绩关掉后再试。')
+        return e.reply('米游社返回「数据未公开」，通常是这两个原因：\n'
+          + '1) 用的是公共 CK 而不是你自己的：日志里出现「分配查询ck」就属于这种，重新 #扫码绑定 后再试；\n'
+          + '2) 确实在米游社「我的 → 战绩」里隐藏了战绩，关掉即可。')
       }
       const errs = cards.filter(c => c.err).map(c => `${c.title}: ${c.err}`).slice(0, 4)
       logger.mark?.(`[HoYoGet][abyss_stat] *深渊 四类都无数据：${errs.join(' | ') || '接口未返回楼层'}`)
