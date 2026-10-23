@@ -261,7 +261,10 @@ const HELP_HTML = `
 <div class="hoyo-help">
   <div class="hp-hero">
     <div class="hp-hero-copy">
-      <span class="hp-kicker">HoYoGet · Global Help</span>
+      <div class="hp-hero-brand">
+        <img class="hp-logo" id="hp-logo" alt="" />
+        <span class="hp-kicker">HoYoGet · Global Help</span>
+      </div>
       <h2 id="hp-title">全局帮助</h2>
       <p id="hp-sub">原神 / 星铁 / 绝区零 / 崩坏3 全部指令速查。点击任意卡片即可复制指令，也可以直接搜索关键词。</p>
       <div class="hp-hero-tags">
@@ -270,6 +273,7 @@ const HELP_HTML = `
     </div>
     <div class="hp-hero-stat" id="hp-stats"></div>
   </div>
+  <div class="hp-games" id="hp-games"></div>
   <div class="hp-toolbar">
     <label class="hp-search"><span>⌕</span><input id="hp-search" placeholder="搜索指令或说明，如：抽卡、签到、深渊、面板" /></label>
     <select id="hp-group"><option value="">全部板块</option></select>
@@ -470,6 +474,15 @@ export function init(ctx) {
     }
   })
 
+  ctx.registerApi('get', '/help/logo', (req, res) => {
+    try {
+      res.sendFile(path.join(ROOT, 'resources', 'Tl', 'imgs', '米哈游.png'))
+    } catch (err) {
+      ctx.logger?.warn?.(`[HoYoGet][guoba] 读取帮助 Logo 失败：${err?.message || err}`)
+      res.status(404).end()
+    }
+  })
+
   ctx.registerApi('get', '/help/theme', (req, res) => {
     try {
       const q = req.query || {}
@@ -509,6 +522,8 @@ export function init(ctx) {
       const raw = YAML.parse(fs.readFileSync(target, 'utf8')) || []
       const result = Array.isArray(raw) ? { helpList: raw } : raw
       result.theme = pickHelpTheme(result.helpCfg || {})
+      result.themes = helpThemeNames()
+      try { result.version = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version || '' } catch { result.version = '' }
       res.json({ ok: true, code: 0, message: 'ok', result })
     } catch (err) {
       ctx.logger?.error?.(`[HoYoGet][guoba] 读取全局帮助失败：${err?.message || err}`)
