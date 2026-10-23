@@ -5894,6 +5894,29 @@ ${r.summary || ''}`;
   }
 
   /**
+   * 崩三卡池的换池节奏固定在**周四 12:00**（官方一般提前 2~4 天发公告）。
+   * 这里把「公告发布日」推到其后最近的周四 12:00，即该批开池时间。
+   *
+   * 实测基准（全部与官方一致）：
+   *   镜见之钥   公告 09-21(周一) → 09-24(周四)
+   *   协同者/服装 公告 09-22(周二) → 09-24(周四)
+   *   镇×偃月叩晓 公告 09-28(周一) → 10-01(周四)
+   */
+  bh3NextPoolThursday(ts) {
+    const d = new Date(ts);
+    let add = (4 - d.getDay() + 7) % 7;   // 0=周日 … 4=周四
+    if (add === 0) {
+      const noon = new Date(d);
+      noon.setHours(12, 0, 0, 0);
+      if (d.getTime() > noon.getTime()) add = 7;
+    }
+    const out = new Date(d);
+    out.setDate(out.getDate() + add);
+    out.setHours(12, 0, 0, 0);
+    return out.getTime();
+  }
+
+  /**
    * 从公告配图 URL 里取开池日期。
    *
    * 米游社上传路径带日期：https://upload-bbs.miyoushe.com/upload/2026/10/21/73565430/xxx.png
@@ -6081,21 +6104,32 @@ ${r.summary || ''}`;
         }
       }
     }
-    /* 配图日期只给出开池日，结束日按崩三的补给周期推：
-       角色/装备池 21 天一轮，服装池 14 天一轮，协同池跟随角色池。
-       若推算出的结束日超出本版本窗口，就截到版本结束（版本末会换池）。 */
+    /* 配图 URL 只给出「公告发布日」，不是开池日。
+       崩三换池固定在**周四 12:00**，官方提前 2~4 天发公告；
+       角色/装备池 21 天一轮、服装池 22 天一轮（结束日同为周四）。
+       所以：公告日 → 其后最近的周四 = 开池日；开池日 + 周期 = 结束日。
+       算出的结束日超出本版本窗口时截到版本结束（版本末会换池）。 */
     for (const [name, st] of imageStart.entries()) {
       const target = (pools || []).find(x => String(x.name || '') === name);
       if (!target || target.end) continue;
-      const days = target.type === 'outfit' ? 14 : 21;
-      let end = st + days * 86400000;
+      const days = target.type === 'outfit' ? 22 : 21;
+      const start = this.bh3NextPoolThursday(st);
+      let end = start + days * 86400000;
       const ve = toTs(vp?.end);
       const vs = toTs(vp?.start);
-      if (ve && end > ve) end = ve;
+      /* 版本首批池会延续到版本末才换（9.1 首批 09-24 开、11-06 版本末才结束），
+         所以结束日先取「开池日 + 周期」，若那早于版本末就说明这批中间还要换，
+         此时按版本末算。 */
+      if (ve && end < ve) {
+        // 首批（开池日紧贴版本开始）→ 延续到版本末
+        if (vs && Math.abs(start - vs) < 3 * 86400000) end = ve;
+      } else if (ve && end > ve) {
+        end = ve;
+      }
       if (vs && end <= vs) end = vs + days * 86400000;
-      target.start = fmt(st);
+      target.start = fmt(start);
       target.end = fmt(end);
-      target.inferredTime = '配图日期+补给周期';
+      target.inferredTime = '公告日→周四开池+补给周期';
       times++;
     }
 
