@@ -26,13 +26,14 @@
         <div class="char-list">
           {{each cards c}}
           <div class="char-item">
-            <div class="item-icon char-icon star{{c.rarity === 'S' ? 5 : 4}}">
+            <div class="item-icon char-icon star{{c.rarity === 'S' ? 5 : 4}}{{if showSource && c.source === 'Enka'}} enka{{/if}}">
               <span class="img" style="background-image:url('{{c.icon}}')"
                     onerror="this.style.visibility='hidden'"></span>
               <span class="cons-tag">影{{c.rank}}</span>
               <span class="lv-tag">Lv{{c.level}}</span>
             </div>
-            <span class="name">{{c.name}}</span>
+            <span class="name">{{if c.updated}}<i class="new-dot"></i>{{/if}}{{c.name}}</span>
+            {{if showSource}}<span class="src{{if c.source === 'Enka'}} enka{{/if}}">{{c.source}}</span>{{/if}}
             <div class="char-icons">
               <img class="type-icon" src="{{ppath}}wiki/imgs/zzz_{{c.element}}.png"
                    onerror="this.style.display='none'" title="{{c.element}}">
@@ -48,7 +49,8 @@
           {{/each}}
         </div>
         <div class="cont-footer">
-          <span>from 米哈游</span>
+          <span class="foot-left"><i class="legend-dot"></i>本次更新角色{{if updatedCount}} · {{updatedCount}}{{/if}}</span>
+          <span class="foot-right">当前更新服务：{{serviceLabel}}</span>
         </div>
       </div>
     </div>

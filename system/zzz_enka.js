@@ -51,6 +51,15 @@ function fmtProp(propId, value, pct) {
   return String(Math.trunc(n))
 }
 
+/** 米游社列表用方形头像；Enka 不返回图标，这里用本地 ZZZ-Plugin 立绘或 nanoka 镜像补上 */
+function roleIcon(info) {
+  const sprite = info?.sprite_id
+  if (!sprite) return ''
+  const local = path.join(process.cwd(), 'plugins', 'ZZZ-Plugin', 'resources', 'images', 'nanoka', 'role', `IconRole${sprite}_01.webp`)
+  try { return `data:image/webp;base64,${fs.readFileSync(local).toString('base64')}` } catch { /* 没装 ZZZ-Plugin 就用镜像 */ }
+  return `https://static.nanoka.cc/assets/zzz/IconRole${sprite}_01.webp`
+}
+
 let _weapon = null
 function weaponMap() {
   if (_weapon) return _weapon
@@ -144,6 +153,7 @@ export async function fetchEnkaPanel(uid, { timeout = 15000 } = {}) {
       rarity: info.Rarity || 'A',
       rank,
       ranks: [],
+      role_square_url: roleIcon(info),
       equip: equips,
       weapon,
       skills,

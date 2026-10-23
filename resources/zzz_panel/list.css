@@ -140,6 +140,12 @@ body::after {
   border: 2px solid #9b8cff !important;
 }
 
+/* Enka 来源的角色用绿色外圈，和「本次更新」的绿点区分开 */
+.char-icon.enka {
+  border-color: #3ddc84;
+  box-shadow: 0 0 10px rgba(61, 220, 132, .65), 1px 1px 3px 0 #000;
+}
+
 .cons-tag {
   position: absolute;
   bottom: -2px;
@@ -183,6 +189,31 @@ body::after {
   padding: 0 2px;
 }
 
+/* 本次由所选服务更新到的角色：名字左侧绿点 */
+.char-item .name .new-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: #3ddc84;
+  box-shadow: 0 0 6px #3ddc84;
+  vertical-align: middle;
+}
+
+/* Enka 更新时标出每个角色来自哪个服务 */
+.char-item .src {
+  display: block;
+  margin-top: 1px;
+  font-size: 9px;
+  line-height: 12px;
+  color: #8b93a7;
+}
+.char-item .src.enka {
+  color: #3ddc84;
+  font-weight: 700;
+}
+
 .char-icons {
   display: flex;
   align-items: center;
@@ -216,10 +247,25 @@ body::after {
 
 .cont-footer {
   display: flex;
-  justify-content: center;
-  padding: 8px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
   margin-top: 6px;
   font-size: 12px;
-  color: #ff4d4f;
+  color: #9aa0b0;
   border-radius: 0 0 10px 10px;
+}
+
+.cont-footer .foot-left { color: #dfe4ef; }
+.cont-footer .foot-right { color: #ffcf5c; }
+
+.cont-footer .legend-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: #3ddc84;
+  box-shadow: 0 0 6px #3ddc84;
+  vertical-align: middle;
 }

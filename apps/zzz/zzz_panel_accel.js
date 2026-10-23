@@ -6,9 +6,12 @@ import { fileURLToPath } from 'node:url'
 import { config, pluginPriority } from '#HoYoGet'
 
 /**
- * 绝区零面板更新加速。
+ * 绝区零面板更新加速（ZZZ-Plugin 链路）。
  *
- * ZZZ-Plugin 的「%更新面板」有两处串行阻塞，耗时随角色数线性增长：
+ * 注意：`%更新面板` 现在归 zzz_panel_list 走 Enka 公开接口；
+ * 这里只接管 `%快速更新面板`，继续复用 ZZZ-Plugin 的米游社链路做并发加速。
+ *
+ * ZZZ-Plugin 的面板更新有两处串行阻塞，耗时随角色数线性增长：
  *
  * 1. dist/lib/avatar.js getAvatarInfoList()
  *      for (const item of avatarBaseList) {
@@ -48,17 +51,17 @@ const CFG_KEYS = {
 /**
  * 接管范围。ZZZ-Plugin 的面板规则是 `(.*)面板(展柜)?(刷新|更新|列表)?`，
  * 前缀任意，因此这里枚举会被它吃掉的形式：
- * 「更新面板 / 刷新面板 / 更新展柜面板 / 更新全部面板 / 更新面板列表」等。
+ * 「快速更新面板 / 快速刷新面板 / 快速更新展柜面板」等。
  */
 /**
- * 只接管**带绝区零标识**的指令：%更新面板 / #绝区零更新面板 / zzz刷新面板。
+ * 只接管**显式写了「快速」+ 绝区零标识**的指令：%快速更新面板 / #绝区零快速刷新面板。
  *
  * 不能把游戏名写成可选：裸的「#更新面板」是 genshin 那边原神面板的固定叫法
  * （model/other/button.js 的按钮就写死这个），前缀一旦可选，本插件又会靠
  * -9999999999 的优先级 + accept 返回 'return' 把它抢走，原神面板永远收不到。
  * ZZZ-Plugin 自己的 rulePrefix 同样把前缀写成可选，那属于它的行为，不在本插件范围内。
  */
-const ACCEL_RE = /^[#*\s]*(?:%\s*(?:绝区零|zzz|绝区)?|[/%]\s*|绝区零|[zZ][zZ][zZ]|绝区)\s*(?:更新|刷新)(?:全部|全局|所有|全服|本地)?(?:展柜)?面板(?:列表)?$/
+const ACCEL_RE = /^[#*\s]*(?:%\s*(?:绝区零|zzz|绝区)?|[/%]\s*|绝区零|[zZ][zZ][zZ]|绝区)\s*快速(?:更新|刷新)(?:全部|全局|所有|全服|本地)?(?:展柜)?面板(?:列表)?$/
 
 /**
  * 读取配置。走 xhh 自己的 config()（即 plugins/HoYoGet-Plugin/config/config.yaml，

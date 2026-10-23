@@ -21,7 +21,8 @@ import { getPanelBg } from '../../system/zzz_panel_bg.js'
  * 再调 avatar/info 拿 专武/驱动盘/技能/影，自研模板 resources/zzz_panel/detail.html 出图。
  *
  * 入口指令：
- *   - `米游社更新面板`  → 列表面板（本插件）
+ *   - `%更新面板`        → 列表面板（Enka 公开接口，不需要 CK）
+ *   - `%米游社更新面板`  → 列表面板（米游社 record 接口，需要 CK）
  *   - `米游社<名字>面板`（如 米游社南宫羽面板）→ 单角色详情（本插件，旧「米游社面板 <名字>」仍兼容）
  *   都不带 # 前缀，靠有无 # 区分绝区零（本插件）/ 原神（miao-plugin 的 #米游社更新面板）。
  */
@@ -31,6 +32,39 @@ const ZZZ_ROOT = path.join(process.cwd(), 'plugins', 'ZZZ-Plugin')
 const OUT_DIR = path.join(PLUGIN_ROOT, 'data', 'zzz_panel')
 const RECORDS_DIR = path.join(OUT_DIR, 'records')
 const EXTREME_PRESET_FILE = path.join(PLUGIN_ROOT, 'system', 'default', 'zzz_extreme.yaml')
+
+/* ZZZ-Plugin 当前把面板库放在 <yunzai>/data/ZZZ-Plugin/panel/<uid>.json；
+   旧版本才放 plugins/ZZZ-Plugin/data/panel。两个都要认，否则升级后读不到历史全量角色。 */
+const ZZZ_PANEL_DIRS = [
+  path.join(process.cwd(), 'data', 'ZZZ-Plugin', 'panel'),
+  path.join(ZZZ_ROOT, 'data', 'panel'),
+]
+const ZZZ_PLAYER_DIRS = [
+  path.join(process.cwd(), 'data', 'ZZZ-Plugin', 'player'),
+  path.join(ZZZ_ROOT, 'data', 'player'),
+]
+
+/** 读 ZZZ-Plugin 面板库里某个 UID 的全量角色；没有就返回空数组 */
+function readZzzPluginPanel(uid = '') {
+  const out = []
+  for (const dir of ZZZ_PANEL_DIRS) {
+    const file = uid ? path.join(dir, `${uid}.json`) : ''
+    try {
+      if (file) {
+        const list = JSON.parse(fs.readFileSync(file, 'utf8'))
+        if (Array.isArray(list)) out.push(...list)
+      } else if (fs.existsSync(dir)) {
+        for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.json'))) {
+          try {
+            const list = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'))
+            if (Array.isArray(list)) out.push(...list)
+          } catch { /* 跳过坏文件 */ }
+        }
+      }
+    } catch { /* 目录/文件不存在 */ }
+  }
+  return out
+}
 
 // 属性 / 职业 中文映射，与 system/mys.js 的 zzz_element_map / zzz_type_map 保持一致
 //（属产品形态，非角色数值表，数值表一律现取、不搬）。
@@ -1758,6 +1792,8 @@ function normalizeDetail(a, uid) {
 // 带 % 会被绝区零前缀规则（zzzReg = /^#?(%|％|绝区零|zzz)+/）先一步吃掉，实测抢不到，
 // 所以绝区零这边干脆不用任何前缀，用有无 # 来区分两个游戏。
 const CMD_REG = /^(?:米游社|%|#?绝区零)?\s*米游社\s*(更新|刷新)\s*(全部)?\s*面板$/
+// %更新面板 / #绝区零更新面板 → Enka 公开接口（不需要 CK）
+const ENKA_UPDATE_REG = /^(?:#?绝区零|zzz|绝区)\s*(?:更新|刷新)(?:全部|全局|所有|全服|本地)?(?:展柜)?面板(?:列表)?$/
 // 详情新格式：米游社<名字>面板（如 米游社南宫羽面板）；保留旧「米游社面板 <名字>」兼容。
 // 负向预查 (?!更新|刷新) 避免与「米游社更新面板 / 米游社刷新面板」抢。
 // 也接受绝区零常用的 % 前缀；%zzz/%绝区零 仍留给 ZZZ-Plugin，避免把它的指令吃掉
@@ -1810,6 +1846,7 @@ export class zzz_panel_list extends plugin {
         { reg: BULK_UPDATE_REG.source, fnc: 'panelBulkUpdate' },
         { reg: BULK_CHALLENGE_REG.source, fnc: 'panelBulkChallenge' },
         { reg: CLEAN_BINDING_REG.source, fnc: 'panelCleanBinding' },
+        { reg: ENKA_UPDATE_REG.source, fnc: 'panelEnkaUpdate' },
         { reg: CMD_REG.source, fnc: 'panelList' },
         { reg: DAMAGE_REG.source, fnc: 'panelDamage' },
         { reg: DETAIL_REG.source, fnc: 'panelDetail' },
@@ -1928,44 +1965,83 @@ export class zzz_panel_list extends plugin {
     }
   }
 
-  async panelList(e) {
+  /** %更新面板 → Enka 公开接口；%米游社更新面板 → 米游社 record 接口 */
+  async panelEnkaUpdate(e) {
+    return this.panelList(e, 'enka')
+  }
+
+  async panelList(e, service = 'miyoushe') {
+    const useEnka = service === 'enka'
     const uid = this.getZzzUid(e)
     if (!uid) return e.reply('请先绑定绝区零账号')
 
-    const ck = await this.getCk(e, uid)
-    if (!ck || !Object.values(ck).some(item => item?.ck)) {
-      return e.reply('尚未绑定 cookie，请先绑定 cookie 或 #扫码登录')
+    let ck = null
+    if (useEnka) {
+      // Enka 是公开接口，没有 CK 也能更新；有 CK 时顺手用于玩家昵称
+      try { ck = await this.getCk(e, uid) } catch { /* 忽略 */ }
+    } else {
+      ck = await this.getCk(e, uid)
+      if (!ck || !Object.values(ck).some(item => item?.ck)) {
+        return e.reply('尚未绑定 cookie，请先绑定 cookie 或 #扫码登录')
+      }
     }
-    const server = await this.pickServer(uid, ck)
-    if (!server) return e.reply('未能判断服务器分区（官服 prod_gf_cn / 渠道 prod_qd_cn），请确认绑定信息')
 
-    const raw = await this.fetchRaw(e, uid, server, ck)
-    if (raw?.__error) return e.reply(raw.__error)
+    let server = mhy.getServer(uid, 'zzz')
+    if (!useEnka) {
+      server = await this.pickServer(uid, ck)
+      if (!server) return e.reply('未能判断服务器分区（官服 prod_gf_cn / 渠道 prod_qd_cn），请确认绑定信息')
+    }
 
-    // 落盘原始响应，便于后续排查 / 字段再核对（按需，不影响出图）
-    fs.mkdirSync(OUT_DIR, { recursive: true })
+    let list = []
+    let enkaById = null
+    let enkaPlayer = null
+    const updatedIds = new Set()
+    const sources = new Map()
     const basicFile = path.join(OUT_DIR, 'avatar_basic.json')
-    fs.writeFileSync(basicFile, JSON.stringify({ uid, server, deviceFpApplied: !!raw.__fp, data: raw?.data }, null, 2))
 
-    const list = this.pickList(raw?.data)
-    if (!Array.isArray(list) || !list.length) {
-      return e.reply(`已取到响应，但没识别出角色列表。原始数据已存到：\n${basicFile}\n请检查接口返回结构。`)
+    if (useEnka) {
+      try {
+        const { fetchEnkaPanel } = await import('../../system/zzz_enka.js')
+        const enka = await fetchEnkaPanel(uid)
+        enkaPlayer = enka.playerInfo
+        enkaById = new Map(enka.avatars.map(a => [String(a.id), a]))
+        list = enka.avatars
+        for (const a of list) if (a?.id != null) updatedIds.add(String(a.id))
+      } catch (err) {
+        return e.reply(`Enka 更新失败：${err?.message || err}`)
+      }
+    } else {
+      const raw = await this.fetchRaw(e, uid, server, ck)
+      if (raw?.__error) return e.reply(raw.__error)
+
+      // 落盘原始响应，便于后续排查 / 字段再核对（按需，不影响出图）
+      fs.mkdirSync(OUT_DIR, { recursive: true })
+      fs.writeFileSync(basicFile, JSON.stringify({ uid, server, deviceFpApplied: !!raw.__fp, data: raw?.data }, null, 2))
+
+      list = this.pickList(raw?.data)
+      if (!Array.isArray(list) || !list.length) {
+        return e.reply(`已取到响应，但没识别出角色列表。原始数据已存到：\n${basicFile}\n请检查接口返回结构。`)
+      }
+      for (const a of list) if (a?.id != null) updatedIds.add(String(a.id))
     }
 
-    // 合并历史落盘角色：米游社 avatar/basic 只返回「展示柜」里的角色，
-    // 玩家没勾选的老角色不会出现在响应里。这里把本地历次落盘的全量列表
+    for (const a of list) if (a?.id != null) sources.set(String(a.id), useEnka ? 'Enka' : '米游社')
+
+    // 合并历史落盘角色：接口只返回「展示柜」里的角色，玩家没勾选的老角色
+    // 不会出现在响应里。这里把本地历次落盘的全量列表
     // （data/zzz_panel/avatar_basic_<uid>.json 与 records/ 详情）补进来，
     // 按 id 去重，避免「更新面板」后老角色消失。
     let mergedList = [...list]
     try {
       const seen = new Set(mergedList.map(a => String(a?.id)))
-      const addFrom = (arr) => {
+      const addFrom = (arr, src = '米游社') => {
         if (!Array.isArray(arr)) return
         for (const a of arr) {
           const id = String(a?.id ?? a?.data?.id ?? '')
           if (!id || seen.has(id)) continue
           seen.add(id)
           mergedList.push(a?.data || a)
+          sources.set(id, src)
         }
       }
       // 1) 本 uid 的历史全量列表（批量更新落盘）
@@ -1986,29 +2062,39 @@ export class zzz_panel_list extends plugin {
           } catch { /* 忽略损坏 */ }
         }
       } catch { /* records 目录不存在 */ }
+      // 3) ZZZ-Plugin 的面板库（<yunzai>/data/ZZZ-Plugin/panel/<uid>.json）
+      //    ZZZ-Plugin 每次更新也是「接口只给展柜 + 本地按 id 累积」，所以这份库里
+      //    往往已经有用户历史上展柜过的全部角色，比单次 avatar/basic 全得多。
+      addFrom(readZzzPluginPanel(uid))
     } catch (err) {
       logger.debug?.(`[HoYoGet][zzz_panel] 合并历史角色失败：${err?.message || err}`)
     }
 
-    // 3) Enka 展示柜（公开接口）：补齐米游社 avatar/basic 没返回、本地也没有的角色
+    // 4) 米游社模式下，用 Enka 公开展示柜补齐接口没返回、本地也没有的角色
     //    （叶瞬光/雅/艾莲等），并带上完整驱动盘用于评分。
-    let enkaById = null
-    try {
-      const { fetchEnkaPanel } = await import('../../system/zzz_enka.js')
-      const enka = await fetchEnkaPanel(uid)
-      enkaById = new Map(enka.avatars.map(a => [String(a.id), a]))
-      const seen = new Set(mergedList.map(a => String(a?.id)))
-      for (const a of enka.avatars) {
-        if (!a?.id || seen.has(String(a.id))) continue
-        seen.add(String(a.id))
-        mergedList.push(a)
+    if (!useEnka) {
+      try {
+        const { fetchEnkaPanel } = await import('../../system/zzz_enka.js')
+        const enka = await fetchEnkaPanel(uid)
+        enkaById = new Map(enka.avatars.map(a => [String(a.id), a]))
+        const seen = new Set(mergedList.map(a => String(a?.id)))
+        for (const a of enka.avatars) {
+          if (!a?.id || seen.has(String(a.id))) continue
+          seen.add(String(a.id))
+          mergedList.push(a)
+          sources.set(String(a.id), '米游社')
+        }
+      } catch (err) {
+        logger.debug?.(`[HoYoGet][zzz_panel] Enka 展示柜合并失败：${err?.message || err}`)
       }
-    } catch (err) {
-      logger.debug?.(`[HoYoGet][zzz_panel] Enka 展示柜合并失败：${err?.message || err}`)
     }
 
     // 归一化后交模板渲染（自研，不复用 ZZZ-Plugin 模板）
-    let cards = mergedList.map(it => normalizeAvatar(it))
+    const isUpdated = id => id != null && updatedIds.has(String(id))
+    let cards = mergedList.map(it => {
+      const c = normalizeAvatar(it)
+      return { ...c, updated: isUpdated(c.id), source: sources.get(String(c.id)) || '米游社' }
+    })
 
     // 从本插件 records + ZZZ-Plugin 已落盘数据加载评分，用于排序与展示
     const uidRecords = new Map()
@@ -2054,6 +2140,7 @@ export class zzz_panel_list extends plugin {
     try {
       if (fs.existsSync(RECORDS_DIR)) {
         for (const f of fs.readdirSync(RECORDS_DIR).filter(f => f.endsWith('.json'))) {
+          if (!f.startsWith(`${uid}_`) && !f.startsWith(`${uid}.`)) continue
           try {
             const obj = JSON.parse(fs.readFileSync(path.join(RECORDS_DIR, f), 'utf8'))
             scoreOne(obj?.data || obj)
@@ -2061,19 +2148,15 @@ export class zzz_panel_list extends plugin {
         }
       }
     } catch { /* records 目录不存在 */ }
-    // 2) ZZZ-Plugin 旧落盘（数组格式，回退兼容）
+    // 2) ZZZ-Plugin 面板库（当前版在 <yunzai>/data/ZZZ-Plugin/panel，旧版在插件目录）
+    //    只取当前 uid，避免把别的用户的面板分数算到这张卡上。
     try {
-      const zzzPanelDir = path.join(ZZZ_ROOT, 'data', 'panel')
-      if (fs.existsSync(zzzPanelDir)) {
-        for (const f of fs.readdirSync(zzzPanelDir).filter(f => f.endsWith('.json'))) {
-          try {
-            const list = JSON.parse(fs.readFileSync(path.join(zzzPanelDir, f), 'utf8'))
-            if (!Array.isArray(list)) continue
-            for (const a of list) scoreOne(a)
-          } catch { /* 跳过损坏文件 */ }
-        }
-      }
+      for (const a of readZzzPluginPanel(uid)) scoreOne(a)
     } catch { /* panel 目录不存在 */ }
+    // 3) Enka 展示柜（含完整驱动盘）：本次 Enka 更新和米游社兜底补进来的角色
+    if (enkaById) {
+      for (const a of enkaById.values()) scoreOne(a)
+    }
 
     // 给每个卡片注入评分（有记录则显示，无记录标记暂无）
     cards = cards.map(c => {
@@ -2092,7 +2175,7 @@ export class zzz_panel_list extends plugin {
       if (rec.hasProps) return false           // 词条完整，跳过
       return rec.hasEquip === true             // 有驱动盘但没词条 → 重拉
     })
-    if (missing.length) {
+    if (!useEnka && missing.length) {
       await e.reply(`检测到 ${missing.length} 个角色评分数据不完整，正在并发补全，请稍候…`, true, { recallMsg: 0 })
       let gamePlayer = null
       try { gamePlayer = await this.fetchPlayer(e, uid, ck) } catch {}
@@ -2108,6 +2191,10 @@ export class zzz_panel_list extends plugin {
             if (!avatar && enkaById) avatar = enkaById.get(String(c.id)) || null
             if (avatar) {
               scoreOne(avatar)
+              if (avatar.id != null) {
+                updatedIds.add(String(avatar.id))
+                sources.set(String(avatar.id), '米游社')
+              }
               // 落盘详情，供下次列表/排名/极限面板复用
               try {
                 fs.mkdirSync(RECORDS_DIR, { recursive: true })
@@ -2127,7 +2214,7 @@ export class zzz_panel_list extends plugin {
       // 重新注入评分
       cards = cards.map(c => {
         const rec = uidRecords.get(c.name)
-        return { ...c, equip_score: rec?.score ?? null, equip_rating: rec?.rating ?? null }
+        return { ...c, equip_score: rec?.score ?? null, equip_rating: rec?.rating ?? null, updated: isUpdated(c.id) }
       })
     }
 
@@ -2164,8 +2251,11 @@ export class zzz_panel_list extends plugin {
     // 不再注入排名序号，等以后有群排名数据再加
     // 统计有评分的角色数
     const scoredCount = cards.filter(c => c.equip_score != null).length
-    let gamePlayer = null
-    try { gamePlayer = await this.fetchPlayer(e, uid, ck) } catch {}
+    let gamePlayer = enkaPlayer?.nickname ? enkaPlayer : null
+    if (!gamePlayer) {
+      try { gamePlayer = await this.fetchPlayer(e, uid, ck) } catch { /* 拿不到就用群名片 */ }
+    }
+    const serviceLabel = useEnka ? 'Enka' : '米游社'
     try {
       const img = await render('zzz_panel/list', {
         cards,
@@ -2174,6 +2264,9 @@ export class zzz_panel_list extends plugin {
         count: cards.length,
         time: formatNow(),
         bgImage: getPanelBg(),
+        serviceLabel,
+        showSource: useEnka,
+        updatedCount: cards.filter(c => c.updated).length,
         ...getPlayerBadge(e, gamePlayer),
       }, { e, ret: true, dsf: ZZZ_PANEL_DSF })
       return img
@@ -2182,9 +2275,9 @@ export class zzz_panel_list extends plugin {
       // 渲染失败兜底：回退成文字列表，至少把数据给到
       const lines = cards.slice(0, 30).map(c => `${c.name} Lv${c.level} ${c.rarity} ${c.element}/${c.type} 影${c.rank}${c.equip_score != null ? ` ${c.equip_score.toFixed(1)}分` : ' 暂无评分'}`)
       return e.reply([
-        `面板渲染失败，文字兜底（共 ${cards.length} 名代理人）：`,
+        `面板渲染失败，文字兜底（共 ${cards.length} 名代理人，来源：${serviceLabel}）：`,
         ...lines,
-        `原始数据：${basicFile}`,
+        ...(useEnka ? [] : [`原始数据：${basicFile}`]),
       ])
     }
   }
@@ -2254,8 +2347,19 @@ export class zzz_panel_list extends plugin {
         logger.debug?.(`[HoYoGet][zzz_panel] Enka 兜底失败：${err?.message || err}`)
       }
     }
+    // 3) ZZZ-Plugin 本地面板库（历史累积，含已从展柜撤下的角色）
     if (!avatar) {
-      return e.reply(`米游社与 Enka 都没有「${target.name_mi18n || arg}」的面板数据。\n可能是该角色未在游戏内公开面板，或展柜未展示该角色。`)
+      const zzzList = readZzzPluginPanel(uid)
+      avatar = zzzList.find(a => String(a.id) === String(target.id))
+        || zzzList.find(a => {
+          const n = String(arg).replace(/[「」·\s]/g, '')
+          const an = String(a.name_mi18n || a.full_name_mi18n || '').replace(/[「」·\s]/g, '')
+          return an && (an.includes(n) || n.includes(an))
+        })
+      if (avatar) avatar = this.normalizeRecordProps(avatar)
+    }
+    if (!avatar) {
+      return e.reply(`米游社、Enka 与本地面板库都没有「${target.name_mi18n || arg}」的面板数据。\n请先在游戏内把该角色放进代理人展柜，或执行「%更新面板」/「%米游社更新面板」累积历史数据。`)
     }
 
     const detail = normalizeDetail(avatar, uid)
@@ -2487,15 +2591,8 @@ export class zzz_panel_list extends plugin {
       }
     } catch { /* 本地还没有记录 */ }
     try {
-      for (const f of fs.readdirSync('./plugins/ZZZ-Plugin/data/panel').filter(f => f.endsWith('.json'))) {
-        try {
-          const list = JSON.parse(fs.readFileSync(path.join('./plugins/ZZZ-Plugin/data/panel', f), 'utf8'))
-          if (Array.isArray(list)) {
-            const a = list.find(match)
-            if (a) return this.normalizeRecordProps(a)
-          }
-        } catch { /* 跳过坏文件 */ }
-      }
+      const a = readZzzPluginPanel(uid).find(match)
+      if (a) return this.normalizeRecordProps(a)
     } catch { /* 没装 ZZZ-Plugin 就只认本地 */ }
     return null
   }
@@ -2855,8 +2952,38 @@ export class zzz_panel_list extends plugin {
     const list = this.pickList(raw?.data)
     if (!Array.isArray(list) || !list.length) return e.reply('没取到代理人列表，请稍后重试或先执行「米游社更新面板」')
 
+    // 与面板列表同一口径：接口只给展柜角色，练度统计还要并入历史全量
+    // （本插件历史列表 / 详情落盘 / ZZZ-Plugin 面板库），否则只能统计到几个角色。
+    const merged = list.slice()
+    const seen = new Set(merged.map(a => String(a?.id)))
+    const addFrom = arr => {
+      if (!Array.isArray(arr)) return
+      for (const a of arr) {
+        if (!a?.id || seen.has(String(a.id))) continue
+        seen.add(String(a.id))
+        merged.push(a)
+      }
+    }
+    try {
+      const histFile = path.join(OUT_DIR, `avatar_basic_${uid}.json`)
+      if (fs.existsSync(histFile)) {
+        const hist = JSON.parse(fs.readFileSync(histFile, 'utf8'))
+        addFrom(hist?.data?.avatar_list || hist?.data || hist?.avatar_list)
+      }
+    } catch { /* 忽略损坏 */ }
+    try {
+      for (const f of fs.readdirSync(RECORDS_DIR).filter(f => f.endsWith('.json'))) {
+        if (!f.startsWith(`${uid}_`) && !f.startsWith(`${uid}.`)) continue
+        try {
+          const obj = JSON.parse(fs.readFileSync(path.join(RECORDS_DIR, f), 'utf8'))
+          if (obj?.data) addFrom([obj.data])
+        } catch { /* 忽略损坏 */ }
+      }
+    } catch { /* records 目录不存在 */ }
+    addFrom(readZzzPluginPanel(uid))
+
     // 逐角色算驱动盘评分 → 练度分
-    const rows = list.map(it => {
+    const rows = merged.map(it => {
       const bp = buildBasicProperties(it)
       const equip = (it.equip || []).map(d => ({
         slot: d.equipment_type ?? 0,
@@ -3130,7 +3257,7 @@ export class zzz_panel_list extends plugin {
     }
     for (const file of [
       `./plugins/HoYoGet-Plugin/data/zzz_gacha/zzz_plugin/player/${uid}.json`,
-      `./plugins/ZZZ-Plugin/data/player/${uid}.json`,
+      ...ZZZ_PLAYER_DIRS.map(dir => path.join(dir, `${uid}.json`)),
     ]) {
       try {
         const j = JSON.parse(fs.readFileSync(file, 'utf8'))

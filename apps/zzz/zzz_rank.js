@@ -9,7 +9,10 @@ import { zzz_panel_list } from './zzz_panel_list.js'
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const RECORDS_DIR = path.join(PLUGIN_ROOT, 'data', 'zzz_panel', 'records')
-const ZZZ_PANEL_DIR = path.join(process.cwd(), 'plugins', 'ZZZ-Plugin', 'data', 'panel')
+const ZZZ_PANEL_DIRS = [
+  path.join(process.cwd(), 'data', 'ZZZ-Plugin', 'panel'),
+  path.join(process.cwd(), 'plugins', 'ZZZ-Plugin', 'data', 'panel'),
+]
 const YUNZAI_DB = path.join(process.cwd(), 'data', 'db', 'data.db')
 
 /* 框架会把 % 前缀改写成「#绝区零」（lib/plugins/loader.js 的 zzzReg），
@@ -201,7 +204,7 @@ function loadAllRecords(groupUids = null) {
   const records = []
   const seen = new Set()
 
-  for (const dir of [RECORDS_DIR, ZZZ_PANEL_DIR]) {
+  for (const dir of [RECORDS_DIR, ...ZZZ_PANEL_DIRS]) {
     if (!dir || !fs.existsSync(dir)) continue
     try {
       for (const file of fs.readdirSync(dir).filter(f => f.endsWith('.json'))) {
@@ -357,7 +360,9 @@ export class zzz_panel_rank extends plugin {
     }
     const dirs = []
     if (fs.existsSync(RECORDS_DIR)) dirs.push(`米哈游: ${RECORDS_DIR}`)
-    if (fs.existsSync(ZZZ_PANEL_DIR)) dirs.push(`ZZZ-Plugin: ${ZZZ_PANEL_DIR}`)
+    for (const dir of ZZZ_PANEL_DIRS) {
+      if (fs.existsSync(dir)) dirs.push(`ZZZ-Plugin: ${dir}`)
+    }
     return e.reply([
       `面板排名数据状态：`,
       ...dirs.map(d => `  数据源：${d}`),
