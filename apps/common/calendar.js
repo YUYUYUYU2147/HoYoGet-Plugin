@@ -79,10 +79,6 @@ export class calendar extends plugin {
     const msg = String(e?.msg || '').trim()
     if (!CAL_RE.test(msg)) return false
     const game = gameOf(msg)
-    if (game === 'bh3') {
-      await e.reply('崩坏3日历请发送「！日历」或「#崩三日历」')
-      return 'return'
-    }
     this.e = e
     await this.calendar(e)
     return 'return'
@@ -90,7 +86,15 @@ export class calendar extends plugin {
 
   async calendar(e) {
     const game = gameOf(e?.msg || '')
-    if (game === 'bh3') return e.reply('崩坏3日历请发送「！日历」或「#崩三日历」')
+    if (game === 'bh3') {
+      // 崩三日历有独立实现：直接转过去出图，不再只回一句提示
+      try {
+        const { bh3_calendar } = await import('../bh3/bh3_calendar.js')
+        return await new bh3_calendar().calendar(e)
+      } catch (err) {
+        return e.reply(`崩三日历生成失败：${err?.message || err}`)
+      }
+    }
     const now = moment()
     try {
       const raw = await getCalendarActivities(game)

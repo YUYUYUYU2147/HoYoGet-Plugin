@@ -53,7 +53,7 @@ export class bh3_calendar extends plugin {
       priority: pluginPriority('bh3_calendar', -999999),
       rule: [
         { reg: '^[!！]日历$', fnc: 'calendar' },
-        { reg: '^#?(崩三|崩坏3|崩坏三|BH3)(日历|日历列表|活动)$', fnc: 'calendar' }
+        { reg: '^#?(崩三|崩坏3|崩坏三|BH3)(日历|日历列表)$', fnc: 'calendar' }
       ]
     });
   }

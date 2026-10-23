@@ -400,6 +400,28 @@ export class abyss_stat extends plugin {
   srBoss(e) { return this.srChallenge(e, 'boss') }
   srPeak(e) { return this.srChallenge(e, 'peak') }
 
+  /**
+   * 把一期的楼层整理成总览页可渲染的结构：
+   * 每层带星数/分数、各节点的角色，以及节点上的关卡效果（buff）。
+   */
+  collectSrFloors(data) {
+    if (!data) return []
+    return (data.floors || []).map(f => {
+      const nodes = (f.nodes || []).filter(n => n && n.avatars?.length)
+      const buffs = []
+      for (const n of (f.nodes || [])) {
+        const raw = n?.raw || {}
+        const b = raw.buff || raw.maze_buff || (Array.isArray(raw.buff_list) ? raw.buff_list[0] : null)
+        if (!b) continue
+        const desc = String(b.desc_mi18n || b.desc || b.simple_desc_mi18m || '')
+          .replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
+        if (!desc) continue
+        buffs.push({ name: b.name_mi18n || b.name || '', desc, icon: b.icon || '' })
+      }
+      return { ...f, nodes, buffs }
+    }).filter(f => f.nodes.length || f.isFast)
+  }
+
   /** 星铁深渊总览：混沌 + 虚构 + 末日 + 王棋 四类一次拉全，汇总成一张卡 */
   async srAbyss(e) {
     const type = /(上期|往期)/.test(String(e.msg || '')) ? 2 : 1
@@ -426,6 +448,7 @@ export class abyss_stat extends plugin {
             : '',
           /* 四类玩法的满星基准：混沌/虚构 12，末日 10，王棋按额外星 */
           fullStar: { chaos: 12, story: 12, boss: 10, peak: 0 }[key] || 0,
+          floors: collectSrFloors(data),
         })
       } catch (err) {
         cards.push({ key, title: cfg.title, ok: false, err: err?.message || String(err) })
@@ -438,6 +461,10 @@ export class abyss_stat extends plugin {
       period: type === 2 ? '上期' : '当期',
       cards,
       uid: mys.uid,
+      repeat,
+      elemIcon,
+      _miao_path: miaoResPath(),
+      sys: { copyright: '' },
     }, { e, ret: true, dsf: 3.2 })
   }
 }

@@ -10,8 +10,8 @@
     <div class="page">
       <div class="head">
         <div class="head-left">
-          <div class="title">星铁深渊总览</div>
-          <div class="subtitle">{{period}} · 混沌回忆 / 虚构叙事 / 末日幻影 / 王棋</div>
+          <div class="title">逐光捡金挑战回顾</div>
+          <div class="subtitle">{{period}} · 混沌回忆 / 虚构叙事 / 末日幻影 / 异相仲裁</div>
         </div>
         <div class="head-right">
           <div class="uid">UID {{uid}}</div>
@@ -39,6 +39,75 @@
           <div class="card-empty-text">暂无数据{{if c.err}}<span class="err">{{c.err}}</span>{{/if}}</div>
           {{/if}}
         </div>
+        {{/each}}
+      </div>
+
+      <div class="sections">
+        {{each cards c}}
+        {{if c.ok && c.floors.length}}
+        <section class="section sec-{{c.key}}">
+          <div class="sec-head">
+            <div class="sec-title">{{c.title}}</div>
+            <div class="sec-sub">
+              {{if c.periodName}}<span>{{c.periodName}}</span>{{/if}}
+              <span>{{c.totalStar}} 星{{if c.extraStar}} +{{c.extraStar}}{{/if}}</span>
+              {{if c.battleNum}}<span>{{c.battleNum}} 场</span>{{/if}}
+            </div>
+          </div>
+
+          <div class="floors">
+            {{each c.floors f}}
+            <div class="floor">
+              <div class="floor-head">
+                <div class="floor-name">{{f.name}}</div>
+                <div class="floor-right">
+                  <span class="stars">{{each repeat(f.star) s}}★{{/each}}{{if f.extraStar}}<i>+{{f.extraStar}}</i>{{/if}}</span>
+                  {{if !f.isFast}}<span class="floor-score">{{f.score}}</span>{{/if}}
+                </div>
+              </div>
+
+              {{each f.nodes node}}
+              {{if node.avatars.length}}
+              <div class="node">
+                <div class="node-head">
+                  <span class="node-name">节点{{node.index}}</span>
+                  {{if node.time}}<span class="node-time">{{node.time}}</span>{{/if}}
+                  {{if node.score}}<span class="node-score">{{node.score}}</span>{{/if}}
+                </div>
+                <div class="avatars">
+                  {{each node.avatars a}}
+                  <div class="av rarity-{{a.rarity || 5}}">
+                    <div class="av-pic">
+                      {{if a.icon}}<img src="{{a.icon}}" alt="" />{{/if}}
+                      {{if a.element && elemIcon(a.element)}}<img class="av-elem" src="{{ppath}}{{elemIcon(a.element)}}" alt="" />{{/if}}
+                      <span class="av-cons">{{a.rank ?? 0}}</span>
+                    </div>
+                    <div class="av-name">{{a.abbr || a.name || ''}}</div>
+                    <div class="av-lv">Lv{{a.level || 80}}</div>
+                  </div>
+                  {{/each}}
+                </div>
+              </div>
+              {{/if}}
+              {{/each}}
+
+              {{if f.buffs.length}}
+              <div class="buffs">
+                {{each f.buffs b}}
+                <div class="buff">
+                  {{if b.icon}}<img class="buff-icon" src="{{b.icon}}" alt="" />{{/if}}
+                  <div class="buff-text">
+                    {{if b.name}}<b>{{b.name}}：</b>{{/if}}<span>{{b.desc}}</span>
+                  </div>
+                </div>
+                {{/each}}
+              </div>
+              {{/if}}
+            </div>
+            {{/each}}
+          </div>
+        </section>
+        {{/if}}
         {{/each}}
       </div>
 
