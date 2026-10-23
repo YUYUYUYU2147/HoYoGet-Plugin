@@ -186,7 +186,16 @@ async function resolveRandomBg(api) {
     else if (res.ok) target = url;
     if (!/^https?:\/\//i.test(target)) return '';
     // 避免把引号/括号带进 CSS url()
-    return /["'\\\n\r()]/.test(target) ? '' : target;
+    if (/["'\\\n\r()]/.test(target)) return '';
+    // 关键：把图片下下来转成 data URI。只给 URL 时 Chromium 可能在
+    // 背景图加载完成前就截图，结果落到 CSS 里的本地默认背景。
+    const img = await fetch(target, { signal: AbortSignal.timeout(8000) });
+    if (!img.ok) return '';
+    const type = String(img.headers.get('content-type') || '');
+    if (!/^image\//i.test(type)) return '';
+    const buf = Buffer.from(await img.arrayBuffer());
+    if (!buf.length || buf.length > 10 * 1024 * 1024) return '';
+    return `data:${type};base64,${buf.toString('base64')}`;
   } catch {
     return '';
   }
@@ -200,6 +209,7 @@ async function pickGlobalBackground(helpCfg, themeName) {
   if (useApi) {
     const url = await resolveRandomBg(api);
     if (url) return { mode: 'api', url };
+    logger.debug?.('[HoYoGet][help] 随机背景获取失败，回退本地主题背景');
   }
   return { mode: 'theme', url: '' };
 }
