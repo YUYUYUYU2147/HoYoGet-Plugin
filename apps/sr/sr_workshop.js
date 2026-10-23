@@ -160,17 +160,41 @@ function localNames() {
   return NAMES
 }
 
-/** 本地角色头像：本插件 meta-sr 的 face.webp 按角色名存放，缺失返回空串 */
+/** 读本地 PlayerData 的游戏昵称（不依赖工坊返回的 nick_name） */
+function localPlayerName(uid) {
+  try {
+    const d = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'data', 'PlayerData', 'sr', `${uid}.json`), 'utf8'))
+    return String(d?.name || '').trim()
+  } catch (_) { return '' }
+}
+
+/** 本地角色头像：按角色名找 meta-sr/character/<名>/imgs/face.webp；
+ *  工坊名可能写成「阮梅 / 阮•梅 / 「大黑塔」」，这里规范化后再匹配目录。 */
+let _faceDirMap = null
+function faceDirMap() {
+  if (_faceDirMap) return _faceDirMap
+  const map = new Map()
+  try {
+    const root = path.join(PLUGIN_ROOT, 'resources', 'meta-sr', 'character')
+    for (const dir of fs.readdirSync(root)) {
+      map.set(dir.replace(/[·•・\s「」『』]/g, ''), dir)
+    }
+  } catch (_) { /* ignore */ }
+  _faceDirMap = map
+  return map
+}
 function localFace(name) {
   const clean = String(name || '').trim()
   if (!clean) return ''
-  const file = path.join(PLUGIN_ROOT, 'resources', 'meta-sr', 'character', clean, 'imgs', 'face.webp')
-  try {
-    if (!fs.existsSync(file)) return ''
-  } catch (_) {
-    return ''
+  const norm = clean.replace(/[·•・\s「」『』]/g, '')
+  const dirs = [clean, norm, faceDirMap().get(norm)].filter(Boolean)
+  for (const dir of new Set(dirs)) {
+    try {
+      const file = path.join(PLUGIN_ROOT, 'resources', 'meta-sr', 'character', dir, 'imgs', 'face.webp')
+      if (fs.existsSync(file)) return `${MIAO_RES}/meta-sr/character/${dir}/imgs/face.webp`
+    } catch (_) { /* ignore */ }
   }
-  return `${MIAO_RES}/meta-sr/character/${clean}/imgs/face.webp`
+  return ''
 }
 
 // ===== 名称缓存（接口）=====
@@ -687,11 +711,16 @@ async function buildSrDetail(arg) {
   let globalRank = null
   try {
     const { fetchPersonalRank } = await import(`../../system/fortoffans.js?t=${Date.now()}`)
-    const pr = await fetchPersonalRank({
-      nickname: nick,
-      char: String(role.item_id),
-      eidolon: itemJson?.rank ?? 0,
-    })
+    const localNick = localPlayerName(uid)
+    let pr = null
+    for (const nm of [...new Set([nick, localNick].filter(Boolean))]) {
+      pr = await fetchPersonalRank({
+        nickname: nm,
+        char: String(role.item_id),
+        eidolon: itemJson?.rank ?? 0,
+      })
+      if (pr && pr.rank != null) break
+    }
     if (pr && pr.rank != null) {
       // 网站配装是否比工坊旧：早于工坊更新时间则提示可能未同步
       const siteAt = pr.entry?.updated_at ? new Date(pr.entry.updated_at).getTime() : 0
@@ -958,8 +987,8 @@ async function buildSrTeam(arg) {
     const members = memberNames.map((n, i) => {
       const id = memberIds[i] || ''
       const role = roles.find(r => String(r?.item_id) === id) || roles.find(r => r?.nick_name === n)
-      const cnName = role?.nick_name || n
-      return { name: cnName, face: localFace(cnName) || '' }
+      const cnName = localNames()?.chars?.[id]?.name || role?.nick_name || n
+      return { name: cnName, face: localFace(cnName) || localFace(role?.nick_name) || localFace(n) || '' }
     })
     return {
       name: row?.team_name || '未命名队伍',
