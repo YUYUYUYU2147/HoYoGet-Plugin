@@ -70,8 +70,11 @@ const Serv = {
         }
     if (servKey[servIdx]) return Serv.serv(servKey[servIdx])
 
-    // 设置为0或无token，使用返回默认的serv。官服0 B服1 国际2
-    let defServKey = isGs ? [ "mgg", "mgg", "enka" ] : [ "homo", "homo", "homo" ]
+    // 设置为0或无 token 时的默认服务。
+    // 旧默认是 mgg（原神）/ homo（星铁）—— 这两个是第三方镜像，数据经常不是
+    // 游戏内真实展柜；这里改为 Enka / EnkaHSR，展柜数据更接近真实面板。
+    // 显式配置 profileServer / srProfileServer 时仍按用户选择走。
+    let defServKey = isGs ? [ "enka", "enka", "enka" ] : [ "enkaHSR", "enkaHSR", "enkaHSR" ]
     return Serv.serv(defServKey[servType])
   },
 
