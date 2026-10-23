@@ -115,6 +115,23 @@ export class sr_global_rank extends plugin {
     return false
   }
 
+  /** 远程头像转 data URI：渲染器可能不等远程 img 加载完就截图，头像会空 */
+  async inlineAvatar(url) {
+    const u = String(url || '').trim()
+    if (!/^https?:\/\//i.test(u)) return ''
+    try {
+      const res = await fetch(u, { signal: AbortSignal.timeout(6000) })
+      if (!res.ok) return ''
+      const type = String(res.headers.get('content-type') || '')
+      if (!/^image\//i.test(type)) return ''
+      const buf = Buffer.from(await res.arrayBuffer())
+      if (!buf.length || buf.length > 2 * 1024 * 1024) return ''
+      return `data:${type};base64,${buf.toString('base64')}`
+    } catch (_) {
+      return ''
+    }
+  }
+
   async myRank(e) {
     const m = String(e.msg || '').match(RE_MY_RANK)
     let uid = m?.[1] || ''
@@ -196,7 +213,7 @@ export class sr_global_rank extends plugin {
       const img = await render('sr_rank/my', {
         nickname,
         uid,
-        ownerAvatar: roleProfile?.avatar || '',
+        ownerAvatar: await this.inlineAvatar(roleProfile?.avatar),
         level: roleProfile?.userLevel || data?.level || '',
         signature: roleProfile?.signature || data?.sign || '',
         region: roleProfile?.serverName || '',
