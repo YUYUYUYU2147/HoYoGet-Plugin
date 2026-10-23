@@ -267,9 +267,7 @@ const HELP_HTML = `
       </div>
       <h2 id="hp-title">全局帮助</h2>
       <p id="hp-sub">原神 / 星铁 / 绝区零 / 崩坏3 全部指令速查。点击任意卡片即可复制指令，也可以直接搜索关键词。</p>
-      <div class="hp-hero-tags">
-        <span># 原神</span><span>* 星铁</span><span>% 绝区零</span><span>! 崩坏3</span><span>+ 通用</span>
-      </div>
+      <div class="hp-hero-tags" id="hp-hero-tags"></div>
     </div>
     <div class="hp-hero-stat" id="hp-stats"></div>
   </div>

@@ -20,7 +20,7 @@
 
   const GAME_META = {
     gs: { name: '原神', color: '#e9a23b' },
-    sr: { name: '星穹铁道', color: '#6a7fd0' },
+    sr: { name: '崩坏：星穹铁道', color: '#6a7fd0' },
     zzz: { name: '绝区零', color: '#3aa6a0' },
     bh3: { name: '崩坏3', color: '#c26a9a' },
     common: { name: '通用', color: '#7de2ff' },
@@ -116,6 +116,16 @@
       + '<div class="hp-stat"><div class="k">当前显示</div><div class="v">' + shownCount + '</div></div>'
       + '<div class="hp-stat"><div class="k">帮助主题</div><div class="v">' + (themes.length || 1) + '</div></div>'
       + '<div class="hp-stat"><div class="k">支持游戏</div><div class="v">4</div></div>'
+  }
+
+  /** Hero 里的游戏前缀标签：复用 binding 页同一套 /game/icon */
+  function renderHeroTags() {
+    const box = el('hp-hero-tags')
+    if (!box) return
+    box.innerHTML = ['gs', 'sr', 'zzz', 'bh3'].map(game => {
+      const meta = GAME_META[game]
+      return '<span><img src="' + iconUrl(game) + '" alt="" onerror="this.style.display=\'none\'" />' + meta.name + '</span>'
+    }).join('') + '<span><i class="hp-hero-plus">+</i>通用</span>'
   }
 
   /** 顶部游戏筛选：官方图标 + 该游戏指令数 */
@@ -279,6 +289,7 @@
       if (kicker && version) kicker.textContent = 'HoYoGet v' + version + ' · Global Help'
       await loadSprite()
       await loadBackground(payload, payload.theme || 'default')
+      renderHeroTags()
       renderGames()
       const options = groups.map(group => '<option value="' + esc(group.group) + '">' + esc(group.group) + '</option>').join('')
       groupSel.innerHTML = '<option value="">全部板块</option>' + options

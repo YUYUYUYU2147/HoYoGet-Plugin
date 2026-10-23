@@ -353,3 +353,5 @@
 .hp-tag.green { color: #15803d; background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.24); }
 .hp-game-chip.off { opacity: .42; cursor: not-allowed; }
 .hp-game-chip.off:hover { transform: none; border-color: var(--g-border, #d8dde6); }
+.hp-hero-tags img { width: 18px; height: 18px; border-radius: 5px; object-fit: cover; vertical-align: -4px; margin-right: 4px; background: rgba(255,255,255,.1); }
+.hp-hero-plus { font-style: normal; margin-right: 2px; color: #7de2ff; }
