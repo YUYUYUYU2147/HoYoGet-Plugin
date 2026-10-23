@@ -358,6 +358,27 @@ function webStyleCss(helpCfg, themeStyle = {}, pageWidth = 1000) {
   return `<style>${css}</style>`
 }
 
+function colorLuminance(value) {
+  const v = String(value || '').trim();
+  let m = v.match(/^#([0-9a-f]{3})$/i);
+  if (m) return (0.2126 * parseInt(m[1][0] + m[1][0], 16) + 0.7152 * parseInt(m[1][1] + m[1][1], 16) + 0.0722 * parseInt(m[1][2] + m[1][2], 16)) / 255;
+  m = v.match(/^#([0-9a-f]{6})$/i);
+  if (m) return (0.2126 * parseInt(m[1].slice(0, 2), 16) + 0.7152 * parseInt(m[1].slice(2, 4), 16) + 0.0722 * parseInt(m[1].slice(4, 6), 16)) / 255;
+  m = v.match(/rgba?\(([^)]+)\)/i);
+  if (m) {
+    const p = m[1].split(',').map(x => parseFloat(x));
+    if (p.length >= 3 && p.every(Number.isFinite)) return (0.2126 * p[0] + 0.7152 * p[1] + 0.0722 * p[2]) / 255;
+  }
+  return -1;
+}
+
+/** iOS 浅色底：太浅的文字颜色自动回退，避免白底白字 */
+function readableColor(value, fallback, maxLum = 0.72) {
+  const v = String(value || '').trim();
+  const lum = colorLuminance(v);
+  return lum >= 0 && lum <= maxLum ? v : fallback;
+}
+
 function appStyleCss(helpCfg, themeStyle = {}, pageWidth = 1000) {
   // iOS 浅色只认用户在锅巴里改的样式，主题的深色字体不参与，避免白底白字
   const user = helpCfg.style || {}
@@ -369,14 +390,14 @@ function appStyleCss(helpCfg, themeStyle = {}, pageWidth = 1000) {
   const themeAccent = safeCssValue(themeStyle?.fontColor)
   const css = `body {
     width: ${pageWidth}px;
-    --w-head: ${color('titleColor') || '#111827'};
-    --w-sub: ${color('subTitleColor') || '#6b7280'};
-    --w-item: ${color('fontColor') || '#111827'};
-    --w-desc: ${color('descColor') || '#6b7280'};
-    --w-tag-red: ${color('tagRed') || '#dc2626'};
-    --w-tag-amber: ${color('tagAmber') || '#b45309'};
-    --w-tag-green: ${color('tagGreen') || '#15803d'};
-    --w-tag-gray: ${color('tagGray') || '#64748b'};
+    --w-head: ${readableColor(color('titleColor'), '#111827')};
+    --w-sub: ${readableColor(color('subTitleColor'), '#6b7280')};
+    --w-item: ${readableColor(color('fontColor'), '#111827')};
+    --w-desc: ${readableColor(color('descColor'), '#4b5563')};
+    --w-tag-red: ${readableColor(color('tagRed'), '#dc2626', 0.8)};
+    --w-tag-amber: ${readableColor(color('tagAmber'), '#b45309', 0.8)};
+    --w-tag-green: ${readableColor(color('tagGreen'), '#15803d', 0.8)};
+    --w-tag-gray: ${readableColor(color('tagGray'), '#64748b', 0.8)};
     --w-title-size: ${size('titleSize', '48px', 120)};
     --w-group-size: ${size('groupSize', '18px', 60)};
     --w-item-size: ${size('itemSize', '17px', 60)};
@@ -431,7 +452,7 @@ export class help extends plugin {
         if (layout !== 'classic') {
           const web = buildWebData(helpList, colCount);
           // 纵向：板块上下排列；iOS 版每组单列，网页深色版按 colCount 分列
-          for (const group of web.groups) group.cols = layout === 'app' ? 1 : colCount;
+          for (const group of web.groups) group.cols = colCount;
           const pageWidth = 1000;
           const img = await render('global_help/web', {
             helpCfg,
