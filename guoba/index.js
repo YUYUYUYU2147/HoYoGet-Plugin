@@ -248,8 +248,14 @@ function helpThemeNames() {
 function pickHelpTheme(helpCfg = {}) {
   const all = helpThemeNames()
   let names = all
-  if (Array.isArray(helpCfg.theme) && helpCfg.theme.length) names = all.filter(n => helpCfg.theme.includes(n))
-  else if (helpCfg.theme && helpCfg.theme !== 'all') names = all.filter(n => n === String(helpCfg.theme))
+  const rawTheme = helpCfg.theme
+  const theme = Array.isArray(rawTheme)
+    ? rawTheme
+    : (typeof rawTheme === 'string' && rawTheme.includes(',')
+      ? rawTheme.split(',').map(v => v.trim()).filter(Boolean)
+      : rawTheme)
+  if (Array.isArray(theme) && theme.length) names = all.filter(n => theme.includes(n))
+  else if (theme && theme !== 'all') names = all.filter(n => n === String(theme))
   const exclude = Array.isArray(helpCfg.themeExclude) ? helpCfg.themeExclude : []
   if (exclude.length) names = names.filter(n => !exclude.includes(n))
   if (!names.length) names = all.filter(n => n !== 'default')
@@ -276,9 +282,11 @@ const HELP_HTML = `
     <label class="hp-search"><span>⌕</span><input id="hp-search" placeholder="搜索指令或说明，如：抽卡、签到、深渊、面板" /></label>
     <select id="hp-group"><option value="">全部板块</option></select>
     <button id="hp-refresh">刷新</button>
+    <button id="hp-edit" class="hp-ghost">编辑</button>
     <span class="hp-meta" id="hp-meta"></span>
   </div>
   <div class="hp-groups" id="hp-groups"><div class="hp-empty">加载中…</div></div>
+  <div class="hp-editor" id="hp-editor"></div>
   <div class="hp-toast" id="hp-toast"></div>
 </div>
 `
@@ -469,6 +477,50 @@ export function init(ctx) {
     } catch (err) {
       ctx.logger?.warn?.(`[HoYoGet][guoba] 读取角色立绘失败：${err?.message || err}`)
       res.status(404).end()
+    }
+  })
+
+  ctx.registerApi('post', '/help/save', async (req, res) => {
+    try {
+      const body = req.body || {}
+      const cfg = body.helpCfg && typeof body.helpCfg === 'object' ? JSON.parse(JSON.stringify(body.helpCfg)) : {}
+      const list = Array.isArray(body.helpList) ? body.helpList : []
+      const str = (v, max = 2000) => String(v == null ? '' : v).slice(0, max)
+      const cleanCfg = {}
+      for (const key of ['title', 'subTitle', 'theme', 'background', 'backgroundApi']) {
+        if (cfg[key] != null) cleanCfg[key] = str(cfg[key], 500)
+      }
+      if (cfg.colCount != null) cleanCfg.colCount = Math.min(5, Math.max(2, Number(cfg.colCount) || 3))
+      if (Array.isArray(cfg.themeExclude)) cleanCfg.themeExclude = cfg.themeExclude.map(v => str(v, 40)).slice(0, 60)
+      if (typeof cfg.bgBlur === 'boolean') cleanCfg.bgBlur = cfg.bgBlur
+      if (cfg.style && typeof cfg.style === 'object') cleanCfg.style = JSON.parse(JSON.stringify(cfg.style))
+      const helpList = list.slice(0, 100).map(group => ({
+        group: str(group?.group, 200) || '未分组',
+        ...(group?.auth === 'master' ? { auth: 'master' } : {}),
+        list: (Array.isArray(group?.list) ? group.list : []).slice(0, 500).map(item => ({
+          icon: Math.max(0, Math.min(999, Number(item?.icon) || 0)),
+          title: str(item?.title),
+          desc: str(item?.desc),
+        })).filter(item => item.title || item.desc),
+      })).filter(group => group.list.length)
+      if (!helpList.length) return res.json({ ok: false, code: -1, message: '至少保留一条帮助指令' })
+      const text = '# 由锅巴「全局帮助」页保存，覆盖 system/default/global_help.yaml\n' + YAML.stringify({ helpCfg: cleanCfg, helpList })
+      const dir = path.join(ROOT, 'config')
+      fs.mkdirSync(dir, { recursive: true })
+      fs.writeFileSync(path.join(dir, 'global_help.yaml'), text, 'utf8')
+      res.json({ ok: true, code: 0, message: `已保存 ${helpList.length} 个板块` })
+    } catch (err) {
+      ctx.logger?.error?.(`[HoYoGet][guoba] 保存全局帮助失败：${err?.message || err}`)
+      res.json({ ok: false, code: -1, message: err?.message || String(err) })
+    }
+  })
+
+  ctx.registerApi('post', '/help/reset', (req, res) => {
+    try {
+      fs.rmSync(path.join(ROOT, 'config', 'global_help.yaml'), { force: true })
+      res.json({ ok: true, code: 0, message: '已恢复默认帮助' })
+    } catch (err) {
+      res.json({ ok: false, code: -1, message: err?.message || String(err) })
     }
   })
 

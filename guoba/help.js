@@ -32,7 +32,11 @@
   let themes = []
   let version = ''
   let gameFilter = ''
+  let rawHelp = null
+  let editing = false
+  let draft = null
   let toastTimer = null
+  const editorEl = document.getElementById('hp-editor')
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
@@ -268,6 +272,198 @@
     } catch { /* 图标失败不影响文字 */ }
   }
 
+
+  /* ───────── 编辑模式（保存到 config/global_help.yaml） ───────── */
+  function clone(obj) { return JSON.parse(JSON.stringify(obj)) }
+
+  function startEdit() {
+    if (editing) return
+    const cfg = rawHelp?.helpCfg || rawHelp || {}
+    const source = rawHelp?.helpList || (rawHelp?.groups || groups.map(g => ({
+      group: g.group,
+      auth: g.auth,
+      list: g.list.map(i => ({ icon: i.icon, title: i.title, desc: i.desc })),
+    })))
+    draft = {
+      helpCfg: {
+        ...clone(cfg),
+        title: cfg.title || '全局帮助',
+        subTitle: cfg.subTitle || '',
+        colCount: cfg.colCount || 3,
+        theme: Array.isArray(cfg.theme) ? cfg.theme.join(',') : (cfg.theme || 'all'),
+        background: cfg.background || 'mix',
+        backgroundApi: cfg.backgroundApi || 'https://api.yppp.net/pc.php',
+        bgBlur: cfg.bgBlur !== false,
+      },
+      helpList: clone(source || []).map(g => ({
+        group: g.group || '未分组',
+        auth: g.auth === 'master' ? 'master' : '',
+        list: (g.list || []).map(i => ({ icon: i.icon || '', title: i.title || '', desc: i.desc || '' })),
+      })),
+    }
+    editing = true
+    groupsEl.style.display = 'none'
+    el('hp-games').style.display = 'none'
+    editorEl.classList.add('on')
+    renderEditor()
+  }
+
+  function syncDraft() {
+    if (!draft) return
+    const val = id => el(id)?.value || ''
+    draft.helpCfg.title = val('he-title')
+    draft.helpCfg.subTitle = val('he-subtitle')
+    draft.helpCfg.colCount = Number(val('he-cols')) || 3
+    draft.helpCfg.theme = val('he-theme') || 'all'
+    draft.helpCfg.background = val('he-bg') || 'mix'
+    draft.helpCfg.backgroundApi = val('he-bgapi')
+    draft.helpCfg.bgBlur = !!el('he-blur')?.checked
+    editorEl.querySelectorAll('.he-group').forEach(row => {
+      const g = draft.helpList[Number(row.dataset.g)]
+      if (!g) return
+      g.group = row.querySelector('.he-group-name')?.value || '未分组'
+      g.auth = row.querySelector('.he-group-master')?.checked ? 'master' : ''
+      row.querySelectorAll('.he-item').forEach(itemRow => {
+        const item = g.list[Number(itemRow.dataset.i)]
+        if (!item) return
+        item.icon = Number(itemRow.querySelector('.he-icon')?.value) || 0
+        item.title = itemRow.querySelector('.he-title')?.value || ''
+        item.desc = itemRow.querySelector('.he-desc')?.value || ''
+      })
+    })
+  }
+
+  function renderEditor() {
+    const cfg = draft.helpCfg
+    const groupsHtml = draft.helpList.map((g, gi) => {
+      const items = g.list.map((item, ii) => '<div class="he-item" data-i="' + ii + '">'
+        + '<input class="he-icon" type="number" min="0" max="999" value="' + esc(item.icon) + '" title="图标编号" />'
+        + '<input class="he-title" value="' + esc(item.title) + '" placeholder="指令标题" />'
+        + '<input class="he-desc" value="' + esc(item.desc) + '" placeholder="说明" />'
+        + '<button type="button" data-act="item-up" title="上移">↑</button>'
+        + '<button type="button" data-act="item-down" title="下移">↓</button>'
+        + '<button type="button" class="danger" data-act="item-del" title="删除">×</button>'
+        + '</div>').join('')
+      return '<section class="he-group" data-g="' + gi + '">'
+        + '<div class="he-group-head">'
+        + '<input class="he-group-name" value="' + esc(g.group) + '" placeholder="板块名称" />'
+        + '<label class="he-check"><input type="checkbox" class="he-group-master"' + (g.auth === 'master' ? ' checked' : '') + ' /> 主人专用</label>'
+        + '<div class="he-group-ops">'
+        + '<button type="button" data-act="group-up" title="上移">↑</button>'
+        + '<button type="button" data-act="group-down" title="下移">↓</button>'
+        + '<button type="button" class="danger" data-act="group-del">删除板块</button>'
+        + '</div></div>'
+        + '<div class="he-items">' + items + '</div>'
+        + '<button type="button" class="he-add-item" data-act="item-add">+ 添加指令</button>'
+        + '</section>'
+    }).join('')
+    editorEl.innerHTML = '<div class="he-panel">'
+      + '<div class="he-head"><div><div class="he-title">编辑全局帮助</div>'
+      + '<div class="he-sub">保存后写入 config/global_help.yaml，优先于内置默认；图标编号对应 help 图标表，0 表示不显示</div></div>'
+      + '<div class="he-actions">'
+      + '<button type="button" class="hp-primary" data-act="save">保存</button>'
+      + '<button type="button" data-act="cancel">取消</button>'
+      + '<button type="button" class="danger" data-act="reset">恢复默认</button>'
+      + '</div></div>'
+      + '<div class="he-cfg">'
+      + '<label>标题<input id="he-title" value="' + esc(cfg.title) + '" /></label>'
+      + '<label>副标题<input id="he-subtitle" value="' + esc(cfg.subTitle) + '" /></label>'
+      + '<label>列数<input id="he-cols" type="number" min="2" max="5" value="' + esc(cfg.colCount) + '" /></label>'
+      + '<label>主题<input id="he-theme" value="' + esc(cfg.theme) + '" placeholder="all / 1,2 / default" /></label>'
+      + '<label>背景<select id="he-bg"><option value="theme"' + (cfg.background === 'theme' ? ' selected' : '') + '>本地主题</option><option value="api"' + (cfg.background === 'api' ? ' selected' : '') + '>随机 API</option><option value="mix"' + (cfg.background === 'mix' ? ' selected' : '') + '>混合</option></select></label>'
+      + '<label>随机 API<input id="he-bgapi" value="' + esc(cfg.backgroundApi) + '" /></label>'
+      + '<label class="he-check"><input id="he-blur" type="checkbox"' + (cfg.bgBlur ? ' checked' : '') + ' /> 背景毛玻璃</label>'
+      + '</div>'
+      + '<div class="he-groups">' + (groupsHtml || '<div class="hp-empty">还没有板块，点下面新增</div>') + '</div>'
+      + '<button type="button" class="he-add-group" data-act="group-add">+ 新增板块</button>'
+      + '<div class="he-msg" id="he-msg"></div>'
+      + '</div>'
+    editorEl.querySelectorAll('[data-act]').forEach(btn => {
+      btn.addEventListener('click', onEditorAction)
+    })
+  }
+
+  function onEditorAction(e) {
+    const act = e.currentTarget.dataset.act
+    if (!act) return
+    if (act === 'save') return saveEdit()
+    if (act === 'cancel') return cancelEdit()
+    if (act === 'reset') return resetEdit()
+    syncDraft()
+    const scroller = editorEl.closest('.g-content') || document.scrollingElement
+    const scrollTop = scroller ? scroller.scrollTop : 0
+    const groupRow = e.currentTarget.closest('.he-group')
+    const gi = groupRow ? Number(groupRow.dataset.g) : -1
+    const itemRow = e.currentTarget.closest('.he-item')
+    const ii = itemRow ? Number(itemRow.dataset.i) : -1
+    if (act === 'group-add') draft.helpList.push({ group: '新板块', auth: '', list: [{ icon: 0, title: '', desc: '' }] })
+    else if (act === 'group-del') draft.helpList.splice(gi, 1)
+    else if (act === 'group-up' && gi > 0) [draft.helpList[gi - 1], draft.helpList[gi]] = [draft.helpList[gi], draft.helpList[gi - 1]]
+    else if (act === 'group-down' && gi >= 0 && gi < draft.helpList.length - 1) [draft.helpList[gi + 1], draft.helpList[gi]] = [draft.helpList[gi], draft.helpList[gi + 1]]
+    else if (act === 'item-add' && gi >= 0) draft.helpList[gi].list.push({ icon: 0, title: '', desc: '' })
+    else if (act === 'item-del' && gi >= 0) draft.helpList[gi].list.splice(ii, 1)
+    else if (act === 'item-up' && gi >= 0 && ii > 0) { const l = draft.helpList[gi].list; [l[ii - 1], l[ii]] = [l[ii], l[ii - 1]] }
+    else if (act === 'item-down' && gi >= 0) { const l = draft.helpList[gi].list; if (ii < l.length - 1) [l[ii + 1], l[ii]] = [l[ii], l[ii + 1]] }
+    renderEditor()
+    if (scroller) scroller.scrollTop = scrollTop
+  }
+
+  function cancelEdit() {
+    editing = false
+    editorEl.classList.remove('on')
+    editorEl.innerHTML = ''
+    groupsEl.style.display = ''
+    el('hp-games').style.display = ''
+    render()
+  }
+
+  async function saveEdit() {
+    syncDraft()
+    draft.helpList = draft.helpList.filter(g => g.list.length || g.group)
+    const msg = el('he-msg')
+    if (!draft.helpList.length) { if (msg) msg.textContent = '至少保留一个板块'; return }
+    if (msg) msg.textContent = '保存中…'
+    try {
+      const res = await fetch(g.apiBase + '/help/save', {
+        method: 'POST',
+        headers: { [g.tokenKey || 'guoba-access-token']: g.token || '', 'Content-Type': 'application/json' },
+        body: JSON.stringify(draft),
+      })
+      const json = await res.json()
+      if (!json?.ok) throw new Error(json?.message || '保存失败')
+      editing = false
+      editorEl.classList.remove('on')
+      editorEl.innerHTML = ''
+      groupsEl.style.display = ''
+      el('hp-games').style.display = ''
+      showToast(json.message || '已保存')
+      await load()
+    } catch (err) {
+      if (msg) msg.textContent = '保存失败：' + (err && err.message || err)
+    }
+  }
+
+  async function resetEdit() {
+    if (!confirm('恢复默认会删除 config/global_help.yaml 的自定义内容，确定？')) return
+    try {
+      const res = await fetch(g.apiBase + '/help/reset', {
+        method: 'POST',
+        headers: { [g.tokenKey || 'guoba-access-token']: g.token || '' },
+      })
+      const json = await res.json()
+      if (!json?.ok) throw new Error(json?.message || '恢复失败')
+      showToast('已恢复默认')
+      editing = false
+      editorEl.classList.remove('on')
+      editorEl.innerHTML = ''
+      groupsEl.style.display = ''
+      el('hp-games').style.display = ''
+      await load()
+    } catch (err) {
+      showToast('恢复失败：' + (err && err.message || err))
+    }
+  }
+
   async function load() {
     groupsEl.innerHTML = '<div class="hp-empty">加载中…</div>'
     try {
@@ -277,6 +473,7 @@
       const json = await res.json()
       if (!json?.ok) throw new Error(json?.message || '加载失败')
       const payload = json.result || {}
+      rawHelp = payload
       groups = normalize(payload)
       themes = Array.isArray(payload.themes) ? payload.themes : []
       version = String(payload.version || '')
@@ -302,6 +499,7 @@
   searchEl?.addEventListener('input', render)
   groupSel?.addEventListener('change', render)
   el('hp-refresh')?.addEventListener('click', load)
+  el('hp-edit')?.addEventListener('click', startEdit)
   loadLogo()
   load()
 })();
