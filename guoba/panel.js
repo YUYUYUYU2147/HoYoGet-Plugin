@@ -20,7 +20,14 @@
   let currentGame = 'gs'
   let currentName = ''
 
-  const modal = (() => {
+  // 旧版把弹窗挂在 body，切页后会残留；进页面时先清掉。
+  document.querySelectorAll('body > .pn-modal-mask').forEach(n => n.remove())
+  // 弹窗必须挂在本页容器里。挂 document.body 时，切走页面后锅巴只移除页面 DOM，
+  // 弹窗会留在 body 底部、又丢了 CSS，就在首页/其它页面上露出一堆图片。
+  const pageRoot = document.querySelector('.hoyo-panel') || document.body
+  let modal = null
+  function getModal() {
+    if (modal && document.body.contains(modal)) return modal
     const m = document.createElement('div')
     m.className = 'pn-modal-mask'
     m.innerHTML = '<div class="pn-modal">'
@@ -28,11 +35,12 @@
       + '<div class="pn-viewer"><img class="pn-viewer-img" alt="" /><button class="pn-nav pn-prev">‹</button><button class="pn-nav pn-next">›</button></div>'
       + '<div class="pn-thumbs"></div>'
       + '</div>'
-    document.body.appendChild(m)
+    pageRoot.appendChild(m)
     m.querySelector('.pn-close').addEventListener('click', () => m.classList.remove('on'))
     m.addEventListener('click', e => { if (e.target === m) m.classList.remove('on') })
+    modal = m
     return m
-  })()
+  }
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) }
   function headers(json) { const h = { [g.tokenKey || 'guoba-access-token']: g.token || '' }; if (json) h['Content-Type'] = 'application/json'; return h }
@@ -117,12 +125,13 @@
   function renderViewer() {
     const f = viewerFiles[viewerIndex]
     if (!f) return
-    const viewer = modal.querySelector('.pn-viewer-img')
+    const m = getModal()
+    const viewer = m.querySelector('.pn-viewer-img')
     viewer.src = imgUrl(f, currentGame, currentSource)
-    modal.querySelector('.pn-modal-count').textContent = (viewerIndex + 1) + ' / ' + viewerFiles.length
-    const thumbs = modal.querySelectorAll('.pn-thumb')
+    m.querySelector('.pn-modal-count').textContent = (viewerIndex + 1) + ' / ' + viewerFiles.length
+    const thumbs = m.querySelectorAll('.pn-thumb')
     thumbs.forEach((t, i) => t.classList.toggle('on', i === viewerIndex))
-    const on = modal.querySelector('.pn-thumb.on')
+    const on = m.querySelector('.pn-thumb.on')
     if (on) on.scrollIntoView({ block: 'nearest', inline: 'center' })
   }
   function viewerStep(d) {
@@ -137,9 +146,10 @@
     const files = json?.result || []
     viewerFiles = files
     viewerIndex = 0
-    modal.querySelector('.pn-modal-title').textContent = name
+    const m = getModal()
+    m.querySelector('.pn-modal-title').textContent = name
     const isReadonly = currentSource === 'cowcoo'
-    const thumbs = modal.querySelector('.pn-thumbs')
+    const thumbs = m.querySelector('.pn-thumbs')
     thumbs.innerHTML = files.map((f, i) => '<div class="pn-thumb' + (i === 0 ? ' on' : '') + '" data-i="' + i + '">'
       + '<img src="' + imgUrl(f, currentGame, currentSource) + '" loading="lazy" />'
       + (isReadonly ? '' : '<button class="pn-del" data-file="' + esc(f) + '" title="删除">×</button>')
@@ -163,10 +173,10 @@
         load()
       }))
     }
-    modal.querySelector('.pn-prev').onclick = () => viewerStep(-1)
-    modal.querySelector('.pn-next').onclick = () => viewerStep(1)
+    m.querySelector('.pn-prev').onclick = () => viewerStep(-1)
+    m.querySelector('.pn-next').onclick = () => viewerStep(1)
     renderViewer()
-    modal.classList.add('on')
+    m.classList.add('on')
   }
 
   el('pn-source').addEventListener('change', e => {
