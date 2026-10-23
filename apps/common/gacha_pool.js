@@ -5896,6 +5896,29 @@ ${r.summary || ''}`;
   // 给「近期/未来版本」的补给补录各自的开放时间：
   // ① 优先用刷新拿到的公告正文；② 没有就用「瞬间搜索」按 UP 名取公告正文（不受详情接口风控影响）；
   // 只有能唯一定位到某段区间时才写入，取不到就保持版本窗口，绝不猜。（历史版本不处理，避免误填）
+  /**
+   * 同版本同类补给同开同收的兜底推断。
+   * 崩三角色池与对应装备池、协同池一般在同一时间开关，公告正文与配图都可能不给日期，
+   * 这时用同版本里同类补给中「结束最晚」的已确认区间，并且只在版本窗口内生效。
+   */
+  inferBh3PoolTime(pools = [], pool = null, vp = null) {
+    const toTs = s => {
+      const t = new Date(String(s || '').replace(/-/g, '/')).getTime();
+      return Number.isNaN(t) ? null : t;
+    };
+    const type = String(pool?.type || '');
+    if (!type) return null;
+    const vs = toTs(vp?.start), ve = toTs(vp?.end);
+    const cands = (pools || [])
+      .filter(x => x !== pool && String(x.type || '') === type && x.start && x.end)
+      .map(x => ({ start: toTs(x.start), end: toTs(x.end), name: x.s || x.name }))
+      .filter(x => x.start && x.end);
+    if (!cands.length) return null;
+    const best = cands.reduce((a, b) => (b.end > a.end ? b : a));
+    if (vs && ve && (best.start < vs - 86400000 || best.end > ve + 86400000)) return null;
+    return { start: best.start, end: best.end, from: best.name };
+  }
+
   async fillBh3PoolTimes(history, records = []) {
     const toTs = s => {
       const t = new Date(String(s || '').replace(/-/g, '/')).getTime();
@@ -5917,7 +5940,8 @@ ${r.summary || ''}`;
       const ve = toTs(vp.end);
       // 只处理近期/未来版本（历史版本没有展示需求，也不该用现在的公告去填）
       if (!ve || ve < now - 60 * 86400000) continue;
-      for (const p of vp.pools || []) {
+      const pools = vp.pools || [];
+      for (const p of pools) {
         const needTime = !(p.start && p.end);
         const needCover = !(Array.isArray(p.imgs) && p.imgs.filter(Boolean).length);
         if (!needTime && !needCover) continue;
@@ -5957,7 +5981,18 @@ ${r.summary || ''}`;
             p.end = fmt(hit.end);
             times++;
           } else {
-            missing++;
+            /* 崩三很多补给公告的日期只印在「补给信息」配图里，正文抓不到时间。
+               这类池子按「同版本同类补给同开同收」补齐：取同类型里结束最晚的已确认区间。
+               只补本版本窗口内的池子，不动历史数据。 */
+            const inferred = this.inferBh3PoolTime(pools, p, vp);
+            if (inferred) {
+              p.start = fmt(inferred.start);
+              p.end = fmt(inferred.end);
+              p.inferredTime = '同版本同类补给';
+              times++;
+            } else {
+              missing++;
+            }
           }
         }
         if (needCover && cover) {
