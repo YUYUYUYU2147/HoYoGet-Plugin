@@ -235,11 +235,28 @@ function flattenAnnList(json, game) {
   }).filter(i => i.title && i.end);
 }
 
+// 原神公告里混着大量长期/资讯类条目，日历只保留有明确起止的限时活动
+const GS_CAL_IGNORE = /速览|FAQ|问答|签到|社区|内容展示页|首充|双倍|返利|重置说明|版本更新说明|更新公告|停服|维护|问卷|周边|表情包|壁纸|漫画|音频|OST|原声|预约|预下载|配置要求|防沉迷|实名|协议|隐私|封禁|处罚|外挂|客服|反馈|社区规则|创作者|直播|赛事|嘉年华|音乐会|展览|线下|网页活动|H5|测试服|招募/i;
+
+function gsLikelyActivity(item, now) {
+  const title = item.title || '';
+  if (!title || GS_CAL_IGNORE.test(title) || !item.end) return false;
+  // 十年/几十年后的“永久”说明不是活动
+  const span = item.end.valueOf() - (item.start?.valueOf() || now);
+  if (span > 400 * 864e5 && !/活动|祈愿|盛典|礼盒/.test(title)) return false;
+  // “版本内容一览/机制说明”不是可参与的活动
+  if (/内容一览|机制说明|版本说明|更新说明/.test(title)) return false;
+  // 活动标题一般带「」或含活动/任务/祈愿/挑战等，长草条目多为“说明/一览”
+  if (/说明$|合集$/.test(title) && !/活动/.test(title)) return false;
+  return /活动|祈愿|挑战|任务|签到|盛典|礼盒|奖励|获取|参与|开启|限时|双倍|唤取|跃迁|频段|试炼|危战|七圣召唤|纪行|赛季|兑换/.test(title);
+}
+
 function filterOfficialActivities(list, game) {
+  const now = Date.now();
   return list.filter(item => {
     const tag = item.tag || '';
     const title = item.title || '';
-    if (game === 'gs') return /活动/.test(tag) && !/传说任务|魔神任务|游戏公告/.test(title);
+    if (game === 'gs') return gsLikelyActivity(item, now);
     if (game === 'sr') return !!title;
     if (game === 'zzz') return /活动公告|丽都资讯|活动/.test(tag) || /活动|调频|限时|补给|签到|邀约/.test(title);
     return true;
