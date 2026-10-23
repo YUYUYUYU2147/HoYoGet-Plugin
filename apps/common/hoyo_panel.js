@@ -129,7 +129,7 @@ function withMhyPrefix(msg) {
 }
 
 /** 从 Users 表读该用户的某个游戏 UID */
-async function readBoundUid(e, game) {
+export async function readBoundUid(e, game) {
   const qq = String(e?.user_id || e?.sender?.user_id || '').trim()
   if (!qq) return ''
   if (!fs.existsSync(YUNZAI_DB)) return ''

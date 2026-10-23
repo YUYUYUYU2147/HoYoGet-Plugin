@@ -17,6 +17,11 @@ const RE_RANK = new RegExp(
   `^[#%＊*]*\\s*(?:${SR_PREFIX}\\s*)?\\s*${RANK_WORD}(?:\\s+(.+))?$`,
   'i',
 )
+/* *我的全球排名 [UID]：查自己每个角色的 fort off fans 名次 */
+const RE_MY_RANK = new RegExp(
+  `^[#%＊*]*\\s*(?:${SR_PREFIX}\\s*)?我的\\s*${RANK_WORD}(?:\\s+(\\d{9}))?$`,
+  'i',
+)
 
 /* 属性别名 → stat key */
 const STAT_ALIAS = {
@@ -94,6 +99,7 @@ export class sr_global_rank extends plugin {
       event: 'message',
       priority: pluginPriority('sr_global_rank', -40500),
       rule: [
+        { reg: RE_MY_RANK.source, fnc: 'myRank' },
         { reg: RE_RANK.source, fnc: 'rank' },
       ],
     })
@@ -102,8 +108,59 @@ export class sr_global_rank extends plugin {
   async accept(e) {
     const msg = String(e?.msg || '').trim()
     if (!SR_PREFIX_RE.test(msg)) return false
+    if (RE_MY_RANK.test(msg)) { await this.myRank(e); return 'return' }
     if (RE_RANK.test(msg)) { await this.rank(e); return 'return' }
     return false
+  }
+
+  async myRank(e) {
+    const m = String(e.msg || '').match(RE_MY_RANK)
+    let uid = m?.[1] || ''
+    if (!uid) {
+      try {
+        const { readBoundUid } = await import('../common/hoyo_panel.js')
+        uid = await readBoundUid(e, 'sr')
+      } catch (_) { /* ignore */ }
+    }
+    if (!uid) {
+      return e.reply('没有找到你的星铁 UID。\n用法：*我的全球排名 123456789\n或先绑定：*绑定 123456789')
+    }
+    const file = path.join(process.cwd(), 'data', 'PlayerData', 'sr', `${uid}.json`)
+    let data = {}
+    try { data = JSON.parse(fs.readFileSync(file, 'utf8')) } catch (_) { /* ignore */ }
+    const nickname = String(data?.name || '').trim()
+    if (!nickname) {
+      return e.reply(`还没读到 UID ${uid} 的面板数据。\n请先发「*更新面板」或「*米游社更新面板」，把角色放进游戏内展柜后再试。`)
+    }
+    const avatars = Object.entries(data?.avatars || {})
+      .filter(([, a]) => a && (a.artis || a._source))
+      .slice(0, 15)
+    if (!avatars.length) return e.reply(`UID ${uid} 暂无可查询的角色面板。`)
+    await e.reply(`正在查询 ${nickname}（UID ${uid}）的星铁全球排名，请稍候…`)
+    const chars = loadCharNames()
+    const results = []
+    for (let i = 0; i < avatars.length; i += 4) {
+      const chunk = avatars.slice(i, i + 4)
+      const part = await Promise.all(chunk.map(async ([id, a]) => {
+        try {
+          const pr = await fetchPersonalRank({ nickname, char: id, eidolon: a.cons ?? a.rank ?? 0 })
+          if (!pr || pr.rank == null) return null
+          return {
+            name: chars[id]?.name || a.name || id,
+            rank: pr.rank,
+            total: pr.total,
+            eidolon: Number(a.cons ?? a.rank ?? 0) || 0,
+          }
+        } catch (_) { return null }
+      }))
+      results.push(...part.filter(Boolean))
+    }
+    if (!results.length) {
+      return e.reply(`没有在 fort off fans 查到 ${nickname} 的星铁角色排名。\n请确认游戏昵称与提交面板时一致，或稍后再试。`)
+    }
+    results.sort((a, b) => a.rank - b.rank)
+    const lines = results.map((r, i) => `${i + 1}. ${r.name}：第 ${r.rank} / 共 ${r.total ?? '?'}${r.eidolon ? `（${r.eidolon}魂）` : ''}`)
+    return e.reply([`星铁全球排名 · ${nickname}（UID ${uid}）`, ...lines].join('\n'))
   }
 
   async rank(e) {

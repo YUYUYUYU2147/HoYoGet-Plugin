@@ -77,7 +77,7 @@ const srReg = (body, { avoid = '' } = {}) => {
   )
 }
 
-const RE_SR_RANK = srReg(String.raw`(?:遗器)?(?:练度)?排名`, { avoid: '伤害' })
+const RE_SR_RANK = srReg(String.raw`(?:遗器)?(?:练度)?排名`, { avoid: '伤害|全球|世界|阿卡夏|akasha|幽境' })
 const RE_SR_DMG = srReg(String.raw`伤害(?:排名|排行)`)
 const RE_SR_GRAD = srReg(String.raw`(?:角色)?配装(?:统计)?`)
 const RE_SR_CARD = srReg(String.raw`(?:抽卡|欧非)(?:榜|排行)?`)
