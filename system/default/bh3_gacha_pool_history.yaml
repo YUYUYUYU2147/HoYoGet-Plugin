@@ -18,10 +18,18 @@ pools:
         type: outfit
         s: 镌刻于黎明的誓约
         a: []
-        start: 2026-09-24 12:00:00
-        end: 2026-10-16 12:00:00
+        start: 2026-09-25 12:00:00
+        end: 2026-10-09 12:00:00
         imgs:
           - https://upload-bbs.miyoushe.com/upload/2026/09/22/73565430/ac49b54e2314c8b335f3838901e18248_4317177761258249451.png
+      - name: 【补给】银雪与梦的公主丨服装补给限时开启！
+        type: outfit
+        s: 银雪与梦的公主
+        a: []
+        start: 2026-10-16 12:00:00
+        end: 2026-10-30 12:00:00
+        imgs:
+          - https://upload-bbs.miyoushe.com/upload/2026/10/14/73565430/15fa2fe0ef9671007addbd1185bc96d3_71643158520134326.png
       - name: 【补给】装备补给丨镜见之钥&名以时序
         type: weapon
         s: 镜见之钥

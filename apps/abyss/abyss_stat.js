@@ -94,6 +94,9 @@ export class abyss_stat extends plugin {
    */
   async mys(e, game) {
     e.isSr = game === 'sr'
+    /* e.game 必须显式设：genshin 的 getSelfUid 里 `e.game || (e.isSr ? 'sr' : 'gs')`，
+       e.game 优先，若被别处残留成 'gs' 就会拿原神 UID 去查星铁深渊。 */
+    e.game = game
     let miao
     try {
       miao = await import('#hoyo.miao.models')
@@ -108,12 +111,10 @@ export class abyss_stat extends plugin {
       await e.reply(`请先绑定${game === 'sr' ? '星铁' : '原神'}账号，并确认 Cookie 有效`)
       return null
     }
-    let ok = false
-    try { ok = await mys.checkCk() } catch { ok = false }
-    if (!ok) {
-      await e.reply(`UID ${mys.uid} 的 Cookie 已失效，请重新登录或 #刷新ck`)
-      return null
-    }
+    /* 不在这里做 checkCk()：
+       checkCk 会额外打一次米游社接口判活，偶尔因风控直接失败，
+       于是「接口其实能用」的情况被我们自己挡掉，表现为深渊数据整块为空。
+       真拿不到数据时，下面每个玩法都会各自带出具体的错误原因。 */
     return mys
   }
 
@@ -439,6 +440,12 @@ export class abyss_stat extends plugin {
       if (!data) continue
       const col = this.buildSrColumn(data, cfg, raw, key)
       if (col) columns.push(col)
+      else if (data) {
+        /* 有数据但没有可渲染的楼层（比如本期只打了快速通关）：仍然出一列，
+           至少把星数/最高关卡/周期显示出来，不然整列消失会让人以为没数据。 */
+        const empty = this.buildSrColumn(data, cfg, raw, key, true)
+        if (empty) columns.push(empty)
+      }
     }
 
     if (!columns.length) {
@@ -480,10 +487,16 @@ export class abyss_stat extends plugin {
    * （list.star_num / list.max_floor / list.battle_num / floors[].node_1 …），
    * 这样模板可以原样复用，不用改写。
    */
-  buildSrColumn(data, cfg, raw, key) {
+  buildSrColumn(data, cfg, raw, key, allowEmpty = false) {
     if (!data) return null
     const type = cfg.type
     const group = data.group || {}
+    /* 末日幻影的 BOSS 立绘在 group 里，模板要 upper/lower/tierce_boss */
+    const bossGroup = {
+      upper_boss: group?.upper_boss || null,
+      lower_boss: group?.lower_boss || null,
+      tierce_boss: group?.tierce_boss || null,
+    }
     const floors = (data.floors || [])
       .filter(f => (f.nodes || []).some(n => n?.avatars?.length) || f.isFast)
       .map(f => {
@@ -517,7 +530,7 @@ export class abyss_stat extends plugin {
           node_3: node(f.node3),
         }
       })
-    if (!floors.length) return null
+    if (!floors.length && !allowEmpty) return null
 
     return {
       key,
@@ -531,7 +544,7 @@ export class abyss_stat extends plugin {
       periodText: data.beginTime && data.endTime
         ? `${timeCalc(data.beginTime)} - ${timeCalc(data.endTime)}`
         : '',
-      group,
+      group: bossGroup,
       list: {
         star_num: data.totalStar ?? 0,
         max_floor: data.bestFloor || data.periodName || '',

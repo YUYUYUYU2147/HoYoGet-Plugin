@@ -5903,8 +5903,23 @@ ${r.summary || ''}`;
    *   镇×偃月叩晓 公告 09-28(周一) → 10-01(周四)
    */
   bh3NextPoolThursday(ts) {
+    return this.bh3NextWeekday(ts, 4);
+  }
+
+  /** 崩三卡池的开池日：角色/装备池在周四，服装池在周五 */
+  bh3NextPoolDay(ts, type = 'char') {
+    return this.bh3NextWeekday(ts, type === 'outfit' ? 5 : 4);
+  }
+
+  /**
+   * 推到往后最近的指定星期几 12:00。
+   * 崩三换池节奏：
+   *   角色/装备池 → 周四开池（官方提前 2~4 天发公告）
+   *   服装池     → 周五开池
+   */
+  bh3NextWeekday(ts, weekday) {
     const d = new Date(ts);
-    let add = (4 - d.getDay() + 7) % 7;   // 0=周日 … 4=周四
+    let add = (weekday - d.getDay() + 7) % 7;
     if (add === 0) {
       const noon = new Date(d);
       noon.setHours(12, 0, 0, 0);
@@ -6112,8 +6127,8 @@ ${r.summary || ''}`;
     for (const [name, st] of imageStart.entries()) {
       const target = (pools || []).find(x => String(x.name || '') === name);
       if (!target || target.end) continue;
-      const days = target.type === 'outfit' ? 22 : 21;
-      const start = this.bh3NextPoolThursday(st);
+      const days = target.type === 'outfit' ? 14 : 21;
+      const start = this.bh3NextPoolDay(st, target.type);
       let end = start + days * 86400000;
       const ve = toTs(vp?.end);
       const vs = toTs(vp?.start);
