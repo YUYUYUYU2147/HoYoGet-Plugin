@@ -1,4 +1,6 @@
 import fs from 'node:fs';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { render, pluginPriority, yaml } from '#HoYoGet';
 
 const HELP_PATH = './plugins/HoYoGet-Plugin/system/default/help.yaml';
@@ -6,6 +8,7 @@ const DETAIL_HELP_PATH = './plugins/HoYoGet-Plugin/system/default/help-detail.ya
 const HELP_URL = 'https://yuyu2147.dpdns.org/';
 const GLOBAL_HELP_PATH = './plugins/HoYoGet-Plugin/system/default/global_help.yaml';
 const GLOBAL_HELP_CFG = './plugins/HoYoGet-Plugin/config/global_help.yaml';
+const GLOBAL_THEME_ROOT = './plugins/HoYoGet-Plugin/resources/global_help/theme';
 const GAME_HELP_ALIASES = {
   原神: ['原神'],
   星铁: ['星铁', '崩铁'],
@@ -99,9 +102,53 @@ function buildHelpGroups(helpList, colCount) {
   });
 }
 
+/** 可用的帮助主题（有 main.png 的目录） */
+function globalThemeNames() {
+  try {
+    return fs.readdirSync(GLOBAL_THEME_ROOT, { withFileTypes: true })
+      .filter(e => e.isDirectory() && fs.existsSync(path.join(GLOBAL_THEME_ROOT, e.name, 'main.png')))
+      .map(e => e.name);
+  } catch {
+    return ['default'];
+  }
+}
+
+/** 按 helpCfg.theme / themeExclude 选一个主题，all 表示全部随机 */
+function pickGlobalTheme(helpCfg) {
+  const all = globalThemeNames();
+  let names = all;
+  const theme = helpCfg.theme;
+  if (Array.isArray(theme) && theme.length) names = all.filter(n => theme.includes(n));
+  else if (theme && theme !== 'all') names = all.filter(n => n === String(theme));
+  const exclude = Array.isArray(helpCfg.themeExclude) ? helpCfg.themeExclude : [];
+  if (exclude.length) names = names.filter(n => !exclude.includes(n));
+  if (!names.length) names = all.filter(n => n !== 'default');
+  if (!names.length) names = ['default'];
+  return names[Math.floor(Math.random() * names.length)];
+}
+
+const _themeStyleCache = new Map();
+/** 读主题 config.js 的 style（失败就用默认） */
+async function loadGlobalThemeStyle(name) {
+  if (_themeStyleCache.has(name)) return _themeStyleCache.get(name);
+  let style = {};
+  try {
+    const file = path.resolve(GLOBAL_THEME_ROOT, name, 'config.js');
+    if (fs.existsSync(file)) {
+      const mod = await import(`${pathToFileURL(file).href}?t=${Date.now()}`);
+      style = mod?.style || {};
+    }
+  } catch (err) {
+    logger.debug?.(`[HoYoGet][help] 主题 ${name} 读取失败: ${err?.message || err}`);
+  }
+  _themeStyleCache.set(name, style);
+  return style;
+}
+
 /** 生成喵喵同款主题样式（宽度、配色、行底、毛玻璃） */
-function globalStyle(helpCfg) {
-  const style = { ...GLOBAL_THEME_STYLE, ...(helpCfg.style || {}) };
+function globalStyle(helpCfg, themeStyle = {}) {
+  // 主题自带的配色优先，其次 helpCfg.style，最后内置默认
+  const style = { ...GLOBAL_THEME_STYLE, ...(helpCfg.style || {}), ...(themeStyle || {}) };
   const colCount = Math.min(5, Math.max(2, parseInt(helpCfg.colCount) || 3));
   const colWidth = Math.min(500, Math.max(100, parseInt(helpCfg.colWidth) || 265));
   const width = Math.min(2500, Math.max(800, colCount * colWidth + 30));
@@ -152,11 +199,14 @@ export class help extends plugin {
       if (custom) {
         const helpCfg = custom.helpCfg || {};
         const helpList = custom.helpList.filter(group => !(group.auth === 'master' && !e.isMaster));
-        const { style, colCount } = globalStyle(helpCfg);
+        const themeName = pickGlobalTheme(helpCfg);
+        const themeStyle = await loadGlobalThemeStyle(themeName);
+        const { style, colCount } = globalStyle(helpCfg, themeStyle);
         const img = await render('global_help/index', {
           helpCfg,
           helpGroup: buildHelpGroups(helpList, colCount),
           colCount,
+          themeName,
           style,
         }, { e, pct: 1 });
         return e.reply(img);

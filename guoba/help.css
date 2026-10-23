@@ -1,4 +1,16 @@
-.hoyo-help { padding: 4px 2px 14px; }
+.hoyo-help { position: relative; padding: 4px 2px 14px; }
+.hoyo-help::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: 20px;
+  background: var(--hp-bg, none) center/cover no-repeat;
+  opacity: .10;
+  filter: blur(1px);
+  pointer-events: none;
+}
+.hoyo-help > * { position: relative; z-index: 1; }
 .hp-hero {
   position: relative;
   overflow: hidden;
@@ -9,10 +21,12 @@
   padding: 20px 22px;
   border-radius: 18px;
   color: #eaf6ff;
-  background:
-    radial-gradient(circle at 12% 10%, rgba(94,234,212,.30), transparent 36%),
-    radial-gradient(circle at 88% 0%, rgba(167,139,250,.34), transparent 40%),
-    linear-gradient(135deg, #0b1224 0%, #111a33 55%, #0d1730 100%);
+  background-color: #0b1224;
+  background-image:
+    linear-gradient(135deg, rgba(7,12,24,.80) 0%, rgba(9,16,32,.86) 55%, rgba(7,12,24,.90) 100%),
+    var(--hp-bg, linear-gradient(135deg, #0b1224 0%, #111a33 55%, #0d1730 100%));
+  background-size: auto, cover;
+  background-position: center;
   border: 1px solid rgba(125,226,255,.24);
   box-shadow: 0 18px 46px rgba(20,40,80,.18);
 }
@@ -173,7 +187,8 @@
   padding: 10px 12px 10px 14px;
   border-radius: 10px;
   border: 1px solid var(--g-border, #e3e8ef);
-  background: var(--g-bg-soft, #f7f9fc);
+  background: color-mix(in srgb, var(--g-bg-soft, #f7f9fc) 82%, transparent);
+  backdrop-filter: blur(8px);
   cursor: pointer;
   transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
 }

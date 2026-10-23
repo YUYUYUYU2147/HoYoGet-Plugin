@@ -99,6 +99,7 @@
     metaEl.textContent = '共 ' + groups.length + ' 个板块 / '
       + groups.reduce((n, g) => n + g.list.length, 0) + ' 条指令'
       + (q || only ? ' · 已筛选' : '')
+      + (metaEl.dataset.theme ? ' · 主题 ' + metaEl.dataset.theme : '')
 
     if (!shown.length) {
       groupsEl.innerHTML = '<div class="hp-empty">没有匹配的指令，换个关键词试试</div>'
@@ -136,6 +137,21 @@
     })
   }
 
+  let themeName = ''
+  async function loadTheme(name) {
+    if (!name || name === themeName) return
+    themeName = name
+    try {
+      const res = await fetch(g.apiBase + '/help/theme?name=' + encodeURIComponent(name) + '&file=bg', {
+        headers: { [g.tokenKey || 'guoba-access-token']: g.token || '' },
+      })
+      if (!res.ok) return
+      const url = URL.createObjectURL(await res.blob())
+      document.querySelector('.hoyo-help')?.style.setProperty('--hp-bg', 'url("' + url + '")')
+      metaEl.dataset.theme = name
+    } catch { /* 主题图失败不影响内容 */ }
+  }
+
   let spriteUrl = ''
   async function loadSprite() {
     if (spriteUrl) return
@@ -165,6 +181,7 @@
       if (titleEl && cfg.title) titleEl.textContent = cfg.title
       if (subEl && (cfg.subTitle || cfg.subtitle)) subEl.textContent = cfg.subTitle || cfg.subtitle
       await loadSprite()
+      await loadTheme(payload.theme || 'default')
       const options = groups.map(group => '<option value="' + esc(group.group) + '">' + esc(group.group) + '</option>').join('')
       groupSel.innerHTML = '<option value="">全部板块</option>' + options
       render()

@@ -13,6 +13,7 @@ import YAML from 'yaml'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const STOKEN_DIR = path.join(ROOT, 'data', 'Stoken')
+const HELP_THEME_ROOT = path.join(ROOT, 'resources', 'global_help', 'theme')
 
 /** 通行证脱敏：只留后 4 位，面板里不该出现完整 stuid */
 function maskStuid(stuid) {
@@ -234,6 +235,28 @@ const PAGE_HTML = `
 </div>
 `
 
+function helpThemeNames() {
+  try {
+    return fs.readdirSync(HELP_THEME_ROOT, { withFileTypes: true })
+      .filter(e => e.isDirectory() && fs.existsSync(path.join(HELP_THEME_ROOT, e.name, 'main.png')))
+      .map(e => e.name)
+  } catch {
+    return ['default']
+  }
+}
+
+function pickHelpTheme(helpCfg = {}) {
+  const all = helpThemeNames()
+  let names = all
+  if (Array.isArray(helpCfg.theme) && helpCfg.theme.length) names = all.filter(n => helpCfg.theme.includes(n))
+  else if (helpCfg.theme && helpCfg.theme !== 'all') names = all.filter(n => n === String(helpCfg.theme))
+  const exclude = Array.isArray(helpCfg.themeExclude) ? helpCfg.themeExclude : []
+  if (exclude.length) names = names.filter(n => !exclude.includes(n))
+  if (!names.length) names = all.filter(n => n !== 'default')
+  if (!names.length) names = ['default']
+  return names[Math.floor(Math.random() * names.length)]
+}
+
 const HELP_HTML = `
 <div class="hoyo-help">
   <div class="hp-hero">
@@ -447,6 +470,21 @@ export function init(ctx) {
     }
   })
 
+  ctx.registerApi('get', '/help/theme', (req, res) => {
+    try {
+      const q = req.query || {}
+      const name = String(q.name || 'default')
+      const file = String(q.file || 'bg') === 'main' ? 'main.png' : 'bg.jpg'
+      if (!helpThemeNames().includes(name)) return res.status(404).end()
+      const abs = path.join(HELP_THEME_ROOT, name, file)
+      if (!abs.startsWith(HELP_THEME_ROOT)) return res.status(404).end()
+      res.sendFile(abs)
+    } catch (err) {
+      ctx.logger?.warn?.(`[HoYoGet][guoba] 读取帮助主题失败：${err?.message || err}`)
+      res.status(404).end()
+    }
+  })
+
   ctx.registerApi('get', '/help/icon', (req, res) => {
     try {
       res.sendFile(path.join(ROOT, 'resources', 'global_help', 'icon.png'))
@@ -469,7 +507,8 @@ export function init(ctx) {
       else if (fs.existsSync(detail)) target = detail
       else target = fallback
       const raw = YAML.parse(fs.readFileSync(target, 'utf8')) || []
-      const result = Array.isArray(raw) ? { groups: raw } : raw
+      const result = Array.isArray(raw) ? { helpList: raw } : raw
+      result.theme = pickHelpTheme(result.helpCfg || {})
       res.json({ ok: true, code: 0, message: 'ok', result })
     } catch (err) {
       ctx.logger?.error?.(`[HoYoGet][guoba] 读取全局帮助失败：${err?.message || err}`)
