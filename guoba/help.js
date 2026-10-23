@@ -36,6 +36,10 @@
     { key: 'headerBgColor', label: '板块标题底色', ph: 'rgba(6,21,31,.4)' },
     { key: 'rowBgColor1', label: '奇数行底色', ph: 'rgba(6,21,31,.2)' },
     { key: 'rowBgColor2', label: '偶数行底色', ph: 'rgba(6,21,31,.35)' },
+    { key: 'tagRed', label: '标签颜色-红', ph: '#dc2626' },
+    { key: 'tagAmber', label: '标签颜色-琥珀', ph: '#b45309' },
+    { key: 'tagGreen', label: '标签颜色-绿', ph: '#15803d' },
+    { key: 'tagGray', label: '标签颜色-灰', ph: '#6b7280' },
     { key: 'titleSize', label: '大标题字号(px)', ph: '50', size: true },
     { key: 'groupSize', label: '板块标题字号(px)', ph: '18', size: true },
     { key: 'itemSize', label: '指令标题字号(px)', ph: '16', size: true },
@@ -690,6 +694,17 @@
     }
   }
 
+  /** 把外观样式里的标签颜色映射成 CSS 变量（只影响锅巴页标签） */
+  function applyTagColors(style = {}) {
+    const root = document.querySelector('.hoyo-help')
+    if (!root) return
+    const map = { tagRed: '--hp-tag-red', tagAmber: '--hp-tag-amber', tagGreen: '--hp-tag-green', tagGray: '--hp-tag-gray' }
+    for (const [key, cssVar] of Object.entries(map)) {
+      if (style[key]) root.style.setProperty(cssVar, style[key])
+      else root.style.removeProperty(cssVar)
+    }
+  }
+
   async function load() {
     groupsEl.innerHTML = '<div class="hp-empty">加载中…</div>'
     try {
@@ -704,6 +719,7 @@
       themes = Array.isArray(payload.themes) ? payload.themes : []
       iconCount = Number(payload.iconCount) || 360
       version = String(payload.version || '')
+      applyTagColors(payload.helpCfg?.style || {})
       const cfg = payload.helpCfg || payload
       const titleEl = el('hp-title')
       const subEl = el('hp-sub')

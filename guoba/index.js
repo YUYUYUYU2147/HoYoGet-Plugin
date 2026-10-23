@@ -528,7 +528,7 @@ export function init(ctx) {
       if (Array.isArray(cfg.themeExclude)) cleanCfg.themeExclude = cfg.themeExclude.map(v => str(v, 40)).slice(0, 60)
       if (typeof cfg.bgBlur === 'boolean') cleanCfg.bgBlur = cfg.bgBlur
       if (cfg.style && typeof cfg.style === 'object') {
-        const colorKeys = ['fontColor', 'descColor', 'titleColor', 'subTitleColor', 'fontShadow', 'contBgColor', 'headerBgColor', 'rowBgColor1', 'rowBgColor2']
+        const colorKeys = ['fontColor', 'descColor', 'titleColor', 'subTitleColor', 'fontShadow', 'contBgColor', 'headerBgColor', 'rowBgColor1', 'rowBgColor2', 'tagRed', 'tagAmber', 'tagGreen', 'tagGray']
         const sizeKeys = ['titleSize', 'groupSize', 'itemSize', 'descSize', 'contBgBlur']
         const style = {}
         for (const key of colorKeys) {

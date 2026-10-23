@@ -189,7 +189,7 @@ async function pickGlobalBackground(helpCfg, themeName) {
 
 /** 生成喵喵同款主题样式（宽度、配色、行底、毛玻璃） */
 /* 用户自定义样式只允许这些键，避免把任意 CSS 注入模板 */
-const STYLE_COLOR_KEYS = ['fontColor', 'descColor', 'titleColor', 'subTitleColor', 'fontShadow', 'contBgColor', 'headerBgColor', 'rowBgColor1', 'rowBgColor2'];
+const STYLE_COLOR_KEYS = ['fontColor', 'descColor', 'titleColor', 'subTitleColor', 'fontShadow', 'contBgColor', 'headerBgColor', 'rowBgColor1', 'rowBgColor2', 'tagRed', 'tagAmber', 'tagGreen', 'tagGray'];
 const STYLE_SIZE_KEYS = ['titleSize', 'groupSize', 'itemSize', 'descSize', 'contBgBlur'];
 
 function safeCssValue(value) {
