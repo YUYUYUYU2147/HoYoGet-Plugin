@@ -1424,6 +1424,20 @@ const PROF_WEIGHT_KEY = { 1: 'strong', 2: 'stun', 3: 'anomaly', 4: 'support', 5:
 const CHAR_WEIGHT_OVERRIDE = {
   雅: { '攻击力百分比': 1, '暴击率': 1, '暴击伤害': 1, '穿透值': .75, '属性伤害加成': 1, '异常精通': .25 },
 }
+// 角色级规则覆盖：对齐 ZZZ-Plugin 1a32207（2026-10）
+//   诺姆 / 洛克茜 -> 冲击·双爆（stun）
+//   菲欧妮 -> 主C·异常（anomaly）
+// 面板 profession 偶尔缺失/为 0（尤其是新角色），此时会落到 strong 默认权重；
+// 用角色名兜底，保证新角色不会按强攻双暴算。
+const CHAR_RULE_OVERRIDE = {
+  '诺姆': 'stun',
+  '诺姆·霍洛维尔': 'stun',
+  '洛克茜': 'stun',
+  '洛克茜·伊芙莉塔·普莱斯': 'stun',
+  '菲欧妮': 'anomaly',
+  '菲欧妮·蕾法爱菈': 'anomaly',
+}
+const RULE_LABEL = { strong: '强攻', stun: '击破', anomaly: '异常', support: '支援', rupture: '命破', defender: '防护', edge: '锋御' }
 const PROF_WEIGHT_NAME = { 1: '强攻', 2: '击破', 3: '异常', 4: '支援', 5: '防护', 6: '命破', 7: '锋御' }
 
 /** 取评分权重（按 property_id） */
@@ -1431,10 +1445,10 @@ function getScoreWeight(charName, stats, profession, elementType, baseProps = {}
   const elemId = ELEM_DMG_ID[elementType]
   /* 角色级覆盖优先：命中就直接用覆盖表，不再看职业 */
   const override = CHAR_WEIGHT_OVERRIDE[charName]
-  const key = PROF_WEIGHT_KEY[profession] || 'strong'
+  const key = CHAR_RULE_OVERRIDE[charName] || PROF_WEIGHT_KEY[profession] || 'strong'
   const ruleName = override
     ? `自研·${charName}（特化）`
-    : `自研·${PROF_WEIGHT_NAME[profession] || '强攻'}`
+    : `自研·${RULE_LABEL[key] || PROF_WEIGHT_NAME[profession] || '强攻'}`
   const named = { ...(override || SELF_SCORE_WEIGHTS[key]) }
   const weight = {}
   for (const nm in named) {
