@@ -12,6 +12,7 @@
 | --- | --- | --- |
 | 新增 | **锅巴面板服务选择** —— 面板设置新增「原神面板服务 / 星铁面板服务」下拉：自动（Enka/EnkaHSR）、miao API、MiniGG、X-Enka、Lyln、Mihomo、Avocado；只影响展示柜更新，米游社更新仍走 CK | 锅巴 → 面板 → 原神/星铁面板服务 |
 | 修复 | **原神/星铁展示柜更新默认服务** —— 之前默认走 mgg（原神）/ homo（星铁）第三方镜像，数据可能不是游戏内真实展柜；现在展示柜模式默认改用 Enka / EnkaHSR，显式配置的面板服务仍优先 | `#更新面板`、`*更新面板` |
+| 修复 | **面板服务配置仍未生效** —— 内置版配置在 `system/vendor/miao/config`，但 `Data.importCfg` 去 meta 资源根找；已改为从 vendor 路径加载，Enka/EnkaHSR 的 listApi 正常 | `#更新面板`、`*更新面板` |
 | 修复 | **原神/星铁面板更新报 `profileApi is not a function`** —— 内置 miao 缺少 `config/system/profile_system.js`，面板服务没有 listApi/URL；已补回该文件，Enka / EnkaHSR / MiniGG / Mihomo / Avocado 等都能正常请求 | `#更新面板`、`*更新面板` |
 | 优化 | **新角色评分规则适配** —— 对齐 ZZZ-Plugin `1a32207`：诺姆/洛克茜按「冲击·双爆」、菲欧妮按「主C·异常」计分；即使面板 profession 缺失，也会按角色名兜底，不会落到强攻默认权重 | `%更新面板` / 角色详情评分 |
 | 新增 | **原神/星铁面板双服务更新** —— `#更新面板` / `*更新面板` 走展示柜（Enka/miao 等公开服务，无需 CK）；`#米游社更新面板` / `*米游社更新面板` 走米游社面板（需 CK）；列表给本次更新到的角色加绿点与头像绿圈 | `#更新面板`、`*更新面板`、`#米游社更新面板` |

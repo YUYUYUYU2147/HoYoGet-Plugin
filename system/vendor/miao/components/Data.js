@@ -2,7 +2,7 @@ import fs from "node:fs"
 import crypto from "node:crypto"
 import util from "node:util"
 import lodash from "lodash"
-import { rootPath, metaRoot } from "#hoyo.miao.path"
+import { rootPath, metaRoot, vendorPath } from "#hoyo.miao.path"
 
 const _path = rootPath
 const getRoot = (root = "") => {
@@ -14,6 +14,8 @@ const getRoot = (root = "") => {
     /* 内置版：meta 资源根可能是本插件自己的 resources，也可能还是外部 miao-plugin */
     const res = metaRoot()
     root = res.endsWith('resources') ? `${res}/../` : `${res}/`
+  } else if (root === "vendor") {
+    root = `${vendorPath}/`
   } else {
     root = `${_path}/plugins/${root}/`
   }
@@ -144,8 +146,9 @@ let Data = {
   },
 
   async importCfg(key) {
-    let sysCfg = await Data.importModule(`config/system/${key}_system.js`, "miao")
-    let diyCfg = await Data.importModule(`config/${key}.js`, "miao")
+    // 内置版配置实际在 system/vendor/miao/config，而不是 meta 资源根的 config
+    let sysCfg = await Data.importModule(`config/system/${key}_system.js`, "vendor")
+    let diyCfg = await Data.importModule(`config/${key}.js`, "vendor")
     if (diyCfg.isSys) {
       console.error(`miao-plugin: config/${key}.js无效，已忽略`)
       console.error(`如需配置请复制config/${key}_default.js为config/${key}.js，请勿复制config/system下的系统文件`)
