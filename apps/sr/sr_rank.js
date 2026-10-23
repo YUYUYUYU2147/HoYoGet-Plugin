@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { pluginPriority, render } from '#HoYoGet'
 import { fetchLeaderboard, fetchCharacterMap, STAT_NAMES, DEFAULT_STAT } from '../../system/fortoffans.js'
 import { metaResRel } from '#hoyo.miao.path'
+import { getRoleProfile } from '../../system/roleProfile.js'
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const NAMES_FILE = path.join(PLUGIN_ROOT, 'system', 'default', 'sr_workshop_names.json')
@@ -130,7 +131,8 @@ export class sr_global_rank extends plugin {
     const file = path.join(process.cwd(), 'data', 'PlayerData', 'sr', `${uid}.json`)
     let data = {}
     try { data = JSON.parse(fs.readFileSync(file, 'utf8')) } catch (_) { /* ignore */ }
-    const nickname = nicknameOverride || String(data?.name || '').trim()
+    const roleProfile = await getRoleProfile(e, uid, 'sr').catch(() => ({}))
+    const nickname = nicknameOverride || roleProfile?.nickname || String(data?.name || '').trim()
     if (!nickname) {
       return e.reply(`还没读到 UID ${uid} 的面板数据。\n请先发「*更新面板」或「*米游社更新面板」，把角色放进游戏内展柜后再试。`)
     }
@@ -143,7 +145,7 @@ export class sr_global_rank extends plugin {
     let Character = null
     try { ({ Character } = await import('#hoyo.miao.models')) } catch (_) { /* ignore */ }
     // system/ 下的模块被静态 import 时热重载不会替换，这里带版本号动态加载
-    const { fetchPersonalRank } = await import(`../../system/fortoffans.js?t=${Date.now()}`)
+    const { fetchPersonalRank, fetchLeaderboardRank } = await import(`../../system/fortoffans.js?t=${Date.now()}`)
     const results = []
     let errors = 0
     for (let i = 0; i < avatars.length; i += 6) {
@@ -153,13 +155,21 @@ export class sr_global_rank extends plugin {
           const pr = await fetchPersonalRank({ nickname, char: id, eidolon: a.cons ?? a.rank ?? 0 })
           if (!pr || pr.rank == null) return null
           const e = pr.entry || {}
+          // 优先用遗器评分（wrqs）榜；searchRank 对 wrqs 不生效，需要逐页找
+          let wrqs = null
+          if (e.uid) {
+            try { wrqs = await fetchLeaderboardRank({ char: id, eid: pr.bracket, stat: 'wrqs', uid: e.uid, maxPages: 40 }) } catch (_) {}
+          }
+          const rank = wrqs?.rank ?? pr.rank
+          const total = wrqs?.total ?? pr.total
           const eidolon = Number(e.eidolon ?? a.cons ?? a.rank ?? 0) || 0
-          const pct = pr.total ? Math.max(0, Math.min(100, (1 - pr.rank / pr.total) * 100)) : 0
+          const pct = total ? Math.max(0, Math.min(100, (1 - rank / total) * 100)) : 0
           return {
             name: chars[id]?.name || e.char_name || a.name || id,
             face: Character?.get?.(id)?.imgs?.face || '',
-            rank: pr.rank,
-            total: pr.total,
+            rank,
+            total,
+            rankKind: wrqs ? '遗器评分' : 'CRIT',
             eidolon,
             beatPercent: pct.toFixed(1),
             critValue: e.stat_tcv != null ? Number(e.stat_tcv).toFixed(1) : '—',
@@ -186,8 +196,10 @@ export class sr_global_rank extends plugin {
       const img = await render('sr_rank/my', {
         nickname,
         uid,
-        level: data?.level || '',
-        signature: data?.sign || '',
+        ownerAvatar: roleProfile?.avatar || '',
+        level: roleProfile?.userLevel || data?.level || '',
+        signature: roleProfile?.signature || data?.sign || '',
+        region: roleProfile?.serverName || '',
         queried: avatars.length,
         rows: results.slice(0, 20),
         _miao_path: miaoResPath,

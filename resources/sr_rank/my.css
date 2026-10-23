@@ -5,3 +5,5 @@
 .myrank .score-cell { width: 190px; }
 .myrank .char-cell { width: 170px; }
 .footer { margin-top: 14px; text-align: center; font-size: 12px; color: rgba(231, 235, 243, .38); }
+.myrank .avatar { width: 54px; }
+.head-user-text { max-width: 800px; }

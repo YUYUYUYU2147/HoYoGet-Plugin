@@ -50,7 +50,7 @@
       {{if globalRank}}
       <div class="global">
         <div class="global-head">
-          <span class="global-title">fort off fans 全球练度榜</span>
+          <span class="global-title">{{if globalRank.rankStat === 'wrqs'}}fort off fans 全球遗器评分榜{{else}}fort off fans 全球练度榜{{/if}}</span>
           <span class="global-bracket">{{globalRank.bracket}} 星魂档位</span>
         </div>
         <div class="global-body">
@@ -59,6 +59,7 @@
             <div class="gr-label">全球第 {{globalRank.rank}} 名{{if globalRank.total}} / 共 {{globalRank.total}} 人{{/if}}</div>
           </div>
           <div class="global-stats">
+            {{if globalRank.wrqs}}<div class="gs"><span class="v">{{globalRank.wrqs}}</span><span class="l">遗器评分</span></div>{{/if}}
             {{if globalRank.statTcv}}<div class="gs"><span class="v">{{globalRank.statTcv}}</span><span class="l">CRIT 值</span></div>{{/if}}
             {{if globalRank.statCritRate}}<div class="gs"><span class="v">{{globalRank.statCritRate}}</span><span class="l">暴率</span></div>{{/if}}
             {{if globalRank.statCritDmg}}<div class="gs"><span class="v">{{globalRank.statCritDmg}}</span><span class="l">暴伤</span></div>{{/if}}

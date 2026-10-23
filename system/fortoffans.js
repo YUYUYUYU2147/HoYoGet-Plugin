@@ -267,7 +267,36 @@ export async function fetchPersonalRank({ nickname, char, eidolon } = {}) {
   return out
 }
 
+/**
+ * 在某个角色/星魂档位/属性榜里找某个 UID 的名次。
+ * search 接口只对 opt_score 的 searchRank 生效，wrqs 等需要用排行榜逐页找。
+ */
+export async function fetchLeaderboardRank({ char, eid, stat = 'wrqs', uid, maxPages = 40 } = {}) {
+  if (!char || !eid || !uid) return null
+  const ck = `lr:${stat}:${char}:${eid}:${uid}:v1`
+  const cached = readCache(ck)
+  if (cached) return cached
+  for (let page = 1; page <= maxPages; page++) {
+    const res = await fetchLeaderboard({ char, eid, stat, page })
+    const entries = res?.entries || []
+    if (!entries.length) break
+    const idx = entries.findIndex(e => String(e?.uid) === String(uid))
+    if (idx >= 0) {
+      const pageSize = Number(res.pageSize) || 100
+      const out = {
+        rank: entries[idx].rank ?? ((page - 1) * pageSize + idx + 1),
+        total: res.total ?? null,
+        stat,
+      }
+      writeCache(ck, out)
+      return out
+    }
+    if (page * entries.length >= (res.total || 0)) break
+  }
+  return null
+}
+
 export default {
-  fetchLeaderboard, fetchCharacterMap, fetchPersonalRank, eidolonBracket,
+  fetchLeaderboard, fetchLeaderboardRank, fetchCharacterMap, fetchPersonalRank, eidolonBracket,
   STAT_NAMES, DEFAULT_STAT,
 }

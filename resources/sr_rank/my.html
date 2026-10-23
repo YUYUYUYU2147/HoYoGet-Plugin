@@ -10,9 +10,10 @@
       <div class="head">
         <div class="head-left">
           <div class="head-user">
+            {{if ownerAvatar}}<img class="head-avatar" src="{{ownerAvatar}}" onerror="this.style.display='none'">{{/if}}
             <div class="head-user-text">
               <div class="title">我的全球排名</div>
-              <div class="subtitle">{{if nickname}}{{nickname}} · {{/if}}UID {{uid}}{{if level}} · 等级 {{level}}{{/if}}</div>
+              <div class="subtitle">{{if nickname}}{{nickname}} · {{/if}}UID {{uid}}{{if level}} · 等级 {{level}}{{/if}}{{if region}} · {{region}}{{/if}}</div>
               {{if signature}}<div class="signature">{{signature}}</div>{{/if}}
             </div>
           </div>
@@ -23,7 +24,7 @@
       </div>
 
       <div class="legend">
-        <span>按同角色、同星魂档位的全球名次排序</span>
+        <span>优先按遗器评分（wrqs）同档位名次排序</span>
         <span class="sep">·</span>
         <span>数据来源 hsr.fortoffans.com</span>
       </div>
@@ -50,7 +51,7 @@
           <div class="dmg-cell">{{r.critRate}} / {{r.critDmg}}</div>
 
           <div class="score-cell">
-            <div class="rank-line"><span class="dmg">#{{r.rank}}</span><span class="dmg-total">/ {{r.total || '?'}}</span></div>
+            <div class="rank-line"><span class="dmg">#{{r.rank}}</span><span class="dmg-total">/ {{r.total || '?'}} · {{r.rankKind}}</span></div>
             <div class="beat-line"><span class="beat-bar" style="--beat: {{r.beatPercent}}%"></span><span class="dmg-beat">{{r.beatPercent}}%</span></div>
           </div>
         </div>

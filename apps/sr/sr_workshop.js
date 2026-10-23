@@ -710,7 +710,7 @@ async function buildSrDetail(arg) {
   // 工坊 item_id 与 fort off fans 的 avatar_id 是同一套 id，可直接复用。
   let globalRank = null
   try {
-    const { fetchPersonalRank } = await import(`../../system/fortoffans.js?t=${Date.now()}`)
+    const { fetchPersonalRank, fetchLeaderboardRank } = await import(`../../system/fortoffans.js?t=${Date.now()}`)
     const localNick = localPlayerName(uid)
     let pr = null
     for (const nm of [...new Set([nick, localNick].filter(Boolean))]) {
@@ -722,13 +722,29 @@ async function buildSrDetail(arg) {
       if (pr && pr.rank != null) break
     }
     if (pr && pr.rank != null) {
+      // 优先用遗器评分（wrqs）名次；search 的 searchRank 只对 opt_score 生效，
+      // wrqs 必须去排行榜逐页找 UID。
+      let wrqsRank = null
+      if (pr.entry?.uid) {
+        try {
+          wrqsRank = await fetchLeaderboardRank({
+            char: String(role.item_id),
+            eid: pr.bracket,
+            stat: 'wrqs',
+            uid: pr.entry.uid,
+            maxPages: 40,
+          })
+        } catch (_) { /* 失败回退 CRIT */ }
+      }
       // 网站配装是否比工坊旧：早于工坊更新时间则提示可能未同步
       const siteAt = pr.entry?.updated_at ? new Date(pr.entry.updated_at).getTime() : 0
       const workAt = row?.updated_at ? new Date(row.updated_at).getTime() : 0
       globalRank = {
-        rank: pr.rank,
-        total: pr.total ?? null,
+        rank: wrqsRank?.rank ?? pr.rank,
+        total: wrqsRank?.total ?? pr.total ?? null,
+        rankStat: wrqsRank ? 'wrqs' : 'tcv',
         bracket: pr.bracket || '',
+        wrqs: pr.entry?.wrqs != null ? Number(pr.entry.wrqs).toFixed(2) : '',
         statTcv: pr.entry?.stat_tcv != null ? Number(pr.entry.stat_tcv).toFixed(1) : '',
         statCritRate: pr.entry?.stat_crit_rate != null ? (Number(pr.entry.stat_crit_rate) * 100).toFixed(1) + '%' : '',
         statCritDmg: pr.entry?.stat_crit_dmg != null ? (Number(pr.entry.stat_crit_dmg) * 100).toFixed(1) + '%' : '',
