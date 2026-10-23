@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="shortcut icon" href="#" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}global_help/index.css" />
+    {{@style}}
+    <title>{{helpCfg.title || '全局帮助'}}</title>
+  </head>
+  <body {{sys.scale}}>
+    <div class="container" id="container">
+      <div class="info-box">
+        <div class="head-box">
+          <div class="title">{{helpCfg.title || '全局帮助'}}</div>
+          <div class="label">{{helpCfg.subTitle || '米哈游插件 · 全部指令速查'}}</div>
+        </div>
+      </div>
+      {{each helpGroup group}}
+      <div class="cont-box">
+        <div class="help-group">{{group.group}}</div>
+        {{if group.rows.length}}
+        <div class="help-table">
+          {{each group.rows row}}
+          <div class="tr">
+            {{each row cell}}
+            <div class="td">
+              {{if cell}}
+              <span class="help-icon" style="{{cell.css}}"></span>
+              <strong class="help-title">{{cell.title}}</strong>
+              <span class="help-desc">{{cell.desc}}</span>
+              {{/if}}
+            </div>
+            {{/each}}
+          </div>
+          {{/each}}
+        </div>
+        {{/if}}
+      </div>
+      {{/each}}
+      <div class="copyright">from 米哈游</div>
+    </div>
+  </body>
+</html>

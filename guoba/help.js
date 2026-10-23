@@ -28,14 +28,21 @@
   }
 
   function normalize(raw) {
-    const list = Array.isArray(raw) ? raw : (raw?.groups || raw?.list || raw?.data || [])
+    const list = Array.isArray(raw) ? raw : (raw?.helpList || raw?.groups || raw?.list || raw?.data || [])
     return list.map(group => ({
       group: String(group?.group || '未分组'),
       auth: group?.auth || '',
-      list: (group?.list || []).map(item => ({
-        title: String(item?.title || ''),
-        desc: String(item?.desc || ''),
-      })).filter(i => i.title || i.desc),
+      list: (group?.list || []).map(item => {
+        const icon = Number(item?.icon) || 0
+        const x = icon ? ((icon - 1) % 10) : 0
+        const y = icon ? ((icon - x - 1) / 10) : 0
+        return {
+          title: String(item?.title || ''),
+          desc: String(item?.desc || ''),
+          icon,
+          x, y,
+        }
+      }).filter(i => i.title || i.desc),
     })).filter(g => g.list.length)
   }
 
@@ -109,10 +116,16 @@
         + '</div>'
         + '<div class="hp-cards">'
         + group.list.map(item => {
+          const icon = item.icon
+            ? '<span class="hp-icon"><i style="background-position:-' + item.x * 100 + 'px -' + item.y * 100 + 'px"></i></span>'
+            : ''
           return '<div class="hp-card" data-cmd="' + esc(commandOf(item.title)) + '">'
             + '<div class="copy">复制</div>'
+            + icon
+            + '<div class="hp-card-main">'
             + '<div class="t">' + esc(item.title) + '</div>'
             + (item.desc ? '<div class="d">' + esc(item.desc) + '</div>' : '')
+            + '</div>'
             + '</div>'
         }).join('')
         + '</div></section>'
@@ -121,6 +134,19 @@
     groupsEl.querySelectorAll('.hp-card').forEach(card => {
       card.addEventListener('click', () => copy(card.dataset.cmd || ''))
     })
+  }
+
+  let spriteUrl = ''
+  async function loadSprite() {
+    if (spriteUrl) return
+    try {
+      const res = await fetch(g.apiBase + '/help/icon', {
+        headers: { [g.tokenKey || 'guoba-access-token']: g.token || '' },
+      })
+      if (!res.ok) return
+      spriteUrl = URL.createObjectURL(await res.blob())
+      groupsEl.style.setProperty('--hp-icon-url', 'url("' + spriteUrl + '")')
+    } catch { /* 图标失败不影响文字 */ }
   }
 
   async function load() {
@@ -133,10 +159,12 @@
       if (!json?.ok) throw new Error(json?.message || '加载失败')
       const payload = json.result || {}
       groups = normalize(payload)
+      const cfg = payload.helpCfg || payload
       const titleEl = el('hp-title')
       const subEl = el('hp-sub')
-      if (titleEl && payload.title) titleEl.textContent = payload.title
-      if (subEl && payload.subtitle) subEl.textContent = payload.subtitle
+      if (titleEl && cfg.title) titleEl.textContent = cfg.title
+      if (subEl && (cfg.subTitle || cfg.subtitle)) subEl.textContent = cfg.subTitle || cfg.subtitle
+      await loadSprite()
       const options = groups.map(group => '<option value="' + esc(group.group) + '">' + esc(group.group) + '</option>').join('')
       groupSel.innerHTML = '<option value="">全部板块</option>' + options
       render()

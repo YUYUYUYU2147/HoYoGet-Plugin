@@ -234,3 +234,29 @@
   .hp-meta { margin-left: 0; width: 100%; }
   .hp-cards { grid-template-columns: 1fr; }
 }
+
+/* 喵喵风格图标：100px 原图缩到 36px，避免缩小背景时的错位 */
+.hp-card { display: flex; align-items: flex-start; gap: 10px; }
+.hp-card-main { flex: 1; min-width: 0; }
+.hp-icon {
+  position: relative;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(0,0,0,.18);
+}
+.hp-icon i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100px;
+  height: 100px;
+  display: block;
+  background-image: var(--hp-icon-url);
+  background-repeat: no-repeat;
+  background-size: 1000px auto;
+  transform: scale(.36);
+  transform-origin: 0 0;
+}

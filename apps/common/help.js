@@ -40,18 +40,83 @@ const THEME_HEAD = {
   default: { title: '米哈游插件', sub: '命令帮助 · 指令速查' },
 };
 
+/* 喵喵帮助主题的默认样式（resources/global_help/theme/default/config.js 同款） */
+const GLOBAL_THEME_STYLE = {
+  fontColor: '#ceb78b',
+  fontShadow: 'none',
+  descColor: '#eee',
+  contBgColor: 'rgba(6, 21, 31, .5)',
+  contBgBlur: 3,
+  headerBgColor: 'rgba(6, 21, 31, .4)',
+  rowBgColor1: 'rgba(6, 21, 31, .2)',
+  rowBgColor2: 'rgba(6, 21, 31, .35)',
+};
+
+/** 读全局帮助：支持喵喵的 helpCfg/helpList，也兼容旧的 title/subtitle/groups */
 function readGlobalHelp() {
   const file = fs.existsSync(GLOBAL_HELP_CFG) ? GLOBAL_HELP_CFG
     : (fs.existsSync(GLOBAL_HELP_PATH) ? GLOBAL_HELP_PATH : '');
   if (!file) return null;
   const raw = yaml.get(file) || {};
+  if (raw.helpCfg || raw.helpList) {
+    const helpCfg = raw.helpCfg || {};
+    const helpList = raw.helpList || raw.helpGroup || [];
+    if (!Array.isArray(helpList) || !helpList.length) return null;
+    return { helpCfg, helpList };
+  }
   const groups = Array.isArray(raw) ? raw : (raw.groups || raw.list || raw.data || []);
   if (!Array.isArray(groups) || !groups.length) return null;
   return {
-    title: String(raw.title || '全局帮助'),
-    subtitle: String(raw.subtitle || '米哈游插件 · 全部指令速查'),
-    groups,
+    helpCfg: { title: raw.title || '全局帮助', subTitle: raw.subtitle || '米哈游插件 · 全部指令速查' },
+    helpList: groups,
   };
+}
+
+/** 喵喵帮助图标：icon.png 是 50px 一格的雪碧图，按编号取位 */
+function iconCss(icon) {
+  const n = Number(icon);
+  if (!n) return 'display:none';
+  const x = (n - 1) % 10;
+  const y = (n - x - 1) / 10;
+  return `background-position:-${x * 100}px -${y * 100}px`;
+}
+
+/** 预先把每行补齐成 colCount 列，模板只负责渲染，不再做取模运算 */
+function buildHelpGroups(helpList, colCount) {
+  return helpList.map(group => {
+    const items = (group.list || []).map(item => ({
+      title: item.title || '',
+      desc: item.desc || '',
+      css: iconCss(item.icon),
+    }));
+    const rows = [];
+    for (let i = 0; i < items.length; i += colCount) {
+      const row = items.slice(i, i + colCount);
+      while (row.length < colCount) row.push(null);
+      rows.push(row);
+    }
+    return { group: group.group || '未分组', auth: group.auth, rows };
+  });
+}
+
+/** 生成喵喵同款主题样式（宽度、配色、行底、毛玻璃） */
+function globalStyle(helpCfg) {
+  const style = { ...GLOBAL_THEME_STYLE, ...(helpCfg.style || {}) };
+  const colCount = Math.min(5, Math.max(2, parseInt(helpCfg.colCount) || 3));
+  const colWidth = Math.min(500, Math.max(100, parseInt(helpCfg.colWidth) || 265));
+  const width = Math.min(2500, Math.max(800, colCount * colWidth + 30));
+  const blur = helpCfg.bgBlur === false ? 'none' : `blur(${style.contBgBlur ?? 3}px)`;
+  const css = [
+    `body, .container { width: ${width}px; }`,
+    `.help-table .td { width: ${100 / colCount}%; }`,
+    `.help-title, .help-group { color: ${style.fontColor}; text-shadow: ${style.fontShadow}; }`,
+    `.help-desc { color: ${style.descColor}; }`,
+    `.cont-box { background: ${style.contBgColor}; backdrop-filter: ${blur}; }`,
+    `.help-group { background: ${style.headerBgColor}; }`,
+    `.help-table .tr:nth-child(odd) { background: ${style.rowBgColor1}; }`,
+    `.help-table .tr:nth-child(even) { background: ${style.rowBgColor2}; }`,
+  ].join('\n');
+  return { style: `<style>${css}</style>`, colCount, width };
 }
 
 export class help extends plugin {
@@ -82,20 +147,26 @@ export class help extends plugin {
 
   async globalHelp(e) {
     try {
-      // 优先使用自定义全局帮助（config/global_help.yaml），否则回退完整帮助
+      // 优先使用喵喵风格全局帮助（config/global_help.yaml），否则回退完整帮助
       const custom = readGlobalHelp();
-      let data;
-      let head = THEME_HEAD.global;
       if (custom) {
-        data = custom.groups;
-        head = { title: custom.title, sub: custom.subtitle };
-      } else {
-        const raw = yaml.get(DETAIL_HELP_PATH) || [];
-        data = Array.isArray(raw) ? raw : (raw.list || raw.data || []);
+        const helpCfg = custom.helpCfg || {};
+        const helpList = custom.helpList.filter(group => !(group.auth === 'master' && !e.isMaster));
+        const { style, colCount } = globalStyle(helpCfg);
+        const img = await render('global_help/index', {
+          helpCfg,
+          helpGroup: buildHelpGroups(helpList, colCount),
+          colCount,
+          style,
+        }, { e, pct: 1 });
+        return e.reply(img);
       }
+      const raw = yaml.get(DETAIL_HELP_PATH) || [];
+      const data = Array.isArray(raw) ? raw : (raw.list || raw.data || []);
       if (!data.length) {
         return e.reply('帮助内容为空，可在线查看：' + HELP_URL, true, { recallMsg: 60 });
       }
+      const head = THEME_HEAD.global;
       const img = await render('help/help', {
         data,
         au: !!e.isMaster,

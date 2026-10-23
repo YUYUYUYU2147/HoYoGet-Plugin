@@ -447,6 +447,15 @@ export function init(ctx) {
     }
   })
 
+  ctx.registerApi('get', '/help/icon', (req, res) => {
+    try {
+      res.sendFile(path.join(ROOT, 'resources', 'global_help', 'icon.png'))
+    } catch (err) {
+      ctx.logger?.warn?.(`[HoYoGet][guoba] 读取帮助图标失败：${err?.message || err}`)
+      res.status(404).end()
+    }
+  })
+
   ctx.registerApi('get', '/help', async (req, res) => {
     try {
       // 优先自定义全局帮助，其次完整帮助

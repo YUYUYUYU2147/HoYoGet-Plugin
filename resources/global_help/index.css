@@ -1,0 +1,105 @@
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; user-select: none; }
+body {
+  width: 830px;
+  font-size: 18px;
+  color: #1e1f20;
+  font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+  background: url("theme/default/bg.jpg") center/cover no-repeat;
+  background-attachment: fixed;
+}
+.container {
+  width: 830px;
+  padding: 20px 15px 10px;
+  background: url("theme/default/main.png") top left no-repeat;
+  background-size: 100% auto;
+}
+.head-box {
+  border-radius: 15px;
+  padding: 10px 20px;
+  position: relative;
+  color: #fff;
+  margin: 60px 0 0;
+}
+.head-box .title {
+  font-size: 50px;
+  line-height: 1.2;
+  text-shadow: 0 0 1px #000, 1px 1px 3px rgba(0, 0, 0, .9);
+}
+.head-box .label {
+  margin-top: 4px;
+  font-size: 18px;
+  text-shadow: 0 0 1px #000, 1px 1px 3px rgba(0, 0, 0, .9);
+}
+.cont-box {
+  border-radius: 15px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  overflow: hidden;
+  box-shadow: 0 5px 10px 0 rgba(0, 0, 0, .15);
+  position: relative;
+}
+.help-group {
+  font-size: 18px;
+  font-weight: bold;
+  padding: 15px 15px 10px 20px;
+}
+.help-table {
+  text-align: center;
+  border-collapse: collapse;
+  margin: 0;
+  border-radius: 0 0 10px 10px;
+  display: table;
+  overflow: hidden;
+  width: 100%;
+  color: #fff;
+}
+.help-table .tr { display: table-row; }
+.help-table .td {
+  font-size: 14px;
+  display: table-cell;
+  box-shadow: 0 0 1px 0 #888 inset;
+  padding: 12px 0 12px 50px;
+  line-height: 24px;
+  position: relative;
+  text-align: left;
+  vertical-align: top;
+}
+.help-table .tr:last-child .td { padding-bottom: 12px; }
+.help-icon {
+  /* 用原始尺寸 100px 取图，再整体缩到 40px；按 50px 缩放时部分环境会错位 */
+  width: 100px;
+  height: 100px;
+  display: block;
+  position: absolute;
+  background-image: url("icon.png");
+  background-repeat: no-repeat;
+  background-size: 1000px auto;
+  border-radius: 12px;
+  left: 6px;
+  top: 12px;
+  transform: scale(.4);
+  transform-origin: 0 0;
+}
+.help-title {
+  display: block;
+  color: #d3bc8e;
+  font-size: 16px;
+  line-height: 24px;
+  word-break: break-word;
+}
+.help-desc {
+  display: block;
+  font-size: 13px;
+  line-height: 18px;
+  word-break: break-word;
+  opacity: .92;
+}
+.copyright {
+  font-size: 14px;
+  text-align: center;
+  color: #fff;
+  position: relative;
+  padding: 10px 0;
+  text-shadow: 1px 1px 1px #000;
+  margin: 10px 0;
+}
