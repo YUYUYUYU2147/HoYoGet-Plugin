@@ -363,14 +363,14 @@ function appStyleCss(helpCfg, themeStyle = {}, pageWidth = 1000) {
   const color = key => safeCssValue(raw[key])
   const size = (key, def, max) => safeSize(raw[key], 8, max) || def
   const dimNum = Number(raw.pageDim)
-  const dim = Number.isFinite(dimNum) ? Math.min(100, Math.max(0, dimNum)) / 100 : 0.82
-  const blur = safePx(raw.pageBlur, 20) || '14px'
+  const dim = Number.isFinite(dimNum) ? Math.min(100, Math.max(0, dimNum)) / 100 : 0.88
+  const blur = safePx(raw.pageBlur, 20) || '18px'
   const css = `body {
     width: ${pageWidth}px;
-    --w-head: ${color('titleColor') || '#ffffff'};
-    --w-sub: ${color('subTitleColor') || 'rgba(255,255,255,.9)'};
+    --w-head: ${color('titleColor') || '#111827'};
+    --w-sub: ${color('subTitleColor') || '#6b7280'};
     --w-item: ${color('fontColor') || '#111827'};
-    --w-desc: ${color('descColor') || '#4b5563'};
+    --w-desc: ${color('descColor') || '#6b7280'};
     --w-tag-red: ${color('tagRed') || '#dc2626'};
     --w-tag-amber: ${color('tagAmber') || '#b45309'};
     --w-tag-green: ${color('tagGreen') || '#15803d'};
@@ -427,8 +427,8 @@ export class help extends plugin {
         const layout = helpCfg.layout === 'classic' ? 'classic' : (helpCfg.layout === 'web' ? 'web' : 'app');
         if (layout !== 'classic') {
           const web = buildWebData(helpList, colCount);
-          // 纵向：板块上下排列，板块内按 colCount 分列
-          for (const group of web.groups) group.cols = colCount;
+          // 纵向：板块上下排列；iOS 版每组单列，网页深色版按 colCount 分列
+          for (const group of web.groups) group.cols = layout === 'app' ? 1 : colCount;
           const pageWidth = 1000;
           const img = await render('global_help/web', {
             helpCfg,

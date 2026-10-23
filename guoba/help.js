@@ -45,8 +45,8 @@
     { key: 'itemSize', label: '指令标题字号(px)', ph: '16', size: true },
     { key: 'descSize', label: '说明字号(px)', ph: '13', size: true },
     { key: 'contBgBlur', label: '面板模糊(0-20)', ph: '3', size: true },
-    { key: 'pageDim', label: '页面遮罩(0-100)', ph: '82', size: true },
-    { key: 'pageBlur', label: '页面背景模糊(0-20)', ph: '14', size: true },
+    { key: 'pageDim', label: '页面遮罩(0-100)', ph: '88', size: true },
+    { key: 'pageBlur', label: '页面背景模糊(0-20)', ph: '18', size: true },
   ]
   const iconUrl = game => g.apiBase + '/game/icon?game=' + encodeURIComponent(game) + '&token=' + encodeURIComponent(g.token || '')
 
@@ -656,7 +656,7 @@
       + '<label>副标题<input id="he-subtitle" value="' + esc(cfg.subTitle) + '" /></label>'
       + '<label>列数<input id="he-cols" type="number" min="2" max="5" value="' + esc(cfg.colCount) + '" /></label>'
       + '<input id="he-theme" type="hidden" value="' + esc(themeValue(cfg.theme)) + '" />'
-      + '<label>页面风格<select id="he-layout"><option value="app"' + ((!cfg.layout || cfg.layout === 'app') ? ' selected' : '') + '>App 浅色</option><option value="web"' + (cfg.layout === 'web' ? ' selected' : '') + '>网页（深色）</option><option value="classic"' + (cfg.layout === 'classic' ? ' selected' : '') + '>经典（喵喵）</option></select></label>'
+      + '<label>页面风格<select id="he-layout"><option value="app"' + ((!cfg.layout || cfg.layout === 'app') ? ' selected' : '') + '>iOS 浅色</option><option value="web"' + (cfg.layout === 'web' ? ' selected' : '') + '>网页（深色）</option><option value="classic"' + (cfg.layout === 'classic' ? ' selected' : '') + '>经典（喵喵）</option></select></label>'
       + '<label>背景<select id="he-bg"><option value="theme"' + (cfg.background === 'theme' ? ' selected' : '') + '>本地主题</option><option value="api"' + (cfg.background === 'api' ? ' selected' : '') + '>随机 API</option><option value="mix"' + (cfg.background === 'mix' ? ' selected' : '') + '>混合</option></select></label>'
       + '<label>随机 API<input id="he-bgapi" value="' + esc(cfg.backgroundApi) + '" /></label>'
       + '<label class="he-check"><input id="he-blur" type="checkbox"' + (cfg.bgBlur ? ' checked' : '') + ' /> 背景毛玻璃</label>'
