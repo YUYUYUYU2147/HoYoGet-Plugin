@@ -334,17 +334,19 @@ body.elem-physical { --elem-line: rgba(207, 216, 227, .9); --elem-glow: rgba(180
 
 /* 面板与立绘同框：右下浮层，立绘从左侧透出 */
 .hero .attrs {
-  position: absolute;
-  right: 0;
-  top: 66px;
-  bottom: 0;
+  /* 不固定高度：属性条数多时跟着内容长高，避免数字顶出方框 */
+  position: relative;
+  right: auto;
+  top: auto;
+  bottom: auto;
   width: 262px;
+  margin: 10px 0 0 auto;
   z-index: 2;
-  align-content: center;
   padding: 10px 8px 12px;
   gap: 2px;
-  border-radius: 12px 0 12px 0;
-  background: linear-gradient(90deg, rgba(6, 20, 34, 0), rgba(6, 20, 34, .3) 30%, rgba(6, 20, 34, .5) 100%);
+  border-radius: 12px;
+  background: rgba(6, 20, 34, .46);
+  border: 1px solid rgba(96, 176, 224, .16);
 }
 
 .attr {

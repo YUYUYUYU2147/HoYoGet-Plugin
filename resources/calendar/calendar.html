@@ -30,7 +30,7 @@
           <span class="tag">{{a.tag || '活动'}}</span>
           <span class="time">{{a.startText}}</span>
           <span class="time">{{a.endText}}</span>
-          <span class="remain">{{a.remain}}</span>
+          <span class="remain"><b>{{a.remain}}</b><i class="rbar"><em style="--p: {{a.progress}}%"></em></i></span>
         </div>
         {{/each}}
       </div>

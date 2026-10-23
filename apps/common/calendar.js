@@ -81,8 +81,14 @@ export class calendar extends plugin {
         .slice(0, 40)
         .map(item => {
           const started = !item.start || item.start.isSameOrBefore(now)
+          const totalMs = item.start ? item.end.valueOf() - item.start.valueOf() : 0
+          const leftMs = item.end.valueOf() - now.valueOf()
+          const progress = started
+            ? (totalMs > 0 ? Math.max(0, Math.min(100, leftMs / totalMs * 100)) : 100)
+            : 100
           return {
             title: item.title || item.subtitle || '未命名活动',
+            progress: progress.toFixed(1),
             tag: item.tag || '',
             startText: fmtDate(item.start, now),
             endText: fmtDate(item.end, now),

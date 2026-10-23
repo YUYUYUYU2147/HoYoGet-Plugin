@@ -87,10 +87,13 @@ body {
 
 /* 属性面板：深色磨砂浮层 */
 .hero .attrs {
-  top: 82px;
-  right: 12px;
-  bottom: 12px;
+  /* 自适应高度：属性再多也不超出方框 */
+  position: relative;
+  right: auto;
+  top: auto;
+  bottom: auto;
   width: 252px;
+  margin: 10px 0 0 auto;
   padding: 13px 12px;
   gap: 3px;
   border-radius: 20px;
