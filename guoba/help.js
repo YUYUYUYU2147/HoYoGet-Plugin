@@ -429,6 +429,104 @@
     })
   }
 
+  function hexColor(v) {
+    const s = String(v || '').trim()
+    let m = s.match(/^#([0-9a-f]{3})$/i)
+    if (m) return '#' + m[1].split('').map(c => c + c).join('')
+    m = s.match(/^#([0-9a-f]{6})$/i)
+    if (m) return s
+    m = s.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i)
+    if (m) return '#' + [1, 2, 3].map(i => Number(m[i]).toString(16).padStart(2, '0')).join('')
+    return '#ffffff'
+  }
+
+  function styleFieldHtml(f, cfg) {
+    const value = esc(cfg.style?.[f.key] ?? '')
+    if (f.size) {
+      return '<label>' + f.label + '<input id="he-st-' + f.key + '" value="' + value + '" placeholder="' + esc(f.ph) + '" /></label>'
+    }
+    return '<label>' + f.label
+      + '<div class="he-color-row">'
+      + '<input id="he-st-' + f.key + '" value="' + value + '" placeholder="' + esc(f.ph) + '" />'
+      + '<span class="he-swatch" data-swatch="' + f.key + '" style="background:' + (value || 'transparent') + '"></span>'
+      + '<input type="color" class="he-color-pick" data-for="he-st-' + f.key + '" value="' + hexColor(cfg.style?.[f.key]) + '" title="点击取色" />'
+      + '</div></label>'
+  }
+
+  function bindStyleEditor() {
+    STYLE_FIELDS.forEach(f => {
+      const input = el('he-st-' + f.key)
+      if (!input) return
+      input.addEventListener('input', () => {
+        if (!f.size) {
+          const sw = editorEl.querySelector('[data-swatch="' + f.key + '"]')
+          if (sw) sw.style.background = input.value || 'transparent'
+        }
+        updateStylePreview()
+      })
+      if (!f.size) {
+        const pick = editorEl.querySelector('.he-color-pick[data-for="he-st-' + f.key + '"]')
+        pick?.addEventListener('input', () => {
+          input.value = pick.value
+          const sw = editorEl.querySelector('[data-swatch="' + f.key + '"]')
+          if (sw) sw.style.background = pick.value
+          updateStylePreview()
+        })
+      }
+    })
+    el('he-title')?.addEventListener('input', updateStylePreview)
+    el('he-subtitle')?.addEventListener('input', updateStylePreview)
+    updateStylePreview()
+  }
+
+  function updateStylePreview() {
+    const get = key => String(el('he-st-' + key)?.value || '').trim()
+    const box = el('he-prev-box')
+    if (!box) return
+    const title = el('he-prev-title')
+    const sub = el('he-prev-sub')
+    const group = el('he-prev-group')
+    const rows = [el('he-prev-row1'), el('he-prev-row2')]
+    if (title) title.textContent = el('he-title')?.value || '帮助标题'
+    if (sub) sub.textContent = el('he-subtitle')?.value || '副标题示例'
+    const shadow = get('fontShadow') || 'none'
+    const fontColor = get('fontColor') || '#ceb78b'
+    const descColor = get('descColor') || '#eee'
+    const titleColor = get('titleColor') || '#fff'
+    const subColor = get('subTitleColor') || '#fff'
+    box.style.backgroundColor = get('contBgColor') || 'rgba(6,21,31,.5)'
+    const blur = Number(get('contBgBlur'))
+    box.style.backdropFilter = Number.isFinite(blur) ? 'blur(' + Math.min(20, Math.max(0, blur)) + 'px)' : 'blur(3px)'
+    if (title) {
+      title.style.color = titleColor
+      title.style.textShadow = shadow
+      title.style.fontSize = (Number(get('titleSize')) ? Math.min(40, Number(get('titleSize'))) : 24) + 'px'
+    }
+    if (sub) sub.style.color = subColor
+    if (group) {
+      group.style.color = fontColor
+      group.style.background = get('headerBgColor') || 'rgba(6,21,31,.4)'
+      group.style.textShadow = shadow
+      group.style.fontSize = (Number(get('groupSize')) || 14) + 'px'
+    }
+    if (rows[0]) rows[0].style.background = get('rowBgColor1') || 'rgba(6,21,31,.2)'
+    if (rows[1]) rows[1].style.background = get('rowBgColor2') || 'rgba(6,21,31,.35)'
+    rows.forEach(row => {
+      if (!row) return
+      const strong = row.querySelector('strong')
+      const span = row.querySelector('span')
+      if (strong) {
+        strong.style.color = fontColor
+        strong.style.textShadow = shadow
+        strong.style.fontSize = (Number(get('itemSize')) || 14) + 'px'
+      }
+      if (span) {
+        span.style.color = descColor
+        span.style.fontSize = (Number(get('descSize')) || 12) + 'px'
+      }
+    })
+  }
+
   function renderEditor() {
     const cfg = draft.helpCfg
     const groupsHtml = draft.helpList.map((g, gi) => {
@@ -480,12 +578,22 @@
       + '<div class="he-style">'
       + '<div class="he-style-head"><span>外观样式</span><button type="button" data-act="style-reset">恢复主题默认</button></div>'
       + '<div class="he-style-grid">'
-      + STYLE_FIELDS.map(f => '<label>' + f.label + '<input id="he-st-' + f.key + '" value="' + esc(cfg.style?.[f.key] ?? '') + '" placeholder="' + esc(f.ph) + '" /></label>').join('')
+      + STYLE_FIELDS.map(f => styleFieldHtml(f, cfg)).join('')
+      + '</div>'
+      + '<div class="he-preview"><div class="he-preview-label">效果预览</div>'
+      + '<div class="he-prev-box" id="he-prev-box">'
+      + '<div class="he-prev-title" id="he-prev-title">帮助标题</div>'
+      + '<div class="he-prev-sub" id="he-prev-sub">副标题示例</div>'
+      + '<div class="he-prev-group" id="he-prev-group">板块标题</div>'
+      + '<div class="he-prev-row he-prev-odd" id="he-prev-row1"><strong>#示例指令</strong><span>说明文字效果</span></div>'
+      + '<div class="he-prev-row he-prev-even" id="he-prev-row2"><strong>%示例指令</strong><span>第二行效果</span></div>'
       + '</div></div>'
+      + '</div>'
       + '<div class="he-groups">' + (groupsHtml || '<div class="hp-empty">还没有板块，点下面新增</div>') + '</div>'
       + '<button type="button" class="he-add-group" data-act="group-add">+ 新增板块</button>'
       + '<div class="he-msg" id="he-msg"></div>'
       + '</div>'
+    bindStyleEditor()
     editorEl.querySelectorAll('[data-act]').forEach(btn => {
       btn.addEventListener('click', onEditorAction)
     })
