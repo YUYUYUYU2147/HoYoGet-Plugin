@@ -47,6 +47,8 @@ pools:
         a:
           - 花愈朝夕
         target: 愈生佑翎
+        start: 2026-09-29 12:00:00
+        end: 2026-10-20 12:00:00
         imgs:
           - https://upload-bbs.miyoushe.com/upload/2026/09/29/73565430/b4e52a3e4208c6027e835d24e4d3d3af_7284239669740181753.png
       - name: 【补给】角色补给丨愈生佑翎
@@ -54,6 +56,8 @@ pools:
         s: 愈生佑翎
         a:
           - 午夜苦艾
+        start: 2026-09-29 12:00:00
+        end: 2026-10-20 12:00:00
         imgs:
           - https://upload-bbs.miyoushe.com/upload/2026/09/29/73565430/e10b7d3d51f0fc4128096ad24d4d99cc_4470633074547902847.png
       - name: 【补给】庆典角色补给丨镇×偃月叩晓等目标限时UP
@@ -70,6 +74,8 @@ pools:
         a:
           - 无冕独裁官
         target: 予爱以心
+        start: 2026-10-21 12:00:00
+        end: 2026-11-11 12:00:00
         imgs:
           - https://upload-bbs.miyoushe.com/upload/2026/10/21/73565430/85eb46d621f3fe93437c168242841642_2496375179384353086.png
   - version: "9.0"

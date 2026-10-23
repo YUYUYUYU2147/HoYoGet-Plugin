@@ -5893,6 +5893,38 @@ ${r.summary || ''}`;
     return name && name.length <= 20 ? name : '';
   }
 
+  /**
+   * 从公告配图 URL 里取开池日期。
+   *
+   * 米游社上传路径带日期：https://upload-bbs.miyoushe.com/upload/2026/10/21/73565430/xxx.png
+   * 崩三补给公告的正文只写「>>补给信息 [图片]」，真正的开放时间印在那张官方配图里，
+   * 但**上传日期就等于该批补给的开池日**（同一批发布的角色池/装备池/服装池同一天开）。
+   * 官方公告列表接口拿不到这个路径，必须走「瞬间搜索」按 UP 名找。
+   *
+   * @param {string} keyword UP 名（角色/武器/服装名）
+   * @returns {Promise<{date:string, title:string}|null>} { date: 'YYYY-MM-DD' }
+   */
+  async bh3PoolImageDate(keyword = '') {
+    const kw = String(keyword || '').trim();
+    if (!kw) return null;
+    const posts = await this.searchBh3PostByKeyword(kw);
+    let best = null;
+    for (const post of posts || []) {
+      const title = String(post.title || '');
+      if (!/【补给】/.test(title)) continue;
+      if (!title.includes(kw)) continue;
+      const images = Array.isArray(post.images) ? post.images : [];
+      for (const u of images) {
+        const m = String(u).match(/\/upload\/(\d{4})\/(\d{2})\/(\d{2})\//);
+        if (!m) continue;
+        const date = `${m[1]}-${m[2]}-${m[3]}`;
+        // 同名公告有多个（历史批次），取最新的那个
+        if (!best || date > best.date) best = { date, title, images };
+      }
+    }
+    return best;
+  }
+
   // 给「近期/未来版本」的补给补录各自的开放时间：
   // ① 优先用刷新拿到的公告正文；② 没有就用「瞬间搜索」按 UP 名取公告正文（不受详情接口风控影响）；
   // 只有能唯一定位到某段区间时才写入，取不到就保持版本窗口，绝不猜。（历史版本不处理，避免误填）
@@ -5907,14 +5939,37 @@ ${r.summary || ''}`;
    * 现在只在「同类型的已确认区间全部一致」时才采用，
    * 有多批就放弃推断，交给版本窗口显示。
    */
-  inferBh3PoolTime(pools = [], pool = null, vp = null) {
+  inferBh3PoolTime(pools = [], pool = null, vp = null, imageStart = null) {
     const toTs = s => {
       const t = new Date(String(s || '').replace(/-/g, '/')).getTime();
       return Number.isNaN(t) ? null : t;
     };
     const type = String(pool?.type || '');
-    if (!type) return null;
     const vs = toTs(vp?.start), ve = toTs(vp?.end);
+    const inWindow = (a, b) => !(vs && ve && (a < vs - 86400000 || b > ve + 86400000));
+
+    /* ① 同一批开池：配图日期相同的一批补给共用结束时间。
+       崩三一批通常是「角色池 + 配套装备池 + 服装池」同开同收。 */
+    if (imageStart && imageStart.size) {
+      const myStart = imageStart.get(String(pool?.name));
+      if (myStart) {
+        const day = new Date(myStart).toISOString().slice(0, 10);
+        const ends = [];
+        for (const [name, st] of imageStart.entries()) {
+          if (new Date(st).toISOString().slice(0, 10) !== day) continue;
+          const target = (pools || []).find(x => String(x.name || '') === name);
+          const e = target?.end ? toTs(target.end) : null;
+          if (e) ends.push(e);
+        }
+        // 批内结束时间必须一致，否则说明这批跨了两段，不推断
+        const uniqEnds = [...new Set(ends)];
+        if (uniqEnds.length === 1 && inWindow(myStart, uniqEnds[0])) {
+          return { start: myStart, end: uniqEnds[0], from: '同批次' };
+        }
+      }
+    }
+
+    if (!type) return null;
     const cands = (pools || [])
       .filter(x => x !== pool && String(x.type || '') === type && x.start && x.end)
       .map(x => ({ start: toTs(x.start), end: toTs(x.end), name: x.s || x.name }))
@@ -5924,7 +5979,7 @@ ${r.summary || ''}`;
     const uniq = [...new Set(cands.map(x => `${x.start}|${x.end}`))];
     if (uniq.length !== 1) return null;
     const only = cands[0];
-    if (vs && ve && (only.start < vs - 86400000 || only.end > ve + 86400000)) return null;
+    if (!inWindow(only.start, only.end)) return null;
     return { start: only.start, end: only.end, from: only.name };
   }
 
@@ -5945,6 +6000,8 @@ ${r.summary || ''}`;
     }
     const now = Date.now();
     let times = 0, covers = 0, missing = 0, queried = 0;
+    /* 用配图 URL 日期定到的开池时间：补给名 → 开始时间戳 */
+    const imageStart = new Map();
     for (const vp of history?.pools || []) {
       const ve = toTs(vp.end);
       // 只处理近期/未来版本（历史版本没有展示需求，也不该用现在的公告去填）
@@ -5981,6 +6038,18 @@ ${r.summary || ''}`;
               if (!cand.length && img && !fallbackCover) fallbackCover = img;
             }
             if (!cover) cover = fallbackCover;
+            // 正文没日期 → 用公告配图 URL 的上传日期作为开池日
+            if (!ranges.length) {
+              const hit = await this.bh3PoolImageDate(kw);
+              if (hit?.date) {
+                const t = new Date(`${hit.date} 12:00:00`).getTime();
+                if (!Number.isNaN(t)) {
+                  p.start = fmt(t);
+                  imageStart.set(String(p.name), t);
+                  if (hit.images?.length && !cover) cover = hit.images[0];
+                }
+              }
+            }
           }
         }
         if (needTime) {
@@ -5991,9 +6060,11 @@ ${r.summary || ''}`;
             times++;
           } else {
             /* 崩三很多补给公告的日期只印在「补给信息」配图里，正文抓不到时间。
-               这类池子按「同版本同类补给同开同收」补齐：取同类型里结束最晚的已确认区间。
-               只补本版本窗口内的池子，不动历史数据。 */
-            const inferred = this.inferBh3PoolTime(pools, p, vp);
+               优先两种可靠来源：
+               ① 同一批开池（配图日期相同）→ 结束时间取批内已确认的结束时间；
+               ② 同类型补给区间完全一致 → 直接沿用。
+               两者都拿不到就留空，绝不猜。 */
+            const inferred = this.inferBh3PoolTime(pools, p, vp, imageStart);
             if (inferred) {
               p.start = fmt(inferred.start);
               p.end = fmt(inferred.end);
@@ -6010,6 +6081,24 @@ ${r.summary || ''}`;
         }
       }
     }
+    /* 配图日期只给出开池日，结束日按崩三的补给周期推：
+       角色/装备池 21 天一轮，服装池 14 天一轮，协同池跟随角色池。
+       若推算出的结束日超出本版本窗口，就截到版本结束（版本末会换池）。 */
+    for (const [name, st] of imageStart.entries()) {
+      const target = (pools || []).find(x => String(x.name || '') === name);
+      if (!target || target.end) continue;
+      const days = target.type === 'outfit' ? 14 : 21;
+      let end = st + days * 86400000;
+      const ve = toTs(vp?.end);
+      const vs = toTs(vp?.start);
+      if (ve && end > ve) end = ve;
+      if (vs && end <= vs) end = vs + days * 86400000;
+      target.start = fmt(st);
+      target.end = fmt(end);
+      target.inferredTime = '配图日期+补给周期';
+      times++;
+    }
+
     if (missing) {
       /* 公告正文/配图都没日期时是正常情况，降到 debug，避免每次刷新都刷错误日志；
          能推断的已在上面按同版本同类补给补齐，这里只剩确实无法判定的。 */
