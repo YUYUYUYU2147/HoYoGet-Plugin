@@ -265,3 +265,18 @@ body.game-sr .page {
 .badge-mark.mini.t8 .bm-text { color: #ff9a8a; }
 .badge-mark.mini.t7 { border-color: rgba(255, 230, 153, .7); }
 .badge-mark.mini.t8 { border-color: rgba(255, 154, 138, .75); }
+
+/* 本次更新到的角色：绿点 + 头像绿圈 */
+.cell-name .new-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 6px #22c55e;
+  vertical-align: middle;
+}
+.cell.updated .avatar-wrap .avatar {
+  box-shadow: 0 0 0 2px #22c55e, 0 0 10px rgba(34,197,94,.55);
+}

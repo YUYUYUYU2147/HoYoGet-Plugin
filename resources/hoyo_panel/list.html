@@ -34,7 +34,7 @@
 
       <div class="grid">
         {{each chars c}}
-        <div class="cell star{{c.star}}">
+        <div class="cell star{{c.star}}{{if c.updated}} updated{{/if}}">
           <div class="avatar-wrap">
             <div class="avatar" style="background-image:url('{{_miao_path}}{{c.face}}')"></div>
             {{if c.cons > 0}}<span class="cons-badge c{{c.cons}}">{{c.cons}}</span>{{/if}}
@@ -44,7 +44,7 @@
             {{/if}}
             <span class="lv-badge">{{c.level}}</span>
           </div>
-          <div class="cell-name">{{c.abbr}}</div>
+          <div class="cell-name">{{if c.updated}}<i class="new-dot"></i>{{/if}}{{c.abbr}}</div>
         </div>
         {{/each}}
       </div>

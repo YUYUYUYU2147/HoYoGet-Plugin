@@ -73,7 +73,12 @@ const NO_PREFIX_CHAR_REG = new RegExp(`^#?\\s*${NO_PREFIX_GAME}\\s*面板\\s+(\\
 const NO_PREFIX_REFRESH_REG = new RegExp(`^#?\\s*${NO_PREFIX_GAME}\\s*(?:更新|刷新)(?:全部)?面板(?:\\s+(\\d{9}))?$`, 'i')
 /* 「更新面板」连游戏名都不带（miao 也有这条）：默认按原神处理，
    首轮失败再自动切星铁 —— 用户要求本插件的面板指令一律由本插件受理 */
-const BARE_REFRESH_REG = /^#?\s*(?:全部面板更新|更新全部面板|更新面板|刷新面板|面板更新)\s*(\d{9})?$/i
+const BARE_REFRESH_REG = /^([#*])?\s*(?:全部面板更新|更新全部面板|更新面板|刷新面板|面板更新)\s*(\d{9})?$/i
+/* 米游社更新：
+ *   #米游社更新面板 / *米游社更新面板
+ *   #原神米游社更新面板 / #米哈游原神米游社更新面板 …
+ *   #=>原神，*=>星铁；显式游戏名优先 */
+const MYS_REFRESH_REG = /^([#*])?\s*(?:米哈游\s*)?(?:(原神|星铁|崩铁|gs|sr)\s*)?(?:米哈游\s*)?米游社\s*(?:更新|刷新)(?:全部)?面板(?:\s*(\d{9}))?$/i
 
 /*
  * 「完全取代喵喵」：不带任何前缀的角色面板，如 #雷神面板 / #星铁遐蝶面板 / #面板。
@@ -1469,6 +1474,8 @@ export class hoyo_panel extends plugin {
       event: 'message',
       priority: pluginPriority('hoyo_panel', -42000),
       rule: [
+        { reg: MYS_REFRESH_REG.source, fnc: 'refreshPanel' },
+        { reg: BARE_REFRESH_REG.source, fnc: 'refreshPanel' },
         { reg: PANEL_REFRESH_REG.source, fnc: 'refreshPanel' },
         { reg: PANEL_REG.source, fnc: 'panel' },
         { reg: PANEL_CHAR_REG.source, fnc: 'panel' },
@@ -1514,6 +1521,12 @@ export class hoyo_panel extends plugin {
       else await this.panelArtDelete(e)
       return 'return'
     }
+    /* 展示柜/米游社两种更新：先接走，避免被 miao / 星铁插件抢 */
+    if (MYS_REFRESH_REG.test(msg) || BARE_REFRESH_REG.test(msg)) {
+      this.e = e
+      await this.refreshPanel(e)
+      return 'return'
+    }
     /* 免「米哈游」前缀：#原神面板 / #星铁面板 桑多涅 ……
        优先级低于 miao 就会先被它接走，所以先把 e.msg 补回前缀，后面全走同一套逻辑 */
     const prefixed = withMhyPrefix(msg)
@@ -1537,10 +1550,13 @@ export class hoyo_panel extends plugin {
 
   /** 「#米哈游原神更新面板」：拉取最新面板后直接出总览图 */
   async refreshPanel(e) {
-    const m = String(e.msg || '').match(PANEL_REFRESH_REG)
-    if (!m) return false
-    const key = String(m[1] || '').toLowerCase()
-    const game = ['星铁', '崩铁', 'sr'].includes(key) ? 'sr' : 'gs'
+    const msg = String(e.msg || '')
+    const isMys = /米游社/.test(msg)
+    const starPrefix = /^\s*\*/.test(msg)
+    let game = starPrefix ? 'sr' : 'gs'
+    if (/星铁|崩铁|\bsr\b/i.test(msg)) game = 'sr'
+    else if (/原神|\bgs\b/i.test(msg)) game = 'gs'
+    const explicitGame = /原神|星铁|崩铁|\bgs\b|\bsr\b/i.test(msg)
     const conf = GAME_CONF[game]
     e.isSr = game === 'sr'
 
@@ -1549,16 +1565,16 @@ export class hoyo_panel extends plugin {
       return e.reply('内置面板模型加载失败，请查看日志（system/vendor/miao）。')
     }
 
-    let uid = m[2] || ''
+    let uid = (msg.match(/(\d{9})/) || [])[1] || ''
     if (!uid) uid = await readMysMainUid(e, game)
     if (!uid) uid = await readBoundUid(e, game)
-    /* 没写游戏名时先按原神找 UID；找不到且用户其实绑的是星铁，就自动切过去，
-       免得「#更新面板」对纯星铁账号直接报「没能确定 UID」 */
-    if (!uid && !key) {
+    /* 没写游戏名（且不是 * 前缀）时先按原神找 UID；找不到且用户其实绑的是星铁，
+       就自动切过去，免得「#更新面板」对纯星铁账号直接报「没能确定 UID」 */
+    if (!uid && !explicitGame && !starPrefix) {
       const srUid = (await readMysMainUid(e, 'sr')) || (await readBoundUid(e, 'sr'))
       if (srUid) {
-        // 改成显式的星铁指令再走一遍，避免复制后来的整段逻辑
-        e.msg = `#米哈游星铁更新面板 ${srUid}`
+        // 改成显式的星铁指令再走一遍，保留「米游社」服务选择
+        e.msg = `#米哈游星铁${isMys ? '米游社' : ''}更新面板 ${srUid}`
         return this.refreshPanel(e)
       }
     }
@@ -1586,23 +1602,26 @@ export class hoyo_panel extends plugin {
       player.e = e
       e.uid = uid
       e.game = game
-      e.isfromMys = false
+      e.isfromMys = isMys
       /* miao 的 ProfileReq 会在 2 秒后无条件 e.reply 一条「开始获取uid…」，
          不检查 _isReplyed。这里临时把 e.reply 静音，只收集真正需要的消息，
          更新结束后一次性汇报，避免一条指令刷出四五条消息。 */
-      const mys = await miao.MysApi.init(e, 'cookie')
-      if (!mys) {
-        return e.reply([
-          `更新 ${uid} 的面板需要米游社 Cookie。`,
-          '请先发送 #米哈游扫码绑定 绑定账号，或 #刷新ck 刷新失效的 Cookie。',
-        ].join('\n'))
+      // 米游社更新才需要 CK；展示柜更新走 Enka / miao / mgg 等公开服务
+      if (isMys) {
+        const mys = await miao.MysApi.init(e, 'cookie')
+        if (!mys) {
+          return e.reply([
+            `米游社更新 ${uid} 的面板需要 Cookie。`,
+            '请先发送 #米哈游扫码绑定 绑定账号，或 #刷新ck 刷新失效的 Cookie。',
+          ].join('\n'))
+        }
       }
       // 只有刷新这一段静音，避免 miao 的「开始获取uid…」等中间提示
       const realReply = e.reply.bind(e)
       let refreshed
       try {
         e.reply = async () => true
-        refreshed = await player.refreshProfile(2, false)
+        refreshed = await player.refreshProfile(2, isMys)
       } finally {
         e.reply = realReply
       }
@@ -1622,7 +1641,7 @@ export class hoyo_panel extends plugin {
         ].join('\n'))
       }
       logger.mark?.(`[HoYoGet][hoyo_panel] ${uid} 刷新完成，开始渲染（avatars=${avatarCount}，refreshProfile=${refreshed}）`)
-      return this.renderPanel(e, game, uid, miao, true, fresh)
+      return this.renderPanel(e, game, uid, miao, true, fresh, player._update || [])
     } catch (err) {
       logger.error?.(`[HoYoGet][hoyo_panel] 更新面板失败: ${err?.message || err}`)
       return e.reply(`更新面板失败：${err?.message || err}`)
@@ -1691,7 +1710,7 @@ export class hoyo_panel extends plugin {
         player.e = e
         e.uid = uid
         e.game = game
-        e.isfromMys = false
+        e.isfromMys = isMys
         const mys = await miao.MysApi.init(e, 'cookie')
         if (mys) await player.refreshProfile(2, false)
       }
@@ -2022,7 +2041,7 @@ export class hoyo_panel extends plugin {
   }
 
   /** 把 player 的面板渲染成总览图（panel 与 refreshPanel 共用） */
-  async renderPanel(e, game, uid, miao, isRefresh, prePlayer = null) {
+  async renderPanel(e, game, uid, miao, isRefresh, prePlayer = null, updatedIds = []) {
     const conf = GAME_CONF[game]
     try {
       const player = prePlayer || new miao.Player(uid, game)
@@ -2031,6 +2050,7 @@ export class hoyo_panel extends plugin {
          某些残缺记录（如 artis 结构缺字段）会抛错并中断整个遍历。 */
       const chars = []
       const pairs = []
+      const updatedSet = new Set((updatedIds || []).map(String))
       let skipped = 0
       const ids = Object.keys(player._avatars || {})
       for (const id of ids) {
@@ -2038,7 +2058,11 @@ export class hoyo_panel extends plugin {
           const av = player.getAvatar(id)
           if (!av?.isProfile) continue
           const item = flattenProfile(av, miao.Character)
-          if (item.name) { chars.push(item); pairs.push({ item, av }) }
+          if (item.name) {
+            item.updated = updatedSet.has(String(id)) || updatedSet.has(String(av?.id))
+            chars.push(item)
+            pairs.push({ item, av })
+          }
         } catch (err) {
           skipped++
           logger.debug?.(`[HoYoGet][hoyo_panel] 跳过角色 ${id}：${err?.message || err}`)
