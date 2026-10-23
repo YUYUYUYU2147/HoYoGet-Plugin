@@ -268,10 +268,69 @@
       })
       if (!res.ok) return
       spriteUrl = URL.createObjectURL(await res.blob())
-      groupsEl.style.setProperty('--hp-icon-url', 'url("' + spriteUrl + '")')
+      document.querySelector('.hoyo-help')?.style.setProperty('--hp-icon-url', 'url("' + spriteUrl + '")')
     } catch { /* 图标失败不影响文字 */ }
   }
 
+
+  function iconPos(icon) {
+    const n = Number(icon) || 0
+    if (!n) return ''
+    const x = (n - 1) % 10
+    const y = (n - x - 1) / 10
+    return `background-position:-${x * 100}px -${y * 100}px`
+  }
+
+  /* 图标选择器：360 个格子直接点，不用记编号 */
+  async function openIconPicker(gi, ii) {
+    await loadSprite()
+    const box = el('hp-icon-picker')
+    if (!box) return
+    const current = Number(draft?.helpList?.[gi]?.list?.[ii]?.icon) || 0
+    const cells = []
+    for (let n = 1; n <= 360; n++) {
+      cells.push('<button type="button" class="hic-cell' + (n === current ? ' on' : '') + '" data-icon="' + n + '">'
+        + '<span class="hic-view"><i style="' + iconPos(n) + '"></i></span><b>' + n + '</b></button>')
+    }
+    box.innerHTML = '<div class="hic-panel">'
+      + '<div class="hic-head"><div><div class="hic-title">选择图标</div>'
+      + '<div class="hic-sub">点击图标即可选中，编号会写到当前指令</div></div>'
+      + '<input class="hic-search" id="hic-search" placeholder="输入编号筛选" />'
+      + '<button type="button" class="hic-close" data-close="1">关闭</button></div>'
+      + '<div class="hic-grid" id="hic-grid">' + cells.join('') + '</div>'
+      + '</div>'
+    box.classList.add('on')
+    const grid = box.querySelector('.hic-grid')
+    const search = box.querySelector('#hic-search')
+    const filter = () => {
+      const q = String(search.value || '').trim()
+      grid.querySelectorAll('.hic-cell').forEach(cell => {
+        cell.style.display = !q || cell.dataset.icon.includes(q) ? '' : 'none'
+      })
+    }
+    search?.addEventListener('input', filter)
+    grid.querySelectorAll('.hic-cell').forEach(cell => {
+      cell.addEventListener('click', () => {
+        const n = Number(cell.dataset.icon) || 0
+        const item = draft.helpList[gi].list[ii]
+        item.icon = n
+        const row = editorEl.querySelector('.he-group[data-g="' + gi + '"] .he-item[data-i="' + ii + '"]')
+        if (row) {
+          const input = row.querySelector('.he-icon')
+          if (input) input.value = n
+          const view = row.querySelector('.he-icon-view i')
+          if (view) view.setAttribute('style', iconPos(n))
+          const num = row.querySelector('.he-icon-num')
+          if (num) num.textContent = n || '—'
+        }
+        closeIconPicker()
+      })
+    })
+  }
+
+  function closeIconPicker() {
+    el('hp-icon-picker')?.classList.remove('on')
+  }
 
   /* ───────── 编辑模式（保存到 config/global_help.yaml） ───────── */
   function clone(obj) { return JSON.parse(JSON.stringify(obj)) }
@@ -337,12 +396,18 @@
     const cfg = draft.helpCfg
     const groupsHtml = draft.helpList.map((g, gi) => {
       const items = g.list.map((item, ii) => '<div class="he-item" data-i="' + ii + '">'
-        + '<input class="he-icon" type="number" min="0" max="999" value="' + esc(item.icon) + '" title="图标编号" />'
+        + '<button type="button" class="he-icon-pick" data-act="icon-pick" title="点击选择图标">'
+        + '<span class="he-icon-view"><i style="' + iconPos(item.icon) + '"></i></span>'
+        + '<b class="he-icon-num">' + (Number(item.icon) || '—') + '</b>'
+        + '</button>'
+        + '<input class="he-icon" type="hidden" value="' + esc(item.icon) + '" />'
         + '<input class="he-title" value="' + esc(item.title) + '" placeholder="指令标题" />'
         + '<input class="he-desc" value="' + esc(item.desc) + '" placeholder="说明" />'
+        + '<div class="he-item-ops">'
         + '<button type="button" data-act="item-up" title="上移">↑</button>'
         + '<button type="button" data-act="item-down" title="下移">↓</button>'
         + '<button type="button" class="danger" data-act="item-del" title="删除">×</button>'
+        + '</div>'
         + '</div>').join('')
       return '<section class="he-group" data-g="' + gi + '">'
         + '<div class="he-group-head">'
@@ -390,6 +455,11 @@
     if (act === 'cancel') return cancelEdit()
     if (act === 'reset') return resetEdit()
     syncDraft()
+    if (act === 'icon-pick') {
+      const gr = e.currentTarget.closest('.he-group')
+      const ir = e.currentTarget.closest('.he-item')
+      return openIconPicker(Number(gr?.dataset.g), Number(ir?.dataset.i))
+    }
     const scroller = editorEl.closest('.g-content') || document.scrollingElement
     const scrollTop = scroller ? scroller.scrollTop : 0
     const groupRow = e.currentTarget.closest('.he-group')
@@ -500,6 +570,9 @@
   groupSel?.addEventListener('change', render)
   el('hp-refresh')?.addEventListener('click', load)
   el('hp-edit')?.addEventListener('click', startEdit)
+  el('hp-icon-picker')?.addEventListener('click', e => {
+    if (e.target.id === 'hp-icon-picker' || e.target.dataset.close) closeIconPicker()
+  })
   loadLogo()
   load()
 })();

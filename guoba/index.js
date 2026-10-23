@@ -287,6 +287,7 @@ const HELP_HTML = `
   </div>
   <div class="hp-groups" id="hp-groups"><div class="hp-empty">加载中…</div></div>
   <div class="hp-editor" id="hp-editor"></div>
+  <div class="hp-icon-picker" id="hp-icon-picker"></div>
   <div class="hp-toast" id="hp-toast"></div>
 </div>
 `
