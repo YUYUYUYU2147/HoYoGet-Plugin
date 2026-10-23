@@ -6230,7 +6230,25 @@ ${r.summary || ''}`;
     const title = partner
       ? String(pool.name || '').replace(/协同补给丨协同者/, '协同补给丨').replace(/「([^」]+)」/g, '$1')
       : (pool.name || '');
-    // 崩三卡池单个 UP 卡片右侧不再放立绘/图标，只保留顶部卡片立绘。
+    /* 立绘：角色池→女武神，装备池→武器，协同者池→协同者。
+       服装池没有独立立绘（wiki 里不收服装），用所属角色的立绘兜底。 */
+    let icon = '';
+    try {
+      const m = maps || await this.getBh3WikiMaps();
+      if (partner) {
+        // 轮替池的 s 是「协同者轮替」，具体名字在 a 里
+        const names = Array.isArray(pool.a) && pool.a.length ? pool.a : [pool.s || ''];
+        for (const nm of names) {
+          const hit = this.findBh3WikiIcon(nm, false, m, 'partner').url || '';
+          if (hit) { icon = hit; break; }
+        }
+      } else if (weapon) {
+        icon = this.findBh3WikiIcon(pool.s || '', true, m).url || '';
+      } else {
+        icon = this.findBh3WikiIcon(pool.s || '', false, m).url || '';
+      }
+      if (!icon && outfit) icon = this.findBh3WikiIcon(pool.a?.[0] || '', false, m).url || '';
+    } catch (_) {}
     return {
       gameClass: 'bh3',
       version: pool.version || '-',
@@ -6241,7 +6259,7 @@ ${r.summary || ''}`;
       a: Array.isArray(pool.a) ? pool.a.join(' / ') : (pool.a || '-'),
       // 优先用落盘的公告封面（imgs），没有再留空由官方公告缓存兜底
       img: (Array.isArray(pool.imgs) ? pool.imgs.filter(Boolean)[0] : '') || pool.img || '',
-      icon: '',
+      icon,
       weapon,
       partner,
       mainLabel: outfit ? '服装' : (weapon ? '武器' : (partner ? '协同' : 'S')),
@@ -6505,21 +6523,46 @@ ${r.summary || ''}`;
     return '';
   }
 
+  /**
+   * 崩三 wiki 立绘映射。
+   *
+   * 优先读本地 JSON（resources/bh3_calendar/wiki_icons.json）：
+   * 崩三 wiki 接口有频率限制，联网抓经常失败（表现为卡池立绘空白），
+   * 本地文件里已经存了女武神/武器/圣痕/协同者全部条目，交接换环境也能直接用。
+   * 本地缺某类时再联网补。
+   */
   async getBh3WikiMaps() {
     try {
+      const local = this.loadBh3WikiIconsLocal();
       const helper = Object.create(bh3_gacha.prototype);
-      const maps = await helper.getStarMaps();
+      let maps = {};
+      if (local) {
+        maps = {
+          charIcon: local.char || {},
+          weaponIcon: local.weapon || {},
+          stigmataIcon: local.stigmata || {},
+          partnerIcon: local.partner || {},
+          char: local.char || {},
+          weapon: local.weapon || {},
+        };
+      }
+      if (!Object.keys(maps.charIcon || {}).length) {
+        const net = await helper.getStarMaps();
+        maps = { ...maps, ...net };
+      }
       // getStarMaps 只取女武神/武器；装备补给还会展示圣痕套装，
       // 这里补圣痕图标映射，避免“花愈朝夕/岁岁如新”只能显示文字占位。
-      try {
-        const res = await fetch('https://api-takumi-static.mihoyo.com/common/blackboard/bh3_wiki/v1/home/content/list?app_sn=bh3_wiki&channel_id=19');
-        const json = await res.json();
-        maps.stigmataIcon = maps.stigmataIcon || {};
-        for (const item of json?.data?.list?.[0]?.list || []) {
-          if (item?.title && item?.icon) maps.stigmataIcon[item.title] = item.icon;
+      if (!Object.keys(maps.stigmataIcon || {}).length) {
+        try {
+          const res = await fetch('https://api-takumi-static.mihoyo.com/common/blackboard/bh3_wiki/v1/home/content/list?app_sn=bh3_wiki&channel_id=19');
+          const json = await res.json();
+          maps.stigmataIcon = maps.stigmataIcon || {};
+          for (const item of json?.data?.list?.[0]?.list || []) {
+            if (item?.title && item?.icon) maps.stigmataIcon[item.title] = item.icon;
+          }
+        } catch (err) {
+          logger.warn?.('[HoYoGet][gacha_pool] 崩三圣痕图标映射获取失败:', err);
         }
-      } catch (err) {
-        logger.warn?.('[HoYoGet][gacha_pool] 崩三圣痕图标映射获取失败:', err);
       }
       return maps;
     } catch (err) {
@@ -6528,8 +6571,24 @@ ${r.summary || ''}`;
     }
   }
 
+  /** 本地 wiki 立绘表（离线用） */
+  loadBh3WikiIconsLocal() {
+    try {
+      const file = './plugins/HoYoGet-Plugin/resources/bh3_calendar/wiki_icons.json';
+      if (!fs.existsSync(file)) return null;
+      const data = JSON.parse(fs.readFileSync(file, 'utf-8'));
+      if (!data || !data.char) return null;
+      return data;
+    } catch (err) {
+      logger.warn?.('[HoYoGet][gacha_pool] 崩三本地立绘表读取失败:', err?.message || err);
+      return null;
+    }
+  }
+
   findBh3WikiIcon(name = '', weapon = false, maps = {}, kind = '') {
-    const dict = kind === 'stigmata' ? (maps.stigmataIcon || {}) : (weapon ? (maps.weaponIcon || {}) : (maps.charIcon || {}));
+    const dict = kind === 'stigmata' ? (maps.stigmataIcon || {})
+      : kind === 'partner' ? (maps.partnerIcon || {})
+        : (weapon ? (maps.weaponIcon || {}) : (maps.charIcon || {}));
     const candidates = this.getBh3IconNameCandidates(name);
     const targets = candidates.map(v => this.cleanBh3Name(v)).filter(Boolean);
     if (!targets.length) return { title: name, url: '' };
@@ -6565,7 +6624,9 @@ ${r.summary || ''}`;
       // 按当前行类型 → 圣痕 → 反向角色/武器的顺序兜底。
       const hit = this.findBh3WikiIcon(name, weapon, maps);
       const stigmataHit = hit.url ? hit : this.findBh3WikiIcon(name, weapon, maps, 'stigmata');
-      const fallbackHit = stigmataHit.url ? stigmataHit : this.findBh3WikiIcon(name, !weapon, maps);
+      // 协同者（希娜狄雅/游云等）在 wiki 的「协同者」频道，服装则归在女武神/武器表里
+      const partnerHit = stigmataHit.url ? stigmataHit : this.findBh3WikiIcon(name, weapon, maps, 'partner');
+      const fallbackHit = partnerHit.url ? partnerHit : this.findBh3WikiIcon(name, !weapon, maps);
       if (fallbackHit.url) {
         try {
           const helper = Object.create(bh3_gacha.prototype);

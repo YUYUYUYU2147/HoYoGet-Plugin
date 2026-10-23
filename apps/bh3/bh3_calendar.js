@@ -37,11 +37,26 @@ let _bh3CharIcons = null;
 async function bh3CharIcons() {
   if (_bh3CharIcons !== null) return _bh3CharIcons;
   _bh3CharIcons = {};
+  /* 先读本地总表（离线可用，不会因米游社限流而空白）；
+     本地缺条目时再联网补，并把图缓存到本地。 */
+  try {
+    const file = './plugins/HoYoGet-Plugin/resources/bh3_calendar/wiki_icons.json';
+    if (fs.existsSync(file)) {
+      const data = JSON.parse(fs.readFileSync(file, 'utf-8')) || {};
+      for (const [title, url] of Object.entries(data.char || {})) {
+        if (!title || !url) continue;
+        const local = await cacheBh3Icon(title, url);
+        _bh3CharIcons[title] = local || url;
+      }
+    }
+  } catch (_) {}
+  if (Object.keys(_bh3CharIcons).length >= 100) return _bh3CharIcons;
   try {
     const res = await fetch(`${BH3_WIKI_BASE}&channel_id=18`, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(12000) });
     const json = await res.json();
     for (const item of json?.data?.list?.[0]?.list || []) {
       if (!item?.title || !item?.icon) continue;
+      if (_bh3CharIcons[item.title]) continue;
       const local = await cacheBh3Icon(item.title, item.icon);
       _bh3CharIcons[item.title] = local || item.icon;
     }
@@ -103,7 +118,8 @@ const BH3_AIYI_AVATAR = 'bh3_calendar/aiyi.png';
 /* 生日角色 → 立绘链接（女武神半身立绘，官方 wiki 整理）。
    角色本名和装甲名对不上（琪亚娜 ↔ 白骑士·月光），所以这里存的是映射后的结果，
    交接/换环境时直接读这个文件，不用再联网抓。 */
-const BH3_BIRTHDAY_AVATARS = './plugins/HoYoGet-Plugin/resources/bh3_calendar/birthday_avatars.json';
+/* 立绘总表：女武神/武器/圣痕/协同者 + 生日角色映射，全部离线可用 */
+const BH3_BIRTHDAY_AVATARS = './plugins/HoYoGet-Plugin/resources/bh3_calendar/wiki_icons.json';
 
 /* 生日表里的角色名 → 官方 wiki 角色列表里的代表装甲（头像从女武神列表取）。
    崩三 wiki 只收「装甲名」，没有「琪亚娜」这种角色本名，必须显式映射。 */
@@ -713,11 +729,12 @@ export class bh3_calendar extends plugin {
     return '';
   }
 
-  /** 生日头像表（本地 JSON，含角色名 → 立绘链接） */
+  /** 立绘总表（本地 JSON）：char/weapon/stigmata/partner + birthday（角色名 → 立绘） */
   loadBirthdayAvatars() {
     try {
       if (!fs.existsSync(BH3_BIRTHDAY_AVATARS)) return {};
-      return JSON.parse(fs.readFileSync(BH3_BIRTHDAY_AVATARS, 'utf-8')) || {};
+      const data = JSON.parse(fs.readFileSync(BH3_BIRTHDAY_AVATARS, 'utf-8')) || {};
+      return data.birthday || {};
     } catch (_) {
       return {};
     }
