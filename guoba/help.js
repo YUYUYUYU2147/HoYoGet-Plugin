@@ -70,6 +70,8 @@
   /** 从标题/说明里认游戏；同时提到多个游戏就算通用 */
   function gameOfItem(item = {}, groupName = '') {
     const text = `${item.title || ''} ${item.desc || ''} ${groupName || ''}`
+    // #/*/% 这种组合前缀是跨游戏命令，直接算通用
+    if (/[#*%!]\s*[/／]\s*[#*%!]/.test(text)) return 'common'
     const hit = []
     if (/原神|提瓦特|原石|七圣|尘歌壶|深境螺旋|幻想真境|风神|岩神|雷神|草神/.test(text)) hit.push('gs')
     if (/星铁|星穹|崩铁|星琼|模拟宇宙|忘却之庭|虚构叙事|末日幻影|差分宇宙|货币战争|寰宇蝗灾|黄金与机械/.test(text)) hit.push('sr')

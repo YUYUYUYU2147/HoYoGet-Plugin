@@ -280,6 +280,7 @@ const WEB_GAME_META = {
 const WEB_GAME_ORDER = ['gs', 'sr', 'zzz', 'bh3', 'common']
 
 function webGameOf(text) {
+  if (/[#*%!]\s*[/／]\s*[#*%!]/.test(text)) return 'common'
   const hit = []
   if (/原神|提瓦特|原石|七圣|尘歌壶|深境螺旋|幻想真境/.test(text)) hit.push('gs')
   if (/星铁|星穹|崩铁|星琼|模拟宇宙|忘却之庭|虚构叙事|末日幻影|差分宇宙|货币战争|寰宇蝗灾/.test(text)) hit.push('sr')
