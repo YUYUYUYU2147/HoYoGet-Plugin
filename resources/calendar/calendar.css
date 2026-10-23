@@ -82,3 +82,26 @@ body {
 .foot { position: relative; display: block; padding: 11px 2px 2px; font-size: 10px; color: #64748b; text-align: left; }
 .foot-note { display: inline-block; }
 .foot-from { position: absolute; left: 50%; transform: translateX(-50%); color: #ff4d4f; font-weight: 700; }
+
+/* 大事件条：版本 / 卡池 / 商店 / 刷新 */
+.tl-marks { border-top: 1px dashed rgba(15,23,42,.10); background: linear-gradient(180deg, rgba(248,250,252,.9), #fff); }
+.mark-row { display: grid; grid-template-columns: 260px minmax(0, 1fr); }
+.mark-label { display: flex; align-items: center; gap: 6px; padding: 5px 14px; font-size: 10px; font-weight: 700; color: #475569; border-right: 1px solid rgba(15,23,42,.06); }
+.mark-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.mark-track { position: relative; height: 22px; background-image: repeating-linear-gradient(90deg, rgba(15,23,42,.05) 0 1px, transparent 1px calc(100% / 14)); }
+.mark-pin { position: absolute; top: 50%; transform: translate(-50%, -50%); max-width: 110px; padding: 1px 6px; border-radius: 999px; font-size: 8px; line-height: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #fff; border: 1px solid currentColor; box-shadow: 0 1px 4px rgba(15,40,80,.08); }
+
+.mark-dot.gacha, .mark-pin.gacha { color: #c2410c; }
+.mark-dot.version, .mark-pin.version { color: #7c3aed; }
+.mark-dot.shop, .mark-pin.shop { color: #0f766e; }
+.mark-dot.reset, .mark-pin.reset { color: #2563eb; }
+.mark-pin.version { background: rgba(124,58,237,.08); }
+.mark-pin.gacha { background: rgba(194,65,12,.08); }
+.mark-pin.shop { background: rgba(15,118,110,.08); }
+.mark-pin.reset { background: rgba(37,99,235,.08); }
+
+.tag.kind-gacha { color: #c2410c; background: rgba(194,65,12,.10); }
+.tag.kind-version { color: #7c3aed; background: rgba(124,58,237,.10); }
+.tag.kind-shop { color: #0f766e; background: rgba(15,118,110,.10); }
+.tag.kind-reset { color: #2563eb; background: rgba(37,99,235,.10); }
+.tag.kind-event { color: var(--ink); background: var(--soft); }

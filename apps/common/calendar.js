@@ -1,6 +1,6 @@
 import moment from 'moment'
 import { pluginPriority, render } from '#HoYoGet'
-import { getCalendarActivities } from './activity_remind.js'
+import { getCalendarActivities, KIND_META } from './activity_remind.js'
 
 /* 指令：
  *   #日历 / #原神日历      → 原神
@@ -117,12 +117,15 @@ export class calendar extends plugin {
           return {
             title: item.title || item.subtitle || '未命名活动',
             srcBanner: item.banner || '',
+            kind: KIND_META[item.kind]?.cls || 'event',
+            kindLabel: KIND_META[item.kind]?.label || '活动',
             tag: item.tag || '',
             startText: fmtDate(item.start, now),
             endText: fmtDate(item.end, now),
             remain: remainText(now, item.end),
             status: started ? '进行中' : '即将开始',
             statusClass: started ? 'on' : 'soon',
+            startAbs: item.start?.isValid?.() ? item.start.clone() : winStart.clone(),
             left: left.toFixed(2),
             width: width.toFixed(2),
             clipLeft: !!item.start?.isValid?.() && item.start.isBefore(winStart),
@@ -137,6 +140,31 @@ export class calendar extends plugin {
           a.banner = await bannerThumb(a.srcBanner)
         }))
       }
+
+      // 大事件：版本/卡池/商店/刷新按“发生日”标在时间轴上，同一类只留最近一次
+      const mk = (kind, label) => ({ kind, kindLabel: label, seen: new Set() })
+      const groups = [mk('version', '版本'), mk('gacha', '卡池'), mk('shop', '商店'), mk('reset', '刷新')]
+        .filter(g => list.some(a => a.kind === g.kind))
+      const markList = []
+      for (const g of groups) {
+        for (const a of list) {
+          if (a.kind !== g.kind) continue
+          const day = Math.max(0, Math.min(13, a.startAbs.clone().startOf('day').diff(winStart, 'days')))
+          if (g.seen.has(day)) continue
+          g.seen.add(day)
+          markList.push({
+            kind: g.kind,
+            kindLabel: g.kindLabel,
+            day: a.startAbs.format('M/D'),
+            short: a.title.replace(/^[「【]|」$|】$/g, '').slice(0, 12),
+            title: a.title,
+            pos: (day + 0.5) / 14 * 100,
+            abs: a.startAbs.valueOf(),
+          })
+        }
+      }
+      markList.sort((x, y) => x.abs - y.abs)
+      const marks = markList.length
 
       const active = list.filter(i => i.status === '进行中').length
       const days = Array.from({ length: 14 }, (_, i) => {
@@ -158,6 +186,8 @@ export class calendar extends plugin {
         nowPos: (26 + 74 * nowFrac).toFixed(2),
         total: list.length,
         active,
+        marks,
+        markList,
         soon: list.length - active,
       }, { e, ret: true, dsf: 2 })
     } catch (err) {

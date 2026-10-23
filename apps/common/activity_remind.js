@@ -204,6 +204,27 @@ async function fetchJson(url, opt = {}) {
   return await res.json();
 }
 
+// 大事件分类：卡池 / 版本 / 商店 / 常驻刷新 / 活动
+export function eventKind(game, title = "") {
+  const t = String(title || '');
+  if (/跃迁|祈愿|赋形|频段|卡池|调频|复刻/.test(t)) return 'gacha';
+  // 商城上新 / 城募 / 礼包是商店条目；「新增关卡」「无名勋礼」不是
+  if (/商店|商城|城募|礼包|兑换/.test(t) || /上新/.test(t)) return 'shop';
+  if (/^\s*\d+\.\d+\s*版本\s*[「【]?[^\s」】]*\s*(更新公告|更新说明|开启|上线)/.test(t)) return 'version';
+  if (/模拟宇宙|货币战争|混沌回忆|虚构叙事|末日幻影|深境螺旋|周期|刷新|双倍/.test(t)) return 'reset';
+  if (/生日/.test(t)) return 'birthday';
+  return 'event';
+}
+
+export const KIND_META = {
+  gacha: { label: '卡池', cls: 'gacha' },
+  version: { label: '版本', cls: 'version' },
+  shop: { label: '商店', cls: 'shop' },
+  reset: { label: '刷新', cls: 'reset' },
+  birthday: { label: '生日', cls: 'birthday' },
+  event: { label: '活动', cls: 'event' },
+};
+
 function flattenAnnList(json, game) {
   const items = [];
   if (Array.isArray(json?.data?.list)) {
@@ -223,6 +244,7 @@ function flattenAnnList(json, game) {
     return {
       game,
       id: item.ann_id || item.id || title,
+      kind: eventKind(game, title),
       title,
       subtitle,
       banner: item.banner || item.img || item.cover || '',
@@ -251,14 +273,30 @@ function gsLikelyActivity(item, now) {
   return /活动|祈愿|挑战|任务|签到|盛典|礼盒|奖励|获取|参与|开启|限时|双倍|唤取|跃迁|频段|试炼|危战|七圣召唤|纪行|赛季|兑换/.test(title);
 }
 
+// 星铁公告同样混着周边/问卷/社媒/版本说明，日历只保留可参与的限时内容
+const SR_CAL_IGNORE = /周边|手办|服饰|优惠|商城|问卷|调研|防沉迷|公平运营|社媒|聚合页|直播|赛事|音乐会|壁纸|表情包|漫画|OST|原声|测试服|招募|跃迁记录|统计上线|社区|论坛|协议|隐私|封禁|处罚|外挂|客服|反馈|更新说明|已知问题|优化|修复|预下载|配置/i;
+
+function srLikelyActivity(item) {
+  const title = item.title || '';
+  if (!title || SR_CAL_IGNORE.test(title)) return false;
+  if (/^《.*》.*(声明|公告)$/.test(title) && !/活动/.test(title)) return false;
+  return /活动|跃迁|祈愿|卡池|挑战|试炼|商店|上新|版本|任务|奖励|获取|限时|双倍|盛典|乐园|搭配|工坊|频段|纪行|赛季|兑换|签到|联动|位面|模拟宇宙|忘却|虚构|末日|混沌|差分|货币战争/i.test(title);
+}
+
+function zzzLikelyActivity(item, tag, title) {
+  if (!title) return false;
+  if (/周边|手办|服饰|问卷|调研|防沉迷|公平运营|社媒|壁纸|表情包|音频|OST|测试服|招募|客服|反馈|更新说明|已知问题|预下载/i.test(title)) return false;
+  return /活动公告|丽都资讯|活动/.test(tag) || /活动|调频|频段|限时|补给|签到|邀约|版本|商城|上新|任务|奖励|获取|兑换|挑战|试炼|登录|邮件/i.test(title);
+}
+
 function filterOfficialActivities(list, game) {
   const now = Date.now();
   return list.filter(item => {
     const tag = item.tag || '';
     const title = item.title || '';
     if (game === 'gs') return gsLikelyActivity(item, now);
-    if (game === 'sr') return !!title;
-    if (game === 'zzz') return /活动公告|丽都资讯|活动/.test(tag) || /活动|调频|限时|补给|签到|邀约/.test(title);
+    if (game === 'sr') return srLikelyActivity(item);
+    if (game === 'zzz') return zzzLikelyActivity(item, tag, title);
     return true;
   });
 }

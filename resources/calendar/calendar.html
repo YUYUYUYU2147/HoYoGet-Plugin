@@ -9,13 +9,13 @@
       <div class="head">
         <img class="gicon" src="{{ppath}}game_icons/{{game}}.webp" onerror="this.style.display='none'" />
         <div class="head-copy">
-          <div class="title">{{gameCn}}活动日历</div>
+          <div class="title">{{gameCn}}大事件日历</div>
           <div class="sub">当前时间 {{nowText}} · 14 天窗口 · 数据来自米游社公告</div>
         </div>
         <div class="stats">
           <div class="stat"><span class="k">进行中</span><b>{{active}}</b></div>
           <div class="stat"><span class="k">即将开始</span><b>{{soon}}</b></div>
-          <div class="stat"><span class="k">共</span><b>{{total}}</b></div>
+          <div class="stat"><span class="k">大事件</span><b>{{marks}}</b></div>
         </div>
       </div>
 
@@ -29,6 +29,19 @@
           </div>
         </div>
 
+        {{if markList.length}}
+        <div class="tl-marks">
+          {{each markList m}}
+          <div class="mark-row">
+            <div class="mark-label"><i class="mark-dot {{m.kind}}"></i>{{m.kindLabel}}</div>
+            <div class="mark-track">
+              <span class="mark-pin {{m.kind}}" style="left: {{m.pos}}%" title="{{m.title}}">{{m.short}}</span>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+        {{/if}}
+
         <div class="tl-body">
           <div class="tl-now" style="left: {{nowPos}}%"><span>今天</span></div>
           {{each list a}}
@@ -37,7 +50,7 @@
               {{if a.banner}}<span class="tl-thumb" style="background-image:url('{{a.banner}}')"></span>{{/if}}
               <div class="tl-txt">
                 <div class="tl-name" title="{{a.title}}">{{a.title}}</div>
-                <div class="tl-meta"><i class="pill {{a.statusClass}}">{{a.status}}</i><span class="tag">{{a.tag || '活动'}}</span></div>
+                <div class="tl-meta"><i class="pill {{a.statusClass}}">{{a.status}}</i><span class="tag kind-{{a.kind}}">{{a.kindLabel}}</span></div>
               </div>
             </div>
             <div class="tl-track">
@@ -53,7 +66,7 @@
       </div>
 
       <div class="foot">
-        <span class="foot-note">时间轴只显示今天前后各 7 天 · 条带长度对应活动周期</span>
+        <span class="foot-note">时间轴只显示今天前后各 7 天 · 条带长度对应周期 · 大事件按公告时间标记</span>
         <span class="foot-from">from 米哈游</span>
       </div>
     </div>
