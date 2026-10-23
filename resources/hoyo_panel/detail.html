@@ -309,25 +309,43 @@
 
           {{if srGlobalRank}}
           <div class="akasha sw fortoffans">
-            <div class="ak-title">FortOfFans <span class="sw-note">{{srGlobalRank.bracketText}}</span></div>
-            {{if srGlobalRank.missing}}<div class="ff-warn">部分榜单或展柜同步暂不可用，稍后自动重试</div>{{/if}}
-            {{each srGlobalRank.rows r}}
-            <div class="ff-row">
-              <div class="ff-top">
-                <span class="ff-label">{{r.label}}</span>
-                <span class="ff-rank">#{{r.rank}}</span>
+            <div class="ff-head">
+              <div>
+                <div class="ff-kicker">GLOBAL RANK</div>
+                <div class="ff-bracket">{{srGlobalRank.bracketText}}</div>
               </div>
-              <div class="ff-mid">
-                <span class="ff-val">{{r.value}}</span>
-                <span class="ff-sample">样本量：{{r.total || '?'}} 份配装</span>
-              </div>
-              <div class="ff-bar"><i style="--p: {{r.percent}}%"></i><span>前 {{r.percent}}%</span></div>
+              <div class="ff-src">fort off fans</div>
             </div>
-            {{/each}}
-            <div class="ff-note">查询时间：{{srGlobalRank.fetchedAt}}</div>
-            <div class="ff-note">缓存 24 小时，检测到遗器变化时重新查询</div>
-            <div class="ff-note">名次仅比较网站已收录配装的对应指标，不代表伤害或综合强度</div>
-            <div class="ff-note">数据来源：hsr.fortoffans.com · 需开启角色展柜</div>
+
+            {{if srGlobalRank.primary}}
+            <div class="ff-hero">
+              <div class="ff-ring" style="--p: {{srGlobalRank.primary.percent}}%"><b>#{{srGlobalRank.primary.rank}}</b></div>
+              <div class="ff-hero-main">
+                <div class="ff-hero-label">{{srGlobalRank.primary.label}}</div>
+                <div class="ff-hero-value">{{srGlobalRank.primary.value}}</div>
+                <div class="ff-hero-sub">样本 {{srGlobalRank.primary.total || '?'}} 份 · 前 {{srGlobalRank.primary.percent}}%</div>
+              </div>
+            </div>
+            {{/if}}
+
+            {{if srGlobalRank.rest.length}}
+            <div class="ff-grid">
+              {{each srGlobalRank.rest r}}
+              <div class="ff-metric">
+                <div class="ff-m-top"><span>{{r.label}}</span><b>#{{r.rank}}</b></div>
+                <div class="ff-m-val">{{r.value}}</div>
+                <div class="ff-m-bar"><i style="--p: {{r.percent}}%"></i></div>
+                <div class="ff-m-sub">样本 {{r.total || '?'}} · 前 {{r.percent}}%</div>
+              </div>
+              {{/each}}
+            </div>
+            {{/if}}
+
+            <div class="ff-foot">
+              <span>查询 {{srGlobalRank.fetchedAt}}</span>
+              <span>24h 缓存</span>
+              <span>需开启展柜</span>
+            </div>
           </div>
           {{/if}}
 

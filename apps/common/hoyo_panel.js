@@ -2069,7 +2069,8 @@ export class hoyo_panel extends plugin {
               srGlobalRank = {
                 bracketText: `E${pr.bracket} 段位，不限套装`,
                 rows,
-                missing: rows.length < 4,
+                primary: rows[0],
+                rest: rows.slice(1),
                 fetchedAt: new Date().toLocaleString('zh-CN', { hour12: false }),
               }
             }
