@@ -188,22 +188,46 @@ async function pickGlobalBackground(helpCfg, themeName) {
 }
 
 /** 生成喵喵同款主题样式（宽度、配色、行底、毛玻璃） */
+/* 用户自定义样式只允许这些键，避免把任意 CSS 注入模板 */
+const STYLE_COLOR_KEYS = ['fontColor', 'descColor', 'titleColor', 'subTitleColor', 'fontShadow', 'contBgColor', 'headerBgColor', 'rowBgColor1', 'rowBgColor2'];
+const STYLE_SIZE_KEYS = ['titleSize', 'groupSize', 'itemSize', 'descSize', 'contBgBlur'];
+
+function safeCssValue(value) {
+  const v = String(value ?? '').trim();
+  if (!v || v.length > 120) return '';
+  // 只允许颜色/阴影/尺寸这类字符，禁止 ; { } 等注入
+  return /^[#a-zA-Z0-9(),.%\s-]+$/.test(v) ? v : '';
+}
+
+function safeSize(value, min, max) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return '';
+  return `${Math.min(max, Math.max(min, n))}px`;
+}
+
 function globalStyle(helpCfg, themeStyle = {}) {
-  // 主题自带的配色优先，其次 helpCfg.style，最后内置默认
-  const style = { ...GLOBAL_THEME_STYLE, ...(helpCfg.style || {}), ...(themeStyle || {}) };
+  // 默认 → 主题 → 用户在锅巴里改的样式（用户优先）
+  const rawStyle = { ...GLOBAL_THEME_STYLE, ...(themeStyle || {}), ...(helpCfg.style || {}) };
+  const style = {};
+  for (const key of STYLE_COLOR_KEYS) style[key] = safeCssValue(rawStyle[key]);
   const colCount = Math.min(5, Math.max(2, parseInt(helpCfg.colCount) || 3));
   const colWidth = Math.min(500, Math.max(100, parseInt(helpCfg.colWidth) || 265));
   const width = Math.min(2500, Math.max(800, colCount * colWidth + 30));
-  const blur = helpCfg.bgBlur === false ? 'none' : `blur(${style.contBgBlur ?? 3}px)`;
+  const blurNum = Number(rawStyle.contBgBlur);
+  const blur = helpCfg.bgBlur === false ? 'none' : `blur(${Number.isFinite(blurNum) ? Math.min(20, Math.max(0, blurNum)) : 3}px)`;
   const css = [
     `body, .container { width: ${width}px; }`,
     `.help-table .td { width: ${100 / colCount}%; }`,
-    `.help-title, .help-group { color: ${style.fontColor}; text-shadow: ${style.fontShadow}; }`,
-    `.help-desc { color: ${style.descColor}; }`,
-    `.cont-box { background: ${style.contBgColor}; backdrop-filter: ${blur}; }`,
-    `.help-group { background: ${style.headerBgColor}; }`,
-    `.help-table .tr:nth-child(odd) { background: ${style.rowBgColor1}; }`,
-    `.help-table .tr:nth-child(even) { background: ${style.rowBgColor2}; }`,
+    `.help-title, .help-group { color: ${style.fontColor || '#ceb78b'}; text-shadow: ${style.fontShadow || 'none'}; }`,
+    `.help-desc { color: ${style.descColor || '#eee'}; }`,
+    `.head-box .title { color: ${style.titleColor || '#fff'}; ${safeSize(rawStyle.titleSize, 8, 120) ? `font-size:${safeSize(rawStyle.titleSize, 8, 120)};` : ''} }`,
+    `.head-box .label { color: ${style.subTitleColor || '#fff'}; }`,
+    `.help-group { background: ${style.headerBgColor || 'rgba(6, 21, 31, .4)'}; ${safeSize(rawStyle.groupSize, 8, 60) ? `font-size:${safeSize(rawStyle.groupSize, 8, 60)};` : ''} }`,
+    `.help-title { ${safeSize(rawStyle.itemSize, 8, 60) ? `font-size:${safeSize(rawStyle.itemSize, 8, 60)};` : ''} }`,
+    `.help-desc { ${safeSize(rawStyle.descSize, 8, 60) ? `font-size:${safeSize(rawStyle.descSize, 8, 60)};` : ''} }`,
+    `.cont-box { background: ${style.contBgColor || 'rgba(6, 21, 31, .5)'}; backdrop-filter: ${blur}; }`,
+    `.help-table .tr:nth-child(odd) { background: ${style.rowBgColor1 || 'rgba(6, 21, 31, .2)'}; }`,
+    `.help-table .tr:nth-child(even) { background: ${style.rowBgColor2 || 'rgba(6, 21, 31, .35)'}; }`,
   ].join('\n');
   return { style: `<style>${css}</style>`, colCount, width };
 }

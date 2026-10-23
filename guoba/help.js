@@ -26,6 +26,22 @@
     common: { name: '通用', color: '#7de2ff' },
   }
   const GAME_ORDER = ['gs', 'sr', 'zzz', 'bh3', 'common']
+  const STYLE_FIELDS = [
+    { key: 'fontColor', label: '主文字颜色', ph: '#ceb78b' },
+    { key: 'descColor', label: '说明文字颜色', ph: '#eeeeee' },
+    { key: 'titleColor', label: '大标题颜色', ph: '#ffffff' },
+    { key: 'subTitleColor', label: '副标题颜色', ph: '#ffffff' },
+    { key: 'fontShadow', label: '文字阴影', ph: 'none / 1px 1px 2px #000' },
+    { key: 'contBgColor', label: '面板底色', ph: 'rgba(6,21,31,.5)' },
+    { key: 'headerBgColor', label: '板块标题底色', ph: 'rgba(6,21,31,.4)' },
+    { key: 'rowBgColor1', label: '奇数行底色', ph: 'rgba(6,21,31,.2)' },
+    { key: 'rowBgColor2', label: '偶数行底色', ph: 'rgba(6,21,31,.35)' },
+    { key: 'titleSize', label: '大标题字号(px)', ph: '50', size: true },
+    { key: 'groupSize', label: '板块标题字号(px)', ph: '18', size: true },
+    { key: 'itemSize', label: '指令标题字号(px)', ph: '16', size: true },
+    { key: 'descSize', label: '说明字号(px)', ph: '13', size: true },
+    { key: 'contBgBlur', label: '背景模糊(0-20)', ph: '3', size: true },
+  ]
   const iconUrl = game => g.apiBase + '/game/icon?game=' + encodeURIComponent(game) + '&token=' + encodeURIComponent(g.token || '')
 
   let groups = []
@@ -385,6 +401,18 @@
     draft.helpCfg.background = val('he-bg') || 'mix'
     draft.helpCfg.backgroundApi = val('he-bgapi')
     draft.helpCfg.bgBlur = !!el('he-blur')?.checked
+    const style = {}
+    for (const f of STYLE_FIELDS) {
+      const v = String(el('he-st-' + f.key)?.value || '').trim()
+      if (!v) continue
+      if (f.size) {
+        const n = Number(v)
+        if (Number.isFinite(n) && n >= 0) style[f.key] = n
+      } else {
+        style[f.key] = v
+      }
+    }
+    draft.helpCfg.style = style
     editorEl.querySelectorAll('.he-group').forEach(row => {
       const g = draft.helpList[Number(row.dataset.g)]
       if (!g) return
@@ -449,6 +477,11 @@
       + '<label>随机 API<input id="he-bgapi" value="' + esc(cfg.backgroundApi) + '" /></label>'
       + '<label class="he-check"><input id="he-blur" type="checkbox"' + (cfg.bgBlur ? ' checked' : '') + ' /> 背景毛玻璃</label>'
       + '</div>'
+      + '<div class="he-style">'
+      + '<div class="he-style-head"><span>外观样式</span><button type="button" data-act="style-reset">恢复主题默认</button></div>'
+      + '<div class="he-style-grid">'
+      + STYLE_FIELDS.map(f => '<label>' + f.label + '<input id="he-st-' + f.key + '" value="' + esc(cfg.style?.[f.key] ?? '') + '" placeholder="' + esc(f.ph) + '" /></label>').join('')
+      + '</div></div>'
       + '<div class="he-groups">' + (groupsHtml || '<div class="hp-empty">还没有板块，点下面新增</div>') + '</div>'
       + '<button type="button" class="he-add-group" data-act="group-add">+ 新增板块</button>'
       + '<div class="he-msg" id="he-msg"></div>'
@@ -465,6 +498,11 @@
     if (act === 'cancel') return cancelEdit()
     if (act === 'reset') return resetEdit()
     syncDraft()
+    if (act === 'style-reset') {
+      draft.helpCfg.style = {}
+      renderEditor()
+      return
+    }
     if (act === 'icon-pick') {
       const gr = e.currentTarget.closest('.he-group')
       const ir = e.currentTarget.closest('.he-item')

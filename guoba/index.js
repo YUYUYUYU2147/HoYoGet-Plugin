@@ -527,7 +527,20 @@ export function init(ctx) {
       if (cfg.colCount != null) cleanCfg.colCount = Math.min(5, Math.max(2, Number(cfg.colCount) || 3))
       if (Array.isArray(cfg.themeExclude)) cleanCfg.themeExclude = cfg.themeExclude.map(v => str(v, 40)).slice(0, 60)
       if (typeof cfg.bgBlur === 'boolean') cleanCfg.bgBlur = cfg.bgBlur
-      if (cfg.style && typeof cfg.style === 'object') cleanCfg.style = JSON.parse(JSON.stringify(cfg.style))
+      if (cfg.style && typeof cfg.style === 'object') {
+        const colorKeys = ['fontColor', 'descColor', 'titleColor', 'subTitleColor', 'fontShadow', 'contBgColor', 'headerBgColor', 'rowBgColor1', 'rowBgColor2']
+        const sizeKeys = ['titleSize', 'groupSize', 'itemSize', 'descSize', 'contBgBlur']
+        const style = {}
+        for (const key of colorKeys) {
+          const v = str(cfg.style[key], 120).trim()
+          if (v && /^[#a-zA-Z0-9(),.%\s-]+$/.test(v)) style[key] = v
+        }
+        for (const key of sizeKeys) {
+          const n = Number(cfg.style[key])
+          if (Number.isFinite(n) && n >= 0) style[key] = Math.min(key === 'contBgBlur' ? 20 : 120, n)
+        }
+        if (Object.keys(style).length) cleanCfg.style = style
+      }
       const helpList = list.slice(0, 100).map(group => ({
         group: str(group?.group, 200) || '未分组',
         ...(group?.auth === 'master' ? { auth: 'master' } : {}),
