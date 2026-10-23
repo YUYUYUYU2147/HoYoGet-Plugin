@@ -326,13 +326,14 @@ function buildWebData(helpList, colCount) {
   }
 }
 
-function webStyleCss(helpCfg, themeStyle = {}) {
+function webStyleCss(helpCfg, themeStyle = {}, pageWidth = 1000) {
   const raw = { ...GLOBAL_THEME_STYLE, ...(themeStyle || {}), ...(helpCfg.style || {}) }
   const color = key => safeCssValue(raw[key])
   const size = (key, def, max) => safeSize(raw[key], 8, max) || def
   const blurNum = Number(raw.contBgBlur)
   const blur = helpCfg.bgBlur === false ? 'none' : `blur(${Number.isFinite(blurNum) ? Math.min(20, Math.max(0, blurNum)) : 3}px)`
   const css = `body {
+    width: ${pageWidth}px;
     --w-head: ${color('titleColor') || '#ffffff'};
     --w-sub: ${color('subTitleColor') || '#c9d7ee'};
     --w-item: ${color('fontColor') || '#f0d9a8'};
@@ -351,8 +352,8 @@ function webStyleCss(helpCfg, themeStyle = {}) {
     --w-item-size: ${size('itemSize', '15px', 60)};
     --w-desc-size: ${size('descSize', '12px', 60)};
     --w-blur: ${blur};
-    --w-page-dim: ${Number.isFinite(Number(raw.pageDim)) ? Math.min(100, Math.max(0, Number(raw.pageDim))) / 100 : 0.58};
-    --w-page-blur: ${safePx(raw.pageBlur, 20) || '5px'};
+    --w-page-dim: ${Number.isFinite(Number(raw.pageDim)) ? Math.min(100, Math.max(0, Number(raw.pageDim))) / 100 : 0.45};
+    --w-page-blur: ${safePx(raw.pageBlur, 20) || '2px'};
   }`
   return `<style>${css}</style>`
 }
@@ -398,15 +399,21 @@ export class help extends plugin {
         // 默认网页版布局；需要旧版可把 helpCfg.layout 设为 classic
         if (helpCfg.layout !== 'classic') {
           const web = buildWebData(helpList, colCount);
+          const groupCols = Math.min(3, Math.max(1, web.groups.length));
+          const pageWidth = Math.min(1800, Math.max(1000, groupCols * 520 + 40));
+          // 组内不再按 colCount 分列，而是每组一列，组与组横向排布
+          for (const group of web.groups) group.cols = groupCols;
           const img = await render('global_help/web', {
             helpCfg,
             ...web,
             colCount,
+            groupCols,
+            pageWidth,
             themeName,
             bgMode: bg.mode,
             bgUrl: bg.url,
             bgLabel,
-            style: webStyleCss(helpCfg, themeStyle),
+            style: webStyleCss(helpCfg, themeStyle, pageWidth),
           }, { e, pct: 1 });
           return e.reply(img);
         }

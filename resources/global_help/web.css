@@ -113,7 +113,8 @@ body {
 .w-stat:nth-child(3) b { color: #5eead4; }
 .w-stat:nth-child(4) b { color: #f0b25a; }
 
-.w-group {
+.w-groups { display: grid; gap: 12px; align-items: start; margin-top: 14px; }
+.w-group { margin-top: 0; }
   margin-top: 14px;
   border-radius: 16px;
   border: 1px solid var(--w-border, rgba(255,255,255,.12));
@@ -127,7 +128,7 @@ body {
 .w-group-name { font-size: var(--w-group-size, 16px); font-weight: 800; color: var(--w-item, #f0d9a8); text-shadow: var(--w-shadow, none); }
 .w-count { margin-left: 2px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-style: normal; color: var(--w-accent); background: color-mix(in srgb, var(--w-accent) 12%, transparent); }
 .w-master { margin-left: auto; padding: 1px 8px; border-radius: 999px; font-size: 11px; color: #fca5a5; background: rgba(239,68,68,.14); border: 1px solid rgba(239,68,68,.24); }
-.w-grid { display: grid; gap: 8px; padding: 10px; }
+.w-items { display: flex; flex-direction: column; gap: 8px; padding: 10px; }
 .w-card {
   display: flex;
   gap: 9px;

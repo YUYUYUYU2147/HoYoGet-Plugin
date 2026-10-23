@@ -40,6 +40,7 @@
         </div>
       </header>
 
+      <div class="w-groups" style="grid-template-columns: repeat({{groupCols}}, 1fr);">
       {{each groups g}}
       <section class="w-group" style="--w-accent: {{g.color}}">
         <div class="w-group-head">
@@ -48,7 +49,7 @@
           <em class="w-count">{{g.items.length}}</em>
           {{if g.auth === 'master'}}<b class="w-master">主人专用</b>{{/if}}
         </div>
-        <div class="w-grid" style="grid-template-columns: repeat({{g.cols}}, 1fr);">
+        <div class="w-items">
           {{each g.items item}}
           <div class="w-card">
             <span class="w-icon"><i style="{{item.css}}"></i></span>
@@ -64,6 +65,7 @@
         </div>
       </section>
       {{/each}}
+      </div>
 
       <footer class="w-foot">from 米哈游 · {{bgLabel}}</footer>
     </div>
