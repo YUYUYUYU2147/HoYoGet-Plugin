@@ -2032,23 +2032,46 @@ export class hoyo_panel extends plugin {
             if (pr?.rank != null) break
           }
           if (pr?.rank != null) {
-            let wrqs = null
-            if (pr.entry?.uid) {
-              try {
-                wrqs = await fetchLeaderboardRank({
-                  char: String(hit.id),
-                  eid: pr.bracket,
-                  stat: 'wrqs',
-                  uid: pr.entry.uid,
-                  maxPages: 40,
-                })
-              } catch (_) { /* 回退 CRIT */ }
+            const entry = pr.entry || {}
+            const uidEntry = entry.uid
+            const scans = {}
+            if (uidEntry) {
+              await Promise.all(['wrqs', 'stat_spd', 'stat_break_effect'].map(async key => {
+                try {
+                  const r = await fetchLeaderboardRank({
+                    char: String(hit.id), eid: pr.bracket, stat: key, uid: uidEntry, maxPages: 40,
+                  })
+                  if (r) scans[key] = r
+                } catch (_) { /* 单指标失败不影响其它 */ }
+              }))
             }
-            srGlobalRank = {
-              rank: wrqs?.rank ?? pr.rank,
-              total: wrqs?.total ?? pr.total ?? null,
-              rankStat: wrqs ? 'wrqs' : 'tcv',
-              wrqs: pr.entry?.wrqs != null ? Number(pr.entry.wrqs).toFixed(2) : '',
+            const fmt = (v, digits = 2, suffix = '') => {
+              const n = Number(v)
+              return Number.isFinite(n) ? `${n.toFixed(digits)}${suffix}` : ''
+            }
+            const rows = []
+            const push = (label, value, rank, total) => {
+              if (rank == null || !value) return
+              rows.push({
+                label,
+                value,
+                rank,
+                total,
+                percent: total ? (rank / total * 100).toFixed(2) : '',
+              })
+            }
+            push('遗器评分', fmt(entry.wrqs), scans.wrqs?.rank, scans.wrqs?.total)
+            push('速度', fmt(entry.stat_spd, 2), scans.stat_spd?.rank, scans.stat_spd?.total)
+            push('CRIT 值', fmt(entry.stat_tcv, 2), pr.rank, pr.total)
+            const be = Number(entry.stat_break_effect)
+            if (be > 0) push('击破特攻', fmt(be, 2, '%'), scans.stat_break_effect?.rank, scans.stat_break_effect?.total)
+            if (rows.length) {
+              srGlobalRank = {
+                bracketText: `E${pr.bracket} 段位，不限套装`,
+                rows,
+                missing: rows.length < 4,
+                fetchedAt: new Date().toLocaleString('zh-CN', { hour12: false }),
+              }
             }
           }
         } catch (err) {

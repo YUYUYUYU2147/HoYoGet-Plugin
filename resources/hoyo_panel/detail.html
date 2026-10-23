@@ -308,13 +308,26 @@
           {{/if}}
 
           {{if srGlobalRank}}
-          <div class="akasha sw">
-            <div class="ak-title">fort off fans · {{if srGlobalRank.rankStat === 'wrqs'}}遗器评分榜{{else}}CRIT 值榜{{/if}}</div>
-            <div class="ak-rank">
-              <span class="ak-no">#{{srGlobalRank.rank}}</span>
-              <span class="ak-of">/ {{srGlobalRank.total || '?'}}</span>
+          <div class="akasha sw fortoffans">
+            <div class="ak-title">FortOfFans <span class="sw-note">{{srGlobalRank.bracketText}}</span></div>
+            {{if srGlobalRank.missing}}<div class="ff-warn">部分榜单或展柜同步暂不可用，稍后自动重试</div>{{/if}}
+            {{each srGlobalRank.rows r}}
+            <div class="ff-row">
+              <div class="ff-top">
+                <span class="ff-label">{{r.label}}</span>
+                <span class="ff-rank">#{{r.rank}}</span>
+              </div>
+              <div class="ff-mid">
+                <span class="ff-val">{{r.value}}</span>
+                <span class="ff-sample">样本量：{{r.total || '?'}} 份配装</span>
+              </div>
+              <div class="ff-bar"><i style="--p: {{r.percent}}%"></i><span>前 {{r.percent}}%</span></div>
             </div>
-            {{if srGlobalRank.wrqs}}<div class="ak-plan">遗器评分 {{srGlobalRank.wrqs}}</div>{{/if}}
+            {{/each}}
+            <div class="ff-note">查询时间：{{srGlobalRank.fetchedAt}}</div>
+            <div class="ff-note">缓存 24 小时，检测到遗器变化时重新查询</div>
+            <div class="ff-note">名次仅比较网站已收录配装的对应指标，不代表伤害或综合强度</div>
+            <div class="ff-note">数据来源：hsr.fortoffans.com · 需开启角色展柜</div>
           </div>
           {{/if}}
 
