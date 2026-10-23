@@ -422,6 +422,14 @@ export class abyss_stat extends plugin {
     const columns = []
     const errors = []
     let priv = 0
+    /* challenge / challenge_story / challenge_boss 有些账号会返回 10041（米游社不开放），
+       但 challenge_brief 仍能拿到当期/上期的期数名、星数、最高层、场次。
+       先取一次，主接口全挂时用它兜底，至少能出概览卡。 */
+    let brief = null
+    try {
+      const b = await mys.getChallengeBrief?.()
+      if (b && Array.isArray(b.list)) brief = b.list
+    } catch (_) { brief = null }
     for (const key of keys) {
       const cfg = SR_CFG[key]
       let raw = null
@@ -432,8 +440,11 @@ export class abyss_stat extends plugin {
         continue
       }
       if (!raw) {
-        if (e?._retcode === 10102) priv++
-        errors.push(`${cfg.title}: ${e?._retcode === 10102 ? '米游社数据未公开' : '接口未返回数据'}`)
+        const code = e?._retcode
+        if (code === 10102 || code === 10041) priv++
+        errors.push(`${cfg.title}: ${code === 10102 ? '米游社数据未公开'
+          : code === 10041 ? '米游社未开放该接口（10041）'
+            : '接口未返回数据'}`)
         continue
       }
       const data = buildSrChallengeData(raw, cfg, type)
@@ -448,11 +459,48 @@ export class abyss_stat extends plugin {
       }
     }
 
+    /* 兜底：主接口全被 10041 挡住时，用 challenge_brief 的摘要拼出概览列 */
+    if (!columns.length && brief?.length) {
+      const typeMap = { Chasm: 'chaos', Story: 'story', Boss: 'boss', Peak: 'peak' };
+      for (const item of brief) {
+        const key = typeMap[item.challenge_type];
+        if (!key) continue;
+        const cfg = SR_CFG[key];
+        const sch = type === 2 ? (item.last_schedule || item.cur_schedule) : (item.cur_schedule || item.last_schedule);
+        if (!sch) continue;
+        const col = {
+          key,
+          type: key === 'chaos' ? 'abyss' : key,
+          title: cfg.title,
+          hasStarMode: !!sch.has_tierce,
+          maxLabel: key === 'boss' ? '最高难度' : '最高关卡',
+          showRound: key !== 'boss',
+          showTotalScore: key !== 'chaos',
+          showNodeScore: true,
+          periodText: '',
+          group: {},
+          briefOnly: true,
+          list: {
+            star_num: Number(sch.finish_star_count || 0),
+            max_floor: sch.finish_floor_name || '',
+            battle_num: Number(sch.times || 0),
+          },
+          floors: [],
+          periodName: sch.group_name || '',
+        };
+        columns.push(col);
+      }
+      if (columns.length) {
+        logger.mark?.(`[HoYoGet][abyss_stat] *深渊 主接口不可用，已用概览接口兜底：${columns.map(c => `${c.title} ${c.list.star_num}星`).join('、')}`)
+      }
+    }
+
     if (!columns.length) {
       if (priv === keys.length) {
-        return e.reply('米游社返回「数据未公开」，通常是这两个原因：\n'
+        return e.reply('米游社返回「数据未公开」(10041/10102)，通常是这两个原因：\n'
           + '1) 用的是公共 CK 而不是你自己的：日志里出现「分配查询ck」就属于这种，重新 #扫码绑定 后再试；\n'
-          + '2) 确实在米游社「我的 → 战绩」里隐藏了战绩，关掉即可。')
+          + '2) 确实在米游社「我的 → 战绩」里隐藏了战绩，关掉即可。\n'
+          + '（10041 表示米游社没有开放该接口，账号本身看不到深渊详情）')
       }
       logger.mark?.(`[HoYoGet][abyss_stat] *深渊 四类都无数据：${errors.join(' | ') || '接口未返回楼层'}`)
       return e.reply('没有查到本期星铁深渊数据，可能还没打或面板未公开。'

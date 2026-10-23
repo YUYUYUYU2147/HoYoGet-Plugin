@@ -8,6 +8,7 @@ const MAX_COOKIE_SELECTIONS = 50
 /* 新版 miao 用驼峰 api 名，旧版 Yunzai/genshin 的 apiTool 只注册了下划线名。
    这里做一层别名，避免「未定义MysApi: challengeBoss」把星铁挑战图整块吞掉。 */
 const MYS_API_ALIAS = {
+  challenge_brief: "challenge_brief",
   spiralAbyss: "challenge_chaos",
   challengeStory: "challenge_story",
   challengeBoss: "challenge_boss",
@@ -356,6 +357,16 @@ export default class MysApi {
   }
 
   // 获取星铁异相仲裁信息
+  /**
+   * 逐光捡金概览：一次拿到所有玩法的当期/上期摘要
+   * （期数名、星数、最高层、场次）。
+   * 有些账号 challenge / challenge_story / challenge_boss 会返回 10041（米游社不开放），
+   * 但 challenge_brief 仍然有数据，可以拿它兜底出概览。
+   */
+  async getChallengeBrief() {
+    return await this.getData("challenge_brief")
+  }
+
   async getChallengePeak(type = 1) {
     return await this.getData("challengePeak", { schedule_type: type === 2 ? 3 : 1 })
   }

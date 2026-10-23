@@ -100,6 +100,10 @@ const timeTitleReg = /(开放时间|活动时间|补给时间|上架时间|售�
 /* 爱酱（崩坏3 官方叫「爱衣Λ」）是特殊角色/拟态，不是女武神装甲，
    官方 wiki 装甲列表里没有它，头像用官方「爱衣Λ信箱」公告图裁出来的形象。 */
 const BH3_AIYI_AVATAR = 'bh3_calendar/aiyi.png';
+/* 生日角色 → 立绘链接（女武神半身立绘，官方 wiki 整理）。
+   角色本名和装甲名对不上（琪亚娜 ↔ 白骑士·月光），所以这里存的是映射后的结果，
+   交接/换环境时直接读这个文件，不用再联网抓。 */
+const BH3_BIRTHDAY_AVATARS = './plugins/HoYoGet-Plugin/resources/bh3_calendar/birthday_avatars.json';
 
 /* 生日表里的角色名 → 官方 wiki 角色列表里的代表装甲（头像从女武神列表取）。
    崩三 wiki 只收「装甲名」，没有「琪亚娜」这种角色本名，必须显式映射。 */
@@ -696,13 +700,46 @@ export class bh3_calendar extends plugin {
     return list;
   }
 
+  /** 生日立绘缓存：data/ 下的 png，模板通过 ppath 拼完整路径 */
+  cachedBirthdayIcon(name = '', url = '') {
+    try {
+      if (!url) return '';
+      const dir = './plugins/HoYoGet-Plugin/resources/bh3_calendar/icons';
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      const file = `${String(name).replace(/[\\/:*?"<>|]/g, '_')}.png`;
+      const abs = `${dir}/${file}`;
+      if (fs.existsSync(abs)) return `bh3_calendar/icons/${file}`;
+    } catch (_) {}
+    return '';
+  }
+
+  /** 生日头像表（本地 JSON，含角色名 → 立绘链接） */
+  loadBirthdayAvatars() {
+    try {
+      if (!fs.existsSync(BH3_BIRTHDAY_AVATARS)) return {};
+      return JSON.parse(fs.readFileSync(BH3_BIRTHDAY_AVATARS, 'utf-8')) || {};
+    } catch (_) {
+      return {};
+    }
+  }
+
   /* 角色头像：优先用抽卡记录缓存的官方 wiki 立绘（data/bh3_gacha/icons/char_*.png），
      名字对不上时退回 wiki 角色列表接口，最后才只显示名字。 */
   birthdayAvatar(name = '') {
     const clean = String(name || '').trim();
     if (!clean) return '';
-    // 爱酱走专属形象
+    // 爱酱走专属形象（它不是女武神装甲）
     if (clean === '爱酱') return BH3_AIYI_AVATAR;
+    // 本地 JSON 里的生日立绘（角色名 → 链接）
+    const table = this.loadBirthdayAvatars();
+    const hit = table[clean];
+    if (hit?.icon) {
+      /* 远程图在截图/渲染时可能还没加载完（显示成空白格），
+         所以先把图缓存到本地，模板用本地路径。 */
+      const cached = this.cachedBirthdayIcon(clean, hit.icon);
+      if (cached) return cached;
+      return hit.icon;
+    }
     // 1) 本地抽卡缓存里正好有这个角色立绘（最省事，但不全）
     for (const key of [clean, BIRTHDAY_VALK[clean]].filter(Boolean)) {
       try {
@@ -768,7 +805,9 @@ export class bh3_calendar extends plugin {
         isToday: i === 0
       });
     }
-    return out.slice(0, 8);
+    /* 生日常态是 4 列网格，条目多时末尾会落到网格边界外被截掉，
+       这里多取几条，保证 45 天内的生日都能显示（模板按 4 列排版）。 */
+    return out.slice(0, 12);
   }
 
   getDateList(start, size = 14) {
