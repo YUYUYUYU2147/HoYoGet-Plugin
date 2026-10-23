@@ -3,6 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { pluginPriority, render } from '#HoYoGet'
 import { fetchLeaderboard, fetchCharacterMap, STAT_NAMES, DEFAULT_STAT } from '../../system/fortoffans.js'
+import { metaResRel } from '#hoyo.miao.path'
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const NAMES_FILE = path.join(PLUGIN_ROOT, 'system', 'default', 'sr_workshop_names.json')
@@ -139,6 +140,8 @@ export class sr_global_rank extends plugin {
     if (!avatars.length) return e.reply(`UID ${uid} 暂无可查询的角色面板。`)
     await e.reply(`正在查询 ${nickname}（UID ${uid}）的星铁全球排名，请稍候…`)
     const chars = loadCharNames()
+    let Character = null
+    try { ({ Character } = await import('#hoyo.miao.models')) } catch (_) { /* ignore */ }
     // system/ 下的模块被静态 import 时热重载不会替换，这里带版本号动态加载
     const { fetchPersonalRank } = await import(`../../system/fortoffans.js?t=${Date.now()}`)
     const results = []
@@ -150,11 +153,15 @@ export class sr_global_rank extends plugin {
           const pr = await fetchPersonalRank({ nickname, char: id, eidolon: a.cons ?? a.rank ?? 0 })
           if (!pr || pr.rank == null) return null
           const e = pr.entry || {}
+          const eidolon = Number(e.eidolon ?? a.cons ?? a.rank ?? 0) || 0
+          const pct = pr.total ? Math.max(0, Math.min(100, (1 - pr.rank / pr.total) * 100)) : 0
           return {
             name: chars[id]?.name || e.char_name || a.name || id,
+            face: Character?.get?.(id)?.imgs?.face || '',
             rank: pr.rank,
             total: pr.total,
-            eidolon: Number(e.eidolon ?? a.cons ?? a.rank ?? 0) || 0,
+            eidolon,
+            beatPercent: pct.toFixed(1),
             critValue: e.stat_tcv != null ? Number(e.stat_tcv).toFixed(1) : '—',
             critRate: e.stat_crit_rate != null ? (Number(e.stat_crit_rate) * 100).toFixed(1) + '%' : '—',
             critDmg: e.stat_crit_dmg != null ? (Number(e.stat_crit_dmg) * 100).toFixed(1) + '%' : '—',
@@ -175,11 +182,15 @@ export class sr_global_rank extends plugin {
     }
     results.sort((a, b) => a.rank - b.rank)
     try {
+      const miaoResPath = '../../../../..' + '/' + metaResRel()
       const img = await render('sr_rank/my', {
         nickname,
         uid,
+        level: data?.level || '',
+        signature: data?.sign || '',
         queried: avatars.length,
         rows: results.slice(0, 20),
+        _miao_path: miaoResPath,
       }, { e, ret: true, dsf: 2.5 })
       if (img) return img
     } catch (err) {

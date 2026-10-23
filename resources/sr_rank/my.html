@@ -2,47 +2,62 @@
 <html>
   <head>
     <meta http-equiv="content-type" content="text/html;charset=utf-8" />
-    <link rel="stylesheet" type="text/css" href="{{ppath}}sr_rank/rank.css" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}akasha/rank.css" />
     <link rel="stylesheet" type="text/css" href="{{ppath}}sr_rank/my.css" />
   </head>
   <body>
     <div class="page">
       <div class="head">
         <div class="head-left">
-          <div class="title">星铁全球排名</div>
-          <div class="subtitle">fort off fans · 我的角色名次</div>
+          <div class="head-user">
+            <div class="head-user-text">
+              <div class="title">我的全球排名</div>
+              <div class="subtitle">{{if nickname}}{{nickname}} · {{/if}}UID {{uid}}{{if level}} · 等级 {{level}}{{/if}}</div>
+              {{if signature}}<div class="signature">{{signature}}</div>{{/if}}
+            </div>
+          </div>
         </div>
         <div class="head-right">
-          <div class="badge">HSR GLOBAL</div>
-          <div class="total">{{rows.length}} 个角色</div>
+          <div class="badge">HSR</div>
         </div>
       </div>
 
-      <div class="meta-strip">
-        <span class="my-nick">{{nickname}}</span>
-        <span class="my-uid">UID {{uid}}</span>
-        <span class="my-queried">已查询 {{queried}} 个角色</span>
+      <div class="legend">
+        <span>按同角色、同星魂档位的全球名次排序</span>
+        <span class="sep">·</span>
+        <span>数据来源 hsr.fortoffans.com</span>
+      </div>
+      <div class="legend legend-tip">
+        只统计已提交到 fort off fans 的角色；名次为同角色同星魂档位，参榜数也是该档位人数。
       </div>
 
-      <div class="list">
-        {{each rows r}}
-        <div class="row">
-          <div class="rank my-rank">{{r.rank}}</div>
-          <div class="player">
-            <div class="nick">{{r.name}}</div>
-            <div class="meta"><span class="my-pos">第 {{r.rank}} / 共 {{r.total || '?'}}</span>{{if r.eidolon}}<span class="eid">E{{r.eidolon}}</span>{{/if}}</div>
+      <div class="list myrank">
+        {{each rows r i}}
+        <div class="row {{if i === 0}}top1{{else if i === 1}}top2{{else if i === 2}}top3{{/if}}">
+          <div class="rank">{{i + 1}}</div>
+
+          <div class="avatar">
+            {{if r.face}}<img src="{{_miao_path}}{{r.face}}" onerror="this.style.visibility='hidden'">{{/if}}
           </div>
-          <div class="stats">
-            <div class="stat main"><span class="v">{{r.critValue}}</span><span class="l">CRIT</span></div>
-            <div class="stat"><span class="v">{{r.critRate}}</span><span class="l">暴率</span></div>
-            <div class="stat"><span class="v">{{r.critDmg}}</span><span class="l">暴伤</span></div>
-            <div class="stat"><span class="v">{{r.spd}}</span><span class="l">速度</span></div>
+
+          <div class="char-cell">
+            <span class="nick">{{r.name}}</span>
+            {{if r.eidolon}}<span class="cons-chip">E{{r.eidolon}}</span>{{/if}}
+          </div>
+
+          <div class="plan-cell">CRIT {{r.critValue}}</div>
+
+          <div class="dmg-cell">{{r.critRate}} / {{r.critDmg}}</div>
+
+          <div class="score-cell">
+            <div class="rank-line"><span class="dmg">#{{r.rank}}</span><span class="dmg-total">/ {{r.total || '?'}}</span></div>
+            <div class="beat-line"><span class="beat-bar" style="--beat: {{r.beatPercent}}%"></span><span class="dmg-beat">{{r.beatPercent}}%</span></div>
           </div>
         </div>
         {{/each}}
       </div>
 
-      <div class="footer">数据来源 hsr.fortoffans.com · 只统计已提交到该站的角色</div>
+      <div class="footer">from 米哈游 · fort off fans</div>
     </div>
   </body>
 </html>
