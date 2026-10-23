@@ -58,6 +58,18 @@ import { buildGsAbyss, buildSrChallengeData, SR_CFG, timeCalc, elemIcon } from '
 import { buildRadar } from '../../system/radar.js'
 import { getRoleProfile } from '../../system/roleProfile.js'
 
+/** 米游社星铁挑战接口的错误码说明 */
+function describeSrErr(code) {
+  switch (Number(code)) {
+    case 10102: return '米游社数据未公开（战绩隐藏）'
+    case 10041: return '米游社未开放该接口（战绩未公开）'
+    case 1008: return '请求过于频繁被限流，请稍后再试'
+    case -10001: return '请求被限流或参数无效（米游社 -10001），请稍后重试'
+    case -502: return '米游社服务异常（-502），请稍后重试'
+    default: return code ? `接口未返回数据（retcode ${code}）` : '接口未返回数据'
+  }
+}
+
 export const GS_SPIRAL_RULE = {
   // #深渊 / #深境螺旋 都归原神；不带前缀的「深渊」不再默认成原神，避免和星铁混
   reg: /^#(?:米哈游)?\s*(?:原神)?\s*(上期|往期)?\s*(深境螺旋|深境|深渊|原神深渊)$/i.source,
@@ -442,9 +454,7 @@ export class abyss_stat extends plugin {
       if (!raw) {
         const code = e?._retcode
         if (code === 10102 || code === 10041) priv++
-        errors.push(`${cfg.title}: ${code === 10102 ? '米游社数据未公开'
-          : code === 10041 ? '米游社未开放该接口（10041）'
-            : '接口未返回数据'}`)
+        errors.push(`${cfg.title}: ${describeSrErr(code)}`)
         continue
       }
       const data = buildSrChallengeData(raw, cfg, type)
@@ -459,16 +469,19 @@ export class abyss_stat extends plugin {
       }
     }
 
-    /* 兜底：主接口全被 10041 挡住时，用 challenge_brief 的摘要拼出概览列 */
-    if (!columns.length && brief?.length) {
+    /* 逐类兜底：某一类主接口拿不到（10041 未公开 / 限流），
+       就用 challenge_brief 里对应那条的摘要补一列概览。
+       brief 里有当期/上期的期数名、星数、最高层、场次，够画概览卡了。 */
+    if (brief?.length) {
       const typeMap = { Chasm: 'chaos', Story: 'story', Boss: 'boss', Peak: 'peak' };
+      const have = new Set(columns.map(c => c.key));
       for (const item of brief) {
         const key = typeMap[item.challenge_type];
-        if (!key) continue;
-        const cfg = SR_CFG[key];
+        if (!key || have.has(key)) continue;
         const sch = type === 2 ? (item.last_schedule || item.cur_schedule) : (item.cur_schedule || item.last_schedule);
         if (!sch) continue;
-        const col = {
+        const cfg = SR_CFG[key];
+        columns.push({
           key,
           type: key === 'chaos' ? 'abyss' : key,
           title: cfg.title,
@@ -480,22 +493,25 @@ export class abyss_stat extends plugin {
           periodText: '',
           group: {},
           briefOnly: true,
+          periodName: sch.group_name || '',
           list: {
             star_num: Number(sch.finish_star_count || 0),
             max_floor: sch.finish_floor_name || '',
             battle_num: Number(sch.times || 0),
           },
           floors: [],
-          periodName: sch.group_name || '',
-        };
-        columns.push(col);
-      }
-      if (columns.length) {
-        logger.mark?.(`[HoYoGet][abyss_stat] *深渊 主接口不可用，已用概览接口兜底：${columns.map(c => `${c.title} ${c.list.star_num}星`).join('、')}`)
+        });
+        have.add(key);
+        logger.mark?.(`[HoYoGet][abyss_stat] *深渊 ${cfg.title} 主接口无数据，已用概览接口补一列`)
       }
     }
 
     if (!columns.length) {
+      if (errors.some(e => /限流|-10001|-502/.test(e))) {
+        return e.reply('米游社接口限流了（invalid request / -502），这是短时限流，不是没有数据。\n'
+          + '请等 1~2 分钟后再发一次 *深渊；若依旧失败，再看下面的具体错误。\n'
+          + errors.join('\n'))
+      }
       if (priv === keys.length) {
         return e.reply('米游社返回「数据未公开」(10041/10102)，通常是这两个原因：\n'
           + '1) 用的是公共 CK 而不是你自己的：日志里出现「分配查询ck」就属于这种，重新 #扫码绑定 后再试；\n'
