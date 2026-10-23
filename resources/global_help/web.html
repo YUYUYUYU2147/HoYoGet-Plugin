@@ -7,9 +7,9 @@
     <link rel="stylesheet" type="text/css" href="{{ppath}}global_help/web.css" />
     <style>
       {{if bgMode === 'api' && bgUrl}}
-      body { background-image: url("{{@bgUrl}}"); }
+      body { --w-bg: url("{{@bgUrl}}"); }
       {{else}}
-      body { background-image: url("{{ppath}}global_help/theme/{{themeName}}/bg.jpg"); }
+      body { --w-bg: url("{{ppath}}global_help/theme/{{themeName}}/bg.jpg"); }
       {{/if}}
       .w-hero { background-image: linear-gradient(135deg, rgba(7,12,24,.88), rgba(9,16,32,.92)), url("{{ppath}}global_help/theme/{{themeName}}/main.png"); }
     </style>
@@ -17,6 +17,7 @@
     <title>{{helpCfg.title || '全局帮助'}}</title>
   </head>
   <body {{sys.scale}}>
+    <div class="w-bg"><div class="w-bg-blur"></div><div class="w-bg-full"></div></div>
     <div class="w-page">
       <header class="w-hero">
         <img class="w-logo" src="{{ppath}}Tl/imgs/米哈游.png" alt="" />
@@ -40,7 +41,7 @@
         </div>
       </header>
 
-      <div class="w-groups" style="grid-template-columns: repeat({{groupCols}}, 1fr);">
+      <div class="w-groups">
       {{each groups g}}
       <section class="w-group" style="--w-accent: {{g.color}}">
         <div class="w-group-head">
@@ -49,7 +50,7 @@
           <em class="w-count">{{g.items.length}}</em>
           {{if g.auth === 'master'}}<b class="w-master">主人专用</b>{{/if}}
         </div>
-        <div class="w-items">
+        <div class="w-grid" style="grid-template-columns: repeat({{g.cols}}, 1fr);">
           {{each g.items item}}
           <div class="w-card">
             <span class="w-icon"><i style="{{item.css}}"></i></span>

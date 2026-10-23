@@ -399,15 +399,14 @@ export class help extends plugin {
         // 默认网页版布局；需要旧版可把 helpCfg.layout 设为 classic
         if (helpCfg.layout !== 'classic') {
           const web = buildWebData(helpList, colCount);
-          const groupCols = Math.min(3, Math.max(1, web.groups.length));
-          const pageWidth = Math.min(1800, Math.max(1000, groupCols * 520 + 40));
-          // 组内不再按 colCount 分列，而是每组一列，组与组横向排布
-          for (const group of web.groups) group.cols = groupCols;
+          // 纵向：板块上下排列，板块内按 colCount 分列
+          for (const group of web.groups) group.cols = colCount;
+          const pageWidth = 1000;
           const img = await render('global_help/web', {
             helpCfg,
             ...web,
             colCount,
-            groupCols,
+            groupCols: 1,
             pageWidth,
             themeName,
             bgMode: bg.mode,
