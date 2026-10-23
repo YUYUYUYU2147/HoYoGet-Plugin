@@ -37,6 +37,10 @@ const timeTitleReg = /(开放时间|活动时间|补给时间|上架时间|售�
 // 女武神生日表（月-日 → 角色名），来源：米游社「崩坏3角色生日整理」帖 39681618，
 // 并与百度百科「崩坏3角色生日表」交叉核对。观测枢详情接口没有生日字段，故用静态表；
 // 第二部新角色（希娜狄雅/科拉莉/赫丽娅/松雀等）暂无可靠公开数据，后续确认后直接在此补行即可。
+/* 爱酱（崩坏3 官方叫「爱衣Λ」）是特殊角色/拟态，不是女武神装甲，
+   官方 wiki 装甲列表里没有它，头像用官方「爱衣Λ信箱」公告图裁出来的形象。 */
+const BH3_AIYI_AVATAR = 'bh3_calendar/aiyi.png';
+
 /* 生日表里的角色名 → 官方 wiki 角色列表里的代表装甲（头像从女武神列表取）。
    崩三 wiki 只收「装甲名」，没有「琪亚娜」这种角色本名，必须显式映射。 */
 const BIRTHDAY_VALK = {
@@ -65,7 +69,6 @@ const BIRTHDAY_VALK = {
   '爱因斯坦': '女武神·巡矢',
   '羽兔': '织羽梦旌',
   '乔伊斯': '女武神·重机',
-  '爱酱': '女武神·战车',
   '伊甸': '黄金·璀耀之歌',
 };
 
@@ -522,6 +525,8 @@ export class bh3_calendar extends plugin {
   birthdayAvatar(name = '') {
     const clean = String(name || '').trim();
     if (!clean) return '';
+    // 爱酱走专属形象
+    if (clean === '爱酱') return BH3_AIYI_AVATAR;
     // 1) 本地抽卡缓存里正好有这个角色立绘（最省事，但不全）
     for (const key of [clean, BIRTHDAY_VALK[clean]].filter(Boolean)) {
       try {

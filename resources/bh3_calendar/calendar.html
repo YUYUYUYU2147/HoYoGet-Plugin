@@ -73,7 +73,7 @@
             <div class="bd-people">
               {{each b.people p}}
               <div class="bd-person">
-                {{if p.avatar}}<img class="bd-avatar" src="{{p.avatar}}" />{{else}}<span class="bd-avatar empty">{{p.name.slice(0,1)}}</span>{{/if}}
+                {{if p.avatar}}<img class="bd-avatar" src="{{if p.avatar.indexOf('http') === 0}}{{p.avatar}}{{else}}{{ppath}}{{p.avatar}}{{/if}}" />{{else}}<span class="bd-avatar empty">{{p.name.slice(0,1)}}</span>{{/if}}
                 <span class="bd-name">{{p.name}}</span>
               </div>
               {{/each}}

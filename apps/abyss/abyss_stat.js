@@ -457,10 +457,12 @@ export class abyss_stat extends plugin {
     /* 顶部头像用玩家自己的游戏头像（星铁 index 接口），取不到再回退星铁图标 */
     let avatar = ''
     try {
-      const { getRoleProfile } = await import('../../system/roleProfile.js')
       const profile = await getRoleProfile(e, mys.uid, 'sr')
       avatar = profile?.avatar || ''
-    } catch (_) { /* 头像取不到不影响出图 */ }
+      if (avatar) avatar = String(avatar).replace(/^http:/, 'https:')
+    } catch (err) {
+      logger.debug?.(`[HoYoGet][abyss_stat] 取玩家头像失败：${err?.message || err}`)
+    }
     return render('abyss_stat/sr-abyss-all', {
       period: type === 2 ? '上期' : '当期',
       uid: mys.uid,
