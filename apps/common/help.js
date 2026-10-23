@@ -141,10 +141,14 @@ function pickGlobalTheme(helpCfg) {
     : (typeof rawTheme === 'string' && rawTheme.includes(',')
       ? rawTheme.split(',').map(v => v.trim()).filter(Boolean)
       : rawTheme);
-  if (Array.isArray(theme) && theme.length) names = all.filter(n => theme.includes(n));
+  const custom = Array.isArray(theme) && theme.length;
+  if (custom) names = all.filter(n => theme.includes(n));
   else if (theme && theme !== 'all') names = all.filter(n => n === String(theme));
-  const exclude = Array.isArray(helpCfg.themeExclude) ? helpCfg.themeExclude : [];
-  if (exclude.length) names = names.filter(n => !exclude.includes(n));
+  // 只有「全部随机」才应用 themeExclude；手选主题应尊重用户选择
+  if (!custom) {
+    const exclude = Array.isArray(helpCfg.themeExclude) ? helpCfg.themeExclude : [];
+    if (exclude.length) names = names.filter(n => !exclude.includes(n));
+  }
   if (!names.length) names = all.filter(n => n !== 'default');
   if (!names.length) names = ['default'];
   return names[Math.floor(Math.random() * names.length)];

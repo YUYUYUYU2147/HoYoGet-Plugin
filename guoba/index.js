@@ -287,10 +287,13 @@ function pickHelpTheme(helpCfg = {}) {
     : (typeof rawTheme === 'string' && rawTheme.includes(',')
       ? rawTheme.split(',').map(v => v.trim()).filter(Boolean)
       : rawTheme)
-  if (Array.isArray(theme) && theme.length) names = all.filter(n => theme.includes(n))
+  const custom = Array.isArray(theme) && theme.length
+  if (custom) names = all.filter(n => theme.includes(n))
   else if (theme && theme !== 'all') names = all.filter(n => n === String(theme))
-  const exclude = Array.isArray(helpCfg.themeExclude) ? helpCfg.themeExclude : []
-  if (exclude.length) names = names.filter(n => !exclude.includes(n))
+  if (!custom) {
+    const exclude = Array.isArray(helpCfg.themeExclude) ? helpCfg.themeExclude : []
+    if (exclude.length) names = names.filter(n => !exclude.includes(n))
+  }
   if (!names.length) names = all.filter(n => n !== 'default')
   if (!names.length) names = ['default']
   return names[Math.floor(Math.random() * names.length)]
@@ -577,6 +580,30 @@ export function init(ctx) {
       res.sendFile(path.join(ROOT, 'resources', 'Tl', 'imgs', '米哈游.png'))
     } catch (err) {
       ctx.logger?.warn?.(`[HoYoGet][guoba] 读取帮助 Logo 失败：${err?.message || err}`)
+      res.status(404).end()
+    }
+  })
+
+  ctx.registerApi('get', '/help/theme/thumb', async (req, res) => {
+    try {
+      const name = String(req.query?.name || '')
+      if (!helpThemeNames().includes(name)) return res.status(404).end()
+      const src = [path.join(HELP_THEME_ROOT, name, 'bg.jpg'), path.join(HELP_THEME_ROOT, name, 'main.png')]
+        .find(f => fs.existsSync(f))
+      if (!src) return res.status(404).end()
+      const st = fs.statSync(src)
+      const key = `${name}:${st.mtimeMs}`
+      if (!globalThis.__xhhThemeThumbCache) globalThis.__xhhThemeThumbCache = new Map()
+      const cache = globalThis.__xhhThemeThumbCache
+      if (!cache.has(key)) {
+        const sharp = (await import('sharp')).default
+        const buf = await sharp(src).resize(320, 180, { fit: 'cover' }).webp({ quality: 72 }).toBuffer()
+        cache.set(key, buf)
+        if (cache.size > 80) cache.delete(cache.keys().next().value)
+      }
+      res.type('image/webp').send(cache.get(key))
+    } catch (err) {
+      ctx.logger?.warn?.(`[HoYoGet][guoba] 读取主题缩略图失败：${err?.message || err}`)
       res.status(404).end()
     }
   })

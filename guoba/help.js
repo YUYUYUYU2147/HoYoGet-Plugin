@@ -401,7 +401,9 @@
     draft.helpCfg.title = val('he-title')
     draft.helpCfg.subTitle = val('he-subtitle')
     draft.helpCfg.colCount = Number(val('he-cols')) || 3
-    draft.helpCfg.theme = val('he-theme') || 'all'
+    const themeRaw = val('he-theme') || 'all'
+    draft.helpCfg.theme = themeRaw === 'all' ? 'all' : themeRaw.split(',').map(v => v.trim()).filter(Boolean)
+    draft.helpCfg.themeExclude = el('he-theme-exclude')?.checked ? ['default'] : []
     draft.helpCfg.background = val('he-bg') || 'mix'
     draft.helpCfg.backgroundApi = val('he-bgapi')
     draft.helpCfg.bgBlur = !!el('he-blur')?.checked
@@ -538,6 +540,74 @@
     })
   }
 
+  function themeValue(theme) {
+    if (Array.isArray(theme)) return theme.join(',') || 'all'
+    if (!theme || theme === 'all') return 'all'
+    const list = String(theme).split(',').map(v => v.trim()).filter(Boolean)
+    return list.length ? list.join(',') : 'all'
+  }
+
+  const themeThumbCache = new Map()
+  async function loadThemeThumb(name) {
+    if (themeThumbCache.has(name)) return themeThumbCache.get(name)
+    const p = fetch(g.apiBase + '/help/theme/thumb?name=' + encodeURIComponent(name), {
+      headers: { [g.tokenKey || 'guoba-access-token']: g.token || '' },
+    }).then(async res => {
+      if (!res.ok) throw new Error('thumb')
+      return URL.createObjectURL(await res.blob())
+    }).catch(() => '')
+    themeThumbCache.set(name, p)
+    return p
+  }
+
+  function bindThemePicker() {
+    const grid = el('he-theme-grid')
+    const hidden = el('he-theme')
+    if (!grid || !hidden) return
+    const list = (themes.length ? themes : ['default']).slice().sort((a, b) => {
+      if (a === 'default') return 1
+      if (b === 'default') return -1
+      return Number(a) - Number(b)
+    })
+    grid.innerHTML = '<button type="button" class="he-theme-card he-theme-all" data-theme="__all__"><span>全部随机</span></button>'
+      + list.map(name => '<button type="button" class="he-theme-card" data-theme="' + esc(name) + '">'
+        + '<img data-img="' + esc(name) + '" alt="" />'
+        + '<span>' + (name === 'default' ? '默认' : '主题 ' + name) + '</span></button>').join('')
+    list.forEach(name => {
+      loadThemeThumb(name).then(url => {
+        if (!url) return
+        const img = grid.querySelector('[data-img="' + name + '"]')
+        if (img) img.src = url
+      })
+    })
+    const update = () => {
+      const isAll = hidden.value === 'all'
+      const selected = isAll ? [] : hidden.value.split(',').filter(Boolean)
+      grid.querySelectorAll('[data-theme]').forEach(card => {
+        const t = card.dataset.theme
+        card.classList.toggle('on', t === '__all__' ? isAll : (!isAll && selected.includes(t)))
+      })
+      const count = el('he-theme-count')
+      if (count) count.textContent = isAll ? '全部随机' : '已选 ' + selected.length + ' 个'
+    }
+    grid.querySelectorAll('[data-theme]').forEach(card => {
+      card.addEventListener('click', () => {
+        const name = card.dataset.theme
+        if (name === '__all__') hidden.value = 'all'
+        else {
+          const isAll = hidden.value === 'all'
+          let selected = isAll ? [] : hidden.value.split(',').filter(Boolean)
+          if (selected.includes(name)) selected = selected.filter(v => v !== name)
+          else selected.push(name)
+          hidden.value = selected.length ? selected.join(',') : 'all'
+        }
+        update()
+      })
+    })
+    el('he-theme-exclude')?.addEventListener('change', update)
+    update()
+  }
+
   function renderEditor() {
     const cfg = draft.helpCfg
     const groupsHtml = draft.helpList.map((g, gi) => {
@@ -581,10 +651,16 @@
       + '<label>标题<input id="he-title" value="' + esc(cfg.title) + '" /></label>'
       + '<label>副标题<input id="he-subtitle" value="' + esc(cfg.subTitle) + '" /></label>'
       + '<label>列数<input id="he-cols" type="number" min="2" max="5" value="' + esc(cfg.colCount) + '" /></label>'
-      + '<label>主题<input id="he-theme" value="' + esc(cfg.theme) + '" placeholder="all / 1,2 / default" /></label>'
+      + '<input id="he-theme" type="hidden" value="' + esc(themeValue(cfg.theme)) + '" />'
       + '<label>背景<select id="he-bg"><option value="theme"' + (cfg.background === 'theme' ? ' selected' : '') + '>本地主题</option><option value="api"' + (cfg.background === 'api' ? ' selected' : '') + '>随机 API</option><option value="mix"' + (cfg.background === 'mix' ? ' selected' : '') + '>混合</option></select></label>'
       + '<label>随机 API<input id="he-bgapi" value="' + esc(cfg.backgroundApi) + '" /></label>'
       + '<label class="he-check"><input id="he-blur" type="checkbox"' + (cfg.bgBlur ? ' checked' : '') + ' /> 背景毛玻璃</label>'
+      + '</div>'
+      + '<div class="he-themes">'
+      + '<div class="he-themes-head"><span>帮助主题</span><span class="he-theme-count" id="he-theme-count"></span>'
+      + '<label class="he-check"><input type="checkbox" id="he-theme-exclude"' + ((Array.isArray(cfg.themeExclude) && cfg.themeExclude.includes('default')) ? ' checked' : '') + ' /> 全部随机时排除 default</label>'
+      + '<button type="button" data-act="theme-all">全部随机</button></div>'
+      + '<div class="he-theme-grid" id="he-theme-grid"></div>'
       + '</div>'
       + '<div class="he-style">'
       + '<div class="he-style-head"><span>外观样式</span><button type="button" data-act="style-reset">恢复主题默认</button></div>'
@@ -605,6 +681,7 @@
       + '<div class="he-msg" id="he-msg"></div>'
       + '</div>'
     bindStyleEditor()
+    bindThemePicker()
     editorEl.querySelectorAll('[data-act]').forEach(btn => {
       btn.addEventListener('click', onEditorAction)
     })
@@ -617,6 +694,14 @@
     if (act === 'cancel') return cancelEdit()
     if (act === 'reset') return resetEdit()
     syncDraft()
+    if (act === 'theme-all') {
+      const hidden = el('he-theme')
+      if (hidden) hidden.value = 'all'
+      editorEl.querySelectorAll('#he-theme-grid [data-theme]').forEach(card => card.classList.toggle('on', card.dataset.theme === '__all__'))
+      const count = el('he-theme-count')
+      if (count) count.textContent = '全部随机'
+      return
+    }
     if (act === 'style-reset') {
       draft.helpCfg.style = {}
       renderEditor()
