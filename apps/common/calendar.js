@@ -75,35 +75,60 @@ export class calendar extends plugin {
     const now = moment()
     try {
       const raw = await getCalendarActivities(game)
+      // 14 天窗口：今天前后各 7 天；超出窗口的活动裁到边界并打箭头
+      const winStart = now.clone().startOf('day').subtract(7, 'days')
+      const winEnd = winStart.clone().add(14, 'days')
+      const windowMs = winEnd.valueOf() - winStart.valueOf()
       const list = (raw || [])
-        .filter(item => item?.end?.isValid?.() && item.end.isAfter(now.clone().startOf('day')) && !CAL_IGNORE.test(item.title || ''))
-        .sort((a, b) => a.end.valueOf() - b.end.valueOf())
-        .slice(0, 40)
+        .filter(item => {
+          if (!item?.end?.isValid?.() || CAL_IGNORE.test(item.title || '')) return false
+          if (item.end.isBefore(now)) return false
+          if (item.end.isBefore(winStart)) return false
+          if (item.start?.isValid?.() && item.start.isAfter(winEnd)) return false
+          return true
+        })
+        .sort((a, b) => (a.start?.valueOf?.() || winStart.valueOf()) - (b.start?.valueOf?.() || winStart.valueOf()))
+        .slice(0, 30)
         .map(item => {
           const started = !item.start || item.start.isSameOrBefore(now)
-          const totalMs = item.start ? item.end.valueOf() - item.start.valueOf() : 0
-          const leftMs = item.end.valueOf() - now.valueOf()
-          const progress = started
-            ? (totalMs > 0 ? Math.max(0, Math.min(100, leftMs / totalMs * 100)) : 100)
-            : 100
+          const s = item.start?.isValid?.() && item.start.isAfter(winStart) ? item.start : winStart
+          const e = item.end.isBefore(winEnd) ? item.end : winEnd
+          const left = Math.max(0, Math.min(100, (s.valueOf() - winStart.valueOf()) / windowMs * 100))
+          const width = Math.max(0.6, Math.min(100 - left, (e.valueOf() - s.valueOf()) / windowMs * 100))
           return {
             title: item.title || item.subtitle || '未命名活动',
-            progress: progress.toFixed(1),
             tag: item.tag || '',
             startText: fmtDate(item.start, now),
             endText: fmtDate(item.end, now),
             remain: remainText(now, item.end),
             status: started ? '进行中' : '即将开始',
             statusClass: started ? 'on' : 'soon',
+            left: left.toFixed(2),
+            width: width.toFixed(2),
+            clipLeft: !!item.start?.isValid?.() && item.start.isBefore(winStart),
+            clipRight: item.end.isAfter(winEnd),
+            barText: remainText(now, item.end),
           }
         })
       if (!list.length) return e.reply(`暂未获取到${GAME_CN[game]}活动日历，请稍后再试。`)
       const active = list.filter(i => i.status === '进行中').length
+      const days = Array.from({ length: 14 }, (_, i) => {
+        const d = winStart.clone().add(i, 'days')
+        return {
+          md: d.format('M/D'),
+          week: '日一二三四五六'[d.day()],
+          today: d.isSame(now, 'day'),
+          weekend: [0, 6].includes(d.day()),
+        }
+      })
+      const nowFrac = Math.max(0, Math.min(1, (now.valueOf() - winStart.valueOf()) / windowMs))
       return render('calendar/calendar', {
         game,
         gameCn: GAME_CN[game],
         nowText: now.format('YYYY-MM-DD HH:mm'),
         list,
+        days,
+        nowPos: (26 + 74 * nowFrac).toFixed(2),
         total: list.length,
         active,
         soon: list.length - active,

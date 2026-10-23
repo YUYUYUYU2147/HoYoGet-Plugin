@@ -10,7 +10,7 @@
         <img class="gicon" src="{{ppath}}game_icons/{{game}}.webp" onerror="this.style.display='none'" />
         <div class="head-copy">
           <div class="title">{{gameCn}}活动日历</div>
-          <div class="sub">当前时间 {{nowText}} · 数据来自米游社公告</div>
+          <div class="sub">当前时间 {{nowText}} · 14 天窗口 · 数据来自米游社公告</div>
         </div>
         <div class="stats">
           <div class="stat"><span class="k">进行中</span><b>{{active}}</b></div>
@@ -19,24 +19,38 @@
         </div>
       </div>
 
-      <div class="table">
-        <div class="tr th">
-          <span>状态</span><span>活动</span><span>类型</span><span>开始</span><span>结束</span><span>剩余</span>
+      <div class="tl-card">
+        <div class="tl-head">
+          <div class="tl-label">活动</div>
+          <div class="tl-dates">
+            {{each days d}}
+            <span class="{{if d.today}}today{{/if}} {{if d.weekend}}weekend{{/if}}"><b>{{d.md}}</b><i>周{{d.week}}</i></span>
+            {{/each}}
+          </div>
         </div>
-        {{each list a}}
-        <div class="tr">
-          <span><i class="pill {{a.statusClass}}">{{a.status}}</i></span>
-          <span class="name" title="{{a.title}}">{{a.title}}</span>
-          <span class="tag">{{a.tag || '活动'}}</span>
-          <span class="time">{{a.startText}}</span>
-          <span class="time">{{a.endText}}</span>
-          <span class="remain"><b>{{a.remain}}</b><i class="rbar"><em style="--p: {{a.progress}}%"></em></i></span>
+
+        <div class="tl-body">
+          <div class="tl-now" style="left: {{nowPos}}%"><span>今天</span></div>
+          {{each list a}}
+          <div class="tl-row">
+            <div class="tl-label">
+              <div class="tl-name" title="{{a.title}}">{{a.title}}</div>
+              <div class="tl-meta"><i class="pill {{a.statusClass}}">{{a.status}}</i><span class="tag">{{a.tag || '活动'}}</span></div>
+            </div>
+            <div class="tl-track">
+              <div class="tl-bar {{a.statusClass}}" style="left: {{a.left}}%; width: {{a.width}}%;">
+                {{if a.clipLeft}}<i class="clip l">‹</i>{{/if}}
+                <span>{{a.barText}}</span>
+                {{if a.clipRight}}<i class="clip r">›</i>{{/if}}
+              </div>
+            </div>
+          </div>
+          {{/each}}
         </div>
-        {{/each}}
       </div>
 
       <div class="foot">
-        <span class="foot-note">仅列出今天起仍未结束的活动 · 最多 40 条</span>
+        <span class="foot-note">时间轴只显示今天前后各 7 天 · 条带长度对应活动周期</span>
         <span class="foot-from">from 米哈游</span>
       </div>
     </div>
