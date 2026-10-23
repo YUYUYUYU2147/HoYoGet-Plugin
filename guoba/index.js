@@ -234,6 +234,30 @@ const PAGE_HTML = `
 </div>
 `
 
+const HELP_HTML = `
+<div class="hoyo-help">
+  <div class="hp-hero">
+    <div class="hp-hero-copy">
+      <span class="hp-kicker">HoYoGet · Global Help</span>
+      <h2>全局帮助</h2>
+      <p>原神 / 星铁 / 绝区零 / 崩坏3 全部指令速查。点击任意卡片即可复制指令，也可以直接搜索关键词。</p>
+      <div class="hp-hero-tags">
+        <span># 原神</span><span>* 星铁</span><span>% 绝区零</span><span>! 崩坏3</span><span>+ 通用</span>
+      </div>
+    </div>
+    <div class="hp-hero-stat" id="hp-stats"></div>
+  </div>
+  <div class="hp-toolbar">
+    <label class="hp-search"><span>⌕</span><input id="hp-search" placeholder="搜索指令或说明，如：抽卡、签到、深渊、面板" /></label>
+    <select id="hp-group"><option value="">全部板块</option></select>
+    <button id="hp-refresh">刷新</button>
+    <span class="hp-meta" id="hp-meta"></span>
+  </div>
+  <div class="hp-groups" id="hp-groups"><div class="hp-empty">加载中…</div></div>
+  <div class="hp-toast" id="hp-toast"></div>
+</div>
+`
+
 export function init(ctx) {
   ctx.registerApi('get', '/history', async (req, res) => {
     try {
@@ -421,6 +445,30 @@ export function init(ctx) {
       ctx.logger?.warn?.(`[HoYoGet][guoba] 读取角色立绘失败：${err?.message || err}`)
       res.status(404).end()
     }
+  })
+
+  ctx.registerApi('get', '/help', async (req, res) => {
+    try {
+      const file = path.join(ROOT, 'system', 'default', 'help-detail.yaml')
+      const fallback = path.join(ROOT, 'system', 'default', 'help.yaml')
+      const target = fs.existsSync(file) ? file : fallback
+      const raw = YAML.parse(fs.readFileSync(target, 'utf8')) || []
+      const result = Array.isArray(raw) ? raw : (raw.list || raw.data || [])
+      res.json({ ok: true, code: 0, message: 'ok', result })
+    } catch (err) {
+      ctx.logger?.error?.(`[HoYoGet][guoba] 读取全局帮助失败：${err?.message || err}`)
+      res.json({ ok: false, code: -1, message: err?.message || String(err), result: [] })
+    }
+  })
+
+  ctx.registerPage({
+    id: 'hoyo-global-help',
+    title: '全局帮助',
+    icon: '📖',
+    priority: 64,
+    html: HELP_HTML,
+    style: 'help.css',
+    script: 'help.js',
   })
 
   ctx.registerPage({

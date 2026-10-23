@@ -614,3 +614,71 @@ body {
   text-align: center;
   text-shadow: 0 1px 2px rgba(255,255,255,.72);
 }
+
+/* ───────────── 全局帮助：深夜蓝紫 + 极光，四游戏共用 ───────────── */
+body.theme-global {
+  --g-primary: #7de2ff;
+  --g-secondary: #c69bff;
+  --g-title: #eaf6ff;
+  --g-text: #a9b8d6;
+  --g-card: rgba(9,14,28,.88);
+  --g-item: rgba(16,23,42,.94);
+  --g-border: rgba(125,226,255,.26);
+  --g-shadow: rgba(0,0,0,.46);
+  --g-head-a: rgba(94,234,212,.96);
+  --g-head-b: rgba(167,139,250,.96);
+  --g-head-text: #071018;
+  --g-head-sub: #d7e6ff;
+  --g-head-sub-bg: rgba(9,14,28,.72);
+  --g-label-a: #5eead4;
+  --g-label-b: #a78bfa;
+  --g-strip-a: #5eead4;
+  --g-strip-b: #60a5fa;
+  --g-strip-c: #a78bfa;
+  --g-strip-d: #fbbf24;
+  --g-accent: #7de2ff;
+  --g-base-a: rgba(7,11,22,.96);
+  --g-base-b: rgba(12,18,36,.98);
+  --g-grid: rgba(125,226,255,.12);
+  --g-radius: 20px;
+  --g-title-font: 'HelpBold','HelpSans','Microsoft YaHei',sans-serif;
+}
+body.theme-global .head_box .id_text {
+  font-family: 'HelpBold','HelpSans','Microsoft YaHei',sans-serif;
+  font-weight: 400;
+  font-size: 46px;
+  letter-spacing: 4px;
+  color: #071018;
+  text-shadow: 0 2px 0 rgba(255,255,255,.28);
+}
+body.theme-global .head_box .day_text {
+  font-family: 'HelpBold','HelpSans','Microsoft YaHei',sans-serif;
+  font-weight: 400;
+  font-size: 20px;
+  letter-spacing: 1px;
+  color: #071018;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.5);
+}
+body.theme-global .title .text { color: #eaf6ff; }
+body.theme-global .title .dec { color: #a9b8d6; text-shadow: none; }
+body.theme-global .tab_lable {
+  color: #071018;
+  font-family: 'HelpBold','HelpSans','Microsoft YaHei',sans-serif;
+  font-weight: 400;
+}
+body.theme-global .data_box { backdrop-filter: none; border-color: rgba(125,226,255,.22); }
+body.theme-global .list .item,
+body.theme-global .list .item_ { border-color: rgba(125,226,255,.16); }
+body.theme-global .container::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(94,234,212,.10), transparent 32%),
+    radial-gradient(circle at 88% 4%, rgba(167,139,250,.12), transparent 34%),
+    radial-gradient(circle at 50% 100%, rgba(96,165,250,.08), transparent 46%);
+}
+body.theme-global .head_box { box-shadow: 0 0 0 2px rgba(125,226,255,.18), 0 18px 42px rgba(0,0,0,.48); }
+body.theme-global .head_box::after { display: none; }
+body.theme-global .logo { color: #7de2ff; }

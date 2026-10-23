@@ -33,6 +33,7 @@ const THEME_HEAD = {
   zzz: { title: '绝区零', sub: '命令帮助 · 绳网终端' },
   honkai3: { title: '崩坏3', sub: '命令帮助 · 休伯利安舰务' },
   bilibili: { title: '哔哩哔哩', sub: '命令帮助 · B站功能' },
+  global: { title: '全局帮助', sub: '米哈游插件 · 全部指令速查' },
   default: { title: '米哈游插件', sub: '命令帮助 · 指令速查' },
 };
 
@@ -52,8 +53,36 @@ export class help extends plugin {
           reg: '^#*米哈游(原神|星铁|崩铁|绝区零|崩三|崩坏3|卡池|图鉴|攻略|B站|b站|完整)帮助$',
           fnc: 'help',
         },
+        {
+          // 全局帮助：抢在其它插件的 #帮助 前（优先级取最小值）
+          reg: '^#*(?:全局)?帮助$',
+          fnc: 'globalHelp',
+          priority: Number.MIN_SAFE_INTEGER,
+        },
       ],
     });
+  }
+
+  async globalHelp(e) {
+    try {
+      const raw = yaml.get(DETAIL_HELP_PATH) || [];
+      const data = Array.isArray(raw) ? raw : (raw.list || raw.data || []);
+      if (!data.length) {
+        return e.reply('帮助内容为空，可在线查看：' + HELP_URL, true, { recallMsg: 60 });
+      }
+      const head = THEME_HEAD.global;
+      const img = await render('help/help', {
+        data,
+        au: !!e.isMaster,
+        theme: 'global',
+        headTitle: head.title,
+        headSub: head.sub,
+      }, { e, pct: 1 });
+      return e.reply(img);
+    } catch (err) {
+      logger.warn(`[HoYoGet][help] 全局帮助图渲染失败: ${err?.message || err}`);
+      return e.reply(`米哈游全局帮助：${HELP_URL}`, true, { recallMsg: 60 });
+    }
   }
 
   async help(e) {
