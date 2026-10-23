@@ -385,8 +385,8 @@ function appStyleCss(helpCfg, themeStyle = {}, pageWidth = 1000) {
   const color = key => safeCssValue(user[key])
   const size = (key, def, max) => safeSize(user[key], 8, max) || def
   const dimNum = Number(user.pageDim)
-  const dim = Number.isFinite(dimNum) ? Math.min(100, Math.max(0, dimNum)) / 100 : 0.88
-  const blur = safePx(user.pageBlur, 20) || '18px'
+  const dim = Number.isFinite(dimNum) ? Math.min(100, Math.max(0, dimNum)) / 100 : 0.30
+  const blur = safePx(user.pageBlur, 20) || '1px'
   const themeAccent = safeCssValue(themeStyle?.fontColor)
   const css = `body {
     width: ${pageWidth}px;

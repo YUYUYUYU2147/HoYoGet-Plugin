@@ -196,8 +196,8 @@ body {
 .w-layout-app { color: #111827; }
 .w-layout-app .w-bg-blur { filter: blur(30px) brightness(.95) saturate(1.05); }
 .w-layout-app .w-page {
-  background: rgba(242,242,247,var(--w-page-dim, .88));
-  backdrop-filter: blur(var(--w-page-blur, 18px)) saturate(1.08);
+  background: rgba(242,242,247,var(--w-page-dim, .30));
+  backdrop-filter: blur(var(--w-page-blur, 1px)) saturate(1.02);
 }
 .w-layout-app .w-hero {
   color: #111827;

@@ -45,8 +45,8 @@
     { key: 'itemSize', label: '指令标题字号(px)', ph: '18', size: true },
     { key: 'descSize', label: '说明字号(px)', ph: '15', size: true },
     { key: 'contBgBlur', label: '面板模糊(0-20)', ph: '3', size: true },
-    { key: 'pageDim', label: '页面遮罩(0-100)', ph: '88', size: true },
-    { key: 'pageBlur', label: '页面背景模糊(0-20)', ph: '18', size: true },
+    { key: 'pageDim', label: '页面遮罩(0-100)', ph: '30', size: true },
+    { key: 'pageBlur', label: '页面背景模糊(0-20)', ph: '1', size: true },
   ]
   const iconUrl = game => g.apiBase + '/game/icon?game=' + encodeURIComponent(game) + '&token=' + encodeURIComponent(g.token || '')
 
