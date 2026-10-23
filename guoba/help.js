@@ -30,6 +30,7 @@
 
   let groups = []
   let themes = []
+  let iconCount = 360
   let version = ''
   let gameFilter = ''
   let rawHelp = null
@@ -288,13 +289,13 @@
     if (!box) return
     const current = Number(draft?.helpList?.[gi]?.list?.[ii]?.icon) || 0
     const cells = []
-    for (let n = 1; n <= 360; n++) {
+    for (let n = 1; n <= iconCount; n++) {
       cells.push('<button type="button" class="hic-cell' + (n === current ? ' on' : '') + '" data-icon="' + n + '">'
         + '<span class="hic-view"><i style="' + iconPos(n) + '"></i></span><b>' + n + '</b></button>')
     }
     box.innerHTML = '<div class="hic-panel">'
       + '<div class="hic-head"><div><div class="hic-title">选择图标</div>'
-      + '<div class="hic-sub">点击图标即可选中，编号会写到当前指令</div></div>'
+      + '<div class="hic-sub">共 ' + iconCount + ' 个可用图标，点击即可选中并回填编号</div></div>'
       + '<input class="hic-search" id="hic-search" placeholder="输入编号筛选" />'
       + '<button type="button" class="hic-close" data-close="1">关闭</button></div>'
       + '<div class="hic-grid" id="hic-grid">' + cells.join('') + '</div>'
@@ -546,6 +547,7 @@
       rawHelp = payload
       groups = normalize(payload)
       themes = Array.isArray(payload.themes) ? payload.themes : []
+      iconCount = Number(payload.iconCount) || 360
       version = String(payload.version || '')
       const cfg = payload.helpCfg || payload
       const titleEl = el('hp-title')

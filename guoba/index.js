@@ -245,6 +245,39 @@ function helpThemeNames() {
   }
 }
 
+let _iconCountCache = { mtime: 0, count: 360 }
+/** 雪碧图实际有多少个非空图标（用于选择器只显示有效编号） */
+async function helpIconCount() {
+  const file = path.join(ROOT, 'resources', 'global_help', 'icon.png')
+  try {
+    const st = fs.statSync(file)
+    if (_iconCountCache.mtime === st.mtimeMs) return _iconCountCache.count
+    const sharp = (await import('sharp')).default
+    const { data, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+    const cols = 10
+    const cw = Math.round(info.width / cols)
+    const rows = Math.floor(info.height / cw)
+    let last = 0
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        let hit = 0
+        const x0 = c * cw
+        const y0 = r * cw
+        for (let y = y0; y < y0 + cw && y < info.height; y += 2) {
+          for (let x = x0; x < x0 + cw && x < info.width; x += 2) {
+            if (data[(y * info.width + x) * info.channels + 3] > 16) hit++
+          }
+        }
+        if (hit > 50) last = r * cols + c + 1
+      }
+    }
+    _iconCountCache = { mtime: st.mtimeMs, count: last || 360 }
+    return _iconCountCache.count
+  } catch {
+    return 360
+  }
+}
+
 function pickHelpTheme(helpCfg = {}) {
   const all = helpThemeNames()
   let names = all
@@ -574,6 +607,7 @@ export function init(ctx) {
       const result = Array.isArray(raw) ? { helpList: raw } : raw
       result.theme = pickHelpTheme(result.helpCfg || {})
       result.themes = helpThemeNames()
+      result.iconCount = await helpIconCount()
       result.background = {
         mode: result.helpCfg?.background || 'mix',
         api: result.helpCfg?.backgroundApi || 'https://api.yppp.net/pc.php',
