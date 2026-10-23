@@ -212,14 +212,13 @@ export function eidolonBracket(eidolon) {
  */
 export async function fetchPersonalRank({ nickname, char, eidolon } = {}) {
   if (!nickname || !char) return null
-  const ck = `pr:${nickname}:${char}:v2`
+  const ck = `pr:${nickname}:${char}:v3`
   const cached = readCache(ck)
   if (cached) return cached
 
-  // 1) 个人名次。
-  // 注意：search 接口不能带 eid！带 eid=0/1-2 会按档位过滤，
-  // 而很多玩家的实际档位不是传入值，结果直接空数组。
-  // 不带 eid 会返回该昵称+角色的记录，entry.eidolon 才是真实星魂。
+  // 1) 先不带 eid 查，拿到记录的真实星魂。
+  //    注意：不带 eid 时的 searchRank 是「全星魂档位」的名次，
+  //    不能直接和某个档位的 total 比较（会出现第 645 / 共 524 这种）。
   const sqs = new URLSearchParams({ nickname, char })
   const sres = await fetch(`${ORIGIN}/api/leaderboard/search?${sqs.toString()}`, {
     signal: AbortSignal.timeout(15000),
@@ -227,20 +226,42 @@ export async function fetchPersonalRank({ nickname, char, eidolon } = {}) {
   })
   if (!sres.ok) throw new Error(`fortoffans search HTTP ${sres.status}`)
   const list = await sres.json()
-  const entry = (Array.isArray(list) ? list : []).find(r => String(r?.avatar_id) === String(char))
+  let entry = (Array.isArray(list) ? list : []).find(r => String(r?.avatar_id) === String(char))
   if (!entry) return null // 该玩家没在这个角色上提交过展柜
 
-  // 2) 参榜数：用记录里的真实星魂档位
   const bracket = eidolonBracket(entry.eidolon ?? eidolon)
+
+  // 2) 再带真实档位查一次，拿「同档位」名次；拿不到才退回全档位名次
+  let rank = entry.searchRank ?? null
+  let scope = 'all'
+  try {
+    const sqs2 = new URLSearchParams({ nickname, char, eid: bracket })
+    const sres2 = await fetch(`${ORIGIN}/api/leaderboard/search?${sqs2.toString()}`, {
+      signal: AbortSignal.timeout(15000),
+      headers: { 'User-Agent': UA, Accept: 'application/json' },
+    })
+    if (sres2.ok) {
+      const list2 = await sres2.json()
+      const e2 = (Array.isArray(list2) ? list2 : []).find(r => String(r?.avatar_id) === String(char))
+      if (e2) {
+        entry = e2
+        rank = e2.searchRank ?? rank
+        scope = 'bracket'
+      }
+    }
+  } catch (_) { /* 档位查询失败就保留全档位名次 */ }
+
+  // 3) 参榜数：同角色、同星魂档位
   let total = null
   try {
     total = (await fetchLeaderboard({ char, eid: bracket, page: 1 }))?.total ?? null
   } catch (_) { /* 总数失败不影响个人名次 */ }
   const out = {
-    rank: entry.searchRank ?? null,
+    rank,
     total,
     entry,
     bracket,
+    scope,
   }
   writeCache(ck, out)
   return out
