@@ -1,4 +1,5 @@
 import fs from 'fs';
+import YAML from 'yaml';
 import fetch from 'node-fetch';
 import moment from 'moment';
 import { render, pluginPriority } from '#HoYoGet';
@@ -7,6 +8,23 @@ const NEWS_API = 'https://bbs-api-static.miyoushe.com/painter/wapi/getNewsList?g
 const POST_API = 'https://bbs-api.miyoushe.com/post/wapi/getPostFull?gids=1&read=1&post_id=';
 const CACHE_KEY = 'xhh:bh3:calendar:v6';
 const BH3_ICON_DIR = './plugins/HoYoGet-Plugin/data/bh3_gacha/icons';
+/** 补给名段里「通用描述」不算名字（装备补给 / 角色补给 / 服装补给…） */
+const BH3_GENERIC_SEG = /^(装备补给|角色补给|服装补给|主题补给|协同补给|协同者补给|精确补给|精准补给|跃升补给|扩充补给|补给|限时开启|开启)?$/;
+
+function isBh3NameSegment(seg = '') {
+  const s = String(seg || '').trim();
+  if (!s) return false;
+  if (BH3_GENERIC_SEG.test(s)) return false;
+  // 只剩类型描述（去掉「限时开启」之类后为空）也不算
+  const core = s.replace(/限时开启[!！]*$/, '').replace(/主题补给$/, '').trim();
+  if (!core || BH3_GENERIC_SEG.test(core)) return false;
+  return true;
+}
+
+/* 卡池本地库：崩三公告正文只写「>>补给信息 [图片]」，时间在官方配图里，
+   正文解析不出日期；卡池库里有按「公告日→周四开池 + 补给周期」推好的准确时间，
+   日历的补给条目直接复用它，保证日历和「崩三当前卡池」显示一致。 */
+const BH3_POOL_HISTORY_PATH = './plugins/HoYoGet-Plugin/system/default/bh3_gacha_pool_history.yaml';
 /* 官方 wiki「女武神」列表：拿装甲头像给生日用 */
 const BH3_WIKI_BASE = 'https://api-takumi-static.mihoyo.com/common/blackboard/bh3_wiki/v1/home/content/list?app_sn=bh3_wiki';
 // 崩三公告/活动更新较频繁；原先缓存 10 分钟会让日历看起来不像实时更新。
@@ -132,8 +150,19 @@ export class bh3_calendar extends plugin {
       if (!title || ignoreReg.test(title)) continue;
       let detail = null;
       try { detail = await this.requestPost(post.post_id); } catch (err) { logger.debug?.(`[HoYoGet][bh3_calendar] 帖子详情失败 ${post.post_id}: ${err?.message || err}`); }
-      const content = this.htmlToText(detail?.content || post.content || '');
-      const time = this.extractTime(content, post.created_at);
+      let content = this.htmlToText(detail?.content || post.content || '');
+      let time = this.extractTime(content, post.created_at);
+      /* 帖子详情接口的正文被截断（常停在「>>补给信息 [图片]」），
+         公告里明明写着「10月16日12:00~10月30日12:00」却读不到。
+         详情拿不到时间时，改走「瞬间搜索」接口 —— 它的 content 更完整，
+         能拿到准确的开放时间区间。 */
+      if (!time?.end) {
+        const full = await this.fetchInstantContent(title);
+        if (full) {
+          time = this.extractTime(full, post.created_at);
+          if (time?.end) content = full;
+        }
+      }
       // 已结束的直接不要，别让它们占坑后被裁成窄条堆在日历左上角
       if (!time || !time.end.isAfter(now)) continue;
       const banner = item?.image_list?.[0]?.url || post.cover || post.images?.[0] || '';
@@ -152,6 +181,8 @@ export class bh3_calendar extends plugin {
       });
       if (list.length >= 18) break;
     }
+    // 补给/服装的时间改用卡池库（公告正文拿不到准确日期），与「崩三当前卡池」保持一致
+    this.applyBh3PoolTimes(list);
 
     /* 与米哈游三游戏日历同一套甘特模板：今天前后各 7 天，条带按起止铺开 */
     const winStart = now.clone().startOf('day').subtract(7, 'days');
@@ -378,6 +409,114 @@ export class bh3_calendar extends plugin {
   }
 
   // 近期生日：日历只显示17天，窗口卡得巧就一个生日都看不到，这里单独列未来45天的
+  /**
+   * 载入卡池库里的补给时间，按「UP 名 / 补给名」建索引。
+   * @returns {Map<string, {start:string, end:string, name:string}>}
+   */
+  loadBh3PoolTimes() {
+    const map = new Map();
+    try {
+      if (!fs.existsSync(BH3_POOL_HISTORY_PATH)) return map;
+      const data = YAML.parse(fs.readFileSync(BH3_POOL_HISTORY_PATH, 'utf-8'));
+      /* 库里的版本是从新到旧排的，同名补给（如 8.9 与 9.1 都有「垂曦净蕊」）
+         要用**最新版本**那条，所以先写入的优先、后来的不覆盖。 */
+      for (const vp of data?.pools || []) {
+        for (const p of vp.pools || []) {
+          if (!p.start || !p.end) continue;
+          const item = { start: p.start, end: p.end, name: p.s || p.name || '' };
+          /* 只用补给自身的 UP 名建索引，不要把 target（配套角色）也当 key：
+             「垂曦净蕊」的装备池 target 是「愈生佑翎」，
+             用 target 建 key 会让角色池和装备池互相串台。 */
+          if (p.s) map.set(String(p.s).trim(), item);
+          /* 补给名格式：「【补给】<主体名>丨<类型>」。
+             主体名取「丨」**前**一段（银雪与梦的公主 / 时序之律者），
+             取后一段会拿到「服装补给限时开启！」这种类型描述，匹配全错。 */
+          /* 补给名两种写法都有：
+             「【补给】垂曦净蕊&花愈朝夕丨装备补给」（名称在前）
+             「【补给】装备补给丨垂曦净蕊&花愈朝夕」（类型在前）
+             所以「丨」前后两段都作为候选 key（去掉书名号与「主题补给」后缀）。 */
+          /* 补给名两种写法都有：
+             「【补给】垂曦净蕊&花愈朝夕丨装备补给」（名称在前）
+             「【补给】装备补给丨垂曦净蕊&花愈朝夕」（类型在前）
+             「丨」前后两段都作为候选，但**通用描述段要排除**
+             （「装备补给」「服装补给限时开启！」这类段会命中别的池）。 */
+          const raw = String(p.name || '').replace(/^【[^】]*】/, '');
+          const segs = raw.split(/[丨｜|]/).map(x => x.replace(/[「」『』]/g, '').trim()).filter(Boolean);
+          for (const seg of segs) {
+            if (!isBh3NameSegment(seg)) continue;
+            if (!map.has(seg)) map.set(seg, item);
+            const theme = seg.replace(/主题补给.*$/, '').trim();
+            if (theme && theme !== seg && !map.has(theme)) map.set(theme, item);
+          }
+        }
+      }
+    } catch (_) {}
+    return map;
+  }
+
+  /**
+   * 用「瞬间搜索」接口取公告正文（比帖子详情接口完整）。
+   * 关键词用公告标题里的「丨」前那段主体名。
+   */
+  async fetchInstantContent(title = '') {
+    const raw = String(title || '').replace(/^【[^】]*】/, '');
+    const kw = (raw.split(/[丨｜|]/)[0] || '').replace(/[「」『』]/g, '').trim();
+    if (!kw || kw.length > 20) return '';
+    try {
+      const url = 'https://bbs-api.miyoushe.com/painter/api/user_instant/search/list?keyword=' +
+        encodeURIComponent(kw) + '&uid=73565430&size=20&offset=0&sort_type=2';
+      const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(12000) });
+      if (!res.ok) return '';
+      const json = await res.json();
+      for (const it of json?.data?.list || []) {
+        const p = it?.post?.post || it?.post || {};
+        const t = String(p.subject || '');
+        if (!t.includes(kw)) continue;
+        if (!/补给|服装|公告/.test(t)) continue;
+        const body = String(p.content || '');
+        if (/开放时间|活动时间/.test(body)) return body;
+      }
+    } catch (_) {}
+    return '';
+  }
+
+  /** 用卡池库里的时间覆盖日历里该补给的起止（对不上就保持公告解析的结果） */
+  applyBh3PoolTimes(list = []) {
+    const map = this.loadBh3PoolTimes();
+    if (!map.size) return list;
+    let hit = 0;
+    for (const item of list) {
+      if (item.type !== 'supply' && item.type !== 'outfit') continue;
+      const title = String(item.title || '');
+      /* 名称可能在「丨」前也可能在后，两段都试；
+         必须整段完全相等才算命中 —— 早期版本做过「去掉开启/主题补给」之类的清洗，
+         会把不同补给归到同一个 key，导致新池套上老池的时间。 */
+      const segs = title.replace(/^【[^】]*】/, '').split(/[丨｜|]/)
+        .map(x => x.replace(/[「」『』]/g, '').trim()).filter(Boolean);
+      const candidates = [];
+      for (const seg of segs) {
+        if (!isBh3NameSegment(seg)) continue;
+        candidates.push(seg);
+        const theme = seg.replace(/主题补给.*$/, '').trim();
+        if (theme && theme !== seg) candidates.push(theme);
+      }
+      const found = candidates.map(c => map.get(c)).find(Boolean);
+      if (!found) continue;
+      const s = moment(found.start, 'YYYY-MM-DD HH:mm:ss');
+      const e = moment(found.end, 'YYYY-MM-DD HH:mm:ss');
+      if (!s.isValid() || !e.isValid()) continue;
+      item.start = s;
+      item.end = e;
+      item.startFull = found.start;
+      item.endFull = found.end;
+      item.leftTime = this.leftLabel(moment(), s, e);
+      item.poolTimeFrom = 'local';
+      hit++;
+    }
+    if (hit) logger.mark?.(`[HoYoGet][bh3_calendar] 复用卡池库时间 ${hit} 条`);
+    return list;
+  }
+
   /* 角色头像：优先用抽卡记录缓存的官方 wiki 立绘（data/bh3_gacha/icons/char_*.png），
      名字对不上时退回 wiki 角色列表接口，最后才只显示名字。 */
   birthdayAvatar(name = '') {
