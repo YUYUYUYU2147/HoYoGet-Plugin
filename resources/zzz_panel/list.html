@@ -49,8 +49,12 @@
           {{/each}}
         </div>
         <div class="cont-footer">
-          <span class="foot-left"><i class="legend-dot"></i>本次更新角色{{if updatedCount}} · {{updatedCount}}{{/if}}</span>
-          <span class="foot-right">当前更新服务：{{serviceLabel}}</span>
+          <div class="foot-meta">
+            <span class="foot-left"><i class="legend-dot"></i>本次更新角色{{if updatedCount}} · {{updatedCount}}{{/if}}</span>
+            <span class="foot-sep">|</span>
+            <span class="foot-right">当前更新服务：{{serviceLabel}}</span>
+          </div>
+          <div class="foot-from">from 米哈游</div>
         </div>
       </div>
     </div>

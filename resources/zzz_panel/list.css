@@ -1,6 +1,7 @@
 body {
   position: relative;
-  width: 720px;
+  /* 760 = 内容 720 + 左右各 20 内边距；wrap 用 border-box，避免右侧 20px 被裁 */
+  width: 760px;
   background: #14161f;
   font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
   color: #e8eaf0;
@@ -35,8 +36,9 @@ body::after {
 .wrap {
   position: relative;
   z-index: 1;
-  width: 720px;
+  width: 760px;
   padding: 24px 20px 16px;
+  box-sizing: border-box;
 }
 
 .head-box {
@@ -247,17 +249,35 @@ body::after {
 
 .cont-footer {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
+  gap: 3px;
   padding: 8px 12px;
   margin-top: 6px;
   font-size: 12px;
   color: #9aa0b0;
   border-radius: 0 0 10px 10px;
+  text-align: center;
+}
+
+.cont-footer .foot-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .cont-footer .foot-left { color: #dfe4ef; }
 .cont-footer .foot-right { color: #ffcf5c; }
+.cont-footer .foot-sep { color: #596078; }
+
+/* 保留原来的底部注释：红色、居中 */
+.cont-footer .foot-from {
+  color: #ff4d4f;
+  font-weight: 600;
+  letter-spacing: .5px;
+}
 
 .cont-footer .legend-dot {
   display: inline-block;
