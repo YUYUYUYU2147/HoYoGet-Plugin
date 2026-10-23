@@ -686,7 +686,7 @@ async function buildSrDetail(arg) {
   // 工坊 item_id 与 fort off fans 的 avatar_id 是同一套 id，可直接复用。
   let globalRank = null
   try {
-    const { fetchPersonalRank } = await import('../../system/fortoffans.js')
+    const { fetchPersonalRank } = await import(`../../system/fortoffans.js?t=${Date.now()}`)
     const pr = await fetchPersonalRank({
       nickname: nick,
       char: String(role.item_id),

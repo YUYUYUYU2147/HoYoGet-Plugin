@@ -139,7 +139,10 @@ export class sr_global_rank extends plugin {
     if (!avatars.length) return e.reply(`UID ${uid} 暂无可查询的角色面板。`)
     await e.reply(`正在查询 ${nickname}（UID ${uid}）的星铁全球排名，请稍候…`)
     const chars = loadCharNames()
+    // system/ 下的模块被静态 import 时热重载不会替换，这里带版本号动态加载
+    const { fetchPersonalRank } = await import(`../../system/fortoffans.js?t=${Date.now()}`)
     const results = []
+    let errors = 0
     for (let i = 0; i < avatars.length; i += 6) {
       const chunk = avatars.slice(i, i + 6)
       const part = await Promise.all(chunk.map(async ([id, a]) => {
@@ -159,6 +162,7 @@ export class sr_global_rank extends plugin {
     if (!results.length) {
       return e.reply([
         `没有在 fort off fans 查到 ${nickname} 的星铁角色排名。`,
+        `已查询 ${avatars.length} 个角色，异常 ${errors} 个。`,
         '这个站只收录玩家主动提交的展柜，且昵称必须与网站显示一致。',
         '可先在 hsr.fortoffans.com 搜索你的昵称确认；如果游戏昵称不同，可以这样指定：',
         '*我的全球排名 <UID> 昵称:网站上显示的昵称',
