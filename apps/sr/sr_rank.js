@@ -135,13 +135,13 @@ export class sr_global_rank extends plugin {
     }
     const avatars = Object.entries(data?.avatars || {})
       .filter(([, a]) => a && (a.artis || a._source))
-      .slice(0, 15)
+      .slice(0, 60)
     if (!avatars.length) return e.reply(`UID ${uid} 暂无可查询的角色面板。`)
     await e.reply(`正在查询 ${nickname}（UID ${uid}）的星铁全球排名，请稍候…`)
     const chars = loadCharNames()
     const results = []
-    for (let i = 0; i < avatars.length; i += 4) {
-      const chunk = avatars.slice(i, i + 4)
+    for (let i = 0; i < avatars.length; i += 6) {
+      const chunk = avatars.slice(i, i + 6)
       const part = await Promise.all(chunk.map(async ([id, a]) => {
         try {
           const pr = await fetchPersonalRank({ nickname, char: id, eidolon: a.cons ?? a.rank ?? 0 })
