@@ -409,6 +409,84 @@ export async function getCalendarActivities(game) {
  * 近 N 天角色生日（原神/绝区零有本地表，星铁暂无可靠数据）。
  * 生日是全年固定节点，不依赖公告接口；返回与活动同结构，日期为生日当天。
  */
+/* 绝区零头像缓存：{ 角色名: data URI }，由官方 wiki「代理人」列表补齐 */
+const ZZZ_AVATAR_CACHE = './plugins/HoYoGet-Plugin/data/zzz_birthday_avatars.json'
+let _zzzAvatars = null
+function zzzAvatarCache() {
+  if (_zzzAvatars === null) {
+    try { _zzzAvatars = JSON.parse(fs.readFileSync(ZZZ_AVATAR_CACHE, 'utf8')) || {} } catch (_) { _zzzAvatars = {} }
+  }
+  return _zzzAvatars
+}
+
+/* 生日表简称 → 官方 wiki 全名（简称匹配不到的少数几个） */
+const ZZZ_ALIAS = {
+  '猫又': '猫宫又奈',
+  '奥菲丝&「鬼火」': '奥菲丝·马格努森&「鬼火」',
+  '柚叶': '浮波柚叶',
+  '悠真': '浅羽悠真',
+  '星见雅': '星见雅',
+  '柳': '月城柳',
+  '丽娜': '亚历山德丽娜·莎芭丝缇安',
+};
+
+/** 角色头像：原神/星铁读本地 meta 的 face.webp；绝区零读 wiki 头像缓存，失败返回空串 */
+function birthdayAvatar(game, name = '') {
+  const who = String(name || '').trim()
+  if (!who) return ''
+  if (game === 'zzz') return zzzAvatarCache()[who] || ''
+  try {
+    const abs = `./plugins/HoYoGet-Plugin/resources/meta-${game}/character/${who}/imgs/face.webp`
+    if (fs.existsSync(abs)) return `data:image/webp;base64,${fs.readFileSync(abs).toString('base64')}`
+  } catch (_) { /* 忽略，返回空 */ }
+  return ''
+}
+
+/**
+ * 绝区零出生日头像：官方 wiki「代理人」列表里只有全名（如「可琳·威克斯」），
+ * 生日表里是简称（「可琳」），所以先精确匹配再包含匹配。
+ * 结果写 data/ 缓存，取不到的保持空（模板会显示名字首字）。
+ */
+export async function fillZzzBirthdayAvatars(names = []) {
+  const cache = zzzAvatarCache()
+  const need = [...new Set((names || []).filter(n => n && !cache[n]))]
+  if (!need.length) return 0
+  let list = []
+  try {
+    const u = 'https://api-takumi-static.mihoyo.com/common/blackboard/zzz_wiki/v1/home/content/list?app_sn=zzz_wiki&channel_id=43'
+    const r = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36' }, signal: AbortSignal.timeout(15000) })
+    const json = await r.json()
+    const walk = x => {
+      if (Array.isArray(x)) return x.forEach(walk)
+      if (!x || typeof x !== 'object') return
+      if (x.title && x.icon) list.push({ name: String(x.title).replace(/\s+/g, ''), icon: x.icon })
+      for (const k of ['children', 'list']) walk(x[k])
+    }
+    walk(json?.data?.list)
+  } catch (_) { return 0 }
+  if (!list.length) return 0
+  let got = 0
+  for (const name of need) {
+    const key = String(ZZZ_ALIAS[name] || name).replace(/\s+/g, '')
+    const hit = list.find(x => x.name === key)
+      || list.find(x => x.name.includes(key))
+      || list.find(x => key.includes(x.name))
+    if (!hit) continue
+    try {
+      const r = await fetch(hit.icon, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(12000) })
+      if (!r.ok) continue
+      const buf = Buffer.from(await r.arrayBuffer())
+      if (!buf.length || buf.length > 3 * 1024 * 1024) continue
+      cache[name] = `data:image/png;base64,${buf.toString('base64')}`
+      got++
+    } catch (_) {}
+  }
+  if (got) {
+    try { fs.writeFileSync(ZZZ_AVATAR_CACHE, JSON.stringify(cache), 'utf-8') } catch (_) {}
+  }
+  return got
+}
+
 export function getBirthdayActivities(game, days = 14, now = moment()) {
   const table = birthdaysOf(game);
   if (!table || !Object.keys(table).length) return [];
@@ -427,6 +505,8 @@ export function getBirthdayActivities(game, days = 14, now = moment()) {
         kind: 'birthday',
         title: `${name}生日`,
         subtitle: `${name}生日`,
+        person: name,
+        avatar: birthdayAvatar(game, name),
         banner: '',
         start: d.clone(),
         startText: d.format('YYYY-MM-DD HH:mm:ss'),

@@ -35,7 +35,10 @@
           <div class="mark-row">
             <div class="mark-label"><i class="mark-dot {{m.kind}}"></i>{{m.kindLabel}}</div>
             <div class="mark-track">
-              <span class="mark-pin {{m.kind}}" style="left: {{m.pos}}%" title="{{m.title}}">{{m.short}}</span>
+              <span class="mark-pin {{m.kind}}" style="left: {{m.pos}}%" title="{{m.title}}">
+                {{if m.avatar}}<img class="mark-avatar" src="{{m.avatar}}" />{{/if}}
+                <b>{{m.short}}</b>
+              </span>
             </div>
           </div>
           {{/each}}

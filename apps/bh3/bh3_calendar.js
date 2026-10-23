@@ -5,7 +5,10 @@ import { render, pluginPriority } from '#HoYoGet';
 
 const NEWS_API = 'https://bbs-api-static.miyoushe.com/painter/wapi/getNewsList?gids=1&page_size=80&type=1';
 const POST_API = 'https://bbs-api.miyoushe.com/post/wapi/getPostFull?gids=1&read=1&post_id=';
-const CACHE_KEY = 'xhh:bh3:calendar:v5';
+const CACHE_KEY = 'xhh:bh3:calendar:v6';
+const BH3_ICON_DIR = './plugins/HoYoGet-Plugin/data/bh3_gacha/icons';
+/* 官方 wiki「女武神」列表：拿装甲头像给生日用 */
+const BH3_WIKI_BASE = 'https://api-takumi-static.mihoyo.com/common/blackboard/bh3_wiki/v1/home/content/list?app_sn=bh3_wiki';
 // 崩三公告/活动更新较频繁；原先缓存 10 分钟会让日历看起来不像实时更新。
 // 保留 60 秒短缓存，避免同一分钟内重复请求米游社过多。
 const CACHE_TTL = 60;
@@ -16,6 +19,41 @@ const timeTitleReg = /(开放时间|活动时间|补给时间|上架时间|售�
 // 女武神生日表（月-日 → 角色名），来源：米游社「崩坏3角色生日整理」帖 39681618，
 // 并与百度百科「崩坏3角色生日表」交叉核对。观测枢详情接口没有生日字段，故用静态表；
 // 第二部新角色（希娜狄雅/科拉莉/赫丽娅/松雀等）暂无可靠公开数据，后续确认后直接在此补行即可。
+/* 生日表里的角色名 → 官方 wiki 角色列表里的代表装甲（头像从女武神列表取）。
+   崩三 wiki 只收「装甲名」，没有「琪亚娜」这种角色本名，必须显式映射。 */
+const BIRTHDAY_VALK = {
+  '琪亚娜': '白骑士·月光',
+  '芽衣': '雷电女王的鬼铠',
+  '布洛妮娅': '次元边界突破',
+  '德丽莎': '女武神·誓约',
+  '希儿': '魇夜星渊',
+  '符华': '影骑士·月轮',
+  '姬子': '真炎幸魂',
+  '八重樱': '逆神巫女',
+  '卡莲': '黯蔷薇',
+  '丽塔': '失落迷迭',
+  '幽兰黛尔': '天元骑英',
+  '西琳': '空之律者',
+  '爱莉希雅': '真我·人之律者',
+  '格蕾修': '繁星·绘世之卷',
+  '塞西莉娅': '圣女祈祷',
+  '苏莎娜': '女武神·荣光',
+  '卡罗尔': '女武神·热砂',
+  '时雨绮罗': '糖露星霜',
+  '阿波尼亚': '戒律·深罪之槛',
+  '维尔薇': '螺旋·愚戏之匣',
+  '梅比乌斯': '无限·噬界之蛇',
+  '李素裳': '玉骑士·月痕',
+  '爱因斯坦': '女武神·巡矢',
+  '羽兔': '织羽梦旌',
+  '乔伊斯': '女武神·重机',
+  '爱酱': '女武神·战车',
+  '伊甸': '黄金·璀耀之歌',
+};
+
+/* wiki 头像缓存（data/ 不入库）：{ 角色名: data URI } */
+const BH3_AVATAR_CACHE = './plugins/HoYoGet-Plugin/data/bh3_birthday_avatars.json';
+
 const BIRTHDAYS = {
   '1-1': ['幽兰黛尔', '乔伊斯'],
   '2-9': ['符华'],
@@ -115,19 +153,88 @@ export class bh3_calendar extends plugin {
       if (list.length >= 18) break;
     }
 
-    const range = this.getRange(now);
-    const viewList = this.layout(list, range, now);
+    /* 与米哈游三游戏日历同一套甘特模板：今天前后各 7 天，条带按起止铺开 */
+    const winStart = now.clone().startOf('day').subtract(7, 'days');
+    const winEnd = winStart.clone().add(14, 'days');
+    const windowMs = winEnd.valueOf() - winStart.valueOf();
+    const calList = list
+      .map(i => ({ ...i, startM: moment(i.startFull, 'YYYY-MM-DD HH:mm'), endM: moment(i.endFull, 'YYYY-MM-DD HH:mm') }))
+      .filter(i => i.startM.isValid() && i.endM.isValid())
+      .filter(i => i.endM.isAfter(now) && i.endM.isAfter(winStart) && i.startM.isBefore(winEnd))
+      .sort((a, b) => a.startM - b.startM)
+      .slice(0, 24)
+      .map(item => {
+        const started = item.startM.isSameOrBefore(now);
+        const s = item.startM.isAfter(winStart) ? item.startM : winStart;
+        const e = item.endM.isBefore(winEnd) ? item.endM : winEnd;
+        const left = Math.max(0, Math.min(100, (s.valueOf() - winStart.valueOf()) / windowMs * 100));
+        const width = Math.max(0.6, Math.min(100 - left, (e.valueOf() - s.valueOf()) / windowMs * 100));
+        const kind = { supply: 'gacha', outfit: 'shop', event: 'event', normal: 'event' }[item.type] || 'event';
+        return {
+          title: item.title,
+          startAbs: item.startM.clone(),
+          kind,
+          kindLabel: item.typeName,
+          startText: item.startM.format('M/D HH:mm'),
+          endText: item.endM.format('M/D HH:mm'),
+          status: started ? '进行中' : '即将开始',
+          statusClass: started ? 'on' : 'soon',
+          left: left.toFixed(2),
+          width: width.toFixed(2),
+          clipLeft: item.startM.isBefore(winStart),
+          clipRight: item.endM.isAfter(winEnd),
+          barText: this.leftLabel(now, item.startM, item.endM),
+          srcBanner: item.banner || '',
+        };
+      });
+
+    /* 大事件：补给 / 服装，按开放日打点，同类同日去重 */
+    const mk = (kind, label) => ({ kind, kindLabel: label, seen: new Set() });
+    const groups = [mk('gacha', '补给'), mk('shop', '服装')].filter(g => calList.some(a => a.kind === g.kind));
+    const markList = [];
+    for (const g of groups) {
+      for (const a of calList) {
+        if (a.kind !== g.kind) continue;
+        const day = Math.max(0, Math.min(13, a.startAbs.clone().startOf('day').diff(winStart, 'days')));
+        if (g.seen.has(day)) continue;
+        g.seen.add(day);
+        markList.push({
+          kind: g.kind,
+          kindLabel: g.kindLabel,
+          day: a.startAbs.format('M/D'),
+          short: a.title.replace(/^[「【]|」$|】$/g, '').slice(0, 12),
+          title: a.title,
+          pos: ((day + 0.5) / 14 * 100).toFixed(2),
+          abs: a.startAbs.valueOf(),
+        });
+      }
+    }
+    markList.sort((x, y) => x.abs - y.abs);
+
+    /* 生日头像：本地缓存没有的，按需从官方 wiki 补一次（失败不影响日历） */
+    const birthdayData = this.getBirthdays(now);
+    try {
+      await this.fillBirthdayAvatars(birthdayData.flatMap(b => b.people.map(p => p.name)));
+      for (const b of birthdayData) {
+        for (const p of b.people) if (!p.avatar) p.avatar = this.birthdayAvatar(p.name);
+      }
+    } catch (_) {}
+
     const data = {
       game: 'bh3',
-      title: '崩坏3日历',
+      gameCn: '崩坏3',
+      title: '崩坏3大事件日历',
       subtitle: '数据来源：米游社官方公告',
-      nowTime: now.format('YYYY-MM-DD HH:mm'),
+      nowText: now.format('YYYY-MM-DD HH:mm'),
       nowDate: now.date(),
-      dateList: this.getDateList(range.start),
-      birthdays: this.getBirthdays(now),
-      range: { start: range.start.format('YYYY-MM-DD HH:mm:ss'), end: range.end.format('YYYY-MM-DD HH:mm:ss') },
-      nowLeft: this.getNowLeft({ start: range.start.format('YYYY-MM-DD HH:mm:ss'), end: range.end.format('YYYY-MM-DD HH:mm:ss') }, now),
-      list: viewList,
+      dateList: this.getDateList(winStart),
+      birthdays: birthdayData,
+      range: { start: winStart.format('YYYY-MM-DD HH:mm:ss'), end: winEnd.format('YYYY-MM-DD HH:mm:ss') },
+      nowLeft: this.getNowLeft({ start: winStart.format('YYYY-MM-DD HH:mm:ss'), end: winEnd.format('YYYY-MM-DD HH:mm:ss') }, now),
+      list: calList,
+      markList,
+      marks: markList.length,
+      nowPos: (26 + 74 * (this.getNowLeft({ start: winStart.format('YYYY-MM-DD HH:mm:ss'), end: winEnd.format('YYYY-MM-DD HH:mm:ss') }, now) / 100)).toFixed(2),
       rawCount: list.length,
       splash: this.getFixedSplash()
     };
@@ -271,6 +378,59 @@ export class bh3_calendar extends plugin {
   }
 
   // 近期生日：日历只显示17天，窗口卡得巧就一个生日都看不到，这里单独列未来45天的
+  /* 角色头像：优先用抽卡记录缓存的官方 wiki 立绘（data/bh3_gacha/icons/char_*.png），
+     名字对不上时退回 wiki 角色列表接口，最后才只显示名字。 */
+  birthdayAvatar(name = '') {
+    const clean = String(name || '').trim();
+    if (!clean) return '';
+    // 1) 本地抽卡缓存里正好有这个角色立绘（最省事，但不全）
+    for (const key of [clean, BIRTHDAY_VALK[clean]].filter(Boolean)) {
+      try {
+        const abs = `${BH3_ICON_DIR}/char_${key}.png`;
+        if (fs.existsSync(abs)) return `data:image/png;base64,${fs.readFileSync(abs).toString('base64')}`;
+      } catch (_) {}
+    }
+    // 2) 之前从 wiki 取过并缓存
+    try {
+      const cache = JSON.parse(fs.readFileSync(BH3_AVATAR_CACHE, 'utf8'));
+      if (cache?.[clean]) return cache[clean];
+    } catch (_) {}
+    return '';
+  }
+
+  /** 从崩三官方 wiki「女武神」列表补齐生日头像，结果落 data/ 缓存，不重复请求 */
+  async fillBirthdayAvatars(names = []) {
+    const need = [...new Set((names || []).filter(n => n && !this.birthdayAvatar(n)))];
+    if (!need.length) return 0;
+    let cache = {};
+    try { cache = JSON.parse(fs.readFileSync(BH3_AVATAR_CACHE, 'utf8')) || {}; } catch (_) { cache = {}; }
+    let icons = {};
+    try {
+      const res = await fetch(`${BH3_WIKI_BASE}&channel_id=18`, { headers: this.headers(), signal: AbortSignal.timeout(12000) });
+      const json = await res.json();
+      const list = json?.data?.list?.[0]?.list || [];
+      for (const it of list) if (it?.title && it?.icon) icons[it.title] = it.icon;
+    } catch (_) { return 0; }
+    let got = 0;
+    for (const name of need) {
+      const valk = BIRTHDAY_VALK[name];
+      const url = valk ? icons[valk] : '';
+      if (!url) continue;
+      try {
+        const r = await fetch(url, { headers: this.headers(), signal: AbortSignal.timeout(10000) });
+        if (!r.ok) continue;
+        const buf = Buffer.from(await r.arrayBuffer());
+        if (!buf.length || buf.length > 3 * 1024 * 1024) continue;
+        cache[name] = `data:image/png;base64,${buf.toString('base64')}`;
+        got++;
+      } catch (_) {}
+    }
+    if (got) {
+      try { fs.writeFileSync(BH3_AVATAR_CACHE, JSON.stringify(cache), 'utf-8'); } catch (_) {}
+    }
+    return got;
+  }
+
   getBirthdays(now, days = 45) {
     const out = [];
     for (let i = 0; i <= days; i++) {
@@ -282,6 +442,7 @@ export class bh3_calendar extends plugin {
         date: d.format('MM-DD'),
         week,
         names,
+        people: names.map(n => ({ name: n, avatar: this.birthdayAvatar(n) })),
         days: i,
         label: i === 0 ? '今天' : `${i}天后`,
         isToday: i === 0
@@ -290,16 +451,18 @@ export class bh3_calendar extends plugin {
     return out.slice(0, 8);
   }
 
-  getDateList(start) {
+  getDateList(start, size = 14) {
     const ret = [];
     const week = ['日', '一', '二', '三', '四', '五', '六'];
-    for (let i = 0; i < 17; i++) {
+    for (let i = 0; i < size; i++) {
       const d = start.clone().add(i, 'days');
       ret.push({
+        md: d.format('M/D'),
         day: d.date(),
         month: d.month() + 1,
         week: week[d.day()],
         isToday: d.isSame(moment(), 'day'),
+        weekend: [0, 6].includes(d.day()),
         bd: BIRTHDAYS[`${d.month() + 1}-${d.date()}`] || []
       });
     }

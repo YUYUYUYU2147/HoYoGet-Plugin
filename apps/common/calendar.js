@@ -1,6 +1,6 @@
 import moment from 'moment'
 import { pluginPriority, render } from '#HoYoGet'
-import { getCalendarActivities, getBirthdayActivities, KIND_META } from './activity_remind.js'
+import { getCalendarActivities, getBirthdayActivities, fillZzzBirthdayAvatars, KIND_META } from './activity_remind.js'
 
 /* 指令：
  *   #日历 / #原神日历      → 原神
@@ -100,6 +100,13 @@ export class calendar extends plugin {
       const raw = await getCalendarActivities(game)
       // 生日是本地固定表，和公告合并；原神/绝区零有，星铁暂无
       const birthdays = getBirthdayActivities(game, 21, now)
+      if (game === 'zzz' && birthdays.length) {
+        // 绝区零头像要按官方 wiki 补一次（结果落 data/ 缓存，后续直接命中）
+        try {
+          await fillZzzBirthdayAvatars(birthdays.map(b => b.person))
+          for (const b of birthdays) b.avatar = b.avatar || ''
+        } catch (_) {}
+      }
       raw.push(...birthdays)
       // 14 天窗口：今天前后各 7 天；超出窗口的活动裁到边界并打箭头
       const winStart = now.clone().startOf('day').subtract(7, 'days')
@@ -131,6 +138,8 @@ export class calendar extends plugin {
             srcBanner: item.banner || '',
             kind: KIND_META[item.kind]?.cls || 'event',
             kindLabel: KIND_META[item.kind]?.label || '活动',
+            person: item.person || '',
+            avatar: item.avatar || '',
             tag: item.tag || '',
             startText: fmtDate(item.start, now),
             endText: fmtDate(item.end, now),
@@ -170,6 +179,8 @@ export class calendar extends plugin {
             day: a.startAbs.format('M/D'),
             short: a.title.replace(/^[「【]|」$|】$/g, '').slice(0, 12),
             title: a.title,
+            person: a.person || '',
+            avatar: a.avatar || '',
             pos: (day + 0.5) / 14 * 100,
             abs: a.startAbs.valueOf(),
           })

@@ -109,3 +109,9 @@ body {
 .mark-dot.birthday, .mark-pin.birthday { color: #db2777; }
 .mark-pin.birthday { background: rgba(219,39,119,.08); }
 .tag.kind-birthday { color: #db2777; background: rgba(219,39,119,.10); }
+
+/* 生日大事件：头像 + 名字 */
+.mark-pin { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px 1px 2px; max-width: 160px; }
+.mark-pin.birthday { border-color: rgba(219,39,119,.5); }
+.mark-avatar { width: 16px; height: 16px; border-radius: 50%; object-fit: cover; flex: none; background: #fff; border: 1px solid rgba(219,39,119,.45); }
+.mark-pin b { font-weight: 700; }

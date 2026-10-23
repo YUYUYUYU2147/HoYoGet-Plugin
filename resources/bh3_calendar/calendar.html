@@ -1,61 +1,94 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-  <meta charset="UTF-8">
-  <link rel="stylesheet" href="{{ppath}}bh3_calendar/calendar.css">
-</head>
-<body {{sys.scale}}>
-<div class="wrap">
-  <div class="header">
-    {{if splash}}<img class="corner-splash" src="{{(splash.startsWith('http') || splash.startsWith('/')) ? splash : ppath + splash}}" />{{/if}}
-    <div class="title">{{title}}</div>
-    <div class="meta"><span>{{subtitle}}</span><span>刷新：{{nowTime}}</span></div>
-  </div>
-  <div class="dates">
-    {{each dateList d}}
-    <div class="date {{d.isToday ? 'today' : ''}}">
-      <b>{{d.day}}</b>
-      <span>{{d.month}}月 周{{d.week}}</span>
-      {{if d.bd && d.bd.length}}
-      <div class="bd">
-        {{each d.bd b}}
-        <span class="bd-chip">{{b}}</span>
-        {{/each}}
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}bh3_calendar/calendar.css" />
+  </head>
+  <body class="game-bh3" {{sys.scale}}>
+    <div class="page">
+      <div class="head">
+        <img class="gicon" src="{{ppath}}game_icons/bh3.webp" onerror="this.style.display='none'" />
+        <div class="head-copy">
+          <div class="title">{{gameCn}}大事件日历</div>
+          <div class="sub">当前时间 {{nowText}} · 14 天窗口 · 数据来自米游社公告</div>
+        </div>
+        <div class="stats">
+          <div class="stat"><span class="k">补给 / 活动</span><b>{{list.length}}</b></div>
+          <div class="stat"><span class="k">大事件</span><b>{{marks}}</b></div>
+        </div>
+      </div>
+
+      <div class="tl-card">
+        <div class="tl-head">
+          <div class="tl-label">补给 / 活动</div>
+          <div class="tl-dates">
+            {{each dateList d}}
+            <span class="{{if d.isToday}}today{{/if}} {{if d.weekend}}weekend{{/if}}"><b>{{d.md}}</b><i>周{{d.week}}</i></span>
+            {{/each}}
+          </div>
+        </div>
+
+        {{if markList.length}}
+        <div class="tl-marks">
+          {{each markList m}}
+          <div class="mark-row">
+            <div class="mark-label"><i class="mark-dot {{m.kind}}"></i>{{m.kindLabel}}</div>
+            <div class="mark-track">
+              <span class="mark-pin {{m.kind}}" style="left: {{m.pos}}%" title="{{m.title}}">{{m.short}}</span>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+        {{/if}}
+
+        <div class="tl-body">
+          <div class="tl-now" style="left: {{nowPos}}%"><span>今天</span></div>
+          {{each list a}}
+          <div class="tl-row">
+            <div class="tl-label">
+              <div class="tl-txt">
+                <div class="tl-name" title="{{a.title}}">{{a.title}}</div>
+                <div class="tl-meta"><i class="pill {{a.statusClass}}">{{a.status}}</i><span class="tag kind-{{a.kind}}">{{a.kindLabel}}</span></div>
+              </div>
+            </div>
+            <div class="tl-track">
+              <div class="tl-bar {{a.statusClass}}" style="left: {{a.left}}%; width: {{a.width}}%;">
+                {{if a.clipLeft}}<i class="clip l">‹</i>{{/if}}
+                <span>{{a.barText}}</span>
+                {{if a.clipRight}}<i class="clip r">›</i>{{/if}}
+              </div>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+      </div>
+
+      {{if birthdays.length}}
+      <div class="bd-card">
+        <div class="bd-head"><span class="bd-title">近期生日</span><span class="bd-sub">未来 45 天</span></div>
+        <div class="bd-list">
+          {{each birthdays b}}
+          <div class="bd-item {{if b.isToday}}today{{/if}}">
+            <div class="bd-date"><b>{{b.date}}</b><i>周{{b.week}}</i></div>
+            <div class="bd-people">
+              {{each b.people p}}
+              <div class="bd-person">
+                {{if p.avatar}}<img class="bd-avatar" src="{{p.avatar}}" />{{else}}<span class="bd-avatar empty">{{p.name.slice(0,1)}}</span>{{/if}}
+                <span class="bd-name">{{p.name}}</span>
+              </div>
+              {{/each}}
+            </div>
+            <div class="bd-label">{{b.label}}</div>
+          </div>
+          {{/each}}
+        </div>
       </div>
       {{/if}}
+
+      <div class="foot">
+        <span class="foot-note">时间轴只显示今天前后各 7 天 · 条带长度对应补给周期</span>
+        <span class="foot-from">from 米哈游</span>
+      </div>
     </div>
-    {{/each}}
-  </div>
-  {{if birthdays.length}}
-  <div class="bds">
-    <span class="bds-t">近期生日</span>
-    {{each birthdays b}}
-    <span class="bd-item {{b.isToday ? 'today' : ''}}"><b>{{b.date}} 周{{b.week}}</b>{{b.names.join('、')}} · {{b.label}}</span>
-    {{/each}}
-  </div>
-  {{/if}}
-  <div class="body">
-    <div class="now" style="left:{{nowLeft}}%"><span>当前</span></div>
-    {{each list item}}
-    <div class="bar {{item.barCls}}" style="left:{{item.left}}%;width:{{item.width}}%;top:{{item.top}}px;height:{{item.barH}}px">
-      {{if item.banner}}<img class="bar-bg-img" src="{{item.banner}}" />{{/if}}
-      <div class="tag">{{item.typeName}}</div>
-      <div class="name">{{item.title}}</div>
-      <div class="time">{{item.start}} ~ {{item.end}} · {{item.leftTime}}</div>
-    </div>
-    {{/each}}
-  </div>
-  <div class="list">
-    {{each list item}}
-    <div class="li {{item.type}}">
-      <span class="dot"></span>
-      <span class="li-title">{{item.title}}</span>
-      <span class="li-time">{{item.start}} ~ {{item.end}}</span>
-      <span class="li-left">{{item.leftTime}}</span>
-    </div>
-    {{/each}}
-  </div>
-  <div class="footer">from 米哈游</div>
-</div>
-</body>
+  </body>
 </html>
