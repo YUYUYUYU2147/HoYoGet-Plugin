@@ -1,0 +1,33 @@
+/* 个人全球排名：复用 rank.css 的骨架，只补几处 */
+.page { padding-bottom: 22px; }
+
+.my-rank {
+  min-width: 78px;
+  font-size: 26px;
+  color: #c8cfff;
+  font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+}
+
+.meta-strip .my-nick {
+  font-size: 16px;
+  font-weight: 700;
+  color: #e7ebf3;
+  max-width: 520px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.meta-strip .my-uid,
+.meta-strip .my-queried {
+  font-size: 12px;
+  color: rgba(231, 235, 243, .55);
+}
+
+.row .player .nick { font-size: 17px; }
+.row .player .meta { display: flex; align-items: center; gap: 8px; }
+.my-pos { color: rgba(231, 235, 243, .62); }
+
+.row .stats { min-width: 360px; }
+.row .stats .stat { min-width: 72px; }
+
+.footer { margin-top: 14px; font-size: 12px; color: rgba(231, 235, 243, .38); text-align: center; }

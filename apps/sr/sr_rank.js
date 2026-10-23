@@ -149,11 +149,16 @@ export class sr_global_rank extends plugin {
         try {
           const pr = await fetchPersonalRank({ nickname, char: id, eidolon: a.cons ?? a.rank ?? 0 })
           if (!pr || pr.rank == null) return null
+          const e = pr.entry || {}
           return {
-            name: chars[id]?.name || a.name || id,
+            name: chars[id]?.name || e.char_name || a.name || id,
             rank: pr.rank,
             total: pr.total,
-            eidolon: Number(a.cons ?? a.rank ?? 0) || 0,
+            eidolon: Number(e.eidolon ?? a.cons ?? a.rank ?? 0) || 0,
+            critValue: e.stat_tcv != null ? Number(e.stat_tcv).toFixed(1) : '—',
+            critRate: e.stat_crit_rate != null ? (Number(e.stat_crit_rate) * 100).toFixed(1) + '%' : '—',
+            critDmg: e.stat_crit_dmg != null ? (Number(e.stat_crit_dmg) * 100).toFixed(1) + '%' : '—',
+            spd: e.stat_spd != null ? Number(e.stat_spd).toFixed(0) : '—',
           }
         } catch (_) { return null }
       }))
@@ -169,6 +174,17 @@ export class sr_global_rank extends plugin {
       ].join('\n'))
     }
     results.sort((a, b) => a.rank - b.rank)
+    try {
+      const img = await render('sr_rank/my', {
+        nickname,
+        uid,
+        queried: avatars.length,
+        rows: results.slice(0, 20),
+      }, { e, ret: true, dsf: 2.5 })
+      if (img) return img
+    } catch (err) {
+      logger.error?.(`[HoYoGet][sr_rank] 个人排名出图失败：${err?.message || err}`)
+    }
     const lines = results.map((r, i) => `${i + 1}. ${r.name}：第 ${r.rank} / 共 ${r.total ?? '?'}${r.eidolon ? `（${r.eidolon}魂）` : ''}`)
     return e.reply([`星铁全球排名 · ${nickname}（UID ${uid}）`, ...lines].join('\n'))
   }

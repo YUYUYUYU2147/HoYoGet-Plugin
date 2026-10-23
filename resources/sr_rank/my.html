@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}sr_rank/rank.css" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}sr_rank/my.css" />
+  </head>
+  <body>
+    <div class="page">
+      <div class="head">
+        <div class="head-left">
+          <div class="title">星铁全球排名</div>
+          <div class="subtitle">fort off fans · 我的角色名次</div>
+        </div>
+        <div class="head-right">
+          <div class="badge">HSR GLOBAL</div>
+          <div class="total">{{rows.length}} 个角色</div>
+        </div>
+      </div>
+
+      <div class="meta-strip">
+        <span class="my-nick">{{nickname}}</span>
+        <span class="my-uid">UID {{uid}}</span>
+        <span class="my-queried">已查询 {{queried}} 个角色</span>
+      </div>
+
+      <div class="list">
+        {{each rows r}}
+        <div class="row">
+          <div class="rank my-rank">{{r.rank}}</div>
+          <div class="player">
+            <div class="nick">{{r.name}}</div>
+            <div class="meta"><span class="my-pos">第 {{r.rank}} / 共 {{r.total || '?'}}</span>{{if r.eidolon}}<span class="eid">E{{r.eidolon}}</span>{{/if}}</div>
+          </div>
+          <div class="stats">
+            <div class="stat main"><span class="v">{{r.critValue}}</span><span class="l">CRIT</span></div>
+            <div class="stat"><span class="v">{{r.critRate}}</span><span class="l">暴率</span></div>
+            <div class="stat"><span class="v">{{r.critDmg}}</span><span class="l">暴伤</span></div>
+            <div class="stat"><span class="v">{{r.spd}}</span><span class="l">速度</span></div>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+
+      <div class="footer">数据来源 hsr.fortoffans.com · 只统计已提交到该站的角色</div>
+    </div>
+  </body>
+</html>
