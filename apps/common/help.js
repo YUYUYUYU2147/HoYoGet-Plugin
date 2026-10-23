@@ -264,6 +264,91 @@ function globalStyle(helpCfg, themeStyle = {}) {
   return { style: `<style>${css}</style>`, colCount, width };
 }
 
+const WEB_GAME_META = {
+  gs: { name: '原神', color: '#f0b25a' },
+  sr: { name: '星穹铁道', color: '#8fa6ff' },
+  zzz: { name: '绝区零', color: '#5eead4' },
+  bh3: { name: '崩坏3', color: '#f08ac0' },
+  common: { name: '通用', color: '#7de2ff' },
+}
+const WEB_GAME_ORDER = ['gs', 'sr', 'zzz', 'bh3', 'common']
+
+function webGameOf(text) {
+  const hit = []
+  if (/原神|提瓦特|原石|七圣|尘歌壶|深境螺旋|幻想真境/.test(text)) hit.push('gs')
+  if (/星铁|星穹|崩铁|星琼|模拟宇宙|忘却之庭|虚构叙事|末日幻影|差分宇宙|货币战争|寰宇蝗灾/.test(text)) hit.push('sr')
+  if (/绝区零|ZZZ|%|菲林|邦布|音擎|驱动盘|调频|式舆|危局|临界推演|空洞/.test(text)) hit.push('zzz')
+  if (/崩三|崩坏3|崩坏三|bbb|往世乐土|超弦空间|记忆战场|休伯利安|母带/.test(text)) hit.push('bh3')
+  return hit.length === 1 ? hit[0] : 'common'
+}
+
+function buildWebData(helpList, colCount) {
+  const groups = helpList.map(group => {
+    const items = (group.list || []).map(item => ({
+      title: item.title || '',
+      desc: item.desc || '',
+      css: iconCss(item.icon),
+      tags: imageTags(item),
+      game: webGameOf(`${item.title || ''} ${item.desc || ''} ${group.group || ''}`),
+    }))
+    const counts = {}
+    for (const item of items) counts[item.game] = (counts[item.game] || 0) + 1
+    const game = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'common'
+    return {
+      group: group.group || '未分组',
+      auth: group.auth === 'master' ? 'master' : '',
+      color: WEB_GAME_META[game]?.color || '#7de2ff',
+      items,
+      cols: colCount,
+    }
+  })
+  const chips = WEB_GAME_ORDER.map(key => ({
+    key,
+    name: WEB_GAME_META[key].name,
+    count: groups.reduce((n, g) => n + g.items.filter(i => i.game === key).length, 0),
+  })).filter(c => c.count > 0)
+  const total = groups.reduce((n, g) => n + g.items.length, 0)
+  return {
+    groups,
+    chips,
+    stats: [
+      { k: '指令总数', v: total },
+      { k: '板块', v: groups.length },
+      { k: '帮助主题', v: globalThemeNames().length },
+      { k: '支持游戏', v: 4 },
+    ],
+  }
+}
+
+function webStyleCss(helpCfg, themeStyle = {}) {
+  const raw = { ...GLOBAL_THEME_STYLE, ...(themeStyle || {}), ...(helpCfg.style || {}) }
+  const color = key => safeCssValue(raw[key])
+  const size = (key, def, max) => safeSize(raw[key], 8, max) || def
+  const blurNum = Number(raw.contBgBlur)
+  const blur = helpCfg.bgBlur === false ? 'none' : `blur(${Number.isFinite(blurNum) ? Math.min(20, Math.max(0, blurNum)) : 3}px)`
+  const css = `body {
+    --w-head: ${color('titleColor') || '#ffffff'};
+    --w-sub: ${color('subTitleColor') || '#c9d7ee'};
+    --w-item: ${color('fontColor') || '#f0d9a8'};
+    --w-desc: ${color('descColor') || '#c7d2e5'};
+    --w-panel: ${color('contBgColor') || 'rgba(6,21,31,.55)'};
+    --w-group: ${color('headerBgColor') || 'rgba(6,21,31,.42)'};
+    --w-card: ${color('rowBgColor1') || 'rgba(6,21,31,.35)'};
+    --w-card-alt: ${color('rowBgColor2') || 'rgba(6,21,31,.28)'};
+    --w-shadow: ${color('fontShadow') || 'none'};
+    --w-tag-red: ${color('tagRed') || '#dc2626'};
+    --w-tag-amber: ${color('tagAmber') || '#b45309'};
+    --w-tag-green: ${color('tagGreen') || '#15803d'};
+    --w-tag-gray: ${color('tagGray') || '#6b7280'};
+    --w-title-size: ${size('titleSize', '46px', 120)};
+    --w-group-size: ${size('groupSize', '16px', 60)};
+    --w-item-size: ${size('itemSize', '15px', 60)};
+    --w-desc-size: ${size('descSize', '12px', 60)};
+    --w-blur: ${blur};
+  }`
+  return `<style>${css}</style>`
+}
+
 export class help extends plugin {
   constructor(e) {
     super({
@@ -301,6 +386,22 @@ export class help extends plugin {
         const themeStyle = await loadGlobalThemeStyle(themeName);
         const { style, colCount } = globalStyle(helpCfg, themeStyle);
         const bg = await pickGlobalBackground(helpCfg, themeName);
+        const bgLabel = bg.mode === 'api' ? '随机背景' : `主题 ${themeName}`;
+        // 默认网页版布局；需要旧版可把 helpCfg.layout 设为 classic
+        if (helpCfg.layout !== 'classic') {
+          const web = buildWebData(helpList, colCount);
+          const img = await render('global_help/web', {
+            helpCfg,
+            ...web,
+            colCount,
+            themeName,
+            bgMode: bg.mode,
+            bgUrl: bg.url,
+            bgLabel,
+            style: webStyleCss(helpCfg, themeStyle),
+          }, { e, pct: 1 });
+          return e.reply(img);
+        }
         const img = await render('global_help/index', {
           helpCfg,
           helpGroup: buildHelpGroups(helpList, colCount),
@@ -308,6 +409,7 @@ export class help extends plugin {
           themeName,
           bgMode: bg.mode,
           bgUrl: bg.url,
+          bgLabel,
           style,
         }, { e, pct: 1 });
         return e.reply(img);

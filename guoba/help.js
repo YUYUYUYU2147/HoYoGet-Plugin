@@ -381,6 +381,7 @@
         background: cfg.background || 'mix',
         backgroundApi: cfg.backgroundApi || 'https://api.yppp.net/pc.php',
         bgBlur: cfg.bgBlur !== false,
+        layout: cfg.layout === 'classic' ? 'classic' : 'web',
       },
       helpList: clone(source || []).map(g => ({
         group: g.group || '未分组',
@@ -406,6 +407,7 @@
     draft.helpCfg.themeExclude = el('he-theme-exclude')?.checked ? ['default'] : []
     draft.helpCfg.background = val('he-bg') || 'mix'
     draft.helpCfg.backgroundApi = val('he-bgapi')
+    draft.helpCfg.layout = val('he-layout') === 'classic' ? 'classic' : 'web'
     draft.helpCfg.bgBlur = !!el('he-blur')?.checked
     const style = {}
     for (const f of STYLE_FIELDS) {
@@ -652,6 +654,7 @@
       + '<label>副标题<input id="he-subtitle" value="' + esc(cfg.subTitle) + '" /></label>'
       + '<label>列数<input id="he-cols" type="number" min="2" max="5" value="' + esc(cfg.colCount) + '" /></label>'
       + '<input id="he-theme" type="hidden" value="' + esc(themeValue(cfg.theme)) + '" />'
+      + '<label>页面风格<select id="he-layout"><option value="web"' + ((cfg.layout !== 'classic') ? ' selected' : '') + '>网页版</option><option value="classic"' + (cfg.layout === 'classic' ? ' selected' : '') + '>经典（喵喵）</option></select></label>'
       + '<label>背景<select id="he-bg"><option value="theme"' + (cfg.background === 'theme' ? ' selected' : '') + '>本地主题</option><option value="api"' + (cfg.background === 'api' ? ' selected' : '') + '>随机 API</option><option value="mix"' + (cfg.background === 'mix' ? ' selected' : '') + '>混合</option></select></label>'
       + '<label>随机 API<input id="he-bgapi" value="' + esc(cfg.backgroundApi) + '" /></label>'
       + '<label class="he-check"><input id="he-blur" type="checkbox"' + (cfg.bgBlur ? ' checked' : '') + ' /> 背景毛玻璃</label>'

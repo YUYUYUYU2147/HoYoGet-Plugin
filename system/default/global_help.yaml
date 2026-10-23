@@ -12,6 +12,7 @@ helpCfg:
   bgBlur: true
   background: mix
   backgroundApi: https://api.yppp.net/pc.php
+  layout: web
 helpList:
 - group: 全局帮助
   list:
