@@ -6,7 +6,11 @@
     <link rel="shortcut icon" href="#" />
     <link rel="stylesheet" type="text/css" href="{{ppath}}global_help/index.css" />
     <style>
+      {{if bgMode === 'api' && bgUrl}}
+      body { background-image: url("{{@bgUrl}}"); }
+      {{else}}
       body { background-image: url("{{ppath}}global_help/theme/{{themeName}}/bg.jpg"); }
+      {{/if}}
       .container { background-image: url("{{ppath}}global_help/theme/{{themeName}}/main.png"); }
     </style>
     {{@style}}

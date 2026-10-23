@@ -10,6 +10,9 @@ helpCfg:
   themeExclude:
   - default
   bgBlur: false
+  # 背景：theme=只用本地主题，api=只用随机接口，mix=两者随机
+  background: mix
+  backgroundApi: https://api.yppp.net/pc.php
 helpList:
 - group: ═════════════════ TRSS Yunzai-Bot ════════════════
   list:

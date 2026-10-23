@@ -217,18 +217,32 @@
   }
 
   let themeName = ''
-  async function loadTheme(name) {
-    if (!name || name === themeName) return
+  async function loadBackground(payload, name) {
+    const root = document.querySelector('.hoyo-help')
+    if (!root || !name) return
     themeName = name
+    let themeUrl = ''
     try {
       const res = await fetch(g.apiBase + '/help/theme?name=' + encodeURIComponent(name) + '&file=bg', {
         headers: { [g.tokenKey || 'guoba-access-token']: g.token || '' },
       })
-      if (!res.ok) return
-      const url = URL.createObjectURL(await res.blob())
-      document.querySelector('.hoyo-help')?.style.setProperty('--hp-bg', 'url("' + url + '")')
-      metaEl.dataset.theme = name
+      if (res.ok) themeUrl = URL.createObjectURL(await res.blob())
     } catch { /* 主题图失败不影响内容 */ }
+
+    const cfg = payload.helpCfg || payload || {}
+    const mode = String(cfg.background || 'mix').toLowerCase()
+    const api = String(cfg.backgroundApi || 'https://api.yppp.net/pc.php')
+    const useApi = /^https?:\/\//i.test(api) && (mode === 'api' || (mode === 'mix' && Math.random() < 0.5))
+
+    if (themeUrl) root.style.setProperty('--hp-bg-fallback', 'url("' + themeUrl + '")')
+    // API 背景失败时由 CSS 的 fallback 层接住，不会露白
+    if (useApi) {
+      root.style.setProperty('--hp-bg', 'url("' + api.replace(/["'\\()]/g, '') + '")')
+      metaEl.dataset.theme = '随机背景'
+    } else {
+      if (themeUrl) root.style.setProperty('--hp-bg', 'url("' + themeUrl + '")')
+      metaEl.dataset.theme = name
+    }
   }
 
   let spriteUrl = ''
@@ -264,7 +278,7 @@
       const kicker = document.querySelector('.hp-kicker')
       if (kicker && version) kicker.textContent = 'HoYoGet v' + version + ' · Global Help'
       await loadSprite()
-      await loadTheme(payload.theme || 'default')
+      await loadBackground(payload, payload.theme || 'default')
       renderGames()
       const options = groups.map(group => '<option value="' + esc(group.group) + '">' + esc(group.group) + '</option>').join('')
       groupSel.innerHTML = '<option value="">全部板块</option>' + options

@@ -145,6 +145,42 @@ async function loadGlobalThemeStyle(name) {
   return style;
 }
 
+const DEFAULT_BG_API = 'https://api.yppp.net/pc.php';
+
+/** 随机背景接口大多 302 到图片；只取最终图片 URL，失败就回退本地主题 */
+async function resolveRandomBg(api) {
+  const url = String(api || '').trim();
+  if (!/^https?:\/\//i.test(url)) return '';
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      redirect: 'manual',
+      signal: AbortSignal.timeout(6000),
+    });
+    try { await res.body?.cancel?.(); } catch { /* 忽略 */ }
+    let target = '';
+    if (res.status >= 300 && res.status < 400) target = res.headers.get('location') || '';
+    else if (res.ok) target = url;
+    if (!/^https?:\/\//i.test(target)) return '';
+    // 避免把引号/括号带进 CSS url()
+    return /["'\\\n\r()]/.test(target) ? '' : target;
+  } catch {
+    return '';
+  }
+}
+
+/** 按 helpCfg.background 选背景：本地主题 / 随机接口 / 各一半 */
+async function pickGlobalBackground(helpCfg, themeName) {
+  const mode = String(helpCfg.background || 'mix').toLowerCase();
+  const api = helpCfg.backgroundApi || DEFAULT_BG_API;
+  const useApi = mode === 'api' || (mode === 'mix' && Math.random() < 0.5);
+  if (useApi) {
+    const url = await resolveRandomBg(api);
+    if (url) return { mode: 'api', url };
+  }
+  return { mode: 'theme', url: '' };
+}
+
 /** 生成喵喵同款主题样式（宽度、配色、行底、毛玻璃） */
 function globalStyle(helpCfg, themeStyle = {}) {
   // 主题自带的配色优先，其次 helpCfg.style，最后内置默认
@@ -202,11 +238,14 @@ export class help extends plugin {
         const themeName = pickGlobalTheme(helpCfg);
         const themeStyle = await loadGlobalThemeStyle(themeName);
         const { style, colCount } = globalStyle(helpCfg, themeStyle);
+        const bg = await pickGlobalBackground(helpCfg, themeName);
         const img = await render('global_help/index', {
           helpCfg,
           helpGroup: buildHelpGroups(helpList, colCount),
           colCount,
           themeName,
+          bgMode: bg.mode,
+          bgUrl: bg.url,
           style,
         }, { e, pct: 1 });
         return e.reply(img);

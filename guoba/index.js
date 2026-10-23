@@ -523,6 +523,10 @@ export function init(ctx) {
       const result = Array.isArray(raw) ? { helpList: raw } : raw
       result.theme = pickHelpTheme(result.helpCfg || {})
       result.themes = helpThemeNames()
+      result.background = {
+        mode: result.helpCfg?.background || 'mix',
+        api: result.helpCfg?.backgroundApi || 'https://api.yppp.net/pc.php',
+      }
       try { result.version = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version || '' } catch { result.version = '' }
       res.json({ ok: true, code: 0, message: 'ok', result })
     } catch (err) {
