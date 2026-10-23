@@ -439,9 +439,11 @@ body {
 .hoyo-icon {
   width: 46px;
   height: 46px;
-  border-radius: 12px;
+  border-radius: 50%;
   object-fit: cover;
   flex: none;
+  background: rgba(255, 255, 255, .08);
+  border: 2px solid rgba(150, 160, 255, .35);
 }
 .hoyo-head-copy { flex: 1; min-width: 0; }
 .hoyo-title {

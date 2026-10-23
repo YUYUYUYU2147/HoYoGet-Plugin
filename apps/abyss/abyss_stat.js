@@ -454,9 +454,17 @@ export class abyss_stat extends plugin {
 
     /* 与 genshin 同款：每列 430 CSS 宽，列间距 12，容器左右各 16 */
     const totalWidth = columns.length * 430 + 32 + Math.max(columns.length - 1, 0) * 12
+    /* 顶部头像用玩家自己的游戏头像（星铁 index 接口），取不到再回退星铁图标 */
+    let avatar = ''
+    try {
+      const { getRoleProfile } = await import('../../system/roleProfile.js')
+      const profile = await getRoleProfile(e, mys.uid, 'sr')
+      avatar = profile?.avatar || ''
+    } catch (_) { /* 头像取不到不影响出图 */ }
     return render('abyss_stat/sr-abyss-all', {
       period: type === 2 ? '上期' : '当期',
       uid: mys.uid,
+      avatar,
       columns,
       totalWidth,
       contentWidth: totalWidth - 32,

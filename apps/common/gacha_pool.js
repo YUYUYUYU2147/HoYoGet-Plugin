@@ -5897,9 +5897,15 @@ ${r.summary || ''}`;
   // ① 优先用刷新拿到的公告正文；② 没有就用「瞬间搜索」按 UP 名取公告正文（不受详情接口风控影响）；
   // 只有能唯一定位到某段区间时才写入，取不到就保持版本窗口，绝不猜。（历史版本不处理，避免误填）
   /**
-   * 同版本同类补给同开同收的兜底推断。
-   * 崩三角色池与对应装备池、协同池一般在同一时间开关，公告正文与配图都可能不给日期，
-   * 这时用同版本里同类补给中「结束最晚」的已确认区间，并且只在版本窗口内生效。
+   * 同版本同类补给「同开同收」的兜底推断。
+   *
+   * 崩三角色池与对应装备池、协同池通常同一时间开关，公告正文与配图都可能不给日期。
+   * 但**不能拿「结束最晚」的那段当答案** —— 同版本里常同时存在两批池子
+   * （首批 11-06 结束、次批 11-26 结束），取最晚会把次批写成次批结束时间，
+   * 结果就是「明明已过期还显示在进行中」。
+   *
+   * 现在只在「同类型的已确认区间全部一致」时才采用，
+   * 有多批就放弃推断，交给版本窗口显示。
    */
   inferBh3PoolTime(pools = [], pool = null, vp = null) {
     const toTs = s => {
@@ -5914,9 +5920,12 @@ ${r.summary || ''}`;
       .map(x => ({ start: toTs(x.start), end: toTs(x.end), name: x.s || x.name }))
       .filter(x => x.start && x.end);
     if (!cands.length) return null;
-    const best = cands.reduce((a, b) => (b.end > a.end ? b : a));
-    if (vs && ve && (best.start < vs - 86400000 || best.end > ve + 86400000)) return null;
-    return { start: best.start, end: best.end, from: best.name };
+    // 同类型存在多个不同区间 → 分批开池，不推断
+    const uniq = [...new Set(cands.map(x => `${x.start}|${x.end}`))];
+    if (uniq.length !== 1) return null;
+    const only = cands[0];
+    if (vs && ve && (only.start < vs - 86400000 || only.end > ve + 86400000)) return null;
+    return { start: only.start, end: only.end, from: only.name };
   }
 
   async fillBh3PoolTimes(history, records = []) {
