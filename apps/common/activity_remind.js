@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import moment from 'moment';
 import { segment } from 'oicq';
 import { yaml, config, pluginPriority } from '#HoYoGet';
@@ -204,6 +205,16 @@ async function fetchJson(url, opt = {}) {
   return await res.json();
 }
 
+// 生日数据：原神取自 meta-gs 的 birth，绝区零取自 nanoka 的 partner_info.birthday
+let _birthdays = null
+function birthdaysOf(game) {
+  if (_birthdays === null) {
+    try { _birthdays = JSON.parse(fs.readFileSync('./plugins/HoYoGet-Plugin/resources/calendar/birthdays.json', 'utf8')) }
+    catch (_) { _birthdays = {} }
+  }
+  return _birthdays[game] || {}
+}
+
 // 大事件分类：卡池 / 版本 / 商店 / 常驻刷新 / 活动
 export function eventKind(game, title = "") {
   const t = String(title || '');
@@ -392,6 +403,40 @@ async function getActivities(game) {
 export async function getCalendarActivities(game) {
   if (game === 'bh3') return [];
   return await getOfficialActivities(game);
+}
+
+/**
+ * 近 N 天角色生日（原神/绝区零有本地表，星铁暂无可靠数据）。
+ * 生日是全年固定节点，不依赖公告接口；返回与活动同结构，日期为生日当天。
+ */
+export function getBirthdayActivities(game, days = 14, now = moment()) {
+  const table = birthdaysOf(game);
+  if (!table || !Object.keys(table).length) return [];
+  const start = now.clone().startOf('day')
+  const out = []
+  const seen = new Set()
+  for (let i = 0; i < days; i++) {
+    const d = start.clone().add(i, 'days')
+    const key = `${d.month() + 1}-${d.date()}`
+    for (const [name, [m, day]] of Object.entries(table)) {
+      if (`${m}-${day}` !== key || seen.has(`${key}:${name}`)) continue
+      seen.add(`${key}:${name}`)
+      out.push({
+        game,
+        id: `birthday:${key}:${name}`,
+        kind: 'birthday',
+        title: `${name}生日`,
+        subtitle: `${name}生日`,
+        banner: '',
+        start: d.clone(),
+        startText: d.format('YYYY-MM-DD HH:mm:ss'),
+        end: d.clone().endOf('day'),
+        endText: d.format('YYYY-MM-DD HH:mm:ss'),
+        tag: '生日',
+      })
+    }
+  }
+  return out
 }
 
 function buildMsg(cfg, item, now) {

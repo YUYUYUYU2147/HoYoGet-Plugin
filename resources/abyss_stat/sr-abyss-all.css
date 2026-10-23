@@ -96,3 +96,16 @@ body {
   font-size: 12px;
   color: rgba(231, 235, 243, .4);
 }
+
+.card-period-name {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #dfe5f5;
+}
+.card-period {
+  margin-top: 6px;
+  font-size: 11px;
+  color: rgba(231, 235, 243, .42);
+  font-variant-numeric: tabular-nums;
+}

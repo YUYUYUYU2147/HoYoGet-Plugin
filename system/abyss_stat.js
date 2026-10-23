@@ -198,10 +198,18 @@ function buildSrChallenge(raw = {}, cfg = {}, period = 1) {
 
   const totalStar = raw?.star_num ?? group?.star_num ?? floors.reduce((s, f) => s + f.star, 0)
   const extraStar = raw?.extra_star_num ?? group?.extra_star_num ?? 0
+  /* 期数名：混沌/虚构/末日接口在 group.name（如「来生洄渡其十二」），
+     末日幻影有时只在 group 的 mem/name_mi18n 上；都没有就留空。 */
+  const periodName = group?.name || group?.name_mi18n || raw?.name || ''
+  const begin = Number(group?.begin_time || raw?.begin_time) || 0
+  const end = Number(group?.end_time || raw?.end_time) || 0
   return {
     type,
     title: cfg.title,
     group: group || {},
+    periodName,
+    beginTime: begin,
+    endTime: end,
     floors,
     totalStar,
     extraStar,

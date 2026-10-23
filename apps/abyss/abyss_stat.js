@@ -59,11 +59,14 @@ import { buildRadar } from '../../system/radar.js'
 import { getRoleProfile } from '../../system/roleProfile.js'
 
 export const GS_SPIRAL_RULE = {
-  reg: /^#?(?:米哈游)?\s*(?:原神)?\s*(上期|往期)?\s*(深境螺旋|深境|原神深渊)$/i.source,
+  // #深渊 / #深境螺旋 都归原神；不带前缀的「深渊」不再默认成原神，避免和星铁混
+  reg: /^#(?:米哈游)?\s*(?:原神)?\s*(上期|往期)?\s*(深境螺旋|深境|深渊|原神深渊)$/i.source,
   fnc: 'gsSpiral',
 }
 const RULES = [
-  { reg: /^[*#]?(?:米哈游)?\s*(?:星铁|崩铁|星穹)?\s*(上期|往期)?\s*(深渊|逐光捡金|逐光)$/i.source, fnc: 'srAbyss' },
+  // *深渊 = 星铁深渊总览；#深渊 归原神深境螺旋（GS_SPIRAL_RULE），不能再用 [*#] 一起吞
+  { reg: /^\*(?:米哈游)?\s*(?:星铁|崩铁|星穹)?\s*(上期|往期)?\s*(深渊|逐光捡金|逐光)$/i.source, fnc: 'srAbyss' },
+  { reg: /^#(?:米哈游)?\s*(?:星铁|崩铁|星穹)\s*(上期|往期)?\s*(深渊|逐光捡金|逐光)$/i.source, fnc: 'srAbyss' },
   { reg: /^[*#]?(?:米哈游)?\s*(?:星铁|崩铁|星穹)?\s*(上期|往期)?\s*(混沌回忆|混沌|忘却之庭|忘却)$/i.source, fnc: 'srChaos' },
   { reg: /^[*#]?(?:米哈游)?\s*(?:星铁|崩铁|星穹)?\s*(上期|往期)?\s*(虚构叙事|虚构)$/i.source, fnc: 'srStory' },
   { reg: /^[*#]?(?:米哈游)?\s*(?:星铁|崩铁|星穹)?\s*(上期|往期)?\s*(末日幻影|末日)$/i.source, fnc: 'srBoss' },
@@ -416,7 +419,13 @@ export class abyss_stat extends plugin {
           totalStar: data?.totalStar ?? 0,
           extraStar: data?.extraStar ?? 0,
           bestFloor: data?.bestFloor ?? '',
+          periodName: data?.periodName ?? '',
           battleNum: data?.battleNum ?? 0,
+          period: data?.beginTime && data?.endTime
+            ? `${timeCalc(data.beginTime)} - ${timeCalc(data.endTime)}`
+            : '',
+          /* 四类玩法的满星基准：混沌/虚构 12，末日 10，王棋按额外星 */
+          fullStar: { chaos: 12, story: 12, boss: 10, peak: 0 }[key] || 0,
         })
       } catch (err) {
         cards.push({ key, title: cfg.title, ok: false, err: err?.message || String(err) })

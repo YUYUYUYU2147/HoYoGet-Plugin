@@ -28,10 +28,13 @@
             <span class="star-label">星</span>
             {{if c.extraStar}}<span class="extra">+{{c.extraStar}}</span>{{/if}}
           </div>
+          <div class="card-period-name">{{c.periodName || '—'}}</div>
           <div class="card-meta">
+            {{if c.fullStar}}<span>满星 {{c.fullStar}}</span>{{/if}}
             {{if c.bestFloor}}<span>{{c.bestFloor}}</span>{{/if}}
             {{if c.battleNum}}<span>{{c.battleNum}} 场</span>{{/if}}
           </div>
+          {{if c.period}}<div class="card-period">{{c.period}}</div>{{/if}}
           {{else}}
           <div class="card-empty-text">暂无数据{{if c.err}}<span class="err">{{c.err}}</span>{{/if}}</div>
           {{/if}}

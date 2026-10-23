@@ -46,7 +46,7 @@
     </div>
 
     {{each layers layer}}
-    <div class="layer-card">
+    <div class="layer-card layer-{{layer.name}}">
       <div class="layer-head">
         <span class="layer-title">剧变节点第{{layer.zh}}防线</span>
         <div class="grade-badge grade-{{layer.data.rating}}">{{layer.data.rating}}</div>
@@ -57,6 +57,7 @@
         {{/if}}
       </div>
 
+      <div class="layer-challenge-list">
       {{each layer.data.layer_challenge_info_list item idx}}
       <div class="challenge-card">
         {{if layer.name === 'fitfh' && item.monster_pic}}
@@ -121,6 +122,9 @@
               <span class="team-label">TEAM {{idx + 1}}</span>
             </div>
             {{if item.rating}}<img class="item-grade" src="{{ppath}}zzz_challenge/img/{{item.rating}}.png" />{{/if}}
+            {{if layer.name === 'fourth' && item.challenge_time_fmt}}
+            <span class="card-head-time">{{item.challenge_time_fmt}}</span>
+            {{/if}}
           </div>
           {{if layer.name === 'fitfh' && item.score}}
           <div class="challenge-score">
@@ -157,6 +161,7 @@
         </div>
       </div>
       {{/each}}
+      </div>
     </div>
     {{/each}}
 

@@ -105,3 +105,7 @@ body {
 .tag.kind-shop { color: #0f766e; background: rgba(15,118,110,.10); }
 .tag.kind-reset { color: #2563eb; background: rgba(37,99,235,.10); }
 .tag.kind-event { color: var(--ink); background: var(--soft); }
+
+.mark-dot.birthday, .mark-pin.birthday { color: #db2777; }
+.mark-pin.birthday { background: rgba(219,39,119,.08); }
+.tag.kind-birthday { color: #db2777; background: rgba(219,39,119,.10); }

@@ -567,3 +567,36 @@ body {
 .boss-attrs tr + tr .element-tag {
     background: rgba(255, 80, 80, .16);
 }
+
+/* 剧变节点第四防线：两个队伍左右并排，空间足够，不再上下堆叠 */
+.layer-challenge-list { display: block; }
+.layer-card.layer-fourth .layer-challenge-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 0 12px 10px;
+    align-items: stretch;
+}
+.layer-card.layer-fourth .challenge-card {
+    border-top: none;
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, .03);
+}
+.card-head-time {
+    margin-left: auto;
+    font-size: 10px;
+    color: rgba(255, 255, 255, .55);
+    font-variant-numeric: tabular-nums;
+}
+.layer-card.layer-fourth .challenge-team .av-box {
+    width: 46px;
+    height: 58px;
+}
+.layer-card.layer-fourth .challenge-team .av-box img {
+    width: 100%;
+    height: 100%;
+}
+/* 第四防线卡片窄，藏掉空的时间文字，标题和评级保持一行 */
+.layer-card.layer-fourth .layer-head { margin-bottom: 8px; }
+.layer-card.layer-fourth .challenge-card .challenge-body { gap: 5px; }

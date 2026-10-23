@@ -1,6 +1,6 @@
 import moment from 'moment'
 import { pluginPriority, render } from '#HoYoGet'
-import { getCalendarActivities, KIND_META } from './activity_remind.js'
+import { getCalendarActivities, getBirthdayActivities, KIND_META } from './activity_remind.js'
 
 /* 指令：
  *   #日历 / #原神日历      → 原神
@@ -94,13 +94,21 @@ export class calendar extends plugin {
     const now = moment()
     try {
       const raw = await getCalendarActivities(game)
+      // 生日是本地固定表，和公告合并；原神/绝区零有，星铁暂无
+      const birthdays = getBirthdayActivities(game, 21, now)
+      raw.push(...birthdays)
       // 14 天窗口：今天前后各 7 天；超出窗口的活动裁到边界并打箭头
       const winStart = now.clone().startOf('day').subtract(7, 'days')
       const winEnd = winStart.clone().add(14, 'days')
       const windowMs = winEnd.valueOf() - winStart.valueOf()
       const list = (raw || [])
         .filter(item => {
-          if (!item?.end?.isValid?.() || CAL_IGNORE.test(item.title || '')) return false
+          if (!item?.end?.isValid?.()) return false
+          if (item?.kind === 'birthday') {
+            // 生日按当天标记：只保留窗口内且没过去的
+            return !item.end.isBefore(now) && !item.end.isBefore(winStart)
+          }
+          if (CAL_IGNORE.test(item.title || '')) return false
           if (item.end.isBefore(now)) return false
           if (item.end.isBefore(winStart)) return false
           if (item.start?.isValid?.() && item.start.isAfter(winEnd)) return false
@@ -143,7 +151,7 @@ export class calendar extends plugin {
 
       // 大事件：版本/卡池/商店/刷新按“发生日”标在时间轴上，同一类只留最近一次
       const mk = (kind, label) => ({ kind, kindLabel: label, seen: new Set() })
-      const groups = [mk('version', '版本'), mk('gacha', '卡池'), mk('shop', '商店'), mk('reset', '刷新')]
+      const groups = [mk('version', '版本'), mk('gacha', '卡池'), mk('shop', '商店'), mk('reset', '刷新'), mk('birthday', '生日')]
         .filter(g => list.some(a => a.kind === g.kind))
       const markList = []
       for (const g of groups) {
