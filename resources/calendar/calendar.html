@@ -34,8 +34,11 @@
           {{each list a}}
           <div class="tl-row">
             <div class="tl-label">
-              <div class="tl-name" title="{{a.title}}">{{a.title}}</div>
-              <div class="tl-meta"><i class="pill {{a.statusClass}}">{{a.status}}</i><span class="tag">{{a.tag || '活动'}}</span></div>
+              {{if a.banner}}<span class="tl-thumb" style="background-image:url('{{a.banner}}')"></span>{{/if}}
+              <div class="tl-txt">
+                <div class="tl-name" title="{{a.title}}">{{a.title}}</div>
+                <div class="tl-meta"><i class="pill {{a.statusClass}}">{{a.status}}</i><span class="tag">{{a.tag || '活动'}}</span></div>
+              </div>
             </div>
             <div class="tl-track">
               <div class="tl-bar {{a.statusClass}}" style="left: {{a.left}}%; width: {{a.width}}%;">

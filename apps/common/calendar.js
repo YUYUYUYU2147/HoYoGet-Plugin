@@ -43,6 +43,25 @@ function remainText(now, end) {
   return `${minutes}分钟`
 }
 
+/** 活动 banner 缩成小方图，避免远程图片在截图前还没加载 */
+async function bannerThumb(url) {
+  const u = String(url || '').trim()
+  if (!/^https?:\/\//i.test(u)) return ''
+  try {
+    const res = await fetch(u, { signal: AbortSignal.timeout(8000) })
+    if (!res.ok) return ''
+    const type = String(res.headers.get('content-type') || '')
+    if (!/^image\//i.test(type)) return ''
+    const buf = Buffer.from(await res.arrayBuffer())
+    if (!buf.length || buf.length > 5 * 1024 * 1024) return ''
+    const sharp = (await import('sharp')).default
+    const out = await sharp(buf).resize(96, 64, { fit: 'cover' }).webp({ quality: 70 }).toBuffer()
+    return `data:image/webp;base64,${out.toString('base64')}`
+  } catch (_) {
+    return ''
+  }
+}
+
 export class calendar extends plugin {
   constructor() {
     super({
@@ -97,6 +116,7 @@ export class calendar extends plugin {
           const width = Math.max(0.6, Math.min(100 - left, (e.valueOf() - s.valueOf()) / windowMs * 100))
           return {
             title: item.title || item.subtitle || '未命名活动',
+            srcBanner: item.banner || '',
             tag: item.tag || '',
             startText: fmtDate(item.start, now),
             endText: fmtDate(item.end, now),
@@ -111,6 +131,13 @@ export class calendar extends plugin {
           }
         })
       if (!list.length) return e.reply(`暂未获取到${GAME_CN[game]}活动日历，请稍后再试。`)
+      // banner 缩图：6 个一组，失败不影响日历
+      for (let i = 0; i < list.length; i += 6) {
+        await Promise.all(list.slice(i, i + 6).map(async a => {
+          a.banner = await bannerThumb(a.srcBanner)
+        }))
+      }
+
       const active = list.filter(i => i.status === '进行中').length
       const days = Array.from({ length: 14 }, (_, i) => {
         const d = winStart.clone().add(i, 'days')

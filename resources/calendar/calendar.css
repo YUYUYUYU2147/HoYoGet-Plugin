@@ -41,7 +41,9 @@ body {
 .tl-now span { position: absolute; top: 2px; left: 4px; padding: 0 5px; border-radius: 999px; font-size: 8px; line-height: 14px; color: #fff; background: var(--acc); white-space: nowrap; }
 .tl-row { display: grid; grid-template-columns: 260px minmax(0, 1fr); min-height: 52px; border-top: 1px solid rgba(15,23,42,.055); }
 .tl-row:nth-child(odd) { background: #f8fafc; }
-.tl-row .tl-label { padding: 8px 14px; border-right: 1px solid rgba(15,23,42,.06); }
+.tl-row .tl-label { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-right: 1px solid rgba(15,23,42,.06); }
+.tl-thumb { flex: none; width: 46px; height: 32px; border-radius: 6px; background-size: cover; background-position: center; background-color: #e8edf4; box-shadow: 0 1px 4px rgba(15,40,80,.12); }
+.tl-txt { min-width: 0; flex: 1; }
 .tl-name { font-size: 12px; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tl-meta { display: flex; align-items: center; gap: 5px; margin-top: 4px; min-width: 0; }
 .tag { display: inline-block; max-width: 90px; padding: 1px 6px; border-radius: 999px; font-size: 9px; color: var(--ink); background: var(--soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
