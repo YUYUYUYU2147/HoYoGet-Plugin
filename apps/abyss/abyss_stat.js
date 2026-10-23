@@ -106,9 +106,6 @@ export class abyss_stat extends plugin {
    */
   async mys(e, game) {
     e.isSr = game === 'sr'
-    /* e.game 必须显式设：genshin 的 getSelfUid 里 `e.game || (e.isSr ? 'sr' : 'gs')`，
-       e.game 优先，若被别处残留成 'gs' 就会拿原神 UID 去查星铁深渊。 */
-    e.game = game
     let miao
     try {
       miao = await import('#hoyo.miao.models')
@@ -116,9 +113,27 @@ export class abyss_stat extends plugin {
       await e.reply(`内置数据层加载失败：${err?.message || err}`)
       return null
     }
+    /* 只用**本人**的 CK（auth='cookie'），不能用 'all'：
+       'all' 会回落到公共 CK 池，拿别人的 CK 查你的 UID，米游社一律返回
+       10041/10102「数据未公开」，表现为深渊整块没有数据。
+       genshin 的深渊走的也是只认自身 CK 的那条路。 */
     let mys = null
-    try { mys = await miao.MysApi.init(e, 'cookie') } catch (_) { mys = null }
-    if (!mys) mys = await miao.MysApi.init(e, 'all')
+    /* 这里不能直接用 runtime.getMysInfo('cookie')：
+       runtime._mysInfo 是按 targetType 缓存的，'cookie' 在整个进程里只初始化一次，
+       谁先调用就决定了当时的 e.game。
+       e.game 优先于 e.isSr（getSelfUid 里 `e.game || (e.isSr ? 'sr' : 'gs')`），
+       所以若那一刻 e.game 是 'gs'，就会拿到**原神 UID**去查星铁深渊，
+       米游社返回 1008「用户信息不匹配」，表现就是深渊整块没有数据。
+
+       正确做法：绕开 runtime 缓存，自己用目标游戏初始化一份 mysInfo。 */
+    try {
+      mys = await this.initSrMysInfo(e, game, miao)
+    } catch (_) {
+      mys = null
+    }
+    if (!mys) {
+      try { mys = await miao.MysApi.init(e, 'all') } catch (_) { mys = null }
+    }
     if (!mys) {
       await e.reply(`请先绑定${game === 'sr' ? '星铁' : '原神'}账号，并确认 Cookie 有效`)
       return null
@@ -127,6 +142,43 @@ export class abyss_stat extends plugin {
        checkCk 会额外打一次米游社接口判活，偶尔因风控直接失败，
        于是「接口其实能用」的情况被我们自己挡掉，表现为深渊数据整块为空。
        真拿不到数据时，下面每个玩法都会各自带出具体的错误原因。 */
+    return mys
+  }
+
+  /**
+   * 按目标游戏初始化一份 mysInfo（只用本人 CK），不走 runtime 的 _mysInfo 缓存。
+   *
+   * 背景：runtime.getMysInfo(targetType) 用 `this._mysInfo[targetType]` 缓存，
+   * 'cookie' 这一项全进程只初始化一次。第一次初始化时 e.game 是什么，
+   * 就决定了 getSelfUid 取原神还是星铁的 UID —— 而 e.game 是全局共用的，
+   * 别的插件残留成 'gs' 就会让星铁深渊永远查不到（retcode 1008 用户信息不匹配）。
+   *
+   * 这里自己 new 一个 MysInfo 并指定游戏，取完立刻把 e.game 还原。
+   */
+  async initSrMysInfo(e, game, miao) {
+    /* 真正做鉴权/取 CK 的是 genshin 的 MysInfo（vendor 版没有导出它） */
+    let MysInfo = null
+    try {
+      const mod = await import('file://' + process.cwd() + '/plugins/genshin/model/mys/mysInfo.js')
+      MysInfo = mod.default
+    } catch (_) {
+      return null
+    }
+    if (!MysInfo) return null
+    const oldGame = e.game
+    let mysInfo = null
+    try {
+      e.game = game
+      /* 'detail' 在 genshin 的 auth 白名单里 → 只认本人 CK（onlySelfCk） */
+      mysInfo = await MysInfo.init(e, 'detail')
+    } catch (_) {
+      mysInfo = null
+    } finally {
+      e.game = oldGame
+    }
+    if (!mysInfo?.uid || !mysInfo?.ckInfo?.ck) return null
+    const mys = new miao.MysApi(e, mysInfo.uid, mysInfo)
+    e._mys = mys
     return mys
   }
 

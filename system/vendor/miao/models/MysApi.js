@@ -252,6 +252,26 @@ export default class MysApi {
 
   async getMysApi(e, targetType = "all", option = {}) {
     if (this.mys) return this.mys
+    /* runtime.getMysApi 会走 runtime._mysInfo[targetType] 缓存，
+       而该缓存按 targetType 只初始化一次 —— 第一次初始化时 e.game 是什么，
+       就决定了 getSelfUid 取原神还是星铁的 UID。
+       e.game 是全局共用的（别的插件可能残留成 'gs'），
+       于是「先初始化的是原神」的情况下，所有星铁查询都会拿到原神 UID，
+       米游社返回 1008「用户信息不匹配」。
+
+       所以：只要本实例已经有 mysInfo（由调用方按正确游戏初始化好），
+       就直接用它构造 genshin 的 MysApi，不再走 runtime 的缓存。 */
+    if (this.mysInfo?.uid && this.mysInfo?.ckInfo?.ck) {
+      const { default: GMysApi } = await import(
+        'file://' + process.cwd() + '/plugins/genshin/model/mys/mysApi.js'
+      ).catch(() => ({ default: null }))
+      if (GMysApi) {
+        const opt = { ...option }
+        if (e?.isSr) opt.game = 'sr'
+        this.mys = new GMysApi(this.mysInfo.uid, this.mysInfo.ckInfo.ck, opt)
+        return this.mys
+      }
+    }
     this.mys = await e.runtime.getMysApi(targetType, option, e.isSr)
     return this.mys
   }

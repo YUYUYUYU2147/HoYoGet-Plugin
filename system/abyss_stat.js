@@ -132,6 +132,10 @@ export function buildGsAbyss(raw = {}, ctx = {}) {
 /** 星铁挑战通用：groups → floors */
 function buildSrChallenge(raw = {}, cfg = {}, period = 1) {
   const type = cfg.type
+  /* 异相仲裁的数据结构完全不同：challenge_peak_records[] 里每条是
+     { group, boss_info, boss_record, mob_records, battle_num, ... }，
+     没有 all_floor_detail / node_1 那套。 */
+  if (type === 'peak') return buildSrPeak(raw, period)
   /* 与 genshin 的 StarRail/model/abyss.js 同口径：
      虚构/末日/混沌的楼层都在 data.all_floor_detail，groups 只提供期数与时间，
      groups 既可能是数组也可能是 {0:..,1:..}（虚构/末日按 time 索引）。 */
@@ -220,6 +224,60 @@ function buildSrChallenge(raw = {}, cfg = {}, period = 1) {
     total: raw?.battle_num ?? group?.battle_num ?? 0,
     /* 有楼层就算有数据；接口的 has_data 在各玩法上并不一致 */
     hasData: floors.length > 0 || !!raw?.has_data,
+  }
+}
+
+/**
+ * 异相仲裁（challenge_peak）→ 统一成 floors/nodes 结构。
+ * 一条 record 里通常只有一个「首领本体」节点（boss_record.avatars）。
+ */
+function buildSrPeak(raw = {}, period = 1) {
+  const records = Array.isArray(raw?.challenge_peak_records) ? raw.challenge_peak_records : []
+  const list = records.filter(r => r && r.has_challenge_record !== false)
+  const pick = period === 2 ? (list[1] || list[0]) : (list[0] || list[1])
+  if (!pick) {
+    return { type: 'peak', title: '王棋（异相仲裁）', group: {}, floors: [], totalStar: 0, extraStar: 0, bestFloor: '', battleNum: 0, hasData: false }
+  }
+  const group = pick.group || {}
+  const boss = pick.boss_record || {}
+  const avatars = (boss.avatars || []).map(a => ({
+    id: a.id,
+    level: a.level,
+    rarity: a.rarity,
+    element: a.element,
+    rank: a.rank,
+    name: a.name,
+    abbr: a.abbr,
+    icon: a.icon,
+  }))
+  const starNum = Number(pick.boss_stars || 0)
+  const extraStar = Number(pick.mob_stars || 0)
+  const floors = avatars.length ? [{
+    index: 1,
+    name: group.name_mi18n || '异相仲裁',
+    star: Math.max(0, starNum - extraStar),
+    extraStar,
+    score: 0,
+    roundNum: 0,
+    isFast: false,
+    nodes: [{ index: 1, score: 0, time: '', avatars, raw: {} }],
+  }] : []
+  const ts = t => (t && typeof t === 'object'
+    ? new Date(`${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')} ${String(t.hour || 0).padStart(2, '0')}:${String(t.minute || 0).padStart(2, '0')}:00`).getTime()
+    : 0)
+  return {
+    type: 'peak',
+    title: '王棋（异相仲裁）',
+    group,
+    periodName: group.name_mi18n || '',
+    beginTime: ts(group.begin_time),
+    endTime: ts(group.end_time),
+    floors,
+    totalStar: starNum,
+    extraStar,
+    bestFloor: group.name_mi18n || '',
+    battleNum: Number(pick.battle_num || 0),
+    hasData: true,
   }
 }
 
