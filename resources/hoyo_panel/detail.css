@@ -338,7 +338,7 @@ body.elem-physical { --elem-line: rgba(207, 216, 227, .9); --elem-glow: rgba(180
   right: 0;
   top: 66px;
   bottom: 0;
-  width: 244px;
+  width: 262px;
   z-index: 2;
   align-content: center;
   padding: 8px 8px 10px;
@@ -347,16 +347,17 @@ body.elem-physical { --elem-line: rgba(207, 216, 227, .9); --elem-glow: rgba(180
 }
 
 .attr {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
+  gap: 6px;
   padding: 4px 8px 4px 7px;
   border-radius: 7px;
   background: rgba(6, 24, 40, .26);
 }
 .attr:nth-child(odd) { background: rgba(8, 30, 48, .4); }
 
-.a-left { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.a-left { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; }
 /* 没有对应图标的词条也要占位，否则同一列文字会左移、与上面行不齐 */
 .aicon-wrap {
   width: 14px;
@@ -373,7 +374,7 @@ body.elem-physical { --elem-line: rgba(207, 216, 227, .9); --elem-glow: rgba(180
   filter: brightness(1.15);
 }
 
-.a-label { font-size: 13px; font-weight: 700; color: #9fb8cc; white-space: nowrap; }
+.a-label { min-width: 0; font-size: 13px; font-weight: 700; color: #9fb8cc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* 词条权重徽章：双爆 100 这类高权重给金色，其余中性色 */
 .a-weight {
   flex: none;
@@ -395,15 +396,19 @@ body.elem-physical { --elem-line: rgba(207, 216, 227, .9); --elem-glow: rgba(180
   flex-direction: column;
   align-items: flex-end;
   flex: none;
+  max-width: 64%;
   line-height: 1.1;
 }
 .a-value {
   font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 900;
   color: #f4fbff;
+  white-space: nowrap;
+  letter-spacing: -.25px;
+  font-variant-numeric: tabular-nums;
 }
-.a-sub { margin-top: 1px; display: flex; gap: 4px; font-size: 9.5px; }
+.a-sub { margin-top: 1px; display: flex; gap: 3px; font-size: 9px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .a-sub i { font-style: normal; color: #7f9db4; }
 .a-sub em { font-style: normal; color: #9fe0c8; }
 /* 基础值为 0（miao 没给这一项的基础）时按喵喵的做法淡显，不再整列隐藏 */

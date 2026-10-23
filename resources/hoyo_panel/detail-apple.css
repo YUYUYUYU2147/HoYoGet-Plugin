@@ -90,7 +90,7 @@ body {
   top: 82px;
   right: 12px;
   bottom: 12px;
-  width: 238px;
+  width: 252px;
   padding: 10px 12px;
   border-radius: 20px;
   background: rgba(28, 28, 30, .46);
@@ -98,17 +98,20 @@ body {
   -webkit-backdrop-filter: blur(30px) saturate(160%);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, .1) inset, 0 10px 30px rgba(0, 0, 0, .35);
 }
-.attr { background: transparent; border-radius: 10px; padding: 5px 8px; }
+.attr { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px; background: transparent; border-radius: 10px; padding: 5px 8px; }
 .attr:nth-child(odd) { background: transparent; }
 .attr + .attr { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07); }
-.a-label { color: var(--ap-mute); font-weight: 500; font-size: 12.5px; }
+.a-label { min-width: 0; color: var(--ap-mute); font-weight: 500; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.a-right { max-width: 64%; }
 .a-value {
   color: var(--ap-text);
   font-weight: 600;
-  font-size: 16px;
+  font-size: 15px;
   letter-spacing: -.3px;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+.a-sub { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .player-chip {
   background: rgba(255, 255, 255, .08);
   border-color: rgba(255, 255, 255, .14);
