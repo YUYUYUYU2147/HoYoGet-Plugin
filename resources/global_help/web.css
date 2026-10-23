@@ -180,8 +180,8 @@ body {
   transform-origin: 0 0;
 }
 .w-main { flex: 1; min-width: 0; }
-.w-title { color: var(--w-item, #f0d9a8); font-size: var(--w-item-size, 15px); font-weight: 700; line-height: 1.4; text-shadow: var(--w-shadow, none); word-break: break-word; }
-.w-desc { margin-top: 2px; color: var(--w-desc, #c7d2e5); font-size: var(--w-desc-size, 12px); line-height: 1.5; word-break: break-word; }
+.w-title { color: var(--w-item, #f0d9a8); font-size: var(--w-item-size, 18px); font-weight: 700; line-height: 1.4; text-shadow: var(--w-shadow, none); word-break: break-word; }
+.w-desc { margin-top: 2px; color: var(--w-desc, #c7d2e5); font-size: var(--w-desc-size, 15px); line-height: 1.5; word-break: break-word; }
 .w-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
 .w-tag { padding: 0 6px; border-radius: 999px; font-size: 10px; line-height: 15px; border: 1px solid transparent; }
 .w-tag.red { color: var(--w-tag-red, #dc2626); background: color-mix(in srgb, var(--w-tag-red, #dc2626) 12%, transparent); border-color: color-mix(in srgb, var(--w-tag-red, #dc2626) 22%, transparent); }
@@ -255,7 +255,7 @@ body {
 .w-layout-app .w-icon i { transform: scale(.42); }
 .w-layout-app .w-title { color: var(--w-item, #111827); font-size: var(--w-item-size, 17px); font-weight: 600; letter-spacing: -.2px; text-shadow: none; }
 .w-layout-app .w-desc { color: var(--w-desc, #6b7280); font-size: var(--w-desc-size, 14px); }
-.w-layout-app .w-tag { font-size: 12px; line-height: 18px; padding: 0 8px; border: none; }
+.w-layout-app .w-tag { font-size: 13px; line-height: 19px; padding: 0 8px; border: none; }
 .w-layout-app .w-tag.red { color: var(--w-tag-red, #ff3b30); background: color-mix(in srgb, var(--w-tag-red, #ff3b30) 10%, transparent); }
 .w-layout-app .w-tag.amber { color: var(--w-tag-amber, #c2410c); background: color-mix(in srgb, var(--w-tag-amber, #c2410c) 12%, transparent); }
 .w-layout-app .w-tag.green { color: var(--w-tag-green, #15803d); background: color-mix(in srgb, var(--w-tag-green, #15803d) 10%, transparent); }

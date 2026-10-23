@@ -398,10 +398,10 @@ function appStyleCss(helpCfg, themeStyle = {}, pageWidth = 1000) {
     --w-tag-amber: ${readableColor(color('tagAmber'), '#b45309', 0.8)};
     --w-tag-green: ${readableColor(color('tagGreen'), '#15803d', 0.8)};
     --w-tag-gray: ${readableColor(color('tagGray'), '#64748b', 0.8)};
-    --w-title-size: ${size('titleSize', '48px', 120)};
-    --w-group-size: ${size('groupSize', '18px', 60)};
-    --w-item-size: ${size('itemSize', '17px', 60)};
-    --w-desc-size: ${size('descSize', '14px', 60)};
+    --w-title-size: ${size('titleSize', '52px', 120)};
+    --w-group-size: ${size('groupSize', '20px', 60)};
+    --w-item-size: ${size('itemSize', '18px', 60)};
+    --w-desc-size: ${size('descSize', '15px', 60)};
     --w-page-dim: ${dim};
     --w-page-blur: ${blur};
     --w-theme-accent: ${themeAccent || '#007aff'};
