@@ -11,7 +11,11 @@ const defaultCfg = {
   push_image: true,
   at_mode: 'none',
   at_users: [],
+  // 谁可以在群里开关活动提醒：master/owner/admin/all
+  permission: 'master',
+  // 通用屏蔽词 + 分游戏屏蔽词；同一游戏两者用 | 合并
   ban_words: '专题展示页|主题曲|前瞻特别节目预告|角色PV|签到福利|商城|周边|手办|有奖活动|已开奖|问卷|征集|作品展示|同人|大别野|米游币',
+  ban_words_game: { gs: '', sr: '', zzz: '', bh3: '' },
   groups: { gs: [], sr: [], zzz: [], bh3: [] },
 };
 
@@ -35,7 +39,8 @@ const bh3IgnoreReg = /(封禁|外挂|账号交易|公平运营|问题修复|已�
 function getCfg() {
   const cfg = yaml.get(cfgFile) || {};
   const groups = { ...defaultCfg.groups, ...(cfg.groups || {}) };
-  return { ...defaultCfg, ...cfg, groups };
+  const banWordsGame = { ...defaultCfg.ban_words_game, ...(cfg.ban_words_game || {}) };
+  return { ...defaultCfg, ...cfg, groups, ban_words_game: banWordsGame };
 }
 
 function saveCfg(cfg) {
@@ -44,13 +49,54 @@ function saveCfg(cfg) {
   yaml.set(cfgFile, 'push_image', cfg.push_image !== false);
   yaml.set(cfgFile, 'at_mode', cfg.at_mode || 'none');
   yaml.set(cfgFile, 'at_users', normalizeList(cfg.at_users));
+  yaml.set(cfgFile, 'permission', ['master', 'owner', 'admin', 'all'].includes(cfg.permission) ? cfg.permission : 'master');
   yaml.set(cfgFile, 'ban_words', String(cfg.ban_words || ''));
+  yaml.set(cfgFile, 'ban_words_game', { ...defaultCfg.ban_words_game, ...(cfg.ban_words_game || {}) });
   yaml.set(cfgFile, 'groups', cfg.groups || defaultCfg.groups);
 }
 
 function normalizeList(value = []) {
   if (Array.isArray(value)) return [...new Set(value.map(v => String(v).trim()).filter(Boolean))];
   return [...new Set(String(value || '').split(/[,，\s]+/).map(v => v.trim()).filter(Boolean))];
+}
+
+/** 群配置既认旧的扁平数组，也认 { botId: [群号] }；统一展平成「群号」或「botId:群号」 */
+function flattenGroups(value) {
+  if (Array.isArray(value)) return normalizeList(value);
+  if (value && typeof value === 'object') {
+    return Object.entries(value).flatMap(([botId, list]) =>
+      normalizeList(list).map(gid => `${botId}:${gid}`));
+  }
+  return normalizeList(value);
+}
+
+/** 把推送目标拆成机器人与群号；不带机器人前缀时交给默认 Bot */
+function parseTarget(entry) {
+  const text = String(entry || '').trim();
+  const m = text.match(/^(\d+):(\d+)$/);
+  return m ? { botId: m[1], groupId: m[2] } : { botId: '', groupId: text };
+}
+
+function botIdOf(e) {
+  return String(e?.self_id || e?.bot?.uin || globalThis.Bot?.uin || '');
+}
+
+function defaultBotId() {
+  const bot = globalThis.Bot;
+  if (bot?.uin) return String(bot.uin);
+  if (bot?.self_id) return String(bot.self_id);
+  if (bot && typeof bot === 'object') {
+    const key = Object.keys(bot).find(id => /^\d+$/.test(id));
+    if (key) return key;
+  }
+  return '';
+}
+
+/** 群命令写入的条目：默认机器人存纯群号，其它机器人存 botId:群号 */
+function groupEntry(e, gid) {
+  const botId = botIdOf(e);
+  const def = defaultBotId();
+  return botId && def && botId !== def ? `${botId}:${gid}` : String(gid);
 }
 
 function parseGame(msg = '') {
@@ -107,10 +153,21 @@ function inWindow(end, now, hoursBefore) {
   return diff >= 0 && diff <= Number(hoursBefore || 24) * 3600000;
 }
 
-function banReg(cfg) {
-  const text = String(cfg.ban_words || '').trim();
-  if (!text) return null;
-  try { return new RegExp(text); } catch (_) { return null; }
+function banReg(cfg, game = '') {
+  const parts = [String(cfg.ban_words || '').trim(), String(cfg.ban_words_game?.[game] || '').trim()].filter(Boolean);
+  if (!parts.length) return null;
+  try { return new RegExp(parts.join('|')); } catch (_) { return null; }
+}
+
+/** 群内开关提醒的权限：主人始终可用，其余按配置 */
+function hasPermission(e, cfg) {
+  if (e?.isMaster) return true;
+  const need = String(cfg.permission || 'master');
+  if (need === 'all') return true;
+  const role = e?.sender?.role;
+  if (need === 'admin') return !!(e?.isGroupAdmin || e?.isGroupOwner || role === 'admin' || role === 'owner');
+  if (need === 'owner') return !!(e?.isGroupOwner || role === 'owner');
+  return false;
 }
 
 let _activityAgent;
@@ -289,9 +346,11 @@ function buildMsg(cfg, item, now) {
   return msg;
 }
 
-async function sendGroupMsg(groupId, msg, e = null) {
+async function sendGroupMsg(groupId, msg, e = null, botId = '') {
   const gid = Number(groupId) || groupId;
   const botObj = globalThis.Bot || (typeof Bot !== 'undefined' ? Bot : null) || globalThis.bot;
+  // 指定了机器人就优先用对应 Bot，多机器人部署不会串号
+  if (botId && botObj?.[botId]?.pickGroup) return botObj[botId].pickGroup(gid).sendMsg(msg);
   if (e?.isGroup && String(e.group_id) === String(groupId) && e.group?.sendMsg) return e.group.sendMsg(msg);
   if (botObj?.sendGroupMsg) return botObj.sendGroupMsg(gid, msg);
   if (botObj?.pickGroup) return botObj.pickGroup(gid).sendMsg(msg);
@@ -323,43 +382,47 @@ export class activity_remind extends plugin {
   }
 
   async toggleGame(e) {
-    if (!e.isMaster) return e.reply('仅主人可操作');
     if (!e.isGroup) return e.reply('请在需要推送的群聊里操作');
     const game = parseGame(e.msg);
     if (!game) return false;
     const cfg = getCfg();
+    if (!hasPermission(e, cfg)) return e.reply('没有开关活动提醒的权限');
     const groups = { ...defaultCfg.groups, ...(cfg.groups || {}) };
-    const list = normalizeList(groups[game]);
+    const list = flattenGroups(groups[game]);
     const gid = String(e.group_id);
     const enable = isEnableMsg(e.msg);
-    groups[game] = enable ? [...new Set([...list, gid])] : list.filter(v => v !== gid);
+    const entry = groupEntry(e, gid);
+    const drop = new Set([gid, entry, `${botIdOf(e)}:${gid}`]);
+    groups[game] = enable ? [...new Set([...list, entry])] : list.filter(v => !drop.has(String(v)));
     cfg.groups = groups;
-    cfg.enable = Object.values(groups).some(arr => normalizeList(arr).length);
+    cfg.enable = Object.values(groups).some(arr => flattenGroups(arr).length);
     saveCfg(cfg);
     return e.reply(`${gameMap[game].short}活动到期提醒已${enable ? '开启' : '关闭'}${enable ? '\n如有即将到期的活动将自动推送至此' : ''}`);
   }
 
   async toggleAll(e) {
-    if (!e.isMaster) return e.reply('仅主人可操作');
     if (!e.isGroup) return e.reply('请在需要推送的群聊里操作');
     const cfg = getCfg();
+    if (!hasPermission(e, cfg)) return e.reply('没有开关活动提醒的权限');
     const groups = { ...defaultCfg.groups, ...(cfg.groups || {}) };
     const gid = String(e.group_id);
     const enable = isEnableMsg(e.msg);
+    const entry = groupEntry(e, gid);
+    const drop = new Set([gid, entry, `${botIdOf(e)}:${gid}`]);
     for (const game of Object.keys(gameMap)) {
-      const list = normalizeList(groups[game]);
-      groups[game] = enable ? [...new Set([...list, gid])] : list.filter(v => v !== gid);
+      const list = flattenGroups(groups[game]);
+      groups[game] = enable ? [...new Set([...list, entry])] : list.filter(v => !drop.has(String(v)));
     }
     cfg.groups = groups;
-    cfg.enable = Object.values(groups).some(arr => normalizeList(arr).length);
+    cfg.enable = Object.values(groups).some(arr => flattenGroups(arr).length);
     saveCfg(cfg);
     return e.reply(`全部游戏（原神、星铁、绝区零、崩三）活动到期提醒已${enable ? '开启' : '关闭'}${enable ? '\n如有即将到期的活动将自动推送至此' : ''}`);
   }
 
   async status(e) {
     const cfg = getCfg();
-    const lines = Object.entries(gameMap).map(([key, info]) => `${info.short}：${normalizeList(cfg.groups?.[key]).join('、') || '未开启'}`);
-    return e.reply(`活动到期提醒：${cfg.enable ? '已开启' : '未开启'}\n提前时间：${cfg.hours_before || 24}小时\n${lines.join('\n')}`);
+    const lines = Object.entries(gameMap).map(([key, info]) => `${info.short}：${flattenGroups(cfg.groups?.[key]).join('、') || '未开启'}`);
+    return e.reply(`活动到期提醒：${cfg.enable ? '已开启' : '未开启'}\n提前时间：${cfg.hours_before || 24}小时\n开关权限：${cfg.permission || 'master'}\n${lines.join('\n')}`);
   }
 
   async testPush(e) {
@@ -373,11 +436,11 @@ export class activity_remind extends plugin {
     const groups = { ...defaultCfg.groups, ...(cfg.groups || {}) };
     if (!cfg.enable && !manual) return;
     const now = moment();
-    const reg = banReg(cfg);
     const resultLines = [];
 
     for (const game of Object.keys(gameMap)) {
-      const targetGroups = normalizeList(groups[game]);
+      const reg = banReg(cfg, game);
+      const targetGroups = flattenGroups(groups[game]);
       if (!targetGroups.length && !manual) continue;
       let list = [];
       try {
@@ -400,12 +463,13 @@ export class activity_remind extends plugin {
       if (manual) resultLines.push(`${gameMap[game].short}：${list.length ? list.map(i => `${i.title}（剩余${remainText(now, i.end)}）`).join('、') : '暂无即将到期活动'}`);
       if (!targetGroups.length) continue;
 
-      for (const groupId of targetGroups) {
+      for (const entry of targetGroups) {
+        const { botId, groupId } = parseTarget(entry);
         for (const item of list) {
-          const dedup = `xhh:activity_remind:sent:${game}:${groupId}:${item.id}:${item.end.format('YYYYMMDDHHmm')}`;
+          const dedup = `xhh:activity_remind:sent:${game}:${botId || 'default'}:${groupId}:${item.id}:${item.end.format('YYYYMMDDHHmm')}`;
           if (!manual && await redis.get(dedup)) continue;
           try {
-            await sendGroupMsg(groupId, buildMsg(cfg, item, now), e);
+            await sendGroupMsg(groupId, buildMsg(cfg, item, now), e, botId);
             await redis.set(dedup, '1', { EX: 3 * 24 * 3600 });
             logger.mark(`[activity_remind] 已推送 ${gameMap[game].short} ${item.title} -> ${groupId}`);
           } catch (err) {
