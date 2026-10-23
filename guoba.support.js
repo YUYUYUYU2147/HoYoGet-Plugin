@@ -427,6 +427,12 @@ export const supportGuoba = () => {
         component: 'Input',
       },
       {
+        field: 'activity_proxy',
+        label: '活动公告请求代理（HTTP）',
+        helpMessage: '留空=直连。填标准 HTTP 代理，如 http://127.0.0.1:7890。只用于活动到期提醒的公告请求，不携带 Cookie。上面的米游社接口代理不支持活动公告域名，所以这里单独配',
+        component: 'Input',
+      },
+      {
         field: 'ttocr_appkey',
         label: '打码平台密钥',
         helpMessage: '可留空。本机服务解开时不会用到它，只有本机失败才调平台（滑块 5 点/次）。⚠️ 平台只提供 http 没有 https，这个密钥会以明文过网，介意就别填',
@@ -1415,6 +1421,8 @@ export const supportGuoba = () => {
         // 米游社接口代理。默认空 = 不启用，只有被风控拦了才走它
         mhy_proxy: cfg.mhy_proxy ?? '',
         mhy_proxy_key: cfg.mhy_proxy_key ?? '',
+        // 活动公告单独的标准 HTTP 代理（公告域名不在米游社接口代理的白名单里）
+        activity_proxy: cfg.activity_proxy ?? '',
         ttocr_appkey: cfg.ttocr_appkey ?? '',
         ttocr_itemid: Number(cfg.ttocr_itemid) || 32,
         bh3_remind_groups: parseMultiList(bh3Remind.groups),
@@ -1700,6 +1708,9 @@ export const supportGuoba = () => {
       }
       if (has(data, 'mhy_proxy_key')) {
         yaml.set(_path + 'config.yaml', 'mhy_proxy_key', String(data.mhy_proxy_key || '').trim())
+      }
+      if (has(data, 'activity_proxy')) {
+        yaml.set(_path + 'config.yaml', 'activity_proxy', String(data.activity_proxy || '').trim())
       }
       if (has(data, 'ttocr_appkey')) {
         yaml.set(_path + 'config.yaml', 'ttocr_appkey', String(data.ttocr_appkey || '').trim())

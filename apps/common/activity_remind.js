@@ -1,7 +1,7 @@
-import fetch from 'node-fetch';
 import moment from 'moment';
 import { segment } from 'oicq';
-import { yaml, pluginPriority } from '#HoYoGet';
+import { yaml, config, pluginPriority } from '#HoYoGet';
+import { mhyFetch } from '../../system/mhy_fetch.js';
 
 const _path = './plugins/HoYoGet-Plugin/config/';
 const cfgFile = _path + 'activity_remind.yaml';
@@ -113,11 +113,36 @@ function banReg(cfg) {
   try { return new RegExp(text); } catch (_) { return null; }
 }
 
+let _activityAgent;
+async function activityAgent() {
+  if (_activityAgent !== undefined) return _activityAgent;
+  const proxy = String(config().activity_proxy || '').trim();
+  if (!proxy) { _activityAgent = null; return null; }
+  try {
+    // 可选依赖：宿主 Yunzai 通常自带，没有就退回直连
+    const { HttpsProxyAgent } = await import('https-proxy-agent');
+    _activityAgent = new HttpsProxyAgent(proxy);
+  } catch (err) {
+    logger.warn?.(`[activity_remind] 活动请求代理不可用，改直连：${err?.message || err}`);
+    _activityAgent = null;
+  }
+  return _activityAgent;
+}
+
 async function fetchJson(url, opt = {}) {
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36' },
-    signal: AbortSignal.timeout(opt.timeout || 12000),
-  });
+  const agent = await activityAgent();
+  const headers = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36' };
+  let res = null;
+  // 429 多为短时限流：重试两次；配了 activity_proxy 时每次都走代理
+  for (let attempt = 0; attempt < 3; attempt++) {
+    res = await mhyFetch(url, {
+      headers,
+      ...(agent ? { agent } : {}),
+      signal: AbortSignal.timeout(opt.timeout || 12000),
+    });
+    if (res.status !== 429) break;
+    if (attempt < 2) await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+  }
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return await res.json();
 }

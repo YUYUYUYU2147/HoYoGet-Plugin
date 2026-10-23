@@ -74,8 +74,13 @@ const MHY_HOSTS = [
     'api-takumi.miyoushe.com',
     'api.mihoyo.com',
     'bbs-api.miyoushe.com',
+    'bbs-api-static.miyoushe.com',
     'api-takumi-record.mihoyo.com',
     'public-operation-common.mihoyo.com',
+    // 活动公告接口（原神/星铁/绝区零），429 时也要能切代理
+    'hk4e-api.mihoyo.com',
+    'hkrpg-api.mihoyo.com',
+    'announcement-api.mihoyo.com',
 ];
 
 function isMhyUrl(url) {
@@ -158,8 +163,9 @@ function gameOfUrl(url) {
     if (s.includes('/hkkrpg/') || s.includes('hkrpg_cn') || s.includes('act_id=e202304121516551')) return 'hkrpg';
     // 绝区零除 /nap/ 外还有两种形态：event/game_record_zzz/ 与 zzz_record。
     // 缺了后者会把面板/调频请求报成 hk4e，代理按原神处理会返回不匹配的数据。
-    if (s.includes('/nap/') || s.includes('zzz_cn') || s.includes('game_record_zzz')
-        || s.includes('zzz_record') || s.includes('act_id=e202406242138391')) return 'nap';
+    if (s.includes('/nap/') || s.includes('nap_cn') || s.includes('zzz_cn')
+        || s.includes('game_record_zzz') || s.includes('zzz_record')
+        || s.includes('act_id=e202406242138391')) return 'nap';
     return 'hk4e';
 }
 
@@ -192,8 +198,9 @@ export async function mhyFetch(url, obj = {}) {
     }
     // 先把 body 读出来：无论是判断阻断页还是交给调用方解析，都需要文本
     const text = await resp.text();
-    // HTML 阻断页 与 风控 retcode（10041/1034/10035/5003）都要试一次代理
-    if (!looksBlocked(text) && !looksBlockedJson(text)) {
+    // HTML 阻断页、HTTP 429（限流也可能是 JSON/空 body）、
+    // 以及风控 retcode（10041/1034/10035/5003）都要试一次代理
+    if (resp.status !== 429 && !looksBlocked(text) && !looksBlockedJson(text)) {
         return makeResponse(resp.ok, resp.status, text);
     }
     const via = await viaProxy(url, obj);
