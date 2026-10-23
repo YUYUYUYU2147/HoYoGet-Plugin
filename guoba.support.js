@@ -554,6 +554,37 @@ export const supportGuoba = () => {
         },
       },
       {
+        field: 'panel_service_gs',
+        label: '原神面板服务',
+        helpMessage: '只影响「#更新面板 / #原神更新面板」的展示柜模式；「#米游社更新面板」仍走米游社。自动=Enka',
+        component: 'Select',
+        componentProps: {
+          options: [
+            { label: '自动（Enka）', value: 'auto' },
+            { label: 'Enka', value: 'enka' },
+            { label: '喵 API（需 Token）', value: 'miao' },
+            { label: 'MiniGG', value: 'mgg' },
+            { label: 'X-Enka', value: 'hanxuan' },
+            { label: 'Lyln 代理', value: 'lyln' },
+          ],
+        },
+      },
+      {
+        field: 'panel_service_sr',
+        label: '星铁面板服务',
+        helpMessage: '只影响「*更新面板 / #星铁更新面板」的展示柜模式；「*米游社更新面板」仍走米游社。自动=EnkaHSR',
+        component: 'Select',
+        componentProps: {
+          options: [
+            { label: '自动（EnkaHSR）', value: 'auto' },
+            { label: 'EnkaHSR', value: 'enka' },
+            { label: '喵 API（需 Token）', value: 'miao' },
+            { label: 'Mihomo', value: 'homo' },
+            { label: 'Avocado（鳄梨）', value: 'avocado' },
+          ],
+        },
+      },
+      {
         component: 'SOFT_GROUP_BEGIN',
         label: '游戏攻略',
       },
@@ -1424,6 +1455,8 @@ export const supportGuoba = () => {
         // 数据模式：面板上要能读到当前值，否则单选框显示不出选中的那一项
         data_mode: getDataMode(),
         panel_style: getPanelStyle(),
+        panel_service_gs: cfg.panel_service_gs || 'auto',
+        panel_service_sr: cfg.panel_service_sr || 'auto',
         update: !!cfg.update,
         img_quality: cfg.img_quality ?? 80,
         wiki: !!cfg.wiki,
@@ -1651,6 +1684,14 @@ export const supportGuoba = () => {
       /* 面板风格同样只认 dark / apple，其它值一律回落到 dark */
       if (data.panel_style != null) {
         yaml.set(_path + 'config.yaml', 'panel_style', String(data.panel_style).trim().toLowerCase() === 'apple' ? 'apple' : 'dark')
+      }
+      if (data.panel_service_gs != null) {
+        const v = String(data.panel_service_gs).trim().toLowerCase()
+        yaml.set(_path + 'config.yaml', 'panel_service_gs', ['auto', 'enka', 'miao', 'mgg', 'hanxuan', 'lyln'].includes(v) ? v : 'auto')
+      }
+      if (data.panel_service_sr != null) {
+        const v = String(data.panel_service_sr).trim().toLowerCase()
+        yaml.set(_path + 'config.yaml', 'panel_service_sr', ['auto', 'enka', 'miao', 'homo', 'avocado'].includes(v) ? v : 'auto')
       }
       for (const [k, v] of Object.entries(boolMap)) {
         const target = ['forwardMsg', 'bh3', 'by', 'xbgd', 'cover'].includes(k) ? 'other.yaml' : 'config.yaml'

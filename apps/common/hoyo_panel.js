@@ -207,6 +207,27 @@ async function readMysMainUid(e, game) {
  * 不再 import 外部插件：miao 卸载后面板照样能出图。
  */
 let _vendorModels = null
+/** 把锅巴里选的面板服务临时写进 miao Cfg，返回恢复函数 */
+async function applyPanelService(game, value) {
+  const key = game === 'gs' ? 'profileServer' : 'srProfileServer'
+  const maps = {
+    gs: { enka: '2', miao: '1', mgg: '3', hanxuan: '4', lyln: '5' },
+    sr: { enka: '4', miao: '1', homo: '2', avocado: '3' },
+  }
+  const idx = maps[game]?.[String(value || '').toLowerCase()]
+  if (!idx) return null
+  try {
+    const { default: Cfg } = await import('../../system/vendor/miao/components/Cfg.js')
+    if (!Cfg.config.profile) Cfg.config.profile = {}
+    const old = Cfg.config.profile[key]
+    Cfg.config.profile[key] = idx
+    return () => { Cfg.config.profile[key] = old }
+  } catch (err) {
+    logger.debug?.(`[HoYoGet][hoyo_panel] 应用面板服务失败：${err?.message || err}`)
+    return null
+  }
+}
+
 async function loadMiao() {
   if (_vendorModels) return _vendorModels
   try {
@@ -1616,6 +1637,12 @@ export class hoyo_panel extends plugin {
           ].join('\n'))
         }
       }
+      // 展示柜模式：按锅巴里选的面板服务临时覆盖 miao 配置
+      let restoreService = null
+      if (!isMys) {
+        const pick = game === 'gs' ? config().panel_service_gs : config().panel_service_sr
+        restoreService = await applyPanelService(game, pick)
+      }
       // 只有刷新这一段静音，避免 miao 的「开始获取uid…」等中间提示
       const realReply = e.reply.bind(e)
       let refreshed
@@ -1624,6 +1651,7 @@ export class hoyo_panel extends plugin {
         refreshed = await player.refreshProfile(2, isMys)
       } finally {
         e.reply = realReply
+        restoreService?.()
       }
       /* ⚠ 不能用返回值判断成功。
          miao 的 ProfileAvatar.refreshProfile 成功时返回 player._update.length，
