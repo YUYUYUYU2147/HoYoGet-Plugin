@@ -435,7 +435,7 @@
 .he-group-ops, .he-item button { display: inline-flex; gap: 4px; }
 .he-group-ops button { height: 28px; padding: 0 8px; }
 .he-items { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; }
-.he-item { display: grid; grid-template-columns: 70px minmax(140px, 1.2fr) minmax(160px, 2fr) auto; gap: 6px; align-items: center; }
+.he-item { display: grid; grid-template-columns: 70px minmax(130px, 1.1fr) minmax(150px, 1.7fr) minmax(90px, 140px) auto; gap: 6px; align-items: center; }
 .he-item .he-icon { text-align: center; }
 .he-item button { height: 28px; min-width: 28px; padding: 0 6px; }
 .he-add-item, .he-add-group {
@@ -448,7 +448,7 @@
 .he-msg { margin-top: 10px; font-size: 12px; color: var(--g-text-dim, #8a93a3); min-height: 18px; }
 @media (max-width: 760px) {
   .he-item { grid-template-columns: 60px 1fr; }
-  .he-item .he-desc { grid-column: 1 / -1; }
+  .he-item .he-desc, .he-item .he-tag { grid-column: 1 / -1; }
   .he-item button { justify-self: start; }
 }
 
@@ -584,3 +584,7 @@
   background: color-mix(in srgb, var(--g-card, #fff) 78%, transparent);
 }
 .he-item-ops { display: flex; gap: 4px; align-items: center; }
+.he-item .he-tag { min-width: 0; }
+.he-tag {
+  color: #b45309;
+}

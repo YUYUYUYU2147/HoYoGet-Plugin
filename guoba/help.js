@@ -68,6 +68,7 @@
         return {
           title: String(item?.title || ''),
           desc: String(item?.desc || ''),
+          tag: String(item?.tag || ''),
           icon,
           x, y,
           game: gameOfItem(item, groupName),
@@ -155,13 +156,19 @@
     })
   }
 
-  /** 指令状态标签：只根据文案明确提到的内容给标签，不臆测 */
+  /** 状态标签：只显示配置里手写的 tag，不再从文案猜（避免把「扫码登录」标成需CK） */
   function tagsOf(item, group) {
     const tags = []
     if (group.auth === 'master') tags.push({ t: '主人', c: 'red' })
-    const text = item.title + ' ' + item.desc
-    if (/扫码|CK|cookie|绑定|登录/i.test(text)) tags.push({ t: '需CK', c: 'amber' })
-    if (/自动|推送|定时|每天/.test(text)) tags.push({ t: '自动', c: 'green' })
+    const raw = String(item.tag || '').split(/[,，|｜]/).map(v => v.trim()).filter(Boolean)
+    for (const t of raw) {
+      let c = 'gray'
+      if (/免CK|免费|无需|公开/i.test(t)) c = 'green'
+      else if (/自动|推送|定时|每天/i.test(t)) c = 'green'
+      else if (/需CK|需要CK|需扫码|需登录|需绑定|限时/i.test(t)) c = 'amber'
+      else if (/主人|仅主人|失效|停用/i.test(t)) c = 'red'
+      tags.push({ t, c })
+    }
     return tags
   }
 
@@ -172,7 +179,7 @@
       if (only && group.group !== only) return { ...group, list: [] }
       let list = group.list
       if (gameFilter) list = list.filter(i => i.game === gameFilter)
-      if (q) list = list.filter(i => (i.title + ' ' + i.desc).toLowerCase().includes(q))
+      if (q) list = list.filter(i => (i.title + ' ' + i.desc + ' ' + (i.tag || '')).toLowerCase().includes(q))
       return { ...group, list }
     }).filter(group => group.list.length)
 
@@ -358,7 +365,7 @@
       helpList: clone(source || []).map(g => ({
         group: g.group || '未分组',
         auth: g.auth === 'master' ? 'master' : '',
-        list: (g.list || []).map(i => ({ icon: i.icon || '', title: i.title || '', desc: i.desc || '' })),
+        list: (g.list || []).map(i => ({ icon: i.icon || '', title: i.title || '', desc: i.desc || '', tag: i.tag || '' })),
       })),
     }
     editing = true
@@ -389,6 +396,7 @@
         item.icon = Number(itemRow.querySelector('.he-icon')?.value) || 0
         item.title = itemRow.querySelector('.he-title')?.value || ''
         item.desc = itemRow.querySelector('.he-desc')?.value || ''
+        item.tag = itemRow.querySelector('.he-tag')?.value || ''
       })
     })
   }
@@ -404,6 +412,7 @@
         + '<input class="he-icon" type="hidden" value="' + esc(item.icon) + '" />'
         + '<input class="he-title" value="' + esc(item.title) + '" placeholder="指令标题" />'
         + '<input class="he-desc" value="' + esc(item.desc) + '" placeholder="说明" />'
+        + '<input class="he-tag" value="' + esc(item.tag) + '" placeholder="状态标签（可空）" />'
         + '<div class="he-item-ops">'
         + '<button type="button" data-act="item-up" title="上移">↑</button>'
         + '<button type="button" data-act="item-down" title="下移">↓</button>'
@@ -467,11 +476,11 @@
     const gi = groupRow ? Number(groupRow.dataset.g) : -1
     const itemRow = e.currentTarget.closest('.he-item')
     const ii = itemRow ? Number(itemRow.dataset.i) : -1
-    if (act === 'group-add') draft.helpList.push({ group: '新板块', auth: '', list: [{ icon: 0, title: '', desc: '' }] })
+    if (act === 'group-add') draft.helpList.push({ group: '新板块', auth: '', list: [{ icon: 0, title: '', desc: '', tag: '' }] })
     else if (act === 'group-del') draft.helpList.splice(gi, 1)
     else if (act === 'group-up' && gi > 0) [draft.helpList[gi - 1], draft.helpList[gi]] = [draft.helpList[gi], draft.helpList[gi - 1]]
     else if (act === 'group-down' && gi >= 0 && gi < draft.helpList.length - 1) [draft.helpList[gi + 1], draft.helpList[gi]] = [draft.helpList[gi], draft.helpList[gi + 1]]
-    else if (act === 'item-add' && gi >= 0) draft.helpList[gi].list.push({ icon: 0, title: '', desc: '' })
+    else if (act === 'item-add' && gi >= 0) draft.helpList[gi].list.push({ icon: 0, title: '', desc: '', tag: '' })
     else if (act === 'item-del' && gi >= 0) draft.helpList[gi].list.splice(ii, 1)
     else if (act === 'item-up' && gi >= 0 && ii > 0) { const l = draft.helpList[gi].list; [l[ii - 1], l[ii]] = [l[ii], l[ii - 1]] }
     else if (act === 'item-down' && gi >= 0) { const l = draft.helpList[gi].list; if (ii < l.length - 1) [l[ii + 1], l[ii]] = [l[ii], l[ii + 1]] }

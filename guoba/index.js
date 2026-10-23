@@ -535,6 +535,7 @@ export function init(ctx) {
           icon: Math.max(0, Math.min(999, Number(item?.icon) || 0)),
           title: str(item?.title),
           desc: str(item?.desc),
+          tag: str(item?.tag, 100),
         })).filter(item => item.title || item.desc),
       })).filter(group => group.list.length)
       if (!helpList.length) return res.json({ ok: false, code: -1, message: '至少保留一条帮助指令' })
