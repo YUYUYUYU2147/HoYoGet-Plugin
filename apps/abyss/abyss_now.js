@@ -542,6 +542,40 @@ async function buildSr(mode, opts = {}) {
  * @param {object} opts 与 loadPhase 相同，可传 offset=1 取上期
  * @returns {Promise<Object<number, Array<{label,level,waves}>>>}
  */
+/**
+ * 星铁各玩法的「关卡增益 / 战技」文本（来自 Alioth 速览数据）。
+ * 按玩法返回 [{ name, desc }]，供总览页挂在每个节点上。
+ */
+export async function getSrBuffs(modeKey) {
+  const mode = MODES[modeKey];
+  if (!mode || mode.game !== 'sr') return [];
+  try {
+    const index = await getJson(`${DATA_BASE}/${mode.data}/${LANG}/${mode.file}.json`);
+    const phases = index?.Phases || [];
+    if (!phases.length) return [];
+    const now = Date.now();
+    let idx = phases.findIndex(p => {
+      const r = periodRange(p.Time);
+      return r && now >= r.start && now <= r.end;
+    });
+    if (idx < 0) idx = 0;
+    const phase = phases[idx];
+    const detail = await getJson(`${DATA_BASE}/${mode.data}/${LANG}/${mode.file}/${phase._id}.json`, 6 * 60 * 60 * 1000);
+    if (!detail) return [];
+    const out = [];
+    if (detail.Buff?.Name || detail.Buff?.Desc) out.push(...buffList([detail.Buff]));
+    out.push(...buffList(detail.NewBuffs || []));
+    for (const v of valuesOf(detail.Skills)) {
+      const desc = [v.Desc, v.Desc2].filter(Boolean).map(cleanRich).filter(Boolean).join('\n');
+      if (v.Name || desc) out.push({ name: cleanRich(v.Name), desc });
+    }
+    return out;
+  } catch (err) {
+    logger.debug?.(`[HoYoGet][abyss_now] 星铁增益获取失败(${modeKey})：${err?.message || err}`);
+    return [];
+  }
+}
+
 export async function getSrBossesByFloor(modeKey, opts = {}) {
   const mode = MODES[modeKey];
   if (!mode || mode.game !== 'sr' || !['sr_chaos', 'sr_fiction', 'sr_shadow'].includes(modeKey)) return {};

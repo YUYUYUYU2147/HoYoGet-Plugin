@@ -581,14 +581,27 @@ export class abyss_stat extends plugin {
       }
       const data = buildSrChallengeData(raw, cfg, type)
       if (!data) continue
-      const col = this.buildSrColumn(data, cfg, raw, key)
+      const col = this.buildSrColumn(data, cfg, raw, key, false, buffMap[key] || [])
       if (col) columns.push(col)
       else if (data) {
         /* 有数据但没有可渲染的楼层（比如本期只打了快速通关）：仍然出一列，
            至少把星数/最高关卡/周期显示出来，不然整列消失会让人以为没数据。 */
-        const empty = this.buildSrColumn(data, cfg, raw, key, true)
+        const empty = this.buildSrColumn(data, cfg, raw, key, true, buffMap[key] || [])
         if (empty) columns.push(empty)
       }
+    }
+
+    /* 关卡增益 / 战技：从 Alioth 速览数据取，挂到该玩法的每个节点上 */
+    const buffMap = {}
+    try {
+      const now2 = await import('./abyss_now.js')
+      const pairs = [['chaos', 'sr_chaos'], ['story', 'sr_fiction'], ['boss', 'sr_shadow']]
+      for (const [k, modeKey] of pairs) {
+        const list = await now2.getSrBuffs?.(modeKey) || []
+        if (list.length) buffMap[k] = list
+      }
+    } catch (err) {
+      logger.debug?.(`[HoYoGet][abyss_stat] 取星铁关卡增益失败：${err?.message || err}`)
     }
 
     /* 逐类兜底：某一类主接口拿不到（10041 未公开 / 限流），
@@ -684,7 +697,7 @@ export class abyss_stat extends plugin {
    * （list.star_num / list.max_floor / list.battle_num / floors[].node_1 …），
    * 这样模板可以原样复用，不用改写。
    */
-  buildSrColumn(data, cfg, raw, key, allowEmpty = false) {
+  buildSrColumn(data, cfg, raw, key, allowEmpty = false, buffs = []) {
     if (!data) return null
     const type = cfg.type
     const group = data.group || {}
@@ -709,7 +722,18 @@ export class abyss_stat extends plugin {
             hasData: true,
             score: n.score,
             challenge_time_str: n.time || '',
-            buff: b ? { id: b.id || b.name || 'buff', icon: b.icon || '', name_mi18n: b.name_mi18n || b.name || '', desc_mi18n: String(b.desc_mi18n || b.desc || '').replace(/<[^>]+>/g, '').trim() } : null,
+            /* 接口自带 buff 优先；没有就用 Alioth 速览的关卡增益/战技（该期通用） */
+            buff: b
+              ? { id: b.id || b.name || 'buff', icon: b.icon || '', name_mi18n: b.name_mi18n || b.name || '', desc_mi18n: String(b.desc_mi18n || b.desc || '').replace(/<[^>]+>/g, '').trim() }
+              : (buffs.length
+                ? {
+                  id: 'buff_' + (n.index || 0),
+                  icon: '',
+                  name_mi18n: buffs.map(x => x.name).filter(Boolean).join(' / '),
+                  desc_mi18n: buffs.map(x => x.desc).filter(Boolean).join('\n'),
+                }
+                : null),
+            buffs: buffs.map(x => ({ name: x.name || '', desc: x.desc || '' })),
             avatars: (n.avatars || []).map(a => ({
               icon: a.icon || '',
               rarity: a.rarity || 5,
@@ -753,6 +777,7 @@ export class abyss_stat extends plugin {
         ? `${timeCalc(data.beginTime)} - ${timeCalc(data.endTime)}`
         : '',
       group: bossGroup,
+      buffs: (buffs || []).map(x => ({ name: x.name || '', desc: x.desc || '' })),
       list: {
         star_num: data.totalStar ?? 0,
         max_floor: data.bestFloor || data.periodName || '',
