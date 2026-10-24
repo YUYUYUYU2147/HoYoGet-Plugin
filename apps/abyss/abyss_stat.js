@@ -186,7 +186,9 @@ export class abyss_stat extends plugin {
   async gsSpiral(e) {
     const type = /(上期|往期)/.test(String(e.msg || '')) ? 2 : 1
     const mys = await this.mys(e, 'gs')
-    if (!mys) return
+    // 返回 true 表示已处理：框架遇到 false/undefined 会 continue 到别的插件，
+    // 原神深渊就可能落到 genshin 的同名指令上。
+    if (!mys) return true
     let raw
     try {
       raw = await mys.getSpiralAbyss(type)
@@ -409,7 +411,8 @@ export class abyss_stat extends plugin {
     const cfg = SR_CFG[key]
     const type = /(上期|往期)/.test(String(e.msg || '')) ? 2 : 1
     const mys = await this.mys(e, 'sr')
-    if (!mys) return
+    // 同上：必须返回 truthy，否则会被别的插件接手
+    if (!mys) return true
     let raw
     try {
       raw = await mys[cfg.api](type)
@@ -481,7 +484,11 @@ export class abyss_stat extends plugin {
   async srAbyss(e) {
     const type = /(上期|往期)/.test(String(e.msg || '')) ? 2 : 1
     const mys = await this.mys(e, 'sr')
-    if (!mys) return
+    /* 注意：这里必须返回 truthy。
+       框架匹配到规则后，若插件函数返回 false/undefined，会 continue 去找下一个插件，
+       于是 genshin 的「#星铁深渊」会接手并出它自己的图（表现为 *深渊 被抢）。
+       拿不到 CK 时 mys() 已经回复过提示，这里返回 true 表示「已处理」。 */
+    if (!mys) return true
     const keys = ['chaos', 'story', 'boss', 'peak']
     const columns = []
     const errors = []
@@ -568,19 +575,22 @@ export class abyss_stat extends plugin {
 
     if (!columns.length) {
       if (errors.some(e => /限流|-10001|-502/.test(e))) {
-        return e.reply('米游社接口限流了（invalid request / -502），这是短时限流，不是没有数据。\n'
+        await e.reply('米游社接口限流了（invalid request / -502），这是短时限流，不是没有数据。\n'
           + '请等 1~2 分钟后再发一次 *深渊；若依旧失败，再看下面的具体错误。\n'
           + errors.join('\n'))
+        return true
       }
       if (priv === keys.length) {
-        return e.reply('米游社返回「数据未公开」(10041/10102)，通常是这两个原因：\n'
+        await e.reply('米游社返回「数据未公开」(10041/10102)，通常是这两个原因：\n'
           + '1) 用的是公共 CK 而不是你自己的：日志里出现「分配查询ck」就属于这种，重新 #扫码绑定 后再试；\n'
           + '2) 确实在米游社「我的 → 战绩」里隐藏了战绩，关掉即可。\n'
           + '（10041 表示米游社没有开放该接口，账号本身看不到深渊详情）')
+        return true
       }
       logger.mark?.(`[HoYoGet][abyss_stat] *深渊 四类都无数据：${errors.join(' | ') || '接口未返回楼层'}`)
-      return e.reply('没有查到本期星铁深渊数据，可能还没打或面板未公开。'
+      await e.reply('没有查到本期星铁深渊数据，可能还没打或面板未公开。'
         + (errors.length ? `\n${errors.join('\n')}` : ''))
+      return true
     }
 
     /* 与 genshin 同款：每列 430 CSS 宽，列间距 12，容器左右各 16 */
@@ -595,7 +605,7 @@ export class abyss_stat extends plugin {
     } catch (err) {
       logger.debug?.(`[HoYoGet][abyss_stat] 取玩家头像失败：${err?.message || err}`)
     }
-    return render('abyss_stat/sr-abyss-all', {
+    const img = await render('abyss_stat/sr-abyss-all', {
       period: type === 2 ? '上期' : '当期',
       uid: mys.uid,
       avatar,
@@ -605,6 +615,13 @@ export class abyss_stat extends plugin {
       layoutcopyright: 'from 米哈游',
       sys: { copyright: '' },
     }, { e, ret: true, dsf: 3.2, viewport: { width: Math.max(1000, totalWidth), height: 900 } })
+    /* render 失败返回 false 时框架会 continue 到下一个插件（genshin 会接手出它自己的图）。
+       这里兜底成 true，保证「*深渊」由本插件独占处理。 */
+    if (!img) {
+      logger.warn?.('[HoYoGet][abyss_stat] *深渊 出图失败')
+      return e.reply('星铁深渊总览出图失败，请稍后重试。')
+    }
+    return img
   }
 
   /**
