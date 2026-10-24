@@ -12,7 +12,7 @@ import moment from 'moment'
 
 /** {year,month,day,hour,minute} → YYYY-MM-DD HH:mm */
 export function timeCalc(t) {
-  if (!t) return ''
+  if (!t || !t.year || !t.month || !t.day) return ''
   const p = n => String(n || 0).padStart(2, '0')
   return `${t.year}-${p(t.month)}-${p(t.day)} ${p(t.hour)}:${p(t.minute)}`
 }
@@ -156,6 +156,8 @@ function buildSrChallenge(raw = {}, cfg = {}, period = 1) {
     if (!n) return null
     return {
       raw: n,
+      /* 节点自带的关卡战意，单玩法页逐节点展示 */
+      buff: n.buff || n.maze_buff || (Array.isArray(n.buff_list) ? n.buff_list[0] : null) || null,
       index: idx + 1,
       score: Number(n.score) || 0,
       time: n.challenge_time ? timeCalc(n.challenge_time) : '',
@@ -239,13 +241,14 @@ function buildSrPeak(raw = {}, period = 1) {
      保留 period 索引用于极少数同时返回当期+上期的情况。
      不能提前过滤掉 has_challenge_record=false 的记录，否则「本期没打」
      会被当成「没有数据」，模板里的「暂无通关战绩」状态也永远出不来。 */
-  const pick = records[period === 2 ? 1 : 0]
-    || records.find(r => r && r.has_challenge_record)
-    || records[0]
+  /* 只取对应期数那一条：不再回退到「有记录的另一期」，
+     否则本期没打王棋时会静默显示往期数据（与单个王棋页不一致）。 */
+  const pick = records[period === 2 ? 1 : 0] || records[0]
   if (!pick) {
     return { type: 'peak', title: '王棋（异相仲裁）', group: {}, floors: [], totalStar: 0, extraStar: 0, bestFloor: '', battleNum: 0, hasData: false }
   }
   const group = pick.group || {}
+
   const boss = pick.boss_record || {}
   const avatars = (boss.avatars || []).map(a => ({
     id: a.id,
@@ -274,17 +277,51 @@ function buildSrPeak(raw = {}, period = 1) {
       })),
       raw: {},
     }))
-  const floors = (avatars.length || mobNodes.length) ? [{
-    index: 1,
-    name: group.name_mi18n || '异相仲裁',
+  /* 王棋与骑士关拆成多张卡：王棋BOSS单独一层，每组骑士一层；
+     索引倒序编排，配合总览的降序排序保证「王棋 → 骑士一 → 骑士三」的顺序。 */
+  const bossName = pick.boss_info?.name_mi18n || pick.boss_info?.name || '王棋BOSS关'
+  const CN_NUM = ['一', '二', '三', '四', '五', '六']
+  const mobRecords = (pick.mob_records || []).filter(r => r && (r.avatars || []).length)
+  const toAv = a => ({ id: a.id, level: a.level, rarity: a.rarity, element: a.element, rank: a.rank, name: a.name, abbr: a.abbr, icon: a.icon })
+  const totalCards = mobRecords.length + (avatars.length ? 1 : 0)
+  const bossFloor = avatars.length ? {
+    index: totalCards,
+    name: bossName,
     star: starNum,
     extraStar: 0,
     mobStar: mobStarNum,
     score: 0,
-    roundNum: 0,
+    roundNum: Number(boss.round_num || 0),
     isFast: false,
-    nodes: [{ index: 1, score: 0, time: '', avatars, raw: {} }, ...mobNodes],
-  }] : []
+    nodes: [{
+      index: 1,
+      score: 0,
+      round_num: Number(boss.round_num || pick.round_num || 0),
+      time: boss.challenge_time ? timeCalc(boss.challenge_time) : '',
+      avatars,
+      raw: {},
+    }],
+  } : null
+  const starPerMob = mobRecords.length ? Math.round(mobStarNum / mobRecords.length) : 0
+  const mobFloors = mobRecords.map((rec, i) => ({
+    index: mobRecords.length - i,
+    name: rec.name_mi18n || rec.name || `骑士（${CN_NUM[i] || i + 1}）`,
+    star: starPerMob,
+    extraStar: 0,
+    mobStar: 0,
+    score: 0,
+    roundNum: Number(boss.round_num || 0),
+    isFast: false,
+    nodes: [{
+      index: 1,
+      score: 0,
+      round_num: Number(rec.round_num || 0),
+      time: rec.challenge_time ? timeCalc(rec.challenge_time) : '',
+      avatars: (rec.avatars || []).map(toAv),
+      raw: {},
+    }],
+  }))
+  const floors = [bossFloor, ...mobFloors].filter(Boolean)
   const ts = t => (t && typeof t === 'object'
     ? new Date(`${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')} ${String(t.hour || 0).padStart(2, '0')}:${String(t.minute || 0).padStart(2, '0')}:00`).getTime()
     : 0)

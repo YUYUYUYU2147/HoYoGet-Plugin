@@ -8,22 +8,34 @@
 <body>
   <div class="container" id="container" style="width: {{totalWidth}}px;">
     <div class="hoyo-head" style="width: {{contentWidth}}px;">
-      {{if avatar}}<img class="hoyo-icon" src="{{avatar}}" onerror="this.style.display='none'" />{{else}}<img class="hoyo-icon" src="{{ppath}}game_icons/sr.webp" onerror="this.style.display='none'" />{{/if}}
       <div class="hoyo-head-copy">
         <div class="hoyo-title">逐光捡金挑战回顾</div>
         <div class="hoyo-sub">{{period}} · 混沌回忆 / 虚构叙事 / 末日幻影 / 异相仲裁</div>
       </div>
-      <div class="hoyo-uid">UID {{uid}}</div>
+      <div class="hoyo-user">
+        <div class="hoyo-user-meta">
+          {{if nickname}}<div class="hoyo-nick">{{nickname}}</div>{{/if}}
+          <div class="hoyo-uid">UID {{uid}}</div>
+        </div>
+        {{if avatar}}<img class="hoyo-icon" src="{{avatar}}" onerror="this.style.display='none'" />{{else}}<img class="hoyo-icon" src="{{ppath}}game_icons/sr.webp" onerror="this.style.display='none'" />{{/if}}
+      </div>
     </div>
     <div class="columns" style="width: {{contentWidth}}px;">
       {{each columns col}}
       <div class="column {{col.type}}">
+        <div class="col-head">
         <div class="column-title">{{col.title}}</div>
         <div class="overview-card">
+          <div class="overview-title">{{col.sectionTitle || col.title}}挑战回顾</div>
           <div class="overview-main">
             <div class="star-summary">
-              <span class="star-mark">★</span>
+              <img class="star-mark" src="{{ppath}}abyss_stat/imgs/challenge/peak/mob_star.png" />
               <span class="star-count">× {{col.list.star_num}}</span>
+              {{if col.mobStar}}
+              <span class="floor-star-sep">|</span>
+              <img class="star-mark" src="{{ppath}}abyss_stat/imgs/challenge/peak/mob_star.png" />
+              <span class="star-count">× {{col.mobStar}}</span>
+              {{/if}}
               {{if col.hasStarMode}}
               <span class="floor-star-sep">|</span>
               <img class="summary-star4" src="{{ppath}}abyss_stat/genshin_img/other/abyss_star4.png" />
@@ -61,56 +73,69 @@
           {{/if}}
           <div class="period-info">{{col.periodText}}{{if col.periodName}} · {{col.periodName}}{{/if}}</div>
         </div>
-        {{if col.buffs && col.buffs.length}}
-        <div class="col-buffs">
-          <div class="col-buffs-title">本期增益 / 战技</div>
-          {{each col.buffs b}}
-          <div class="col-buff"><b>{{b.name}}：</b><span>{{b.desc}}</span></div>
-          {{/each}}
         </div>
-        {{/if}}
+        <div class="section-label">{{col.sectionTitle || col.title}}通关战绩</div>
         <div class="floor-list">
           {{each col.floors floor}}
           <div class="floor-card">
             <div class="floor-head">
               <div class="floor-name">{{floor.name}}</div>
               <div class="floor-stars">
-                <span class="{{if floor.star_num<1}}nostar{{/if}}">★</span>
-                <span class="{{if floor.star_num<2}}nostar{{/if}}">★</span>
-                <span class="{{if floor.star_num<3}}nostar{{/if}}">★</span>
+                <img class="floor-star {{if floor.star_num<1}}nostar-img{{/if}}" src="{{ppath}}abyss_stat/imgs/challenge/peak/mob_star.png" />
+                <img class="floor-star {{if floor.star_num<2}}nostar-img{{/if}}" src="{{ppath}}abyss_stat/imgs/challenge/peak/mob_star.png" />
+                <img class="floor-star {{if floor.star_num<3}}nostar-img{{/if}}" src="{{ppath}}abyss_stat/imgs/challenge/peak/mob_star.png" />
                 {{if floor.hasTierceRecord}}
                 <span class="floor-star-sep">|</span>
                 <img class="star4 {{if floor.star_num<4}}nostar-img{{/if}}" src="{{ppath}}abyss_stat/genshin_img/other/abyss_star4.png" />
                 {{/if}}
                 {{if floor.mob_star}}
                 <span class="floor-star-sep">|</span>
-                <span class="mob-star">小怪 {{floor.mob_star}}★</span>
                 {{/if}}
               </div>
             </div>
             <div class="floor-meta">
-              <span class="round-info">{{if col.showRound}}轮次：{{floor.round_num || 0}}{{/if}}</span>
-              {{if col.showTotalScore && floor.allscore !== undefined}}
+              <span class="round-info">{{if col.showRound}}使用使用轮次：{{floor.round_num || 0}}{{/if}}</span>
+              {{if col.showTotalScore && floor.allscore}}
               <span class="total-info">总分：<b>{{floor.allscore}}</b></span>
               {{/if}}
             </div>
 
+            {{if !floor.node_1?.hasData && col.type !== "peak"}}
+            <div class="node-card node-empty"></div>
+            {{/if}}
             {{if floor.node_1?.hasData}}
             <div class="node-card">
               <div class="node-head">
                 <span>节点1</span>
                 <em>{{floor.node_1.challenge_time_str}}</em>
-                {{if col.showNodeScore && floor.node_1.score !== undefined}}<b>积分：{{floor.node_1.score}}</b>{{/if}}
+                {{if col.showNodeScore && floor.node_1.score}}<b>积分：{{floor.node_1.score}}</b>{{/if}}{{if floor.node_1.round_num}}<b>回合：{{floor.node_1.round_num}}</b>{{/if}}
               </div>
               {{if floor.node_1.buff?.id}}
-              <div class="buff"><img src="{{floor.node_1.buff.icon}}" /><span>{{floor.node_1.buff.name_mi18n}}：{{floor.node_1.buff.desc_mi18n}}</span></div>
+              <div class="buff">{{if floor.node_1.buff.icon}}<img src="{{floor.node_1.buff.icon}}" />{{else}}<img src="{{ppath}}abyss_stat/imgs/role/buffs/1.png" />{{/if}}<span>{{floor.node_1.buff.name_mi18n}}：{{floor.node_1.buff.desc_mi18n}}</span></div>
+              {{/if}}
+              {{if floor.bossHalf}}
+              <div class="peak-boss-head">
+                <span class="peak-boss-title">{{floor.bossHalf.label}}{{if floor.bossHalf.level}} · Lv.{{floor.bossHalf.level}}{{/if}}</span>
+                {{each floor.bossHalf.tags tag}}
+                <span class="sr-boss-mech-tag">{{tag}}</span>
+                {{/each}}
+              </div>
+              {{if floor.bossHalf.waves && floor.bossHalf.waves.length}}
+              <div class="peak-boss-mons">
+                {{each floor.bossHalf.waves w}}
+                {{each w.monsters m}}
+                <span class="sr-boss-mon"><span class="sr-boss-main">{{if m.icon}}<span class="sr-boss-ico" style="background-image:url('{{m.icon}}')"></span>{{/if}}<span class="sr-boss-name">{{m.name}}</span>{{if m.hp}}<span class="sr-boss-hpv">{{m.hp}}{{if m.hpMult}} ×{{m.hpMult}}{{/if}}</span>{{/if}}</span>{{if m.weak && m.weak.length}}<span class="sr-boss-tags">{{each m.weak e}}<span class="sr-boss-elem">{{if e.icon}}<span class="sr-boss-ico" style="background-image:url('{{e.icon}}')"></span>{{/if}}{{e.cn}}</span>{{/each}}</span>{{/if}}</span>
+                {{/each}}
+                {{/each}}
+              </div>
+              {{/if}}
               {{/if}}
               <div class="avatars-grid">
                 {{each floor.node_1.avatars v}}
                 <div class="avatar-wrapper bg{{v.rarity}}">
                   {{if v.rank>0}}<span class="avatar-rank">{{v.rank}}</span>{{/if}}
                   <img class="avatar-img" src="{{v.icon}}" onerror="whenError(this)" />
-                  <div class="avatar-level">Lv.{{v.level}}</div>
+                  <div class="avatar-level">等级 {{v.level}}</div>
                   <div class="element-icon"><img src="{{ppath}}abyss_stat/genshin_img/element/{{v.element}}.png" /></div>
                 </div>
                 {{/each}}
@@ -118,22 +143,25 @@
             </div>
             {{/if}}
 
+            {{if !floor.node_2?.hasData && col.type !== "peak"}}
+            <div class="node-card node-empty"></div>
+            {{/if}}
             {{if floor.node_2?.hasData}}
             <div class="node-card">
               <div class="node-head">
                 <span>节点2</span>
                 <em>{{floor.node_2.challenge_time_str}}</em>
-                {{if col.showNodeScore && floor.node_2.score !== undefined}}<b>积分：{{floor.node_2.score}}</b>{{/if}}
+                {{if col.showNodeScore && floor.node_2.score}}<b>积分：{{floor.node_2.score}}</b>{{/if}}{{if floor.node_2.round_num}}<b>回合：{{floor.node_2.round_num}}</b>{{/if}}
               </div>
               {{if floor.node_2.buff?.id}}
-              <div class="buff"><img src="{{floor.node_2.buff.icon}}" /><span>{{floor.node_2.buff.name_mi18n}}：{{floor.node_2.buff.desc_mi18n}}</span></div>
+              <div class="buff">{{if floor.node_2.buff.icon}}<img src="{{floor.node_2.buff.icon}}" />{{else}}<img src="{{ppath}}abyss_stat/imgs/role/buffs/1.png" />{{/if}}<span>{{floor.node_2.buff.name_mi18n}}：{{floor.node_2.buff.desc_mi18n}}</span></div>
               {{/if}}
               <div class="avatars-grid">
                 {{each floor.node_2.avatars v}}
                 <div class="avatar-wrapper bg{{v.rarity}}">
                   {{if v.rank>0}}<span class="avatar-rank">{{v.rank}}</span>{{/if}}
                   <img class="avatar-img" src="{{v.icon}}" onerror="whenError(this)" />
-                  <div class="avatar-level">Lv.{{v.level}}</div>
+                  <div class="avatar-level">等级 {{v.level}}</div>
                   <div class="element-icon"><img src="{{ppath}}abyss_stat/genshin_img/element/{{v.element}}.png" /></div>
                 </div>
                 {{/each}}
@@ -141,22 +169,25 @@
             </div>
             {{/if}}
 
+            {{if !floor.node_3?.hasData && col.type !== "peak"}}
+            <div class="node-card node-empty"></div>
+            {{/if}}
             {{if floor.node_3?.hasData}}
             <div class="node-card node3">
               <div class="node-head">
                 <span><img class="node3-crown" src="{{ppath}}abyss_stat/genshin_img/boss/node3top.png" />节点3</span>
                 <em>{{floor.node_3.challenge_time_str}}</em>
-                {{if col.showNodeScore && floor.node_3.score !== undefined}}<b>积分：{{floor.node_3.score}}</b>{{/if}}
+                {{if col.showNodeScore && floor.node_3.score}}<b>积分：{{floor.node_3.score}}</b>{{/if}}{{if floor.node_3.round_num}}<b>回合：{{floor.node_3.round_num}}</b>{{/if}}
               </div>
               {{if floor.node_3.buff?.id}}
-              <div class="buff"><img src="{{floor.node_3.buff.icon}}" /><span>{{floor.node_3.buff.name_mi18n}}：{{floor.node_3.buff.desc_mi18n}}</span></div>
+              <div class="buff">{{if floor.node_3.buff.icon}}<img src="{{floor.node_3.buff.icon}}" />{{else}}<img src="{{ppath}}abyss_stat/imgs/role/buffs/1.png" />{{/if}}<span>{{floor.node_3.buff.name_mi18n}}：{{floor.node_3.buff.desc_mi18n}}</span></div>
               {{/if}}
               <div class="avatars-grid">
                 {{each floor.node_3.avatars v}}
                 <div class="avatar-wrapper bg{{v.rarity}}">
                   {{if v.rank>0}}<span class="avatar-rank">{{v.rank}}</span>{{/if}}
                   <img class="avatar-img" src="{{v.icon}}" onerror="whenError(this)" />
-                  <div class="avatar-level">Lv.{{v.level}}</div>
+                  <div class="avatar-level">等级 {{v.level}}</div>
                   <div class="element-icon"><img src="{{ppath}}abyss_stat/genshin_img/element/{{v.element}}.png" /></div>
                 </div>
                 {{/each}}
@@ -166,6 +197,41 @@
           </div>
           {{/each}}
         </div>
+        <div class="col-spacer"></div>
+        <!-- 快速通关卡已关闭（恢复时把下面的 if false 改回 col.fastSummary 条件） -->
+        {{if false}}
+        <div class="floor-card fast-card">
+          <div class="floor-head">
+            <div class="floor-name">{{col.fastSummary.first}}{{if col.fastSummary.count > 1}} ~ {{col.fastSummary.last}}{{/if}}</div>
+            <div class="floor-stars">
+              <img class="floor-star {{if col.fastSummary.star<1}}nostar-img{{/if}}" src="{{ppath}}abyss_stat/imgs/challenge/peak/mob_star.png" />
+              <img class="floor-star {{if col.fastSummary.star<2}}nostar-img{{/if}}" src="{{ppath}}abyss_stat/imgs/challenge/peak/mob_star.png" />
+              <img class="floor-star {{if col.fastSummary.star<3}}nostar-img{{/if}}" src="{{ppath}}abyss_stat/imgs/challenge/peak/mob_star.png" />
+            </div>
+          </div>
+          <div class="fast-card-sub">快速通关，共 {{col.fastSummary.count}} 关</div>
+        </div>
+        {{/if}}
+        {{if col.prevPeak}}
+        <div class="prev-peak">
+          <div class="prev-peak-title">{{col.prevPeak.version}}{{if col.prevPeak.version && col.prevPeak.range}} · {{/if}}{{col.prevPeak.range}}</div>
+          <div class="prev-peak-name">{{col.prevPeak.name}}</div>
+          <div class="prev-peak-row">
+            <span>王棋通关战绩</span>
+            <span>使用次数 {{col.prevPeak.kingStar}} ★</span>
+          </div>
+          {{if col.prevPeak.knights && col.prevPeak.knights.length}}
+          <div class="prev-peak-knights">
+            {{each col.prevPeak.knights k}}
+            <div class="prev-peak-knight">
+              <div class="prev-peak-knight-name">骑士 {{k.label}}</div>
+              <div class="prev-peak-knight-star">{{k.star}} ★</div>
+            </div>
+            {{/each}}
+          </div>
+          {{/if}}
+        </div>
+        {{/if}}
       </div>
       {{/each}}
     </div>

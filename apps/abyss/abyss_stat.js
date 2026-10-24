@@ -490,13 +490,16 @@ export class abyss_stat extends plugin {
       : null
     /* 顶部玩家头像：星铁 index 接口（与 *深渊 同款），取不到模板回退星铁图标 */
     let avatar = ''
+    let nickname = ''
     try {
       const profile = await getRoleProfile(e, mys.uid, 'sr')
       avatar = profile?.avatar || ''
+      nickname = String(profile?.nickname || '').trim()
       if (avatar) avatar = String(avatar).replace(/^http:/, 'https:')
     } catch (err) {
       logger.debug?.(`[HoYoGet][abyss_stat] 取玩家头像失败：${err?.message || err}`)
     }
+    if (!nickname) logger.mark?.('[HoYoGet][abyss_stat] 单玩法页未取到游戏昵称')
     /* 混沌/虚构/末日：有「快速通关」层（满星继承）时只渲染有 BOSS 数据的楼层
        （混沌 10~12、虚构/末日 3~4），并把快速通关层整合成一行汇总，没快速通关就全部渲染。王棋不走此逻辑。 */
     let renderStory = data
@@ -530,7 +533,7 @@ export class abyss_stat extends plugin {
         : {}),
       uid: mys.uid,
       avatar,
-      nickname: raw?.role?.nickname || '',
+      nickname: raw?.role?.nickname || nickname || '',
       avatars,
       mysFailed: !Object.keys(avatars).length,
       srBosses,
@@ -576,6 +579,19 @@ export class abyss_stat extends plugin {
       const b = await mys.getChallengeBrief?.()
       if (b && Array.isArray(b.list)) brief = b.list
     } catch (_) { brief = null }
+    /* 关卡增益 / 战技：从 Alioth 速览数据取，挂到该玩法的每个节点上 */
+    const buffMap = {}
+    try {
+      const now2 = await import('./abyss_now.js')
+      const pairs = [['chaos', 'sr_chaos'], ['story', 'sr_fiction'], ['boss', 'sr_shadow'], ['peak', 'sr_arb']]
+      for (const [k, modeKey] of pairs) {
+        const list = await now2.getSrBuffs?.(modeKey) || []
+        if (list.length) buffMap[k] = list
+      }
+    } catch (err) {
+      logger.debug?.(`[HoYoGet][abyss_stat] 取星铁关卡增益失败：${err?.message || err}`)
+    }
+
     for (const key of keys) {
       const cfg = SR_CFG[key]
       let raw = null
@@ -611,18 +627,6 @@ export class abyss_stat extends plugin {
       }
     }
 
-    /* 关卡增益 / 战技：从 Alioth 速览数据取，挂到该玩法的每个节点上 */
-    const buffMap = {}
-    try {
-      const now2 = await import('./abyss_now.js')
-      const pairs = [['chaos', 'sr_chaos'], ['story', 'sr_fiction'], ['boss', 'sr_shadow']]
-      for (const [k, modeKey] of pairs) {
-        const list = await now2.getSrBuffs?.(modeKey) || []
-        if (list.length) buffMap[k] = list
-      }
-    } catch (err) {
-      logger.debug?.(`[HoYoGet][abyss_stat] 取星铁关卡增益失败：${err?.message || err}`)
-    }
 
     /* 逐类兜底：某一类主接口拿不到（10041 未公开 / 限流），
        就用 challenge_brief 里对应那条的摘要补一列概览。
@@ -681,22 +685,59 @@ export class abyss_stat extends plugin {
       return true
     }
 
+    /* 王棋列：把 Alioth 的王棋/骑士关卡信息（等级、机制 tag、怪物弱点）挂到各层卡片 */
+    const peakCol = columns.find(c => c.key === 'peak')
+    if (peakCol && peakCol.floors?.length) {
+      try {
+        const now3 = await import('./abyss_now.js')
+        const pb = await now3.getSrArbKingBosses?.({ offset: type === 2 ? 1 : 0 }) || {}
+        peakCol.floors.forEach((fl, i) => {
+          fl.bossHalf = i === 0
+            ? (pb.king?.[4] || pb.king?.[5] || null)
+            : (pb.knight?.[i] || null)
+          if (i === 0 && fl.bossHalf) fl.bossHalf.label = '王棋 BOSS'
+        })
+        /* 上期赛季面板：填掉王棋列下方空白，信息与单个王棋页一致 */
+        const prevRaw = await mys.getChallengePeak?.(2)
+        const prevRec = prevRaw?.challenge_peak_records?.[0]
+        if (prevRec && prevRec.has_challenge_record) {
+          const pg = prevRec.group || {}
+          const knightCount = (prevRec.mob_records || []).filter(r => (r.avatars || []).length).length
+          const mobStars = Number(prevRec.mob_stars || 0)
+          const perStar = knightCount ? Math.round(mobStars / knightCount) : 0
+          peakCol.prevPeak = {
+            version: pg.version ? `${pg.version}版本` : '',
+            range: [timeCalc(pg.begin_time), timeCalc(pg.end_time)].filter(Boolean).join(' ~ '),
+            name: pg.name_mi18n || pg.name || '王棋关卡',
+            kingStar: Number(prevRec.boss_stars || 0),
+            knights: Array.from({ length: knightCount }, (_, i) => ({ label: String(i + 1).padStart(2, '0'), star: perStar })),
+          }
+        }
+      } catch (err) {
+        logger.debug?.(`[HoYoGet][abyss_stat] 取王棋关卡信息失败：${err?.message || err}`)
+      }
+    }
+
     /* 与 genshin 同款：每列 430 CSS 宽，列间距 12，容器左右各 16 */
     const totalWidth = columns.length * 430 + 32 + Math.max(columns.length - 1, 0) * 12
     logger.mark?.(`[HoYoGet][abyss_stat] *深渊 列：${columns.map(c => `${c.title} ${c.list?.star_num}星/${c.floors?.length || 0}层`).join(' | ')}`)
     /* 顶部头像用玩家自己的游戏头像（星铁 index 接口），取不到再回退星铁图标 */
     let avatar = ''
+    let nickname = ''
     try {
       const profile = await getRoleProfile(e, mys.uid, 'sr')
       avatar = profile?.avatar || ''
+      nickname = String(profile?.nickname || '').trim()
       if (avatar) avatar = String(avatar).replace(/^http:/, 'https:')
     } catch (err) {
       logger.debug?.(`[HoYoGet][abyss_stat] 取玩家头像失败：${err?.message || err}`)
     }
+    logger.mark?.(`[HoYoGet][abyss_stat] 昵称=${JSON.stringify(nickname)} 头像=${avatar ? 'ok' : '空'}`)
     const img = await render('abyss_stat/sr-abyss-all', {
       period: type === 2 ? '上期' : '当期',
       uid: mys.uid,
       avatar,
+      nickname,
       columns,
       totalWidth,
       contentWidth: totalWidth - 32,
@@ -728,11 +769,14 @@ export class abyss_stat extends plugin {
       tierce_boss: group?.tierce_boss || null,
     }
     const allFloors = (data.floors || [])
-      .filter(f => (f.nodes || []).some(n => n?.avatars?.length) || f.isFast)
+      .filter(f => (f.nodes || []).some(n => n?.avatars?.length))
+      .filter(f => Number(f.index) !== 10)
+      .sort((a, b) => (Number(b.index) || 0) - (Number(a.index) || 0))
+      .sort((a, b) => (Number(b.index) || 0) - (Number(a.index) || 0))
     /* 只渲染最后 2 层：混沌回忆有 12 层，全画出来整图能到 15000px，
        超过 Chromium 截图上限（16384px，dsf 还要再乘）直接截不出来。
        概览卡里的星数/最高层/场次仍按全部层统计，不受影响。 */
-    const floors = allFloors.slice(-2)
+    const floors = allFloors.slice(0, 4)
       .map(f => {
         const node = n => {
           if (!n || !n.avatars?.length) return null
@@ -741,6 +785,7 @@ export class abyss_stat extends plugin {
           return {
             hasData: true,
             score: n.score,
+            round_num: Number(n.round_num || 0),
             challenge_time_str: n.time || '',
             /* 接口自带 buff 优先；没有就用 Alioth 速览的关卡增益/战技（该期通用） */
             buff: b
@@ -750,10 +795,10 @@ export class abyss_stat extends plugin {
                   id: 'buff_' + (n.index || 0),
                   icon: '',
                   name_mi18n: buffs.map(x => x.name).filter(Boolean).join(' / '),
-                  desc_mi18n: buffs.map(x => x.desc).filter(Boolean).join('\n'),
+                  desc_mi18n: buffs.map(x => String(x.desc || '').replace(/<color=[^>]*>/gi, '').replace(/<\/color>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()).filter(Boolean).join('\n'),
                 }
                 : null),
-            buffs: buffs.map(x => ({ name: x.name || '', desc: x.desc || '' })),
+            buffs: buffs.map(x => ({ name: x.name || '', desc: String(x.desc || '').replace(/<color=[^>]*>/gi, '').replace(/<\/color>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() })),
             avatars: (n.avatars || []).map(a => ({
               icon: a.icon || '',
               rarity: a.rarity || 5,
@@ -789,15 +834,32 @@ export class abyss_stat extends plugin {
       type: key === 'chaos' ? 'abyss' : key,
       title: cfg.title,
       hasStarMode: floors.some(f => f.hasTierceRecord),
+      /* 异相仲裁：小怪星数合计（各层 mob_star 求和），显示在概览卡 */
+      mobStar: floors.reduce((sum, f) => sum + (Number(f.mob_star) || 0), 0),
       maxLabel: key === 'boss' ? '最高难度' : '最高关卡',
       showRound: key !== 'boss',
       showTotalScore: key !== 'chaos',
       showNodeScore: true,
-      periodText: data.beginTime && data.endTime
+      /* 快速通关层：与单个挑战页一致，压缩成一行汇总，不出空卡 */
+      fastSummary: (() => {
+        const fast = (data.floors || [])
+          .filter(f => f.isFast)
+          .sort((a, b) => (Number(a.index) || 0) - (Number(b.index) || 0))
+        return fast.length
+          ? {
+            first: fast[0].name,
+            last: fast[fast.length - 1].name,
+            count: fast.length,
+            star: Number(fast[0].star ?? fast[0].star_num ?? 3) || 0,
+          }
+          : null
+      })(),
+      sectionTitle: String(cfg.title || '').replace(/（.*?）/g, '').trim(),
+      periodText: timeCalc(data.beginTime) && timeCalc(data.endTime)
         ? `${timeCalc(data.beginTime)} - ${timeCalc(data.endTime)}`
         : '',
       group: bossGroup,
-      buffs: (buffs || []).map(x => ({ name: x.name || '', desc: x.desc || '' })),
+      buffs: (buffs || []).map(x => ({ name: String(x.name || '').replace(/<[^>]+>/g, '').trim(), desc: String(x.desc || '').replace(/<color=[^>]*>/gi, '').replace(/<\/color>/gi, '').replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() })),
       list: {
         star_num: data.totalStar ?? 0,
         max_floor: data.bestFloor || data.periodName || '',

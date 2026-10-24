@@ -176,3 +176,12 @@ body .story-body:not(.no-boss) { width: 1200px; }
   background: rgba(255, 255, 255, 0.08);
   margin-bottom: 4px;
 }
+
+/* 左右两栏按较高一侧对齐：左栏卡片撑满整行高度 */
+#container .story-row .story-left { display: flex; flex-direction: column; }
+#container .story-row .story-left .floor-card { flex: 1 1 auto; }
+
+/* 左右两栏严格等高：两个单元格都改为纵向 flex，卡片/怪物面板填满剩余高度 */
+#container .story-row > .story-cell { display: flex; flex-direction: column; align-self: stretch; }
+#container .story-row > .story-cell > .floor-card,
+#container .story-row > .story-cell > .sr-boss-floor { flex: 1 1 auto; }

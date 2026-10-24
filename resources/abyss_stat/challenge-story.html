@@ -21,8 +21,13 @@
       <div class="story-time">统计周期：{{timeCalc(story?.group?.begin_time)}} - {{timeCalc(story?.group?.end_time)}}</div>
     </div>
     <div class="story-head-right">
-      <div>{{nickname || '开拓者'}}</div>
-      <div>UID: {{uid}}</div>
+      {{if avatar}}
+      <img class="story-head-avatar" src="{{avatar}}" onerror="this.style.display='none'" />
+      {{/if}}
+      <div class="story-head-info">
+        <div>{{nickname || '开拓者'}}</div>
+        <div>UID: {{uid}}</div>
+      </div>
     </div>
   </div>
 

@@ -470,6 +470,14 @@ function srWaves(detail, stage, healPct = 0) {
     let monsters = [];
     if (Array.isArray(w.Monsters)) monsters = w.Monsters.map(m => srMonster(detail, m, healPct));
     else if (w.ID) monsters = [srMonster(detail, w, healPct)];
+    /* 同波召唤的小怪：挂在 Summons 上，补在首领之后 */
+    if (!Array.isArray(w.Monsters) && Array.isArray(w.Summons) && w.Summons.length) {
+      for (const sm of w.Summons) {
+        const one = srMonster(detail, sm, healPct);
+        one.isSummon = true;
+        monsters.push(one);
+      }
+    }
     return {
       name: plainText(w.WaveName) || (Array.isArray(raw) && list.length > 1 ? `第${w.Wave ?? i + 1}波` : ''),
       monsters,
