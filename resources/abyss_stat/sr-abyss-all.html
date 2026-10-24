@@ -61,6 +61,14 @@
           {{/if}}
           <div class="period-info">{{col.periodText}}{{if col.periodName}} · {{col.periodName}}{{/if}}</div>
         </div>
+        {{if col.buffs && col.buffs.length}}
+        <div class="col-buffs">
+          <div class="col-buffs-title">本期增益 / 战技</div>
+          {{each col.buffs b}}
+          <div class="col-buff"><b>{{b.name}}：</b><span>{{b.desc}}</span></div>
+          {{/each}}
+        </div>
+        {{/if}}
         <div class="floor-list">
           {{each col.floors floor}}
           <div class="floor-card">

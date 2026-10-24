@@ -37,6 +37,13 @@ const RADAR_SHORT = {
   生命值: '生命', 攻击力: '攻击', 防御力: '防御',
   暴击率: '暴击', 暴击伤害: '暴伤', 元素充能: '充能',
 }
+/* 异相仲裁段位图标：接口给的是 ChallengePeakRankIconTypeXxx，
+   模板要的是 icon_type_N.png 里的数字（1铜/2金/3银/4彩）。 */
+const PEAK_RANK_ICON = {
+  None: 0, Copper: 1, Bronze: 1, Gold: 2,
+  Silver: 3, Platinum: 3, Diamond: 4, Ultra: 4,
+}
+const peakIconType = type => PEAK_RANK_ICON[String(type || '').replace('ChallengePeakRankIconType', '')] ?? 0
 const shortRadar = radar => radar && {
   ...radar,
   labels: radar.labels.map(l => ({ ...l, label: RADAR_SHORT[l.label] || l.label })),
@@ -424,12 +431,19 @@ export class abyss_stat extends plugin {
     const modeKey = { chaos: 'sr_chaos', story: 'sr_fiction', boss: 'sr_shadow' }[key]
     const [avatars, bossMap] = await Promise.all([
       this.fetchSrAvatars(e, mys, data),
-      modeKey
+      key === 'peak'
         ? import('./abyss_now.js')
-          .then(m => m.getSrBossesByFloor(modeKey, { offset: type === 2 ? 1 : 0 }))
+          .then(m => m.getSrArbKingBosses({ offset: type === 2 ? 1 : 0 }))
           .catch(() => ({}))
-        : Promise.resolve({}),
+        : modeKey
+          ? import('./abyss_now.js')
+            .then(m => m.getSrBossesByFloor(modeKey, { offset: type === 2 ? 1 : 0 }))
+            .catch(() => ({}))
+          : Promise.resolve({}),
     ])
+    /* 王棋：右栏 BOSS 与左栏关卡一一对应，直接用 { knight, king } 索引表，
+       不再走混沌/虚构/末日那套按楼层对齐的逻辑。 */
+    const peakBosses = key === 'peak' ? (bossMap || {}) : null
     const userFloors = (data.floors || [])
       .map(f => ({ index: Number(f.index) }))
       .filter(f => Number.isFinite(f.index))
@@ -448,77 +462,83 @@ export class abyss_stat extends plugin {
         ...b,
         index: Number(userFloors[i]?.index ?? b.index),
       }))
-    /* 右栏太长：只保留最后两层（bossEntries 已按楼层从高到低排序，取头部两层） */
-    let srBosses = alignedBosses.slice(0, 2)
-    /* 异相仲裁没有 Alioth 速览数据，但接口本身带 boss_info（首领）和 mob_records（小怪），
-       直接用它们拼右栏，不至于整块空着。 */
-    if (!srBosses.length && key === 'peak') {
-      const peak = raw?.challenge_peak_records?.[type === 2 ? 1 : 0] || raw?.challenge_peak_records?.[0]
-      const bi = peak?.boss_info
-      if (bi) {
-        const halves = []
-        if (bi.icon) {
-          halves.push({
-            label: bi.name_mi18n || '首领',
-            level: '',
-            waves: [{
-              name: bi.hard_mode_name_mi18n || bi.name_mi18n || '',
-              monsters: [{
-                name: bi.name_mi18n || '首领',
-                icon: bi.icon,
-                hp: '',
-                hpMult: '',
-                weak: [],
-                res: [],
-              }],
-            }],
-          })
-        }
-        for (const mr of peak?.mob_records || []) {
-          const avs = mr?.avatars || []
-          if (!avs.length) continue
-          halves.push({
-            label: '小怪',
-            level: '',
-            waves: [{
-              name: '',
-              monsters: avs.map(a => ({
-                name: a.name || a.abbr || '',
-                icon: a.icon || '',
-                hp: '',
-                hpMult: '',
-                weak: [],
-                res: [],
-              })),
-            }],
-          })
-        }
-        if (halves.length) srBosses = [{ index: userFloors[0]?.index || 1, halves }]
-      }
-    }
-    if (!srBosses.length) {
+    /* 逐层对应：右栏 BOSS 与左栏楼层一一对应，保留全部层（不再只取最后两层） */
+    let srBosses = key === 'peak' ? [] : alignedBosses
+    /* 逐层对应的 BOSS 索引表：模板按 floor.index 取该层 BOSS，实现左右逐层对齐 */
+    const srBossByFloor = {}
+    for (const b of srBosses) srBossByFloor[b.index] = b.halves
+    if (!srBosses.length && key !== 'peak') {
       logger.mark?.(`[HoYoGet][abyss_stat] ${cfg.title}右栏无怪物数据`
         + `（user floors: ${userFloors.map(f => f.index).join('/') || '无'}`
         + `；Alioth floors: ${bossEntries.map(b => b.index).join('/') || '无'}）`)
     }
+    /* 异相仲裁模板（challenge-peak.html）读的是**单条** record
+       （record.group / record.boss_info / record.mob_infos），
+       不是 challenge_peak_records 数组。之前把数组原样传进去，
+       模板里所有 record.* 都取不到，整张图只剩空壳。 */
+    const peakRecord = key === 'peak' ? (data.record || {}) : null
+    const peakBrief = key === 'peak'
+      ? (raw?.challenge_peak_best_record_brief
+        || (peakRecord?.group
+          ? {
+            boss_stars: peakRecord.boss_stars,
+            mob_stars: peakRecord.mob_stars,
+            total_battle_num: peakRecord.battle_num,
+            challenge_peak_rank_icon_type: '',
+          }
+          : {}))
+      : null
+    /* 顶部玩家头像：星铁 index 接口（与 *深渊 同款），取不到模板回退星铁图标 */
+    let avatar = ''
+    try {
+      const profile = await getRoleProfile(e, mys.uid, 'sr')
+      avatar = profile?.avatar || ''
+      if (avatar) avatar = String(avatar).replace(/^http:/, 'https:')
+    } catch (err) {
+      logger.debug?.(`[HoYoGet][abyss_stat] 取玩家头像失败：${err?.message || err}`)
+    }
+    /* 混沌/虚构/末日：有「快速通关」层（满星继承）时只渲染有 BOSS 数据的楼层
+       （混沌 10~12、虚构/末日 3~4），并把快速通关层整合成一行汇总，没快速通关就全部渲染。王棋不走此逻辑。 */
+    let renderStory = data
+    let fastSummary = null
+    if (key !== 'peak') {
+      const hasFast = (data.floors || []).some(f => f.isFast)
+      if (hasFast) {
+        const bossIdxs = new Set(Object.keys(srBossByFloor || {}).map(Number))
+        const filtered = (data.floors || []).filter(f => bossIdxs.has(Number(f.index)))
+        const fastFloors = (data.floors || []).filter(f => f.isFast)
+          .slice().sort((a, b) => b.index - a.index)
+        if (filtered.length) renderStory = { ...data, floors: filtered }
+        if (fastFloors.length) {
+          fastSummary = {
+            first: fastFloors[0].name,
+            last: fastFloors[fastFloors.length - 1].name,
+            count: fastFloors.length,
+          }
+        }
+      }
+    }
     return render(`abyss_stat/${cfg.tpl}`, {
-      story: data,
-      /* 异相仲裁模板（challenge-peak.html）直接读顶层的
-         challenge_peak_records / challenge_peak_best_record_brief，
-         不走 story.floors，所以要把接口原始记录一起传上去。 */
-      ...(key === 'peak' && raw && typeof raw === 'object'
+      story: renderStory,
+      fastSummary,
+      ...(key === 'peak'
         ? {
-          challenge_peak_records: raw.challenge_peak_records || [],
-          challenge_peak_best_record_brief: raw.challenge_peak_best_record_brief || {},
+          challenge_peak_records: peakRecord,
+          challenge_peak_best_record_brief: peakBrief,
+          icon_type: peakIconType(peakBrief?.challenge_peak_rank_icon_type),
         }
         : {}),
       uid: mys.uid,
-      nickname: '',
+      avatar,
+      nickname: raw?.role?.nickname || '',
       avatars,
       mysFailed: !Object.keys(avatars).length,
       srBosses,
-      /* 两栏总宽 1120 CSS；body 还有 1.4 倍 transform，shotium 默认 800 视窗会裁掉右栏 */
-      viewport: { width: 1600, height: 600 },
+      srBossByFloor,
+      peakBosses,
+      /* 混沌/虚构/末日两栏总宽 1200 CSS；王棋左右等宽各 880 → 1776 CSS，
+         视窗要盖住整宽，否则右栏会被裁掉 */
+      viewport: { width: key === 'peak' ? 1900 : 1600, height: 600 },
       timeCalc,
       elemIcon,
       repeat,

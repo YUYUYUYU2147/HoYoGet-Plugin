@@ -476,3 +476,25 @@ body {
   color: #7fd4c0;
   margin-left: 4px;
 }
+
+/* 本期增益 / 战技（每个玩法显示一次） */
+.col-buffs {
+  margin-bottom: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(120, 140, 255, .10);
+  border: 1px solid rgba(150, 160, 255, .18);
+}
+.col-buffs-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #c8cfff;
+  margin-bottom: 4px;
+}
+.col-buff {
+  font-size: 10px;
+  line-height: 1.55;
+  color: rgba(231, 235, 243, .72);
+  margin-top: 2px;
+}
+.col-buff b { color: #ffd66b; font-weight: 700; }

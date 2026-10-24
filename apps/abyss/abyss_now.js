@@ -600,6 +600,97 @@ export async function getSrBossesByFloor(modeKey, opts = {}) {
   }
 }
 
+/**
+ * 取星铁异相仲裁（王棋）的「骑士关卡 + 王棋关卡」BOSS 血量/弱点/抗性，
+ * 供王棋战绩图右栏用。与速览同一份 Alioth 数据源；失败返回空对象。
+ * 返回 { knight: { [Index]: half }, king: { [Index]: half } }，
+ * 其中 half = { label, level, waves:[{name, monsters:[...]}] }。
+ * 左栏关卡与右栏 BOSS 按此索引一一对应：
+ *   首领 → king[hard_mode ? 5 : 4]（困难/普通），骑士 i → knight[i]。
+ */
+export async function getSrArbKingBosses(opts = {}) {
+  const mode = MODES.sr_arb;
+  if (!mode) return {};
+  try {
+    const loaded = await loadPhase(mode, opts);
+    if (!loaded || loaded.error) return {};
+    const { detail } = loaded;
+    /* 骑士关卡怪物 buff（血嗜 / 桎梏+ / 激怒 / 闭锁）：KnightTags 按 Index 给标题 */
+    const knightTags = {};
+    for (const v of detail.KnightTags || []) {
+      knightTags[v.Index] = valuesOf(v.Tags).map(t => cleanRich(t.Name)).filter(Boolean);
+    }
+    /* 王棋关卡怪物 buff（血嗜 / 洞穿 / 不屈 / +）：KingTags 按 Index 给标题。
+       血量高 = 绝境（Index 5，血嗜+/洞穿+/不屈），血量低 = 普通（Index 4，血嗜/洞穿），
+       与挑战记录 boss_record.hard_mode 对应（true=绝境→5，false=普通→4）。 */
+    const kingTags = {};
+    for (const v of detail.KingTags || []) {
+      kingTags[v.Index] = valuesOf(v.Tags).map(t => cleanRich(t.Name)).filter(Boolean);
+    }
+    const knight = {};
+    const king = {};
+    for (const v of detail.Knight || []) {
+      const h = srStageHalf(detail, v, `骑士关卡 ${v.Index}`);
+      if (h.waves.length) {
+        h.tags = knightTags[v.Index] || [];
+        knight[v.Index] = h;
+      }
+    }
+    for (const v of detail.King || []) {
+      const h = srStageHalf(detail, v, `王棋关卡 ${v.Index}`);
+      if (h.waves.length) {
+        h.tags = kingTags[v.Index] || [];
+        king[v.Index] = h;
+      }
+    }
+    return { knight, king, kingMechs: collectKingMechs(detail) };
+  } catch (err) {
+    logger.debug?.(`[HoYoGet][abyss_now] 星铁王棋BOSS配置获取失败：${err?.message || err}`);
+    return {};
+  }
+}
+
+/**
+ * 王棋首领（堕神之血·亚婆离）的机制（血脑屏障 / 稳态失衡）。
+ * 来源：detail.Guides（list）里 Icon 与首领怪物一致的条目，
+ * 只取首领、不含小怪（月夜天马 / 灯塔）与骑士关。
+ */
+function collectKingMechs(detail) {
+  try {
+    // Icon → 机制列表
+    const mechByIcon = {};
+    for (const g of detail.Guides || []) {
+      const icon = g.Icon;
+      const mechs = (g.Guide || [])
+        .map(gi => ({
+          title: plainText(gi.Title),
+          desc: (gi.DescList || []).map(d => cleanRich(d)).filter(Boolean).join('<br>'),
+        }))
+        .filter(m => m.title || m.desc);
+      if (icon && mechs.length) mechByIcon[icon] = mechs;
+    }
+    // 王棋关卡里名字含「亚婆离」的首领 → 取其机制
+    for (const v of detail.King || []) {
+      const st = detail.Stages?.[String(v.StageID)] || detail.Stages?.[v.StageID] || {};
+      const waves = Array.isArray(st.Waves) ? st.Waves : (st.Waves ? [st.Waves] : []);
+      for (const w of waves) {
+        const mons = Array.isArray(w.Monsters) ? w.Monsters : (w.Monsters ? [w.Monsters] : []);
+        for (const m of mons) {
+          const info = detail.Monsters?.[m.ID] || {};
+          if (/亚婆离/.test(plainText(info.Name) || '')) {
+            const mechs = mechByIcon[info.Icon];
+            if (mechs && mechs.length) return mechs;
+          }
+        }
+      }
+    }
+    return [];
+  } catch (err) {
+    logger.debug?.(`[HoYoGet][abyss_now] 王棋首领机制解析失败：${err?.message || err}`);
+    return [];
+  }
+}
+
 /* ---------------- 星铁：异相仲裁 ---------------- */
 
 async function buildArb(mode, opts = {}) {

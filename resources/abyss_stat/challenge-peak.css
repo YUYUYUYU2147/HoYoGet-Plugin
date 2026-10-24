@@ -68,6 +68,23 @@ body {
 
 .head-left {
   display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.head-avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+  border: 3px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.head-info {
+  display: flex;
   flex-direction: column;
   gap: 8px;
 }
@@ -541,6 +558,9 @@ body {
 }
 
 .avatar-card {
+  /* tpl.css 里给 .avatar-card 加了 4.5px 外边距，4 张卡会因此超宽换行，
+     导致队伍竖着叠而不是同一行；这里清零。 */
+  margin: 0;
   border: 2px solid rgba(140, 120, 180, 0.20);
   background: rgba(0, 0, 0, 0.08);
   width: 168px;
@@ -1075,4 +1095,240 @@ body {
   font-size: 20px;
   color: rgba(255, 255, 255, 0.18);
   letter-spacing: 1px;
+}
+
+/* ============================================================
+   王棋逐关卡两栏：每个关卡一行，左 = 战绩，右 = BOSS 血量/弱点/抗性
+   左右 cell 等宽（各 880px）、等高（align-items: stretch），整体 1776px。
+   ============================================================ */
+body:has(.body.has-sr-boss) {
+  width: 1776px !important;
+  transform: none !important;
+}
+.container:has(.body.has-sr-boss) {
+  width: 1776px !important;
+}
+.body.has-sr-boss {
+  width: 1776px;
+}
+.body.has-sr-boss .peak-main {
+  display: flex;
+  flex-direction: column;
+}
+.body.has-sr-boss .peak-row {
+  display: flex;
+  gap: 16px;
+  align-items: stretch;
+}
+.body.has-sr-boss .peak-cell {
+  min-width: 0;
+}
+.body.has-sr-boss .peak-left {
+  width: 880px;
+  flex: none;
+}
+.body.has-sr-boss .peak-right {
+  width: 880px;
+  flex: none;
+}
+.body.has-sr-boss .boss-title-full {
+  padding-left: 0;
+}
+
+/* —— 右栏 BOSS 怪物卡（与 sr-bosses.css 同款，元素样式内联到本页）—— */
+.body.has-sr-boss .sr-boss-floor,
+.body.has-sr-boss .sr-boss-floor * { box-sizing: border-box; }
+
+.body.has-sr-boss .sr-boss-floor {
+  overflow: hidden;
+  margin: 0 0 22px;
+  border: 1px solid rgba(92, 145, 210, .58);
+  border-radius: 0 36px 0 0;
+  background: url("./imgs/challenge/story/floor.png") center -30px / 100% auto repeat-y rgba(27, 36, 58, .92);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .22);
+}
+.body.has-sr-boss .sr-boss-floor-name {
+  position: relative;
+  min-height: 44px;
+  padding: 12px 20px;
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 20px;
+  color: #e9f7ff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, .35);
+  background: linear-gradient(180deg, rgba(42, 120, 187, .58) 0%, rgba(31, 99, 163, .58) 100%);
+  border-bottom: 1px solid rgba(172, 213, 255, .28);
+  border-top-right-radius: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.body.has-sr-boss .sr-boss-floor-name::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border: 1px solid rgba(206, 230, 255, .28);
+  border-top-right-radius: 36px;
+  pointer-events: none;
+}
+.body.has-sr-boss .sr-boss-body {
+  padding: 12px 16px 14px;
+}
+.body.has-sr-boss .sr-boss-half {
+  display: block;
+}
+.body.has-sr-boss .sr-boss-half + .sr-boss-half {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, .1);
+}
+.body.has-sr-boss .sr-boss-half-head {
+  display: inline;
+  margin-right: 6px;
+}
+.body.has-sr-boss .sr-boss-wave { font-size: 13px; color: #b9a8ff; font-weight: 700; }
+.body.has-sr-boss .sr-boss-monsters {
+  display: block;
+  line-height: 0;
+}
+/* 小怪左右排列：inline-block 一行，超出才换行 */
+.body.has-sr-boss .sr-boss-mon {
+  display: inline-block;
+  vertical-align: top;
+  margin: 0 6px 6px 0;
+  padding: 3px 10px 4px 5px;
+  border-radius: 0 12px 0 0;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(140, 165, 200, .28);
+  white-space: nowrap;
+}
+.body.has-sr-boss .sr-boss-main {
+  display: block;
+  line-height: 30px;
+  white-space: nowrap;
+}
+.body.has-sr-boss .sr-boss-tags {
+  display: block;
+  padding-top: 1px;
+  line-height: 15px;
+  white-space: nowrap;
+}
+.body.has-sr-boss .sr-boss-ico {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  vertical-align: middle;
+  margin-right: 4px;
+  border-radius: 5px;
+  background-color: rgba(255, 255, 255, .06);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.body.has-sr-boss .sr-boss-name {
+  display: inline;
+  font-size: 14px;
+  font-weight: 900;
+  color: #f2f7ff;
+}
+.body.has-sr-boss .sr-boss-hpv {
+  display: inline;
+  margin-left: 6px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, .72);
+}
+.body.has-sr-boss .sr-boss-elem,
+.body.has-sr-boss .sr-boss-res {
+  display: inline-block;
+  margin-right: 3px;
+  padding: 0 3px;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 16px;
+  vertical-align: 2px;
+  white-space: nowrap;
+}
+.body.has-sr-boss .sr-boss-elem {
+  color: #ffd27a;
+  background: rgba(255, 190, 90, .18);
+}
+.body.has-sr-boss .sr-boss-res {
+  color: #9fd6ff;
+  background: rgba(90, 170, 255, .18);
+}
+.body.has-sr-boss .sr-boss-elem .sr-boss-ico,
+.body.has-sr-boss .sr-boss-res .sr-boss-ico {
+  width: 10px;
+  height: 10px;
+  margin-right: 1px;
+  vertical-align: -1px;
+  border-radius: 2px;
+}
+
+/* 无 Alioth BOSS 数据时退回单栏：隐藏右栏空框 */
+.peak-main.no-boss .peak-right {
+  display: none;
+}
+.peak-main.no-boss .peak-row {
+  display: block;
+}
+.peak-main.no-boss .peak-cell {
+  width: auto;
+}
+
+/* —— 王棋首领机制（血脑屏障 / 稳态失衡）—— */
+.body.has-sr-boss .sr-boss-mechs {
+  margin: -14px 0 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.body.has-sr-boss .sr-boss-mech {
+  overflow: hidden;
+  border: 1px solid rgba(200, 160, 240, .35);
+  border-radius: 0 20px 0 0;
+  background: linear-gradient(135deg, rgba(90, 60, 140, .30), rgba(40, 30, 70, .35));
+  padding: 12px 16px;
+}
+.body.has-sr-boss .sr-boss-mech-title {
+  font-size: 20px;
+  font-weight: 900;
+  color: #d9c0ff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, .4);
+  margin-bottom: 6px;
+}
+.body.has-sr-boss .sr-boss-mech-desc {
+  font-size: 14px;
+  line-height: 1.55;
+  color: rgba(240, 235, 255, .85);
+  word-break: break-all;
+}
+.body.has-sr-boss .sr-boss-mech-desc .hl,
+.body.has-sr-boss .sr-boss-mech-desc b.hl {
+  color: #ffd27a;
+  font-weight: 700;
+}
+
+/* —— BOSS 卡标题行右侧的 buff 标签（血嗜 / 洞穿 / 不屈 等）—— */
+.body.has-sr-boss .sr-boss-name-tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.body.has-sr-boss .sr-boss-mech-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 20px;
+  color: #ffd27a;
+  background: rgba(255, 190, 90, .14);
+  border: 1px solid rgba(255, 190, 90, .35);
+  border-radius: 10px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .4);
+  white-space: nowrap;
 }

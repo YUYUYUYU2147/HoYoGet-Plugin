@@ -172,7 +172,9 @@ function buildSrChallenge(raw = {}, cfg = {}, period = 1) {
     }
   }
   let floors = rawFloors.map((f, i) => {
-    const index = f.index ?? (i + 1)
+    /* 楼层号：all_floor_detail 是「高层在前」倒序数组（[0]=第12层…[11]=第1层），
+       用数组位置 i+1 会把第 12 层当成第 1 层。真实楼层号 = 总层数 - 位置。 */
+    const index = Number(f.index) > 0 ? Number(f.index) : (rawFloors.length - i)
     const node1 = makeNode(f.node_1, 0)
     const node2 = makeNode(f.node_2, 1)
     const node3 = makeNode(f.node_3, 2)
@@ -233,8 +235,13 @@ function buildSrChallenge(raw = {}, cfg = {}, period = 1) {
  */
 function buildSrPeak(raw = {}, period = 1) {
   const records = Array.isArray(raw?.challenge_peak_records) ? raw.challenge_peak_records : []
-  const list = records.filter(r => r && r.has_challenge_record !== false)
-  const pick = period === 2 ? (list[1] || list[0]) : (list[0] || list[1])
+  /* 接口已经按 schedule_type 返回对应期数，records 通常只有一条；
+     保留 period 索引用于极少数同时返回当期+上期的情况。
+     不能提前过滤掉 has_challenge_record=false 的记录，否则「本期没打」
+     会被当成「没有数据」，模板里的「暂无通关战绩」状态也永远出不来。 */
+  const pick = records[period === 2 ? 1 : 0]
+    || records.find(r => r && r.has_challenge_record)
+    || records[0]
   if (!pick) {
     return { type: 'peak', title: '王棋（异相仲裁）', group: {}, floors: [], totalStar: 0, extraStar: 0, bestFloor: '', battleNum: 0, hasData: false }
   }
@@ -293,6 +300,9 @@ function buildSrPeak(raw = {}, period = 1) {
     extraStar: 0,
     bestFloor: group.name_mi18n || '',
     battleNum: Number(pick.battle_num || 0),
+    /* 模板 challenge-peak.html 需要的是单条 record（record.group /
+       record.boss_info / record.mob_infos），不是 records 数组。 */
+    record: pick,
     hasData: true,
   }
 }

@@ -1,8 +1,8 @@
 {
-  "name": "xhh",
-  "version": "1.0.0",
+  "name": "HoYoGe-Plugin",
+  "version": "3.0.0",
   "author": "YUYUYUYU2147",
-  "description": "小花火插件",
+  "description": "米哈游插件",
   "type": "module",
   "imports": {
     "#HoYoGet": "./system/index.js",

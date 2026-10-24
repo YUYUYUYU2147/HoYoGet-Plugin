@@ -21,6 +21,7 @@
       <div class="story-time">统计周期：{{timeCalc(story?.group?.begin_time)}} - {{timeCalc(story?.group?.end_time)}}</div>
     </div>
     <div class="story-head-right">
+      {{if avatar}}<img class="story-avatar" src="{{avatar}}" onerror="this.style.display='none'" />{{else}}<img class="story-avatar" src="{{ppath}}game_icons/sr.webp" onerror="this.style.display='none'" />{{/if}}
       <div>{{nickname || '开拓者'}}</div>
       <div>UID: {{uid}}</div>
     </div>
@@ -47,8 +48,10 @@
   </div>
 
   <div class="story-main{{if !srBosses || !srBosses.length}} no-boss{{/if}}">
-    <div class="story-floors">
   {{each story.floors floor floorIndex}}
+  {{set boss = srBossByFloor[floor.index]}}
+  <div class="story-row">
+    <div class="story-cell story-left">
   <div class="floor-card">
     <div class="floor-head">
       <div>
@@ -149,16 +152,13 @@
     {{/if}}
     {{/each}}
   </div>
-  {{/each}}
     </div>
-    {{if srBosses && srBosses.length}}
-    <aside class="sr-bosses">
-      <div class="sr-boss-title">本层怪物 / BOSS</div>
-      {{each srBosses b}}
+    <div class="story-cell story-right">
+      {{if boss}}
       <div class="sr-boss-floor">
-        <div class="sr-boss-floor-name">第{{b.index}}层</div>
+        <div class="sr-boss-floor-name">第{{floor.index}}层</div>
         <div class="sr-boss-body">
-        {{each b.halves half}}
+        {{each boss half}}
         <div class="sr-boss-half">
           {{each half.waves w}}
           <div class="sr-boss-half-head">
@@ -175,9 +175,31 @@
         {{/each}}
         </div>
       </div>
-      {{/each}}
-    </aside>
-    {{/if}}
+      {{/if}}
+    </div>
+  </div>
+  {{/each}}
+  {{if fastSummary}}
+  <div class="story-row fast-summary-row">
+    <div class="story-cell story-left">
+      <div class="floor-card fast-card">
+        <div class="floor-head">
+          <div>
+            <div class="floor-name">{{fastSummary.first}} ~ {{fastSummary.last}}</div>
+            <div class="floor-sub floor-fast">快速通关，共 {{fastSummary.count}} 关</div>
+          </div>
+          <div class="floor-meta">
+            <div class="floor-stars">
+              {{each repeat(3) i}}
+              <img src="{{ppath}}abyss_stat/imgs/challenge/peak/mob_star.png" alt="">
+              {{/each}}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {{/if}}
   </div>
 </div>
 
