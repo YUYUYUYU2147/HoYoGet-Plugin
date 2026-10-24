@@ -342,12 +342,12 @@ export class user extends plugin {
                     cookieTokenV2: tk("cookie_token_v2"),
                     ltokenV2: tk("ltoken_v2")
                 });
+                let data_ = {};
                 if (SToken && stuid && mid && ltoken) {
                     res = await api(e, {
                         type: 'GameRoles',
                         headers: headers
                     });
-                    let data_ = {};
                     /*
                     hk4e_cn国服原神
                     hkrpg_cn国服星铁
