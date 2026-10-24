@@ -449,7 +449,53 @@ export class abyss_stat extends plugin {
         index: Number(userFloors[i]?.index ?? b.index),
       }))
     /* 右栏太长：只保留最后两层（bossEntries 已按楼层从高到低排序，取头部两层） */
-    const srBosses = alignedBosses.slice(0, 2)
+    let srBosses = alignedBosses.slice(0, 2)
+    /* 异相仲裁没有 Alioth 速览数据，但接口本身带 boss_info（首领）和 mob_records（小怪），
+       直接用它们拼右栏，不至于整块空着。 */
+    if (!srBosses.length && key === 'peak') {
+      const peak = raw?.challenge_peak_records?.[type === 2 ? 1 : 0] || raw?.challenge_peak_records?.[0]
+      const bi = peak?.boss_info
+      if (bi) {
+        const halves = []
+        if (bi.icon) {
+          halves.push({
+            label: bi.name_mi18n || '首领',
+            level: '',
+            waves: [{
+              name: bi.hard_mode_name_mi18n || bi.name_mi18n || '',
+              monsters: [{
+                name: bi.name_mi18n || '首领',
+                icon: bi.icon,
+                hp: '',
+                hpMult: '',
+                weak: [],
+                res: [],
+              }],
+            }],
+          })
+        }
+        for (const mr of peak?.mob_records || []) {
+          const avs = mr?.avatars || []
+          if (!avs.length) continue
+          halves.push({
+            label: '小怪',
+            level: '',
+            waves: [{
+              name: '',
+              monsters: avs.map(a => ({
+                name: a.name || a.abbr || '',
+                icon: a.icon || '',
+                hp: '',
+                hpMult: '',
+                weak: [],
+                res: [],
+              })),
+            }],
+          })
+        }
+        if (halves.length) srBosses = [{ index: userFloors[0]?.index || 1, halves }]
+      }
+    }
     if (!srBosses.length) {
       logger.mark?.(`[HoYoGet][abyss_stat] ${cfg.title}右栏无怪物数据`
         + `（user floors: ${userFloors.map(f => f.index).join('/') || '无'}`
@@ -457,6 +503,15 @@ export class abyss_stat extends plugin {
     }
     return render(`abyss_stat/${cfg.tpl}`, {
       story: data,
+      /* 异相仲裁模板（challenge-peak.html）直接读顶层的
+         challenge_peak_records / challenge_peak_best_record_brief，
+         不走 story.floors，所以要把接口原始记录一起传上去。 */
+      ...(key === 'peak' && raw && typeof raw === 'object'
+        ? {
+          challenge_peak_records: raw.challenge_peak_records || [],
+          challenge_peak_best_record_brief: raw.challenge_peak_best_record_brief || {},
+        }
+        : {}),
       uid: mys.uid,
       nickname: '',
       avatars,
