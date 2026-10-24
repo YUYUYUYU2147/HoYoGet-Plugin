@@ -126,3 +126,110 @@ body {
   background: rgba(15, 23, 42, .06);
   border: 1px solid rgba(15, 23, 42, .08);
 }
+
+/* MINW-FIX：剩余时间文字不再被进度条宽度裁掉 */
+.tl-bar { min-width: 68px; }
+.tl-bar span { overflow: visible; text-overflow: clip; }
+
+/* 剩余时间文案：保证条宽不低于容纳文案所需，避免文字溢出虚线框 */
+.tl-bar {
+  min-width: 104px;
+  box-sizing: border-box;
+  padding-left: 8px;
+  padding-right: 8px;
+  white-space: nowrap;
+  overflow: visible;
+}
+
+/* 虚线框按文案自适应：框宽至少等于剩余时间文字宽度，杜绝溢出框外 */
+.tl-bar {
+  box-sizing: content-box;
+  min-width: max-content;
+  padding-left: 6px;
+  padding-right: 6px;
+  overflow: visible;
+}
+.tl-bar span {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.tl-bar span { font-size: 11px; letter-spacing: -.3px; }
+
+/* 说明：条长必须等于周期比例，不可为容纳文案撑宽；
+   故恢复原始最小宽度，文字改为绝对居中浮动、不参与条宽计算 */
+.tl-bar {
+  box-sizing: content-box;
+  min-width: 8px;
+  padding: 0 8px;
+  overflow: visible;
+}
+.tl-bar span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+
+
+/* 剩余时间文案右对齐贴于条内侧，向左展开；
+   避免条位于轨道右端时文字右半越出卡片被 overflow:hidden 裁切 */
+.tl-bar span {
+  position: absolute;
+  left: auto;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+/* 条宽必须把左右 padding 算进去，否则外框比内联 width% 宽 16px，
+   右端固定溢出轨道，被 .tl-card 的 overflow:hidden 裁掉半个字 */
+.tl-bar {
+  box-sizing: border-box;
+  padding: 0 8px;
+  min-width: 8px;
+  overflow: visible;
+}
+
+/* 临时诊断：红框标出条的实际边界，黄色底标出文字的实际占位 */
+
+/* 进度条内剩余时间：文案按天数取整，条保留 44px 可见下限，文字居中 */
+.tl-bar {
+  box-sizing: border-box;
+  padding: 0 8px;
+  min-width: 8px;
+  overflow: visible;
+}
+.tl-bar span {
+  position: absolute;
+  left: 50%;
+  right: auto;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+/* 活动公告配图作为左侧标签区背景：靠右铺满、向左渐隐，不遮挡标题与标签 */
+.tl-row .tl-label { position: relative; overflow: hidden; }
+.tl-label .tl-portrait {
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 132px;
+  background-size: cover;
+  background-position: center;
+  opacity: .26;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.85) 55%, #000 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.85) 55%, #000 100%);
+}
+.tl-label .tl-thumb, .tl-label .tl-txt { position: relative; z-index: 2; }

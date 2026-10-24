@@ -1,3 +1,4 @@
+import fs from 'fs'
 import moment from 'moment'
 import { pluginPriority, render } from '#HoYoGet'
 import { getCalendarActivities, getBirthdayActivities, fillZzzBirthdayAvatars, KIND_META } from './activity_remind.js'
@@ -28,6 +29,24 @@ function gameOf(msg = '') {
   return 'gs'
 }
 
+/* 生日角色立绘表：resources/calendar/portraits.json（{ game: { 角色名: 立绘链接 } }） */
+const PORTRAITS_FILE = './plugins/HoYoGet-Plugin/resources/calendar/portraits.json'
+let PORTRAITS = null
+function portraitsOf(game) {
+  if (PORTRAITS === null) {
+    try { PORTRAITS = JSON.parse(fs.readFileSync(PORTRAITS_FILE, "utf-8")) }
+    catch (_) { PORTRAITS = {} }
+  }
+  return PORTRAITS[game] || {}
+}
+function portraitOf(game, name) {
+  const table = portraitsOf(game)
+  const key = String(name || "").replace(/\s+/g, "")
+  if (!key) return ""
+  if (table[key]) return table[key]
+  const hit = Object.keys(table).find(k => k.includes(key) || key.includes(k))
+  return hit ? table[hit] : ""
+}
 function fmtDate(d, now) {
   if (!d?.isValid?.()) return '—'
   return d.year() === now.year() ? d.format('M/D HH:mm') : d.format('YYYY/M/D HH:mm')
@@ -43,6 +62,16 @@ function remainText(now, end) {
   return `${minutes}分钟`
 }
 
+/* 进度条内极简剩余时间：以完整天数为单位，控制在 3-4 个字符 */
+function remainShort(now, end) {
+  const diff = Math.max(0, end.valueOf() - now.valueOf())
+  const days = Math.floor(diff / 86400000)
+  if (days >= 1) return `${days}天`
+  const hours = Math.floor(diff / 3600000)
+  if (hours >= 1) return `${hours}小时`
+  const minutes = Math.floor(diff / 60000)
+  return `${minutes}分`
+}
 /** 活动 banner 缩成小方图，避免远程图片在截图前还没加载 */
 async function bannerThumb(url) {
   const u = String(url || '').trim()
@@ -131,8 +160,13 @@ export class calendar extends plugin {
           const started = !item.start || item.start.isSameOrBefore(now)
           const s = item.start?.isValid?.() && item.start.isAfter(winStart) ? item.start : winStart
           const e = item.end.isBefore(winEnd) ? item.end : winEnd
-          const left = Math.max(0, Math.min(100, (s.valueOf() - winStart.valueOf()) / windowMs * 100))
-          const width = Math.max(0.6, Math.min(100 - left, (e.valueOf() - s.valueOf()) / windowMs * 100))
+          let left = Math.max(0, Math.min(100, (s.valueOf() - winStart.valueOf()) / windowMs * 100))
+          let width = Math.max(0.6, Math.min(100 - left, (e.valueOf() - s.valueOf()) / windowMs * 100))
+          /* 极窄条（即将开始，起点贴近窗口末端）回退左端并给足宽度，避免向右撑出轨道 */
+          if (width < 6) {
+            left = Math.max(0, Math.min(left, 94))
+            width = 6
+          }
           return {
             title: item.title || item.subtitle || '未命名活动',
             srcBanner: item.banner || '',
@@ -140,6 +174,7 @@ export class calendar extends plugin {
             kindLabel: KIND_META[item.kind]?.label || '活动',
             person: item.person || '',
             avatar: item.avatar || '',
+            portrait: item.kind === 'birthday' ? portraitOf(game, item.person) : '',
             tag: item.tag || '',
             startText: fmtDate(item.start, now),
             endText: fmtDate(item.end, now),
@@ -151,7 +186,7 @@ export class calendar extends plugin {
             width: width.toFixed(2),
             clipLeft: !!item.start?.isValid?.() && item.start.isBefore(winStart),
             clipRight: item.end.isAfter(winEnd),
-            barText: remainText(now, item.end),
+            barText: remainShort(now, item.end),
           }
         })
       if (!list.length) return e.reply(`暂未获取到${GAME_CN[game]}活动日历，请稍后再试。`)
@@ -181,7 +216,7 @@ export class calendar extends plugin {
             title: a.title,
             person: a.person || '',
             avatar: a.avatar || '',
-            pos: (day + 0.5) / 14 * 100,
+            pos: Math.min(92, Math.max(8, (day + 0.5) / 14 * 100)),
             abs: a.startAbs.valueOf(),
           })
         }

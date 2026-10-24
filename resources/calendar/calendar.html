@@ -50,6 +50,9 @@
           {{each list a}}
           <div class="tl-row">
             <div class="tl-label">
+              {{if a.portrait}}
+              <span class="tl-portrait" style="background-image:url('{{a.portrait}}')"></span>
+              {{/if}}
               {{if a.banner}}<span class="tl-thumb" style="background-image:url('{{a.banner}}')"></span>{{/if}}
               <div class="tl-txt">
                 <div class="tl-name" title="{{a.title}}">{{a.title}}</div>
