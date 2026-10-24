@@ -614,7 +614,7 @@ export class abyss_stat extends plugin {
       contentWidth: totalWidth - 32,
       layoutcopyright: 'from 米哈游',
       sys: { copyright: '' },
-    }, { e, ret: true, dsf: 3.2, viewport: { width: Math.max(1000, totalWidth), height: 900 } })
+    }, { e, ret: true, dsf: 2, viewport: { width: Math.max(1000, totalWidth), height: 900 } })
     /* render 失败返回 false 时框架会 continue 到下一个插件（genshin 会接手出它自己的图）。
        这里兜底成 true，保证「*深渊」由本插件独占处理。 */
     if (!img) {
@@ -639,8 +639,12 @@ export class abyss_stat extends plugin {
       lower_boss: group?.lower_boss || null,
       tierce_boss: group?.tierce_boss || null,
     }
-    const floors = (data.floors || [])
+    const allFloors = (data.floors || [])
       .filter(f => (f.nodes || []).some(n => n?.avatars?.length) || f.isFast)
+    /* 只渲染最后 2 层：混沌回忆有 12 层，全画出来整图能到 15000px，
+       超过 Chromium 截图上限（16384px，dsf 还要再乘）直接截不出来。
+       概览卡里的星数/最高层/场次仍按全部层统计，不受影响。 */
+    const floors = allFloors.slice(-2)
       .map(f => {
         const node = n => {
           if (!n || !n.avatars?.length) return null

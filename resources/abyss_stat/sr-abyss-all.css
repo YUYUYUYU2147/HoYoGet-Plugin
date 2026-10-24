@@ -51,6 +51,9 @@ body {
 .column {
   width: 430px;
   flex: 0 0 430px;
+  min-width: 0;          /* flex 子项默认 min-width:auto，会被内容撑宽 */
+  max-width: 430px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -72,7 +75,7 @@ body {
 .overview-card,
 .floor-card {
   border-radius: 10px;
-  padding: 12px;
+  padding: 10px;
   background: rgba(0, 0, 0, 0.42);
   border: 1px solid rgba(255, 255, 255, 0.16);
 }
@@ -182,11 +185,14 @@ body {
   font-size: 11px;
 }
 
+/* 楼层卡单列排（每类只渲染最后 2 层，高度已经够低）。 */
 .floor-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  min-width: 0;
 }
+.floor-list > * { min-width: 0; }
 
 .floor-card {
   background:
@@ -258,8 +264,8 @@ body {
 }
 
 .node-card {
-  margin-top: 8px;
-  padding-top: 8px;
+  margin-top: 6px;
+  padding-top: 6px;
   border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
@@ -282,7 +288,7 @@ body {
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   font-size: 11px;
 }
 
