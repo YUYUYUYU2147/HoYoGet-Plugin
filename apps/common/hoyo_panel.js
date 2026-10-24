@@ -1772,7 +1772,7 @@ export class hoyo_panel extends plugin {
         player.e = e
         e.uid = uid
         e.game = game
-        e.isfromMys = isMys
+        e.isfromMys = false
         const mys = await miao.MysApi.init(e, 'cookie')
         if (mys) await player.refreshProfile(2, false)
       }
