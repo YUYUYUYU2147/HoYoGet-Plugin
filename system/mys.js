@@ -1334,7 +1334,7 @@ class mys {
             }
             return s;
         });
-        // 保留旧版 xhh 读取 ext.filter.text 的兼容格式。
+        // 保留旧版 HoYoGet 读取 ext.filter.text 的兼容格式。
         const normalizedExt = JSON.stringify({
             ...parsed,
             filter: { text: JSON.stringify(filterList) },

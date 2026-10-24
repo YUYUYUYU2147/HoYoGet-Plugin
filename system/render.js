@@ -28,7 +28,7 @@ async function render(path, data_, cfg) {
       // 框架把 HTML 存在 ./temp/html/小花火/{path}/{saveId}.html，
       // 从那张 HTML 所在目录回到 TRSS-Yunzai 根要上跳「path 段数 + 3」层：
       //   wiki/gs_role_nk（2 段）→ temp/html/小花火/wiki/gs_role_nk → 5 层
-      //   abyss_report/nanoka_report_sr（2 段）→ temp/html/xhh/… → 5 层
+      //   abyss_report/nanoka_report_sr（2 段）→ temp/html/HoYoGet/… → 5 层
       // 实测过 4 层不通（CSS 404），框架默认的 3+段数 才是对的，这里保持一致。
       // 写死层数会让 CSS 和图标全部 404 —— 页面上就变成没样式的裸 HTML：
       // 原图按原始尺寸铺开（攻略区几张武器图能占几千 px）、

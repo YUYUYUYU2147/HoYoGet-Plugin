@@ -326,7 +326,7 @@ class mhy {
   //opts.bindGenshinCookie —— 是否额外调用 genshin 的老 CK 绑定器，默认不调用。
   //由 v2 stoken 换出的 ltoken/ltuid/cookie_token 属于老格式，米游社对它的校验
   //不一定认。genshin 内部用 reqMysUid() 校验，失败后会把「Cookie错误」推进
-  //sendMsg，显示成「绑定Cookie失败」——但此刻 xhh 的 stoken 数据其实早已存好，
+  //sendMsg，显示成「绑定Cookie失败」——但此刻 HoYoGet 的 stoken 数据其实早已存好，
   //真正失败的只是这步额外的兼容动作。社区签到、角色查询、抽卡记录、水晶都只
   //依赖 stoken 那一侧，故默认不再强依赖它；确有需要时由调用方显式打开。
   async refresh_cookies(e, headers, SToken, id, opts = {}) {
@@ -380,7 +380,7 @@ class mhy {
   //试一次 genshin 的 CK 绑定，并把回复收下来自己判断成败。
   //genshin 内部直接往 e.reply 抛消息，校验不过时是「Cookie错误」之类。
   //这里临时接管 e.reply 只为收集，不再让它混进 refresh_cookies 的 sendMsg——
-  //此刻 xhh 的 stoken 早已落盘，genshin 绑定失败不该显示成扫码绑定失败。
+  //此刻 HoYoGet 的 stoken 早已落盘，genshin 绑定失败不该显示成扫码绑定失败。
   async tryBindGenshinCookie(e, ck) {
     const oldReply = e.reply;
     const msgs = [];
@@ -489,10 +489,10 @@ class mhy {
   }
 
   /**
-   * 「只有逍遥侧数据」的人第一次签到时，顺手把 xhh 侧文件补出来。
+   * 「只有逍遥侧数据」的人第一次签到时，顺手把 HoYoGet 侧文件补出来。
    *
    * 做的事就是 getSToken 的第二条路：从逍遥文件取出 stoken，调一次 GameRoles
-   * 列出各游戏 uid，写成 xhh 的 yaml。跟手动发「#刷新ck」走的是同一条路，
+   * 列出各游戏 uid，写成 HoYoGet 的 yaml。跟手动发「#刷新ck」走的是同一条路，
    * 不需要扫码（两边都没数据才会扫码，那种情况这里不碰）。
    *
    * 与手动刷新的区别：这里只补文件，不换 cookie_token（签到时 ensureCookieToken

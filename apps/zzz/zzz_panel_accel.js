@@ -64,7 +64,7 @@ const CFG_KEYS = {
 const ACCEL_RE = /^[#*\s]*(?:%\s*(?:绝区零|zzz|绝区)?|[/%]\s*|绝区零|[zZ][zZ][zZ]|绝区)\s*快速(?:更新|刷新)(?:全部|全局|所有|全服|本地)?(?:展柜)?面板(?:列表)?$/
 
 /**
- * 读取配置。走 xhh 自己的 config()（即 plugins/HoYoGet-Plugin/config/config.yaml，
+ * 读取配置。走 HoYoGet 自己的 config()（即 plugins/HoYoGet-Plugin/config/config.yaml，
  * 缺失项由 system/default/default_config/config.yaml 兜底），
  * 不自己解析 YAML——之前手写正则既不支持行内注释，也和插件的读取方式不一致。
  */
@@ -239,7 +239,7 @@ export class zzz_panel_accel extends plugin {
 
       // 渲染面板图：模板 panel/refresh.html 及 beforeRender 注入的
       // pluResPath / sys.resourcesPath / 玩家信息全在 ZZZ-Plugin 内，
-      // xhh 既没有这张模板、也没有 this.renderImg 这个入口（该名字只存在于
+      // HoYoGet 既没有这张模板、也没有 this.renderImg 这个入口（该名字只存在于
       // Mys-plugin 的基类与 apps/meme.js 的模块内局部函数里），
       // 直接调用必然抛错并被下面的 catch 吞掉，表现为「只有文字、没有图」。
       // 因此借 ZZZ-Plugin 面板类自身的 render()，与上游 refreshPanel() 同一入口。

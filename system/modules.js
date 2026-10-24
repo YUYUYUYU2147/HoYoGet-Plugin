@@ -1,7 +1,7 @@
 /**
  * 功能模块注册表 —— 模块开关的单一事实来源
  *
- * 参考 xhh-TL 的实现（https://github.com/cchanlan/xhh-TL）改写，适配 xhh 的配置体系：
+ * 参考 xhh-TL 的实现（https://github.com/cchanlan/xhh-TL）改写，适配 HoYoGet 的配置体系：
  * 配置读取走 system/yaml.js 读 config/config.yaml，而不是 xhh-TL 的 pluginConfig。
  *
  * 为什么要有这个文件：

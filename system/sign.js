@@ -216,7 +216,7 @@ async function MysSign(e, games = DEFAULT_SIGN_GAMES) {
                 }
             }
         }
-        // 逍遥插件的账号按 game_biz 归到对应游戏，和 xhh 侧的账号一起签。
+        // 逍遥插件的账号按 game_biz 归到对应游戏，和 HoYoGet 侧的账号一起签。
         // 同一个 uid 两边都有时只签一次，免得重复请求把风控打上去。
         for (const v of xiaoyaoAll) {
             if (v.game !== game || !v.uid) continue;
@@ -435,7 +435,7 @@ const BBS_FORUMS = [
 ];
 
 // ─────────── 逍遥插件（xiaoyao-cvs-plugin）的 stoken ───────────
-// 社区签到与游戏签到都从这里补账号。以前社区签到只在「xhh 一个 stoken 都没有」
+// 社区签到与游戏签到都从这里补账号。以前社区签到只在「HoYoGet 一个 stoken 都没有」
 // 时才去读逍遥的文件，导致两边各自签到过、却互相看不见对方的账号。
 // 现在两个来源都读、按 stuid 去重，谁都有就用谁。
 const xiaoyaoYamlPath = qq => `./plugins/xiaoyao-cvs-plugin/data/yaml/${qq}.yaml`;
@@ -453,7 +453,7 @@ const XIAOYAO_REGION_NAME = { 天空岛: 'gs', 世界树: 'gs', 星穹列车: 's
  * 「一条绑定记录 → 内部游戏键」的判据：game_biz → region_name → 崩三那套 region。
  * 名字里带 xiaoyao 只是因为最初为读逍遥文件写的，实际两个来源的条目结构一样，
  * 所以补名单等在别处算游戏的地方也复用这一份，别再抄第二套常量 ——
- * 两份实现各自演化过一次，导致只有 xhh 侧数据的人游戏全显示未知。
+ * 两份实现各自演化过一次，导致只有 HoYoGet 侧数据的人游戏全显示未知。
  */
 function gameOfEntry(e) {
     const byBiz = XIAOYAO_GAME_BIZ[String(e?.game_biz || '')];
@@ -492,7 +492,7 @@ function getXiaoyaoEntries(qq) {
     }
 }
 
-// 逍遥没有 cookie_token 时，按 xhh 同样的拼法凑一个
+// 逍遥没有 cookie_token 时，按 HoYoGet 同样的拼法凑一个
 const xiaoyaoCk = e => e.ck_stoken || `stuid=${e.stuid};stoken=${e.stoken};${e.mid ? `mid=${e.mid};` : ''}`;
 
 function getBbsAccounts(e) {
@@ -519,11 +519,11 @@ function getBbsAccounts(e) {
     const collect = data => {
         for (const entry of Object.values(data || {})) collectOne(entry);
     };
-    // 先收 xhh 侧的：两边有同一个 stuid 时以它为准（它带 ck_stoken，信息更全）
+    // 先收 HoYoGet 侧的：两边有同一个 stuid 时以它为准（它带 ck_stoken，信息更全）
     if (fs.existsSync(path)) {
         try { collect(yaml.get(path)); } catch (_) {}
     }
-    // 再补逍遥插件的账号。以前这里是「xhh 一个都没有才用逍遥的」，
+    // 再补逍遥插件的账号。以前这里是「HoYoGet 一个都没有才用逍遥的」，
     // 于是同一个 QQ 两边各签过一部分账号时，签到只覆盖其中一边。
     const xy = getXiaoyaoEntries(e.user_id);
     for (const entry of xy) {
@@ -1242,7 +1242,7 @@ async function ckForGameUid(e, game, uid, fallback, entry = null) {
         // 换齐了才算数：游戏签到要 ltoken 与 cookie_token 同时在
         if (/cookie_token=/.test(built) && /ltoken=/.test(built)) return built;
     }
-    // 先看 xhh 自己那份 stoken —— 有些账号只在 data/Stoken 里绑过，逍遥那边没有条目，
+    // 先看 HoYoGet 自己那份 stoken —— 有些账号只在 data/Stoken 里绑过，逍遥那边没有条目，
     // 而库里缓存的 ck 可能早就过期了（genshin 那边 17 条实测有 6 条失效）。
     const own = getStokenEntry(e?.user_id, String(uid));
     if (own?.stuid && own?.stoken) {
@@ -1588,7 +1588,7 @@ async function BbsAutoSign(qqs = [], group = 0) {
             sender: { nickname: String(qq) },
             reply: async () => false,
         };
-        // 只有逍遥侧数据的人，顺手把 xhh 文件补出来（不需要扫码）
+        // 只有逍遥侧数据的人，顺手把 HoYoGet 文件补出来（不需要扫码）
         await mhy.ensureXhhFromXiaoyao(e);
         const { msgs, lines } = await bbsSignForEvent(e, false);
         // 与卡片显示同一数据源判定：bbsCardItem 的 tip 已把 1008「重复打卡」归为「今日已签」。
@@ -1788,7 +1788,7 @@ async function zd_MysSign(qqs) {
         const diag = [];
         let e = {};
         e.user_id = qq;
-        // 只有逍遥侧数据的人，顺手把 xhh 文件补出来（不需要扫码）
+        // 只有逍遥侧数据的人，顺手把 HoYoGet 文件补出来（不需要扫码）
         await mhy.ensureXhhFromXiaoyao(e);
         e.reply = async msg => {
             if (msg === undefined || msg === null) return false;
@@ -1798,7 +1798,7 @@ async function zd_MysSign(qqs) {
         };
         for (let game of games) {
             let user = (await (await getNoteUser()).create(qq)).getMysUser(game); //只要当前xx游戏绑定ck的账号信息（原神可能有多个，如渠道服）
-            // 逍遥插件在该游戏下也有账号时一并处理，别因为 xhh 侧没绑就整个游戏跳过
+            // 逍遥插件在该游戏下也有账号时一并处理，别因为 HoYoGet 侧没绑就整个游戏跳过
             const xiaoyaoForGame = getXiaoyaoEntries(qq).filter(v => v.game === game && v.uid);
             if (!user && !xiaoyaoForGame.length) continue;
             // 部分账号只绑定了 CK，但没有该游戏的 UID；

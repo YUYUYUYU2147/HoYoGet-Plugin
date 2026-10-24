@@ -245,7 +245,7 @@ async function api(e, data = {}) {
         obj.headers['x-rpc-app_version'] = '2.73.1';
         obj.headers.Referer = 'https://webstatic.mihoyo.com/';
         obj.headers['User-Agent'] = 'Mozilla/5.0 (Linux; Android 12; XQ-AT52 Build/58.2.A.7.93; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/100.0.4896.88 Mobile Safari/537.36 miHoYoBBS/2.73.1';
-        // 删除xhh额外加的头部，避免Bh3 API拒绝
+        // 删除 HoYoGet 额外加的头部，避免 Bh3 API 拒绝
         delete obj.headers.Origin;
         delete obj.headers['X-Requested-With'];
         delete obj.headers['x-rpc-sys_version'];

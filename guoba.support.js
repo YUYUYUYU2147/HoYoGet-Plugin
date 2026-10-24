@@ -120,7 +120,7 @@ export const supportGuoba = () => {
 
   return ({
   pluginInfo: {
-    // 必须与目录名一致：锅巴卸载走 plugins/${name}，写 xhh 会找不到目录
+    // 必须与目录名一致：锅巴卸载走 plugins/${name}，写 HoYoGet 会找不到目录
     name: 'HoYoGet-Plugin',
     title: '米哈游',
     description: '多功能辅助插件，支持米游社签到、B站解析、攻略查询等',
@@ -251,7 +251,7 @@ export const supportGuoba = () => {
       },
       {
         field: 'bdsb',
-        label: '使用xhh绑定设备',
+        label: '使用HoYoGet绑定设备',
         helpMessage: '作用于genshin/StarRail/ZZZ-Plugin',
         component: 'Switch',
       },
@@ -1440,7 +1440,7 @@ export const supportGuoba = () => {
       {
         field: 'auto_reload',
         label: '自举热重载',
-        helpMessage: '改完 apps/ 与 system/ 里的代码自动生效，不用重启（框架的 #重载插件 对 xhh 无效）。新增/删除指令仍需 #重启',
+        helpMessage: '改完 apps/ 与 system/ 里的代码自动生效，不用重启（框架的 #重载插件 对 HoYoGet 无效）。新增/删除指令仍需 #重启',
         component: 'Switch',
       },
     ],

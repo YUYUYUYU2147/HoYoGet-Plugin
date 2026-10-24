@@ -848,7 +848,7 @@ export class zzz_gacha extends plugin {
         { reg: '^#*米哈游(绝区零|zzz)?邦布记录$', fnc: 'bangbooRecord' },
         { reg: '^#*米哈游(绝区零|zzz)?邦布统计$', fnc: 'bangbooStat' },
         { reg: '^#*米哈游(绝区零|zzz)?全部统计$', fnc: 'allStat' },
-        // 无 xhh/小花火 前缀的裸指令。`%角色记录` 会被框架 zzzReg 改写成
+        // 无 HoYoGet/小花火 前缀的裸指令。`%角色记录` 会被框架 zzzReg 改写成
         // `#绝区零角色记录`，故这里也要认「绝区零」前缀，否则会被喵喵抢走。
         // 绝区零裸指令。三种前缀都直接认，不依赖框架的规范化结果：
         //   · %        框架 zzzReg 与 genshin dealPrefix 都会改写成 #绝区零，

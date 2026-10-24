@@ -8,7 +8,7 @@ import { buildIsUP } from '../../system/join_isup.mjs'
 //
 // 这几个模块（gachaLog / srGachaSummary）是 genshin 较新版本才有的，
 // 不同用户的 genshin 版本不一：若用静态 import，遇到没有该文件的版本会直接
-// ERR_MODULE_NOT_FOUND，导致**整个 xhh 插件加载失败**（用户反馈在
+// ERR_MODULE_NOT_FOUND，导致**整个 HoYoGet 插件加载失败**（用户反馈在
 // Windows 上出现过「插件加载完毕」卡住不继续的问题）。
 //
 // 因此改为运行时按需加载，且给出多个候选路径；全都找不到时把对应功能标记为
@@ -1067,7 +1067,7 @@ async function refreshBadgeCookie(uid, ck, region) {
 /**
  * 用 ck 直接拉取常驻池（gacha_type=1）。
  *
- * 原来这里绕道 genshin 的 GachaLog.getGcLogData()，导致 xhh 必须依赖
+ * 原来这里绕道 genshin 的 GachaLog.getGcLogData()，导致 HoYoGet 必须依赖
  * genshin 里有 model/gachaLog/gachaLog.js（较新版本才有），
  * 缺失时整个插件 ERR_MODULE_NOT_FOUND 而无法加载。
  *
@@ -2178,7 +2178,7 @@ export class sr_gacha extends plugin {
         { reg: '^#*米哈游(星铁|崩铁)?武器统计$', fnc: 'weaponStat' },
         { reg: '^#*米哈游(星铁|崩铁)?联动角色记录$', fnc: 'collabRoleRecord' },
         { reg: '^#*米哈游(星铁|崩铁)?联动武器记录$', fnc: 'collabWeaponRecord' },
-        // 无 xhh/小花火 前缀的裸指令（*角色记录、*角色统计 等）。
+        // 无 HoYoGet/小花火 前缀的裸指令（*角色记录、*角色统计 等）。
         // 喵喵的 `^#*(星铁)?(角色|武器|光锥)…(记录|统计)$` 里前缀全部可选，会把这些
         // 一并吃掉（实测 *角色记录 7 次、*角色统计 5 次落到喵喵）。本插件优先级 1
         // 比喵喵的 50 小、按框架升序本该先跑，但规则要求 米哈游 根本匹配不上，

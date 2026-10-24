@@ -1,7 +1,7 @@
 /**
  * 检查「直接调用 puppeteer.render 时是否传了 ppath」。
  *
- * 背景：xhh 的模板里资源路径一律写成 `{{ppath}}xxx/yyy.css`，而 ppath 只有
+ * 背景：HoYoGet 的模板里资源路径一律写成 `{{ppath}}xxx/yyy.css`，而 ppath 只有
  * system/render.js 的 beforeRender 会注入；直接 `puppeteer.render(name, data)`
  * 的调用必须自己传，框架不会补。漏传的后果不是报错，而是 {{ppath}} 被渲染成
  * 空串 -> CSS、背景图、图标全部 404 -> 页面上是一张没有样式的裸 HTML（曾因此

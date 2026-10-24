@@ -23,7 +23,7 @@ const getBot = () => globalThis.Bot || (typeof Bot !== 'undefined' ? Bot : null)
 
 function readYaml(p) {
     // 先判存在再读：yaml.get 内部会 catch 住 ENOENT 并 logger.error，
-    // 而逍遥侧的人本来就没有 xhh 侧的 yaml 文件，不判一下每次都要往 error.log 刷一条
+    // 而逍遥侧的人本来就没有 HoYoGet 侧的 yaml 文件，不判一下每次都要往 error.log 刷一条
     if (!fs.existsSync(p)) return {};
     try { return yaml.get(p) || {}; } catch { return {}; }
 }

@@ -50,7 +50,7 @@ export async function resolve(specifier, context, nextResolve) {
   // 由插件外部发起、且目标正是插件入口 = 框架的一次（重新）加载，留一条诊断
   if (!inRoot(parent) && bare === ENTRY) {
     // 钩子跑在独立的 hooks 线程里，拿不到框架的 logger，用 console 打到同一份日志
-    console.log('[xhh][hot] 检测到插件入口加载')
+    console.log('[HoYoGet][hot] 检测到插件入口加载')
     mark('入口加载')
   }
   if (!inRoot(res.url)) return res

@@ -17,7 +17,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// 日程表目录：本文件在 xhh/ 下任意子目录都可正确定位到 system/default
+// 日程表目录：本文件在 HoYoGet/ 下任意子目录都可正确定位到 system/default
 const SCHEDULE_DIR = path.join(__dirname, '..', 'system', 'default');
 
 const FAR = Date.UTC(2099, 0, 1);

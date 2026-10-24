@@ -11,7 +11,7 @@ import { fillBaseAdd } from '../../system/zzz_attr_base.js'
 import { getPanelBg } from '../../system/zzz_panel_bg.js'
 
 /**
- * 绝区零面板（xhh 自研）—— 第 2 步：归一化 + 自研渲染。
+ * 绝区零面板（HoYoGet 自研）—— 第 2 步：归一化 + 自研渲染。
  *
  * 数据源：米游社 record 接口 avatar/basic（角色基础列表）。
  * 第 1 步探针已确认真实字段（见 HANDOFF_zzz_panel.md），本步据此写归一化与渲染，

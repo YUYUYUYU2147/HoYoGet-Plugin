@@ -347,7 +347,7 @@ class bili {
             return e.reply('序号不对哟~');
         }
         let re = await e.reply(img);
-        // await redis.set(`xhh:bili:${re.message_id}`,JSON.stringify(pic), { EX: 600 })
+        // await redis.set(`HoYoGet:bili:${re.message_id}`,JSON.stringify(pic), { EX: 600 })
         if (pl_kg) {
             await this.temp();
             if (re.data?.message_id) re.message_id = re.data.message_id; //onebot

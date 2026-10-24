@@ -1276,7 +1276,7 @@ export class zzz_workshop extends plugin {
     /* 原神的 Akasha 全球榜也以「排名」结尾，且「全球」会被 RE_ROLE_RANK_SHORT
        当成角色名的一部分（%我的全球排名 → 角色名「我的全球」）。必须在最前面放行：
          #<角色>全球排名 / %我的全球排名 / 全球 <角色> / %胡桃全球排名
-       这些归原神插件（miao-plugin / xhh myGlobal），不是绝区零工坊榜。 */
+       这些归原神插件（miao-plugin / HoYoGet myGlobal），不是绝区零工坊榜。 */
     /* 原神的 Akasha 系列：全球排名 / 幽境排名 / 圣遗物排名 / 阿卡夏，
        都会被 ([^\s]+?)...排名 结构当成绝区零角色名，必须放行。 */
     if (/全球排名|幽境|圣遗物|阿卡夏|akasha/i.test(msg)) return false
