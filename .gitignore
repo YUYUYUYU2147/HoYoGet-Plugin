@@ -42,3 +42,7 @@ resources/meta-sr/.sha
 
 # 崩三日历的女武神/生日立绘缓存（运行时从官方 wiki 下载，不入库）
 resources/bh3_calendar/icons/
+
+# 本地备份
+*.bak
+*.bak[0-9]*
