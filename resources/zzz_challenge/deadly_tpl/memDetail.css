@@ -601,3 +601,43 @@ body {
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
+
+/* 立绘在上、名称/弱点/抗性/基础数据在下，与防卫战一致 */
+.card-body { grid-template-columns: 1fr; }
+.boss-left { grid-column: 1; margin: 0 auto; }
+.info { grid-column: 1; }
+
+/* 覆盖：立绘保持左列，名称/弱点/抗性/基础数据移到其下方整行 */
+.card-body { grid-template-columns: 160px 1fr; }
+.boss-left { grid-column: 1; margin: 0; }
+.info { grid-column: 1 / -1; margin-top: 10px; }
+
+/* 左窄列：立绘在上、信息卡在下；分数与队伍在右列 */
+.card-body { grid-template-columns: 190px 1fr; align-items: start; }
+.boss-col { grid-column: 1; display: flex; flex-direction: column; gap: 8px; }
+.boss-left { grid-column: auto; width: 190px; height: 190px; margin: 0; }
+.boss-info { padding: 8px; border-radius: 8px; background: rgba(0, 0, 0, .48); border: 1px solid rgba(255, 255, 255, .12); }
+.boss-info .title { font-size: 14px; text-align: center; }
+.info { grid-column: 2; }
+
+/* 窄列适配：左列略加宽，基础数据两列，长数字折行不叠 */
+.card-body { grid-template-columns: 210px 1fr; }
+.boss-left { width: 210px; height: 210px; }
+.boss-info .boss-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 8px; }
+.boss-info .bs-item b { font-size: 12px; white-space: normal; overflow-wrap: anywhere; }
+
+/* 窄列内弱点/抗性标签自适应：允许折行并缩小一档 */
+.card-body { grid-template-columns: 220px 1fr; }
+.boss-left { width: 220px; height: 220px; }
+.boss-info .element-tag { font-size: 11px; padding: 1px 5px; }
+
+/* 左栏与右栏等高：立绘固定，信息框自动填满剩余高度 */
+.card-body { align-items: stretch; }
+.boss-col { align-self: stretch; }
+.boss-left { flex: 0 0 auto; }
+.boss-info { flex: 1 1 auto; }
+.boss-info { display: flex; flex-direction: column; }
+.boss-info .boss-stats { margin-top: auto; }
+
+/* 队伍落到右栏底部，与防卫战一致 */
+.info .team { margin-top: auto; }

@@ -302,6 +302,10 @@ export class zzz_panel_rank extends plugin {
        顺带一提，SHORT_RANK_REG 的 (.+?) 会把修饰词吃进角色名
        （%雅全服排名 → 「雅全服」），所以这里也不能接。 */
     if (/(?:全服|本群|工坊)排名$/.test(msg)) return false
+    /* 玩法名 + 排名（%防卫战排名 / %式舆排名 / %危局排名）属于玩法榜，不是角色榜：
+       SHORT_RANK_REG 会把玩法名当成角色名（%防卫战排名 → 「防卫战」），
+       这里放行，交由 ZZZ-Plugin 的玩法榜单接管。 */
+    if (/(?:式舆防卫战|式舆|防卫战|防卫|危局强袭战|危局|强袭战|强袭)排名$/.test(msg)) return false
     /* 不带修饰词时按「%面板排名范围」的当前值决定榜单：
          本群 → 本地面板排名（就是本文件）
          全部 → 工坊练度榜（交给 zzz_workshop 的 accept）

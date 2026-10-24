@@ -65,6 +65,29 @@ export function listChallengeRecords(uid, type) {
   }
 }
 
+/** 列出某 type 下每个 uid 的最新一期记录（排行榜用） */
+export function listLatestRecords(type) {
+  const out = []
+  try {
+    if (!fs.existsSync(ROOT)) return out
+    for (const uid of fs.readdirSync(ROOT)) {
+      const dir = path.join(ROOT, uid, type)
+      if (!fs.existsSync(dir)) continue
+      let latest = null
+      for (const f of fs.readdirSync(dir).filter(x => x.endsWith('.json'))) {
+        try {
+          const o = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf-8'))
+          if (!o || !o.data) continue
+          if (!latest || String(o.period).localeCompare(String(latest.period)) > 0) latest = o
+        } catch { /* 单个文件坏了不影响整体 */ }
+      }
+      if (!latest) continue
+      out.push({ uid: latest.uid || uid, period: latest.period, savedAt: latest.savedAt, data: latest.data })
+    }
+  } catch { /* 目录不可读时返回空列表 */ }
+  return out
+}
+
 /** 读取某 uid+type 的某期记录（按列表下标） */
 export function readChallengeRecord(uid, type, index) {
   const list = listChallengeRecords(uid, type)
@@ -78,4 +101,4 @@ export function readChallengeRecord(uid, type, index) {
   }
 }
 
-export default { saveChallengeRecord, listChallengeRecords, readChallengeRecord, periodKeyOf }
+export default { saveChallengeRecord, listChallengeRecords, readChallengeRecord, periodKeyOf, listLatestRecords }

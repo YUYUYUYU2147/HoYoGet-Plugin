@@ -17,6 +17,8 @@
  */
 import fs from 'node:fs'
 import path from 'node:path'
+import { normalizeShiyu, normalizeDeadly } from '../../../system/zzz_challenge.js'
+import { saveChallengeRecord } from '../../../system/zzz_challenge_history.js'
 
 const PLUGIN_ROOT = path.resolve(import.meta.dirname, '../../..')
 const OUT_DIR = path.join(PLUGIN_ROOT, 'data', 'zzz_challenge')
@@ -88,6 +90,29 @@ async function refreshOne(handler, user) {
     } catch (err) {
       result.errors.push(`${type}: ${String(err?.message || err).slice(0, 50)}`)
     }
+  }
+
+  /* 归一化后写入挑战历史：%防卫战排名 / %危局排名 读的就是这份存档 */
+  /* 昵称 / 头像只能从玩家信息接口拿，取不到时留空，不影响成绩落盘 */
+  let player = {}
+  try { player = (await handler.fetchPlayer(mock, uid, ck)) || {} } catch { player = {} }
+
+  const saved = { shiyu: false, deadly: false }
+  try {
+    if (result.hadal) {
+      const d = await normalizeShiyu(result.hadal, { uid, nickname: player.nickname, avatar: player.avatar })
+      if (d && !d.empty && d.period) saved.shiyu = saveChallengeRecord(uid, 'shiyu', d.period, d)
+    }
+  } catch (err) {
+    result.errors.push(`shiyu 落盘: ${String(err?.message || err).slice(0, 50)}`)
+  }
+  try {
+    if (result.deadly) {
+      const d = await normalizeDeadly(result.deadly, { uid, nickname: player.nickname, avatar: player.avatar })
+      if (d && !d.empty && d.period) saved.deadly = saveChallengeRecord(uid, 'deadly', d.period, d)
+    }
+  } catch (err) {
+    result.errors.push(`deadly 落盘: ${String(err?.message || err).slice(0, 50)}`)
   }
 
   /* 两个都失败才算这个用户失败；只失败一个时仍落盘另一个 */

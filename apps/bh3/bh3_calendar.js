@@ -348,7 +348,7 @@ export class bh3_calendar extends plugin {
           day: a.startAbs.format('M/D'),
           short: a.title.replace(/^[「【]|」$|】$/g, '').slice(0, 12),
           title: a.title,
-          pos: ((day + 0.5) / 14 * 100).toFixed(2),
+          pos: Math.min(92, Math.max(8, (day + 0.5) / 14 * 100)).toFixed(2),
           abs: a.startAbs.valueOf(),
         });
       }

@@ -600,3 +600,6 @@ body {
 /* 第四防线卡片窄，藏掉空的时间文字，标题和评级保持一行 */
 .layer-card.layer-fourth .layer-head { margin-bottom: 8px; }
 .layer-card.layer-fourth .challenge-card .challenge-body { gap: 5px; }
+
+/* BOSS 立绘与下方信息框同宽 */
+.boss-panel .challenge-cover { width: 100%; height: auto; aspect-ratio: 1 / 1; }

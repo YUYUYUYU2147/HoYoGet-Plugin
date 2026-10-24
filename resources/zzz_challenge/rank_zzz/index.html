@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>式舆防卫战排名</title>
+  <link rel="stylesheet" type="text/css" href="{{ppath}}zzz_challenge/rank_zzz/common/style/index.css">
+  <link rel="stylesheet" type="text/css" href="{{ppath}}zzz_challenge/rank_zzz/common/layout/index.css" />
+  <link rel="stylesheet" type="text/css" href="{{ppath}}zzz_challenge/rank_zzz/index.css">
+</head>
+
+<body>
+  <div class="container" id="container">
+    <div class="card">
+      <div class="special-title">
+        <div class="bg-content">{{titleEn}}</div>
+        <div class="parallelograms"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="content">{{titleCn}}</div>
+        <div class="parallelograms"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+      {{each scoredData record i}}
+      <div class="record">
+        <div class="user-info">
+          <link rel="stylesheet" type="text/css" href="{{ppath}}zzz_challenge/rank_zzz/common/layout/playerinfo.css" />
+          <div class="avatar">
+            <img src="{{record.player.avatar}}" alt="Avatar">
+          </div>
+          <div class="info-bar">
+            <div class="info">
+              <div class="nickname">{{record.player.player.nickname}}</div>
+            </div>
+            <div class="info">
+              <div class="label level">Lv{{record.player.player.level}}</div>
+              <div class="label server">{{record.player.player.region_name}}</div>
+            </div>
+            <div class="uid">UID {{record.player.player.game_uid}}</div>
+          </div>
+          <div class="result">
+            <div class="value">
+              <div class="label">总得分</div>
+              {{if record.score.maxScore}}
+              <div class="max-score-icon score{{record.score.maxScore}}"></div>
+              {{else}}
+              <div class="total-score">{{record.score.score}}</div>
+              {{/if}}
+            </div>
+            <div class="rank">
+              <div class="label">评级</div>
+              <div class="rating-icon {{record.score.ratingClass}}"></div>
+            </div>
+          </div>
+        </div>
+        {{each record.stages layer}}
+        <div class="item-card">
+          {{if layer}}
+          <div class="content">
+            <div class="header">
+              <div class="name">{{layer.title}}</div>
+              <div class="value">
+                {{if layer.maxScore}}
+                <div class="max-score-icon score{{layer.maxScore}}"></div>
+                {{else}}
+                <div class="val">{{layer.score}}</div>
+                {{/if}}
+                <div class="rating-icon {{layer.ratingClass}}"></div>
+              </div>
+            </div>
+            <div class="list">
+              {{each layer.avatars av}}
+              <div class="char-container">
+                {{if av}}
+                <div class="item char">
+                  {{if av.rank}}
+                  <div class="count">{{av.rank}}</div>
+                  {{/if}}
+                  <div class="rank_disp">
+                    <div class="rank rank-icon {{av.rarity}}"></div>
+                  </div>
+                  <div class="image">
+                    <img src="{{av.role_square_url}}" alt="">
+                  </div>
+                </div>
+                {{else}}
+                <div class="item char"></div>
+                {{/if}}
+              </div>
+              {{/each}}
+              <div class="bangboo-container">
+                {{if layer.buddy}}
+                <div class="item bangboo">
+                  <div class="rank_disp">
+                    <div class="rank rank-icon {{layer.buddy.rarity}}"></div>
+                  </div>
+                  <div class="image">
+                    <img src="{{layer.buddy.bangboo_rectangle_url}}" alt="">
+                  </div>
+                </div>
+                {{else}}
+                <div class="item bangboo"></div>
+                {{/if}}
+              </div>
+            </div>
+          </div>
+          {{/if}}
+        </div>
+        {{/each}}
+      </div>
+      {{/each}}
+      <div class="notes-container">
+        <ul class="notes">
+          {{each notes nt}}
+          <li>{{nt}}</li>
+          {{/each}}
+        </ul>
+        {{if signature}}<div class="signature">{{signature}}</div>{{/if}}
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>

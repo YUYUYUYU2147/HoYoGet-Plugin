@@ -3,7 +3,7 @@
 #凌晨3:30是否自动更新xhh：true开，false关 (注意：这是强制更新,会覆盖文件的那种,爱改文件的大佬慎用)
 update: false
 
-#调试模式：true开，false关（输出水晶查询/扫码绑定/图鉴解析等详细日志，平时保持关闭）
+#调试模式：true开，false关（输出卡池同步/水晶查询/扫码绑定/图鉴解析等详细日志，平时保持关闭）
 debug: false
 
 #自举热重载：true开，false关。改完 apps/ 与 system/ 里的代码自动生效，不用重启、
@@ -46,7 +46,7 @@ zzz_remind_abyss_level: 5
 zzz_remind_deadly_stars: 6
 zzz_panel_list_priority: -40000
 # 绝区零式舆防卫战 / 危局强袭战优先级（需 < ZZZ-Plugin 的 abyss=-1000 / deadly=70）
-zzz_challenge_priority: -32000
+zzz_challenge_priority: -37000
 
 # 绝区零单角色面板/伤害详情页的随机背景图；留空则使用纯黑底。
 zzz_panel_bg_url: 'https://api.yppp.net/api.php'

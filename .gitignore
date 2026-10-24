@@ -48,3 +48,4 @@ resources/bh3_calendar/icons/
 *.bak[0-9]*
 resources/meta-gs/
 resources/meta-sr/
+*.zip

@@ -1476,7 +1476,7 @@ async function bbsSignCore(e, accounts, title) {
             }
             markInvalid(account, rows);
             bbsRecord(e, account, rows);
-            msgs.push(await bbsCardItem(account, rows, await bbsPassportAvatar(account)));
+            msgs.push(await bbsCardItem(account, rows, (await bbsPassportAvatar(account)) || `https://q1.qlogo.cn/g?b=qq&nk=${e.user_id}&s=140`));
             continue;
         }
         const ctx = {};
@@ -1494,7 +1494,7 @@ async function bbsSignCore(e, accounts, title) {
         await finishBbsAccount(e, account, ctx, rows, lines);
         markInvalid(account, rows);
         bbsRecord(e, account, rows);
-        msgs.push(await bbsCardItem(account, rows, await bbsPassportAvatar(account)));
+        msgs.push(await bbsCardItem(account, rows, (await bbsPassportAvatar(account)) || `https://q1.qlogo.cn/g?b=qq&nk=${e.user_id}&s=140`));
     }
     return { msgs, lines };
 }
@@ -1548,9 +1548,11 @@ async function bbsPassportAvatar(account = {}) {
         });
         const json = await r.json().catch(() => null);
         const info = json?.data?.user_info || {};
+        /* 米游社 avatar 只是头像框数字 ID，拼不出图片；真实头像在 avatar_url */
+        const avatarUrl = String(info.avatar_url || '').trim();
         const avatar = String(info.avatar || '').trim();
-        if (/^https?:\/\//.test(avatar)) out = avatar;
-        else if (/^\d+$/.test(avatar)) out = `https://upload-bbs.miyoushe.com/upload/avatar/${avatar}.png`;
+        if (/^https?:\/\//.test(avatarUrl)) out = avatarUrl;
+        else if (/^https?:\/\//.test(avatar)) out = avatar;
     } catch (_) {
         out = '';
     }

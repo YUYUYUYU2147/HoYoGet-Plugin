@@ -1284,6 +1284,9 @@ export class zzz_workshop extends plugin {
        「%星铁练度排名」这类写法会被短式的 ([^\s]+?)…排名 当成角色名「星铁练度」，
        必须在这里放行，否则被绝区零榜接住后查不到角色。 */
     if (/星铁|星穹铁道|^[#%]*\s*(?:sr|hsr)/i.test(msg)) return false
+    /* 玩法名 + 排名（%防卫战排名 / %式舆排名 / %危局排名）属于玩法榜，不是角色榜：
+       RE_ROLE_RANK_SHORT 会把玩法名解析成角色名，这里放行交由 ZZZ-Plugin 接管。 */
+    if (/(?:式舆防卫战|式舆|防卫战|防卫|危局强袭战|危局|强袭战|强袭)排名$/.test(msg)) return false
     /* 框架已把 % 改写成 #绝区零，两种形态都要认 */
     const hasScopeWord = /(?:全服|本群|工坊)排名$/.test(msg)
     /* 不带范围修饰词时看「%面板排名范围」：

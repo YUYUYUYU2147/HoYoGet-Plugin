@@ -32,10 +32,16 @@ function gameOf(msg = '') {
 /* 生日角色立绘表：resources/calendar/portraits.json（{ game: { 角色名: 立绘链接 } }） */
 const PORTRAITS_FILE = './plugins/HoYoGet-Plugin/resources/calendar/portraits.json'
 let PORTRAITS = null
+let PORTRAITS_MTIME = 0
 function portraitsOf(game) {
-  if (PORTRAITS === null) {
-    try { PORTRAITS = JSON.parse(fs.readFileSync(PORTRAITS_FILE, "utf-8")) }
-    catch (_) { PORTRAITS = {} }
+  try {
+    const mtime = fs.statSync(PORTRAITS_FILE).mtimeMs
+    if (PORTRAITS === null || mtime !== PORTRAITS_MTIME) {
+      PORTRAITS = JSON.parse(fs.readFileSync(PORTRAITS_FILE, "utf-8"))
+      PORTRAITS_MTIME = mtime
+    }
+  } catch (_) {
+    if (PORTRAITS === null) PORTRAITS = {}
   }
   return PORTRAITS[game] || {}
 }
