@@ -250,17 +250,33 @@ function buildSrPeak(raw = {}, period = 1) {
     abbr: a.abbr,
     icon: a.icon,
   }))
+  /* boss_stars 是首领星数，mob_stars 是小怪星数（不是额外星），
+     不能相减，否则 3-9 会算出 0 星。 */
   const starNum = Number(pick.boss_stars || 0)
-  const extraStar = Number(pick.mob_stars || 0)
-  const floors = avatars.length ? [{
+  const mobStarNum = Number(pick.mob_stars || 0)
+  /* 小怪记录：每条一组角色（异相仲裁是「首领 + 多组小怪」） */
+  const mobNodes = (pick.mob_records || [])
+    .filter(r => r && (r.avatars || []).length)
+    .map((r, i) => ({
+      index: i + 2,
+      score: 0,
+      time: '',
+      avatars: (r.avatars || []).map(a => ({
+        id: a.id, level: a.level, rarity: a.rarity, element: a.element,
+        rank: a.rank, name: a.name, abbr: a.abbr, icon: a.icon,
+      })),
+      raw: {},
+    }))
+  const floors = (avatars.length || mobNodes.length) ? [{
     index: 1,
     name: group.name_mi18n || '异相仲裁',
-    star: Math.max(0, starNum - extraStar),
-    extraStar,
+    star: starNum,
+    extraStar: 0,
+    mobStar: mobStarNum,
     score: 0,
     roundNum: 0,
     isFast: false,
-    nodes: [{ index: 1, score: 0, time: '', avatars, raw: {} }],
+    nodes: [{ index: 1, score: 0, time: '', avatars, raw: {} }, ...mobNodes],
   }] : []
   const ts = t => (t && typeof t === 'object'
     ? new Date(`${t.year}-${String(t.month).padStart(2, '0')}-${String(t.day).padStart(2, '0')} ${String(t.hour || 0).padStart(2, '0')}:${String(t.minute || 0).padStart(2, '0')}:00`).getTime()
@@ -274,7 +290,7 @@ function buildSrPeak(raw = {}, period = 1) {
     endTime: ts(group.end_time),
     floors,
     totalStar: starNum,
-    extraStar,
+    extraStar: 0,
     bestFloor: group.name_mi18n || '',
     battleNum: Number(pick.battle_num || 0),
     hasData: true,

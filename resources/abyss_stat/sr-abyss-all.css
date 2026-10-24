@@ -463,3 +463,10 @@ body {
   color: rgba(231, 235, 243, .6);
   font-variant-numeric: tabular-nums;
 }
+
+/* 异相仲裁：小怪星数 */
+.mob-star {
+  font-size: 10px;
+  color: #7fd4c0;
+  margin-left: 4px;
+}

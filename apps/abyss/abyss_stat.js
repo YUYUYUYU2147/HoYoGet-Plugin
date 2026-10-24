@@ -661,15 +661,22 @@ export class abyss_stat extends plugin {
           }
         }
         const allscore = (f.nodes || []).reduce((sum, n) => sum + (Number(n?.score) || 0), 0)
+        /* 节点来源两种：buildSrChallenge 给 node1/node2/node3（混沌/虚构/末日），
+           异相仲裁直接给 nodes 数组（首领 + 多组小怪）。这里都归一成一个数组。 */
+        const nodeList = (f.nodes?.length
+          ? f.nodes
+          : [f.node1, f.node2, f.node3]
+        ).filter(n => n && n.avatars?.length)
         return {
           name: f.name,
           star_num: f.star,
           round_num: f.roundNum || 0,
           allscore,
           hasTierceRecord: !!f.extraStar,
-          node_1: node(f.node1),
-          node_2: node(f.node2),
-          node_3: node(f.node3),
+          mob_star: f.mobStar || 0,
+          node_1: node(nodeList[0]),
+          node_2: node(nodeList[1]),
+          node_3: node(nodeList[2]),
         }
       })
     if (!floors.length && !allowEmpty) return null

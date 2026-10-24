@@ -74,6 +74,10 @@
                 <span class="floor-star-sep">|</span>
                 <img class="star4 {{if floor.star_num<4}}nostar-img{{/if}}" src="{{ppath}}abyss_stat/genshin_img/other/abyss_star4.png" />
                 {{/if}}
+                {{if floor.mob_star}}
+                <span class="floor-star-sep">|</span>
+                <span class="mob-star">小怪 {{floor.mob_star}}★</span>
+                {{/if}}
               </div>
             </div>
             <div class="floor-meta">
