@@ -129,7 +129,7 @@ export class user extends plugin {
                     fnc: 'fp',
                 },
                 {
-                    reg: '^#?米哈游扫码(登录|绑定|登陆)$',
+                    reg: '^#?(米哈游)?扫码(登录|绑定|登陆)$',
                     fnc: 'sm',
                 },
                 {
@@ -618,7 +618,7 @@ export class user extends plugin {
 
         let res = await mysApi.getData(type, data);
         if (![1034, 5003, 10035, 10041].includes(Number(res?.retcode))) {
-            logger.mark(`[[xhh]mys重试成功][uid:${mysApi.uid}][qq:${e.user_id}]`)
+            logger.mark(`[[HoYoGet]mys重试成功][uid:${mysApi.uid}][qq:${e.user_id}]`)
             return res;
         }
         return reject();
