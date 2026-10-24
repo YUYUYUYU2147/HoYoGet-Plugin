@@ -1434,7 +1434,7 @@ export const supportGuoba = () => {
       {
         field: 'debug',
         label: '调试模式',
-        helpMessage: '输出水晶查询/扫码绑定的详细日志',
+        helpMessage: '输出卡池同步、水晶查询、扫码绑定等详细日志',
         component: 'Switch',
       },
       {

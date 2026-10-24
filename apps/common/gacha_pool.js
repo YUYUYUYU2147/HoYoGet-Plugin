@@ -2148,7 +2148,7 @@ export class xhh_gacha_pool extends plugin {
         // 联动池长期开放（结束时间最远），不能算「最新版本」；排除后再取最新。
         const latest = local.find(v => !/^联动/.test(String(v?.ver || ''))) || local[0];
         await this.syncSrImagesFromOfficial(records); // 仍尝试用官方公告补背景图
-        logger.mark(`[HoYoGet][gacha_pool] 星铁 Bwiki 同步明细：新增 ${added} / 修正 ${updated}`);
+        if (config().debug) logger.mark(`[HoYoGet][gacha_pool] 星铁 Bwiki 同步明细：新增 ${added} / 修正 ${updated}`);
         return `星穹铁道：本地库已同步 Bwiki 跃迁（最新 v${latest?.ver || ''}）`;
       } catch (err) {
         logger.warn('[HoYoGet][gacha_pool] 星铁 Bwiki 合并失败，卡池数据保持现状:', err);
@@ -2228,7 +2228,7 @@ export class xhh_gacha_pool extends plugin {
         const latestNum = Number(String(latest.ver || '').replace(/[^0-9.]/g, ''));
         if (latestNum) this.setCurrentVersion('gs', latestNum);
         this.safeWritePoolYaml(GS_POOL_HISTORY_YAML_PATH, data, '原神卡池库');
-        logger.mark(`[HoYoGet][gacha_pool] 原神 Bwiki 同步明细：新增 ${added} / 修正 ${updated}`);
+        if (config().debug) logger.mark(`[HoYoGet][gacha_pool] 原神 Bwiki 同步明细：新增 ${added} / 修正 ${updated}`);
         // 封面统一走米游社：数据以 Bwiki 为准，图片仍用官方公告封面补录
         await this.syncGsImagesFromOfficial(records);
         return `原神：本地库已同步 Bwiki 往期祈愿（最新 v${latest?.ver || ''}）`;
@@ -2512,7 +2512,7 @@ export class xhh_gacha_pool extends plugin {
         } catch (err) {
           logger.warn('[HoYoGet][gacha_pool] 绝区零本地库写入失败:', err);
         }
-        logger.mark(`[HoYoGet][gacha_pool] 绝区零 Bwiki 同步明细：新增 ${added} / 修正 ${updated}` +
+        if (config().debug) logger.mark(`[HoYoGet][gacha_pool] 绝区零 Bwiki 同步明细：新增 ${added} / 修正 ${updated}` +
           (samples.length ? `（示例：${samples.join('；')}）` : ''));
         return `绝区零：本地库已同步 Bwiki 调频（最新 v${latest.version}）`;
       }
@@ -2649,7 +2649,7 @@ export class xhh_gacha_pool extends plugin {
   // 解析不到时退回公告发布时间(createdAt)作为开启时间、按单版本约 3 周补齐结束时间，从而能把新版本真正写进本地库。
   // 仍只在能定位到开始时间+主UP时才写入，且不改写已有版本数据，避免破坏当前卡池识别。
   async syncBh3LocalFromOfficial(records = []) {
-    logger.mark(`[HoYoGet][gacha_pool] 崩三版本更新时间表: ${JSON.stringify(readBh3VersionStartMap())}`);
+    if (config().debug) logger.mark(`[HoYoGet][gacha_pool] 崩三版本更新时间表: ${JSON.stringify(readBh3VersionStartMap())}`);
     // 当前版本号跟随版本更新时间表：到了更新时间就自动推进（如 9.1 于 09-24 06:00 上线后自动变 9.1）
     for (const v of Object.keys(readBh3VersionStartMap()).map(Number).filter(n => !Number.isNaN(n))) {
       const ts = bh3VersionStart(v);
@@ -5517,7 +5517,7 @@ ${r.summary || ''}`;
         if (this.gsPoolFourStarCount(item.names) > this.gsPoolFourStarCount(prev.names)) best.set(item.ver, item);
       }
       // 排查用：打印 imgs 库内实际键名与查询键，定位「有图但取不到」的键不匹配问题
-      logger.mark('[HoYoGet][gacha_pool] 当前卡池 imgs 匹配:',
+      if (config().debug) logger.mark('[HoYoGet][gacha_pool] 当前卡池 imgs 匹配:',
         [...best.values()].map(v => `【${v.ver}】=> ${(data.imgs?.[`【${v.ver}】`] || []).length} 张`).join(', '),
         '| 库内 imgs 键:', Object.keys(data.imgs || {}).join(', ') || '(空)');
       for (const item of best.values()) this.setCurrentVersion('gs', item.ver);
