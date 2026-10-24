@@ -585,6 +585,7 @@ export class abyss_stat extends plugin {
 
     /* 与 genshin 同款：每列 430 CSS 宽，列间距 12，容器左右各 16 */
     const totalWidth = columns.length * 430 + 32 + Math.max(columns.length - 1, 0) * 12
+    logger.mark?.(`[HoYoGet][abyss_stat] *深渊 列：${columns.map(c => `${c.title} ${c.list?.star_num}星/${c.floors?.length || 0}层`).join(' | ')}`)
     /* 顶部头像用玩家自己的游戏头像（星铁 index 接口），取不到再回退星铁图标 */
     let avatar = ''
     try {
@@ -678,98 +679,4 @@ export class abyss_stat extends plugin {
     }
   }
 
-  srChaos(e) { return this.srChallenge(e, 'chaos') }
-  srStory(e) { return this.srChallenge(e, 'story') }
-  srBoss(e) { return this.srChallenge(e, 'boss') }
-  srPeak(e) { return this.srChallenge(e, 'peak') }
-
-  /**
-   * 把一期的楼层整理成总览页可渲染的结构：
-   * 每层带星数/分数、各节点的角色，以及节点上的关卡效果（buff）。
-   */
-  collectSrFloors(data) {
-    if (!data) return []
-    return (data.floors || []).map(f => {
-      const nodes = (f.nodes || []).filter(n => n && n.avatars?.length)
-      const buffs = []
-      for (const n of (f.nodes || [])) {
-        const raw = n?.raw || {}
-        const b = raw.buff || raw.maze_buff || (Array.isArray(raw.buff_list) ? raw.buff_list[0] : null)
-        if (!b) continue
-        const desc = String(b.desc_mi18n || b.desc || b.simple_desc_mi18m || '')
-          .replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
-        if (!desc) continue
-        buffs.push({ name: b.name_mi18n || b.name || '', desc, icon: b.icon || '' })
-      }
-      return { ...f, nodes, buffs }
-    }).filter(f => f.nodes.length || f.isFast)
-  }
-
-  /** 星铁深渊总览：混沌 + 虚构 + 末日 + 王棋 四类一次拉全，汇总成一张卡 */
-  async srAbyss(e) {
-    const type = /(上期|往期)/.test(String(e.msg || '')) ? 2 : 1
-    const mys = await this.mys(e, 'sr')
-    if (!mys) return
-    const keys = ['chaos', 'story', 'boss', 'peak']
-    const cards = []
-    for (const key of keys) {
-      const cfg = SR_CFG[key]
-      try {
-        const raw = await mys[cfg.api](type)
-        if (!raw) {
-          /* getData 在 retcode!==0 时返回 false，并把 retcode 记到 e._retcode */
-          const code = e?._retcode
-          cards.push({
-            key,
-            title: cfg.title,
-            ok: false,
-            private: code === 10102,
-            err: code === 10102 ? '米游社数据未公开' : '接口未返回数据（可能该玩法本期未参与）',
-          })
-          continue
-        }
-        const data = buildSrChallengeData(raw, cfg, type)
-        cards.push({
-          key,
-          title: cfg.title,
-          ok: !!data,
-          totalStar: data?.totalStar ?? 0,
-          extraStar: data?.extraStar ?? 0,
-          bestFloor: data?.bestFloor ?? '',
-          periodName: data?.periodName ?? '',
-          battleNum: data?.battleNum ?? 0,
-          period: data?.beginTime && data?.endTime
-            ? `${timeCalc(data.beginTime)} - ${timeCalc(data.endTime)}`
-            : '',
-          /* 四类玩法的满星基准：混沌/虚构 12，末日 10，王棋按额外星 */
-          fullStar: { chaos: 12, story: 12, boss: 10, peak: 0 }[key] || 0,
-          floors: this.collectSrFloors(data),
-        })
-      } catch (err) {
-        cards.push({ key, title: cfg.title, ok: false, err: err?.message || String(err) })
-      }
-    }
-    const anyData = cards.some(c => c.ok)
-    if (!anyData) {
-      if (cards.every(c => c.private)) {
-        return e.reply('米游社返回「数据未公开」，通常是这两个原因：\n'
-          + '1) 用的是公共 CK 而不是你自己的：日志里出现「分配查询ck」就属于这种，重新 #扫码绑定 后再试；\n'
-          + '2) 确实在米游社「我的 → 战绩」里隐藏了战绩，关掉即可。')
-      }
-      const errs = cards.filter(c => c.err).map(c => `${c.title}: ${c.err}`).slice(0, 4)
-      logger.mark?.(`[HoYoGet][abyss_stat] *深渊 四类都无数据：${errs.join(' | ') || '接口未返回楼层'}`)
-      return e.reply('没有查到本期星铁深渊数据，可能还没打或面板未公开。'
-        + (errs.length ? `\n${errs.join('\n')}` : ''))
-    }
-
-    return render('abyss_stat/sr-abyss-all', {
-      period: type === 2 ? '上期' : '当期',
-      cards,
-      uid: mys.uid,
-      repeat,
-      elemIcon,
-      _miao_path: miaoResPath(),
-      sys: { copyright: '' },
-    }, { e, ret: true, dsf: 3.2 })
-  }
 }
