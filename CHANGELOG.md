@@ -32,6 +32,8 @@
 | 修复 | **`*深渊` 深渊数据整块不显示** —— ①`mys()` 里显式设 `e.game`（`getSelfUid` 里 `e.game` 优先于 `e.isSr`，残留成 gs 会拿原神 UID 查星铁）；②去掉 `checkCk()` 预检（它会因风控误判，把可用接口自己挡掉）；③有数据但无楼层的玩法也出一列，末日幻影补 group 里的 BOSS 立绘 | `*深渊` |
 | 优化 | **崩三立绘全部落进本地 JSON** —— 新增 `resources/bh3_calendar/wiki_icons.json`：女武神 111、武器 392、圣痕 700、协同者 8 + 生日角色映射；卡池立绘/日历立绘优先读本地表，完全离线也能出图，不怕米游社限流 | `崩三当前卡池` / `#崩三日历` |
 | 优化 | **崩三卡池加立绘** —— 角色池显示女武神立绘、装备池显示武器、协同者池显示协同者（轮替池取 a 里的具体人）、服装池用公告封面；协同者轮替补上 4 位具体协同者 | `崩三当前卡池` |
+| 修复 | **`#刷新ck` 触发两次/UID 对不上** —— `getSToken` 按 **stuid** 聚合条目，同一通行证下的原神/星铁/绝区零互相覆盖，只剩一条且 key 变成 stuid；刷新接口 `getCookieAccountInfoBySToken` 的 uid 参数要的是 game_uid。现统一按 game_uid 保留条目，写回 ltoken 也按 game_uid 精确匹配 | `#刷新ck` |
+| 修复 | **绑定/刷新结果可能重复发图** —— `replyBindImage` 里 render 已用 `ret:true` 发出去了，再判 Buffer 属于多余；出图成功后不再走文字分支 | `#扫码绑定` / `#刷新ck` |
 | 修复 | **`*深渊` 渲染出空白四列** —— 类里存在两套 `srAbyss`/`srChaos`/`srPeak`（改模板时遗留），后定义的旧版覆盖了新版，旧版只出概览卡且无楼层；已删除旧的一套 | `*深渊` |
 | 修复 | **`*深渊` 一直只有文字（根因）** —— `runtime._mysInfo` 按 targetType 缓存且全进程只初始化一次，谁先调用就决定了 `e.game`；`e.game` 优先于 `e.isSr`，若那一刻是 'gs' 就会拿**原神 UID** 查星铁深渊，米游社返回 1008「用户信息不匹配」。现在按目标游戏单独初始化 mysInfo（本人 CK）并绕过 runtime 缓存，vendor 版 MysApi 也改为优先用已确定的 mysInfo | `*深渊` |
 | 修复 | **异相仲裁数据解析缺失** —— `challenge_peak` 的结构是 `challenge_peak_records`（含 group/boss_record），与混沌/虚构/末日的 `all_floor_detail` 完全不同，之前一律解析为 null；现补 `buildSrPeak` | `*深渊` |

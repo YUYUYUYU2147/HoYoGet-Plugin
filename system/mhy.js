@@ -432,8 +432,13 @@ class mhy {
       data_ = {};
     if (fs.existsSync(path)) {
       data = yaml.get(path);
+      /* 按 **game_uid** 保留条目，不能按 stuid 聚合：
+         同一个米游社通行证（stuid）下可能同时绑了原神/星铁/绝区零，
+         按 stuid 聚合会让后面的游戏覆盖前面的，只剩一条，
+         表现为「#刷新ck」少刷一个游戏，或刷出来的 UID 和游戏对不上。
+         键用 game_uid，刷新接口 getCookieAccountInfoBySToken 的 uid 参数要的正是它。 */
       for (let k in data) {
-        data_[data[k].stuid] = [data[k].stoken, data[k].ck_stoken];
+        data_[k] = [data[k].stoken, data[k].ck_stoken];
       }
       return data_;
     }
@@ -475,7 +480,10 @@ class mhy {
         data_[key].splice(2); //删除多余数据
       }
       fs.writeFileSync(path, YAML.stringify(sj), 'utf-8');
-      return [data_, sj];
+      /* 返回的键统一用 game_uid（sj 的键），和上面自己目录那条分支保持一致；
+         调用方（#刷新ck）按 game_uid 调 getCookieAccountInfoBySToken，
+         用 stuid 当 uid 会取不到对应角色的 Cookie。 */
+      return [sj, sj];
     }
     return false;
   }

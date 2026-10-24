@@ -63,11 +63,15 @@ async function collectBindAccounts(e, stokenData) {
     return accounts;
 }
 
-/* 出图；渲染失败就回退文字，保证绑定/刷新本身不受影响 */
+/* 出图；渲染失败就回退文字，保证绑定/刷新本身不受影响。
+   注意：render 传了 ret:true，图已经由 runtime 直接发出去了，
+   这里绝不能再 e.reply 一次，否则同一张图会被发两遍。
+   render 的返回值可能是 message_id（发送成功）或 base64 字符串（未发出），
+   两者都不是 Buffer，所以原来的 Buffer.isBuffer 判断其实是多余的。 */
 async function replyBindImage(e, accounts, title) {
     if (!accounts.length) return false;
     try {
-        const buf = await render('sign/bind_result', {
+        await render('sign/bind_result', {
             title,
             statusText: '成功',
             statusClass: '',
@@ -75,8 +79,7 @@ async function replyBindImage(e, accounts, title) {
             sys: { scale: '' },
             saveId: 'bind_result',
         }, { e, ret: true });
-        if (buf && Buffer.isBuffer(buf)) return e.reply(segment.image(buf));
-        return false;
+        return true;
     } catch (err) {
         logger.warn(`[HoYoGet][user] 绑定结果出图失败，回退文字：${err?.message || err}`);
         return false;
@@ -440,11 +443,11 @@ export class user extends plugin {
                 mid
             });
             if (ltoken && data) {
-                for (let m in data) {
-                    if (data[m].stoken == SToken) {
-                        data[m].ltoken = ltoken;
-                        kg = 1;
-                    }
+                /* 按 game_uid 精确写回。同一 stuid 下可能有多个游戏，
+                   用 stoken 匹配会把这一轮刷出来的 ltoken 写到所有游戏上。 */
+                if (data[k] && data[k].stoken == SToken) {
+                    data[k].ltoken = ltoken;
+                    kg = 1;
                 }
             }
             msgs.push(...sendMsg);
