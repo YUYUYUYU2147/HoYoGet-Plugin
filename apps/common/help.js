@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { recordRandomBg } from '../../system/zzz_panel_bg.js'
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { render, pluginPriority, yaml } from '#HoYoGet';
@@ -189,6 +190,7 @@ async function resolveRandomBg(api) {
     if (res.status >= 300 && res.status < 400) target = res.headers.get('location') || '';
     else if (res.ok) target = url;
     if (!/^https?:\/\//i.test(target)) return '';
+    recordRandomBg(target, 'help');
     // 避免把引号/括号带进 CSS url()
     if (/["'\\\n\r()]/.test(target)) return '';
     // 关键：把图片下下来转成 data URI。只给 URL 时 Chromium 可能在

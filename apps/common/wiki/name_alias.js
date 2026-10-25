@@ -18,6 +18,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { onlineAliasSources, syncAliasOnline } from '../../../system/alias_online.js';
 
 /* 路径不按 cwd 拼：cwd 是 TRSS-Yunzai 根目录，但单测/脚本可能从别处跑。
    一律按本文件位置定位插件根（apps/common/wiki/ → ../../../）。 */
@@ -215,7 +216,19 @@ function add(map, alias, entry) {
   if (!map.has(k)) map.set(k, entry);
 }
 
+/* 在线别名：TTL 到期时后台拉一次，拉到新数据就下次重建索引用上。*/
+let _syncing = false;
+function maybeSyncOnline() {
+  if (_syncing) return;
+  _syncing = true;
+  Promise.resolve()
+    .then(() => syncAliasOnline(false))
+    .then(r => { if (Array.isArray(r) && r.some(x => x.ok && !x.cached)) resetAliasIndex(); })
+    .catch(() => { })
+    .finally(() => { _syncing = false; });
+}
 function buildIndex() {
+  maybeSyncOnline();
   const map = new Map();
   const addTable = (table, game, type) => {
     for (const [formal, aliases] of Object.entries(table || {})) {
@@ -229,6 +242,21 @@ function buildIndex() {
       if (bare !== formal) add(map, bare, entry);
     }
   };
+  /* 在线别名表优先：先建在线缓存索引，本地 YAML/miao 只做兜底（add 先到先得，后加不覆盖）。*/
+  for (const s of onlineAliasSources()) {
+    try {
+      const raw = fs.readFileSync(s.file, 'utf8');
+      if (/\.ya?ml$/i.test(s.file)) {
+        const t = readYaml(s.file);
+        if (t) addTable(t, s.game, s.type);
+      } else {
+        for (const [k, v] of Object.entries(parseMiaoAliasJs(raw))) {
+          for (const a of [].concat(v)) add(map, a, { name: k, game: s.game, type: s.type, src: 'online' });
+          add(map, k, { name: k, game: s.game, type: s.type, src: 'online' });
+        }
+      }
+    } catch { /* 单个在线文件坏了不影响其它 */ }
+  }
   for (const { file, game, type } of YAML_SOURCES) {
     const t = readYaml(p(file));
     if (t) addTable(t, game, type);

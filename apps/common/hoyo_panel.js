@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import { recordRandomBg } from '../../system/zzz_panel_bg.js'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { config, pluginPriority, render, makeForwardMsg } from '#HoYoGet'
@@ -1355,8 +1356,9 @@ async function randomBgUrl() {
       signal: AbortSignal.timeout(5000),
     })
     const location = res.headers?.get?.('location')
-    if (location) return new URL(location, RANDOM_BG_API).href
-    return RANDOM_BG_API
+    const bgUrl = location ? new URL(location, RANDOM_BG_API).href : RANDOM_BG_API
+    recordRandomBg(bgUrl, 'hoyo_panel')
+    return bgUrl
   } catch (err) {
     logger.debug?.(`[HoYoGet][hoyo_panel] 随机背景获取失败：${err?.message || err}`)
     return ''

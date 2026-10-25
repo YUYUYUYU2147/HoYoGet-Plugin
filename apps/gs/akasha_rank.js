@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import { recordRandomBg } from '../../system/zzz_panel_bg.js'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { pluginPriority, render, config } from '#HoYoGet'
@@ -44,7 +45,9 @@ async function fetchRandomBg() {
       if (!loc) break
       url = new URL(loc, url).href
     }
-    return /\.(png|jpe?g|webp|gif|avif)(\?|$)/i.test(url) ? url : ''
+    const bgUrl = /\.(png|jpe?g|webp|gif|avif)(\?|$)/i.test(url) ? url : ''
+    if (bgUrl) recordRandomBg(bgUrl, 'akasha')
+    return bgUrl
   } catch (err) {
     logger.debug?.(`[HoYoGet][akasha] 随机背景获取失败：${err?.message || err}`)
     return ''

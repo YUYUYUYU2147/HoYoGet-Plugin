@@ -1,4 +1,5 @@
 import { yaml, render, mys, config, reply_recallMsg } from '#HoYoGet';
+import { recordRandomBg } from '../../system/zzz_panel_bg.js'
 import { gsRoleView, srRoleView, stripTags } from '../../system/role_detail.js';
 import { buildRelicView, extractRelicArt } from './wiki/relic_view.js';
 import { fetchGsRole, buildGsDetail, fetchGsGuidePage, parseGsGuide, resolveGsGuideIcons, fetchGsRoleList, fetchGsWeaponList, fetchGsArtifactList, fetchSrRoleList, fetchSrLcList, fetchSrRelicList } from './wiki/bwiki_gs.js';
@@ -1324,6 +1325,7 @@ export class Wiki extends plugin {
       });
       const ct = String(r.headers.get('content-type') || '');
       if (!r.ok || !ct.startsWith('image/')) return '';
+      recordRandomBg(r.url || api, 'wiki');
       const buf = Buffer.from(await r.arrayBuffer());
       if (buf.length < 1024) return '';
       await fs.promises.mkdir(dir, { recursive: true });

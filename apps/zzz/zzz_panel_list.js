@@ -8,7 +8,7 @@ import { getBuffAreas } from '../../system/zzz_buff.js'
 import { mhyFetch } from '../../system/mhy_fetch.js'
 import { zzzPanelExtras } from '../../system/zzz_panel.js'
 import { fillBaseAdd } from '../../system/zzz_attr_base.js'
-import { getPanelBg, resolvePanelBg } from '../../system/zzz_panel_bg.js'
+import { getPanelBg, resolvePanelBg, rememberPanelBg2Msg, savePanelBg, lookupPanelBg, listPanelBg } from '../../system/zzz_panel_bg.js'
 import { zzzpScoreWeight, zzzpSubStatIds, zzzpWarmup } from '../../system/zzz_score_zzzp.js'
 zzzpWarmup()
 
@@ -2389,12 +2389,13 @@ export class zzz_panel_list extends plugin {
         server,
         count: cards.length,
         time: formatNow(),
-        bgImage: getPanelBg(),
+        bgImage: await resolvePanelBg(e),
         serviceLabel,
         showSource: useEnka,
         updatedCount: cards.filter(c => c.updated).length,
         ...getPlayerBadge(e, gamePlayer),
       }, { e, ret: true, dsf: ZZZ_PANEL_DSF })
+      await rememberPanelBg2Msg(img, e.__panelBg, e)
       return img
     } catch (err) {
       logger.error?.(`[HoYoGet][zzz_panel] 渲染失败：${err?.message || err}`)
@@ -2527,8 +2528,9 @@ export class zzz_panel_list extends plugin {
       // 缓存面板用的角色原图，供「%原图」直接取回
       const roleIcon = detail.charData?.role_icon
       const bmid = sent?.message_id || sent?.data?.message_id
+      if (bmid) savePanelBg(bmid, bgImage, e)
       if (bmid && typeof redis !== 'undefined') {
-        redis.set('ZZZ:PANEL:BG:' + bmid, bgImage, { EX: 3600 * 3 }).catch(() => {})
+        redis.set('ZZZ:PANEL:BG:' + bmid, bgImage, { EX: 3600 * 24 * 30 }).catch(() => {})
         redis.set(e.group_id ? 'ZZZ:PANEL:BG:GROUP:' + e.group_id + ':USER:' + e.user_id : 'ZZZ:PANEL:BG:USER:' + e.user_id, bgImage, { EX: 3600 * 3 }).catch(() => {})
       }
       if (roleIcon) {
@@ -3055,10 +3057,11 @@ export class zzz_panel_list extends plugin {
         ...detail,
         footer: 'from 米哈游 · 理论极限',
         appleStyle: panelAppleStyle(),
-        bgImage: getPanelBg(),
+        bgImage: await resolvePanelBg(e),
         playerName: '理论极限',
         playerAvatar: '',
       }, { e, ret: true, dsf: ZZZ_PANEL_DSF })
+      await rememberPanelBg2Msg(img, e.__panelBg, e)
       return img
     } catch (err) {
       logger.error?.(`[HoYoGet][zzz_panel] 极限面板渲染失败：${err?.message || err}`)
@@ -3184,10 +3187,11 @@ export class zzz_panel_list extends plugin {
         uid,
         general,
         rows,
-        bgImage: getPanelBg(),
+        bgImage: await resolvePanelBg(e),
         playerName,
         playerAvatar,
       }, { e, ret: true, dsf: ZZZ_PANEL_DSF })
+      await rememberPanelBg2Msg(img, e.__panelBg, e)
       return img
     } catch (err) {
       logger.error?.(`[HoYoGet][zzz_panel] 练度统计渲染失败：${err?.message || err}`)
@@ -3197,15 +3201,30 @@ export class zzz_panel_list extends plugin {
   }
 
   /** 「%原图」：取回面板实际使用的角色原图（data URI），不是截图 */
+  /** 「#背景图」：引用面板消息取回其背景图；发「#背景图列表」以转发查看全部记录 */
+  /** 「#背景图」：引用面板消息取回其背景图；发「#背景图列表」以转发查看全部记录（图片+链接） */
+  /** 「#背景图」：引用面板消息取回背景图；「#背景图列表」转发查看全部记录（仅主人） */
   async panelBgImage(e) {
+    const _arg = String(e.msg || '').replace(/^#背景图/, '').trim()
+    if (/^(列表|历史|list)$/i.test(_arg)) {
+      if (!e.isMaster) return e.reply('仅限主人使用')
+      const _list = listPanelBg(50)
+      if (!_list.length) return e.reply('暂无背景图记录，渲染一次面板后再试')
+      const _nodes = _list.map((x, i) => ['#' + (i + 1) + ' 消息ID：' + x.msgId + '\n' + x.url, segment.image(x.url)])
+      return e.reply(await makeForwardMsg(e, _nodes, '背景图记录（共 ' + _list.length + ' 条）'))
+    }
     let id = e.source?.message_id || e.source?.id || ''
     try {
-      const src = e.getReply ? await e.getReply() : null
-      id = src?.message_id || src?.data?.message_id || id
+      const _src = e.getReply ? await e.getReply() : null
+      id = _src?.message_id || _src?.data?.message_id || id
     } catch { }
+    if (id) {
+      const _bg = await lookupPanelBg(id)
+      if (_bg) return e.reply(segment.image(_bg))
+    }
     if (typeof redis === 'undefined') return e.reply(segment.image(getPanelBg()))
     const key = e.group_id ? 'ZZZ:PANEL:BG:GROUP:' + e.group_id + ':USER:' + e.user_id : 'ZZZ:PANEL:BG:USER:' + e.user_id
-    const bg = (id && await redis.get('ZZZ:PANEL:BG:' + id)) || (await redis.get(key)) || getPanelBg()
+    const bg = (await redis.get(key)) || getPanelBg()
     return e.reply(segment.image(bg))
   }
 
@@ -3328,8 +3347,9 @@ export class zzz_panel_list extends plugin {
         uid,
         command: `米游社${charData.full_name_mi18n || arg}伤害${idx + 1}`,
         footer,
-        bgImage: getPanelBg(),
+        bgImage: await resolvePanelBg(e),
       }, { e, ret: true, dsf: ZZZ_PANEL_DSF })
+      await rememberPanelBg2Msg(img, e.__panelBg, e)
       return img
     } catch (err) {
       logger.error?.(`[HoYoGet][zzz_panel] 伤害详情渲染失败：${err?.message || err}`)
