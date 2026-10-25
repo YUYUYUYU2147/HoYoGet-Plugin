@@ -96,10 +96,11 @@ export class bh3_all_note extends plugin {
     if (fs.existsSync(stokenPath)) {
       const stokenData = yaml.get(stokenPath) || {};
       if (!uid) {
+        const biz = { gs: 'hk4e_cn', sr: 'hkrpg_cn', zzz: 'nap_cn', bh3: 'bh3_cn' }[game];
         const gameRegions = this.getGameRegions(game);
         for (const key of Object.keys(stokenData)) {
           const entry = stokenData[key];
-          if (gameRegions.includes(entry?.region || '')) {
+          if ((biz ? entry?.game_biz === biz : gameRegions.includes(entry?.region || '')) && entry?.uid && String(entry.uid) !== '0') {
             uid = key;
             region = entry.region || region;
             break;
@@ -107,6 +108,7 @@ export class bh3_all_note extends plugin {
         }
       }
       const entry = stokenData[uid];
+      if (!ck && entry && entry.ck_stoken) ck = String(entry.ck_stoken).trim();
       if (entry) {
         region = entry.region || region;
         if (entry.stuid) {
@@ -228,7 +230,7 @@ export class bh3_all_note extends plugin {
 
   async getWidgetNote(e, game) {
     const auth = await this.getAuth(e, game);
-    if (!auth.uid || !auth.ck) return null;
+    if (!auth.uid || !auth.ck) { logger.warn("[all_note] " + game + " 未绑定账号或缺少 CK"); return null };
     const headers = mhy.getHeaders(e, auth.ck, false);
     const urls = {
       gs: 'https://api-takumi-record.mihoyo.com/game_record/genshin/aapi/widget/v2',
@@ -239,7 +241,7 @@ export class bh3_all_note extends plugin {
       this.getRoleInfo(e, headers, auth.uid),
       fetch(urls[game], { method: 'get', headers }).then(r => r.json()),
     ]);
-    if (res?.retcode !== 0) return null;
+    if (res?.retcode !== 0) { logger.warn("[all_note] " + game + " 接口返回 " + res?.retcode + " " + (res?.message || "")); return null };
     const note = res.data || {};
     const common = {
       gameKey: game,

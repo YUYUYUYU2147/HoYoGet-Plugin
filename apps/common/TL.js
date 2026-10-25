@@ -38,6 +38,7 @@ async function ensureCookieToken(e, ck, entry = null) {
     const headers = mhy.getHeaders(e, ck);
     const cookieRes = await fetch(`https://api-takumi.mihoyo.com/auth/api/getCookieAccountInfoBySToken?stoken=${encodeURIComponent(stoken)}&uid=${encodeURIComponent(stuid)}`, { method: 'GET', headers }).then(r => r.json());
     const ltokenRes = await fetch('https://passport-api.mihoyo.com/account/auth/api/getLTokenBySToken', { method: 'GET', headers }).then(r => r.json());
+    logger.error(`[TL-ck] stuid=${stuid} ct=${cookieRes?.retcode} lt=${ltokenRes?.retcode} token=${cookieToken ? 1 : 0} ltoken=${ltoken ? 1 : 0}`);
     const cookieToken = cookieRes?.data?.cookie_token;
     const ltoken = ltokenRes?.data?.ltoken || entry?.ltoken;
     if (cookieToken && ltoken) return `ltoken=${ltoken};ltuid=${stuid};cookie_token=${cookieToken};account_id=${stuid};`;
@@ -554,11 +555,24 @@ export class TL extends plugin {
     let uid = uidOverride || e.user.getUid(game);
 
     if (!uid) {
+      const biz = { gs: 'hk4e_cn', sr: 'hkrpg_cn', zzz: 'nap_cn', bh3: 'bh3_cn' }[game];
+      try {
+        const p = `./plugins/HoYoGet-Plugin/data/Stoken/${e.user_id}.yaml`;
+        if (biz && fs.existsSync(p)) {
+          const d = yaml.get(p) || {};
+          const k = Object.keys(d).find((x) => d[x] && d[x].uid && String(d[x].uid) !== '0' && d[x].game_biz === biz);
+          if (k) uid = k;
+        }
+      } catch (_) {}
+    }
+    if (!uid) {
       if (!san) e.reply('未发现绑定的uid，请[扫码绑定]米游社~');
       return '没有';
     }
 
+    logger.error(`[TL-note] enter ${game} uid=${uid} override=${uidOverride}`);
     let sk = await mhy.getstoken(e, uid);
+    if (!sk) { const _b = { gs: 'hk4e_cn', sr: 'hkrpg_cn', zzz: 'nap_cn', bh3: 'bh3_cn' }[game]; try { const _p = `./plugins/HoYoGet-Plugin/data/Stoken/${e.user_id}.yaml`; const _d = yaml.get(_p) || {}; const _k = Object.keys(_d).find((x) => _d[x] && _d[x].ck_stoken && _d[x].game_biz === _b && String(_d[x].uid) !== '0'); if (_k) { uid = _k; sk = _d[_k].ck_stoken; } } catch (_) {} }
     if (!sk) {
       if (!san)
         e.reply('UID:' + uid + '未绑定米游社SToken，请[扫码绑定]米游社~', true);
@@ -567,7 +581,8 @@ export class TL extends plugin {
     const entry = uidOverride ? this.getStokenEntry(e, uid) : null;
     const defaultUid = e.user?.getUid?.(game);
     const useRoleEndpoint = !!uidOverride && String(uid) !== String(defaultUid || '');
-    const reqCk = useRoleEndpoint && game === 'gs' ? await ensureCookieToken(e, sk, entry) : sk;
+    const reqCk = await ensureCookieToken(e, sk, entry || this.getStokenEntry(e, uid));
+    logger.error(`[TL-note] ck ${game} uid=${uid} len=${String(reqCk).length}`);
     let headers = mhy.getHeaders(e, reqCk, useRoleEndpoint ? true : false);
     let url = game == 'gs' && useRoleEndpoint
       ? `${this.gsDailyNoteUrl}?server=${encodeURIComponent(entry?.region || mhy.getServer(uid, 'gs') || 'cn_gf01')}&role_id=${encodeURIComponent(uid)}`
@@ -581,6 +596,7 @@ export class TL extends plugin {
       method: 'get',
       headers,
     }).then(res => res.json());
+    logger.error(`[TL-note] res ${game} uid=${uid} retcode=${res?.retcode} msg=${res?.message}`);
     if ([-10001, 10001, -100].includes(res?.retcode)) {
       if (!san) {
         e.reply('登录验证过期。请重新：扫码绑定 ');
