@@ -69,12 +69,13 @@
     return '<img class="pn-game ' + gm.cls + '" src="' + iconUrl(game) + '" title="' + esc(gm.name) + '" alt="" onerror="this.style.display=\'none\'" />'
   }
 
-  async function renderStats() {
+  async function renderStats(src) {
+    const sfx = "&source=" + encodeURIComponent(src || "panel")
     try {
       const [gs, sr, zzz] = await Promise.all([
-        api('/panel/list?game=gs', { headers: headers() }),
-        api('/panel/list?game=sr', { headers: headers() }),
-        api('/panel/list?game=zzz', { headers: headers() }),
+        api('/panel/list?game=gs' + sfx, { headers: headers() }),
+        api('/panel/list?game=sr' + sfx, { headers: headers() }),
+        api('/panel/list?game=zzz' + sfx, { headers: headers() }),
       ])
       const gsList = gs?.result || []
       const srList = sr?.result || []
@@ -83,8 +84,8 @@
       const srImgs = srList.reduce((n, p) => n + (p.count || 0), 0)
       const zzzImgs = zzzList.reduce((n, p) => n + (p.count || 0), 0)
       const cells = [
-        { cls: 'chars', k: '角色总数', v: gsList.length + srList.length + zzzList.length },
-        { cls: 'imgs', k: '图片总数', v: gsImgs + srImgs + zzzImgs },
+        { cls: 'chars', k: (src === 'cowcoo' ? '咕咕牛角色' : '角色总数'), v: gsList.length + srList.length + zzzList.length },
+        { cls: 'imgs', k: (src === 'cowcoo' ? '咕咕牛图片' : '图片总数'), v: gsImgs + srImgs + zzzImgs },
         { cls: 'gs', k: '原神', v: gsList.length },
         { cls: 'sr', k: '星穹铁道', v: srList.length },
         { cls: 'zzz', k: '绝区零', v: zzzList.length },
@@ -95,8 +96,7 @@
 
   async function load() {
     cards.innerHTML = '<div class="pn-empty">加载中…</div>'
-    if (currentSource === 'panel') renderStats()
-    else stats.innerHTML = ''
+    renderStats(currentSource)
     try {
       const json = await api('/panel/list?source=' + currentSource + '&game=' + currentGame, { headers: headers() })
       const list = json?.result || []

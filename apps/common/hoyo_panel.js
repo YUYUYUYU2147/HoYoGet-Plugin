@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import { recordRandomBg } from '../../system/zzz_panel_bg.js'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { config, pluginPriority, render, makeForwardMsg } from '#HoYoGet'
+import { config, pluginPriority, render, makeForwardMsg, yaml } from '#HoYoGet'
 import { listCategories, fetchLeaderboard, getUserCalculations, getDamageDistribution } from '../../system/akasha.js'
 import { yshelperRankForChar } from '../../system/yshelper.js'
 import { getRoleProfile } from '../../system/roleProfile.js'
@@ -12,6 +12,41 @@ import { buildRadar } from '../../system/radar.js'
 import { metaResRel, metaRoot } from '#hoyo.miao.path'
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
+
+function zzzLookup(raw) {
+  const clean = String(raw || '').replace(/[「」]/g, '').trim()
+  if (!clean) return ''
+  const norm = v => String(v || '').replace(/[\s·・\-—_「」『』《》【】\[\]（）()]/g, '').toLowerCase()
+  const nClean = norm(clean)
+  try {
+    const names = yaml.get(path.join(PLUGIN_ROOT, 'system', 'default', 'zzz_js_names.yaml')) || {}
+    for (const [formal, aliases] of Object.entries(names)) {
+      if (norm(formal) === nClean) return formal
+      if (Array.isArray(aliases) && aliases.some(a => norm(a) === nClean)) return formal
+    }
+  } catch { }
+  return ''
+}
+
+function zzzRoleName(raw) {
+  const clean = String(raw || '').replace(/[「」]/g, '').trim()
+  if (!clean) return ''
+  const norm = v => String(v || '').replace(/[\s·・\-—_「」『』《》【】\[\]（）()]/g, '').toLowerCase()
+  const nClean = norm(clean)
+  try {
+    const names = yaml.get(path.join(PLUGIN_ROOT, 'system', 'default', 'zzz_js_names.yaml')) || {}
+    const list = Object.entries(names)
+    for (const [formal, aliases] of list) {
+      if (norm(formal) === nClean) return formal
+      if (Array.isArray(aliases) && aliases.some(a => norm(a) === nClean)) return formal
+    }
+    if (nClean.length >= 2) {
+      for (const [formal] of list) { const nf = norm(formal); if (nf && (nf.startsWith(nClean) || nClean.startsWith(nf) || nClean.includes(nf))) return formal }
+      for (const [formal, aliases] of list) { if (Array.isArray(aliases) && aliases.some(a => { const na = norm(a); return na && na.length >= 2 && (na.includes(nClean) || nClean.includes(na)) })) return formal }
+    }
+  } catch { }
+  return clean
+}
 const YUNZAI_DB = path.join(process.cwd(), 'data', 'db', 'data.db')
 
 /**
@@ -106,7 +141,7 @@ async function normalizeBarePanel(msg) {
   let game = ''
   const g = name.match(BARE_GAME)
   if (g) {
-    game = ['星铁', '崩铁', 'sr'].includes(g[1].toLowerCase()) ? 'sr' : 'gs'
+    game = ['星铁', '崩铁', 'sr'].includes(g[1].toLowerCase()) ? 'sr' : (['绝区零', '绝区', '绝', 'zzz'].includes(g[1].toLowerCase()) ? 'zzz' : 'gs')
     name = name.slice(g[0].length).trim()
   }
   const miao = await loadMiao()
@@ -115,7 +150,7 @@ async function normalizeBarePanel(msg) {
      真正的归属看实例自带的 isSr / game。 */
   const found = miao.Character.get(name)
   if (!found) return ''
-  if (!game) game = found.isSr || found.game === 'sr' ? 'sr' : 'gs'
+  if (!game) game = found.isSr || found.game === 'sr' ? 'sr' : (found.game === 'zzz' ? 'zzz' : 'gs')
   if ((game === 'sr') !== !!(found.isSr || found.game === 'sr')) return ''
   return `#米哈游${game === 'sr' ? '星铁' : '原神'}面板 ${name}${uid ? ' ' + uid : ''}`
 }
@@ -1804,19 +1839,25 @@ export class hoyo_panel extends plugin {
    * 解析自定义面板图用的角色：写名字或简称都行，返回 { name, game }。
    * 用 miao 的角色表只为「认名字 / 定游戏」，图本身完全走本插件目录，不读 miao 的图。
    */
-  async resolveArtRole(raw) {
+  
+async resolveArtRole(raw) {
     const miao = await loadMiao()
     const clean = String(raw || '').replace(/[「」]/g, '').trim()
     if (!clean) return null
     /* 「星铁遐蝶」「原神胡桃」这种把游戏写在前面的写法 */
     let game = ''
     let name = clean
-    const g = clean.match(/^(原神|星铁|崩铁|gs|sr)\s*/i)
+    const g = clean.match(/^(原神|星铁|崩铁|gs|sr|绝区零|绝区|绝|zzz)\s*/i)
     if (g) {
       game = ['星铁', '崩铁', 'sr'].includes(g[1].toLowerCase()) ? 'sr' : 'gs'
       name = clean.slice(g[0].length).trim()
     }
-    const found = miao?.Character?.get?.(name)
+    if (game === 'zzz') { const zn = zzzRoleName(name); return zn ? { name: zn, game: 'zzz' } : null }
+  {
+    const zn = zzzLookup(name)
+    if (zn) return { name: zn, game: 'zzz' }
+  }
+  const found = miao?.Character?.get?.(name)
     if (found) return { name: found.name, game: found.isSr || found.game === 'sr' ? 'sr' : 'gs' }
     if (!game) return null
     return { name, game }
@@ -1878,7 +1919,7 @@ export class hoyo_panel extends plugin {
       }
     }
     const where = `resources/hoyo_panel/images/panel/${role.game}/${role.name}/`
-    return e.reply(`成功上传 ${ok} 张（${role.name}·${role.game === 'sr' ? '星铁' : '原神'}），失败 ${images.length - ok} 张。\n目录：${where}`)
+    return e.reply(`成功上传 ${ok} 张（${role.name}·${role.game === 'sr' ? '星铁' : (role.game === 'zzz' ? '绝区零' : '原神')}），失败 ${images.length - ok} 张。\n目录：${where}`)
   }
 
   /** 「#米哈游查看雷神面板图」：列出已上传的图，带 ID 方便删除 */
@@ -1987,7 +2028,7 @@ export class hoyo_panel extends plugin {
       })
 
       /* 先记下未裁切的立绘，供「#米哈游原图」回复；再走面板图的裁切。 */
-      const originalFile = panelOriginalFile(data)
+
       /* 咕咕牛图库的面板图左侧带二维码/编号栏，出图前按比例裁掉；
          裁切失败就保留原图，不影响面板。 */
       const cropRatio = customArtCrop()
@@ -1999,6 +2040,8 @@ export class hoyo_panel extends plugin {
         }
       }
 
+            /* 立绘在裁切之后取，保证原图与面板一致 */
+      const originalFile = panelOriginalFile(data)
       /* 关键数据全空时不要出空白图：通常是 miao 版本差异导致字段名不同 */
       if (!data.attrs.length && !data.artis.length) {
         logger.mark?.(`[HoYoGet][hoyo_panel] ${charName} 面板字段为空：avatar 键=${Object.keys(hit || {}).join(',')}`)

@@ -66,7 +66,7 @@ const COWCOO_ROOT = path.join(YZ_ROOT, 'resources', 'CowCoos')
 const COWCOO_REPOS = ['Miao-Plugin-MBT', 'Miao-Plugin-MBT-2', 'Miao-Plugin-MBT-3', 'Miao-Plugin-MBT-4']
 
 function normalDirCandidates(game = 'gs') {
-  const g = game === 'sr' ? 'sr' : 'gs'
+  const g = ['gs', 'sr', 'zzz'].includes(game) ? game : 'gs'
   const out = []
   try {
     const conf = readConfigSafe() || {}
@@ -155,10 +155,11 @@ function nameVariants(name) {
  * @returns {string} 相对插件 resources 的路径，如 hoyo_panel/images/panel/gs/雷电将军/x.webp
  */
 export function pickUserPanelArt(game, names = []) {
-  const g = game === 'sr' ? 'sr' : 'gs'
+  const g = ['gs', 'sr', 'zzz'].includes(game) ? game : 'gs'
   for (const name of names.flatMap(n => nameVariants(n))) {
     const dir = path.join(CUSTOM_PANEL_ROOT, g, name)
-    const hit = pickInDir(dir)
+    try { if (!pickInDir(dir)) { for (const b of normalDirCandidates(g)) { let f2 = []; try { f2 = fs.readdirSync(path.join(b, name)).filter(f => /\.(png|jpe?g|webp)$/i.test(f)).sort() } catch (e) { } if (f2.length) { const bf = f2[Math.floor(Math.random() * f2.length)]; fs.mkdirSync(dir, { recursive: true }); const dp = path.join(dir, bf); if (!fs.existsSync(dp)) { try { fs.linkSync(path.join(b, name, bf), dp) } catch (e) { fs.copyFileSync(path.join(b, name, bf), dp) } } break } } } } catch (e) { }
+  const hit = pickInDir(dir)
     if (!hit) continue
     // pickInDir 返回的是 miao 的格式，这里换算成插件内的路径
     return `hoyo_panel/images/panel/${g}/${encodeURIComponent(name)}/${hit.split('/').pop()}`
@@ -168,7 +169,7 @@ export function pickUserPanelArt(game, names = []) {
 
 /** 列出某角色自定义目录下的图片文件名（按名字排序） */
 export function listUserPanelArt(game, name) {
-  const g = game === 'sr' ? 'sr' : 'gs'
+  const g = ['gs', 'sr', 'zzz'].includes(game) ? game : 'gs'
   for (const n of nameVariants(name)) {
     const dir = path.join(CUSTOM_PANEL_ROOT, g, n)
     try {
@@ -181,7 +182,7 @@ export function listUserPanelArt(game, name) {
 
 /** 上传用的目标目录（不存在就建） */
 export function ensureUserPanelDir(game, name) {
-  const g = game === 'sr' ? 'sr' : 'gs'
+  const g = ['gs', 'sr', 'zzz'].includes(game) ? game : 'gs'
   const dir = path.join(CUSTOM_PANEL_ROOT, g, String(name || '').trim())
   fs.mkdirSync(dir, { recursive: true })
   return dir
@@ -204,7 +205,7 @@ export async function cropCustomPanelArt(splash = '', splashLocal = '', game = '
   if (!srcRel) return ''
   const r = Number(ratio)
   if (!Number.isFinite(r) || r <= 0 || r >= 0.5) return ''
-  const g = game === 'sr' ? 'sr' : 'gs'
+  const g = ['gs', 'sr', 'zzz'].includes(game) ? game : 'gs'
   try {
     /* 咕咕牛目录可能被配置到插件外，按候选目录依次找原始文件 */
     let srcAbs = ''

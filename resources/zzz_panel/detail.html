@@ -35,12 +35,11 @@
               <span class="element-icon {{c.sub_element_str}}"></span>
             </div>
             <div class="chips">
-              <span class="chip gold">Lv.{{c.level}}</span>
-              <span class="chip">{{c.profession}}</span>
-              <span class="chip">{{c.element_cn}}</span>
-              <span class="chip">影{{c.rank}}</span>
+                            <span class="chip">{{if c.professionIcon}}<img class="chip-ico" src="{{c.professionIcon}}">{{/if}}{{c.profession}}</span>
+              <span class="chip">{{if c.elementIcon}}<img class="chip-ico" src="{{c.elementIcon}}">{{/if}}{{c.element_cn}}</span>
+              <span class="chip">{{if c.campIcon}}<img class="chip-ico" src="{{c.campIcon}}">{{/if}}{{c.camp}}</span><span class="chip">影{{c.rank}}</span>
             </div>
-            <div class="uid">UID {{uid}}</div>
+            <div class="uid"><span class="lv-badge">Lv.{{c.level}}</span> UID {{uid}}</div>
             <div class="stats">
               {{each c.stat_rows r}}
               <div class="row">

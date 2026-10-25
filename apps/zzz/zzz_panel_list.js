@@ -877,11 +877,18 @@ export function calcDamage(bp, level, avatar, charName) {
   for (const sk of avatar?.skills || []) {
     const skLv = Number(sk.level) || 1
     const items = (sk.items || []).filter(v => String(v?.title || '').trim())
-    const fallback = items.length ? null : bestOfType(Number(sk.skill_type))
-    for (const item of items.length ? items : (fallback ? [{ title: fallback.name }] : [])) {
+    if (items.length) { const cats = CAT_OF_TYPE[Number(sk.skill_type)] || []; for (const s2 of rates.skills) { if (!s2.isHide && s2.alsoShow && cats.includes(skillCat(s2.name)) && !items.some(it => skillCore(it.title) === skillCore(s2.name))) items.push({ title: s2.name }) } }
+    const fallback = items.length ? [] : (() => {
+      const cats = CAT_OF_TYPE[Number(sk.skill_type)] || []
+      const list = rates.skills.filter(s => !s.isHide && cats.includes(skillCat(s.name)))
+      if (!list.length) return []
+      const best = list.reduce((a, b) => ((b.rate || 0) > (a.rate || 0) ? b : a))
+      return [best, ...list.filter(s => s !== best && s.alsoShow)]
+    })()
+    for (const item of items.length ? items : fallback.map(f => ({ title: f.name, __e: f }))) {
       const title = String(item?.title || '').trim()
       if (!title) continue
-      const hit = fallback || table.get(`${skillCat(title)}|${skillCore(title)}`)
+      const hit = item?.__e || table.get(`${skillCat(title)}|${skillCore(title)}`)
       if (!hit) continue                      // 倍率表没有这个技能（如新角色未收录）
       if (hit.isHide) continue                // 隐藏子段（如回旋斩击）只作为主段的一部分，不单列
       const one1 = one(hit.key)
@@ -1704,6 +1711,7 @@ function normalizeDetail(a, uid) {
 
   // 驱动盘
   const discsRaw = a?.equip || []
+  const _vw = (() => { try { return getScoreWeight(a?.name_mi18n || '', {}, a?.avatar_profession, a?.element_type, basic_properties).weight || {} } catch { return {} } })()
   const equip_final = discsRaw.map(d => {
     const suit = d.equip_suit || {}
     return {
@@ -1721,7 +1729,7 @@ function normalizeDetail(a, uid) {
         base: p.base || '',
       })),
       properties: (d.properties || []).map(p => {
-        const valid = !!p.valid
+        const valid = p.valid != null ? !!p.valid : !!_vw[p.property_id]
         return {
           pid: p.property_id,
           classname: (ZPROP[p.property_id] || {}).c || 'attack',
@@ -1759,6 +1767,7 @@ function normalizeDetail(a, uid) {
     ap: parseFloat(basic_properties.elementmystery?.final) || 0,
   }
   const scoreRes = calcEquipScore(equip_final, a?.name_mi18n || '', scoreStats, a?.avatar_profession, a?.element_type, basic_properties)
+  equip_final.forEach(e=>e.properties.forEach(x=>{x.base_score=(scoreRes.weight[x.pid]>0?1:0)}))
   const statWeight = pid => Math.round((scoreRes.weight?.[Number(pid)] || 0) * 100)
 
   const propertyStats = Object.values(agg)
@@ -1841,6 +1850,10 @@ function normalizeDetail(a, uid) {
     rarity,
     sub_element_str: subElement,
     element_str: elementStr,
+    camp: (Object.values(getZzzPartnerMap()).find(v => v && (v.name === a?.name_mi18n || v.full_name === a?.full_name_mi18n)))?.Camp || "",
+    campIcon: (() => { const c = (Object.values(getZzzPartnerMap()).find(v => v && (v.name === a?.name_mi18n || v.full_name === a?.full_name_mi18n)))?.Camp; return c ? "file://" + PLUGIN_ROOT + "/resources/zzz_panel/images/chip_icons/camp/" + c + ".png" : "" })(),
+    professionIcon: (() => { const t = ZZZ_TYPE_MAP[a?.avatar_profession]; return t ? "file://" + PLUGIN_ROOT + "/resources/zzz_panel/images/chip_icons/profession/" + t + ".png" : "" })(),
+    elementIcon: (() => { const e = ZZZ_ELEMENT_MAP[a?.element_type]; return e ? "file://" + PLUGIN_ROOT + "/resources/zzz_panel/images/chip_icons/element/" + e + ".png" : "" })(),
     element_cn: ZZZ_ELEMENT_MAP[a?.element_type] || `属性${a?.element_type ?? ''}`,
     profession: ZZZ_TYPE_MAP[a?.avatar_profession] || `类型${a?.avatar_profession ?? ''}`,
     full_name_mi18n: a?.full_name_mi18n || a?.name_mi18n || `角色${a?.id}`,
@@ -1886,7 +1899,7 @@ const DAMAGE_REG = new RegExp(`${PREFIX_REG}(?!更新|刷新)(.+?)伤害\\s*(\\d
 const DETAIL_REG_OLD = /^(?:米游社|%|#?绝区零)面板\s+(.+)$/
 const HELP_REG = /^米游社面板$/
 const ORIGINAL_REG = /^(?:米游社|#?绝区零)原图$/
-const PANEL_UPLOAD_REG = /^(?:米游社|%|#?绝区零)?(?:上传|添加)(.+?)(?:角色|面板)图$/
+const PANEL_UPLOAD_REG = /^(?:#?(?:米游社|米哈游)|%|#?(?:绝区零|zzz))?(?:上传|添加)(.+?)(?:角色|面板)图$/
 const PANEL_IMAGES_REG = /^(?:米游社|%|#?绝区零)?(?:获取|查看)(.+?)(?:角色|面板)图\s*(\d*)$/
 const PANEL_DELETE_IMG_REG = /^(?:米游社|%|#?绝区零)?删除(.+?)(?:角色|面板)图(.+)$/
 const EXTREME_REG = /^(?:米游社|%|#?绝区零)?(.+?)极限面板$/
@@ -2447,7 +2460,7 @@ export class zzz_panel_list extends plugin {
     // avatar/basic 只返回部分角色（展示柜），不在列表里的角色（如叶瞬光）
     // 用本地全量角色表解析出 id，直接查 avatar/info。
     if ((!target || target.id == null) && !/^\d+$/.test(arg)) {
-      target = resolveZzzIdByName(arg)
+      target = resolveZzzIdByName(arg) || resolveZzzIdByName(this.resolvePanelRole(arg))
     }
     if (!target || target.id == null) {
       const names = list.slice(0, 12).map((it, i) => `${i + 1}.${it.name_mi18n || it.full_name_mi18n}`).join('  ')
@@ -2558,20 +2571,37 @@ export class zzz_panel_list extends plugin {
 
   /** 把别名/本名解析成资源目录里的正式角色名 */
   resolvePanelRole(raw = '') {
-    const clean = String(raw || '').replace(/[「」]/g, '').trim()
+    let clean = String(raw || '').replace(/[「」]/g, '').trim()
+    /* 去掉可能被一起带进来的前缀：# % 米游社 米哈游 米哈 绝区零 绝 zzz */
+    const _ng = clean.replace(/^[#%]?\s*(?:米游社|米哈游|米哈)?\s*(?:绝区零|绝|zzz)?[\s·]*/i, '').trim()
+    if (_ng) clean = _ng
     if (!clean) return ''
     const norm = v => String(v || '').replace(/[\s·・\-—_「」『』《》【】\[\]（）()]/g, '').toLowerCase()
-    const localBase = path.join(PLUGIN_ROOT, 'resources', 'zzz_panel', 'images', 'panel')
+    const nClean = norm(clean)
     const hasDir = name => CUSTOM_PORTRAIT_DIRS.some(base => fs.existsSync(path.join(base, name)))
     if (hasDir(clean)) return clean
     try {
       const names = yaml.get(path.join(PLUGIN_ROOT, 'system', 'default', 'zzz_js_names.yaml')) || {}
-      for (const [formal, aliases] of Object.entries(names)) {
-        if (norm(formal) === norm(clean) || (Array.isArray(aliases) && aliases.some(a => norm(a) === norm(clean)))) {
-          return formal
+      const list = Object.entries(names)
+      for (const [formal, aliases] of list) {
+        if (norm(formal) === nClean) return formal
+        if (Array.isArray(aliases) && aliases.some(a => norm(a) === nClean)) return formal
+      }
+      if (nClean.length >= 2) {
+        for (const [formal] of list) {
+          const nf = norm(formal)
+          if (nf && (nf.startsWith(nClean) || nClean.startsWith(nf))) return formal
+        }
+        for (const [formal, aliases] of list) {
+          if (Array.isArray(aliases) && aliases.some(a => { const na = norm(a); return na && na.length >= 2 && (na.startsWith(nClean) || nClean.startsWith(na) || na.includes(nClean)) })) return formal
+        }
+        /* 最强兜底：输入里包含某个正式名（如「绝区零艾莲」含「艾莲」） */
+        for (const [formal] of list) {
+          const nf = norm(formal)
+          if (nf && nf.length >= 2 && nClean.includes(nf)) return formal
         }
       }
-    } catch { /* 别名表读不到就只认本名 */ }
+    } catch { }
     return ''
   }
 
@@ -2596,7 +2626,7 @@ export class zzz_panel_list extends plugin {
   async panelUploadImages(e) {
     if (!e.isMaster) return e.reply('只有主人才能上传面板图')
     const m = String(e.msg || '').match(PANEL_UPLOAD_REG)
-    const role = this.resolvePanelRole(m?.[1] || '')
+    const role = this.resolvePanelRole(m?.[1] || String(e.msg || '')); logger?.mark?.('[HoYoGet][zzz_panel] 上传识别: e.msg=' + JSON.stringify(e.msg) + ' m=' + JSON.stringify(m && m[1]) + ' role=' + role); logger?.mark?.('[HoYoGet][zzz_panel] 上传识别: e.msg=' + JSON.stringify(e.msg) + ' m=' + JSON.stringify(m && m[1]) + ' role=' + role)
     if (!role) return e.reply('未找到对应角色')
     const images = await this.collectPanelImages(e)
     if (!images.length) return e.reply('消息中未找到图片，请把图片和指令一起发，或引用要添加的图片')
@@ -2608,7 +2638,7 @@ export class zzz_panel_list extends plugin {
         const url = img.url || img.file || ''
         let buf
         if (/^https?:/i.test(url)) {
-          const resp = await mhyFetch(url)
+          const resp = await fetch(url)
           buf = Buffer.from(await resp.arrayBuffer())
         } else {
           const file = String(url).replace(/^file:\/\//, '')
@@ -2633,7 +2663,7 @@ export class zzz_panel_list extends plugin {
   /** 查看某角色已上传的面板图，带 ID 便于删除 */
   async panelImageList(e) {
     const m = String(e.msg || '').match(PANEL_IMAGES_REG)
-    const role = this.resolvePanelRole(m?.[1] || '')
+    const role = this.resolvePanelRole(m?.[1] || String(e.msg || ''))
     if (!role) return e.reply('未找到对应角色')
     const dir = path.join(PLUGIN_ROOT, 'resources', 'zzz_panel', 'images', 'panel', role)
     let files = []

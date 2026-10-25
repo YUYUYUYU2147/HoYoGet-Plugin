@@ -99,7 +99,8 @@ export function damageSkillsAt(charNameOrId, skillLevel = 16) {
       // 少了它们，多段技能只会按首段倍率算，直接低估一大截。
       ops: s.ops || [],
       isHide: !!s.isHide,
-      isMain: !!s.isMain
+      isMain: !!s.isMain,
+    alsoShow: !!s.alsoShow
     }))
   return { ok: true, char, skillLevel: lv, skills }
 }

@@ -1,0 +1,44 @@
+{
+ "camp": {
+  "狡兔屋": "chip_icons/camp/狡兔屋.png",
+  "白祇重工": "chip_icons/camp/白祇重工.png",
+  "维多利亚家政": "chip_icons/camp/维多利亚家政.png",
+  "防卫军·奥波勒斯小队": "chip_icons/camp/防卫军·奥波勒斯小队.png",
+  "防卫军·白银小队": "chip_icons/camp/防卫军·白银小队.png",
+  "对空六课": "chip_icons/camp/对空六课.png",
+  "治安局·刑侦特勤组": "chip_icons/camp/治安局·刑侦特勤组.png",
+  "卡吕冬之子": "chip_icons/camp/卡吕冬之子.png",
+  "天琴座": "chip_icons/camp/天琴座.png",
+  "反舌鸟": "chip_icons/camp/反舌鸟.png",
+  "云岿山": "chip_icons/camp/云岿山.png",
+  "怪啖屋": "chip_icons/camp/怪啖屋.png",
+  "坎卜斯黑枝": "chip_icons/camp/坎卜斯黑枝.png",
+  "妄想天使": "chip_icons/camp/妄想天使.png",
+  "治安局·都市秩序部": "chip_icons/camp/治安局·都市秩序部.png",
+  "法厄同": "chip_icons/camp/法厄同.png",
+  "罗斯凯利法·外务筹策局": "chip_icons/camp/罗斯凯利法·外务筹策局.png",
+  "达识结社": "chip_icons/camp/达识结社.png",
+  "罗斯凯利法·空域巡戍局": "chip_icons/camp/罗斯凯利法·空域巡戍局.png",
+  "罗斯凯利法·弗林特工坊": "chip_icons/camp/罗斯凯利法·弗林特工坊.png"
+ },
+ "profession": {
+  "强攻": "chip_icons/profession/强攻.png",
+  "击破": "chip_icons/profession/击破.png",
+  "支援": "chip_icons/profession/支援.png",
+  "异常": "chip_icons/profession/异常.png",
+  "防护": "chip_icons/profession/防护.png",
+  "命破": "chip_icons/profession/命破.png",
+  "锋御": "chip_icons/profession/锋御.png"
+ },
+ "element": {
+  "火": "chip_icons/element/火.png",
+  "冰": "chip_icons/element/冰.png",
+  "电": "chip_icons/element/电.png",
+  "以太": "chip_icons/element/以太.png",
+  "物理": "chip_icons/element/物理.png",
+  "风": "chip_icons/element/风.png",
+  "流明": "chip_icons/element/流明.png",
+  "凛刃": "chip_icons/element/凛刃.png",
+  "玄墨": "chip_icons/element/玄墨.png"
+ }
+}
