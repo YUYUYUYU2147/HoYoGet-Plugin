@@ -20,7 +20,7 @@
         <div class="list">
           {{each accounts item}}
           <div class="row">
-            <div class="row-ico"><img src="{{item.game == 'bh3' ? ppath + 'bh3_note/bh3_icon.png' : ppath + 'sign/' + (item.game == 'sr' ? 'sr' : item.game == 'zzz' ? 'zzz' : 'gs') + '.png'}}" /></div>
+            <div class="row-ico"><img src="{{ppath + 'game_icons/' + item.game + '.webp'}}" /></div>
             {{if item.avatar}}<img class="row-avatar" src="{{item.avatar}}" />{{/if}}
             <div class="row-main">
               <div class="row-name">{{item.name || ('UID ' + item.uid)}}</div>
@@ -35,7 +35,7 @@
         </div>
       </div>
 
-      <div class="footer">from 米哈游</div>
+      <div class="footer"><span style="color:#ff4d4f;font-weight:600">from 米哈游</span></div>
     </div>
   </body>
 </html>

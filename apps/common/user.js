@@ -383,11 +383,15 @@ export class user extends plugin {
                     const bh3BindInfo = await this.prepareBh3BindInfo(e, data_);
                     if (bh3BindInfo) sendMsg.push(bh3BindInfo);
                 }
+                if (e.no_reply) e.reply = e.no_reply;
                 const bindAccounts = await collectBindAccounts(e, data_);
                 if (bindAccounts.length && await replyBindImage(e, bindAccounts, '米哈游扫码绑定结果')) {
                     break;
                 }
                 await this.replyBindResult(e, sendMsg, '米哈游扫码绑定结果');
+                if (!bindAccounts.length && !sendMsg.length) {
+                    e.reply('扫码登录成功，但未读取到可绑定的游戏角色。请确认该米游社账号下已创建角色、并已开启战绩展示后再试', true);
+                }
                 break;
             }
         }
