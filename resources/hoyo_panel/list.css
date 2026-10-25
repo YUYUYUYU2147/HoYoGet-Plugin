@@ -296,3 +296,30 @@ body.game-sr .page {
 }
 .cell-src.enka { color: #22c55e; font-weight: 700; }
 .cell-src.mys { color: #60a5fa; font-weight: 700; }
+
+/* ── 深色主题覆盖：配色对齐绝区零面板 ── */
+body { background: #14161f; }
+.page { background: #14161f; color: #e8eaf0; }
+body.game-sr .page { background: #14161f; color: #e8eaf0; }
+.bg-random { opacity: 1; filter: saturate(1) brightness(.92) blur(.5px); }
+.bg-veil { background: linear-gradient(180deg, rgba(8,10,18,.42), rgba(8,10,18,.70)); }
+.head { background: rgba(4,7,13,.45); border: 1px solid rgba(255,255,255,.08); }
+.head-nick { color: #e8eaf0; }
+.subtitle { color: #9aa0b0; }
+.stat-pill { background: rgba(4,7,13,.5); border: 1px solid rgba(255,207,92,.28); }
+.pill-value { color: #ffcf5c; }
+.pill-label { color: #9aa0b0; }
+.cell-name { color: #e8eaf0; }
+.lv-badge { background: rgba(0,0,0,.72); color: #ffcf5c; border-color: rgba(255,255,255,.12); }
+.avatar { border-color: rgba(255,255,255,.18); }
+.footer { color: #9aa0b0; }
+.head-svc { color: #3ddc84; }
+.group-rank.rank-4 { color: #cdd3e6; background: rgba(0,0,0,.55); border-color: rgba(255,255,255,.14); }
+.group-rank.rank-10 { color: #9aa0b0; background: rgba(0,0,0,.55); border-color: rgba(255,255,255,.12); }
+
+/* 顶栏：薄玻璃 + 明确文字色 */
+.head { background: rgba(10,13,20,.28); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.14); box-shadow: 0 6px 18px rgba(0,0,0,.28); }
+.title { color: #ffcf5c; text-shadow: 0 1px 3px rgba(0,0,0,.65); }
+.head-nick { color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,.65); }
+.subtitle { color: #c3c9d8; text-shadow: 0 1px 2px rgba(0,0,0,.55); }
+.stat-pill { background: rgba(10,13,20,.42); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }

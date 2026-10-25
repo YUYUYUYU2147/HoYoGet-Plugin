@@ -2119,6 +2119,7 @@ export class hoyo_panel extends plugin {
         appleStyle: style === 'apple',
       }, { e, ret: true })
       cachePanelOriginal(e, sent, originalFile)
+      try { const bmid = sent?.message_id || sent?.data?.message_id; if (bmid && typeof redis !== 'undefined' && randomBg) { redis.set('ZZZ:PANEL:BG:' + bmid, randomBg, { EX: 3600 * 3 }).catch(() => {}); redis.set(e.group_id ? 'ZZZ:PANEL:BG:GROUP:' + e.group_id + ':USER:' + e.user_id : 'ZZZ:PANEL:BG:USER:' + e.user_id, randomBg, { EX: 3600 * 3 }).catch(() => {}) } } catch { }
       return sent
     } catch (err) {
       logger.error?.(`[HoYoGet][hoyo_panel] 角色面板渲染失败: ${err?.message || err}`)

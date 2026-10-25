@@ -17,3 +17,20 @@ export function getPanelBg() {
 }
 
 export { DEFAULT_PANEL_BG }
+// 跟随 302 取到 cdn 上的固定图片地址：同一地址恒为同一张图，
+// 用它渲染可让「#背景图」取回与面板完全一致的那张
+export async function resolvePanelBg() {
+  const url = getPanelBg()
+  if (!/^https?:\/\//i.test(url)) return url
+  try {
+    const res = await fetch(url, {
+      redirect: 'follow',
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120', Referer: 'https://api.yppp.net/' },
+      signal: AbortSignal.timeout(8000),
+    })
+    res.body?.cancel?.()?.catch?.(() => {})
+    return /^https?:\/\//i.test(String(res.url || '')) ? res.url : url
+  } catch {
+    return url
+  }
+}

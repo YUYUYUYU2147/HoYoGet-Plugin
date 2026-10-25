@@ -8,6 +8,7 @@
   <link rel="stylesheet" type="text/css" href="{{ppath}}zzz_panel/panel-icons.css">
   <link rel="stylesheet" type="text/css" href="{{ppath}}zzz_panel/detail.css">
   {{if appleStyle}}<link rel="stylesheet" type="text/css" href="{{ppath}}zzz_panel/detail-apple.css">{{/if}}
+<style>.dp-hit { color: #6cb6ff; font-weight: 600; }</style>
 </head>
 <body {{sys.scale}}>
   {{if bgImage}}<div class="panel-bg" style="background-image:url('{{bgImage}}')"></div>{{/if}}
@@ -119,7 +120,7 @@
                 <img class="dc-icon" src="{{equip.suit_icon}}">
                 <div class="dc-title">
                   <div class="dc-name">{{equip.name}}</div>
-                  <div class="dc-meta">Lv.{{equip.level}}<span class="rarity-icon {{equip.rarity}}"></span><span class="dc-score {{equip.grade}}">{{equip.grade}} {{equip.score.toFixed(1)}}</span></div>
+                  <div class="dc-meta">Lv.{{equip.level}}<span class="rarity-icon {{equip.rarity}}"></span><span class="dc-score {{equip.grade}}">{{equip.grade}} {{equip.scoreText}}</span></div>
                 </div>
               </div>
               <div class="dc-props">
@@ -145,9 +146,12 @@
             <div class="score-box">
               <div class="score-line">
                 <div class="score-rate rate-{{c.equip_comment}}">{{c.equip_comment}}</div>
-                <div class="score-val">{{c.equip_score.toFixed(1)}}<span class="unit">分</span></div>
+                <div class="score-val">{{c.equip_score_text}}<span class="unit">分</span></div>
               </div>
               <div class="score-meta">规则：{{c.weightRule}} · 词条权重 0~100</div>
+              {{if dataMissing}}
+              <div class=score-meta>该账号未公开角色面板数据，请在游戏内开启角色详情展示后重新更新面板</div>
+              {{/if}}
             </div>
             <div class="prop-stats">
               {{each c.propertyStats stat}}

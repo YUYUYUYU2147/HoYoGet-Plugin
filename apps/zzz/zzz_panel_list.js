@@ -8,7 +8,9 @@ import { getBuffAreas } from '../../system/zzz_buff.js'
 import { mhyFetch } from '../../system/mhy_fetch.js'
 import { zzzPanelExtras } from '../../system/zzz_panel.js'
 import { fillBaseAdd } from '../../system/zzz_attr_base.js'
-import { getPanelBg } from '../../system/zzz_panel_bg.js'
+import { getPanelBg, resolvePanelBg } from '../../system/zzz_panel_bg.js'
+import { zzzpScoreWeight, zzzpSubStatIds, zzzpWarmup } from '../../system/zzz_score_zzzp.js'
+zzzpWarmup()
 
 /**
  * 绝区零面板（HoYoGet 自研）—— 第 2 步：归一化 + 自研渲染。
@@ -1442,6 +1444,8 @@ const PROF_WEIGHT_NAME = { 1: '强攻', 2: '击破', 3: '异常', 4: '支援', 5
 
 /** 取评分权重（按 property_id） */
 function getScoreWeight(charName, stats, profession, elementType, baseProps = {}) {
+  const zzzp = zzzpScoreWeight({ charName, stats, profession, elementType, baseProps })
+  if (zzzp) return zzzp
   const elemId = ELEM_DMG_ID[elementType]
   /* 角色级覆盖优先：命中就直接用覆盖表，不再看职业 */
   const override = CHAR_WEIGHT_OVERRIDE[charName]
@@ -1498,7 +1502,7 @@ export function calcEquipScore(equip_final, charName, stats, profession, element
       const w = weight[p.pid]
       if (w) { actual += w * (p.count ?? 0); useful += (p.count ?? 0); effective += w * (p.count ?? 0) }
     }
-    const cand = SUB_STAT_IDS.filter(id => id !== mainId && weight[id]).sort((a, b) => weight[b] - weight[a]).slice(0, 4)
+    const cand = (zzzpSubStatIds() || SUB_STAT_IDS).filter(id => id !== mainId && weight[id]).sort((a, b) => weight[b] - weight[a]).slice(0, 4)
     let score = 0
     if (cand.length) {
       let max = weight[cand[0]] * 6
@@ -1604,6 +1608,14 @@ function buildZZZRadar(stat_rows) {
  * 模板字段与 resources/zzz_panel/detail.html 对齐，
  * 不复用其算法（评分用接口分近似；伤害乘区公式取自其 Calculator.ts，按面板属性计算）。
  */
+/** 图标表：system/default/zzz_icons.json，盘/套装/音擎 id → 官方图标链接 */
+let _zzzIcons = null
+function zzzIcons() {
+  if (_zzzIcons) return _zzzIcons
+  try { _zzzIcons = JSON.parse(fs.readFileSync(path.join(PLUGIN_ROOT, "system", "default", "zzz_icons.json"), "utf8")) }
+  catch { _zzzIcons = { equip: {}, suit: {}, weapon: {}, avatar: {} } }
+  return _zzzIcons
+}
 function normalizeDetail(a, uid) {
   const rarity = a?.rarity === 'S' ? 'S' : (a?.rarity || 'A')
   const subElement = ZELEM[a?.element_type] || 'physical'
@@ -1611,6 +1623,18 @@ function normalizeDetail(a, uid) {
   const w = a?.weapon || {}
 
   // 武器
+  // Enka 只给音擎的名字/等级，精炼、图标、被动文案都没有；从 ZZZ-Plugin 本地面板库补齐
+  if (w?.name && (!w.talent_content || !w.icon)) {
+    const zbW = (readZzzPluginPanel(uid).find(y => String(y.id) === String(a?.id)) || {}).weapon
+    if (zbW) Object.assign(w, {
+      icon: w.icon || zbW.icon || "",
+      talent_title: w.talent_title || zbW.talent_title || "",
+      talent_content: w.talent_content || zbW.talent_content || "",
+      star: w.star || zbW.star || 0,
+      main_properties: (w.main_properties || []).length ? w.main_properties : (zbW.main_properties || []),
+      properties: (w.properties || []).length ? w.properties : (zbW.properties || []),
+    })
+  }
   const weapon = w?.name ? {
     name: w.name,
     rarity: w.rarity || rarity,
@@ -1623,18 +1647,54 @@ function normalizeDetail(a, uid) {
     talent: stripTags(w.talent_content || ''),
     main_properties: (w.main_properties || []).map(p => ({
       classname: (ZPROP[p.property_id] || {}).c || 'attack',
-      property_name: p.property_name || '',
+      property_name: p.property_name || MAIN_NAME[Number(p.property_id)] || '',
       base: p.base || '',
     })),
     properties: (w.properties || []).map(p => ({
       classname: (ZPROP[p.property_id] || {}).c || 'attack',
-      property_name: p.property_name || '',
+      property_name: p.property_name || MAIN_NAME[Number(p.property_id)] || '',
       base: p.base || '',
     })),
   } : null
 
   // 角色基础属性 → basic_properties（按字段键；伤害加成单独处理以挂元素图标）
+  // Enka 归一化只给装备与技能，没有面板属性；缺失时用 ZZZ-Plugin 本地面板库的同角色补齐，
+  // 否则基础面板整块为空、评分里固定值折算也会失真
+  const panelPropsFromZzz = x => x && uid ? (readZzzPluginPanel(uid).find(y => String(y.id) === String(x.id))
+    || readZzzPluginPanel(uid).find(y => (y.name_mi18n || "") === (x.name_mi18n || "")))?.properties || [] : []
+  if (!(a?.properties || []).length) {
+    const zbProps = panelPropsFromZzz(a)
+    if (zbProps.length) a = { ...a, properties: zbProps }
+  }
+  // enkaDiscIcons：Enka 的 convertEquip 里 icon 恒为空，按槽位从 ZZZ-Plugin 本地面板库补图标与套装文案
+  if (uid && Array.isArray(a?.equip)) {
+    const zbForIcon = readZzzPluginPanel(uid).find(y => String(y.id) === String(a?.id))
+    if (zbForIcon) {
+      a.equip = a.equip.map(d => {
+        const src = (zbForIcon.equip || []).find(e => Number(e.equipment_type) === Number(d.equipment_type))
+        if (!src || d.icon) return d
+        const ds = d.equip_suit || {}
+        const ss = src.equip_suit || {}
+        return { ...d, icon: src.icon || "", equip_suit: { ...ds, desc1: ds.desc1 || ss.desc1 || "", desc2: ds.desc2 || ss.desc2 || "" } }
+      })
+      if (a.weapon && !a.weapon.icon) a.weapon = { ...a.weapon, icon: zbForIcon.weapon?.icon || "" }
+    }
+  }
   const basic_properties = buildBasicProperties(a)
+  // 图标：Enka 不给 icon，这里按盘 id / 套装 id / 音擎 id 从本地图标表补
+  if (Array.isArray(a?.equip)) {
+    const I = zzzIcons()
+    a.equip = a.equip.map(d => {
+      if (d.icon) return d
+      const sid = d.equip_suit?.suit_id
+      const icon = I.equip?.[String(d.id)] || I.suit?.[String(sid)] || ""
+      return icon ? { ...d, icon } : d
+    })
+    if (a.weapon && !a.weapon.icon) {
+      const wi = I.weapon?.[String(a.weapon.id)] || ""
+      if (wi) a.weapon = { ...a.weapon, icon: wi }
+    }
+  }
 
   // 技能：按固定槽位顺序产出，模板按 skills[0..5] 取
   const skills = SKILL_POS.map(t => {
@@ -1657,7 +1717,7 @@ function normalizeDetail(a, uid) {
       main_properties: (d.main_properties || []).map(p => ({
         pid: p.property_id,
         classname: (ZPROP[p.property_id] || {}).c || 'attack',
-        short_name: p.property_name || '',
+        short_name: p.property_name || MAIN_NAME[Number(p.property_id)] || '',
         base: p.base || '',
       })),
       properties: (d.properties || []).map(p => {
@@ -1665,7 +1725,7 @@ function normalizeDetail(a, uid) {
         return {
           pid: p.property_id,
           classname: (ZPROP[p.property_id] || {}).c || 'attack',
-          property_name: p.property_name || '',
+          property_name: p.property_name || MAIN_NAME[Number(p.property_id)] || '',
           base: p.base || '',
           count: p.level ?? 0,
           hit: Math.max(0, (p.level ?? 0) - 1),
@@ -1706,11 +1766,16 @@ function normalizeDetail(a, uid) {
     .map(s => ({ name: s.name, count: s.count, value: s.value.toFixed(1) + (s.isPct ? '%' : ''), weight: statWeight(s.pid) }))
     .sort((x, y) => y.count - x.count)
 
-  const rating = scoreRes.rating
-  const equip_score = scoreRes.score
+  // 词条与面板属性都不可见时不出分数：六盘全空会算出 1~3 号位保底 12、4~6 号位 0，总分 36 判 C，纯噪声且误导
+  const discNoProps = equip_final.length > 0 && equip_final.every(d => (d.properties || []).length === 0)
+  const propsMissing = discNoProps || (a?.properties || []).length === 0
+  const rating = discNoProps ? "暂无" : scoreRes.rating
+  const equip_score = discNoProps ? "—" : scoreRes.score
+  const equip_score_text = discNoProps ? "" : equip_score.toFixed(1)
   equip_final.forEach((eq, i) => {
-    eq.score = scoreRes.discScores[i] ?? 0
-    eq.grade = discGrade(eq.score)
+    eq.score = discNoProps ? null : (scoreRes.discScores[i] ?? 0)
+    eq.grade = discNoProps ? "—" : discGrade(eq.score)
+    eq.scoreText = discNoProps ? "" : eq.score.toFixed(1)
   })
   const validCount = a?.equip_plan_info?.valid_property_cnt
     ?? discsRaw.reduce((s, d) => s + (d.properties || []).filter(p => p.valid).length, 0)
@@ -1784,6 +1849,7 @@ function normalizeDetail(a, uid) {
     basic_properties,
     weapon,
     equip_score,
+    equip_score_text,
     equip_comment: rating,
     weightRule: scoreRes.ruleName,
     usefulCount: scoreRes.usefulCount,
@@ -1795,6 +1861,7 @@ function normalizeDetail(a, uid) {
     damageAvailable,
     rateCovered,
     sets,
+    dataMissing: propsMissing,
     stat_rows,
     radar: buildZZZRadar(stat_rows),
   }
@@ -1868,6 +1935,7 @@ export class zzz_panel_list extends plugin {
         { reg: DETAIL_REG_OLD.source, fnc: 'panelDetail' },
         { reg: HELP_REG.source, fnc: 'panelDetailHelp' },
         { reg: ORIGINAL_REG.source, fnc: 'panelOriginal' },
+        { reg: '^#背景图', fnc: 'panelBgImage' },
         { reg: PANEL_UPLOAD_REG.source, fnc: 'panelUploadImages' },
         { reg: PANEL_IMAGES_REG.source, fnc: 'panelImageList' },
         { reg: PANEL_DELETE_IMG_REG.source, fnc: 'panelDeleteImages' },
@@ -1986,7 +2054,7 @@ export class zzz_panel_list extends plugin {
   }
 
   async panelList(e, service = 'miyoushe') {
-    const useEnka = service === 'enka'
+    let useEnka = service === 'enka'
     const uid = this.getZzzUid(e)
     if (!uid) return e.reply('请先绑定绝区零账号')
 
@@ -2023,7 +2091,24 @@ export class zzz_panel_list extends plugin {
         list = enka.avatars
         for (const a of list) if (a?.id != null) updatedIds.add(String(a.id))
       } catch (err) {
-        return e.reply(`Enka 更新失败：${err?.message || err}`)
+        // Enka 不可用时自动回退米游社，避免整条更新失败
+        logger.mark?.(`[HoYoGet][zzz_panel] Enka 不可用（${err?.message || err}），已自动切换米游社`)
+        try {
+          const raw = await this.fetchRaw(e, uid, server, ck)
+          if (!raw || raw.__error) {
+            return e.reply(`Enka 更新失败：${err?.message || err}\n米游社回退失败：${raw?.__error || "无返回"}`)
+          }
+          fs.mkdirSync(OUT_DIR, { recursive: true })
+          fs.writeFileSync(basicFile, JSON.stringify({ uid, server, deviceFpApplied: !!raw.__fp, data: raw?.data }, null, 2))
+          list = this.pickList(raw?.data)
+          if (!Array.isArray(list) || !list.length) {
+            return e.reply(`Enka 更新失败：${err?.message || err}\n米游社返回无法识别角色列表，原始数据已存到：\n${basicFile}`)
+          }
+          for (const a of list) if (a?.id != null) updatedIds.add(String(a.id))
+          useEnka = false
+        } catch (err2) {
+          return e.reply(`Enka 更新失败：${err?.message || err}\n米游社回退异常：${err2?.message || err2}`)
+        }
       }
     } else {
       const raw = await this.fetchRaw(e, uid, server, ck)
@@ -2149,7 +2234,7 @@ export class zzz_panel_list extends plugin {
         ap: parseFloat(basic_properties.elementmystery?.final) || 0,
       }
       const scoreRes = calcEquipScore(equip, name, scoreStats, a?.avatar_profession, a?.element_type, basic_properties)
-      uidRecords.set(name, { score: scoreRes.score, rating: scoreRes.rating, ruleName: scoreRes.ruleName, hasProps, hasEquip })
+        uidRecords.set(name, { score: hasProps ? scoreRes.score : null, rating: hasProps ? scoreRes.rating : null, ruleName: scoreRes.ruleName, hasProps, hasEquip, updatedAt: a?.__updatedAt || 0 })
     }
     // 1) 本插件自己的 records（单角色详情落盘，优先）
     try {
@@ -2158,7 +2243,7 @@ export class zzz_panel_list extends plugin {
           if (!f.startsWith(`${uid}_`) && !f.startsWith(`${uid}.`)) continue
           try {
             const obj = JSON.parse(fs.readFileSync(path.join(RECORDS_DIR, f), 'utf8'))
-            scoreOne(obj?.data || obj)
+            scoreOne(Object.assign(obj?.data || obj, { __updatedAt: obj?.updatedAt || 0 }))
           } catch { /* 跳过损坏文件 */ }
         }
       }
@@ -2188,8 +2273,27 @@ export class zzz_panel_list extends plugin {
       const rec = uidRecords.get(c.name)
       if (!rec) return true                    // 没有记录，拉一次
       if (rec.hasProps) return false           // 词条完整，跳过
-      return rec.hasEquip === true             // 有驱动盘但没词条 → 重拉
+      if (rec.hasEquip !== true) return false
+      if (rec.updatedAt && Date.now() - rec.updatedAt < 86400000) return false
+      return true
     })
+    if (!useEnka) {
+      // 接口只返回展示柜角色时，其余角色按本地记录 id 逐个补拉，避免整份面板停在旧数据
+      for (const c of cards) {
+        if (c.id == null || updatedIds.has(String(c.id))) continue
+        if (missing.some(m => String(m.id) === String(c.id))) continue
+        const rec = uidRecords.get(c.name)
+        missing.push(c)
+      }
+    }
+    if (!useEnka) {
+      const markDir = path.join(RECORDS_DIR, "_throttle")
+      const thrSlug = (name) => String(name || "").replace(/[\\/:*?"<>|\s·・]/g, "")
+      const markOf = (name) => path.join(markDir, uid + "_" + thrSlug(name) + ".json")
+      const isThrottled = (name) => { try { const f = markOf(name); return fs.existsSync(f) && Date.now() - fs.statSync(f).mtimeMs < 86400000 } catch (err) { return false } }
+      try { fs.mkdirSync(markDir, { recursive: true }) } catch (err) { }
+      for (const it of missing) { try { fs.writeFileSync(markOf(it && it.name), String(Date.now())) } catch (err) { } }
+    }
     if (!useEnka && missing.length) {
       await e.reply(`检测到 ${missing.length} 个角色评分数据不完整，正在并发补全，请稍候…`, true, { recallMsg: 0 })
       let gamePlayer = null
@@ -2214,7 +2318,14 @@ export class zzz_panel_list extends plugin {
               try {
                 fs.mkdirSync(RECORDS_DIR, { recursive: true })
                 const recRole = String(avatar?.name_mi18n || c.name || 'unknown').replace(/[\\/:*?"<>|\s·・]/g, '') || 'unknown'
-                fs.writeFileSync(path.join(RECORDS_DIR, `${uid}_${recRole}.json`), JSON.stringify({
+                const oldRecFile = path.join(RECORDS_DIR, `${uid}_${recRole}.json`)
+                let keepOld = false
+                try {
+                  const oldRec = JSON.parse(fs.readFileSync(oldRecFile, "utf8"))
+                  const oldAvatar = oldRec?.data || oldRec
+                  keepOld = (oldAvatar?.equip || []).some(d => (d.properties || []).length > 0) && (avatar?.equip || []).some(d => (d.properties || []).length > 0) === false
+                } catch { /* 无旧记录 */ }
+                if (keepOld === false) fs.writeFileSync(path.join(RECORDS_DIR, `${uid}_${recRole}.json`), JSON.stringify({
                   uid, data: avatar, player: gamePlayer || null, updatedAt: Date.now(),
                 }))
               } catch { /* 落盘失败不影响本次 */ }
@@ -2344,6 +2455,10 @@ export class zzz_panel_list extends plugin {
 
     const info = await this.fetchDetail(e, uid, ck, target.id)
     let avatar = info && !info.__error ? this.pickInfo(info?.data) : null
+    // 米游社对非本人账号只给角色摘要：equip 有外壳但主/副词条全空，算不出评分，
+    // 这里直接丢弃，走下面的 Enka / ZZZ-Plugin 本地面板库回退。
+    const zzzHasSubProps = x => (x?.equip || []).some(d => (d.properties || []).length > 0)
+    if (avatar && zzzHasSubProps(avatar) === false) avatar = null
 
     // 米游社 avatar/info 只返回展示柜里的部分角色，老角色（叶瞬光/雅/艾莲等）
     // 常常查不到。回退 Enka（公开接口，含展示柜完整驱动盘）：从 ShowcaseDetail
@@ -2406,10 +2521,16 @@ export class zzz_panel_list extends plugin {
       } catch (err) {
         logger.debug?.(`[HoYoGet][zzz_panel] 面板记录落盘失败：${err?.message || err}`)
       }
-      const img = await render('zzz_panel/detail', { ...detail, footer, zzzWorkshop, appleStyle: panelAppleStyle(), bgImage: getPanelBg(), ...getPlayerBadge(e, gamePlayer) }, { e, ret: true, dsf: ZZZ_PANEL_DSF })
+      const bgImage = await resolvePanelBg()
+      const img = await render('zzz_panel/detail', { ...detail, footer, zzzWorkshop, appleStyle: panelAppleStyle(), bgImage, ...getPlayerBadge(e, gamePlayer) }, { e, ret: true, dsf: ZZZ_PANEL_DSF })
       const sent = img // render(ret:true) 已自动 e.reply 发送，此处仅保留引用供下方缓存使用
       // 缓存面板用的角色原图，供「%原图」直接取回
       const roleIcon = detail.charData?.role_icon
+      const bmid = sent?.message_id || sent?.data?.message_id
+      if (bmid && typeof redis !== 'undefined') {
+        redis.set('ZZZ:PANEL:BG:' + bmid, bgImage, { EX: 3600 * 3 }).catch(() => {})
+        redis.set(e.group_id ? 'ZZZ:PANEL:BG:GROUP:' + e.group_id + ':USER:' + e.user_id : 'ZZZ:PANEL:BG:USER:' + e.user_id, bgImage, { EX: 3600 * 3 }).catch(() => {})
+      }
       if (roleIcon) {
         const mid = sent?.message_id || sent?.data?.message_id || sent?.message_id
         if (mid && typeof redis !== 'undefined') {
@@ -3076,6 +3197,18 @@ export class zzz_panel_list extends plugin {
   }
 
   /** 「%原图」：取回面板实际使用的角色原图（data URI），不是截图 */
+  async panelBgImage(e) {
+    let id = e.source?.message_id || e.source?.id || ''
+    try {
+      const src = e.getReply ? await e.getReply() : null
+      id = src?.message_id || src?.data?.message_id || id
+    } catch { }
+    if (typeof redis === 'undefined') return e.reply(segment.image(getPanelBg()))
+    const key = e.group_id ? 'ZZZ:PANEL:BG:GROUP:' + e.group_id + ':USER:' + e.user_id : 'ZZZ:PANEL:BG:USER:' + e.user_id
+    const bg = (id && await redis.get('ZZZ:PANEL:BG:' + id)) || (await redis.get(key)) || getPanelBg()
+    return e.reply(segment.image(bg))
+  }
+
   async panelOriginal(e) {
     if (config().zzz_panel_allow_original === false) return e.reply('已禁止获取绝区零面板原图')
     if (!e.isMaster) return e.reply('仅限主人获取绝区零面板原图')
