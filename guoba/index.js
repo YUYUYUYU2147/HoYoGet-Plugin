@@ -299,6 +299,29 @@ function pickHelpTheme(helpCfg = {}) {
   return names[Math.floor(Math.random() * names.length)]
 }
 
+const BGPAGE_HTML = `
+<div class="hoyo-bg">
+  <div class="bg-stats" id="bg-stats"></div>
+  <div class="bg-tip">这里列出插件已保存的随机背景图（绝区零面板 / 帮助 / 图鉴 / 角色柜 / akasha 等会自动写入 data/zzz_panel/panel_bg.json）。可查看、复制链接或删除。</div>
+  <div class="bg-bar">
+    <select class="bg-input" id="bg-source">
+      <option value="">全部来源</option>
+      <option value="panel">面板</option>
+      <option value="help">帮助</option>
+      <option value="wiki">图鉴</option>
+      <option value="hoyo_panel">角色柜</option>
+      <option value="akasha">akasha</option>
+      <option value="redis">redis 导入</option>
+    </select>
+    <input class="bg-input" id="bg-q" placeholder="按链接/消息ID筛选" />
+    <button class="bg-btn primary" id="bg-refresh">刷新</button>
+    <button class="bg-btn" id="bg-export">导出 JSON</button>
+    <span class="bg-meta" id="bg-meta"></span>
+  </div>
+  <div class="bg-cards" id="bg-cards"><div class="bg-empty">加载中…</div></div>
+</div>
+`
+
 const HELP_HTML = `
 <div class="hoyo-help">
   <div class="hp-hero">
@@ -694,6 +717,38 @@ export function init(ctx) {
     }
   })
 
+  ctx.registerApi('get', '/bg/list', async (req, res) => {
+    try {
+      const file = path.join(ROOT, 'data', 'zzz_panel', 'panel_bg.json')
+      let db = { updatedAt: 0, count: 0, list: [] }
+      try { db = JSON.parse(fs.readFileSync(file, 'utf8')) } catch { }
+      if (!Array.isArray(db.list)) db.list = []
+      res.json({ ok: true, code: 0, message: 'ok', result: { updatedAt: db.updatedAt, total: db.list.length, list: db.list } })
+    } catch (err) {
+      ctx.logger?.error?.(`[HoYoGet][guoba] 读取背景图记录失败：${err?.message || err}`)
+      res.json({ ok: false, code: -1, message: err?.message || String(err), result: { total: 0, list: [] } })
+    }
+  })
+  ctx.registerApi('post', '/bg/del', async (req, res) => {
+    try {
+      const file = path.join(ROOT, 'data', 'zzz_panel', 'panel_bg.json')
+      const b = req.body || {}
+      const key = String(b.msgId == null ? '' : b.msgId)
+      if (!key) return res.json({ ok: false, code: -1, message: '缺少 msgId', result: false })
+      let db = { updatedAt: 0, count: 0, list: [] }
+      try { db = JSON.parse(fs.readFileSync(file, 'utf8')) } catch { }
+      if (!Array.isArray(db.list)) db.list = []
+      const before = db.list.length
+      db.list = db.list.filter(x => !x || String(x.msgId) !== key)
+      db.updatedAt = Date.now()
+      db.count = db.list.length
+      fs.writeFileSync(file, JSON.stringify(db, null, 2))
+      res.json({ ok: true, code: 0, message: before === db.list.length ? '未找到该记录' : '已删除', result: before - db.list.length })
+    } catch (err) {
+      ctx.logger?.warn?.(`[HoYoGet][guoba] 删除背景图记录失败：${err?.message || err}`)
+      res.json({ ok: false, code: -1, message: err?.message || String(err), result: false })
+    }
+  })
   ctx.registerPage({
     id: 'hoyo-global-help',
     title: '全局帮助',
@@ -743,6 +798,16 @@ export function init(ctx) {
     style: 'task.css',
     script: 'task.js',
   })
+  ctx.registerPage({
+    id: 'hoyo-bg-history',
+    title: '背景图管理',
+    icon: '🎨',
+    priority: 59,
+    html: BGPAGE_HTML,
+    style: 'bg.css',
+    script: 'bg.js',
+  })
+
 }
 
 export default { init }
