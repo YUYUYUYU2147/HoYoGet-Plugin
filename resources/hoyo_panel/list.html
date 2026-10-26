@@ -16,7 +16,6 @@
           <div class="head-copy">
             <div class="title">{{gameCn}}</div>
             <div class="subtitle">{{if nickname}}<span class="head-nick">{{nickname}}</span> · {{/if}}UID {{uid}}{{if level}} · AR{{level}}{{/if}}</div>
-            {{if serviceLabel}}<div class="head-svc">本次更新服务：{{serviceLabel}}</div>{{/if}}
           </div>
         </div>
         <div class="head-right">
@@ -51,7 +50,7 @@
         {{/each}}
       </div>
 
-      <div class="footer"><span style="color:#ff4d4f;font-weight:600">from 米哈游</span></div>
+<div class="footer"><span class="upd-tip" style="font-size:17px">本次更新角色 · {{updatedCount}}</span><span class="ft-from" style="font-size:17px;color:#ff4d4f">from 米哈游</span><span class="upd-svc" style="font-size:17px;font-weight:800;color:#3ddc84">服务 {{serviceLabel}}</span></div>
     </div>
   </body>
 </html>

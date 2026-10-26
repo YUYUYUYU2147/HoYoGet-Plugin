@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { config, mhy, pluginPriority, render, yaml, makeForwardMsg, mys } from '#HoYoGet'
+import { resolveWikiAlias } from "../common/wiki/name_alias.js"
 import { damageSkillsAt, getCharRates } from '../../system/zzz_skill_rate.js'
 import { getBuffAreas } from '../../system/zzz_buff.js'
 import { mhyFetch } from '../../system/mhy_fetch.js'
@@ -2426,7 +2427,8 @@ export class zzz_panel_list extends plugin {
   async panelDetail(e) {
     const msg = String(e.msg || '')
     const m = msg.match(DETAIL_REG) || msg.match(DETAIL_REG_OLD)
-    const arg = (m && m[1] ? m[1] : '').trim()
+    let arg = (m && m[1] ? m[1] : '').trim()
+  const _al=resolveWikiAlias(arg);if(_al&&_al.name)arg=_al.name
     if (!arg) return this.panelDetailHelp(e)
 
     const uid = this.getZzzUid(e)

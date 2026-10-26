@@ -2281,7 +2281,7 @@ async resolveArtRole(raw) {
         ownerAvatar: String(roleInfo?.avatar || '').replace(/^http:/, 'https:'),
         level: info.level || '',
         chars,
-        total: chars.length,
+        total: chars.length,updatedCount: (chars||[]).filter(c=>c.updated).length,
         avgScore,
         maxScore: maxScore ? maxScore.toFixed(1) : '',
         groupRank,

@@ -95,7 +95,7 @@ body.game-sr .page {
 /* ── 圆形宫格 ── */
 .grid {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
+  grid-template-columns: repeat(8, minmax(0,1fr));
   gap: 10px 4px;
   margin-top: 16px;
 }
@@ -323,3 +323,19 @@ body.game-sr .page { background: #14161f; color: #e8eaf0; }
 .head-nick { color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,.65); }
 .subtitle { color: #c3c9d8; text-shadow: 0 1px 2px rgba(0,0,0,.55); }
 .stat-pill { background: rgba(10,13,20,.42); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.footer{display:flex!important;justify-content:space-between;align-items:center}.upd-svc{color:#3ddc84;font-weight:600;margin-right:4px}
+.avatar-wrap{width:150px;height:150px}.cell-name{font-size:20px;font-weight:700}
+.upd-tip{justify-self:start;display:inline-flex;align-items:center;gap:5px}.ft-from{justify-self:center}.upd-svc{justify-self:end}
+.dot{width:8px;height:8px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80}
+.avatar-wrap{width:120px;height:120px}.cell-name{font-size:19px}.footer{display:flex;justify-content:space-between;align-items:center;font-size:15px}.upd-svc{order:3;font-weight:800;color:#3ddc84}.upd-tip{display:inline-flex;align-items:center}.upd-tip::before{content:"";width:8px;height:8px;border-radius:50%;background:#4ade80;margin-right:5px}
+.footer{display:flex;justify-content:space-between;align-items:center}.footer,.footer span{font-size:15px}.upd-tip .dot{display:none}.upd-svc{order:3;margin-left:auto;font-weight:800;color:#3ddc84}
+.upd-svc{margin-left:0}
+.cell .cell-src{font-size:13px;font-weight:700;margin-top:2px;line-height:1.2}
+.cons-badge{bottom:6px;left:6px;height:16px;min-width:16px;font-size:9px;line-height:14px}.lv-badge{right:6px;bottom:6px;height:15px;min-width:20px;font-size:9px;line-height:13px}.badge-mark.mini{transform:scale(.78);transform-origin:left top}
+.cons-badge{bottom:2px;left:2px;height:22px;min-width:22px;font-size:13px;line-height:20px}.lv-badge{right:2px;bottom:2px;height:20px;min-width:24px;font-size:12px;line-height:18px}.badge-mark.mini{transform:scale(.95)}
+.cell .badge-mark.mini{transform:none;height:20px;line-height:20px}.cell .badge-mark.mini .bm-text{font-size:12px;font-weight:800}
+.cell .badge-mark.mini{height:23px;line-height:23px;padding:0 6px;border-radius:5px}.cell .badge-mark.mini .bm-text{font-size:15px;letter-spacing:0}
+.cell .badge-mark.mini .bm-text{font-size:13px}
+.cell .group-rank .gr-text{font-size:15px;font-weight:900}
+.footer{display:grid;grid-template-columns:1fr auto;align-items:center;row-gap:2px}.upd-tip{grid-column:1;grid-row:1;justify-self:start}.upd-svc{grid-column:2;grid-row:1;justify-self:end;margin-left:0}.ft-from{grid-column:1/-1;grid-row:2;justify-self:center}
+.footer{display:grid!important;grid-template-columns:1fr auto!important;grid-template-rows:auto auto}.upd-tip{grid-column:1!important;grid-row:1!important;justify-self:start}.upd-svc{grid-column:2!important;grid-row:1!important;justify-self:end}.ft-from{grid-column:1/-1!important;grid-row:2!important;justify-self:center}
