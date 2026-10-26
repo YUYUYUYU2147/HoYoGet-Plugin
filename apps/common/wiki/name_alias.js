@@ -107,8 +107,8 @@ function parseMiaoAliasJs(raw) {
 
 /** ZZZ-Plugin 的代理人别名（本地表优先，默认表兜底） */
 const ZZZ_ALIAS_FILES = [
-  './plugins/HoYoGet-Plugin/resources/zzz/alias.yaml',
-  './plugins/HoYoGet-Plugin/resources/zzz/alias.yaml'
+  new URL("../../../resources/zzz/alias.yaml", import.meta.url).pathname,
+  new URL("../../../resources/zzz/alias.yaml", import.meta.url).pathname,
 ];
 
 /* 纯关键词查询不做别名解析：这些词本身就是类别名（命令路由要靠它们判断

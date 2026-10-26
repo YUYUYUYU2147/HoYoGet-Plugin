@@ -2628,7 +2628,8 @@ export class zzz_panel_list extends plugin {
   async panelUploadImages(e) {
     if (!e.isMaster) return e.reply('只有主人才能上传面板图')
     const m = String(e.msg || '').match(PANEL_UPLOAD_REG)
-    const role = this.resolvePanelRole(m?.[1] || String(e.msg || '')); logger?.mark?.('[HoYoGet][zzz_panel] 上传识别: e.msg=' + JSON.stringify(e.msg) + ' m=' + JSON.stringify(m && m[1]) + ' role=' + role); logger?.mark?.('[HoYoGet][zzz_panel] 上传识别: e.msg=' + JSON.stringify(e.msg) + ' m=' + JSON.stringify(m && m[1]) + ' role=' + role)
+    let role = this.resolvePanelRole(m?.[1] || String(e.msg || '')); logger?.mark?.('[HoYoGet][zzz_panel] 上传识别: e.msg=' + JSON.stringify(e.msg) + ' m=' + JSON.stringify(m && m[1]) + ' role=' + role); logger?.mark?.('[HoYoGet][zzz_panel] 上传识别: e.msg=' + JSON.stringify(e.msg) + ' m=' + JSON.stringify(m && m[1]) + ' role=' + role)
+  if (!role) role = String(m?.[1] || "").replace(/[「」·]/g, "").trim()
     if (!role) return e.reply('未找到对应角色')
     const images = await this.collectPanelImages(e)
     if (!images.length) return e.reply('消息中未找到图片，请把图片和指令一起发，或引用要添加的图片')
@@ -2640,7 +2641,7 @@ export class zzz_panel_list extends plugin {
         const url = img.url || img.file || ''
         let buf
         if (/^https?:/i.test(url)) {
-          const resp = await fetch(url)
+          const resp = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0", "Referer": "https://q.qq.com/" } })
           buf = Buffer.from(await resp.arrayBuffer())
         } else {
           const file = String(url).replace(/^file:\/\//, '')
@@ -2655,7 +2656,7 @@ export class zzz_panel_list extends plugin {
         fs.writeFileSync(target, buf)
         ok++
       } catch (err) {
-        logger.warn?.(`[HoYoGet][zzz_panel] 上传面板图失败：${err?.message || err}`)
+        logger.error?.(`[HoYoGet][zzz_panel] 上传面板图失败：${err?.message || err}`)
         fail++
       }
     }
@@ -2685,11 +2686,13 @@ export class zzz_panel_list extends plugin {
     msg.push('删除或添加后会重新排序 ID，删除前请重新查看列表。')
     return e.reply(await makeForwardMsg(e, msg))
   }
+  if (!role) role = String(m?.[1] || "").replace(/[「」·]/g, "").trim()
 
   /** 删除自定义面板图：%删除艾莲面板图1,2 */
   async panelDeleteImages(e) {
     if (!e.isMaster) return e.reply('只有主人才能删除面板图')
     const m = String(e.msg || '').match(PANEL_DELETE_IMG_REG)
+  if (!role) role = String(m?.[1] || "").replace(/[「」·]/g, "").trim()
     const role = this.resolvePanelRole(m?.[1] || '')
     if (!role) return e.reply('未找到对应角色')
     const dir = path.join(PLUGIN_ROOT, 'resources', 'zzz_panel', 'images', 'panel', role)
