@@ -2628,7 +2628,7 @@ export class zzz_panel_list extends plugin {
   async panelUploadImages(e) {
     if (!e.isMaster) return e.reply('只有主人才能上传面板图')
     const m = String(e.msg || '').match(PANEL_UPLOAD_REG)
-    let role = this.resolvePanelRole(m?.[1] || String(e.msg || '')); logger?.mark?.('[HoYoGet][zzz_panel] 上传识别: e.msg=' + JSON.stringify(e.msg) + ' m=' + JSON.stringify(m && m[1]) + ' role=' + role); logger?.mark?.('[HoYoGet][zzz_panel] 上传识别: e.msg=' + JSON.stringify(e.msg) + ' m=' + JSON.stringify(m && m[1]) + ' role=' + role)
+    let role = this.resolvePanelRole(m?.[1] || String(e.msg || '')); logger?.mark?.('[HoYoGet][zzz_panel] 上传识别: e.msg=' + JSON.stringify(e.msg) + ' m=' + JSON.stringify(m && m[1]) + ' role=' + role)
   if (!role) role = String(m?.[1] || "").replace(/[「」·]/g, "").trim()
     if (!role) return e.reply('未找到对应角色')
     const images = await this.collectPanelImages(e)
