@@ -2686,13 +2686,11 @@ export class zzz_panel_list extends plugin {
     msg.push('删除或添加后会重新排序 ID，删除前请重新查看列表。')
     return e.reply(await makeForwardMsg(e, msg))
   }
-  if (!role) role = String(m?.[1] || "").replace(/[「」·]/g, "").trim()
 
   /** 删除自定义面板图：%删除艾莲面板图1,2 */
   async panelDeleteImages(e) {
     if (!e.isMaster) return e.reply('只有主人才能删除面板图')
     const m = String(e.msg || '').match(PANEL_DELETE_IMG_REG)
-  if (!role) role = String(m?.[1] || "").replace(/[「」·]/g, "").trim()
     const role = this.resolvePanelRole(m?.[1] || '')
     if (!role) return e.reply('未找到对应角色')
     const dir = path.join(PLUGIN_ROOT, 'resources', 'zzz_panel', 'images', 'panel', role)
