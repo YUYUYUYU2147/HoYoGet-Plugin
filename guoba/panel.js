@@ -96,7 +96,7 @@
 
   async function load() {
     cards.innerHTML = '<div class="pn-empty">加载中…</div>'
-    renderStats(currentSource)
+    renderStats(currentSource);var kw=(el('pn-search')?.value||'').trim()
     try {
       const json = await api('/panel/list?source=' + currentSource + '&game=' + currentGame, { headers: headers() })
       const list = json?.result || []
@@ -105,7 +105,7 @@
         cards.innerHTML = '<div class="pn-empty">' + (currentSource === 'cowcoo' ? '咕咕牛图库没有这个游戏的图库' : '还没有上传面板图，用「#米哈游上传&lt;角色&gt;面板图」上传') + '</div>'
         return
       }
-      cards.innerHTML = list.map(p => {
+      cards.innerHTML = list.filter(p => !kw || String(p.name).includes(kw)).map(p => {
         const coverSrc = p.splash ? splashUrl(currentGame, p.name) : imgUrl(p.cover, currentGame, currentSource, p.name)
         const fallback = p.splash ? " onerror=\"this.onerror=null;this.src='" + imgUrl(p.cover, currentGame, currentSource, p.name) + "'\"" : ''
         return '<div class="pn-card" data-name="' + esc(p.name) + '">'
@@ -186,7 +186,7 @@
     load()
   })
   el('pn-game').addEventListener('change', e => { currentGame = e.target.value; load() })
-  el('pn-refresh').addEventListener('click', load)
+  el('pn-refresh').addEventListener('click', load);el('pn-search')?.addEventListener('input',()=>{clearTimeout(window._pnT);window._pnT=setTimeout(load,200)})
   el('pn-up-btn').addEventListener('click', async () => {
     const name = el('pn-up-name').value.trim()
     const fileInput = el('pn-up-file')

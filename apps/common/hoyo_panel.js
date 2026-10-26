@@ -1,3 +1,4 @@
+import { resolveWikiAlias } from "./wiki/name_alias.js"
 import fs from 'node:fs'
 import { recordRandomBg } from '../../system/zzz_panel_bg.js'
 import path from 'node:path'
@@ -148,7 +149,7 @@ async function normalizeBarePanel(msg) {
   if (!miao?.Character?.get) return ''
   /* Character.get 的第二个参数只影响别名表，不校验游戏：遐蝶用 'gs' 也能取到实例。
      真正的归属看实例自带的 isSr / game。 */
-  const found = miao.Character.get(name)
+  const _al = resolveWikiAlias(name); if (_al && _al.name) name = _al.name; const found = miao.Character.get(name)
   if (!found) return ''
   if (!game) game = found.isSr || found.game === 'sr' ? 'sr' : (found.game === 'zzz' ? 'zzz' : 'gs')
   if ((game === 'sr') !== !!(found.isSr || found.game === 'sr')) return ''

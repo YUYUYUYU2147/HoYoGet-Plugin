@@ -158,7 +158,7 @@ const PANEL_HTML = `
       <option value="cowcoo">咕咕牛图库</option>
     </select>
     <select class="pn-input" id="pn-game"></select>
-    <button class="pn-btn primary" id="pn-refresh">刷新</button>
+    <input class="pn-input" id="pn-search" placeholder="搜索角色"/><button class="pn-btn primary" id="pn-refresh">刷新</button>
     <span class="pn-meta" id="pn-meta"></span>
   </div>
   <div class="pn-upload" id="pn-upload">
