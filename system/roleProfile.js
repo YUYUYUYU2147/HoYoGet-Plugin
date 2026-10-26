@@ -116,7 +116,7 @@ export async function getRoleProfile(e, uid, game, auth = {}) {
     if (!uid) return out;
     out.serverName = serverName(mhy.getServer(String(uid), game));
     // e.game 必须先设好：(await getMysInfo()).get 内部靠它选游戏和对应的 hostRecord
-    const oldGame = e.game;
+    const oldGame = e.game; const oldUid = e.uid;
     e.game = game;
     try {
         let res;
@@ -137,7 +137,7 @@ export async function getRoleProfile(e, uid, game, auth = {}) {
                 })
                 : null;
         } else {
-            res = await (await getMysInfo()).get(e, 'index', {}, { log: false, game });
+            e.uid = Number(uid); res = await (await getMysInfo()).get(e, 'index', {}, { log: false, game });
         }
         if (!res || res.retcode !== 0 || !res.data) return out;
         const d = res.data;
@@ -166,7 +166,7 @@ export async function getRoleProfile(e, uid, game, auth = {}) {
     } catch (err) {
         logger.debug?.('[HoYoGet][资料] 获取玩家资料失败:', err?.message || err);
     } finally {
-        e.game = oldGame;
+        e.game = oldGame; e.uid = oldUid;
     }
     return out;
 }

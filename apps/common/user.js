@@ -282,7 +282,7 @@ export class user extends plugin {
             60,
             true
         );
-        if (re.data?.message_id) re.message_id = re.data.message_id;
+        if (re?.data?.message_id) re.message_id = re?.data?.message_id;
         await sleep(2000);
 
         url = 'https://passport-api.mihoyo.com/account/ma-cn-passport/app/queryQRLoginStatus'; //查询二维码状态
@@ -303,11 +303,11 @@ export class user extends plugin {
             }, '查询扫码状态');
             
                             
-            if (res.retcode != 0) return e.reply(res?._html ? '米游社返回拦截页，扫码绑定失败。请稍后重试或换网络环境。' : '二维码已过期~', true);
+            if (res?.retcode != 0) return e.reply(res?._html ? '米游社返回拦截页，扫码绑定失败。请稍后重试或换网络环境。' : '二维码已过期~', true);
             if (res.data.status == 'Init') continue;
             if (res.data.status == 'Scanned' && !zt) {
                 zt = true;
-                recallMsg(e, re.message_id);
+                if (re?.message_id) recallMsg(e, re.message_id);
                 e.reply('二维码已被扫，请确认登录~', true);
             }
             

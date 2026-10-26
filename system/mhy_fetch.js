@@ -1,3 +1,5 @@
+import __net from "node:net";
+__net.setDefaultAutoSelectFamily(false);
 /**
  * 走米游社的请求出口。默认直连，被风控拦了才切代理。
  *
