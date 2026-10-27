@@ -1,4 +1,138 @@
+import https from 'node:https';
+import tls from 'node:tls';
+import dns from 'node:dns/promises';
+
 const NEWS_API = 'https://bbs-api-static.miyoushe.com/painter/wapi/getNewsList';
+// 静态资源域名与接口域名指向同一套公告接口，某一域名解析到坏地址池时互相兜底
+const NEWS_API_ALT = 'https://bbs-api.miyoushe.com/painter/wapi/getNewsList';
+const POST_API = 'https://bbs-api.miyoushe.com/post/wapi/getPostFull';
+
+
+/* 米游社公告域名走自建 CDN，DNS 每轮解析会轮换到不同机房地址池，部分地址池从本机
+   不可达：TCP 握手能完成，TLS 阶段再无响应；而 fetch（undici）只取解析结果里的首个
+   地址、不会换地址重试，请求便一直挂到超时，日志表现为 TimeoutError。
+   处理思路：解析后并发做 TLS 握手探测，选定可达地址再发 https 请求，结果缓存十分钟；
+   请求失败即拉黑该地址并清空缓存，重试时重新解析换池。 */
+const IP_TTL = 10 * 60 * 1000;
+const IP_BAD_TTL = 10 * 60 * 1000;
+const ipCache = new Map();
+const ipBad = new Map();
+
+const REQUEST_HEADERS = {
+  Referer: 'https://www.miyoushe.com',
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36'
+};
+
+function tlsProbe(ip, hostname, timeout = 2500) {
+  return new Promise(resolve => {
+    const socket = tls.connect({ host: ip, port: 443, servername: hostname, timeout });
+    const done = ok => { socket.destroy(); resolve(ok); };
+    socket.once('secureConnect', () => done(true));
+    socket.once('timeout', () => done(false));
+    socket.once('error', () => done(false));
+  });
+}
+
+function badSet(hostname) {
+  let set = ipBad.get(hostname);
+  if (!set) { set = new Map(); ipBad.set(hostname, set); }
+  return set;
+}
+
+function markBad(hostname, ip) {
+  if (!ip) return;
+  badSet(hostname).set(ip, Date.now() + IP_BAD_TTL);
+  const cached = ipCache.get(hostname);
+  if (cached && cached.ip === ip) ipCache.delete(hostname);
+}
+
+function isBadIp(hostname, ip) {
+  const set = badSet(hostname);
+  const expire = set.get(ip);
+  if (!expire) return false;
+  if (expire > Date.now()) return true;
+  set.delete(ip);
+  return false;
+}
+async function pickIp(hostname) {
+  const cached = ipCache.get(hostname);
+  if (cached && Date.now() - cached.at < IP_TTL && !isBadIp(hostname, cached.ip)) return cached.ip;
+  let candidates = [];
+  // 同一轮解析只会给出同一个地址池，池内全被拉黑时再解析几次换个池子
+  for (let round = 0; round < 3 && !candidates.length; round++) {
+    const ips = await dns.resolve4(hostname).catch(() => []);
+    candidates = ips.filter(ip => !isBadIp(hostname, ip));
+  }
+  if (!candidates.length) return '';
+  const ip = await new Promise(resolve => {
+    let pending = candidates.length;
+    for (const candidate of candidates) {
+      tlsProbe(candidate, hostname).then(ok => {
+        if (ok) { resolve(candidate); return; }
+        markBad(hostname, candidate);
+        if (--pending === 0) resolve('');
+      });
+    }
+  });
+  if (ip) ipCache.set(hostname, { ip, at: Date.now() });
+  return ip;
+}
+
+function requestJson(url, timeoutMs = 12000) {
+  return new Promise((resolve, reject) => {
+    const target = new URL(url);
+    pickIp(target.hostname).then(ip => {
+      // 地址池整池不可达时立即失败，交给重试重新解析换池，不占用一轮超时
+      if (!ip) return reject(new Error('米游社接口无可用出口地址'));
+      const options = {
+        headers: REQUEST_HEADERS,
+        servername: target.hostname,
+        timeout: timeoutMs,
+        // 地址已选定，关闭多地址探测，避免在坏地址上再等一轮
+        autoSelectFamily: false
+      };
+      options.lookup = (host, opts, cb) => (
+        // 部分调用路径会以 all 形式索取地址表，两种形态都要兼容
+        opts && opts.all ? cb(null, [{ address: ip, family: 4 }]) : cb(null, ip, 4)
+      );
+      const req = https.get(target, options, res => {
+        const chunks = [];
+        res.on('data', chunk => chunks.push(chunk));
+        res.on('end', () => {
+          const text = Buffer.concat(chunks).toString('utf8');
+          if (res.statusCode !== 200) return reject(new Error('米游社接口 HTTP ' + res.statusCode));
+          try {
+            resolve(JSON.parse(text));
+          } catch (_) {
+            reject(new Error('米游社接口返回非 JSON：' + text.slice(0, 120)));
+          }
+        });
+      });
+      req.on('timeout', () => req.destroy(new Error('米游社接口请求超时 ' + timeoutMs + 'ms')));
+      req.on('error', err => {
+        markBad(target.hostname, ip);
+        reject(err);
+      });
+    }).catch(reject);
+  });
+}
+
+async function requestJsonWithRetry(urls, { attempts = 3, timeoutMs = 12000 } = {}) {
+  const list = Array.isArray(urls) ? urls : [urls];
+  let lastErr = null;
+  for (let round = 0; round < attempts; round++) {
+    for (const url of list) {
+      try {
+        return await requestJson(url, timeoutMs);
+      } catch (err) {
+        lastErr = err;
+      }
+    }
+    if (round + 1 < attempts) await new Promise(r => setTimeout(r, 600 * (round + 1)));
+  }
+  throw lastErr || new Error('米游社接口请求失败');
+}
+
 
 const GAME_META = {
   gs: {
@@ -69,17 +203,8 @@ class OfficialGachaPool {
   async requestNews(game, pageSize = 30) {
     const meta = GAME_META[game];
     if (!meta) return [];
-    const url = `${NEWS_API}?gids=${meta.gid}&page_size=${pageSize}&type=1`;
-    const res = await fetch(url, {
-      method: 'GET',
-      headers: {
-        Referer: 'https://www.miyoushe.com',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36'
-      },
-      signal: AbortSignal.timeout(8000)
-    });
-    if (!res.ok) throw new Error(`米游社公告接口 HTTP ${res.status}`);
-    const json = await res.json();
+    const query = `?gids=${meta.gid}&page_size=${pageSize}&type=1`;
+    const json = await requestJsonWithRetry([`${NEWS_API}${query}`, `${NEWS_API_ALT}${query}`]);
     if (json?.retcode !== 0 || !Array.isArray(json?.data?.list)) {
       throw new Error(`米游社公告接口异常：${JSON.stringify(json).slice(0, 180)}`);
     }
@@ -89,17 +214,8 @@ class OfficialGachaPool {
   async requestPostFull(game, postId = '') {
     const meta = GAME_META[game];
     if (!meta || !postId) return null;
-    const url = `https://bbs-api.miyoushe.com/post/wapi/getPostFull?gids=${meta.gid}&read=1&post_id=${postId}`;
-    const res = await fetch(url, {
-      method: 'GET',
-      headers: {
-        Referer: 'https://www.miyoushe.com',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36'
-      },
-      signal: AbortSignal.timeout(8000)
-    });
-    if (!res.ok) throw new Error(`米游社公告详情 HTTP ${res.status}`);
-    const json = await res.json();
+    const url = `${POST_API}?gids=${meta.gid}&read=1&post_id=${postId}`;
+    const json = await requestJsonWithRetry(url, { timeoutMs: 15000 });
     if (json?.retcode !== 0) throw new Error(`米游社公告详情异常：${JSON.stringify(json).slice(0, 180)}`);
     return json?.data?.post?.post || null;
   }
@@ -271,7 +387,7 @@ class OfficialGachaPool {
             riskControl = true;
             logger.warn(`[HoYoGet][gacha_pool] ${GAME_META[game]?.name || game} 详情接口触发风控(1034)，本次剩余公告用摘要兜底`);
           } else {
-            logger.warn(`[HoYoGet][gacha_pool] ${GAME_META[game]?.name || game} 公告UP解析失败:`, record.title, err);
+            logger.warn(`[HoYoGet][gacha_pool] ${GAME_META[game]?.name || game} 公告详情拉取失败，已回退公告摘要:`, record.title, err?.message || err);
           }
           // 详情接口失败时也保留正文文本，避免下游把 contentText 误判为“公告正文为空”
           ret[idx] = {

@@ -19,6 +19,102 @@ if (!globalThis.__xhhHotHooked) {
     logger.warn?.(`[HoYoGet] 热重载钩子注册失败，仅入口可热重载：${err?.message || err}`);
   }
 }
+/* 渲染兼容补丁：框架的 puppeteer 封装与 playwright 1.60 存在两处行为差异，受影响的是
+   走框架截图能力的插件（例如咕咕牛图库管理器）。这里在插件入口统一抹平，不改动框架文件：
+   1. launch 收到 puppeteer 风格的 userDataDir 时 playwright 直接断言失败，改为丢弃该参数；
+   2. 模板用 body{transform:scale(n)} 放大排版，画面宽度常超过默认 1280x720 视口，
+      截图时 clip 会与视口求交，超出部分被静默裁掉（表现为状态报告右侧缺失），
+      故截图前按 clip 尺寸扩大视口，截完再恢复；
+   3. 超大页面的整页截图偶发 Protocol error，扩大视口后重试一次。 */
+if (!globalThis.__hoyoPuppeteerPatched) {
+  try {
+    const { default: puppeteer } = await import('puppeteer');
+
+    const patchPage = page => {
+      if (!page) return page;
+      if (page.__hoyoShotPatched) return page;
+      page.__hoyoShotPatched = true;
+      const rawShot = page.screenshot.bind(page);
+      const measure = () => page.evaluate(() => ({
+        w: window.innerWidth,
+        h: window.innerHeight,
+        sw: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth),
+        sh: Math.max(document.documentElement.scrollHeight, document.body.scrollHeight)
+      }));
+      const grow = async (wantW, wantH, box) => {
+        if (wantW <= box.w) {
+          if (wantH <= box.h) return null;
+        }
+        await page.setViewport({ width: wantW, height: wantH });
+        return { width: box.w, height: box.h };
+      };
+      page.screenshot = async function (options = {}) {
+        const opt = { ...options };
+        let restore = null;
+        try {
+          const box = await measure();
+          if (opt.clip) {
+            // 视口小于裁剪区时只截得到视口范围，先把视口撑到覆盖 clip
+            restore = await grow(
+              Math.ceil(Math.max(box.w, opt.clip.x + opt.clip.width)),
+              Math.ceil(Math.max(box.h, opt.clip.y + opt.clip.height)),
+              box
+            );
+          }
+        } catch (_) {}
+        try {
+          return await rawShot(opt);
+        } catch (err) {
+          if (!opt.clip) {
+            if (opt.fullPage !== true) throw err;
+          }
+          // 整页截图超出可捕获区域时，按文档尺寸撑大视口再试一次
+          try {
+            const box = await measure();
+            const again = await grow(Math.ceil(box.sw), Math.ceil(box.sh), box);
+            if (again) restore = again;
+            return await rawShot(opt);
+          } catch (_) {
+            throw err;
+          }
+        } finally {
+          if (restore) page.setViewport(restore).catch(() => {});
+        }
+      };
+      return page;
+    };
+
+    const patchBrowser = browser => {
+      if (!browser) return browser;
+      if (browser.__hoyoPagesPatched) return browser;
+      browser.__hoyoPagesPatched = true;
+      const rawNewPage = browser.newPage.bind(browser);
+      browser.newPage = async function (...args) {
+        return patchPage(await rawNewPage(...args));
+      };
+      return browser;
+    };
+
+    for (const name of ['launch', 'connect']) {
+      const raw = puppeteer?.[name];
+      if (typeof raw !== 'function') continue;
+      puppeteer[name] = async function (options) {
+        let opts = options;
+        if (opts) {
+          if (typeof opts === 'object') {
+            opts = { ...opts };
+            delete opts.userDataDir;
+          }
+        }
+        return patchBrowser(await raw.call(this, opts));
+      };
+    }
+    globalThis.__hoyoPuppeteerPatched = true;
+  } catch (err) {
+    logger.warn?.('[HoYoGet] puppeteer 兼容补丁未生效：' + (err?.message ? err.message : err));
+  }
+}
+
 const { default: yaml } = await import('./system/yaml.js');
 
 logger.info('\x1B[31m---------៷>ᴗ<៷---------\x1B[0m');

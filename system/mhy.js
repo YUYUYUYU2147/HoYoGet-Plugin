@@ -335,11 +335,14 @@ class mhy {
       `https://api-takumi.mihoyo.com/auth/api/getCookieAccountInfoBySToken?stoken=${SToken}&uid=${id}`,
       'https://passport-api.mihoyo.com/account/auth/api/getLTokenBySToken',
     ];
-    let res, Cookie, ltoken;
+    let res, Cookie, ltoken, ltuid;
     for (let url of urls) {
       res = await fetchJson(url, { method: 'GET', headers }, '刷新 Cookie');
       if (res.data?.cookie_token) Cookie = res.data?.cookie_token;
       if (res.data?.ltoken) ltoken = res.data?.ltoken;
+      /* getCookieAccountInfoBySToken 会回带通行证 uid：它与 game_uid 常常不是同一个值，
+         而 genshin 校验 CK 时认的是通行证 uid，用 game_uid 当 ltuid 会被判「Cookie错误」 */
+      if (res.data?.uid) ltuid = String(res.data.uid);
     }
     if (config().debug) logger.mark('[refresh_cookies] got Cookie:', !!Cookie, 'ltoken:', !!ltoken);
     if (!e.no_reply) e.no_reply = e.reply;
@@ -356,7 +359,7 @@ class mhy {
       if (config().debug) logger.mark('[refresh_cookies] failed for id:', id);
       return { sendMsg };
     }
-    e.msg = `ltoken=${ltoken};ltuid=${id};cookie_token=${Cookie}`;
+    e.msg = `ltoken=${ltoken};ltuid=${ltuid ? ltuid : id};cookie_token=${Cookie}`;
     if (!opts.bindGenshinCookie) {
       if (config().debug) logger.mark('[refresh_cookies] 已跳过 genshin CK 绑定, id:', id);
       return { sendMsg, ltoken, ck: e.msg };

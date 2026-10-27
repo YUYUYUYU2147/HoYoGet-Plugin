@@ -7,6 +7,38 @@ import { bustTplCache } from './tpl_cache.js';
 // 验证通过后删除本段。
 logger.info?.('[HoYoGet][热重载自测] system/render.js 模块已加载');
 try { fs.appendFileSync('./plugins/HoYoGet-Plugin/temp/hot_reload.log', `${new Date().toISOString()} render.js 模块加载\n`) } catch (_) { }
+/* 出图后的体积控制：base64 图片经 WebSocket 发往对端，体积过大会拖到超时，
+   链路抖动时还容易把连接挤断。超过阈值就转 jpeg 并限制宽度，失败则按原图返回。 */
+async function shrinkImage(img) {
+  try {
+    const m = String(img).match(/^base64:\/\/([\s\S]+)$/);
+    if (!m) return img;
+    const buf = Buffer.from(m[1], 'base64');
+    if (buf.length <= 700 * 1024) return img;
+    const sharp = (await import('sharp')).default;
+    const meta = await sharp(buf).metadata();
+    let pipe = sharp(buf);
+    if (meta.width > 1200) pipe = pipe.resize({ width: 1200 });
+    const out = await pipe.jpeg({ quality: 82 }).toBuffer();
+    if (out.length < buf.length) return 'base64://' + out.toString('base64');
+    return img;
+  } catch (err) {
+    logger.warn?.('[HoYoGet][render] 图片压缩失败，按原图发送：' + (err?.message ? err.message : err));
+    return img;
+  }
+}
+
+/* 对端连接短暂抖动时发送会抛错，隔几秒重试一次，避免整张图丢掉。 */
+async function sendWithRetry(e, img) {
+  try {
+    return await e.reply(img);
+  } catch (err) {
+    logger.warn?.('[HoYoGet][render] 图片发送失败，3 秒后重试：' + (err?.message ? err.message : err));
+    await new Promise(r => setTimeout(r, 3000));
+    return await e.reply(img);
+  }
+}
+
 async function render(path, data_, cfg) {
   let tplFile =
     data_.tplFile || process.cwd() + '/plugins/HoYoGet-Plugin/resources/' + path + '.html';
@@ -56,8 +88,9 @@ async function render(path, data_, cfg) {
   // ret:true 时由 render 统一用 base64 自发送；调用方不要再 e.reply，否则会重复发送。
   // 发送成功则返回 e.reply 的结果（含 message_id，供 %原图 等缓存用），失败/未发送才返回 base64。
   if (cfg.ret && e) {
-    const sent = await e.reply(img);
-    return sent ?? img;
+    const payload = await shrinkImage(img);
+    const sent = await sendWithRetry(e, payload);
+    return sent ?? payload;
   }
   return img;
 }
