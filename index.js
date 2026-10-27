@@ -27,6 +27,18 @@ logger.info('\x1B[31m-------------------------\x1B[0m');
 
 var paths = ['config/', 'temp/', 'data/', 'data/fp/', 'data/Stoken/'];
 
+/* 启动后后台补齐面板图：把咕咕牛图库的立绘硬链接进 resources/hoyo_panel/images/panel/。
+   原本只在打开某角色面板时才同步那一个角色，目录长期不全、统计数字还会随访问慢慢增长；
+   这里启动后跑一次，已存在的跳过。延迟执行，避免和插件加载抢 IO。 */
+setTimeout(async () => {
+  try {
+    const { syncAllUserPanelArt } = await import('./system/custom_panel.js');
+    const r = syncAllUserPanelArt();
+    if (r && r.files) logger.mark('[HoYoGet] 面板图已自动同步：' + r.roles + ' 个角色 / ' + r.files + ' 张');
+  } catch (err) {
+    logger.debug && logger.debug('[HoYoGet] 面板图自动同步失败：' + (err && err.message ? err.message : err));
+  }
+}, 8000);
 paths.map(path => {
   if (!fs.existsSync('./plugins/HoYoGet-Plugin/' + path)) {
     fs.mkdirSync('./plugins/HoYoGet-Plugin/' + path);

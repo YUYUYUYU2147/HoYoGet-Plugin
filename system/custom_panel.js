@@ -167,6 +167,49 @@ export function pickUserPanelArt(game, names = []) {
   return ''
 }
 
+/**
+ * 把咕咕牛图库的面板图全量硬链接进本插件目录。
+ * 原本只在渲染某个角色时按需同步一个角色，目录长期不全、统计数字还会随访问慢慢增长；
+ * 启动后调用一次即可补齐。已存在的文件跳过，不覆盖用户自己上传的图。
+ * zzz 走 zzz_panel 软链，不需要同步。
+ */
+export function syncAllUserPanelArt(games = ['gs', 'sr']) {
+  const IMG_EXT = ['.png', '.jpg', '.jpeg', '.webp']
+  const isImgFile = f => IMG_EXT.some(x => f.toLowerCase().endsWith(x))
+  const ret = { roles: 0, files: 0 }
+  for (const game of games) {
+    if (game !== 'gs' && game !== 'sr') continue
+    let names = null
+    try {
+      names = new Set(fs.readdirSync(path.join(PLUGIN_ROOT, 'resources', 'meta-' + game, 'character')))
+    } catch { names = null }
+    for (const base of normalDirCandidates(game)) {
+      let dirs = []
+      try {
+        dirs = fs.readdirSync(base, { withFileTypes: true }).filter(e => e.isDirectory()).map(e => e.name)
+      } catch { continue }
+      for (const name of dirs) {
+        if (names && !names.has(name)) continue
+        const src = path.join(base, name)
+        let imgs = []
+        try { imgs = fs.readdirSync(src).filter(isImgFile) } catch { continue }
+        if (!imgs.length) continue
+        const dest = path.join(CUSTOM_PANEL_ROOT, game, name)
+        try { fs.mkdirSync(dest, { recursive: true }) } catch { continue }
+        let added = false
+        for (const file of imgs) {
+          const dp = path.join(dest, file)
+          if (fs.existsSync(dp)) continue
+          try { fs.linkSync(path.join(src, file), dp) } catch { try { fs.copyFileSync(path.join(src, file), dp) } catch { continue } }
+          added = true
+          ret.files++
+        }
+        if (added) ret.roles++
+      }
+    }
+  }
+  return ret
+}
 /** 列出某角色自定义目录下的图片文件名（按名字排序） */
 export function listUserPanelArt(game, name) {
   const g = ['gs', 'sr', 'zzz'].includes(game) ? game : 'gs'
