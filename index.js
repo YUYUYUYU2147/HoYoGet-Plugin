@@ -34,9 +34,16 @@ setTimeout(async () => {
   try {
     const { syncAllUserPanelArt } = await import('./system/custom_panel.js');
     const r = syncAllUserPanelArt();
+    /* 图库缺失提示：没有 CowCoos 图库时面板只能用官方立绘，
+       这里在启动同步后检查一次并提示主人，避免误以为功能坏了 */
+    const libDirs = ['Miao-Plugin-MBT', 'Miao-Plugin-MBT-2', 'Miao-Plugin-MBT-3', 'Miao-Plugin-MBT-4'];
+    const hasLib = libDirs.some(d => {
+      try { return fs.readdirSync('./resources/CowCoos/' + d).some(n => n.endsWith('-character')) } catch { return false }
+    });
+    if (!hasLib) logger.mark('[HoYoGet] 未检测到咕咕牛图库，面板将使用官方立绘；需要自定义立绘请先发送 #下载咕咕牛'); else logger.mark('[HoYoGet] 咕咕牛图库已就绪，面板立绘可用');
     if (r && r.files) logger.mark('[HoYoGet] 面板图已自动同步：' + r.roles + ' 个角色 / ' + r.files + ' 张');
   } catch (err) {
-    logger.debug && logger.debug('[HoYoGet] 面板图自动同步失败：' + (err && err.message ? err.message : err));
+    logger.mark('[HoYoGet] 面板图自动同步失败：' + (err && err.message ? err.message : err));
   }
 }, 8000);
 paths.map(path => {
