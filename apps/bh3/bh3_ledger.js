@@ -504,25 +504,7 @@ export class bh3_ledger extends plugin {
         const selected = action?.account || null;
         // 拉昵称/头像：崩三 index 接口需要 headers（stoken 构造的 ck），逐个查，
         // 查不到就回退到模板里的默认头像与「UID xxx」文案，不阻塞出图。
-        let enriched = uidList;
-        try {
-            const stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${e.user_id}.yaml`;
-            let stokenData = {};
-            if (fs.existsSync(stokenPath)) { try { stokenData = await yaml.get(stokenPath) || {}; } catch (_) {} }
-            enriched = await Promise.all(uidList.map(async item => {
-                const entry = stokenData[item.uid] || {};
-                if (!entry?.ck_stoken && !entry?.stoken) return item;
-                try {
-                    const headers = mhy.getHeaders(e, entry.ck_stoken || `stuid=${entry.stuid};stoken=${entry.stoken};`);
-                    const p = await getRoleProfile(e, item.uid, 'bh3', { headers, server: entry.region });
-                    return { ...item, nickname: p.nickname, avatar: p.avatar, level: p.userLevel };
-                } catch {
-                    return item;
-                }
-            }));
-        } catch (err) {
-            logger.debug?.(`[HoYoGet][bh3_ledger] 拉取崩三昵称头像失败：${err?.message || err}`);
-        }
+        const enriched = await this.collectBh3Profiles(e, uidList);
         const accounts = enriched.map((item, i) => ({
             ...item,
             index: i + 1,
@@ -596,6 +578,81 @@ export class bh3_ledger extends plugin {
         return e.reply(msg);
     }
 
+    /**
+     * 补齐崩三账号的昵称/等级/头像。
+     *
+     * 昵称与等级一次 getUserGameRolesByStoken 就够（stoken 直接能取，返回必定带 nickname）。
+     * 头像是 record 接口的字段，只认真正的 ck（ltoken/cookie_token）；用 stoken 拼出来的 ck
+     * 会被判「登录失效」，所以卡片以前一直显示固定头像、昵称退化成 UID。
+     * 真 ck 从 genshin 的 NoteUser 缓存里按 stuid 取（与 #水晶 账本同一条路）。
+     */
+    async collectBh3Profiles(e, uidList = []) {
+        const stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${e.user_id}.yaml`;
+        let stokenData = {};
+        if (fs.existsSync(stokenPath)) {
+            try { stokenData = await yaml.get(stokenPath) || {}; } catch (_) { stokenData = {}; }
+        }
+        const profiles = new Map();
+        const put = (uid, patch = {}) => {
+            const old = profiles.get(String(uid)) || {};
+            profiles.set(String(uid), {
+                nickname: patch.nickname || old.nickname || '',
+                level: patch.level || old.level || 0,
+                avatar: patch.avatar || old.avatar || '',
+            });
+        };
+        // 1) 角色列表：一次请求拿全部昵称/等级
+        try {
+            const anyCk = Object.values(stokenData).map(v => v?.ck_stoken).find(Boolean) || '';
+            if (anyCk) {
+                const res = await api(e, { type: 'GameRoles', headers: mhy.getHeaders(e, anyCk), silent: true });
+                for (const row of res?.data?.list || []) {
+                    if (!row?.game_uid) continue;
+                    put(row.game_uid, { nickname: row.nickname || '', level: Number(row.level || 0) || 0 });
+                }
+            }
+        } catch (err) {
+            logger.debug?.(`[HoYoGet][bh3_ledger] 角色列表取昵称失败：${err?.message || err}`);
+        }
+        // 2) 真 ck（按 stuid 索引）→ 头像
+        const ckByStuid = {};
+        try {
+            const nu = await (await getNoteUser()).create(String(e.user_id));
+            for (const ltuid of Object.keys(nu?.mysUsers || {})) {
+                const ck = nu.mysUsers[ltuid]?.ck;
+                if (ck) ckByStuid[String(ltuid)] = ck;
+            }
+        } catch (err) {
+            logger.debug?.(`[HoYoGet][bh3_ledger] 读取 CK 失败：${err?.message || err}`);
+        }
+        /* 逐个 uid 的 profile 请求要并发：崩三 record 域名在本机经常直连超时，
+           串行三个账号会白等 30s 以上，并发后总耗时只等于最慢的那一个。 */
+        await Promise.all(uidList.map(async item => {
+            const entry = stokenData[item.uid] || {};
+            const ck = ckByStuid[String(entry.stuid || '')];
+            if (!ck) return;
+            const headers = mhy.getHeaders(e, ck);
+            const server = entry.region || mhy.getServer(String(item.uid), 'bh3');
+            try {
+                const p = await getRoleProfile(e, item.uid, 'bh3', { headers, server });
+                if (p) put(item.uid, { nickname: p.nickname || '', level: p.userLevel || 0, avatar: p.avatar || '' });
+            } catch (err) {
+                logger.debug?.(`[HoYoGet][bh3_ledger] 取 ${item.uid} 资料失败：${err?.message || err}`);
+            }
+            if (!profiles.get(String(item.uid))?.avatar) {
+                try {
+                    const char = await api(e, { type: 'bh3_character', uid: item.uid, headers, game: 'bh3', server, silent: true });
+                    const icon = char?.data?.characters?.[0]?.character?.avatar?.icon_path || '';
+                    if (icon) put(item.uid, { avatar: icon });
+                } catch (_) { }
+            }
+        }));
+        return uidList.map(item => {
+            const p = profiles.get(String(item.uid)) || {};
+            return { ...item, nickname: p.nickname || '', level: p.level || 0, avatar: p.avatar || '' };
+        });
+    }
+
     async getHitokoto() {
         try {
             const res = await fetch(HITOKOTO_API, {
@@ -627,7 +684,9 @@ export class bh3_ledger extends plugin {
         let avatarUrl = info.avatar || "";
         const nickname = info.nickname || "";
         const userLevel = info.userLevel || 0;
-        const serverName = info.serverName || "未知";
+        const rawServer = info.serverName ? info.serverName : (server ? server : "");
+        const mappedServer = BH3_REGION_LABELS[rawServer];
+        const serverName = mappedServer ? mappedServer : (rawServer ? rawServer : "未知");
         if (!avatarUrl) {
             try {
                 const char = await api(e, {

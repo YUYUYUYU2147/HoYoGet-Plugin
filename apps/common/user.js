@@ -36,10 +36,37 @@ function gameOfEntry(entry = {}) {
     return BH3_LEGACY_REGIONS.includes(entry.region || '') ? 'bh3' : '';
 }
 
+/* 用 stoken 拉一次「角色列表」，补昵称与等级。
+   绝区零的 record index 只返回头像（cur_head_icon_url），没有昵称字段，
+   只靠 getRoleProfile 会让绝区零那行退化成「UID xxxxxx」。
+   getUserGameRolesByStoken 走 stoken，与 getSToken 同一条路，返回必定带 nickname。 */
+async function collectStokenRoles(e, stokenData) {
+    const roles = new Map();
+    const seen = new Set();
+    for (const entry of Object.values(stokenData || {})) {
+        const ck = entry?.ck_stoken || '';
+        if (!ck || seen.has(ck)) continue;
+        seen.add(ck);
+        try {
+            const headers = mhy.getHeaders(e, ck);
+            const res = await api(e, { type: 'GameRoles', headers, silent: true });
+            for (const row of res?.data?.list || []) {
+                if (!row?.game_uid) continue;
+                roles.set(String(row.game_uid), {
+                    nickname: row.nickname || '',
+                    level: Number(row.level || 0) || 0,
+                });
+            }
+        } catch { /* 单条失败不影响出图 */ }
+    }
+    return roles;
+}
+
 /* 从 Stoken 结构（<uid> → 条目）收集出图用账号，逐个查昵称头像。
    查不到就回退「UID xxx」与空头像，不阻塞。 */
 async function collectBindAccounts(e, stokenData) {
     const accounts = [];
+    const stokenRoles = await collectStokenRoles(e, stokenData);
     for (const uid of Object.keys(stokenData || {})) {
         const entry = stokenData[uid] || {};
         if (!/^\d+$/.test(String(uid)) || Number(uid) <= 0) continue;
@@ -52,13 +79,14 @@ async function collectBindAccounts(e, stokenData) {
         const headers = mhy.getHeaders(e, passCk);
             profile = await getRoleProfile(e, uid, game, game === 'bh3' ? { headers, server: entry.region } : {});
         } catch { /* 忽略，回退 */ }
+        const fallback = stokenRoles.get(String(uid)) || {};
         accounts.push({
             uid: String(uid),
             game,
             gameName: GAME_NAME[game] || '未知',
-            name: profile.nickname,
+            name: profile.nickname || fallback.nickname || '',
             avatar: profile.avatar,
-            level: profile.userLevel,
+            level: profile.userLevel || fallback.level || 0,
             ok: true,
         });
     }

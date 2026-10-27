@@ -119,6 +119,7 @@ body {
   width: 54px;
   height: 54px;
   border-radius: 50%;
+  object-fit: cover;
   background: #f2f7ff;
   box-shadow: 0 0 0 3px #fff, 0 4px 10px rgba(96, 140, 200, 0.25);
 }
@@ -140,8 +141,10 @@ body {
 
 .sub {
   margin-top: 3px;
-  font-size: 18px;
+  font-size: 17px;
+  line-height: 1.45;
   color: #7b8fa8;
+  word-break: break-word;
 }
 
 .tag {

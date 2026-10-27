@@ -192,11 +192,24 @@ function makeResponse(ok, status, text) {
  */
 export async function mhyFetch(url, obj = {}) {
     let resp = null;
-    try {
-        resp = await fetch(url, obj);
-    } catch (err) {
-        // 连接层面的失败（超时/DNS）不算风控，仍按原样抛给调用方
-        throw err;
+    let lastErr = null;
+    /* 机房出口到米游社偶尔会 connect timeout / DNS 抖动（实测 public-operation-common
+       连续 10s 建连失败），和风控无关，但一次失败就足够让整条指令报「米游社接口异常」。
+       这里先原样重试一次，仍失败就把这次请求交给代理：代理是国内出口，比机房直连稳。 */
+    /* 配了代理时只试一次直连：机房到某些米游社域名是整体不通的（api-takumi-record
+       实测 10s 建连超时），重试只是白等一个连接超时。没配代理才就地重试。 */
+    const maxAttempts = proxyEnabled() && isMhyUrl(url) && !isNoProxyUrl(url) ? 1 : 2;
+    for (let attempt = 0; attempt < maxAttempts && !resp; attempt++) {
+        try {
+            resp = await fetch(url, obj);
+        } catch (err) {
+            lastErr = err;
+        }
+    }
+    if (!resp) {
+        const via = await viaProxy(url, obj);
+        if (via) return via;
+        throw lastErr || new Error('fetch failed');
     }
     // 先把 body 读出来：无论是判断阻断页还是交给调用方解析，都需要文本
     const text = await resp.text();

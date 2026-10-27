@@ -19,7 +19,7 @@
         <img class="avatar" src="{{item.avatar || ppath + 'sign/xhh_avatar.png'}}" />
         <div class="main">
           <div class="uid">{{item.nickname || ('UID ' + item.uid)}}</div>
-          <div class="sub">{{item.nickname ? 'UID ' + item.uid : item.server}}{{if item.level}} · Lv.{{item.level}}{{/if}}</div>
+          <div class="sub">{{if item.nickname}}UID {{item.uid}}{{if item.level}} · Lv.{{item.level}}{{/if}} · {{item.server}}{{else}}{{item.server}}{{/if}}</div>
         </div>
         <div class="tag">
           {{if item.isSelected}}已切换{{else if item.isCurrent}}当前{{else if mode === 'delete'}}已绑定{{else}}可选{{/if}}

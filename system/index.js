@@ -8,6 +8,7 @@ import bili_live from './bili_live.js';
 import mhy from './mhy.js';
 import QR from 'qrcode';
 import api from './api.js';
+import { mhyFetch } from './mhy_fetch.js';
 import {
     MysSign,
     zd_MysSign,
@@ -245,6 +246,7 @@ export {
     bili,
     bili_live,
     api,
+    mhyFetch,
     mhy,
     isTrss,
     recallMsg,

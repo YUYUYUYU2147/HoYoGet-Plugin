@@ -1,7 +1,7 @@
 import moment from 'moment';
 import fs from 'fs';
 import path from 'path';
-import { render, pluginPriority, mhy, config } from '#HoYoGet';
+import { render, pluginPriority, mhy, config, mhyFetch } from '#HoYoGet';
 import { xhh_gacha_pool } from './gacha_pool.js';
 import { getRoleProfile, serverName as toServerName } from '../../system/roleProfile.js';
 
@@ -215,6 +215,70 @@ const pickSrcList = md => {
         .filter(i => i.name && i.num > 0);
 };
 
+/* 三个游戏的账本端点，2026-10 实测全部可用。
+   为什么不继续用 genshin 的 MysInfo.get(e,'ledger')：它的 urlMap 里只有 gs/sr 的
+   ys_ledger，zzz 连这个 key 都没有，取到的永远是 undefined —— 这就是「菲林统计」
+   一直报「月报接口返回异常」的根因。自己发请求还能顺带用上 mhyFetch 的代理兜底。 */
+const LEDGER_API = {
+    gs: {
+        url: 'https://hk4e-api.mihoyo.com/event/ys_ledger/monthInfo',
+        // 原神札记的 month 是「几月」，参数名是 bind_uid / bind_region
+        query: (uid, server, m) => 'month=' + m.month + '&bind_uid=' + uid + '&bind_region=' + server,
+    },
+    sr: {
+        // 必须走 api-takumi；换成 api-takumi-record 会直接连接失败
+        url: 'https://api-takumi.mihoyo.com/event/srledger/month_info',
+        query: (uid, server, m) => 'lang=zh-cn&region=' + server + '&uid=' + uid + '&month=' + m.ym,
+    },
+    zzz: {
+        url: 'https://act-nap-api.mihoyo.com/event/nap_ledger/month_info',
+        query: (uid, server, m) => 'lang=zh-cn&uid=' + uid + '&region=' + server + '&month=' + m.ym,
+    },
+};
+
+/** 账本接口认 v1 Cookie（ltoken/ltuid/cookie_token/account_id），缺 account_id 会被判「未登录」 */
+function ledgerCookie(auth) {
+    let ck = String(auth?.ckInfo?.ck || '').trim();
+    const ltuid = String(auth?.ckInfo?.ltuid || '');
+    if (!ck) return '';
+    if (ltuid && !/(^|;\s*)account_id=/.test(ck)) {
+        ck = ck.replace(/;\s*$/, '') + '; account_id=' + ltuid + ';';
+    }
+    return ck;
+}
+
+/** 直接请求账本接口：请求头与其它可用接口一致（带绑定设备的指纹），失败时把 retcode 交给调用方提示 */
+async function fetchLedgerApi(e, game, uid, ck, mInfo) {
+    const ep = LEDGER_API[game];
+    if (!ep) return { retcode: -1, message: '该游戏没有账本接口' };
+    if (!uid || !ck) return { retcode: -1, message: '缺少账本查询所需的 UID 或 Cookie' };
+    const server = mhy.getServer(String(uid), game);
+    const query = ep.query(String(uid), server, mInfo);
+    /* 10041 是设备指纹风控：账本接口同样要带绑定设备的 device_id/device_fp，
+       只带 Cookie + DS 会被判「设备指纹未通过」。设备信息统一从 mhy.getHeaders 取，
+       其余仍保持账本接口认的 web 头（client_type 5 + 4x salt），三个游戏共用。 */
+    const dev = mhy.getHeaders(e, ck);
+    const headers = {
+        Cookie: ck,
+        DS: mhy.getDs2(query, '', '4'),
+        'x-rpc-client_type': '5',
+        'x-rpc-app_version': '2.40.1',
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.73 Mobile Safari/537.36 miHoYoBBS/2.40.1',
+        Origin: 'https://webstatic.mihoyo.com',
+        Referer: 'https://webstatic.mihoyo.com/',
+        'x-rpc-device_id': dev['x-rpc-device_id'],
+        'x-rpc-device_fp': dev['x-rpc-device_fp'],
+        'x-rpc-device_model': dev['x-rpc-device_model'],
+    };
+    try {
+        const resp = await mhyFetch(ep.url + '?' + query, { method: 'GET', headers });
+        const text = await resp.text();
+        return JSON.parse(text);
+    } catch (err) {
+        return { retcode: -500, message: '账本请求失败: ' + (err?.message || err) };
+    }
+}
+
 /** 把三个游戏各自不同的响应，统一成同一套字段 */
 function normalize(game, res) {
     const d = res?.data || {};
@@ -331,6 +395,15 @@ function toB64(obj) {
     return Buffer.from(JSON.stringify(obj), 'utf8').toString('base64');
 }
 
+/** 统计区间文案：同年只写一次年份，单月只写一个月 */
+function rangeLabel(first, last) {
+    const ym = (v, withYear) => (withYear ? Number(v.slice(0, 4)) + "年" : "") + Number(v.slice(4)) + "月";
+    if (!first) return "";
+    if (!last) return ym(first, true);
+    if (first === last) return ym(first, true);
+    return ym(first, true) + " ~ " + ym(last, first.slice(0, 4) !== last.slice(0, 4));
+}
+
 export class CurrencyLedger extends plugin {
     constructor() {
         super({
@@ -351,16 +424,32 @@ export class CurrencyLedger extends plugin {
     }
 
     /** 统一的取数入口 */
-    async fetch(e, game, mInfo) {
-        const meta = GAMES[game];
+    async fetch(e, game, mInfo, auth) {
         const oldGame = e.game;
         const oldNoTips = e.noTips;
         e.game = game;
         e.noTips = false;
         try {
-            const res = await (await getMysInfo()).get(e, 'ledger', { month: meta.monthArg(mInfo) }, { log: false, game });
+            const ck = ledgerCookie(auth);
+            const res = await fetchLedgerApi(e, game, String(auth?.uid || ''), ck, mInfo);
             if (!res || res.retcode !== 0) {
-                return { error: res?.message || '月报接口返回异常，请确认已扫码绑定 Cookie 且在米游社 App 内开启「账本」权限。' };
+                if (Number(res?.retcode) === 10041) {
+                    const hasDevice = fs.existsSync('./plugins/HoYoGet-Plugin/data/fp/' + (e && e.user_id ? e.user_id : '') + '.yaml');
+                    return {
+                        error: hasDevice
+                            ? '米游社风控（10041）：设备指纹未通过，请重新绑定常用设备后再试（发送 #绑定设备帮助 查看步骤）。'
+                            : '米游社风控（10041）：尚未绑定设备指纹，请先发 #米哈游开启设备绑定，再按 #绑定设备帮助 绑定常用设备。',
+                    };
+                }
+                const detail = [
+                    res && res.retcode !== undefined ? 'retcode=' + res.retcode : '',
+                    res?.message || '',
+                ].filter(Boolean).join(' ');
+                return {
+                    error: detail
+                        ? '账本接口返回异常（' + detail + '），可稍后重试，或确认米游社 App 内已开启「账本」权限。'
+                        : '月报接口返回异常，请确认已扫码绑定 Cookie 且在米游社 App 内开启「账本」权限。',
+                };
             }
             const snap = normalize(game, res);
             // 接口真实字段名有几处从来没被验证过，一次性都打出来，省得反复重启：
@@ -429,7 +518,7 @@ export class CurrencyLedger extends plugin {
         if (!auth?.uid || !auth?.ckInfo?.ck) {
             return e.reply('未检测到米游社 Cookie，请先发送 #扫码登录 完成绑定。', true, { recallMsg: 60 });
         }
-        const { snap, error } = await this.fetch(e, game, mInfo);
+        const { snap, error } = await this.fetch(e, game, mInfo, auth);
         if (error) return e.reply(error, true, { recallMsg: 60 });
         // 接口没回合法 YYYYMM 时用「请求的月份」兜底，否则存盘的键不完整，
         // 统计页的月份标签会渲染成空的「月」
@@ -530,7 +619,7 @@ export class CurrencyLedger extends plugin {
             total: total.toLocaleString('en-US'),
             sourceTotal: sourceTotal.toLocaleString('en-US'),
             monthCount: months.length,
-            rangeText: `${Number(first.slice(0, 4))}年${Number(first.slice(4))}月 ~ ${Number(last.slice(0, 4))}月`,
+            rangeText: rangeLabel(first, last),
             bestMonth: best ? best.month : '',
             bestValue: best ? best.value.toLocaleString('en-US') : '',
             itemsB64: toB64(items),

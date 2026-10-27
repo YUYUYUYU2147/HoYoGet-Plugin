@@ -1,0 +1,26 @@
+/* #uid 面板：每个游戏条目自己的底色，配合 resources/uid/banner/<game>.png 使用。
+   背景图由模板内联（内联优先级高于这里的 background 简写），这里只负责底色。 */
+.uid-list .game-bar {
+  background: right top no-repeat #f0ece4;
+  background-size: auto 100%;
+}
+
+.uid-list .game-barGs {
+  background: right top no-repeat #7c5f4c;
+  background-size: auto 100%;
+}
+
+.uid-list .game-barSr {
+  background: right top no-repeat #3a54a5;
+  background-size: auto 100%;
+}
+
+.uid-list .game-barZzz {
+  background: right top no-repeat #1f1f1f;
+  background-size: auto 100%;
+}
+
+.uid-list .game-barBh3 {
+  background: right top no-repeat #416CA6;
+  background-size: auto 100%;
+}

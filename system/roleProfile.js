@@ -36,7 +36,7 @@ const getMysInfo = makeGenshinLoader('model/mys/mysInfo.js', ['model/mys/mysInfo
 const SERVER_CN = {
     cn_gf01: '国服', cn_qd01: 'B服', prod_gf_cn: '国服', prod_qd_cn: 'B服',
     os_usa: '美服', os_asia: '亚服', os_euro: '欧服', os_cht: '港澳台服',
-    android01: '安卓官服', ios01: 'iOS服',
+    android01: '安卓官服', ios01: 'iOS服', pc01: '桌面服', bb01: '哔哩哔哩', yyb01: '应用宝服', hun01: '渠道1服', hun02: '渠道2服',
     prod_gf_us: '美服', prod_gf_eu: '欧服', prod_gf_jp: '日服', prod_gf_sg: '新加坡服',
     prod_official_usa: '国际服', prod_official_asia: '亚服',
     prod_official_eur: '欧服', prod_official_euro: '欧服', prod_official_cht: '港澳台服',
