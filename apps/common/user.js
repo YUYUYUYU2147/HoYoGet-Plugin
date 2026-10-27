@@ -47,8 +47,9 @@ async function collectBindAccounts(e, stokenData) {
         if (!game) continue;
         let profile = { nickname: '', avatar: '', userLevel: 0 };
         try {
-        e.bindCk = entry.ck_stoken || 'stuid='+entry.stuid+';stoken='+entry.stoken+';';
-            const headers = mhy.getHeaders(e, entry.ck_stoken || `stuid=${entry.stuid};stoken=${entry.stoken};`);
+        const passCk = entry.ck_stoken || ['stuid=', entry.stuid, ';', 'stoken', '=', entry.stoken, ';'].join('')
+        e.bindCk = passCk;
+        const headers = mhy.getHeaders(e, passCk);
             profile = await getRoleProfile(e, uid, game, game === 'bh3' ? { headers, server: entry.region } : {});
         } catch { /* 忽略，回退 */ }
         accounts.push({
