@@ -29,7 +29,7 @@ function getEventText(e = {}) {
   return [...new Set(parts)].join(' ').trim();
 }
 
-async function ensureCookieToken(e, ck, entry = null) {
+export async function ensureCookieToken(e, ck, entry = null) {
   if (!ck || /(?:^|;\s*)cookie_token=/.test(ck)) return ck;
   const stuid = entry?.stuid || cookiePart(ck, 'stuid') || cookiePart(ck, 'ltuid');
   const stoken = entry?.stoken || cookiePart(ck, 'stoken');
@@ -38,8 +38,8 @@ async function ensureCookieToken(e, ck, entry = null) {
     const headers = mhy.getHeaders(e, ck);
     const cookieRes = await fetch(`https://api-takumi.mihoyo.com/auth/api/getCookieAccountInfoBySToken?stoken=${encodeURIComponent(stoken)}&uid=${encodeURIComponent(stuid)}`, { method: 'GET', headers }).then(r => r.json());
     const ltokenRes = await fetch('https://passport-api.mihoyo.com/account/auth/api/getLTokenBySToken', { method: 'GET', headers }).then(r => r.json());
-    logger.error(`[TL-ck] stuid=${stuid} ct=${cookieRes?.retcode} lt=${ltokenRes?.retcode} token=${cookieToken ? 1 : 0} ltoken=${ltoken ? 1 : 0}`);
     const cookieToken = cookieRes?.data?.cookie_token;
+    logger.mark(`[TL-ck] stuid=${stuid} ct=${cookieRes?.retcode} lt=${ltokenRes?.retcode} ck=${cookieToken?1:0} lk=${ltoken?1:0}`);
     const ltoken = ltokenRes?.data?.ltoken || entry?.ltoken;
     if (cookieToken && ltoken) return `ltoken=${ltoken};ltuid=${stuid};cookie_token=${cookieToken};account_id=${stuid};`;
     if (cookieToken) return `stuid=${stuid};stoken=${stoken};cookie_token=${cookieToken};account_id=${stuid};`;

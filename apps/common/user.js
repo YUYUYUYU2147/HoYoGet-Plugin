@@ -47,6 +47,7 @@ async function collectBindAccounts(e, stokenData) {
         if (!game) continue;
         let profile = { nickname: '', avatar: '', userLevel: 0 };
         try {
+        e.bindCk = entry.ck_stoken || 'stuid='+entry.stuid+';stoken='+entry.stoken+';';
             const headers = mhy.getHeaders(e, entry.ck_stoken || `stuid=${entry.stuid};stoken=${entry.stoken};`);
             profile = await getRoleProfile(e, uid, game, game === 'bh3' ? { headers, server: entry.region } : {});
         } catch { /* 忽略，回退 */ }
@@ -570,6 +571,7 @@ export class user extends plugin {
     }
 
     async mysReqErrHandler(e, args, reject) {
+        logger.mark('[mysover] hin ret:'+args?.res?.retcode+' bdsb:'+config().bdsb+' mreq:'+e.mysReq);
         if (!config().bdsb) return reject();
         let {
             data,
@@ -618,7 +620,7 @@ export class user extends plugin {
             if (!submit || submit.retcode !== 0) return reject();
             e.mysReq = true
             await sleep(2000)
-        } else return reject();
+        }else{logger.mark('[mysover] enter uid:'+mysApi.uid+' ckLen:'+(e.bindCk||'').length);const a=config()?.auto_verify_addr||'http://127.0.0.1:2149/solve',k=await(await import('./TL.js')).ensureCookieToken(e,args?.mysApi?.cookie||e.bindCk||'');if(!a||!k)return reject();const r=await fetch(a,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cookie:k,clientType:'2',game:String(mysApi.game||(mysApi.isSr?'sr':'gs'))}),signal:AbortSignal.timeout(360000)}).then(x=>x.json()).catch(e=>{logger.warn('[mysover] ferr '+(e?.message||e));return null});if(r?.data?.result!=='ok')return reject();data=data||{};logger.mark('[mysover] ch='+String(r.data.challenge).slice(0,14)+' g='+String(mysApi.isSr?6:(mysApi.game==='zzz'?8:2)));}
 
         let res = await mysApi.getData(type, data);
         if (![1034, 5003, 10035, 10041].includes(Number(res?.retcode))) {

@@ -474,7 +474,7 @@ export default class MysInfo {
             })) || res
         }
 
-        if (res?.retcode == 1034||res?.retcode==10035) {
+        if (res?.retcode==1034||res?.retcode==10035||res?.retcode==10041) {
           logger.mark(`[米游社查询失败][uid:${this.uid}][qq:${this.userId}] 遇到验证码`)
           if (!isTask) this.e.reply([`UID:${this.uid}，米游社查询遇到验证码，${config().bdsb ? '查询失败！\n可发送：设备帮助\n尝试绑定常用设备后查询！' : '暂时无法查询'}`, this.mysButton])
         }else if(res?.retcode != 0){

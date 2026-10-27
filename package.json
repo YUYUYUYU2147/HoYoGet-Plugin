@@ -17,6 +17,7 @@
     "ci": "node tools/ci/syntax-check.mjs && node tools/ci/config-check.mjs && node tools/ci/ppath-check.mjs && node tools/ci/assets-check.mjs && node tools/ci/extreme-preset-check.mjs && node tools/ci/privacy-scan.mjs"
   },
   "dependencies": {
+    "image-size": "^2.0.4",
     "jsdom": "^26.1.0",
     "mysql2": "^3.24.5",
     "qrcode": "^1.5.4",
