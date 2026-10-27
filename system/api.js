@@ -166,6 +166,25 @@ async function api(e, data = {}) {
                 method: 'GET',
             },
         },
+        //原神/星铁/绝区零用户信息（record index）。走插件自己的 api()，可按 uid 带该账号自己的 ck 与设备指纹
+        gs_index: {
+            url: 'https://api-takumi-record.mihoyo.com/game_record/app/genshin/api/index?role_id=' + uid + '&server=' + server,
+            obj: {
+                method: 'GET',
+            },
+        },
+        sr_index: {
+            url: 'https://api-takumi-record.mihoyo.com/game_record/app/hkrpg/api/index?role_id=' + uid + '&server=' + server,
+            obj: {
+                method: 'GET',
+            },
+        },
+        zzz_index: {
+            url: 'https://api-takumi-record.mihoyo.com/event/game_record_zzz/api/zzz/index?role_id=' + uid + '&server=' + server,
+            obj: {
+                method: 'GET',
+            },
+        },
         //崩三用户信息
         bh3_index: {
             url: `https://api-takumi-record.mihoyo.com/game_record/appv2/honkai3rd/api/index?role_id=${uid}&server=${server}`,

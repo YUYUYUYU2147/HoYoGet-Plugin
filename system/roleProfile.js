@@ -30,6 +30,7 @@ import { api, mhy } from '#HoYoGet';
 // genshin 的 MysInfo 必须动态加载：静态 import 在 genshin 缺失或版本变动时会让**整个插件**
 // 加载失败（ESM 解析阶段抛 ERR_MODULE_NOT_FOUND，没有 try/catch 兜底）。
 import { makeGenshinLoader } from './genshin_loader.js'
+import { getAccount } from './ck_store.js'
 const getMysInfo = makeGenshinLoader('model/mys/mysInfo.js', ['model/mys/mysInfo.js'])
 
 // 服务器代码 → 中文名
@@ -137,7 +138,32 @@ export async function getRoleProfile(e, uid, game, auth = {}) {
                 })
                 : null;
         } else {
-            e.uid = Number(uid); res = await (await getMysInfo()).get(e, 'index', {}, { log: false, game });
+            e.uid = Number(uid)
+            const acc = getAccount(e.user_id, uid)
+            const ownCk = acc && acc.ck_stoken ? acc.ck_stoken : ''
+            // 只有含 ltoken/cookie_token 的完整 ck 能直接用于 record 接口；
+            // 只存了 stuid/stoken 的条目拿去请求会得到 -100，不能用来重试
+            const ckUsable = /ltoken=/.test(ownCk) && /cookie_token=/.test(ownCk)
+            /* 有专属完整 ck 时先走插件通道：带该账号自己的 ck 与绑定设备指纹，
+               避开 genshin 按 QQ 复用其他账号 ck 导致的 10041（绝区零 index 对设备指纹最严格）。 */
+            if (ckUsable) {
+                const own = await api(e, {
+                    type: game + '_index',
+                    uid: uid,
+                    game: game,
+                    server: mhy.getServer(String(uid), game),
+                    headers: mhy.getHeaders(e, ownCk),
+                    silent: true,
+                })
+                if (own && own.retcode === 0) res = own
+            }
+            if (!res || res.retcode !== 0) {
+                const fb = await (await getMysInfo()).get(e, 'index', {}, { log: false, game })
+                if (fb && fb.retcode === 0) res = fb
+                /* 10041/5003 只会在没有可用 ck 时出现，代表该账号缺绑定设备或 ck 失效；
+                   这里降级成空资料交给上层，不再把错误码传出去，避免整张面板报错。 */
+                if (!res || res.retcode !== 0) res = null
+            }
         }
         if (!res || res.retcode !== 0 || !res.data) return out;
         const d = res.data;
