@@ -386,7 +386,11 @@ export function init(ctx) {
   ctx.registerApi('get', '/bindings', async (req, res) => {
     try {
       const users = await collectBindings()
-      res.json({ ok: true, code: 0, message: 'ok', result: { total: users.length, users } })
+      const icons = {}
+      for (const gg of ['gs', 'sr', 'zzz', 'bh3']) {
+        try { icons[gg] = 'data:image/webp;base64,' + fs.readFileSync(path.join(ROOT, 'resources', 'game_icons', gg + '.webp')).toString('base64') } catch (e) { }
+      }
+      res.json({ ok: true, code: 0, message: 'ok', result: { total: users.length, users, icons } })
     } catch (err) {
       ctx.logger?.error?.(`[HoYoGet][guoba] 读取绑定失败：${err?.message || err}`)
       res.json({ ok: false, code: -1, message: err?.message || String(err), result: { total: 0, users: [] } })

@@ -11,7 +11,8 @@
     zzz: { name: '绝区零', cls: 'hb-zzz' },
     bh3: { name: '崩坏3', cls: 'hb-bh3' },
   }
-  const iconUrl = game => g.apiBase + '/game/icon?game=' + encodeURIComponent(game) + '&token=' + encodeURIComponent(g.token || '')
+  let ICONS = {}
+  const iconUrl = game => ICONS[game] || (g.apiBase + '/game/icon?game=' + encodeURIComponent(game) + '&token=' + encodeURIComponent(g.token || ''))
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
@@ -45,6 +46,7 @@
         headers: { [g.tokenKey || 'guoba-access-token']: g.token || '' },
       })
       const json = await res.json()
+      ICONS = json?.result?.icons || {}
       const allUsers = json?.result?.users || []
       renderStats(allUsers)
       let users = allUsers
