@@ -6,6 +6,9 @@ const NEWS_API = 'https://bbs-api-static.miyoushe.com/painter/wapi/getNewsList';
 // 静态资源域名与接口域名指向同一套公告接口，某一域名解析到坏地址池时互相兜底
 const NEWS_API_ALT = 'https://bbs-api.miyoushe.com/painter/wapi/getNewsList';
 const POST_API = 'https://bbs-api.miyoushe.com/post/wapi/getPostFull';
+/* 详情接口在 bbs-api 域名上会整条挂死：TCP 能连、TLS 之后没有响应，十秒级超时。
+   static 域名同一接口正常（实测 getPostFull 200、3 秒返回），因此两个域名都试，static 优先。 */
+const POST_API_ALT = 'https://bbs-api-static.miyoushe.com/post/wapi/getPostFull';
 
 
 /* 米游社公告域名走自建 CDN，DNS 每轮解析会轮换到不同机房地址池，部分地址池从本机
@@ -15,6 +18,9 @@ const POST_API = 'https://bbs-api.miyoushe.com/post/wapi/getPostFull';
    请求失败即拉黑该地址并清空缓存，重试时重新解析换池。 */
 const IP_TTL = 10 * 60 * 1000;
 const IP_BAD_TTL = 10 * 60 * 1000;
+/* TLS 探测失败只短时间避开：并发握手排队也会超时，按请求失败的口径拉黑十分钟，
+   会把整个地址池误判成不可用，公告详情随即成片失败（14:30:09 那一轮即如此）。 */
+const PROBE_BAD_TTL = 60 * 1000;
 const ipCache = new Map();
 const ipBad = new Map();
 
@@ -39,9 +45,9 @@ function badSet(hostname) {
   return set;
 }
 
-function markBad(hostname, ip) {
+function markBad(hostname, ip, ttl = IP_BAD_TTL) {
   if (!ip) return;
-  badSet(hostname).set(ip, Date.now() + IP_BAD_TTL);
+  badSet(hostname).set(ip, Date.now() + ttl);
   const cached = ipCache.get(hostname);
   if (cached && cached.ip === ip) ipCache.delete(hostname);
 }
@@ -54,12 +60,26 @@ function isBadIp(hostname, ip) {
   set.delete(ip);
   return false;
 }
-async function pickIp(hostname) {
+const ipPending = new Map();
+
+/* 并发请求共用同一次探测：公告详情是并发拉的，每个请求各自解析并握手，
+   同一台机器会打出一片探测超时，地址池很快就被自己清空。 */
+function pickIp(hostname) {
+  const pending = ipPending.get(hostname);
+  if (pending) return pending;
+  const task = pickIpNow(hostname).finally(() => ipPending.delete(hostname));
+  ipPending.set(hostname, task);
+  return task;
+}
+
+async function pickIpNow(hostname) {
   const cached = ipCache.get(hostname);
   if (cached && Date.now() - cached.at < IP_TTL && !isBadIp(hostname, cached.ip)) return cached.ip;
   let candidates = [];
   // 同一轮解析只会给出同一个地址池，池内全被拉黑时再解析几次换个池子
   for (let round = 0; round < 3 && !candidates.length; round++) {
+    // 解析器自带缓存，连着问三次拿到的是同一份答案，稍等再问才可能换到别的地址池
+    if (round) await new Promise(r => setTimeout(r, 300 * round));
     const ips = await dns.resolve4(hostname).catch(() => []);
     candidates = ips.filter(ip => !isBadIp(hostname, ip));
   }
@@ -69,7 +89,8 @@ async function pickIp(hostname) {
     for (const candidate of candidates) {
       tlsProbe(candidate, hostname).then(ok => {
         if (ok) { resolve(candidate); return; }
-        markBad(hostname, candidate);
+        // 探测失败多半是瞬时拥塞：只短时间避开这个地址，不要按请求失败的口径拉黑
+        markBad(hostname, candidate, PROBE_BAD_TTL);
         if (--pending === 0) resolve('');
       });
     }
@@ -78,12 +99,35 @@ async function pickIp(hostname) {
   return ip;
 }
 
+/* 系统解析器直连：地址池给不出可用出口（DNS 空答、整池被拉黑）时的兜底。
+   以前这里直接抛错，公告详情会在同一分钟里成片报「米游社接口无可用出口地址」。 */
+function requestDirect(url, timeoutMs = 12000) {
+  return new Promise((resolve, reject) => {
+    const target = new URL(url);
+    const req = https.get(target, { headers: REQUEST_HEADERS, timeout: timeoutMs }, res => {
+      const chunks = [];
+      res.on('data', chunk => chunks.push(chunk));
+      res.on('end', () => {
+        const text = Buffer.concat(chunks).toString('utf8');
+        if (res.statusCode !== 200) return reject(new Error('米游社接口 HTTP ' + res.statusCode));
+        try {
+          resolve(JSON.parse(text));
+        } catch (_) {
+          reject(new Error('米游社接口返回非 JSON：' + text.slice(0, 120)));
+        }
+      });
+    });
+    req.on('timeout', () => req.destroy(new Error('米游社接口请求超时 ' + timeoutMs + 'ms')));
+    req.on('error', reject);
+  });
+}
+
 function requestJson(url, timeoutMs = 12000) {
   return new Promise((resolve, reject) => {
     const target = new URL(url);
     pickIp(target.hostname).then(ip => {
-      // 地址池整池不可达时立即失败，交给重试重新解析换池，不占用一轮超时
-      if (!ip) return reject(new Error('米游社接口无可用出口地址'));
+      // 整池不可达：改用系统解析器直连，不再让整轮公告详情直接失败
+      if (!ip) return requestDirect(url, timeoutMs).then(resolve, reject);
       const options = {
         headers: REQUEST_HEADERS,
         servername: target.hostname,
@@ -111,7 +155,8 @@ function requestJson(url, timeoutMs = 12000) {
       req.on('timeout', () => req.destroy(new Error('米游社接口请求超时 ' + timeoutMs + 'ms')));
       req.on('error', err => {
         markBad(target.hostname, ip);
-        reject(err);
+        // 选定地址连不上时也退回直连：宁可多打一次，也不要整条详情链路失败
+        requestDirect(url, timeoutMs).then(resolve, () => reject(err));
       });
     }).catch(reject);
   });
@@ -215,9 +260,16 @@ class OfficialGachaPool {
     const meta = GAME_META[game];
     if (!meta || !postId) return null;
     const url = `${POST_API}?gids=${meta.gid}&read=1&post_id=${postId}`;
-    const json = await requestJsonWithRetry(url, { timeoutMs: 15000 });
+    const query = url.slice(url.indexOf('?'));
+    // static 域名排前面：bbs-api 那台在这条链路上长期无响应，先试能用的那个
+    const json = await requestJsonWithRetry([POST_API_ALT + query, POST_API + query], { attempts: 2, timeoutMs: 8000 });
     if (json?.retcode !== 0) throw new Error(`米游社公告详情异常：${JSON.stringify(json).slice(0, 180)}`);
     return json?.data?.post?.post || null;
+  }
+
+  /** 任意米游社接口 GET：搜索接口不在固定 URL 表里，但同样需要出口地址池兜底 */
+  async requestJsonUrl(url, timeoutMs = 15000) {
+    return requestJsonWithRetry(url, { timeoutMs });
   }
 
   decodeHtml(text = '') {

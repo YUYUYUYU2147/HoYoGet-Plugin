@@ -46,6 +46,9 @@ const SR_BWIKI_URL = 'https://wiki.biligame.com/sr/' + encodeURIComponent('历�
 // 米游社「官方号搜索接口」：按标题关键词搜某个官方号发的公告，再按图片索引取图。
 // 结构参考社区插件：['帖子标题关键字段', 作者uid, [图片索引数组], '作者名']
 const MYS_SEARCH_API = 'https://bbs-api.miyoushe.com/painter/api/user_instant/search/list';
+// 同一路径在 static 域名上正常，bbs-api 域名整条无响应（实测 9 秒超时），
+// 14:31 星铁联动取图失败即此；两个域名都试，最后再交给出口地址池。
+const MYS_SEARCH_API_ALT = 'https://bbs-api-static.miyoushe.com/painter/api/user_instant/search/list';
 const MYS_OFFICIAL_UID = { gs: '75276539', sr: '288909600', zzz: '152039148', bh3: '73565430' };
 // 联动池背景图：按 post_id 定位公告帖，再从帖子的 images 里挑出指定的那张。
 //
@@ -1777,13 +1780,20 @@ export class xhh_gacha_pool extends plugin {
 
   // 调官方号搜索接口取某个官方号发的帖子列表
   async mysSearchPosts(uid = '', keyword = '') {
-    const url = `${MYS_SEARCH_API}?keyword=${encodeURIComponent(keyword)}&uid=${uid}&size=20&offset=0&sort_type=2`;
-    const res = await fetch(url, {
-      headers: { Referer: 'https://www.miyoushe.com', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36' },
-      signal: AbortSignal.timeout(8000)
-    });
-    const json = await res.json();
-    return (json?.data?.list || []).map(it => it?.post?.post || {});
+    const query = `?keyword=${encodeURIComponent(keyword)}&uid=${uid}&size=20&offset=0&sort_type=2`;
+    const headers = { Referer: 'https://www.miyoushe.com', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36' };
+    const parse = json => (json?.data?.list || []).map(it => it?.post?.post || {});
+    // 同一路径在 static 域名上正常，bbs-api 域名整条无响应（实测 9 秒超时），
+    // 14:31:01 星铁联动取图失败就是这么来的；两个域名都试，最后交给出口地址池。
+    for (const base of [MYS_SEARCH_API_ALT, MYS_SEARCH_API]) {
+      try {
+        const res = await fetch(base + query, { headers, signal: AbortSignal.timeout(9000) });
+        if (res.ok) return parse(await res.json());
+      } catch (err) {
+        logger.debug?.('[HoYoGet][gacha_pool] 搜索接口 ' + base + ' 失败：' + (err?.message || err));
+      }
+    }
+    return parse(await officialPool.requestJsonUrl(MYS_SEARCH_API_ALT + query, 15000));
   }
 
   // 通用取图：游戏 + 标题关键词 + 图片索引数组 → 图片 URL 数组
@@ -1913,6 +1923,7 @@ export class xhh_gacha_pool extends plugin {
       }
       return images[spec.index < 0 ? images.length - 1 : spec.index] || '';
     };
+    // 搜索与详情分开兜底：搜索超时不该把唯一还能出图的那条路径一起跳过
     try {
       // 使用米游社官方号搜索 API 获取帖子，再按 post_id 精确匹配目标公告。
       // 这样图片来源和顺序都来自官方搜索接口，不把任何图片直链写入仓库。
@@ -1922,7 +1933,11 @@ export class xhh_gacha_pool extends plugin {
         .map(image => typeof image === 'string' ? image : image?.url)
         .filter(Boolean);
       if (apiImages.length) return pickImage(apiImages);
+    } catch (err) {
+      logger.warn(`[HoYoGet][gacha_pool] 星铁${ver}联动公告搜索失败，改用详情接口（${spec.postId}）：`, err?.message || err);
+    }
 
+    try {
       // 搜索结果被米游社裁剪时，才用同一篇文章的详情 API 兜底。
       const post = await officialPool.requestPostFull('sr', spec.postId);
       const content = String(post?.content || post?.structured_content || '');

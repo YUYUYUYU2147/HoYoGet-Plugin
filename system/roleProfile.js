@@ -103,6 +103,39 @@ function findNickname(d) {
     ).trim();
 }
 
+/** 绑定设备指纹头：与 mys.req.err 重试时注入的是同一份（data/fp/<qq>.yaml）。
+    没有存档时返回空对象，交给 genshin 自己的指纹逻辑，不硬塞假指纹。 */
+function deviceFpHeaders(e) {
+    const h = mhy.getHeaders(e, '');
+    const out = {};
+    if (h['x-rpc-device_fp']) out['x-rpc-device_fp'] = h['x-rpc-device_fp'];
+    if (h['x-rpc-device_id']) out['x-rpc-device_id'] = h['x-rpc-device_id'];
+    return out;
+}
+
+/* stoken 换 cookie_token 要打两次网络，头像是半小时一刷的低频需求，换一次缓存六小时 */
+const ckUpgradeCache = new Map();
+const CK_UPGRADE_TTL = 6 * 60 * 60 * 1000;
+
+async function upgradeCk(e, ck, entry) {
+    const key = `${String(e.user_id || '')}:${String(entry?.stuid || '')}:${String(entry?.uid || '')}`;
+    const hit = ckUpgradeCache.get(key);
+    if (hit && Date.now() - hit.ts < CK_UPGRADE_TTL) return hit.ck;
+    let next = ck;
+    try {
+        /* 与 mys.req.err 处理器共用 TL.js 的换 token 实现，避免两套逻辑各换各的 */
+        const { ensureCookieToken } = await import('../../apps/common/TL.js');
+        const got = await ensureCookieToken(e, ck, entry);
+        if (got && /cookie_token=/.test(got)) next = got;
+    } catch (err) {
+        logger.debug?.('[HoYoGet][资料] stoken 换 cookie_token 失败：' + (err?.message || err));
+    }
+    /* 换失败也缓存：不缓存的话每次出图都要白等两个网络往返 */
+    ckUpgradeCache.set(key, { ts: Date.now(), ck: next });
+    if (ckUpgradeCache.size > 500) ckUpgradeCache.clear();
+    return next;
+}
+
 /**
  * 取玩家资料
  *
@@ -144,25 +177,33 @@ export async function getRoleProfile(e, uid, game, auth = {}) {
             // 只有含 ltoken/cookie_token 的完整 ck 能直接用于 record 接口；
             // 只存了 stuid/stoken 的条目拿去请求会得到 -100，不能用来重试
             const ckUsable = /ltoken=/.test(ownCk) && /cookie_token=/.test(ownCk)
-            /* 有专属完整 ck 时先走插件通道：带该账号自己的 ck 与绑定设备指纹，
-               避开 genshin 按 QQ 复用其他账号 ck 导致的 10041（绝区零 index 对设备指纹最严格）。 */
-            if (ckUsable) {
+            /* 设备指纹只有插件通道带得上（mhy.getHeaders 会读 data/fp/<qq>.yaml），
+               所以优先用该账号自己的 ck 走插件通道；存档里只有 stoken 时先换出 cookie_token，
+               不能直接退化到 genshin —— 那条路用的是随机设备指纹，绝区零 index 会稳定 10041。 */
+            const recordCk = ownCk && !ckUsable ? await upgradeCk(e, ownCk, acc) : ownCk
+            if (recordCk && /(?:^|; ?)(?:ltoken|cookie_token)=/.test(recordCk)) {
                 const own = await api(e, {
                     type: game + '_index',
                     uid: uid,
                     game: game,
                     server: mhy.getServer(String(uid), game),
-                    headers: mhy.getHeaders(e, ownCk),
+                    headers: mhy.getHeaders(e, recordCk),
                     silent: true,
                 })
                 if (own && own.retcode === 0) res = own
             }
             if (!res || res.retcode !== 0) {
-                const fb = await (await getMysInfo()).get(e, 'index', {}, { log: false, game })
+                /* genshin 那条路的请求头由 MysApi 自己拼，设备指纹是随机值或公共 getFp，
+                   绑定的手机指纹根本用不上，10041 因此常驻。把绑定指纹塞进 data.headers，
+                   MysApi.getData 会合并进最终请求头 —— 与 mys.req.err 重试时做的完全一致。 */
+                const fb = await (await getMysInfo()).get(e, 'index', { headers: deviceFpHeaders(e) }, { log: false, game })
                 if (fb && fb.retcode === 0) res = fb
-                /* 10041/5003 只会在没有可用 ck 时出现，代表该账号缺绑定设备或 ck 失效；
-                   这里降级成空资料交给上层，不再把错误码传出去，避免整张面板报错。 */
-                if (!res || res.retcode !== 0) res = null
+                /* 10041/5003 依旧只降级成空资料：一个 uid 失败不该拖垮整张面板；
+                   但要在日志里留痕，否则「头像突然没了」只能靠猜。 */
+                if (!res || res.retcode !== 0) {
+                    res = null
+                    logger.warn(`[HoYoGet][资料] ${game} uid ${uid} 取 index 失败，头像与昵称回退为空`)
+                }
             }
         }
         if (!res || res.retcode !== 0 || !res.data) return out;
