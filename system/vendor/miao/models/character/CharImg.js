@@ -8,6 +8,18 @@ import { miaoPath } from "#hoyo.miao.path"
 
 const rPath = `${miaoPath}/resources`
 
+/* 资源根：本插件 resources 优先，外部 miao-plugin 作为兜底。
+   内置模型被搬进插件后，原实现仍写死 ./plugins/miao-plugin/resources，
+   miao 未安装时目录扫描恒为空，表现为头像、立绘全丢。 */
+const RES_ROOTS = [ rPath, "./plugins/miao-plugin/resources" ]
+const resolveRes = function(rel) {
+  for (const root of RES_ROOTS) {
+    const p = `${root}/${rel}`
+    if (fs.existsSync(p)) return p
+  }
+  return `${RES_ROOTS[0]}/${rel}`
+}
+
 // 目录图片列表与图片尺寸缓存，TTL 60s：消除同一批出图内的重复读盘，新上传图片≤1分钟生效
 const _dirCache = new Map()
 const _sizeCache = new Map()
@@ -17,7 +29,7 @@ const readImgDir = function(charImgPath) {
   let now = Date.now()
   let cached = _dirCache.get(charImgPath)
   if (cached && now - cached.time < _CACHE_TTL) return cached.imgs
-  let dirPath = `./plugins/miao-plugin/resources/${charImgPath}`
+  let dirPath = resolveRes(charImgPath)
   let imgs = []
   if (fs.existsSync(dirPath)) {
     imgs = fs.readdirSync(dirPath)
@@ -31,7 +43,7 @@ const readImgDir = function(charImgPath) {
 const getImgSize = function(img) {
   let cached = _sizeCache.get(img)
   if (cached) return cached
-  let ret = sizeOf(`./plugins/miao-plugin/resources/${img}`)
+  let ret = sizeOf(resolveRes(img))
   _sizeCache.set(img, ret)
   return ret
 }
@@ -49,7 +61,7 @@ const CharImg = {
       addImg(`character-img/${name}`)
       addImg(`character-img/${name}/upload`)
       if (se) addImg(`character-img/${name}/se`)
-      const plusPath = "./plugins/miao-plugin/resources/miao-res-plus/"
+      const plusPath = resolveRes("miao-res-plus") + "/"
       if (fs.existsSync(plusPath)) {
         addImg(`miao-res-plus/character-img/${name}`)
         if (se) addImg(`miao-res-plus/character-img/${name}/se`)

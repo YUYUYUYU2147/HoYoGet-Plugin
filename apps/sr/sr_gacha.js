@@ -16,6 +16,7 @@ import { buildIsUP } from '../../system/join_isup.mjs'
 // 只在真正要用到该功能时才 import，代价可以忽略。
 
 const GENSHIN_ROOTS = [
+  '../../system/vendor/genshin/',
   '../../../genshin/',
   '../../genshin/',
   '../genshin/',
@@ -60,7 +61,7 @@ async function loadGenshinModule(tag, relPaths, named = null) {
     missingGenshinModules.add(tag)
     logger.error(
       `[HoYoGet][sr_gacha] 未能在 genshin 插件中找到 ${tag}（已尝试 ${candidates.length} 个路径，` +
-      `最后错误：${lastErr?.message || lastErr}）。该功能将不可用，请更新 genshin 插件。`
+      `最后错误：${lastErr?.message || lastErr}）。该功能将不可用。`
     )
   }
   return { ok: false, value: null }

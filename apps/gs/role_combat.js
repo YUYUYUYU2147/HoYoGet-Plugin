@@ -1,7 +1,9 @@
+import fs from 'node:fs';
 import fetch from 'node-fetch';
 import moment from 'moment';
 import { render, pluginPriority } from '#HoYoGet';
 import { Character } from '#hoyo.miao.models';
+import { miaoPath } from '#hoyo.miao.path';
 
 const MANIFEST_URL = 'https://static.nanoka.cc/manifest.json';
 const ELEMENT_MAP = {
@@ -45,6 +47,17 @@ async function fetchJson(url, timeout = 8000) {
   }
 }
 
+/** 角色头像地址：本插件 resources 优先，外部 miao-plugin 兜底，都没有时留空 */
+function charImgUrl(face) {
+  const rel = String(face || '').replace(/^\/+/, '');
+  if (!rel) return '';
+  for (const root of [`${miaoPath}/resources`, `${process.cwd()}/plugins/miao-plugin/resources`]) {
+    const file = `${root}/${rel}`;
+    if (fs.existsSync(file)) return `file://${file}`;
+  }
+  return '';
+}
+
 function charById(id) {
   const char = Character.get(Number(id));
   if (!char) return null;
@@ -55,7 +68,7 @@ function charById(id) {
     elemName: ELEMENT_CN[char.elem] || '',
     elemClass: ELEMENT_CLASS[char.elem] || '',
     star: char.star || 4,
-    face: char.face ? `file://${process.cwd()}/plugins/miao-plugin/resources${char.face}` : '',
+    face: char.face ? charImgUrl(char.face) : '',
   };
 }
 

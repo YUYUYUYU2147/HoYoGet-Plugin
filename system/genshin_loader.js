@@ -1,9 +1,15 @@
 /**
- * genshin 插件模块的按需加载器。
+ * 按需加载「米游社数据层」的统一入口。
  *
  * 为什么需要它：ESM 在模块解析阶段一次性解析全部静态依赖，任一路径不存在就整份
  * 文件抛 ERR_MODULE_NOT_FOUND，而且 ESM 没有 try/catch 兜底 —— 结果是**整个插件
- * 加载失败**，而不是某个功能失效。所以跨插件引用一律走这里动态 import。
+ * 加载失败**，而不是某个功能失效。所以跨模块引用一律走这里动态 import。
+ *
+ * 候选顺序（先内置，后外部）：
+ *   1. ./vendor/genshin/  本插件内置的实现，不依赖任何外部插件；
+ *   2. genshin 插件目录    用户自行安装 genshin 时，用它的更新版本。
+ * 内置层覆盖 model/mys 下的 NoteUser / mysInfo / mhyFetch；
+ * gachaLog 等尚未内置的模块找不到时只是对应功能降级，不影响插件加载。
  *
  * 用法：
  *   const r = await loadGenshinModule('model/mys/NoteUser.js', ['model/mys/NoteUser.js'])
@@ -11,8 +17,9 @@
  *   const NoteUser = r.value
  */
 
-// 插件可能装在 plugins/ 下、也可能被 TRSS 挂到别处，多给几个候选根。
+// 内置兼容层放在最前：缺外部插件时功能仍然可用。
 const GENSHIN_ROOTS = [
+  './vendor/genshin/',
   '../../genshin/',
   '../genshin/',
   './genshin/',
@@ -31,13 +38,13 @@ function resolveGenshinModule(relPaths) {
   return found
 }
 
-// 同一个模块只报一次错：缺 genshin 时每个指令都会触发加载，刷屏没有意义
+// 同一个模块只报一次错：缺模块时每个指令都会触发加载，刷屏没有意义
 const missingGenshinModules = new Set()
 
 /**
- * 按需加载 genshin 的一个模块，取其 default 或指定的具名导出。
+ * 按需加载一个数据层模块，取其 default 或指定的具名导出。
  * @param {string} tag 功能标记，用于错误提示与去重
- * @param {string[]} relPaths 相对 genshin 插件根的候选路径
+ * @param {string[]} relPaths 相对候选根（如 model/mys/NoteUser.js）的路径
  * @param {string|null} named 取具名导出；传 '*' 返回整个模块命名空间；不传则取 default
  * @returns {Promise<{ok: boolean, value: any, err?: Error}>}
  */
@@ -57,8 +64,8 @@ export async function loadGenshinModule(tag, relPaths, named = null) {
   if (!missingGenshinModules.has(tag)) {
     missingGenshinModules.add(tag)
     logger.error(
-      `[HoYoGet] 未能在 genshin 插件中找到 ${tag}（已尝试 ${candidates.length} 个路径，` +
-      `最后错误：${lastErr?.message || lastErr}）。相关功能将不可用，请更新 genshin 插件。`
+      `[HoYoGet] 未找到数据层模块 ${tag}（已尝试 ${candidates.length} 个路径，` +
+      `最后错误：${lastErr?.message || lastErr}）。相关功能将不可用。`
     )
   }
   return { ok: false, value: null, err: lastErr }

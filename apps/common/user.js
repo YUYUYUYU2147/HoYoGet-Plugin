@@ -189,7 +189,13 @@ export class user extends plugin {
     async kq(e) {
         if (!e.isMaster) return false
         let path = './plugins/HoYoGet-Plugin/config/config.yaml';
-        fs.cpSync('./plugins/HoYoGet-Plugin/system/checkCode/gs.txt', './plugins/genshin/model/mys/mysInfo.js')
+        /* 未安装 genshin 时没有可注入的目标目录，跳过这一步；
+           设备指纹绑定本身由本插件完成，不依赖 genshin。 */
+        if (fs.existsSync('./plugins/genshin/model/mys')) {
+            fs.cpSync('./plugins/HoYoGet-Plugin/system/checkCode/gs.txt', './plugins/genshin/model/mys/mysInfo.js')
+        } else {
+            logger.warn('[HoYoGet] 未安装 genshin 插件，已跳过设备绑定注入')
+        }
         // 星铁这份实现依赖 StarRail-plugin 自己的 SRApiTool/getDeviceFp；
         // 这两个文件不存在时覆盖过去只会让 StarRail-plugin 直接 ERR_MODULE_NOT_FOUND。
         const srRuntime = './plugins/StarRail-plugin/runtime'
