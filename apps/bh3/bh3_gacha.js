@@ -103,9 +103,11 @@ export class bh3_gacha extends plugin {
       event: 'message',
       priority: pluginPriority('bh3_gacha', 100),
       rule: [
-        { reg: '^#*(崩三|崩坏3|崩坏三|BH3)?(抽卡记录|抽卡统计)$', fnc: 'gachaSummary' },
-        { reg: '^#*(崩三|崩坏3|崩坏三|BH3)?(刷新|更新)抽卡记录$', fnc: 'refreshGacha' },
+        { reg: '^#*(?:崩三|崩坏3|崩坏三|BH3)(抽卡记录|抽卡统计)$', fnc: 'gachaSummary' },
+        { reg: '^#*(?:崩三|崩坏3|崩坏三|BH3)(刷新|更新)抽卡记录$', fnc: 'refreshGacha' },
         { reg: '^#*(崩三|崩坏3|崩坏三|BH3)?全量(刷新|更新)抽卡记录$', fnc: 'fullRefreshGacha' },
+        { reg: "^！[ \\t]*(刷新|更新)抽卡记录$", fnc: "refreshGacha" },
+        { reg: "^！[ \\t]*(抽卡记录|抽卡统计|抽卡)$", fnc: "gachaSummary" },
         { reg: '^#*(崩三|崩坏3|崩坏三|BH3)?(充值记录|充值查询|充值流水|氪金记录)$', fnc: 'rechargeRecord' },
         { reg: '^#*(崩三|崩坏3|崩坏三|BH3)?(卡池)?(核对|校验)$', fnc: 'showCrossCheck' },
       ],

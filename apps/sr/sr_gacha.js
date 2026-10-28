@@ -426,6 +426,40 @@ export function timeFromId(id) {
 // 各游戏的卡池定义差异较大（星铁与绝区零编号、命名、货币都不同），
 // 视图层按 game 取对应配置，避免把绝区零的编号写进星铁分支
 const GAME_VIEW_CONF = {
+  // 鸣潮：唤取池。键名 WuwaPool<cardPoolType>，与接口的分池编号一一对应。
+  ww: {
+    poolOrder: ["WuwaPool1", "WuwaPool2", "WuwaPool3", "WuwaPool4", "WuwaPool5", "WuwaPool6", "WuwaPool7", "WuwaPool8", "WuwaPool9"],
+    currency: "星声",
+    typeMap: {
+      WuwaPool1: "1", WuwaPool2: "2", WuwaPool3: "3",
+      WuwaPool4: "4", WuwaPool5: "5", WuwaPool6: "6",
+      WuwaPool7: "7", WuwaPool8: "8", WuwaPool9: "9",
+    },
+    labelClassMap: {
+      WuwaPool1: "char", WuwaPool2: "weapon", WuwaPool3: "common",
+      WuwaPool4: "common", WuwaPool5: "newbie", WuwaPool6: "collabChar",
+      WuwaPool7: "collabWeapon", WuwaPool8: "char", WuwaPool9: "weapon",
+    },
+  },
+  // 原神：五类祈愿。键名统一加 Gs 前缀，避免与星铁同名的 301/302 池串味。
+  gs: {
+    poolOrder: ["GsGachaType_AvatarUp", "GsGachaType_WeaponUp", "GsGachaType_AvatarUp2", "GsGachaType_Collection", "GsGachaType_Permanent"],
+    currency: "原石",
+    typeMap: {
+      GsGachaType_AvatarUp: "301",
+      GsGachaType_WeaponUp: "302",
+      GsGachaType_AvatarUp2: "500",
+      GsGachaType_Collection: "400",
+      GsGachaType_Permanent: "200",
+    },
+    labelClassMap: {
+      GsGachaType_AvatarUp: "char",
+      GsGachaType_WeaponUp: "weapon",
+      GsGachaType_AvatarUp2: "char",
+      GsGachaType_Collection: "collabChar",
+      GsGachaType_Permanent: "common",
+    },
+  },
   sr: {
     poolOrder: POOL_ORDER,
     currency: '星琼',
@@ -487,6 +521,8 @@ const DEFAULT_POOL_BY_GAME = {
 let _isUPSr = null
 let _isUPZzz = null
 function getIsUP(g) {
+  // 原神不参与星铁与绝区零的 is_up 重算，直接采用抽卡数据自身字段
+  if (g === "gs") return null
   if (g === 'zzz') return _isUPZzz || (_isUPZzz = buildIsUP('zzz'))
   return _isUPSr || (_isUPSr = buildIsUP('sr'))
 }
@@ -2184,8 +2220,8 @@ export class sr_gacha extends plugin {
         // 比喵喵的 50 小、按框架升序本该先跑，但规则要求 米哈游 根本匹配不上，
         // 故补上裸指令形式。限定 * 前缀，不抢 genshin 侧的 # 指令；
         // 联动形式必须排在普通形式之前，否则会被抢。
-        { reg: '^[\\*%％][ \\t]*(?:星铁|崩铁)?联动(角色|武器)(记录|统计)$', fnc: 'collabRoleOrWeapon' },
-        { reg: '^[\\*%％][ \\t]*(?:星铁|崩铁)?(角色|武器)(记录|统计)$', fnc: 'roleOrWeapon' },
+        { reg: '^[\\*][ \\t]*(?:星铁|崩铁)?联动(角色|武器)(记录|统计)$', fnc: 'collabRoleOrWeapon' },
+        { reg: '^[\\*][ \\t]*(?:星铁|崩铁)?(角色|武器)(记录|统计)$', fnc: 'roleOrWeapon' },
         { reg: '^#*米哈游(星铁|崩铁)?绑定小助手(\\s+\\S+)?$', fnc: 'bindHelper' },
         { reg: // 前缀必须带：本插件所有指令均需 #米哈游/ #小花火，否则会抢走
         // genshin 侧「#更新小助手抽卡记录」（原神·小助手）与「*更新小助手抽卡记录」（星铁·工坊别名）。

@@ -870,6 +870,8 @@ export class zzz_gacha extends plugin {
         { reg: '^#*米哈游(绝区零|zzz)?绑定工坊(\\s+\\S+)?$', fnc: 'bindWorkshop' },
         { reg: '^#*米哈游(绝区零|zzz)?(导入|合并)四星(\\s+\\S+)?$', fnc: 'importFourStar' },
         { reg: '^#*米哈游(绝区零|zzz)?导出(抽卡)?(记录|json)$', fnc: 'exportLog' },
+        { reg: "^%[ \\t]*(刷新|更新)抽卡记录$", fnc: "refresh" },
+        { reg: "^%[ \\t]*(抽卡|调频)(记录|统计|分析)$", fnc: "summary" },
         { reg: '^#*米哈游(绝区零|zzz)?(导入)(抽卡)?(记录|json)$', fnc: 'importLog' },
         { reg: '^#*米哈游(绝区零|zzz)?重建图标(索引)?$', fnc: 'rebuildIconIndex' },
       ],
