@@ -434,8 +434,83 @@ export class help extends plugin {
           fnc: 'globalHelp',
           priority: Number.MIN_SAFE_INTEGER,
         },
+        {
+          /* 咕咕牛图库：启动日志提示发送 #下载咕咕牛，但此前没有对应指令，消息被静默丢弃 */
+          reg: "^#*(?:咕咕牛|GGN|ggn)(?:帮助|说明|help|菜单)$",
+          fnc: "ggnHelp",
+        },
+        {
+          reg: "^#*(?:下载|安装)咕咕牛(?:图库)?$",
+          fnc: "ggnDownload",
+          permission: "master",
+        },
       ],
     });
+  }
+
+  /** 咕咕牛图库状态：四个 CowCoos 仓库的安装情况与角色图数量 */
+  ggnStatus() {
+    const root = "./resources/CowCoos";
+    const repos = ["Miao-Plugin-MBT", "Miao-Plugin-MBT-2", "Miao-Plugin-MBT-3", "Miao-Plugin-MBT-4"];
+    let dirs = 0;
+    let chars = 0;
+    for (const r of repos) {
+      try {
+        const list = fs.readdirSync(path.join(root, r));
+        const hit = list.filter(n => n.endsWith("-character")).length;
+        if (hit) { dirs++; chars += hit; }
+      } catch { }
+    }
+    return { dirs, chars, repos };
+  }
+
+  async ggnHelp(e) {
+    const { dirs, chars } = this.ggnStatus();
+    const state = dirs ? "已安装 " + dirs + "/4 个图库 · " + chars + " 个角色" : "未安装（面板当前使用官方立绘）";
+    return e.reply([
+      "咕咕牛图库（Miao-Plugin-MBT）说明",
+      "· 当前状态：" + state,
+      "· 用途：为角色面板提供自定义立绘，安装后本插件会自动同步到面板图目录",
+      "· 安装：发送 #下载咕咕牛（体积较大，需要服务器能访问 GitHub）",
+      "· 目录：resources/CowCoos/Miao-Plugin-MBT{,2,3,4}",
+      "· 安装完成后无需重启，直接查看面板即可生效",
+    ].join(String.fromCharCode(10)), true);
+  }
+
+  async ggnDownload(e) {
+    const root = "./resources/CowCoos";
+    const repos = ["Miao-Plugin-MBT", "Miao-Plugin-MBT-2", "Miao-Plugin-MBT-3", "Miao-Plugin-MBT-4"];
+    try { fs.mkdirSync(root, { recursive: true }); } catch { }
+    const todo = repos.filter(r => !fs.existsSync(path.join(root, r, ".git")));
+    if (!todo.length) return e.reply("咕咕牛图库已全部安装，无需重复下载", true);
+    await e.reply("开始下载咕咕牛图库：" + todo.join("、") + "（后台进行，完成后会再通知）", true);
+    const { execFile } = await import("node:child_process");
+    const run = (args) => new Promise((resolve, reject) => {
+      execFile("git", args, { timeout: 1800000, maxBuffer: 1 << 20 }, (err, stdout) => (err ? reject(err) : resolve(stdout)));
+    });
+    (async () => {
+      const ok = [];
+      const bad = [];
+      for (const name of todo) {
+        try {
+          await run(["clone", "--depth", "1", "https://github.com/GuGuNiu/" + name + ".git", path.join(root, name)]);
+          ok.push(name);
+          logger.mark("[HoYoGet][ggn] " + name + " 下载完成");
+        } catch (err) {
+          bad.push(name + "(" + String((err && err.message) || err).split(String.fromCharCode(10))[0] + ")");
+          logger.warn("[HoYoGet][ggn] " + name + " 下载失败：" + ((err && err.message) || err));
+        }
+      }
+      let sync = "";
+      try {
+        const { syncAllUserPanelArt } = await import("../../system/custom_panel.js");
+        const r = syncAllUserPanelArt();
+        if (r) sync = String.fromCharCode(10) + "已同步面板图：" + (r.roles || 0) + " 个角色 / " + (r.files || 0) + " 张";
+      } catch (err) {
+        logger.warn("[HoYoGet][ggn] 面板图同步失败：" + ((err && err.message) || err));
+      }
+      e.reply("咕咕牛图库下载结束：成功 " + ok.length + " 个，失败 " + bad.length + " 个" + (bad.length ? String.fromCharCode(10) + "失败项：" + bad.join("；") : "") + sync, true);
+    })();
   }
 
   async globalHelp(e) {

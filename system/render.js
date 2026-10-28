@@ -7,25 +7,9 @@ import { bustTplCache } from './tpl_cache.js';
 // 验证通过后删除本段。
 logger.info?.('[HoYoGet][热重载自测] system/render.js 模块已加载');
 try { fs.appendFileSync('./plugins/HoYoGet-Plugin/temp/hot_reload.log', `${new Date().toISOString()} render.js 模块加载\n`) } catch (_) { }
-/* 出图后的体积控制：base64 图片经 WebSocket 发往对端，体积过大会拖到超时，
-   链路抖动时还容易把连接挤断。超过阈值就转 jpeg 并限制宽度，失败则按原图返回。 */
+/* 原图直发：出图后不缩放、不二次压缩，保持文字与细节的原始清晰度。 */
 async function shrinkImage(img) {
-  try {
-    const m = String(img).match(/^base64:\/\/([\s\S]+)$/);
-    if (!m) return img;
-    const buf = Buffer.from(m[1], 'base64');
-    if (buf.length <= 700 * 1024) return img;
-    const sharp = (await import('sharp')).default;
-    const meta = await sharp(buf).metadata();
-    let pipe = sharp(buf);
-    if (meta.width > 1200) pipe = pipe.resize({ width: 1200 });
-    const out = await pipe.jpeg({ quality: 82 }).toBuffer();
-    if (out.length < buf.length) return 'base64://' + out.toString('base64');
-    return img;
-  } catch (err) {
-    logger.warn?.('[HoYoGet][render] 图片压缩失败，按原图发送：' + (err?.message ? err.message : err));
-    return img;
-  }
+  return img;
 }
 
 /* 对端连接短暂抖动时发送会抛错，隔几秒重试一次，避免整张图丢掉。 */
