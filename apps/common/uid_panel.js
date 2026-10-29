@@ -234,6 +234,27 @@ async function fillProfiles(games, e, stoken, noteUser) {
   }
 }
 
+/**
+ * uid 列表归一化为对象数组。
+ *
+ * 内置 NoteUser 的 getUidList 返回字符串数组，部分版本的 genshin 返回
+ * { uid, ... } 对象数组；模板与补资料逻辑统一按对象取字段，这里一次转换，
+ * 两种来源都能用。
+ */
+function normalizeUidList(list) {
+  const out = [];
+  for (const item of Array.isArray(list) ? list : []) {
+    if (item && typeof item === 'object') {
+      const uid = String(item.uid || item.uid_str || '').trim();
+      if (uid) out.push({ ...item, uid });
+    } else {
+      const uid = String(item ?? '').trim();
+      if (uid) out.push({ uid });
+    }
+  }
+  return out;
+}
+
 /** 崩三分组：face/banner 用占位图，模板对 zzz_face/zzz_banner 有专门分支 */
 function buildBh3Group(list, current) {
   const uidList = list.map(row => ({
@@ -326,12 +347,12 @@ export class uidPanel extends plugin {
       }
     }
 
-    const games = GAME_LIST.map(ds => ({
-      key: ds.key,
-      name: ds.name,
-      uid: user.getUid(ds.key),
-      uidList: user.getUidList(ds.key) || [],
-    }));
+    const games = GAME_LIST.map(ds => {
+      const uidList = normalizeUidList(user.getUidList(ds.key));
+      const rawUid = user.getUid(ds.key);
+      const current = rawUid && typeof rawUid === 'object' ? rawUid.uid : rawUid;
+      return { key: ds.key, name: ds.name, uid: String(current || uidList[0]?.uid || ''), uidList };
+    });
     if (bh3 && bh3.list && bh3.list.length) games.push(buildBh3Group(bh3.list, bh3.current));
 
     try {
