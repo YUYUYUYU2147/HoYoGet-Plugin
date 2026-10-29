@@ -200,7 +200,7 @@ export default class MysApi {
     // genshin 那边已经封装了「直连被拦就改走代理」的出口，能复用就不重复造
     let mhyFetch = null
     try {
-      ({ default: mhyFetch } = await import(`file://${process.cwd()}/plugins/genshin/model/mys/mhyFetch.js`))
+      mhyFetch = (await import("../../genshin/model/mys/mhyFetch.js").catch(() => ({ default: null }))).default
     } catch (_) {
       mhyFetch = null
     }
@@ -262,9 +262,7 @@ export default class MysApi {
        所以：只要本实例已经有 mysInfo（由调用方按正确游戏初始化好），
        就直接用它构造 genshin 的 MysApi，不再走 runtime 的缓存。 */
     if (this.mysInfo?.uid && this.mysInfo?.ckInfo?.ck) {
-      const { default: GMysApi } = await import(
-        'file://' + process.cwd() + '/plugins/genshin/model/mys/mysApi.js'
-      ).catch(() => ({ default: null }))
+      const { default: GMysApi } = await import("../../genshin/model/mys/mysApi.js").catch(() => ({ default: null }))
       if (GMysApi) {
         const opt = { ...option }
         if (e?.isSr) opt.game = 'sr'

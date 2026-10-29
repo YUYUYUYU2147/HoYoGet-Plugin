@@ -14,9 +14,9 @@ const CharImg = {
   getCardImg(names, se = false, def = true) {
     let list = []
     let addImg = function(charImgPath, disable = false) {
-      let dirPath = `./plugins/miao-plugin/resources/${charImgPath}`
+      let dirPath = `${mPath}/${charImgPath}`
 
-      if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath)
+      if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true })
       if (disable) return
 
       let imgs = fs.readdirSync(dirPath)
@@ -30,7 +30,7 @@ const CharImg = {
       addImg(`character-img/${name}`)
       addImg(`character-img/${name}/upload`)
       addImg(`character-img/${name}/se`, !se)
-      const plusPath = "./plugins/miao-plugin/resources/miao-res-plus/"
+      const plusPath = `${mPath}/miao-res-plus/`
       if (fs.existsSync(plusPath)) {
         addImg(`miao-res-plus/character-img/${name}`)
         addImg(`miao-res-plus/character-img/${name}/se`, !se)
@@ -45,7 +45,7 @@ const CharImg = {
         return false
       }
     }
-    let ret = sizeOf(`./plugins/miao-plugin/resources/${img}`)
+    let ret = sizeOf(`${mPath}/${img}`)
     ret.img = img
     ret.mode = ret.width > ret.height ? "left" : "bottom"
     return ret

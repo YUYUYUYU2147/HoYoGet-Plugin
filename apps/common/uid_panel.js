@@ -36,7 +36,7 @@ let playerApi;
 async function getPlayer() {
   if (playerApi !== undefined) return playerApi;
   playerApi = false;
-  const candidates = ['../../../miao-plugin/models/index.js', '#miao.models'];
+  const candidates = ["#miao.models", "../../../miao-plugin/models/index.js"];
   for (const path of candidates) {
     try {
       const mod = await import(path);

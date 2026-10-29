@@ -30,7 +30,7 @@ function findCustomRoleArt(game, name) {
   const variants = [name, `「${name}」`, String(name).replace(/[「」]/g, '')];
   const dirs = game === 'zzz'
     ? ['./plugins/HoYoGet-Plugin/resources/zzz_panel/images/panel', './plugins/ZZZ-Plugin/resources/images/panel']
-    : ['./plugins/miao-plugin/resources/profile/normal-character'];
+    : ["./resources/CowCoos/Miao-Plugin-MBT/gs-character", "./resources/CowCoos/Miao-Plugin-MBT/sr-character", "./plugins/miao-plugin/resources/profile/normal-character"];
   for (const base of dirs) {
     for (const nm of variants) {
       const dir = path.resolve(base, nm);

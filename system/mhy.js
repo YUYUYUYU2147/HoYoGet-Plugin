@@ -384,7 +384,7 @@ class mhy {
   //genshin 内部直接往 e.reply 抛消息，校验不过时是「Cookie错误」之类。
   //这里临时接管 e.reply 只为收集，不再让它混进 refresh_cookies 的 sendMsg——
   //此刻 HoYoGet 的 stoken 早已落盘，genshin 绑定失败不该显示成扫码绑定失败。
-  async tryBindGenshinCookie(e, ck) {
+  async tryBindGenshinCookie(e, ck) { if (!fs.existsSync("./plugins/genshin/model/user.js")) return { ok: false, msgs: [] };
     const oldReply = e.reply;
     const msgs = [];
     e.reply = msg => {

@@ -26,7 +26,7 @@ import {
 let isTrss = true
 
 try {
-    const module = await import('../../miao-plugin/components/index.js');
+    const module = { Version: { name: "TRSS-Yunzai" } }; // 版本判定不再依赖外部 miao-plugin
     isTrss = module.Version.name === 'TRSS-Yunzai';
 } catch (err) {
 

@@ -163,10 +163,10 @@ export class abyss_stat extends plugin {
    * 这里自己 new 一个 MysInfo 并指定游戏，取完立刻把 e.game 还原。
    */
   async initSrMysInfo(e, game, miao) {
-    /* 真正做鉴权/取 CK 的是 genshin 的 MysInfo（vendor 版没有导出它） */
+    /* 鉴权与取 CK 全部走插件内置的 MysInfo，外部 genshin 插件装与不装都能用 */
     let MysInfo = null
     try {
-      const mod = await import('file://' + process.cwd() + '/plugins/genshin/model/mys/mysInfo.js')
+      const mod = await import("../../system/genshin_loader.js").then(m => m.loadGenshinModule("abyss:mysInfo", ["model/mys/mysInfo.js"])).then(r => ({ default: r.ok ? r.value : null }))
       MysInfo = mod.default
     } catch (_) {
       return null

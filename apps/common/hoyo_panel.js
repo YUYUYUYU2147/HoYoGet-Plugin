@@ -1144,7 +1144,7 @@ function talentCn(charName, slot) {
   if (TALENT_CN_CACHE.has(key)) return TALENT_CN_CACHE.get(key)
   let out = null
   try {
-    const file = path.join(PLUGIN_ROOT, '..', 'miao-plugin', 'resources', 'meta-gs', 'character', String(charName || ''), 'data.json')
+    const file = path.join(PLUGIN_ROOT, "resources", "meta-gs", "character", String(charName || ""), "data.json")
     const data = JSON.parse(fs.readFileSync(file, 'utf8'))
     const talent = data?.talent?.[slot]
     if (talent?.name) {

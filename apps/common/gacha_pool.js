@@ -4579,8 +4579,11 @@ ${r.summary || ''}`;
     const target = String(name || '').replace(/Pro$/i, '').replace('•', '·');
     if (!target) return '';
     const roots = [
-      './plugins/miao-plugin/resources/profile/normal-character',
-      './plugins/miao-plugin/resources/profile/super-character'
+      "./resources/CowCoos/Miao-Plugin-MBT/gs-character",
+      "./resources/CowCoos/Miao-Plugin-MBT/sr-character",
+      "./resources/CowCoos/Miao-Plugin-MBT-4/gs-character",
+      "./plugins/miao-plugin/resources/profile/normal-character",
+      "./plugins/miao-plugin/resources/profile/super-character"
     ];
     for (const root of roots) {
       const dir = `${root}/${target}`;

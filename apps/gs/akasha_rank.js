@@ -162,7 +162,7 @@ const ID_TO_CN = { 10000002: '神里绫华', 10000003: '琴', 10000006: '丽莎'
  * 新角色（10000117 以后）只有这里有。静态 ID_TO_CN 容易过期，
  * 所以优先读它，读不到再退回静态表 / 接口给的名字。
  */
-const MIAO_GS_DATA = path.join(PLUGIN_ROOT, '..', 'miao-plugin', 'resources', 'meta-gs', 'character', 'data.json')
+const MIAO_GS_DATA = path.join(PLUGIN_ROOT, "resources", "meta-gs", "character", "data.json")
 let MIAO_ID_TO_CN = null
 function miaoIdToCn() {
   if (MIAO_ID_TO_CN) return MIAO_ID_TO_CN
