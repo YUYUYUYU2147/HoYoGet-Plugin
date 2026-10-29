@@ -5803,7 +5803,27 @@ class Morpheus {
       if (pageBoundingRect && pageBoundingRect.selector) {
         const element = await page.$(pageBoundingRect.selector);
         if (element) {
-          const box = await element.boundingBox();
+          const box = await (async () => {
+            const rect = async () => {
+              try {
+                return await element.evaluate(n => { const r = n.getBoundingClientRect(); return { x: r.x + window.scrollX, y: r.y + window.scrollY, width: r.width, height: r.height }; });
+              } catch (e) { return null; }
+            };
+            let b = await rect();
+            if (!b || !(b.width > 0) || !(b.height > 0)) b = await element.boundingBox();
+            /* 渲染精度（RenderMatrix 的 transform:scale）大于 100 时，缩放后的内容会超出初始视口。
+               上游这里直接取 boundingBox()：部分环境按布局盒返回，clip 只覆盖左侧一块，表现为
+               精度 200 以上出图右侧/底部缺内容。所以先量可视矩形（含祖先 transform），再把视口
+               撑到可视尺寸重量一次 —— body 是 margin:auto，视口一变位置就跟着变。 */
+            const vp = (page.viewport && page.viewport()) || { width: 0, height: 0 };
+            const needW = Math.ceil(b.x + b.width + 16);
+            const needH = Math.ceil(b.y + b.height + 16);
+            if (needW > (vp.width || 0) || needH > (vp.height || 0)) {
+              await page.setViewport({ width: Math.max(vp.width || 0, needW), height: Math.max(vp.height || 0, needH), deviceScaleFactor: vp.deviceScaleFactor || 1 }).catch(() => {});
+              b = (await rect()) || b;
+            }
+            return b;
+          })();
           if (box && Number.isFinite(box.x) && Number.isFinite(box.y) && Number.isFinite(box.width) && Number.isFinite(box.height) && box.width > 0 && box.height > 0) {
             imgBuffer = await page.screenshot({
               type: imgType,

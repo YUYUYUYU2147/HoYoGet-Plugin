@@ -29,6 +29,13 @@ function transform(code, upstreamFile) {
     [/^const __dirname = .*$/m, () => 'const __dirname = ' + JSON.stringify(path.dirname(upstreamFile)) + ';'],
     [/^const YzPath = .*$/m, () => 'const YzPath = ' + JSON.stringify(YZ_ROOT) + ';'],
     [/LinkFiles: \[.*\]/m, () => 'LinkFiles: []'],
+    /* 渲染精度（RenderMatrix 的 transform:scale）超过 100 时，缩放后的内容会超出初始视口；
+       上游按 element.boundingBox() 取裁剪框，部分环境按布局盒返回，出图右侧/底部会缺一块。
+       这里把那一行换成「量可视矩形 + 撑大视口重量一次」，与内置基线里的实现保持一致。 */
+    [
+      /^([ \t]*)const box = await element\.boundingBox\(\);$/m,
+      (m, pad) => pad + 'const box = await (async () => { const rect = async () => { try { return await element.evaluate(n => { const r = n.getBoundingClientRect(); return { x: r.x + window.scrollX, y: r.y + window.scrollY, width: r.width, height: r.height }; }); } catch (e) { return null; } }; let b = await rect(); if (!b || !(b.width > 0) || !(b.height > 0)) b = await element.boundingBox(); const vp = (page.viewport && page.viewport()) || { width: 0, height: 0 }; const needW = Math.ceil(b.x + b.width + 16); const needH = Math.ceil(b.y + b.height + 16); if (needW > (vp.width || 0) || needH > (vp.height || 0)) { await page.setViewport({ width: Math.max(vp.width || 0, needW), height: Math.max(vp.height || 0, needH), deviceScaleFactor: vp.deviceScaleFactor || 1 }).catch(() => {}); b = (await rect()) || b; } return b; })();',
+    ],
   ]
   let out = code
   for (const [re, rep] of pairs) {
