@@ -96,14 +96,16 @@ function loadFromStoken(qq) {
 }
 
 /** 读取框架 sqlite 的历史 MysUsers 表（存在才读，失败静默） */
-async function loadFromSqlite() {
+async function loadFromSqlite(qq) {
   const file = path.resolve(process.cwd(), 'data/db/data.db')
   if (!fs.existsSync(file)) return []
   let db
   try {
     const { DatabaseSync } = await import('node:sqlite')
     db = new DatabaseSync(file, { readOnly: true })
-    const rows = db.prepare('select ltuid, ck, uids from MysUsers').all()
+    /* MysUsers 按米游社账号（ltuid）存放，与 QQ 无关：必须用 Users.ltuids 过滤，
+       否则其他用户的账号会一并挂到本用户的面板上。 */
+    const rows = db.prepare('select m.ltuid, m.ck, m.uids from MysUsers m join Users u on u.id = ? where instr(u.ltuids, CAST(m.ltuid AS TEXT)) > 0').all(String(qq))
     return rows.map(r => {
       let uids = {}
       try {
@@ -171,7 +173,7 @@ export default class NoteUser {
       attach(row.ltuid, row.ck, row.game, row.uid, row.stoken)
     }
 
-    for (const row of await loadFromSqlite()) {
+    for (const row of await loadFromSqlite(qq)) {
       for (const game of GAMES) {
         const list = Array.isArray(row.uids?.[game]) ? row.uids[game] : []
         for (const uid of list) attach(row.ltuid, row.ck, game, uid)
