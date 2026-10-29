@@ -165,9 +165,9 @@ async function fillProfiles(games, e, stoken, noteUser) {
     if (role.nickname) item.name = role.nickname;
     if (role.level) item.level = role.level;
     if (game.key === 'zzz') {
+      /* 这两个标记只决定缺图时的兜底样式；绝区零同样要补昵称与头像，不能提前退出 */
       item.zzz_banner = true;
       item.zzz_face = true;
-      continue;
     }
     if (!Player) continue;
     try {
@@ -182,7 +182,36 @@ async function fillProfiles(games, e, stoken, noteUser) {
     }
   }
 
-  /* ② 崩三头像：并发；headers 必须用真 ck，stoken 拼出来的 ck 会被判登录失效 */
+  /* ② 角色列表：昵称与等级的唯一可靠来源。
+     record index 不返回这两项（绝区零连昵称都没有），只靠本地存档会显示「暂无uid信息」；
+     GameRoles 一次就能返回该账号下全部游戏的 uid / 昵称 / 等级。 */
+  const roleInfo = new Map();
+  const seenCk = new Set();
+  for (const mu of Object.values(noteUser?.mysUsers || {})) {
+    const ck = mu?.ck;
+    if (!ck || seenCk.has(ck)) continue;
+    seenCk.add(ck);
+    try {
+      const res = await api(e, { type: 'GameRoles', headers: mhy.getHeaders(e, ck), silent: true });
+      for (const row of res?.data?.list || []) {
+        if (!row?.game_uid) continue;
+        roleInfo.set(String(row.game_uid), {
+          nickname: row.nickname || '',
+          level: Number(row.level || 0) || 0,
+        });
+      }
+    } catch (err) {
+      logger.debug?.('[HoYoGet][uid] 取角色列表失败：' + (err?.message || err));
+    }
+  }
+  for (const row of tasks) {
+    const info = roleInfo.get(String(row.item.uid || ''));
+    if (!info) continue;
+    if (info.nickname) row.item.name = info.nickname;
+    if (info.level) row.item.level = info.level;
+  }
+
+  /* ③ 崩三头像：并发；headers 必须用真 ck，stoken 拼出来的 ck 会被判登录失效 */
   const bh3Rows = tasks.filter(row => row.game.key === 'bh3');
   await Promise.all(bh3Rows.map(async row => {
     const item = row.item;
@@ -210,14 +239,15 @@ async function fillProfiles(games, e, stoken, noteUser) {
     saveProfile('bh3', uid, avatar);
   }));
 
-  /* ③ 原神/星铁/绝区零：串行，避免 e.uid / e.game 互相覆盖 */
+  /* ④ 原神/星铁/绝区零：串行，避免 e.uid / e.game 互相覆盖 */
   for (const row of tasks) {
     if (row.game.key === 'bh3') continue;
     const item = row.item;
     const uid = String(item.uid || '');
+    /* 只认非空缓存：之前接口失败留下的空记录不该把后续重查挡掉 */
     const cached = readProfile(row.game.key, uid);
-    if (cached !== null) {
-      if (cached) item.faceUrl = cached;
+    if (cached) {
+      item.faceUrl = cached;
       continue;
     }
     let avatar = '';
