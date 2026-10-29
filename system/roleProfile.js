@@ -160,11 +160,21 @@ export async function getRoleProfile(e, uid, game, auth = {}) {
             // 403，且那个域名没被 WAF 拦、响应体不是拦截页，代理兜底不会被触发。
             // 小花火的 api() 本就带 DS 签名并走 mhyFetch，
             // 且 api.js 里 bh3_index 与该URL 完全一致（bh3_abyss_boss 已在用）。
-            res = auth.headers
+            /* 崩三条目的 ck_stoken 常常只有 stuid/stoken/mid，而 record 接口必须带 ltoken：
+               与其它游戏共用同一个米游社账号时 ltoken 就存在条目里，这里补一次再请求。 */
+            let bh3Headers = auth.headers || null
+            if (bh3Headers) {
+                const acc = getAccount(e.user_id, uid) || {}
+                const ck = String(bh3Headers.Cookie || '')
+                if (acc.ltoken && !/ltoken=/.test(ck)) {
+                    bh3Headers = { ...bh3Headers, Cookie: `ltoken=${acc.ltoken};ltuid=${acc.stuid || ''};${ck}` }
+                }
+            }
+            res = bh3Headers
                 ? await api(e, {
                     type: 'bh3_index',
                     uid,
-                    headers: auth.headers,
+                    headers: bh3Headers,
                     game: 'bh3',
                     server: auth.server || mhy.getServer(String(uid), 'bh3'),
                     silent: true,
