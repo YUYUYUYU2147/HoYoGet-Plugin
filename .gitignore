@@ -49,3 +49,6 @@ resources/bh3_calendar/icons/
 resources/meta-gs/
 resources/meta-sr/
 *.zip
+
+# 绝区零面板：裁掉咕咕牛水印栏后的自动缓存，不入库
+resources/zzz_panel/images/panel_crop/

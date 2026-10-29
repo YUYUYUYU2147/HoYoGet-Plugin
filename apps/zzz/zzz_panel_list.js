@@ -1272,15 +1272,183 @@ function zzzPortraitUrl(name) {
   return hit ? zzzPortraitTable[hit] : ''
 }
 
+/* 立绘来源：本地图库 -> 作者仓库在线图 -> 官方立绘 */
+/* 本地目录的图压缩成缓存；咕咕牛图库的图带水印，按来源裁掉后再进面板 */
+const PORTRAIT_CROP_BOTTOM = 0.163
+const PORTRAIT_CROP_LEFT = 0.24
+const PORTRAIT_CACHE_DIR = path.join(PLUGIN_ROOT, 'resources', 'zzz_panel', 'images', 'panel_crop')
+const PORTRAIT_INDEX_FILE = path.join(PLUGIN_ROOT, 'data', 'zzz_portrait_index.json')
+const PORTRAIT_REMOTE = {
+  tree: 'https://api.github.com/repos/YUYUYUYU2147/HoYoGet-Plugin/git/trees/images?recursive=1',
+  raw: 'https://raw.githubusercontent.com/YUYUYUYU2147/HoYoGet-Plugin/images/',
+  dir: 'resources/zzz_panel/images/panel/',
+}
+let portraitIndexCache = null
+let portraitIndexAt = 0
+let portraitIndexTried = false
+
+function readPortraitIndexSync() {
+  if (portraitIndexCache && Date.now() - portraitIndexAt < 6 * 3600e3) return portraitIndexCache
+  try {
+    const j = JSON.parse(fs.readFileSync(PORTRAIT_INDEX_FILE, 'utf8'))
+    if (j && j.roles && Object.keys(j.roles).length) {
+      portraitIndexCache = j.roles
+      portraitIndexAt = Date.now()
+      return portraitIndexCache
+    }
+  } catch { /* 还没有索引，交给在线拉取 */ }
+  return null
+}
+
+async function fetchPortraitIndex(force = false) {
+  if (!force) {
+    const cached = readPortraitIndexSync()
+    if (cached) return cached
+  }
+  portraitIndexTried = true
+  try {
+    const res = await fetch(PORTRAIT_REMOTE.tree, { signal: AbortSignal.timeout(20000) })
+    if (!res.ok) return portraitIndexCache
+    const j = await res.json()
+    const roles = {}
+    for (const it of (j?.tree || [])) {
+      if (it.type !== 'blob' || !it.path.startsWith(PORTRAIT_REMOTE.dir)) continue
+      const rel = it.path.slice(PORTRAIT_REMOTE.dir.length).split('/')
+      if (rel.length !== 2 || !/\.(png|jpe?g|webp)$/i.test(rel[1])) continue
+      if (!roles[rel[0]]) roles[rel[0]] = []
+      roles[rel[0]].push(rel[1])
+    }
+    if (!Object.keys(roles).length) return portraitIndexCache
+    portraitIndexCache = roles
+    portraitIndexAt = Date.now()
+    try {
+      fs.mkdirSync(path.dirname(PORTRAIT_INDEX_FILE), { recursive: true })
+      fs.writeFileSync(PORTRAIT_INDEX_FILE, JSON.stringify({ updatedAt: Date.now(), roles }), 'utf8')
+    } catch { /* 索引落盘失败不影响本次使用 */ }
+    return roles
+  } catch {
+    return portraitIndexCache
+  }
+}
+
+/* 在线图：索引里按角色名挑一张，拼 raw 地址交给渲染端加载 */
+function pickRemotePortrait(variants) {
+  const roles = readPortraitIndexSync()
+  if (!roles) {
+    if (!portraitIndexTried) fetchPortraitIndex().catch(() => {})
+    return ''
+  }
+  const keys = Object.keys(roles)
+  for (const nm of variants) {
+    const key = keys.find(k => k === nm) || keys.find(k => k.length > 1 && (k.includes(nm) || nm.includes(k)))
+    if (!key || !roles[key].length) continue
+    const file = roles[key][Math.floor(Math.random() * roles[key].length)]
+    return PORTRAIT_REMOTE.raw + PORTRAIT_REMOTE.dir + encodeURIComponent(key) + '/' + encodeURIComponent(file)
+  }
+  return ''
+}
+
+/* 检测图片边缘的不透明条带：咕咕牛图库的信息栏整行/整列不透明，人像四周是透明的 */
+async function detectWatermark(abs) {
+  try {
+    const sharp = (await import('sharp')).default
+    const { data, info } = await sharp(abs).ensureAlpha().resize({ width: 160 }).raw().toBuffer({ resolveWithObject: true })
+    const W = info.width
+    const H = info.height
+    const C = info.channels
+    const rowFill = y => { let c = 0, n = 0; for (let x = 0; x < W; x += 2) { n++; if (data[(y * W + x) * C + 3] > 16) c++ } return c / n }
+    const colFill = x => { let c = 0, n = 0; for (let y = 0; y < H; y += 2) { n++; if (data[(y * W + x) * C + 3] > 16) c++ } return c / n }
+    let bottom = 0
+    for (let y = H - 1; y >= 0; y--) { if (rowFill(y) > 0.9) bottom++; else break }
+    let left = 0
+    for (let x = 0; x < W; x++) { if (colFill(x) > 0.9) left++; else break }
+    return { bottom: bottom / H, left: left / W }
+  } catch { return { bottom: 0, left: 0 } }
+}
+
+/* 本地图 -> 缓存 webp（900 宽）；crop 为 auto 时先检测水印栏，命中就按检测到的比例裁掉 */
+async function cachePortrait(abs, crop) {
+  try {
+    const st = fs.statSync(abs)
+    const key = crypto.createHash('sha1').update(abs + '|' + st.size + '|' + st.mtimeMs + '|' + crop).digest('hex').slice(0, 16)
+    const dest = path.join(PORTRAIT_CACHE_DIR, key + '.webp')
+    if (fs.existsSync(dest)) return dest
+    const sharp = (await import('sharp')).default
+    const meta = await sharp(abs).metadata()
+    const w = Number(meta.width) || 0
+    const h = Number(meta.height) || 0
+    if (!w || !h) return abs
+    let side = crop
+    let ratio = 0
+    if (crop === 'auto') {
+      const d = await detectWatermark(abs)
+      if (d.bottom >= 0.05 && d.bottom <= 0.3) { side = 'bottom'; ratio = d.bottom }
+      else if (d.left >= 0.1 && d.left <= 0.4) { side = 'left'; ratio = d.left }
+      else side = 'none'
+    } else if (crop === 'bottom') {
+      ratio = PORTRAIT_CROP_BOTTOM
+    } else if (crop === 'left') {
+      ratio = PORTRAIT_CROP_LEFT
+    }
+    let box = { left: 0, top: 0, width: w, height: h }
+    if (side === 'bottom') {
+      const cut = Math.round(h * ratio)
+      if (cut > 0 && cut < h * 0.3) box = { left: 0, top: 0, width: w, height: h - cut }
+    } else if (side === 'left') {
+      const cut = Math.round(w * ratio)
+      if (cut > 0 && cut < w * 0.4) box = { left: cut, top: 0, width: w - cut, height: h }
+    }
+    fs.mkdirSync(PORTRAIT_CACHE_DIR, { recursive: true })
+    await sharp(abs).extract(box).resize({ width: 900, withoutEnlargement: true }).webp({ quality: 88 }).toFile(dest)
+    return dest
+  } catch { return abs }
+}
+
+/* 咕咕牛 zzz-character 的水印在底部信息栏，喵喵老库 normal-character 在左侧二维码栏；
+   本插件 panel 目录可能是手动拷进来的任意图，交给 auto 检测 */
+function portraitCropOf(base) {
+  if (/normal-character/i.test(base)) return 'left'
+  if (/CowCoos|Miao-Plugin/i.test(base)) return 'auto'
+  return 'auto'
+}
+
+/* 文件读成 data URI（webp/png/jpg 均可） */
+function fileDataUri(abs) {
+  try {
+    const buf = fs.readFileSync(abs)
+    const ext = path.extname(abs).slice(1).toLowerCase() || 'webp'
+    return 'data:image/' + (ext === 'jpg' ? 'jpeg' : ext) + ';base64,' + buf.toString('base64')
+  } catch { return '' }
+}
+
+/* 作者仓库的在线立绘：首次下载后压成缓存，之后直接读本地，不再走网络 */
+async function fetchRemotePortrait(variants) {
+  const url = pickRemotePortrait(variants)
+  if (!url) return ''
+  try {
+    const key = 'remote-' + crypto.createHash('sha1').update(url).digest('hex').slice(0, 16)
+    const dest = path.join(PORTRAIT_CACHE_DIR, key + '.webp')
+    if (fs.existsSync(dest)) return dest
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
+    if (!res.ok) return ''
+    const buf = Buffer.from(await res.arrayBuffer())
+    if (!buf.length) return ''
+    const sharp = (await import('sharp')).default
+    fs.mkdirSync(PORTRAIT_CACHE_DIR, { recursive: true })
+    await sharp(buf).resize({ width: 900, withoutEnlargement: true }).webp({ quality: 88 }).toFile(dest)
+    return dest
+  } catch { return '' }
+}
+
 /**
- * 读取自定义面板图，返回 data URI；无则返回 ''。
- * 每个角色目录随机取一张 png/jpg/webp；名字同时尝试简称/全称和「」包裹形式。
+ * 读取面板立绘：本地图库 -> 作者仓库在线图 -> 官方立绘，全部返回可直接放进 img 的地址。
+ * 本地图压成 900 宽 webp 缓存；咕咕牛图库的图带水印，进面板前自动裁掉信息栏。
  */
-function loadCustomPortrait(names) {
+async function loadCustomPortrait(names) {
   const variants = []
   for (const nm of names) {
     if (!nm) continue
-    variants.push(nm, `「${nm}」`, String(nm).replace(/[「」]/g, ''))
+    variants.push(nm, '「' + nm + '」', String(nm).replace(/[「」]/g, ''))
   }
   /* 接口给的是正式名（星见雅），图库目录用的是简称（雅）；先用别名表补出全部写法再找目录 */
   try {
@@ -1294,23 +1462,32 @@ function loadCustomPortrait(names) {
       }
     }
   } catch { /* 别名表缺失就只按原名找 */ }
+  /* 咕咕牛图库的图带水印，排在作者仓库在线图之后：进咕咕牛目录前先试在线图 */
+  const isCowDir = b => /CowCoos|Miao-Plugin|normal-character/i.test(b)
+  let remoteTried = false
   for (const base of CUSTOM_PORTRAIT_DIRS) {
+    if (!remoteTried && isCowDir(base)) {
+      remoteTried = true
+      const online = await fetchRemotePortrait(variants)
+      const uri = online ? fileDataUri(online) : ''
+      if (uri) return uri
+    }
     for (const nm of variants) {
       const dir = path.join(base, nm)
       if (!fs.existsSync(dir)) continue
       let files = []
       try { files = fs.readdirSync(dir).filter(f => /\.(png|jpe?g|webp)$/i.test(f)).sort() } catch { files = [] }
       if (!files.length) continue
-      const file = files[Math.floor(Math.random() * files.length)]
-      const ext = path.extname(file).slice(1).toLowerCase()
-      const mime = ext === 'jpg' ? 'jpeg' : ext
-      try {
-        const buf = fs.readFileSync(path.join(dir, file))
-        return `data:image/${mime};base64,${buf.toString('base64')}`
-      } catch { /* 读取失败则试下一个 */ }
+      const abs = await cachePortrait(path.join(dir, files[Math.floor(Math.random() * files.length)]), portraitCropOf(base))
+      const uri = fileDataUri(abs)
+      if (uri) return uri
     }
   }
-  /* 本地图库没有该角色时回落到官方立绘链接，模板 onerror 再兜底接口图 */
+  if (!remoteTried) {
+    const online = await fetchRemotePortrait(variants)
+    const uri = online ? fileDataUri(online) : ''
+    if (uri) return uri
+  }
   for (const nm of variants) {
     const url = zzzPortraitUrl(nm)
     if (url) return url
@@ -1681,7 +1858,7 @@ function zzzIcons() {
   catch { _zzzIcons = { equip: {}, suit: {}, weapon: {}, avatar: {} } }
   return _zzzIcons
 }
-function normalizeDetail(a, uid) {
+async function normalizeDetail(a, uid) {
   const rarity = a?.rarity === 'S' ? 'S' : (a?.rarity || 'A')
   const subElement = ZELEM[a?.element_type] || 'physical'
   const elementStr = ZELEM_STR[a?.element_type] || 'Physical'
@@ -1960,6 +2137,7 @@ const ORIGINAL_REG = /^(?:米游社|#?绝区零)原图$/
 const PANEL_UPLOAD_REG = /^(?:#?(?:米游社|米哈游)|%|#?(?:绝区零|zzz))?(?:上传|添加)(.+?)(?:角色|面板)图$/
 const PANEL_IMAGES_REG = /^(?:米游社|%|#?绝区零)?(?:获取|查看)(.+?)(?:角色|面板)图\s*(\d*)$/
 const PANEL_DELETE_IMG_REG = /^(?:米游社|%|#?绝区零)?删除(.+?)(?:角色|面板)图(.+)$/
+const PANEL_DOWNLOAD_REG = /^(?:%|#?(?:绝区零|zzz))?\s*(?:下载|更新|同步)(?:面板)?(?:立绘|资源|图库)\s*(.*)$/
 const EXTREME_REG = /^(?:米游社|%|#?绝区零)?(.+?)极限面板$/
 // 主人专用：批量更新群友（私聊则全部绑定用户）的面板
 const BULK_UPDATE_REG = /^(?:米游社|%|#?绝区零)?(?:批量)?更新群友面板$/
@@ -2010,6 +2188,7 @@ export class zzz_panel_list extends plugin {
         { reg: PANEL_UPLOAD_REG.source, fnc: 'panelUploadImages' },
         { reg: PANEL_IMAGES_REG.source, fnc: 'panelImageList' },
         { reg: PANEL_DELETE_IMG_REG.source, fnc: 'panelDeleteImages' },
+        { reg: PANEL_DOWNLOAD_REG.source, fnc: 'panelDownloadArt' },
         { reg: REMIND_ON_REG.source, fnc: 'zzzRemindToggle' },
         { reg: REMIND_GLOBAL_ON_REG.source, fnc: 'zzzRemindGlobalToggle' },
         { reg: REMIND_ABYSS_REG.source, fnc: 'zzzRemindAbyssThreshold' },
@@ -2565,7 +2744,7 @@ export class zzz_panel_list extends plugin {
       return e.reply(`米游社、Enka 与本地面板库都没有「${target.name_mi18n || arg}」的面板数据。\n请先在游戏内把该角色放进代理人展柜，或执行「%更新面板」/「%米游社更新面板」累积历史数据。`)
     }
 
-    const detail = normalizeDetail(avatar, uid)
+    const detail = await normalizeDetail(avatar, uid)
     const charData = detail.charData
     const footer = 'from 米哈游'
     try {
@@ -2745,6 +2924,40 @@ export class zzz_panel_list extends plugin {
   }
 
   /** 删除自定义面板图：%删除艾莲面板图1,2 */
+  /**
+   * 主人专用：把作者仓库 images 分支的面板立绘下载到本地（%下载资源 / %下载资源 艾莲）。
+   * 下载后即为本地图，面板优先读本地，不再依赖在线图。
+   */
+  async panelDownloadArt(e) {
+    if (!e.isMaster) return e.reply('只有主人才能下载立绘资源')
+    const m = String(e.msg || '').match(PANEL_DOWNLOAD_REG)
+    const want = String(m?.[1] || '').replace(/[「」]/g, '').trim()
+    await e.reply('正在拉取仓库立绘清单……')
+    const roles = await fetchPortraitIndex(true)
+    if (!roles) return e.reply('拉取立绘清单失败，请确认服务器能访问 GitHub')
+    const all = Object.keys(roles)
+    const targets = want ? all.filter(k => k === want || k.includes(want) || want.includes(k)) : all
+    if (!targets.length) return e.reply('仓库里没有「' + want + '」的立绘目录')
+    let ok = 0, skip = 0, fail = 0
+    for (const role of targets) {
+      const dir = path.join(PLUGIN_ROOT, 'resources', 'zzz_panel', 'images', 'panel', role)
+      try { fs.mkdirSync(dir, { recursive: true }) } catch { fail += roles[role].length; continue }
+      for (const file of roles[role]) {
+        const dest = path.join(dir, file)
+        try { if (fs.existsSync(dest) && fs.statSync(dest).size > 1024) { skip++; continue } } catch { /* 状态读不到就重新下载 */ }
+        const url = PORTRAIT_REMOTE.raw + PORTRAIT_REMOTE.dir + encodeURIComponent(role) + '/' + encodeURIComponent(file)
+        try {
+          const res = await fetch(url, { signal: AbortSignal.timeout(60000) })
+          if (!res.ok) { fail++; continue }
+          const buf = Buffer.from(await res.arrayBuffer())
+          if (!buf.length) { fail++; continue }
+          fs.writeFileSync(dest, buf)
+          ok++
+        } catch { fail++ }
+      }
+    }
+    return e.reply('立绘下载完成：新增 ' + ok + ' 张，跳过 ' + skip + ' 张，失败 ' + fail + ' 张\n目录 resources/zzz_panel/images/panel/<角色>/')
+  }
   async panelDeleteImages(e) {
     if (!e.isMaster) return e.reply('只有主人才能删除面板图')
     const m = String(e.msg || '').match(PANEL_DELETE_IMG_REG)
@@ -3142,7 +3355,7 @@ export class zzz_panel_list extends plugin {
     }
     try {
       const raw = this.applyExtremePanel(built.avatar, preset)
-      const detail = normalizeDetail(raw, '100000000')
+      const detail = await normalizeDetail(raw, '100000000')
       const img = await render('zzz_panel/detail', {
         ...detail,
         footer: 'from 米哈游 · 理论极限',
@@ -3409,7 +3622,7 @@ export class zzz_panel_list extends plugin {
     const avatar = this.pickInfo(info?.data)
     if (!avatar) return e.reply('取到详情响应，但没识别到角色数据')
 
-    const detail = normalizeDetail(avatar, uid)
+    const detail = await normalizeDetail(avatar, uid)
     const charData = detail.charData
     // normalizeDetail 返回 { uid, charData }，damage 挂在 charData 上，不在顶层
     const damage = charData.damage
