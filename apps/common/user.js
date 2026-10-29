@@ -80,6 +80,9 @@ async function collectBindAccounts(e, stokenData) {
             profile = await getRoleProfile(e, uid, game, game === 'bh3' ? { headers, server: entry.region } : {});
         } catch { /* 忽略，回退 */ }
         const fallback = stokenRoles.get(String(uid)) || {};
+        /* 服务器类型：优先取存档里的 region_name（天空岛 / 星穹列车 / 新艾利都 / 各平台服），
+           缺失时按 region 代码回退，再缺则按 uid 推断 */
+        const server = entry.region_name || mhy.getServerName(entry.region) || mhy.getServerName(mhy.getServer(uid, game));
         accounts.push({
             uid: String(uid),
             game,
@@ -87,6 +90,7 @@ async function collectBindAccounts(e, stokenData) {
             name: profile.nickname || fallback.nickname || '',
             avatar: profile.avatar,
             level: profile.userLevel || fallback.level || 0,
+            server,
             ok: true,
         });
     }

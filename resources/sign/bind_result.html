@@ -24,7 +24,7 @@
             {{if item.avatar}}<img class="row-avatar" src="{{item.avatar}}" />{{/if}}
             <div class="row-main">
               <div class="row-name">{{item.name || ('UID ' + item.uid)}}</div>
-              <div class="row-sub">{{item.gameName}} · UID {{item.uid}}{{if item.level}} · Lv.{{item.level}}{{/if}}</div>
+              <div class="row-sub">{{item.gameName}} · UID {{item.uid}}{{if item.level}} · Lv.{{item.level}}{{/if}}{{if item.server}} · {{item.server}}{{/if}}</div>
             </div>
             <div class="row-state {{item.ok ? '' : 'fail'}}">{{item.ok ? '成功' : '失败'}}</div>
           </div>
