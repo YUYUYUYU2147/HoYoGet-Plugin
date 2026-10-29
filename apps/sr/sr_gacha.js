@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto'
 import { render, mhy, pluginPriority, makeForwardMsg } from '#HoYoGet'
 import { appendTaskRecords } from '../../system/task_history.js'
 import { buildIsUP } from '../../system/join_isup.mjs'
+import { getEventNoteUser } from '../../system/genshin_loader.js'
 // === 跨插件依赖：genshin 插件 ===
 //
 // 这几个模块（gachaLog / srGachaSummary）是 genshin 较新版本才有的，
@@ -626,7 +627,43 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
        Character/Weapon 查到的相对路径全部 404（常驻池等没有自带 icon 的记录
        就完全没有图标）。改用本插件 resources，meta-sr 里 face/icon 都在。 */
     const MIAO_RES = '../../../../../plugins/HoYoGet-Plugin/resources'
-    const miaoGame = game === 'zzz' ? 'zzz' : 'sr'
+    const miaoGame = game === 'zzz' ? 'zzz' : game
+    /* 三个游戏的物品类型口径不同：原神「角色 / 武器」、星铁「角色 / 光锥」、
+       绝区零「代理人 / 音擎 / 邦布」。三套都要认，否则原神武器分支永远取不到图标。 */
+    const ROLE_TYPES = new Set(['角色', '代理人'])
+    const WEAPON_TYPES = new Set(['武器', '光锥', '音擎'])
+    /* 武器资源按类型分桶（meta-gs/weapon/<类型>/<名称>/icon.webp），桶名固定，
+       逐个探测比遍历整棵树便宜。 */
+    const WEAPON_BUCKETS = { gs: ['sword', 'claymore', 'polearm', 'bow', 'catalyst'], sr: [], zzz: [] }
+    const resAbs = rel => path.join(process.cwd(), 'plugins/HoYoGet-Plugin/resources', rel)
+    const existsRes = rel => {
+      try { return fs.existsSync(resAbs(rel)) } catch { return false }
+    }
+    /** 去掉资源路径开头的斜杠，便于拼成 MIAO_RES 下的相对地址 */
+    const trimLead = v => {
+      const s = String(v || '')
+      return s.startsWith('/') ? s.slice(1) : s
+    }
+    /** 本地资源兜底：meta-<游戏>/character/<名称>/imgs/face.webp 与武器 icon */
+    const localIcon = (name, kind) => {
+      if (!name || game === 'zzz') return ''
+      if (kind === 'role') {
+        for (const file of ['face.webp', 'face-q.webp', 'face0.webp']) {
+          const rel = 'meta-' + game + '/character/' + name + '/imgs/' + file
+          if (existsRes(rel)) return MIAO_RES + '/' + rel
+        }
+        return ''
+      }
+      if (kind === 'weapon') {
+        for (const bucket of WEAPON_BUCKETS[game] || []) {
+          for (const file of ['icon.webp', 'gacha.webp', 'awaken.webp']) {
+            const rel = 'meta-' + game + '/weapon/' + bucket + '/' + name + '/' + file
+            if (existsRes(rel)) return MIAO_RES + '/' + rel
+          }
+        }
+      }
+      return ''
+    }
     // 绝区零：官方物品配置接口忽略 game 参数只返回星铁数据，miao-plugin 也无绝区零资源，
     // 且图源站点在本机不可达，因此这里只认记录自带的 icon，不做任何猜测性拼接
     const makeIcon = item => {
@@ -635,28 +672,32 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
       // 此前这里直接丢弃 item.icon 改用 miao 查表，而 miao 的星铁 data.json 不提供
       // imgs.face（98 个角色全为空），于是星铁卡片从来没有头像
       if (item?.icon) return item.icon
+      const name = String(item?.name || '')
+      const type = String(item?.item_type || '')
+      // 类型缺失（旧数据、云端同步）时两种都试，避免整张卡片没有头像
+      const wantRole = !type || ROLE_TYPES.has(type)
+      const wantWeapon = !type || WEAPON_TYPES.has(type)
       try {
         const { Character, Weapon } = miaoModels || {}
-        if (item.item_type === '角色' && Character) {
-          const char = Character.get(item.name, miaoGame)
+        if (wantRole && Character && name) {
+          const char = Character.get(name, miaoGame)
           const face = char?.imgs?.face || char?.face || ''
-          if (face) return `${MIAO_RES}${face}`
+          if (face) return MIAO_RES + String(face)
         }
-        if (item.item_type === '光锥' && Weapon) {
-          const weapon = Weapon.get(item.name, miaoGame)
+        if (wantWeapon && Weapon && name) {
+          const weapon = Weapon.get(name, miaoGame)
           const img = weapon?.getData?.('img')?.img || weapon?.img || ''
-          if (img) return `${MIAO_RES}/${String(img).replace(/^\//, '')}`
+          if (img) return MIAO_RES + '/' + trimLead(img)
         }
       } catch {}
-      // miao 星铁角色的 imgs 目录里有 face.webp，只是 data.json 未引用，按约定路径兜底
-      const name = String(item?.name || '')
-      if (game === 'sr' && item?.item_type === '角色' && name) {
-        const local = `meta-sr/character/${name}/imgs/face.webp`
-        try {
-          if (fs.existsSync(path.join(process.cwd(), 'plugins/HoYoGet-Plugin/resources', local))) {
-            return `${MIAO_RES}/${local}`
-          }
-        } catch {}
+      // miao 索引缺项（新角色、别名写法）时按约定路径兜底
+      if (wantRole) {
+        const hit = localIcon(name, 'role')
+        if (hit) return hit
+      }
+      if (wantWeapon) {
+        const hit = localIcon(name, 'weapon')
+        if (hit) return hit
       }
       return ''
     }
@@ -1057,8 +1098,9 @@ function normalizeRecordsByPool(list = []) {
 
 async function getUserAuth(e) {
   const qq = e.user_id
-  const uid = e.user?.getUid?.('sr')
-  if (!uid) return { error: '请先用 genshin 侧绑定星铁账号，再更新抽卡记录' }
+  const user = await getEventNoteUser(e)
+  const uid = user?.getUid?.('sr') || ''
+  if (!uid) return { error: '未找到绑定的星铁账号，请先 #米哈游扫码绑定' }
 
   const getCookieFile = await getSrSummaryFn('getSrGachaCookieFile')
   const readCookie = await getSrSummaryFn('readSrGachaCookie')
@@ -1075,11 +1117,11 @@ async function getUserAuth(e) {
     candidates.push(await mysInfo.getCookie('sr'))
   } catch {}
   try {
-    candidates.push(e.user?.getMysUser?.('sr')?.ck)
+    candidates.push(user?.getMysUser?.('sr')?.ck)
   } catch {}
 
   const cookies = [...new Set(candidates.map(v => String(v || '').trim()).filter(Boolean))]
-  if (!cookies.length) return { error: '请先用 genshin 侧绑定星铁账号，再更新抽卡记录' }
+  if (!cookies.length) return { error: '未找到绑定的星铁账号，请先 #米哈游扫码绑定' }
   return { qq, uid, cookies, cookieFile }
 }
 
@@ -1156,6 +1198,80 @@ async function fetchPool(uid, region, ck, gachaType) {
     if (!versionId || !maxId) break
   }
   return rows
+}
+
+/** 徽章接口（five_star_list）的五星摘要归一化：与 genshin 的 srGachaSummary 同口径 */
+function normalizeCkRows(list) {
+  const records = []
+  let pity = null
+  for (const row of Array.isArray(list) ? list : []) {
+    if (!row || typeof row !== 'object') continue
+    if (row.item === null) {
+      // item 为 null 且 got_item 为 false 的才是「当前垫抽」，其余空条目跳过
+      if (row.got_item === false && Number.isInteger(Number(row.gacha_count)) && Number(row.gacha_count) >= 0) {
+        pity = { gacha_count: Number(row.gacha_count) }
+      }
+      continue
+    }
+    if (row.got_item !== true || row.item?.rarity !== 5) continue
+    const id = String(row.id || row.uuid || '')
+    const item = row.item
+    if (!id || !item.name || !['ItemType_Avatar', 'ItemType_Equipment'].includes(item.item_type)) continue
+    records.push({
+      id,
+      uuid: row.uuid || '',
+      item_id: item.item_id,
+      name: item.name,
+      item_type: item.item_type === 'ItemType_Avatar' ? '角色' : '光锥',
+      rarity: 5,
+      is_up: row.is_up === true,
+      gacha_count: Number.isInteger(Number(row.gacha_count)) ? Number(row.gacha_count) : null,
+      time: row.time || '',
+    })
+  }
+  return { records, pity }
+}
+
+/**
+ * 用本插件的徽章接口实现 ck 更新（不依赖 genshin 的 SrGachaSummary）。
+ *
+ * 原先 ck 更新只能走 genshin 的类，未安装 genshin 的机器上更新必定失败。
+ * 这里用同一套接口逐池拉五星摘要，字段口径与 genshin 一致，
+ * 合并、is_up 校准等后续流程照旧复用。
+ *
+ * @param {string} uid 游戏 UID
+ * @param {string} region 区服
+ * @param {string} ck 可用 Cookie
+ * @returns {Promise<{pools: object}>} 以池 type 为键的五星摘要
+ */
+async function fetchSrCkPools(uid, region, ck) {
+  const pools = {}
+  let cookie = ck
+  let refreshed = false
+  for (const def of POOLS) {
+    let rows = []
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        rows = await fetchPool(uid, region, cookie, def.type)
+        break
+      } catch (err) {
+        // 徽章会话过期会报「请从游戏内打开参与活动」，先换一次 e_hkrpg_token 再试
+        if (attempt === 0 && !refreshed) {
+          refreshed = true
+          try {
+            cookie = await refreshBadgeCookie(uid, cookie, region)
+            continue
+          } catch (e2) {
+            throw err
+          }
+        }
+        throw err
+      }
+    }
+    const incoming = normalizeCkRows(rows)
+    pools[def.type] = { name: def.name, records: incoming.records, pity: incoming.pity }
+  }
+  return { pools }
 }
 
 function getDataFile(uid, qq) {
@@ -2253,7 +2369,9 @@ export class sr_gacha extends plugin {
         try {
           const SrGachaSummaryCls = await getSrSummaryClass()
           if (typeof SrGachaSummaryCls !== 'function') {
-            throw new Error('genshin 插件缺少 SrGachaSummary 类，请更新 genshin 插件')
+            // 未安装 genshin：改用本机实现，接口与数据口径一致
+            result = await fetchSrCkPools(auth.uid, getSrRegion(auth.uid), cookie)
+            break
           }
           const saveCookie = await getSrSummaryFn('saveSrGachaCookie')
           const summary = new SrGachaSummaryCls({ uid: auth.uid, cookie, file: `./data/srGachaSummary/${auth.uid}.json` })
@@ -2270,6 +2388,15 @@ export class sr_gacha extends plugin {
       // type 1。彻底移除对 genshin 的 GachaLog 依赖。
       const oldFile = getDataFile(auth.qq, auth.uid)
       const old = readData(oldFile)
+      // 本机实现不返回增量：按更新前后的五星条数差补一份，供回复文案使用
+      if (!result.addedByPool) {
+        result.addedByPool = {}
+        for (const pool of POOLS) {
+          const before = getPoolRecords(old?.pools?.[pool.type]).length
+          const now = getPoolRecords(result.pools?.[pool.type]).length
+          result.addedByPool[pool.type] = Math.max(0, now - before)
+        }
+      }
       for (const ck of auth.cookies) {
         try {
           const common = await fetchCommonPoolByCk(auth.uid, getSrRegion(auth.uid), ck)
@@ -2521,16 +2648,9 @@ export class sr_gacha extends plugin {
       // 否则刚发链接拉取的新五星会被全部当成非UP，导致角色池统计不准确
       for (const cookie of auth.cookies) {
         try {
-          const SrGachaSummaryCls = await getSrSummaryClass()
-          if (typeof SrGachaSummaryCls !== 'function') {
-            throw new Error('genshin 插件缺少 SrGachaSummary 类，请更新 genshin 插件')
-          }
-          const summary = new SrGachaSummaryCls({ uid: auth.uid, cookie, file: `./data/srGachaSummary/${auth.uid}.json` })
-          const sr = await summary.update()
+          const sr = await fetchSrCkPools(auth.uid, getSrRegion(auth.uid), cookie)
           if (sr?.pools) {
             result.pools = mergeIsUp(sr.pools, result.pools)
-            const saveCookie2 = await getSrSummaryFn('saveSrGachaCookie')
-            saveCookie2?.(auth.cookieFile, cookie)
             break
           }
         } catch (err) {
@@ -2674,8 +2794,9 @@ export class sr_gacha extends plugin {
 
   async updateHelper(e) {
     const qq = e.user_id
-    const uid = e.user?.getUid?.('sr')
-    if (!uid) return e.reply('请先用 genshin 侧绑定星铁账号，再更新抽卡记录')
+    const user = await getEventNoteUser(e)
+    const uid = user?.getUid?.('sr') || ''
+    if (!uid) return e.reply('未找到绑定的星铁账号，请先 #米哈游扫码绑定')
     let bind = readHelperBind(qq)
     if (!bind?.union_id) {
       // 未绑定时先尝试从本机微信缓存自动识别，避免让用户手工去挖union_id

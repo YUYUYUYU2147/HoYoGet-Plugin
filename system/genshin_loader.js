@@ -79,3 +79,24 @@ export function makeGenshinLoader(tag, relPaths, named = null) {
     return cache.value
   }
 }
+
+/**
+ * 取事件对应的用户绑定对象（NoteUser）。
+ *
+ * JiuLi 分发阶段只挂 e.runtime，不预建 e.user，直接读 e.user 会拿不到任何 UID，
+ * 表现为「明明扫码绑定了，却提示未绑定」。这里按 QQ 现构造一份并写回事件，
+ * 使后续按 e.user 同步取值的代码同样可用。
+ *
+ * @param {object} e 事件对象
+ * @returns {Promise<object|null>} 绑定对象；取不到时返回原 e.user（可能为 undefined）
+ */
+export async function getEventNoteUser(e) {
+  if (e?.user && typeof e.user.getUid === 'function') return e.user
+  const r = await loadGenshinModule('model/mys/NoteUser.js', ['model/mys/NoteUser.js'])
+  if (!r.ok || !r.value) return e?.user || null
+  try {
+    return (await r.value.create(e)) || e?.user || null
+  } catch {
+    return e?.user || null
+  }
+}
