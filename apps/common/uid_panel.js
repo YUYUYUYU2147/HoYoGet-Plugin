@@ -270,16 +270,19 @@ async function fillProfiles(games, e, stoken, noteUser) {
  * 内置 NoteUser 的 getUidList 返回字符串数组，部分版本的 genshin 返回
  * { uid, ... } 对象数组；模板与补资料逻辑统一按对象取字段，这里一次转换，
  * 两种来源都能用。
+ * 角标类型：内置 NoteUser 的 getUidList 只返回 uid 字符串，没有 type 字段，
+ * 模板按 type 判定角标，缺省会把扫码登录的账号全部显示成「绑定」。条目均
+ * 来自持有 Cookie 的账号，这里统一补成 ck。
  */
 function normalizeUidList(list) {
   const out = [];
   for (const item of Array.isArray(list) ? list : []) {
     if (item && typeof item === 'object') {
       const uid = String(item.uid || item.uid_str || '').trim();
-      if (uid) out.push({ ...item, uid });
+      if (uid) out.push({ type: 'ck', ...item, uid });
     } else {
       const uid = String(item ?? '').trim();
-      if (uid) out.push({ uid });
+      if (uid) out.push({ uid, type: 'ck' });
     }
   }
   return out;
