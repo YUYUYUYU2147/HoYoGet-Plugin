@@ -110,8 +110,9 @@ async function getBh3SignTargets(e) {
     return targets;
 }
 
-async function ensureCookieToken(e, ck, entry = null) {
-    if (!ck || /(?:^|;\s*)cookie_token=/.test(ck)) return ck;
+async function ensureCookieToken(e, ck, entry = null, force = false) {
+    if (!ck) return ck;
+    if (!force && /(?:^|;\s*)cookie_token=/.test(ck)) return ck;
     const map = parseCookie(ck);
     const stuid = entry?.stuid || map.stuid || map.ltuid || map.account_id;
     const stoken = entry?.stoken || map.stoken;
@@ -504,8 +505,14 @@ function getBbsAccounts(e) {
     // 每个条目都被 continue 掉 —— 表现为日志里「逍遥条目=10 → 通行证 0」。
     const collectOne = entry => {
         if (!entry?.stuid || !entry?.stoken) return;
-        if (accounts.has(String(entry.stuid))) return;
-        const ck = entry.ck_stoken || `stuid=${entry.stuid};stoken=${entry.stoken};${entry.mid ? `mid=${entry.mid};` : ''}`;
+        let ck = entry.ck_stoken || `stuid=${entry.stuid};stoken=${entry.stoken};${entry.mid ? `mid=${entry.mid};` : ''}`;
+        /* 同通行证多条记录时保留带 cookie_token 的那条；ck_stoken 常只存 stuid+stoken，用条目字段补齐 */
+        const prevEntry = accounts.get(String(entry.stuid))
+        const hasCookieToken = s => /(?:^|;\s*)cookie_token=/.test(s)
+        if (prevEntry && hasCookieToken(prevEntry.ck) && !hasCookieToken(ck)) return
+        if (!hasCookieToken(ck) && entry.cookie_token) ck = ck + ';cookie_token=' + entry.cookie_token
+        if (!/(?:^|;\s*)ltoken=/.test(ck) && entry.ltoken) ck = ck + ';ltoken=' + entry.ltoken
+        if (!/(?:^|;\s*)ltuid=/.test(ck)) ck = ck + ';ltuid=' + entry.stuid
         // 全程固定 device_id：设备指纹一变，米游社立刻判风险设备 → 1034
         accounts.set(String(entry.stuid), {
             stuid: String(entry.stuid),
@@ -1020,6 +1027,17 @@ async function bbsForumSign(e, account, forum, ctx = {}) {
         const fields = (refreshed.ck || '').split(';').map(s => s.split('=')[0]).filter(Boolean).join(',');
         logger.mark(`[HoYoGet][bbs_sign] ${forum.name} ck字段=[${fields}]`);
         logger.mark(`[HoYoGet][bbs_sign] ${forum.name} signRes=${JSON.stringify(signRes).slice(0, 300)}`);
+    }
+    /* cookie_token 过期但 stoken 仍有效时，拿旧 cookie 直接签到会回 -100；
+       这里强制用 stoken 换一次 cookie_token 再重签，能自愈而不必重新扫码。 */
+    if (isBbsExpired(signRes) && !ctx.forceRefreshedCk) {
+        ctx.forceRefreshedCk = true
+        const freshCk = await ensureCookieToken(e, account.ck, account, true)
+        if (freshCk && freshCk !== refreshed.ck) {
+            refreshed.ck = freshCk
+            signRes = await bbsJson(e, refreshed, signUrl, { gids }, true)
+            if (config().debug) logger.mark('[HoYoGet][bbs_sign] ' + forum.name + ' 强制刷新ck后重签 retcode=' + (signRes?.retcode))
+        }
     }
     // 米游社颁的 challenge 要当 x-rpc-challenge 带回：过码完立刻重打仍是 1034，按梯度等放行
     const retryWithChallenge = async ch => {
@@ -1645,7 +1663,7 @@ function bbsResultTips(lines) {
         tips.push('提示：触发米游社验证码，已优先尝试本地自动过码；若仍失败，请确认 127.0.0.1:2149 过码服务已启动，或按群内链接完成手动验证');
     }
     if (body.some(l => /登录失效/.test(l))) {
-        tips.push('提示：ck 已失效，重新[扫码绑定]后再试');
+        tips.push('提示：米游社社区登录态已失效（游戏签到用的是另一个凭据，通常仍可用），重新[扫码绑定]后再试');
     }
     if (body.some(l => /请求被拒/.test(l))) {
         tips.push('提示：接口签名被拒(米游社版本更新)，请更新插件后再试');
