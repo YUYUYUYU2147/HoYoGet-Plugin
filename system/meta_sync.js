@@ -109,9 +109,52 @@ function copyDir(src, dest) {
   }
 }
 
-/** 本地 miao-plugin 的资源根（装了 miao 时用作缺失文件的兜底来源） */
+/**
+ * 角色子目录数量：判断 meta 资源是否装全的粗判据。
+ * 完整时应接近全部角色数（实测 gs 128、sr 109 个目录），取下限 100；
+ * 只有增量包时目录数远少于此，据此识别半套资源。
+ */
+const MIN_CHAR_DIRS = 100
+
+function countCharDirs(game) {
+  try {
+    return fs.readdirSync(path.join(targetOf(game), 'character'), { withFileTypes: true })
+      .filter(entry => entry.isDirectory()).length
+  } catch {
+    return 0
+  }
+}
+
+/**
+ * 本地 miao 资源根（缺文件时用作兜底来源）。
+ *
+ * 依次尝试环境变量指定目录、同级 miao-plugin、/tmp 下的 miao 源码副本，
+ * 以及同级任意插件目录中同时带 meta-gs 与 common 的 resources，
+ * 避免 miao 改名或挪到临时目录后兜底整体失效。
+ */
 function miaoResRoot() {
-  return path.join(PLUGIN_ROOT, '..', 'miao-plugin', 'resources')
+  const candidates = []
+  try {
+    if (globalThis.__HOYO_MIAO_RES__) candidates.push(String(globalThis.__HOYO_MIAO_RES__))
+  } catch { /* 忽略 */ }
+  if (process.env.HOYO_MIAO_RES) candidates.push(process.env.HOYO_MIAO_RES)
+  const pluginsDir = path.resolve(PLUGIN_ROOT, '..')
+  candidates.push(path.join(pluginsDir, 'miao-plugin', 'resources'))
+  candidates.push(path.join(pluginsDir, 'miao-plugin-next', 'resources'))
+  candidates.push('/tmp/miao-src/resources')
+  try {
+    for (const name of fs.readdirSync(pluginsDir)) {
+      const dir = path.join(pluginsDir, name)
+      if (path.resolve(dir) === PLUGIN_ROOT) continue
+      candidates.push(path.join(dir, 'resources'))
+    }
+  } catch { /* 忽略 */ }
+  for (const dir of candidates) {
+    try {
+      if (fs.existsSync(path.join(dir, 'meta-gs')) && fs.existsSync(path.join(dir, 'common'))) return dir
+    } catch { /* 忽略 */ }
+  }
+  return String()
 }
 
 /** 只复制目标目录里没有的文件，返回复制数量 */
@@ -160,12 +203,34 @@ export function backfillFromMiao(game) {
   return copied
 }
 
+/** 全量仓库：增量包只带改动文件，基线图标只能靠全量分支 */
+const FULL_REPO = 'https://cnb.cool/qsyhh_res/meta.git'
+
+/**
+ * 从全量分支补齐缺失文件（该分支 HEAD 与远端提交 sha 一致）。
+ * @returns {Promise<number>} 补齐的文件数
+ */
+async function pullFull(game) {
+  const tmp = path.join(PLUGIN_ROOT, 'temp', 'meta_full', branchOf(game) + '-' + Date.now())
+  try {
+    await execFileAsync('git', ['clone', '--depth', '1', '-b', branchOf(game), FULL_REPO, tmp], { timeout: 600000 })
+    let copied = 0
+    for (const entry of fs.readdirSync(tmp, { withFileTypes: true })) {
+      if (entry.name === '.git') continue
+      copied += copyMissingTree(path.join(tmp, entry.name), path.join(targetOf(game), entry.name))
+    }
+    return copied
+  } finally {
+    try { fs.rmSync(tmp, { recursive: true, force: true }) } catch { /* 忽略 */ }
+  }
+}
+
 /**
  * 同步一个游戏的 meta 资源。
  *
  * @param {string} game 'gs' | 'sr'
  * @param {object} opts { log, maxCommits } —— log 用于输出进度（可选）
- * @returns {Promise<{game, updated:number, latest:string, skipped:boolean, filled:number}>}
+ * @returns {Promise<{game, updated:number, latest:string, skipped:boolean, filled:number, chars?:number}>}
  */
 export async function syncMeta(game, opts = {}) {
   const log = typeof opts.log === 'function' ? opts.log : () => {}
@@ -175,20 +240,26 @@ export async function syncMeta(game, opts = {}) {
 
   const latest = commits[0].sha
   const local = readSha(game)
-  if (local && local === latest && fs.existsSync(path.join(targetOf(game), 'character'))) {
-    /* 版本虽是最新，但资源可能是「只应用了增量包」的半套，顺手用 miao 补齐 */
+  const localChars = countCharDirs(game)
+  if (local && local === latest && localChars >= MIN_CHAR_DIRS) {
+    /* 版本与角色目录数都达标才跳过；半套资源仍用 miao 补齐 */
     const filled = backfillFromMiao(game)
     log(`${branch} 已是最新（${latest.slice(0, 8)}）${filled ? `，从 miao 补齐 ${filled} 个文件` : ''}`)
     return { game, updated: 0, latest, skipped: true, filled }
+  }
+  if (local && local === latest) {
+    /* 版本标记最新但角色目录不全，不能跳过，转为全量补齐 */
+    log(branch + ' 标记为最新但只有 ' + localChars + ' 个角色目录，转为全量补齐')
   }
 
   const workDir = path.join(PLUGIN_ROOT, 'temp', 'meta_sync', `${branch}-${Date.now()}`)
   fs.mkdirSync(workDir, { recursive: true })
 
-  /* 没有本地版本就只装最新一个增量包（首次可能不完整）；
-     有本地版本时从最新往回做到本地那个提交，逐个应用，保证文件齐 */
+  /* 没有本地版本、或版本标记最新但目录不全时，只装最新一个增量包，
+     缺的部分交给后面的全量补齐；其余情况从最新往回做到本地那个提交，
+     逐个应用，保证文件齐 */
   const todo = []
-  if (!local) {
+  if (!local || local === latest) {
     todo.push(commits[0])
   } else {
     for (const c of commits) {
@@ -221,11 +292,20 @@ export async function syncMeta(game, opts = {}) {
     }
   }
 
-  writeSha(game, latest)
   try { fs.rmSync(workDir, { recursive: true, force: true }) } catch { /* 忽略 */ }
-  const filled = backfillFromMiao(game)
+  let filled = backfillFromMiao(game)
   if (filled) log(`${branch} 从 miao 补齐 ${filled} 个文件`)
-  return { game, updated, latest, skipped: false, filled }
+  if (countCharDirs(game) < MIN_CHAR_DIRS) {
+    try {
+      filled += await pullFull(game)
+    } catch (err) {
+      log(branch + ' 全量补齐失败：' + (err?.message || err))
+    }
+  }
+  const chars = countCharDirs(game)
+  if (chars >= MIN_CHAR_DIRS) writeSha(game, latest)
+  else log(branch + ' 资源仍不完整（' + chars + ' 个角色目录），保留旧版本标记以便重试')
+  return { game, updated, latest, skipped: false, filled, chars }
 }
 
 /** 两个游戏一起同步 */
