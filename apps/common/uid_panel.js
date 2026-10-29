@@ -18,9 +18,9 @@ import { getRoleProfile } from '../../system/roleProfile.js';
 
 const getNoteUser = makeGenshinLoader('model/mys/NoteUser.js', ['model/mys/NoteUser.js']);
 
-/** 面板模板：样式仍借用 genshin 的 resources，模板与布局文件用本插件内置的副本 */
+/** 面板模板与布局都用本插件副本；卡片布局样式仍引用 genshin 的 uid-list.css，卸载 genshin 前需先拷进 resources/uid/ */
 const TPL_FILE = process.cwd() + '/plugins/HoYoGet-Plugin/resources/uid/uid-list.html';
-const LAYOUT_FILE = process.cwd() + '/plugins/HoYoGet-Plugin/resources/common/layout/elem.html';
+const LAYOUT_FILE = process.cwd() + '/plugins/HoYoGet-Plugin/resources/uid/layout.html';
 const STOKEN_DIR = process.cwd() + '/plugins/HoYoGet-Plugin/data/Stoken/';
 
 const GAME_LIST = [
@@ -373,6 +373,8 @@ export class uidPanel extends plugin {
           data.tplFile = TPL_FILE;
           data.uidRes = uidResPath(data);
           data.elemLayout = LAYOUT_FILE;
+          /* 布局里的公共样式（背景、字体）取本插件 resources/common，不依赖 miao */
+          data.commonRes = String(data.uidRes || '').replace('/resources/uid/', '/resources/common/');
           return data;
         },
       },
