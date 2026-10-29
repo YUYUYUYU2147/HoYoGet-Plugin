@@ -128,12 +128,12 @@ export class Sign extends plugin {
                     fnc: 'bbsSign',
                 },
                 {
-                    reg: '^#*米哈游*(手动验证|验证码)(服务)?(自测|测试|test)$',
+                    reg: '^#*(?:米哈游)?(手动验证|验证码)(服务)?(自测|测试|test)$',
                     fnc: 'gtTest',
                     permission: 'master',
                 },
                 {
-                    reg: '^#*米哈游*(手动)?(过码|过验证码|真实过码)(端到端)?(测试|test)$',
+                    reg: '^#*(?:米哈游)?(手动)?(过码|过验证码|真实过码)(端到端)?(测试|test)$',
                     fnc: 'gtRealTest',
                     permission: 'master',
                 },

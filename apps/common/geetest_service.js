@@ -217,8 +217,8 @@ export class GeetestService extends plugin {
             priority: pluginPriority('sign', -26),
             rule: [
                 // 「部署」既可能写在前面（#部署过码）也可能写在后面（#过码部署），两种都得认
-                { reg: '^#*米哈游*(部署|安装)?(过码|滑块)(服务|解码器)?(部署|安装)?$', fnc: 'deploy', permission: 'master' },
-                { reg: '^#*米哈游*(过码|滑块)(服务|解码器)?(状态|情况)$', fnc: 'status' },
+                { reg: '^#*(?:米哈游)?(部署|安装)?(过码|滑块)(服务|解码器)?(部署|安装)?$', fnc: 'deploy', permission: 'master' },
+                { reg: '^#*(?:米哈游)?(过码|滑块)(服务|解码器)?(状态|情况)$', fnc: 'status' },
             ],
         });
     }
