@@ -2075,11 +2075,11 @@ async function normalizeDetail(a, uid) {
 
   const apiPortrait = a?.role_vertical_painting_url || a?.role_square_url || ''
   const fullBody = getZzzFullBody(a)
-  const customPortrait = loadCustomPortrait([a?.name_mi18n, a?.full_name_mi18n])
+  const customPortrait = await loadCustomPortrait([a?.name_mi18n, a?.full_name_mi18n])
   const charData = {
     uid: uid || a?.id || '',
     // 优先自定义面板（咕咕牛 / 本插件），没有再回落官方全身图
-    role_icon: customPortrait || fullBody?.primary || apiPortrait,
+    role_icon: String(customPortrait || fullBody?.primary || apiPortrait || ""),
     role_fallback: fullBody?.fallback || apiPortrait,
     skills,
     rarity,
