@@ -5809,16 +5809,21 @@ class Morpheus {
                 return await element.evaluate(n => { const r = n.getBoundingClientRect(); return { x: r.x + window.scrollX, y: r.y + window.scrollY, width: r.width, height: r.height }; });
               } catch (e) { return null; }
             };
+            /* 渲染精度（RenderMatrix 的 transform:scale）大于 100 时，缩放后的内容是初始视口的数倍。
+               裁剪框若落在视口之外，出图就会缺右侧/底部；而 body 是 margin:auto，视口一加宽
+               内容随即重新居中、坐标整体平移，继续用旧坐标裁剪同样会切掉一块。
+               做法：先把 body 左右外边距清零把内容钉在左侧，再按可视矩形把视口撑到足够大，
+               撑完重量一次坐标；最终裁剪框始终落在视口内，不依赖 captureBeyondViewport 的默认值。 */
+            try {
+              await element.evaluate(n => { const b = n.ownerDocument.body; b.style.marginLeft = "0px"; b.style.marginRight = "0px"; });
+            } catch (e) { /* 取不到文档时退回 boundingBox */ }
             let b = await rect();
             if (!b || !(b.width > 0) || !(b.height > 0)) b = await element.boundingBox();
-            /* 渲染精度（RenderMatrix 的 transform:scale）大于 100 时，缩放后的内容会超出初始视口。
-               上游这里直接取 boundingBox()：部分环境按布局盒返回，clip 只覆盖左侧一块，表现为
-               精度 200 以上出图右侧/底部缺内容。所以先量可视矩形（含祖先 transform），再把视口
-               撑到可视尺寸重量一次 —— body 是 margin:auto，视口一变位置就跟着变。 */
-            const vp = (page.viewport && page.viewport()) || { width: 0, height: 0 };
-            const needW = Math.ceil(b.x + b.width + 16);
-            const needH = Math.ceil(b.y + b.height + 16);
-            if (needW > (vp.width || 0) || needH > (vp.height || 0)) {
+            for (let i = 0; i < 3 && b; i++) {
+              const vp = (page.viewport && page.viewport()) || { width: 0, height: 0 };
+              const needW = Math.ceil(Math.max(b.x + b.width, b.width) + 80);
+              const needH = Math.ceil(b.y + b.height + 80);
+              if (needW <= (vp.width || 0) && needH <= (vp.height || 0)) break;
               await page.setViewport({ width: Math.max(vp.width || 0, needW), height: Math.max(vp.height || 0, needH), deviceScaleFactor: vp.deviceScaleFactor || 1 }).catch(() => {});
               b = (await rect()) || b;
             }
