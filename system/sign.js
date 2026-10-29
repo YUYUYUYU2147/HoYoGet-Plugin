@@ -110,59 +110,82 @@ async function getBh3SignTargets(e) {
     return targets;
 }
 
+/* stoken 换出来的 cookie_token 在内存里缓存一段时间：一次签到里每个板块、每个游戏都会
+   调到这里，不缓存就会把同一份凭证反复换一遍。 */
+const cookieTokenCache = new Map()
+const COOKIE_TOKEN_TTL = 10 * 60 * 1000
+
 async function ensureCookieToken(e, ck, entry = null, force = false) {
-    if (!ck) return ck;
-    if (!force && /(?:^|;\s*)cookie_token=/.test(ck)) return ck;
-    const map = parseCookie(ck);
-    const stuid = entry?.stuid || map.stuid || map.ltuid || map.account_id;
-    const stoken = entry?.stoken || map.stoken;
-    if (!stuid || !stoken) return ck;
+    if (!ck) return ck
+    const map = parseCookie(ck)
+    const stuid = entry?.stuid || map.stuid || map.ltuid || map.account_id
+    const stoken = entry?.stoken || map.stoken
+    if (!stuid || !stoken) return ck
+    /* 以前这里是「ck 里有 cookie_token 就直接返回」，等于把 ck_stoken 里的旧 token 当成可用凭证。
+       典型情形：ck_stoken 存的是 ltoken;ltuid;cookie_token;stuid;mid 这种（没有 stoken 字段），
+       里面那个 cookie_token 可能是很久以前换的，过期后 bbs-api 只回 -100，整轮签到被显示成
+       「登录失效」。旧 token 是否过期本地无从判断，所以只要还有 stoken，就先换一份新的；
+       换不出来（stoken 失效/风控/网络异常）再退回手上这份，能不能签上交给 bbs-api 判定。 */
+    const tokenKey = stuid + ':' + crypto.createHash('md5').update(String(stoken)).digest('hex')
+    const withToken = (cookieToken, ltoken) => {
+        const out = { ...map }
+        out.stuid = stuid
+        out.stoken = stoken
+        out.cookie_token = cookieToken
+        out.account_id = out.account_id || stuid
+        if (entry?.mid) out.mid = entry.mid
+        if (ltoken) {
+            out.ltoken = ltoken
+            out.ltuid = stuid
+        }
+        return buildCookie(out)
+    }
+    if (!force) {
+        const hit = cookieTokenCache.get(tokenKey)
+        if (hit && Date.now() - hit.at < COOKIE_TOKEN_TTL) return withToken(hit.cookie_token, hit.ltoken)
+    }
+    /* 这两个 passport 接口认的是 Cookie 里的 stuid/stoken/mid：只把 stoken 拼进 query 会回
+       -100「登录状态失效」—— 「stoken 已过期」的误判就是这么来的。 */
+    const exchangeCk = buildCookie({ stuid, stoken, mid: entry?.mid || map.mid || '' })
     // 每个请求独立超时：之前两个接口共用一个 10s 计时器，第一个慢一点第二个就会被 abort
     const requestJson = async url => {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 12000);
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), 12000)
         try {
-            const resp = await mhyFetch(url, { method: 'GET', headers: mhy.getHeaders(e, ck), signal: controller.signal });
-            const text = await resp.text();
+            const headers = { ...mhy.getHeaders(e, exchangeCk), Cookie: exchangeCk }
+            const resp = await mhyFetch(url, { method: 'GET', headers, signal: controller.signal })
+            const text = await resp.text()
             try {
-                return JSON.parse(text);
+                return JSON.parse(text)
             } catch (err) {
                 // 被风控拦下时米游社回的是 HTML 拦截页，硬解析会抛 SyntaxError
-                const head = String(text || '').trim().slice(0, 80);
-                logger.mark(`[HoYoGet][sign] 返回非 JSON，status=${resp.status} body=${head}`);
-                return { retcode: -1, message: head.startsWith('<') ? '米游社返回拦截页，请稍后重试' : '接口返回异常' };
+                const head = String(text || '').trim().slice(0, 80)
+                logger.mark('[HoYoGet][sign] 返回非 JSON，status=' + resp.status + ' body=' + head)
+                return { retcode: -1, message: head.startsWith('<') ? '米游社返回拦截页，请稍后重试' : '接口返回异常' }
             }
         } finally {
-            clearTimeout(timer);
+            clearTimeout(timer)
         }
-    };
+    }
     try {
-        const cookieRes = await requestJson(`https://api-takumi.mihoyo.com/auth/api/getCookieAccountInfoBySToken?stoken=${encodeURIComponent(stoken)}&uid=${encodeURIComponent(stuid)}`);
-        const cookieToken = cookieRes?.data?.cookie_token;
+        const cookieRes = await requestJson('https://api-takumi.mihoyo.com/auth/api/getCookieAccountInfoBySToken?stoken=' + encodeURIComponent(stoken) + '&uid=' + encodeURIComponent(stuid))
+        const cookieToken = cookieRes?.data?.cookie_token
         // bbs-api 社区签到同时认 stoken 和 cookie_token：缺 stoken → 1034 无验证参数，缺 cookie_token → -100
         if (cookieToken) {
-            let ltoken = entry?.ltoken || map.ltoken;
+            let ltoken = entry?.ltoken || map.ltoken
             if (!ltoken) {
-                const ltokenRes = await requestJson('https://passport-api.mihoyo.com/account/auth/api/getLTokenBySToken');
-                ltoken = ltokenRes?.data?.ltoken || '';
+                const ltokenRes = await requestJson('https://passport-api.mihoyo.com/account/auth/api/getLTokenBySToken')
+                ltoken = ltokenRes?.data?.ltoken || ''
             }
-            if (config().debug) logger.mark(`[HoYoGet][sign] ensureCookieToken retcode=${cookieRes?.retcode} cookieToken=${!!cookieToken} ltoken=${!!ltoken}`);
-            map.stuid = stuid;
-            map.stoken = stoken;
-            map.cookie_token = cookieToken;
-            map.account_id = map.account_id || stuid;
-            if (entry?.mid) map.mid = entry.mid;
-            if (ltoken) {
-                map.ltoken = ltoken;
-                map.ltuid = stuid;
-            }
-            return buildCookie(map);
+            cookieTokenCache.set(tokenKey, { at: Date.now(), cookie_token: cookieToken, ltoken })
+            if (config().debug) logger.mark('[HoYoGet][sign] ensureCookieToken retcode=' + cookieRes?.retcode + ' cookieToken=' + !!cookieToken + ' ltoken=' + !!ltoken)
+            return withToken(cookieToken, ltoken)
         }
-        if (config().debug) logger.mark(`[HoYoGet][sign] ensureCookieToken 失败 retcode=${cookieRes?.retcode} msg=${cookieRes?.message}`);
+        if (config().debug) logger.mark('[HoYoGet][sign] ensureCookieToken 失败 retcode=' + cookieRes?.retcode + ' msg=' + cookieRes?.message)
     } catch (err) {
-        if (config().debug) logger.mark(`[HoYoGet][sign] refresh cookie_token failed: ${err.message}`);
+        if (config().debug) logger.mark('[HoYoGet][sign] refresh cookie_token failed: ' + err.message)
     }
-    return ck;
+    return ck
 }
 
 async function getSignCookieAndServer(e, game, uid, ck) {
