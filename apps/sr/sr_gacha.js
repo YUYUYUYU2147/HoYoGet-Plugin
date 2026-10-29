@@ -668,10 +668,9 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
     // 且图源站点在本机不可达，因此这里只认记录自带的 icon，不做任何猜测性拼接
     const makeIcon = item => {
       if (game === 'zzz') return item?.icon || ''
-      // 记录自带图标优先：星穹工坊云端同步时按 item_id 从官方物品配置反查得到，官方 CDN 可达。
-      // 此前这里直接丢弃 item.icon 改用 miao 查表，而 miao 的星铁 data.json 不提供
-      // imgs.face（98 个角色全为空），于是星铁卡片从来没有头像
-      if (item?.icon) return item.icon
+      // 网络图标只作最后兜底：记录自带的 icon 是 CDN 地址，网络抖动时整张卡片会变空白，
+      // 因此先用本地资源（内置模型 + 资源目录），两者都取不到才用它
+      const remoteIcon = item?.icon || ''
       const name = String(item?.name || '')
       const type = String(item?.item_type || '')
       // 类型缺失（旧数据、云端同步）时两种都试，避免整张卡片没有头像
@@ -699,7 +698,7 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
         const hit = localIcon(name, 'weapon')
         if (hit) return hit
       }
-      return ''
+      return remoteIcon
     }
     // 五星历史：按时间倒序，供卡片网格使用
     const fiveLog = recent.map(item => {
