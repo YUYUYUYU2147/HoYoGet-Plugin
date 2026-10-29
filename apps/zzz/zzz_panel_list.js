@@ -968,11 +968,29 @@ export function calcDamage(bp, level, avatar, charName) {
   }
 }
 
-// 咕咕牛的面板图在 ZZZ-Plugin/resources/images/panel；本插件自己的自定义图作为第二来源
-const CUSTOM_PORTRAIT_DIRS = [
-  path.join(PLUGIN_ROOT, 'resources', 'zzz_panel', 'images', 'panel'),
-  './plugins/HoYoGet-Plugin/resources/zzz_panel/images/panel',
-]
+/* 自定义立绘候选目录（按顺序取，先本插件自己的图，再咕咕牛图库） */
+const YZ_ROOT = path.resolve(PLUGIN_ROOT, "..", "..")
+function buildPortraitDirs() {
+  const out = [
+    path.join(PLUGIN_ROOT, "resources", "zzz_panel", "images", "panel"),
+    path.join(PLUGIN_ROOT, "resources", "hoyo_panel", "images", "panel", "zzz"),
+    path.join(ZZZ_ROOT, "resources", "images", "panel"),
+  ]
+  const cowcoo = path.join(YZ_ROOT, "resources", "CowCoos")
+  for (const repo of ["Miao-Plugin-MBT", "Miao-Plugin-MBT-2", "Miao-Plugin-MBT-3", "Miao-Plugin-MBT-4"]) {
+    out.push(path.join(cowcoo, repo, "zzz-character"))
+  }
+  try {
+    for (const name of fs.readdirSync(path.join(cowcoo, "Communitys"))) {
+      if (name.endsWith(".json") || name.endsWith(".git")) continue
+      out.push(path.join(cowcoo, "Communitys", name, "normal-character"))
+    }
+  } catch { /* 没有社区投稿目录就跳过 */ }
+  return out.filter(dir => {
+    try { return fs.statSync(dir).isDirectory() } catch { return false }
+  })
+}
+const CUSTOM_PORTRAIT_DIRS = buildPortraitDirs()
 
 /* ───────────────────────── 极限面板：合成底稿（不依赖任何面板记录） ─────────────────────────
  *
@@ -1233,6 +1251,28 @@ function buildExtremeBase(role, preset) {
 }
 
 /**
+ * 官方立绘兜底：resources/calendar/portraits.json 的 zzz 段（角色名 → 官方立绘链接）。
+ * 咕咕牛图库还没收录的新角色（如仪玄）用这里兜底，避免面板只剩一张小图标。
+ */
+const PORTRAITS_FILE = path.join(PLUGIN_ROOT, 'resources', 'calendar', 'portraits.json')
+let zzzPortraitTable = null
+let zzzPortraitMtime = 0
+function zzzPortraitUrl(name) {
+  try {
+    const mtime = fs.statSync(PORTRAITS_FILE).mtimeMs
+    if (zzzPortraitTable === null || mtime !== zzzPortraitMtime) {
+      zzzPortraitTable = JSON.parse(fs.readFileSync(PORTRAITS_FILE, 'utf8'))?.zzz || {}
+      zzzPortraitMtime = mtime
+    }
+  } catch { if (zzzPortraitTable === null) zzzPortraitTable = {} }
+  const key = String(name || '').replace(/\s+/g, '')
+  if (!key) return ''
+  if (zzzPortraitTable[key]) return zzzPortraitTable[key]
+  const hit = Object.keys(zzzPortraitTable).find(k => k.includes(key) || key.includes(k))
+  return hit ? zzzPortraitTable[hit] : ''
+}
+
+/**
  * 读取自定义面板图，返回 data URI；无则返回 ''。
  * 每个角色目录随机取一张 png/jpg/webp；名字同时尝试简称/全称和「」包裹形式。
  */
@@ -1242,6 +1282,18 @@ function loadCustomPortrait(names) {
     if (!nm) continue
     variants.push(nm, `「${nm}」`, String(nm).replace(/[「」]/g, ''))
   }
+  /* 接口给的是正式名（星见雅），图库目录用的是简称（雅）；先用别名表补出全部写法再找目录 */
+  try {
+    const aliasTable = yaml.get(path.join(PLUGIN_ROOT, 'system', 'default', 'zzz_js_names.yaml')) || {}
+    for (const nm of variants.slice()) {
+      for (const [formal, aliases] of Object.entries(aliasTable)) {
+        const inAlias = Array.isArray(aliases) && aliases.includes(nm)
+        if (formal !== nm && !inAlias) continue
+        if (!variants.includes(formal)) variants.push(formal)
+        if (Array.isArray(aliases)) for (const al of aliases) if (!variants.includes(al)) variants.push(al)
+      }
+    }
+  } catch { /* 别名表缺失就只按原名找 */ }
   for (const base of CUSTOM_PORTRAIT_DIRS) {
     for (const nm of variants) {
       const dir = path.join(base, nm)
@@ -1257,6 +1309,11 @@ function loadCustomPortrait(names) {
         return `data:image/${mime};base64,${buf.toString('base64')}`
       } catch { /* 读取失败则试下一个 */ }
     }
+  }
+  /* 本地图库没有该角色时回落到官方立绘链接，模板 onerror 再兜底接口图 */
+  for (const nm of variants) {
+    const url = zzzPortraitUrl(nm)
+    if (url) return url
   }
   return ''
 }
