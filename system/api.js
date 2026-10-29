@@ -276,6 +276,13 @@ async function api(e, data = {}) {
         delete obj.headers['x-rpc-app_id'];
     }
 
+    /* 星铁 record index 已强制 DS2：DS1 会返回 -10001 invalid request（实测 2026-10）。
+       原神/绝区零的 index 仍接受 DS1，只对本接口替换，避免影响已正常的两条。 */
+    if (data.type === 'sr_index') {
+        const queryString = url.includes('?') ? url.split('?')[1] : '';
+        obj.headers.DS = mhy.getDs2(queryString, '');
+    }
+
     let res
 
     try {
