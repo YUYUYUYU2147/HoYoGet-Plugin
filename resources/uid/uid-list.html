@@ -45,7 +45,7 @@ bh3:{mark:'!',cls:'Bh3'}
               </div>
               <div class="detail">
                 {{if uid.name && uid.level}}
-                <div class="name">{{uid.name}} Lv.{{uid.level}}</div>
+                <div class="name">{{uid.name}} Lv.{{uid.level}}{{if uid.server}} · {{uid.server}}{{/if}}</div>
                 {{else}}
                 {{if game.key!=='zzz'}}
                 <div class="no-info">暂无uid信息，可通过更新面板获取信息</div>

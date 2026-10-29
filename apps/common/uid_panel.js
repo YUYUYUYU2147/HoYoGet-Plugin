@@ -162,6 +162,10 @@ async function fillProfiles(games, e, stoken, noteUser) {
     const item = row.item;
     const uid = String(item.uid || '');
     const role = stoken.roles.get(uid) || {};
+    /* 服务器类型：优先取存档里的 region_name，缺失时按 uid 推断 */
+    const entry = stoken.entries[uid] || {};
+    const server = entry.region_name || mhy.getServerName(mhy.getServer(uid, game.key));
+    if (server) item.server = server;
     if (role.nickname) item.name = role.nickname;
     if (role.level) item.level = role.level;
     if (game.key === 'zzz') {
@@ -295,6 +299,7 @@ function buildBh3Group(list, current) {
     type: 'ck',
     name: row.nickname || '',
     level: Number(row.level || 0),
+    server: row.serverName || '',
     zzz_face: true,
     zzz_banner: true,
   }));
