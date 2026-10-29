@@ -238,3 +238,11 @@ nobr {
   background: right top no-repeat #416CA6;
   background-size: auto 100%;
 }
+
+/* 崩三头像素材是 172x148 的横版半身像（SpriteOutput/AvatarIcon），
+   直接 cover 会把人物重心压在下半部、下巴被圆框切掉；这里放大并上移，
+   让面部落在圆框中心。其余三个游戏的头像本身是方形，保持默认裁切。 */
+.uid-list .game-barBh3 .game-inner .face {
+  background-size: 150% auto;
+  background-position: 50% 12%;
+}
