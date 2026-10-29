@@ -14,6 +14,7 @@
  *
  * 防抖：同一进程内 5 分钟内只尝试一次，避免每个版块都去起一遍。
  */
+import net from 'node:net'
 import fs from 'node:fs'
 import path from 'node:path'
 import { exec } from 'node:child_process'
@@ -79,6 +80,56 @@ async function pm2HasProcess() {
   }
 }
 
+/** TCP 探活：只判端口有没有人在听，不发请求 */
+function probePort(host = '127.0.0.1', port = 2149, timeout = 1500) {
+  return new Promise(resolve => {
+    const socket = net.connect({ host, port })
+    let settled = false
+    const done = ok => {
+      if (settled) return
+      settled = true
+      socket.destroy()
+      resolve(ok)
+    }
+    socket.setTimeout(timeout)
+    socket.once('connect', () => done(true))
+    socket.once('timeout', () => done(false))
+    socket.once('error', () => done(false))
+  })
+}
+
+async function waitPort(ms = 12000) {
+  const end = Date.now() + ms
+  while (Date.now() < end) {
+    if (await probePort()) return true
+    await new Promise(r => setTimeout(r, 1000))
+  }
+  return false
+}
+
+/**
+ * pm2 里那条记录用的解释器/脚本还在不在磁盘上。
+ * 换过安装目录、清过 .venv 之后，记录会一直指着旧路径：
+ * pm2 restart 只会以同样的方式再崩一次，服务永远起不来。
+ */
+async function pm2EntryBroken() {
+  try {
+    const { stdout } = await run('pm2 jlist', 20000)
+    const start = stdout.indexOf('[')
+    if (start < 0) return false
+    const list = JSON.parse(stdout.slice(start))
+    const proc = list.find(p => p?.name === PM2_NAME)
+    if (!proc) return false
+    const env = proc.pm2_env || {}
+    const exec = String(env.pm_exec_path || '')
+    if (exec && !fs.existsSync(exec)) return true
+    const args = Array.isArray(env.args) ? env.args.map(String) : []
+    const script = args.find(a => a.slice(-3) === '.py')
+    return !!(script && !fs.existsSync(script))
+  } catch {
+    return false
+  }
+}
 /**
  * 启动过码服务。
  * @param {{force?:boolean, logger?:object}} [opts] force 跳过防抖
@@ -97,13 +148,26 @@ export async function ensureStarted(opts = {}) {
     try {
       if (await has('pm2 -v')) {
         const managed = await pm2HasProcess()
-        if (managed) {
-          await run(`pm2 restart ${PM2_NAME}`, 60000).catch(() => {})
+        if (!managed) {
+          await run('pm2 start ' + q(py) + ' --name ' + PM2_NAME + ' -- ' + q(SERVER_PY), 120000)
+        } else if (await pm2EntryBroken()) {
+          /* 记录里的解释器或脚本已经不在磁盘上（换过安装目录、清过 .venv）：
+             pm2 restart 只会以同样的方式再崩一次，必须删掉按当前 venv 重建 */
+          logger?.mark?.('[HoYoGet][geetest] pm2 记录指向的文件已不存在，按当前 venv 重建 ' + PM2_NAME)
+          await run('pm2 delete ' + PM2_NAME, 30000).catch(() => {})
+          await run('pm2 start ' + q(py) + ' --name ' + PM2_NAME + ' -- ' + q(SERVER_PY), 120000)
         } else {
-          await run(`pm2 start ${q(py)} --name ${PM2_NAME} -- ${q(SERVER_PY)}`, 120000)
+          await run('pm2 restart ' + PM2_NAME, 60000).catch(() => {})
+          if (!await waitPort(12000)) {
+            /* restart 之后进程可能立刻又崩（依赖缺失、端口被占），端口起不来就按当前 venv 重建一次 */
+            logger?.mark?.('[HoYoGet][geetest] pm2 restart 后端口未就绪，改为重建 ' + PM2_NAME)
+            await run('pm2 delete ' + PM2_NAME, 30000).catch(() => {})
+            await run('pm2 start ' + q(py) + ' --name ' + PM2_NAME + ' -- ' + q(SERVER_PY), 120000)
+            await waitPort(12000)
+          }
         }
         await run('pm2 save', 60000).catch(() => {})
-        logger?.mark?.(`[HoYoGet][geetest] 已通过 pm2 自动拉起过码服务（${PM2_NAME}）`)
+        logger?.mark?.('[HoYoGet][geetest] 已通过 pm2 自动拉起过码服务（' + PM2_NAME + '）')
         return { started: true, reason: 'pm2' }
       }
       // 没有 pm2：nohup 兜底，至少这一轮能用

@@ -922,34 +922,51 @@ async function ttocrPoints() {
     return text;
 }
 
+/* 熔断后的处理：服务端连续两次失败就熔断 30 秒，期间每个请求都立刻回 breaker open。
+   旧实现把这次快速失败当成「过码失败」直接跳过，于是在验证码窗口里一次都没真正解过滑块，
+   提示却还写着「已优先尝试本地自动过码」。签到本身要跑几十秒，等熔断窗口过去完全等得起。 */
+const AUTO_VERIFY_BREAKER_TRIES = 3;
+const AUTO_VERIFY_BREAKER_MAX_WAIT = 35;
+
 async function bbsAutoVerify(e, account) {
     if (!(await autoVerifyAvailable())) return '';
     const device = bbsDeviceContext(e, account, account.ck);
-    try {
-        const res = await fetch(autoVerifyAddr(), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                cookie: account.ck,
-                deviceId: String(device.id),
-                deviceFp: String(device.fp || ''),
-                clientType: '2',
-            }),
-            signal: AbortSignal.timeout(360000),
-        }).then(r => r.json());
-        if (res?.data?.result === 'ok') {
-            const challenge = res.data.challenge || '';
-            logger.mark(`[HoYoGet][bbs_sign] 本地服务自动过码成功 challenge=${challenge ? '有' : '无'}`);
-            return challenge;
+    const body = JSON.stringify({
+        cookie: account.ck,
+        deviceId: String(device.id),
+        deviceFp: String(device.fp || ''),
+        clientType: '2',
+    });
+    for (let attempt = 1; attempt <= AUTO_VERIFY_BREAKER_TRIES; attempt++) {
+        try {
+            const res = await fetch(autoVerifyAddr(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body,
+                signal: AbortSignal.timeout(360000),
+            }).then(r => r.json());
+            if (res?.data?.result === 'ok') {
+                const challenge = res.data.challenge || '';
+                logger.mark('[HoYoGet][bbs_sign] 本地服务自动过码成功 challenge=' + (challenge ? '有' : '无'));
+                return challenge;
+            }
+            if (res?.error === 'breaker open') {
+                const left = Math.max(Number(res.retryAfter) || 0, 1);
+                if (attempt < AUTO_VERIFY_BREAKER_TRIES) {
+                    const wait = Math.min(left + 1, AUTO_VERIFY_BREAKER_MAX_WAIT);
+                    logger.mark('[HoYoGet][bbs_sign] 本地过码服务熔断中，' + wait + 's 后重试（第 ' + attempt + '/' + AUTO_VERIFY_BREAKER_TRIES + ' 次）');
+                    await sleep(wait * 1000);
+                    continue;
+                }
+                logger.mark('[HoYoGet][bbs_sign] 本地过码服务熔断未恢复（建议 ' + left + ' 秒后再试），本轮走手动/兜底');
+                return '';
+            }
+            if (config().debug) logger.mark('[HoYoGet][bbs_sign] 本地服务未过码: ' + JSON.stringify(res).slice(0, 160));
+            return '';
+        } catch (err) {
+            if (config().debug) logger.mark('[HoYoGet][bbs_sign] 本地过码服务不可用: ' + err.message);
+            return '';
         }
-        if (res?.error === 'breaker open') {
-            // 服务端熔断中：这一条没真去解滑块，是服务端主动拒的，等冷却结束会自动恢复
-            logger.mark(`[HoYoGet][bbs_sign] 本地过码服务熔断中，本次跳过（建议 ${res.retryAfter ?? '若干'} 秒后再试），直接走手动/兜底`);
-        } else if (config().debug) {
-            logger.mark(`[HoYoGet][bbs_sign] 本地服务未过码: ${JSON.stringify(res).slice(0, 160)}`);
-        }
-    } catch (err) {
-        if (config().debug) logger.mark(`[HoYoGet][bbs_sign] 本地过码服务不可用: ${err.message}`);
     }
     return '';
 }
