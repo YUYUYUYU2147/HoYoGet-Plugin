@@ -13,6 +13,7 @@ import {
 import lodash from 'lodash';
 import Runtime from '../../../../lib/plugins/runtime.js';
 import { runCronTask } from '../../system/task_history.js';
+import { makeGenshinLoader } from '../../system/genshin_loader.js';
 
 /**
  * 跨天去重的状态挂到 globalThis，而不是模块级 let。
@@ -220,7 +221,9 @@ export class Sign extends plugin {
         const { default: api } = await import('../../system/api.js');
         const { default: mhy } = await import('../../system/mhy.js');
         const { manualGeetest } = await import('../../system/manual_geetest.js');
-        const uid = e.user?.getUid?.('gs') || e.user?.getUid?.();
+        const NoteUser = await makeGenshinLoader('model/mys/NoteUser.js', ['model/mys/NoteUser.js'])();
+        const user = (await NoteUser?.create?.(e)) || e.user;
+        const uid = String(user?.getUid?.('gs') || user?.getUid?.() || '');
         if (!uid) return e.reply('未找到绑定的 UID，请先 #米哈游扫码绑定', true);
         const sk = await mhy.getstoken(e, uid);
         if (!sk) return e.reply(`UID:${uid} 未绑定米游社 SToken，请先 #米哈游扫码绑定`, true);
