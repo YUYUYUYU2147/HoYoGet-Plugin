@@ -471,13 +471,18 @@ async function withQuietReply(e, fn) {
 }
 
 /** 面板背景图与默认头像都在插件自己的 resources 下，不改 genshin 的任何文件 */
-const UID_RES_FALLBACK = '../../../../../../plugins/HoYoGet-Plugin/resources/uid/';
+const UID_RES_FALLBACK = '../../../plugins/HoYoGet-Plugin/resources/uid/';
 
 function uidResPath(data) {
   /* _miao_path 的深度跟着渲染输出目录走，直接沿用它的前缀最稳 */
   const miao = String(data?._miao_path || '');
   if (miao.indexOf('miao-plugin/resources/') >= 0) {
     return miao.replace('miao-plugin/resources/', 'HoYoGet-Plugin/resources/uid/');
+  }
+  /* 未装 miao 时沿用 _res_path 的前缀：两者都指向同一输出目录，深度一致 */
+  const res = String(data?._res_path || '');
+  if (res.indexOf('plugins/genshin/resources/') >= 0) {
+    return res.replace('plugins/genshin/resources/', 'plugins/HoYoGet-Plugin/resources/uid/');
   }
   return UID_RES_FALLBACK;
 }
