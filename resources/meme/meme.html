@@ -9,23 +9,31 @@
 <body {{sys.scale}}>
   <div class="container">
     <div class="header">
-      <div class="title">Meme 表情包</div>
-      <div class="sub">共 {{total}} 个 · 第 {{page}}/{{totalPages}} 页 · 发送 <b>#表情名</b> 制作 · <b>#表情名详情</b> 查询</div>
+      <div class="title">{{title}}</div>
+      <div class="sub">{{subText}}</div>
     </div>
     {{each groups g}}
     <div class="grp">
       <div class="grp-head">
-        <span class="grp-name">{{g.name}}</span>
+        <span class="{{g.cls}}">
+          {{g.label}}
+        </span>
         <span class="grp-count">{{g.count}}</span>
       </div>
       <div class="grp-body">
-        {{each g.items item}}
-        <span class="item {{item.isNew ? 'is-new' : ''}}"><span class="nm">{{item.name}}</span><i class="meta">{{item.meta}}</i></span>
+        {{each g.memes m}}
+        <span class="item">
+          <span class="nm">{{m.primary}}</span>
+          <i class="key">{{m.key}}</i>
+          {{each m.badges b}}
+          <i class="bd">{{b}}</i>
+          {{/each}}
+        </span>
         {{/each}}
       </div>
     </div>
     {{/each}}
-    <div class="tip">发送 <b>#meme列表 {{nextPage}}</b> 翻页 · <b>#meme列表 0</b> 查看全部长图 · <b>#meme搜索+关键词</b> 快速查找</div>
+    <div class="tip">发送 <b>#表情名</b> 制作 · <b>#表情名详情</b> 查询 · <b>#meme列表</b> 查看分类</div>
     <div class="footer"><span style="color:#ff4d4f;font-weight:600">from 米哈游</span></div>
   </div>
 </body>

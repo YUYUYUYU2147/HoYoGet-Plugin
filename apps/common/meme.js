@@ -17,6 +17,7 @@ import sharp from '../../node_modules/sharp/lib/index.js';
 import puppeteer from '../../../../lib/puppeteer/puppeteer.js';
 import { render, config, pluginPriority, getSource } from '#HoYoGet';
 import { guardModuleByFile } from '../../system/modules.js'
+import { buildMemeListData } from './meme_category.js'
 
 const DATA_DIR = './plugins/HoYoGet-Plugin/data/memes/';
 const INFOS_FILE = DATA_DIR + 'infos.json';
@@ -99,47 +100,6 @@ async function compressAndSplit(buf, opts = {}) {
   }
   logger.mark(`[HoYoGet-meme] 长图 ${height}px 切割为 ${parts} 张`);
   return list;
-}
-
-// ==================== 服务端列表图 ====================
-// 服务端 /memes/render_list 会按 tags 分组生成整张列表长图（白底多列、组名带数量）。
-// 直接取这张图有两个好处：排版与服务端仓库完全一致；本进程不再渲染近千条 DOM，
-// 避免内存峰值顶到 pm2 的 max_memory_restart 造成重启。
-const RENDER_LIST_TTL = 24 * 60 * 60 * 1000;
-let renderListCache = null;
-
-async function fetchRenderList() {
-  if (renderListCache && Date.now() - renderListCache.at < RENDER_LIST_TTL) {
-    return renderListCache.buf;
-  }
-  const base = memeBaseUrl();
-  if (!base) throw new Error('meme_baseUrl 未配置');
-  // 服务端要遍历全部表情排版，耗时明显高于单个表情，超时给到 90 秒
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 90000);
-  try {
-    const res = await fetch(`${base}/memes/render_list`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: '{}',
-      signal: controller.signal,
-    });
-    const type = (res.headers.get('content-type') || '').toLowerCase();
-    if (!res.ok || !type.includes('image')) {
-      throw new Error(`返回 ${res.status} ${type || '未知类型'}`);
-    }
-    const buf = Buffer.from(await res.arrayBuffer());
-    if (!buf.length) throw new Error('返回内容为空');
-    renderListCache = { buf, at: Date.now() };
-    logger.mark(`[HoYoGet-meme] 服务端列表图已获取：${(buf.length / 1024 / 1024).toFixed(2)}MB`);
-    return buf;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-function clearRenderListCache() {
-  renderListCache = null;
 }
 
 // puppeteer.render 直接返回 Buffer（bh3_profile 等已验证），拿到后压缩/切割再发送
@@ -453,102 +413,32 @@ export class meme extends plugin {
 
   // ---------- 列表 ----------
   async memesList(e) {
-    if (!memeEnabled()) return false;
-    await loadData();
+    if (!memeEnabled()) return false
+    await loadData()
     if (!Object.keys(infos).length) {
-      await e.reply('meme 资源为空，请先发送 #meme更新 拉取资源', true);
-      return true;
+      await e.reply("meme 资源为空，请先发送 #meme更新 拉取资源", true)
+      return true
     }
-    // 默认（不带页码、或页码为 0）直接用服务端渲染的整张列表图：
-    // 排版与服务端仓库一致，且本机不再渲染近千条 DOM。
-    // 带页码时才走下面的本地模板分页，保留翻页能力。
-    const remotePageMatch = e.msg.match(/\d+/);
-    const remotePage = remotePageMatch ? parseInt(remotePageMatch[0], 10) : 0;
-    if (remotePage === 0) {
-      try {
-        const buf = await fetchRenderList();
-        // 服务端原图为 4K 级宽图（约 4427×6310），压到 1600 宽约 0.5MB，文字仍清晰
-        const parts = await compressAndSplit(buf, { maxWidth: 1600 });
-        await e.reply(parts.map(b => segment.image(b)));
-        return true;
-      } catch (err) {
-        logger.mark(`[HoYoGet-meme] 服务端列表图不可用，改用本地渲染：${err.message}`);
-      }
-    }
-
-    const now = Date.now();
-    const NEW_MS = 3 * 24 * 60 * 60 * 1000;
-    const FALLBACK_GROUP = '其他';
-    const list = Object.values(infos).map(info => {
-      const tags = Array.isArray(info.tags) ? info.tags.filter(Boolean) : [];
-      return {
-        key: info.key,
-        name: (info.keywords && info.keywords[0]) || info.key,
-        aliases: (info.keywords || []).slice(1, 4).join('/'),
-        created: info.date_created || 0,
-        isNew: now - new Date(info.date_created || 0).getTime() < NEW_MS,
-        maxImages: info.params_type?.max_images ?? 0,
-        minTexts: info.params_type?.min_texts ?? 0,
-        group: tags[0] || FALLBACK_GROUP,
-      };
-    });
-
-    // 分组规则：组按条目数降序排列，未打标签的固定收尾；组内按创建时间倒序。
-    // 先把分组后的全部条目拼成一维序列再分页，同一分类的条目因此始终相邻，
-    // 翻页只会在页边界处断开，不会出现同类散落各页的情况。
-    const groupSize = new Map();
-    list.forEach(item => {
-      groupSize.set(item.group, (groupSize.get(item.group) || 0) + 1);
-    });
-    const groupOrder = [...groupSize.keys()].sort((a, b) => {
-      if (a === FALLBACK_GROUP) return 1;
-      if (b === FALLBACK_GROUP) return -1;
-      return groupSize.get(b) - groupSize.get(a);
-    });
-    const ordered = [];
-    groupOrder.forEach(name => {
-      list
-        .filter(item => item.group === name)
-        .sort((a, b) => new Date(b.created) - new Date(a.created))
-        .forEach(item => {
-          // 参数摘要在这里拼好，模板内只保留单个表达式，避免模板编译歧义
-          item.meta = `${item.maxImages}图 ${item.minTexts}文`;
-          ordered.push(item);
-        });
-    });
-
-    // 条目改为紧凑排版后单页容量大幅提升，150 条约合 7 页。
-    // 页码传 0 表示不分页：整份列表一次渲染成一张长图，便于整体浏览。
-    // 条目数继续增长后长图会被 compressAndSplit 按高度自动切割，不会发送失败。
-    const PAGE_SIZE = 150;
-    const pageMatch = e.msg.match(/\d+/);
-    const rawPage = pageMatch ? parseInt(pageMatch[0], 10) : 1;
-    const showAll = rawPage === 0;
-    const pageSize = showAll ? ordered.length : PAGE_SIZE;
-    let page = showAll ? 1 : rawPage;
-    const totalPages = Math.max(1, Math.ceil(ordered.length / pageSize));
-    page = Math.max(1, Math.min(page, totalPages));
-    const pageItems = ordered.slice((page - 1) * pageSize, page * pageSize);
-
-    // 页内按分组聚合，模板只做一层遍历
-    const groups = [];
-    pageItems.forEach(item => {
-      const last = groups[groups.length - 1];
-      if (last && last.name === item.group) {
-        last.items.push(item);
-      } else {
-        groups.push({ name: item.group, count: groupSize.get(item.group) || 0, items: [item] });
-      }
-    });
-
-    const nextPage = page < totalPages ? page + 1 : 1;
-    // 全量长图改用 1 倍缩放。默认 2 倍会渲染出 1280×16014 的 PNG（约 6.5MB），
-    // sharp 解码与切图期间内存峰值会顶到 pm2 的 max_memory_restart（512MB），
-    // 表现为「发出长图后进程自动重启」；1 倍时输出 640×8007，位图仅约 20MB。
-    const renderCfg = showAll ? { scale: 1 } : {};
-    const msg = await renderImg(e, 'meme/meme', { groups, total: ordered.length, page, totalPages, nextPage }, renderCfg);
-    await e.reply(msg);
-    return true;
+    // 分类交给本地纯函数模块（题材 / 属性 / 功能三层规则），不再依赖远端 tags：
+    // 远端 990 条里只有约 300 条带 tags，按 tags 分组会让七成条目落进「未分类」。
+    const { groups, stats } = buildMemeListData(infos)
+    const renderGroups = groups.map((group, index) => ({
+      label: group.icon + " " + group.name,
+      cls: "tagx acc-" + (index % 8),
+      count: group.count,
+      memes: group.memes.map(meme => ({
+        primary: meme.primary,
+        key: meme.key,
+        isNew: meme.isNew,
+        badges: (meme.badges || []).map(badge => badge.text),
+      })),
+    }))
+    const subText = "共 " + stats.totalMemes + " 个 · " + stats.groupCount + " 个分类 · " + stats.totalKeywords + " 个关键词 · 发送 #表情名 制作"
+    // 分组一旦分页就会在页边界处断开，这里固定输出全量单图；
+    // 约 990 条时高度超出 MAX_IMG_HEIGHT，由 compressAndSplit 自动切成多张。
+    const msg = await renderImg(e, "meme/meme", { title: "MEME 表情包列表", subText, groups: renderGroups }, { scale: 1 })
+    await e.reply(msg)
+    return true
   }
 
   // ---------- 搜索 ----------
@@ -649,7 +539,6 @@ export class meme extends plugin {
   async memesUpdate(e) {
     await e.reply('米哈游表情包 资源更新中…', true);
     await loadData(true);
-    clearRenderListCache();
     await this.init(true);
     await e.reply(`更新完成，当前共 ${Object.keys(infos).length} 个 meme`, true);
     return true;
