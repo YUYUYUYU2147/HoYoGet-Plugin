@@ -11,13 +11,13 @@ try { fs.appendFileSync('./plugins/HoYoGet-Plugin/temp/hot_reload.log', `${new D
    QQ 客户端上传图片时会按尺寸与体积自行缩放重压：实测 4480px 宽、9.4MB 的
    绝区零面板长图发出后只剩约 300~400KB，文字边缘明显发虚。处理方式是发送前
    把图收进不会被二次压缩的范围：
-   - 宽度超过 2400px 或体积超过 2MB 才处理，其余原样发送
+   - 宽度超过 1600px 或体积超过 2MB 才处理，其余原样发送
    - 以宽度为缩放基准，长图高度按比例跟随；按长边缩放会把长图宽度压到几百
      像素，反而更糊
    - 先按上限宽度试编一次，体积仍超标就按 0.8 逐级递减，取第一个达标的尺寸
    - 一次解码一次编码；缩放后体积没有下降则保留原图
    多帧动图、本地路径与网络链接一律跳过。 */
-const SHRINK_MAX_WIDTH = 2400
+const SHRINK_MAX_WIDTH = 1600
 const SHRINK_MAX_BYTES = 2 * 1024 * 1024
 const SHRINK_MIN_WIDTH = 900
 
@@ -64,8 +64,8 @@ async function shrinkImage(img) {
       fmt === 'png'
         ? pipe.png({ compressionLevel: 9 })
         : fmt === 'webp'
-          ? pipe.webp({ quality: 90 })
-          : pipe.jpeg({ quality: 90, mozjpeg: true })
+          ? pipe.webp({ quality: 95 })
+          : pipe.jpeg({ quality: 95, mozjpeg: true })
     let width = Math.min(w, SHRINK_MAX_WIDTH)
     let best = null
     while (width >= SHRINK_MIN_WIDTH) {
