@@ -459,13 +459,18 @@ export class meme extends plugin {
         });
     });
 
-    // 条目改为紧凑排版后单页容量大幅提升，990 个表情约 4 页
+    // 条目改为紧凑排版后单页容量大幅提升，150 条约合 7 页。
+    // 页码传 0 表示不分页：整份列表一次渲染成一张长图，便于整体浏览。
+    // 条目数继续增长后长图会被 compressAndSplit 按高度自动切割，不会发送失败。
     const PAGE_SIZE = 150;
     const pageMatch = e.msg.match(/\d+/);
-    let page = pageMatch ? parseInt(pageMatch[0], 10) : 1;
-    const totalPages = Math.max(1, Math.ceil(ordered.length / PAGE_SIZE));
+    const rawPage = pageMatch ? parseInt(pageMatch[0], 10) : 1;
+    const showAll = rawPage === 0;
+    const pageSize = showAll ? ordered.length : PAGE_SIZE;
+    let page = showAll ? 1 : rawPage;
+    const totalPages = Math.max(1, Math.ceil(ordered.length / pageSize));
     page = Math.max(1, Math.min(page, totalPages));
-    const pageItems = ordered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+    const pageItems = ordered.slice((page - 1) * pageSize, page * pageSize);
 
     // 页内按分组聚合，模板只做一层遍历
     const groups = [];
@@ -479,7 +484,10 @@ export class meme extends plugin {
     });
 
     const nextPage = page < totalPages ? page + 1 : 1;
-    const msg = await renderImg(e, 'meme/meme', { groups, total: ordered.length, page, totalPages, nextPage });
+    // 全量长图改用 1 倍缩放：2 倍缩放后输出高度约为布局高度的 3.1 倍，
+    // 990 条会突破 MAX_IMG_HEIGHT 被切成两张；1 倍时输出与布局等高，可保持单张。
+    const renderCfg = showAll ? { scale: 1 } : {};
+    const msg = await renderImg(e, 'meme/meme', { groups, total: ordered.length, page, totalPages, nextPage }, renderCfg);
     await e.reply(msg);
     return true;
   }
