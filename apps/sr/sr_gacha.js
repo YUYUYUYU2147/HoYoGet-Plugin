@@ -2357,13 +2357,14 @@ export function limitToOfficialWindow(officialPool, supplyPool) {
   const nameTime = new Set()
   const ago = new Date(Date.now() - 365 * 86400000)
   const pad = n => String(n).padStart(2, "0")
+  // 窗口下界固定取「今天减 365 天」：官方页脚写明只保留最近 12 个月，
+  // 不能用官方最早一条代替——本地可能混有更早的历史记录，会把下界拉低导致该补的补不进来
   let cutoff = ago.getFullYear() + "-" + pad(ago.getMonth() + 1) + "-" + pad(ago.getDate()) + " " + pad(ago.getHours()) + ":" + pad(ago.getMinutes()) + ":" + pad(ago.getSeconds())
   for (const r of official) {
     ids.add(String(r?.id || ""))
     const t = String(r?.time || "").slice(0, 19)
     if (!t) continue
     nameTime.add(String(r?.name || "") + "|" + t)
-    if (t < cutoff) cutoff = t
   }
   // 小助手 / 工坊的记录常常没有 time，但 id 是雪花 id（前 13 位为毫秒时间戳），据此还原时间
   const timeOf = r => {
@@ -2894,8 +2895,13 @@ export class sr_gacha extends plugin {
     const result = mergeSrHelperFull(old.pools, full)
     if (!result.pools.length) return e.reply('小助手文件里没有识别到可用的卡池数据')
     for (const pool of result.pools) {
-      const basePool = old.pools[pool.key]
-      old.pools[pool.key] = basePool ? limitToOfficialWindow(basePool, pool) : pool
+      const oldKeys = Object.keys(old.pools)
+      const poolKey = pool.key || oldKeys.find(k => old.pools[k] === pool) || oldKeys.find(k => old.pools[k] && old.pools[k].name === pool.name) || pool.name
+      if (!poolKey) continue
+      const basePool = old.pools[poolKey]
+      const mergedPool = basePool ? limitToOfficialWindow(basePool, pool) : { ...pool }
+      mergedPool.key = poolKey
+      old.pools[poolKey] = mergedPool
     }
     saveData(file, { ...old, update_time: formatNow(), source: `${old.source || ''}+lelaer-full`.replace(/^\+/, '') })
     const detail = result.pools
@@ -2941,8 +2947,13 @@ export class sr_gacha extends plugin {
     const result = mergeSrHelperFull(old.pools, full)
     if (!result.pools.length) return e.reply('小助手云端没有识别到可用的卡池数据')
     for (const pool of result.pools) {
-      const basePool = old.pools[pool.key]
-      old.pools[pool.key] = basePool ? limitToOfficialWindow(basePool, pool) : pool
+      const oldKeys = Object.keys(old.pools)
+      const poolKey = pool.key || oldKeys.find(k => old.pools[k] === pool) || oldKeys.find(k => old.pools[k] && old.pools[k].name === pool.name) || pool.name
+      if (!poolKey) continue
+      const basePool = old.pools[poolKey]
+      const mergedPool = basePool ? limitToOfficialWindow(basePool, pool) : { ...pool }
+      mergedPool.key = poolKey
+      old.pools[poolKey] = mergedPool
     }
     saveData(file, { ...old, update_time: formatNow(), source: `${old.source || ''}+lelaer-db`.replace(/^\+/, '') })
     const detail = result.pools
