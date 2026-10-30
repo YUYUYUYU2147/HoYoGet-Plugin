@@ -8,18 +8,18 @@ import { bustTplCache } from './tpl_cache.js';
 logger.info?.('[HoYoGet][热重载自测] system/render.js 模块已加载');
 try { fs.appendFileSync('./plugins/HoYoGet-Plugin/temp/hot_reload.log', `${new Date().toISOString()} render.js 模块加载\n`) } catch (_) { }
 /* 出图收口（QQ 二次压缩兜底）
-   QQ 客户端上传图片时会按尺寸与体积自行缩放重压：实测 4480px 宽、9.4MB 的
-   绝区零面板长图发出后只剩约 300~400KB，文字边缘明显发虚。处理方式是发送前
-   把图收进不会被二次压缩的范围：
-   - 宽度超过 1600px 或体积超过 2MB 才处理，其余原样发送
-   - 以宽度为缩放基准，长图高度按比例跟随；按长边缩放会把长图宽度压到几百
-     像素，反而更糊
-   - 先按上限宽度试编一次，体积仍超标就按 0.8 逐级递减，取第一个达标的尺寸
-   - 一次解码一次编码；缩放后体积没有下降则保留原图
+   QQ 服务端按文件体积判定是否重压：实测同样 4480px 宽的面板长图，
+   3279KB 原样送达，9000KB 被压到 300~400KB（宽度同时被缩到 1600）。
+   因此策略是「保分辨率、压体积」：
+   - 体积不超过 3MB 的图原样发送，不做任何处理
+   - 超过时优先降 JPEG 质量（86 → 80 → 74 → 68），保持原始宽度 4480px
+   - 质量降到底仍超标才按 0.85 缩小宽度，再走一遍质量阶梯，最多两轮
+   - 缩放后体积没有下降则保留原图
    多帧动图、本地路径与网络链接一律跳过。 */
-const SHRINK_MAX_WIDTH = 1600
-const SHRINK_MAX_BYTES = 2 * 1024 * 1024
-const SHRINK_MIN_WIDTH = 900
+const SHRINK_MAX_BYTES = 3 * 1024 * 1024
+const SHRINK_QUALITY_STEPS = [86, 80, 74, 68]
+const SHRINK_MIN_WIDTH = 1200
+const SHRINK_SCALE_STEP = 0.85
 
 /* 从 segment、Buffer、base64 字符串中取出图像字节，并给出对等的回包方式。
    框架的 segment.image(file) 返回 { type, file, name } —— file 直接在顶层，
@@ -58,30 +58,46 @@ async function shrinkImage(img) {
     const h = meta.height || 0
     if (!w || !h) return img
     if ((meta.pages || 1) > 1) return img
-    if (w <= SHRINK_MAX_WIDTH && src.length <= SHRINK_MAX_BYTES) return img
+    if (src.length <= SHRINK_MAX_BYTES) return img
     const fmt = meta.format === 'png' ? 'png' : meta.format === 'webp' ? 'webp' : 'jpeg'
-    const encode = pipe =>
+    const encode = (pipe, q) =>
       fmt === 'png'
         ? pipe.png({ compressionLevel: 9 })
         : fmt === 'webp'
-          ? pipe.webp({ quality: 95 })
-          : pipe.jpeg({ quality: 95, mozjpeg: true })
-    let width = Math.min(w, SHRINK_MAX_WIDTH)
+          ? pipe.webp({ quality: q })
+          : pipe.jpeg({ quality: q, mozjpeg: true })
+    const steps = fmt === 'png' ? [0] : SHRINK_QUALITY_STEPS
+    let width = w
     let best = null
-    while (width >= SHRINK_MIN_WIDTH) {
-      const buf = await encode(
-        sharp(src, { animated: false }).resize({ width, withoutEnlargement: true }),
-      ).toBuffer()
-      if (!best || buf.length < best.length) best = buf
-      if (buf.length <= SHRINK_MAX_BYTES) break
-      width = Math.round(width * 0.8)
+    let bestQ = 0
+    let picked = null
+    for (let round = 0; round < 2; round++) {
+      for (const q of steps) {
+        const buf = await encode(
+          sharp(src, { animated: false }).resize({ width, withoutEnlargement: true }),
+          q,
+        ).toBuffer()
+        if (!best || buf.length < best.length) {
+          best = buf
+          bestQ = q
+        }
+        if (buf.length <= SHRINK_MAX_BYTES) {
+          picked = buf
+          bestQ = q
+          break
+        }
+      }
+      if (picked) break
+      width = Math.round(width * SHRINK_SCALE_STEP)
+      if (width < SHRINK_MIN_WIDTH) break
     }
-    if (!best || best.length >= src.length) return img
-    const outMeta = await sharp(best).metadata()
+    const out = picked || best
+    if (!out || out.length >= src.length) return img
+    const outMeta = await sharp(out).metadata()
     logger.info(
-      `[HoYoGet][render] 出图收口 ${w}x${h} ${(src.length / 1024).toFixed(0)}KB → ${outMeta.width}x${outMeta.height} ${(best.length / 1024).toFixed(0)}KB`,
+      `[HoYoGet][render] 出图收口 ${w}x${h} ${(src.length / 1024).toFixed(0)}KB → ${outMeta.width}x${outMeta.height} q${bestQ} ${(out.length / 1024).toFixed(0)}KB`,
     )
-    return unpacked.pack(best)
+    return unpacked.pack(out)
   } catch (err) {
     logger.warn?.(`[HoYoGet][render] 出图收口跳过，按原图发送：${err?.message || err}`)
     return img
@@ -146,7 +162,7 @@ async function render(path, data_, cfg) {
     },
   });
   /* 所有渲染路径统一收口：无论由本函数自发送还是调用方发送，
-     都先把超出 QQ 二次压缩阈值的图缩到安全范围（见 shrinkImage）。 */
+     都先把超出 QQ 重压阈值的图压到安全体积（见 shrinkImage）。 */
   const payload = await shrinkImage(img);
   // ret:true 时由 render 统一用 base64 自发送；调用方不要再 e.reply，否则会重复发送。
   // 发送成功则返回 e.reply 的结果（含 message_id，供 %原图 等缓存用），失败/未发送才返回 base64。
