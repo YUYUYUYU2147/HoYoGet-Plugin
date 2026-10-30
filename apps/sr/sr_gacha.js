@@ -2308,6 +2308,38 @@ function mergeHelperPools(oldPools, newPools) {
   return newPools
 }
 
+/**
+ * 星穹工坊云端同步（只需 UID）。
+ *
+ * 官方小程序接口（five_star_list）要求「米游社登录态 + 游戏内打开过跃迁页」，两者
+ * 任一不满足就取不到数据：ck 不是登录态时回「未登录」，会话过期时回「请从游戏内
+ * 打开参与活动」。这两种情况都与 authkey 链接无关，直接改走工坊云端，只要 UID
+ * 就能出数据。
+ *
+ * @param {string|number} qq 用户 QQ
+ * @param {string|number} uid 星铁 UID
+ * @returns {Promise<{pools: object, stats: string}>} 合并后的卡池与统计文案
+ */
+async function syncSrCloudPools(qq, uid) {
+  let unionId = ""
+  try { unionId = readHelperBind(qq)?.union_id || "" } catch { }
+  if (!unionId) {
+    try { unionId = detectHelperUnionId() || "" } catch { }
+  }
+  const analysis = await fetchHelperCloud(uid, unionId || HELPER_FALLBACK_UNION_ID)
+  const old = readData(getDataFile(qq, uid))
+  const itemIndex = await loadSrItemIndex()
+  const cloudPools = convertHelperPools(analysis, buildNameHint(old?.pools), itemIndex)
+  const pools = fillMissingIcons(old?.pools ? mergeHelperPools(old.pools, cloudPools) : cloudPools, itemIndex)
+  const result = { ...(old || {}), uid: String(uid), pools, update_time: formatNow(), source: "helper" }
+  saveData(getDataFile(qq, uid), result)
+  const stats = Object.values(pools)
+    .filter(p => p.fiveNum || p.totalPulls)
+    .map(p => `【${p.name}】共${p.totalPulls || p.allNum || 0}抽｜五星${p.fiveNum || 0}`)
+    .join("\n")
+  return { pools, stats }
+}
+
 export class sr_gacha extends plugin {
   constructor() {
     super({
@@ -2454,17 +2486,20 @@ export class sr_gacha extends plugin {
       await this.renderSummary(e, [], 'grid')
       return e.reply('发送【#米哈游星铁抽卡帮助】查看全部抽卡指令')
     } catch (err) {
-      // 徽章接口的会话校验：账号未在游戏内打开过跃迁活动页时会返回该提示。
-      // 属于用户侧可自愈的状态，不是代码异常，因此不打 ERROR 与调用栈，
-      // 只留一条 MARK 记录，避免每次请求都刷出一段无意义的堆栈。
-      if (String(err?.message || err).includes('请从游戏内打开参与活动')) {
-        logger.mark('[HoYoGet][sr_gacha] 徽章会话未激活：账号尚未在游戏内打开跃迁活动页')
-        return e.reply([
-          '当前账号还没在游戏内打开过跃迁活动页。',
-          '请先进《星穹铁道》里点开一次活动跃迁页面，再发送【#米哈游星铁更新抽卡记录】重试。',
-          '也可改用：【#米哈游星铁更新小助手抽卡记录】走小助手云端（只需 UID），',
-          '或【#米哈游星铁抽卡链接 <链接>】导入官方跃迁链接（authkey 全量）。',
-        ].join('\n'))
+      // 官方小程序（five_star_list）依赖米游社登录态与游戏内打开的跃迁会话：
+      // ck 不是登录态时回「未登录」，会话过期时回「请从游戏内打开参与活动」。
+      // 两种都不必让用户去找 authkey 链接，直接用星穹工坊云端（只需 UID）兜底。
+      const reason = String(err?.message || err)
+      if (/未登录|请从游戏内打开参与活动/.test(reason)) {
+        logger.mark(`[HoYoGet][sr_gacha] 小程序会话不可用（${reason}），改用星穹工坊云端`)
+        try {
+          const synced = await syncSrCloudPools(auth.qq, auth.uid)
+          await e.reply(`小程序抽卡接口暂不可用（${reason}），已改用星穹工坊云端同步（只需 UID，无需抽卡链接）\n${synced.stats}`)
+          await this.renderSummary(e, [], "grid")
+          return e.reply("发送【#米哈游星铁抽卡帮助】查看全部抽卡指令")
+        } catch (cloudErr) {
+          logger.mark(`[HoYoGet][sr_gacha] 星穹工坊云端兜底失败：${cloudErr?.message || cloudErr}`)
+        }
       }
       logger.error('[HoYoGet][sr_gacha] refresh failed:', err)
       const formatFailure = await getSrSummaryFn('formatSrGachaFailure')
