@@ -484,10 +484,11 @@ export class meme extends plugin {
     });
 
     const nextPage = page < totalPages ? page + 1 : 1;
-    // 全量长图实测为 640×8007px（990 条），略高于 MAX_IMG_HEIGHT，发送前
-    // 会由 compressAndSplit 均分为两张，不会失败。渲染器不读取 deviceScaleFactor，
-    // 因此这里不传缩放参数，长图尺寸只由布局高度决定。
-    const msg = await renderImg(e, 'meme/meme', { groups, total: ordered.length, page, totalPages, nextPage });
+    // 全量长图改用 1 倍缩放。默认 2 倍会渲染出 1280×16014 的 PNG（约 6.5MB），
+    // sharp 解码与切图期间内存峰值会顶到 pm2 的 max_memory_restart（512MB），
+    // 表现为「发出长图后进程自动重启」；1 倍时输出 640×8007，位图仅约 20MB。
+    const renderCfg = showAll ? { scale: 1 } : {};
+    const msg = await renderImg(e, 'meme/meme', { groups, total: ordered.length, page, totalPages, nextPage }, renderCfg);
     await e.reply(msg);
     return true;
   }
