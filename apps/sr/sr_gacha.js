@@ -1217,7 +1217,7 @@ async function refreshBadgeCookie(uid, ck, region) {
  * 所以 ck 更新时必须在这里单独补 type 1，否则常驻会被旧数据顶掉。
  */
 async function fetchCommonPoolByCk(uid, region, ck) {
-  const rows = await fetchPool(uid, region, ck, '1')
+  const rows = await fetchPool(uid, region, ck, 'GachaType_Standard')
   if (!rows?.length) return null
   const pool = buildPoolFromRows('1', { key: 'common', name: '常驻跃迁' }, rows)
   return pool?.records?.length || pool?.totalPulls ? pool : null
