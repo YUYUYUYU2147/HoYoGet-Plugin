@@ -211,7 +211,10 @@ body::before {
 }
 
 .year_group .card_list {
-  margin-bottom: 4px;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .empty_box {
@@ -227,9 +230,9 @@ body::before {
 }
 
 .item {
-  width: 102px;
-  height: 118px;
-  margin: 0 8px 8px 0;
+  width: 100%;
+  height: 104px;
+  margin: 0;
   border-radius: 8px;
   position: relative;
   overflow: hidden;
@@ -245,7 +248,7 @@ body::before {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 24px;
+  height: 20px;
   background: linear-gradient(to top, rgba(253, 248, 236, 0.95) 0%, rgba(253, 248, 236, 0.5) 60%, rgba(253, 248, 236, 0) 100%);
   pointer-events: none;
   z-index: 2;
@@ -256,8 +259,8 @@ body::before {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 88px;
-  height: 88px;
+  width: 66px;
+  height: 66px;
   background-size: cover;
   background-repeat: no-repeat;
   background-position: center;
@@ -288,11 +291,11 @@ body::before {
   left: 6px;
   top: 4px;
   z-index: 3;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1;
   color: #fff;
-  padding: 3px 6px;
+  padding: 2px 5px;
   border-radius: 4px;
 }
 
@@ -306,10 +309,10 @@ body::before {
   left: 50%;
   bottom: 4px;
   transform: translateX(-50%);
-  font-size: 11px;
+  font-size: 10px;
   color: #8a7a5c;
   z-index: 4;
-  padding: 1px 5px;
+  padding: 1px 3px;
   background: rgba(253, 248, 236, 0.7);
   border-radius: 3px;
   white-space: nowrap;
