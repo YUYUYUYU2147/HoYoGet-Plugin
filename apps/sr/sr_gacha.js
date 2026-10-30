@@ -2386,7 +2386,23 @@ export function limitToOfficialWindow(officialPool, supplyPool) {
     if (t >= cutoff) continue
     extra.push({ ...r })
   }
-  const records = official.concat(extra).sort((a, b) => String(b?.time || "").localeCompare(String(a?.time || "")))
+  // 逐抽来源（小助手全量）比五星汇总更可靠时，用它算出的抽数覆盖官方 / 工坊的估算值
+  // （工坊缺逐抽时会把区间算大：实测姬子一次被算成 138，逐抽实际 74）
+  const trustSupply = supply.length >= official.length
+  // 最老的一条五星不能覆盖：逐抽数据可能就是从那次开始同步的，之前的抽卡不在库里，累计值会偏小
+  const supplyOldestId = String(supply.reduce((m, r) => (!m || String(r?.id || "") < String(m?.id || "") ? r : m), null)?.id || "")
+  const supplyById = new Map()
+  for (const r of supply) if (r?.id) supplyById.set(String(r.id), r)
+  const officialFixed = official.map(r => {
+    const s = supplyById.get(String(r?.id || ""))
+    if (String(s?.id || "") === supplyOldestId) return r
+    if (!s || !trustSupply) return r
+    const fixed = { ...r }
+    if (Number(s.gacha_count) > 0) fixed.gacha_count = Number(s.gacha_count)
+    if (String(s.time || "").length >= 10) fixed.time = s.time
+    return fixed
+  })
+  const records = officialFixed.concat(extra).sort((a, b) => String(b?.time || "").localeCompare(String(a?.time || "")))
   const out = recountPool({ ...(officialPool || {}), records }, records)
   if (!out.fourNum) out.fourNum = Number(supplyPool?.fourNum) || 0
   if (!(out.fourLog && out.fourLog.length)) out.fourLog = supplyPool?.fourLog || []
