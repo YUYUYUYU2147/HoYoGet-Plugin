@@ -1995,7 +1995,7 @@ export function dedupePoolRecords(records) {
   }
   const seenId = new Set()
   const seenNameTime = new Set()
-  const seenNameCount = new Set()
+  const timedNameCount = new Set()
   const out = []
   const accept = r => {
     const id = String(r?.id || "")
@@ -2004,10 +2004,12 @@ export function dedupePoolRecords(records) {
     const cnt = String(Number(r?.gacha_count ?? r?.num ?? 0))
     if (id && seenId.has(id)) return
     if (t && seenNameTime.has(nm + "|" + t)) return
-    if (!t && seenNameCount.has(nm + "|" + cnt)) return
+    if (!t && timedNameCount.has(nm + "|" + cnt)) return
     if (id) seenId.add(id)
-    if (t) seenNameTime.add(nm + "|" + t)
-    seenNameCount.add(nm + "|" + cnt)
+    if (t) {
+      seenNameTime.add(nm + "|" + t)
+      timedNameCount.add(nm + "|" + cnt)
+    }
     out.push(r)
   }
   for (const r of timed) accept(r)
@@ -2363,12 +2365,24 @@ export function limitToOfficialWindow(officialPool, supplyPool) {
     nameTime.add(String(r?.name || "") + "|" + t)
     if (t < cutoff) cutoff = t
   }
+  // 小助手 / 工坊的记录常常没有 time，但 id 是雪花 id（前 13 位为毫秒时间戳），据此还原时间
+  const timeOf = r => {
+    const raw = String(r?.time || "").slice(0, 19)
+    if (raw.length >= 10) return raw
+    const id = String(r?.id || "")
+    if (id.length < 13 || !Number.isFinite(Number(id))) return ""
+    const ms = Number(id.slice(0, 13))
+    if (!(ms > 1000000000000 && ms < 4000000000000)) return ""
+    const d = new Date(ms)
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds())
+  }
   const extra = []
   for (const r of supply) {
     if (ids.has(String(r?.id || ""))) continue
-    const t = String(r?.time || "").slice(0, 19)
+    const t = timeOf(r)
     if (t && nameTime.has(String(r?.name || "") + "|" + t)) continue
-    if (cutoff && (!t || t >= cutoff)) continue
+    if (!t) { extra.push({ ...r }); continue }
+    if (t >= cutoff) continue
     extra.push({ ...r })
   }
   const records = official.concat(extra).sort((a, b) => String(b?.time || "").localeCompare(String(a?.time || "")))
