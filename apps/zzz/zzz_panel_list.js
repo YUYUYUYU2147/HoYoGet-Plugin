@@ -2781,7 +2781,7 @@ export class zzz_panel_list extends plugin {
         logger.debug?.(`[HoYoGet][zzz_panel] 面板记录落盘失败：${err?.message || err}`)
       }
       const bgImage = await resolvePanelBg()
-      const img = await render('zzz_panel/detail', { ...detail, footer, zzzWorkshop, appleStyle: panelAppleStyle(), bgImage, ...getPlayerBadge(e, gamePlayer) }, { e, ret: true, dsf: ZZZ_PANEL_DSF, asFile: true })
+      const img = await render('zzz_panel/detail', { ...detail, footer, zzzWorkshop, appleStyle: panelAppleStyle(), bgImage, ...getPlayerBadge(e, gamePlayer) }, { e, ret: true, dsf: ZZZ_PANEL_DSF })
       const sent = img // render(ret:true) 已自动 e.reply 发送，此处仅保留引用供下方缓存使用
       // 缓存面板用的角色原图，供「%原图」直接取回
       const roleIcon = detail.charData?.role_icon

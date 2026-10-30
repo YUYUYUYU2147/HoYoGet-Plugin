@@ -7,19 +7,31 @@ import { bustTplCache } from './tpl_cache.js';
 // 验证通过后删除本段。
 logger.info?.('[HoYoGet][热重载自测] system/render.js 模块已加载');
 try { fs.appendFileSync('./plugins/HoYoGet-Plugin/temp/hot_reload.log', `${new Date().toISOString()} render.js 模块加载\n`) } catch (_) { }
-/* 出图收口（QQ 二次压缩兜底）
-   QQ 服务端按账号策略处理图片消息：实测本号发出的 4480px 宽长图，
-   2146KB 被缩到 1600x2770 / 428KB，而同机上另一个号发 3279KB 却原样送达。
-   因此这里做两层兜底：
-   1) 体积不超过 3MB 的图原样发送；超标时优先降 JPEG 质量（86→80→74→68）、
-      保持原始宽度，质量降到底才按 0.85 缩宽度，最多两轮
-   2) 调用方显式传 asFile 时改用文件消息发送 —— 文件不经过图片压缩通道，
-      手机端点开即是完整分辨率
-   多帧动图、本地路径与网络链接一律跳过。 */
+/* 渲染尺寸与出图体积约束
+   本机 pm2 对 JiuLi 设了 768MB 的内存上限，超限即被杀掉重启。实测
+   4480x7757 的面板长图（dsf 3.2）在 Chromium 位图 + sharp 解码上就会
+   逼近这个上限，因此把像素密度封顶在 2.0 倍（约 2800px 宽），并压制
+   sharp 的常驻缓存与并发，避免单张图把进程推到重启。
+   QQ 服务端对图片消息会缩到 1600px 宽，2800px 冗余量已经够用。 */
+const MAX_DSF = 2
 const SHRINK_MAX_BYTES = 3 * 1024 * 1024
-const SHRINK_QUALITY_STEPS = [86, 80, 74, 68]
+const SHRINK_QUALITY_STEPS = [84, 74]
 const SHRINK_MIN_WIDTH = 1200
 const SHRINK_SCALE_STEP = 0.85
+
+/* sharp 只在首次用到时加载，并关闭缓存、限制并发，降低解码大图时的内存峰值。 */
+let sharpPromise = null
+function getSharp() {
+  if (!sharpPromise) {
+    sharpPromise = (async () => {
+      const sharp = (await import('sharp')).default
+      sharp.cache(false)
+      sharp.concurrency(1)
+      return sharp
+    })()
+  }
+  return sharpPromise
+}
 
 /* 从 segment、Buffer、base64 字符串中取出图像字节，并给出对等的回包方式。
    框架的 segment.image(file) 返回 { type, file, name } —— file 直接在顶层，
@@ -52,7 +64,7 @@ async function shrinkImage(img) {
   }
   const src = unpacked.buf
   try {
-    const sharp = (await import('sharp')).default
+    const sharp = await getSharp()
     const meta = await sharp(src).metadata()
     const w = meta.width || 0
     const h = meta.height || 0
@@ -74,7 +86,10 @@ async function shrinkImage(img) {
     for (let round = 0; round < 2; round++) {
       for (const q of steps) {
         const buf = await encode(
-          sharp(src, { animated: false }).resize({ width, withoutEnlargement: true }),
+          sharp(src, { animated: false, sequentialRead: true }).resize({
+            width,
+            withoutEnlargement: true,
+          }),
           q,
         ).toBuffer()
         if (!best || buf.length < best.length) {
@@ -102,14 +117,6 @@ async function shrinkImage(img) {
     logger.warn?.(`[HoYoGet][render] 出图收口跳过，按原图发送：${err?.message || err}`)
     return img
   }
-}
-
-/* 把图片包成文件消息：QQ 对图片消息会按账号策略缩放重压，对文件消息不做处理。
-   跨机部署时协议端拿不到本机路径，统一用 base64 传内容。 */
-function toFileSegment(img, name) {
-  const unpacked = unpackImage(img)
-  if (!unpacked || !unpacked.buf.length) return null
-  return { type: 'file', file: `base64://${unpacked.buf.toString('base64')}`, name }
 }
 
 /* 对端连接短暂抖动时发送会抛错，隔几秒重试一次，避免整张图丢掉。 */
@@ -152,14 +159,15 @@ async function render(path, data_, cfg) {
       const depth = path.split('/').filter(Boolean).length + 3;
       const ppath = '../'.repeat(depth) + 'plugins/HoYoGet-Plugin/resources/';
       const scale = cfg.pct || (config().img_quality / 100) * 2.4 || 2.4 * 0.8
+      const dsf = cfg.dsf ? Math.min(Number(cfg.dsf) || 0, MAX_DSF) : 0
       return {
         sys: {
           // dsf 模式不走 CSS zoom：Chromium 在 `zoom` 下元素截图会按未缩放盒裁剪，
           // 内容比量到的高度高一截时底部就被切掉（实测绝区零面板尾部的排名/版权行消失）。
           // 改成 zoom:1 + deviceScaleFactor 截图，布局尺寸不变、像素密度一样。
-          scale: cfg.dsf ? 'style=zoom:1' : `style=zoom:${scale}`,
+          scale: dsf ? 'style=zoom:1' : `style=zoom:${scale}`,
         },
-        ...(cfg.dsf ? { deviceScaleFactor: cfg.dsf } : {}),
+        ...(dsf ? { deviceScaleFactor: dsf } : {}),
         ...data_,
         // 自定义模板目录（模板里 <% include(_tpl_path+'/x.html') %> 用），默认仍是框架给的 miao 目录
         ...(data_.tplPath ? { _tpl_path: data_.tplPath } : {}),
@@ -170,22 +178,13 @@ async function render(path, data_, cfg) {
     },
   });
   /* 所有渲染路径统一收口：无论由本函数自发送还是调用方发送，
-     都先把超出 QQ 重压阈值的图压到安全体积（见 shrinkImage）。 */
+     都先把超出阈值的图压到安全体积（见 shrinkImage）。 */
   const payload = await shrinkImage(img);
-  // ret:true 时由 render 统一自发送；调用方不要再 e.reply，否则会重复发送。
+  // ret:true 时由 render 统一用图片消息自发送；调用方不要再 e.reply，否则会重复发送。
   // 发送成功则返回 e.reply 的结果（含 message_id，供 %原图 等缓存用），失败/未发送才返回图片本身。
   if (cfg.ret && e) {
-    let out = payload
-    if (cfg.asFile) {
-      const name = `${(path.split('/').pop() || 'image')}_${Date.now()}.jpg`
-      const fileSeg = toFileSegment(payload, name)
-      if (fileSeg) {
-        out = fileSeg
-        logger.info(`[HoYoGet][render] 改走文件消息发送 · ${name}`)
-      }
-    }
-    const sent = await sendWithRetry(e, out)
-    return sent ?? out
+    const sent = await sendWithRetry(e, payload);
+    return sent ?? payload;
   }
   return payload;
 }
