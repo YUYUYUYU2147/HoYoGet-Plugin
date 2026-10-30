@@ -1983,8 +1983,41 @@ function pickFullerRecords(oldRecords, newRecords) {
 }
 
 // 按选定的五星记录重算统计值；pity 兼容数字或 { gacha_count } 两种格式
+// 同一池内的五星去重：官方记录带 time，小助手/工坊的记录常无 time 且 id 与官方不同，
+// 只按 id 或只按 time 对齐都会漏判，这里三层判重：id、名称+时间、名称+抽数（无时间时）。
+export function dedupePoolRecords(records) {
+  const list = Array.isArray(records) ? records : []
+  const timed = []
+  const untimed = []
+  for (const r of list) {
+    if (String(r?.time || "").length >= 10) timed.push(r)
+    else untimed.push(r)
+  }
+  const seenId = new Set()
+  const seenNameTime = new Set()
+  const seenNameCount = new Set()
+  const out = []
+  const accept = r => {
+    const id = String(r?.id || "")
+    const t = String(r?.time || "").slice(0, 19)
+    const nm = String(r?.name || "")
+    const cnt = String(Number(r?.gacha_count ?? r?.num ?? 0))
+    if (id && seenId.has(id)) return
+    if (t && seenNameTime.has(nm + "|" + t)) return
+    if (!t && seenNameCount.has(nm + "|" + cnt)) return
+    if (id) seenId.add(id)
+    if (t) seenNameTime.add(nm + "|" + t)
+    seenNameCount.add(nm + "|" + cnt)
+    out.push(r)
+  }
+  for (const r of timed) accept(r)
+  for (const r of untimed) accept(r)
+  return out.sort((a, b) => String(b?.time || "").localeCompare(String(a?.time || "")))
+}
+ 
 export function recountPool(pool, records) {
   const pity = Number(typeof pool?.pity === 'object' ? pool.pity?.gacha_count : pool.pity || 0) || 0
+  records = dedupePoolRecords(records)
   const fiveNum = records.length
   const totalPulls = countTotal(records) + pity
   return {
@@ -2565,6 +2598,19 @@ export class sr_gacha extends plugin {
     // 剔除混入星铁数据的绝区零池（如 GachaType_Permanent「常驻频段」）；
     // 有剔除时顺手写回本插件的数据文件，把脏数据永久清掉，不必等下次更新覆盖
     const cleaned = cleanSrPools(data.pools)
+    let dedupFixed = false
+    for (const poolKey of Object.keys(cleaned)) {
+      const before = getPoolRecords(cleaned[poolKey]) || []
+      const after = dedupePoolRecords(before)
+      if (after.length === before.length) continue
+      cleaned[poolKey] = recountPool({ ...cleaned[poolKey], records: after, recent: after }, after)
+      dedupFixed = true
+      logger.mark("[HoYoGet][sr_gacha] 已剔除 " + poolKey + " 的 " + (before.length - after.length) + " 条重复五星记录")
+    }
+    if (dedupFixed) {
+      data = { ...data, pools: cleaned }
+      try { saveData(getDataFile(auth.qq, auth.uid), data) } catch (err) { logger.warn(`[HoYoGet][sr_gacha] 去重结果写回失败：${err?.message || err}`) }
+    }
     const dropped = Object.keys(data.pools).filter(k => !cleaned[k])
     if (dropped.length) {
       logger.mark(`[HoYoGet][sr_gacha] 已剔除混入星铁数据的池：${dropped.map(k => `${k}(${data.pools[k]?.name || '?'})`).join('、')}`)
