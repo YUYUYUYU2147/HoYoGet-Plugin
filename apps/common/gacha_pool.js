@@ -2020,6 +2020,12 @@ export class xhh_gacha_pool extends plugin {
       if (!collabImage && collabSpec) {
         continue;
       }
+      // 已有封面就保持不动：同一期官方可能有多张图，搜索结果每次刷新给出的候选未必相同，
+      // 逐日覆盖会让本地卡池库在两张图之间来回变（git 里天天出现改动，图也来回跳）。
+      // 只有 SR_POOL_IMAGE_KEYWORDS 点名要纠正的池才继续往下重算。
+      const keptImgs = (item.imgs || []).filter(Boolean)
+      const firstUpName = String(item.js_five?.[0] || '')
+      if (keptImgs.length && !SR_POOL_IMAGE_KEYWORDS[firstUpName]) continue
       const roleImg = this.getSrOfficialPoolImage(item, false, records);
       const weaponImg = this.getSrOfficialPoolImage(item, true, records);
       const existingImgs = (item.imgs || []).filter(Boolean);
@@ -4874,8 +4880,15 @@ ${r.summary || ''}`;
         return false;
       }
       if (fs.existsSync(path)) {
+        let unchanged = false
         try {
-          fs.copyFileSync(path, `${path}.bak`);
+          unchanged = fs.readFileSync(path, 'utf-8') === text
+        } catch (_) {}
+        // 内容没变就不落盘：否则每次定时刷新都会重写文件（mtime/.bak 天天变），
+        // 白白让工作区看起来「又被改了一次」。
+        if (unchanged) return true
+        try {
+          fs.copyFileSync(path, `${path}.bak`)
         } catch (_) {}
       }
       fs.writeFileSync(path, text, 'utf-8');
