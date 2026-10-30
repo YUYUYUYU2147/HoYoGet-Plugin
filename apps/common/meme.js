@@ -124,7 +124,7 @@ async function renderImg(e, path, data_, cfg = {}) {
     logger.error(`[HoYoGet-meme] 渲染返回异常 ${path}: ${typeof buf}`);
     return [{ type: 'text', data: { text: '图片渲染失败，请稍后再试' } }];
   }
-  const bufs = await compressAndSplit(buf);
+  const bufs = await compressAndSplit(buf, cfg.img || {});
   return bufs.map(b => segment.image(b));
 }
 
@@ -420,7 +420,7 @@ export class meme extends plugin {
       return true
     }
     // 分类交给本地纯函数模块（题材 / 属性 / 功能三层规则），不再依赖远端 tags：
-    // 远端 990 条里只有约 300 条带 tags，按 tags 分组会让七成条目落进「未分类」。
+    // 远端 990 条里只有约 300 条带 tags，按 tags 分组会让七成条目落进未分类。
     const { groups, stats } = buildMemeListData(infos)
     const renderGroups = groups.map((group, index) => ({
       label: group.icon + " " + group.name,
@@ -434,10 +434,33 @@ export class meme extends plugin {
       })),
     }))
     const subText = "共 " + stats.totalMemes + " 个 · " + stats.groupCount + " 个分类 · " + stats.totalKeywords + " 个关键词 · 发送 #表情名 制作"
-    // 分组一旦分页就会在页边界处断开，这里固定输出全量单图；
-    // 约 990 条时高度超出 MAX_IMG_HEIGHT，由 compressAndSplit 自动切成多张。
-    const msg = await renderImg(e, "meme/meme", { title: "MEME 表情包列表", subText, groups: renderGroups }, { scale: 1 })
-    await e.reply(msg)
+    // 全量单图在 2 倍缩放下高度可达两万像素，sharp 解码峰值会顶到 pm2 内存上限
+    // （历史事故）；1 倍缩放又明显发虚。这里按条目数切片，每片约 260 条单独 2 倍渲染，
+    // 再把各片拼成多条消息发送。
+    const CHUNK_ITEMS = 260
+    const chunks = []
+    let current = []
+    let count = 0
+    for (const group of renderGroups) {
+      const remain = CHUNK_ITEMS - count
+      if (group.memes.length <= remain) {
+        current.push(group)
+        count += group.memes.length
+        continue
+      }
+      current.push({ ...group, memes: group.memes.slice(0, remain) })
+      chunks.push(current)
+      current = [{ ...group, memes: group.memes.slice(remain) }]
+      count = current[0].memes.length
+    }
+    if (current.length) chunks.push(current)
+    const parts = []
+    for (let i = 0; i < chunks.length; i++) {
+      const pageText = chunks.length > 1 ? subText + " · 第 " + (i + 1) + "/" + chunks.length + " 张" : subText
+      const bufs = await renderImg(e, "meme/meme", { title: "MEME 表情包列表", subText: pageText, groups: chunks[i] }, { scale: 2, img: { maxWidth: 1600 } })
+      parts.push(...bufs)
+    }
+    await e.reply(parts)
     return true
   }
 
