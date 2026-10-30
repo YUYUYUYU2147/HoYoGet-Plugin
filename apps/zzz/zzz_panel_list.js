@@ -495,13 +495,20 @@ async function refreshCkByStoken(qq, uid = '') {
   if (!hit) return null
   const entry = hit[1] || {}
   const raw = String(entry.ck_stoken || '')
-  const stoken = (raw.match(/stoken=([^;]+)/) || [])[1]
-  const stuid = (raw.match(/stuid=(\d+)/) || [])[1] || String(entry.stuid || '')
-  if (!stoken || !stuid) return null
+  /* ck_stoken 不保证带 stoken：扫码迁移过来的条目只有 ltoken / ltuid / cookie_token，
+     长期凭证存在字段里，缺省时必须回退过去，否则续期永远拿不到新票。 */
+  const stoken = (raw.match(/stoken=([^;]+)/) || [])[1] || String(entry.stoken || '')
+  /* 米游社通行证 uid 与游戏 uid 不是同一个值：换票接口按通行证 uid 校验，
+     ck_stoken 里的 stuid 通常是游戏 uid，必须优先取字段里的 stuid。 */
+  const stuid = String(entry.stuid || '') || (raw.match(/stuid=(\d+)/) || [])[1]
+  /* 换票接口的 uid 参数要 game_uid（yaml 的条目键），传通行证 uid 取不到 Cookie；
+     ltuid 仍用通行证 uid，两者不能混用。 */
+  const ticketUid = String(hit[0] || uid || '') || stuid
+  if (!stoken || !ticketUid) return null
   try {
     const headers = { 'User-Agent': 'Mozilla/5.0', Cookie: raw }
     const [cookieRes, ltokenRes] = await Promise.all([
-      mhyFetch(`https://api-takumi.mihoyo.com/auth/api/getCookieAccountInfoBySToken?stoken=${encodeURIComponent(stoken)}&uid=${encodeURIComponent(stuid)}`, { headers }).then(r => r.json()),
+      mhyFetch(`https://api-takumi.mihoyo.com/auth/api/getCookieAccountInfoBySToken?stoken=${encodeURIComponent(stoken)}&uid=${encodeURIComponent(ticketUid)}`, { headers }).then(r => r.json()),
       mhyFetch('https://passport-api.mihoyo.com/account/auth/api/getLTokenBySToken', { headers }).then(r => r.json()).catch(() => ({})),
     ])
     const cookieToken = cookieRes?.data?.cookie_token
