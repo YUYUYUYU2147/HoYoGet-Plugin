@@ -484,10 +484,10 @@ export class meme extends plugin {
     });
 
     const nextPage = page < totalPages ? page + 1 : 1;
-    // 全量长图改用 1 倍缩放：2 倍缩放后输出高度约为布局高度的 3.1 倍，
-    // 990 条会突破 MAX_IMG_HEIGHT 被切成两张；1 倍时输出与布局等高，可保持单张。
-    const renderCfg = showAll ? { scale: 1 } : {};
-    const msg = await renderImg(e, 'meme/meme', { groups, total: ordered.length, page, totalPages, nextPage }, renderCfg);
+    // 全量长图实测为 640×8007px（990 条），略高于 MAX_IMG_HEIGHT，发送前
+    // 会由 compressAndSplit 均分为两张，不会失败。渲染器不读取 deviceScaleFactor，
+    // 因此这里不传缩放参数，长图尺寸只由布局高度决定。
+    const msg = await renderImg(e, 'meme/meme', { groups, total: ordered.length, page, totalPages, nextPage });
     await e.reply(msg);
     return true;
   }
