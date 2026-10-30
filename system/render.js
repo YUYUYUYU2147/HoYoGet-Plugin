@@ -20,11 +20,15 @@ const SHRINK_MAX_WIDTH = 1600
 const SHRINK_MAX_BYTES = 1.5 * 1024 * 1024
 const SHRINK_MIN_WIDTH = 900
 
-/* 从 segment、Buffer、base64 字符串中取出图像字节，并给出对等的回包方式。 */
+/* 从 segment、Buffer、base64 字符串中取出图像字节，并给出对等的回包方式。
+   框架的 segment.image(file) 返回 { type, file, name } —— file 直接在顶层，
+   没有 data 字段；传入 Buffer 时 file 就是 Buffer，只有在转发给协议端时才
+   转成 base64:// 字符串。两种形态都要取到，否则收口会静默跳过。 */
 function unpackImage(img) {
   if (Buffer.isBuffer(img)) return { buf: img, pack: b => b }
-  const seg = img && typeof img === 'object' && (img.data || img.file) ? img : null
-  const file = seg ? (seg.data?.file ?? seg.file) : (typeof img === 'string' ? img : null)
+  const seg = img && typeof img === 'object' ? img : null
+  const file = seg ? (seg.file ?? seg.data?.file) : (typeof img === 'string' ? img : null)
+  if (Buffer.isBuffer(file)) return { buf: file, pack: b => (seg ? { ...seg, file: b } : b) }
   if (typeof file !== 'string' || !file.startsWith('base64://')) return null
   const raw = file.slice('base64://'.length)
   if (!raw) return null
@@ -32,14 +36,19 @@ function unpackImage(img) {
     buf: Buffer.from(raw, 'base64'),
     pack: b =>
       seg
-        ? { ...seg, data: { ...seg.data, file: `base64://${b.toString('base64')}` } }
+        ? { ...seg, file: `base64://${b.toString('base64')}` }
         : `base64://${b.toString('base64')}`,
   }
 }
 
 async function shrinkImage(img) {
   const unpacked = unpackImage(img)
-  if (!unpacked || !unpacked.buf.length) return img
+  if (!unpacked || !unpacked.buf.length) {
+    logger.debug?.(
+      `[HoYoGet][render] 出图收口跳过：未识别的图片载荷（${typeof img}${img && typeof img === 'object' ? '/' + typeof img.file : ''}）`,
+    );
+    return img
+  }
   const src = unpacked.buf
   try {
     const sharp = (await import('sharp')).default
