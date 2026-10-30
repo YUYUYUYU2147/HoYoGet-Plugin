@@ -1110,6 +1110,7 @@ async function getUserAuth(e) {
   const readCookie = await getSrSummaryFn('readSrGachaCookie')
   const cookieFile = getCookieFile ? getCookieFile(qq) : `./data/srGachaSummary/${uid}.json`
   const candidates = [
+    await buildSrStokenCookie(qq, uid),
     readCookie ? readCookie(cookieFile) : null,
     e.cookie,
   ]
@@ -1127,6 +1128,60 @@ async function getUserAuth(e) {
   const cookies = [...new Set(candidates.map(v => String(v || '').trim()).filter(Boolean))]
   if (!cookies.length) return { error: '未找到绑定的星铁账号，请先 #米哈游扫码绑定' }
   return { qq, uid, cookies, cookieFile }
+}
+
+/**
+ * 用 stoken 换一次 fresh cookie_token，再拼出徽章接口认的 ck。
+ *
+ * 扫码登录只落盘 stoken 与（可能已过期的）cookie_token；徽章接口要求 ck 里同时有
+ * account_id 与 cookie_token，直接拿 ck_stoken 去打 badge 只会回「未登录」。
+ */
+async function exchangeCookieToken(stoken, stuid, mid) {
+  const params = new URLSearchParams({ stoken, uid: String(stuid) })
+  const url = "https://api-takumi.mihoyo.com/auth/api/getCookieAccountInfoBySToken?" + params
+  const { data } = await requestJson(url, {
+    headers: {
+      accept: "application/json, text/plain, */*",
+      Cookie: "stuid=" + stuid + ";stoken=" + stoken + ";mid=" + mid,
+    },
+  })
+  if (Number(data?.retcode) !== 0) throw new Error(data?.message || "stoken 换取 cookie_token 失败")
+  return String(data?.data?.cookie_token || "")
+}
+
+/**
+ * 从 data/Stoken/<qq>.yaml 组装星铁 ck。
+ *
+ * @param {string|number} qq 用户 QQ
+ * @param {string|number} uid 星铁 UID
+ * @returns {Promise<string>} 可用 ck，取不到时返回空串
+ */
+async function buildSrStokenCookie(qq, uid) {
+  try {
+    const file = PLUGIN_ROOT + "/data/Stoken/" + qq + ".yaml"
+    if (!fs.existsSync(file)) return ""
+    const YAML = (await import("yaml")).default
+    const parsed = YAML.parse(fs.readFileSync(file, "utf8"))
+    const entries = Array.isArray(parsed) ? parsed : Object.values(parsed || {})
+    const list = entries.filter(entry => entry && typeof entry === "object" && entry.stoken)
+    const entry =
+      list.find(item => String(item.uid) === String(uid) && /hkrpg/.test(String(item.game_biz))) ||
+      list.find(item => /hkrpg/.test(String(item.game_biz)))
+    if (!entry) return ""
+    const stuid = String(entry.stuid || entry.ltuid || "")
+    if (!stuid) return ""
+    let token = ""
+    try { token = await exchangeCookieToken(entry.stoken, stuid, String(entry.mid || "")) } catch { }
+    if (!token) token = String(entry.cookie_token || "")
+    if (!token) return ""
+    const parts = ["ltuid=" + stuid, "stuid=" + stuid, "cookie_token=" + token, "account_id=" + stuid]
+    if (entry.ltoken) parts.push("ltoken=" + entry.ltoken)
+    if (entry.mid) parts.push("mid=" + entry.mid)
+    return parts.join(";")
+  } catch (err) {
+    logger.debug?.("[HoYoGet][sr_gacha] stoken 组装 ck 失败：" + (err?.message || err))
+    return ""
+  }
 }
 
 async function refreshBadgeCookie(uid, ck, region) {
