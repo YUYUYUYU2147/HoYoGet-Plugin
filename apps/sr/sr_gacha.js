@@ -2459,7 +2459,12 @@ export class sr_gacha extends plugin {
       // 只留一条 MARK 记录，避免每次请求都刷出一段无意义的堆栈。
       if (String(err?.message || err).includes('请从游戏内打开参与活动')) {
         logger.mark('[HoYoGet][sr_gacha] 徽章会话未激活：账号尚未在游戏内打开跃迁活动页')
-        return e.reply('当前账号还没在游戏内打开过跃迁活动页。\n请先进《星穹铁道》里点开一次活动跃迁页面，再发送【#米哈游星铁更新抽卡记录】重试。')
+        return e.reply([
+          '当前账号还没在游戏内打开过跃迁活动页。',
+          '请先进《星穹铁道》里点开一次活动跃迁页面，再发送【#米哈游星铁更新抽卡记录】重试。',
+          '也可改用：【#米哈游星铁更新小助手抽卡记录】走小助手云端（只需 UID），',
+          '或【#米哈游星铁抽卡链接 <链接>】导入官方跃迁链接（authkey 全量）。',
+        ].join('\n'))
       }
       logger.error('[HoYoGet][sr_gacha] refresh failed:', err)
       const formatFailure = await getSrSummaryFn('formatSrGachaFailure')
