@@ -8,13 +8,13 @@ import { bustTplCache } from './tpl_cache.js';
 logger.info?.('[HoYoGet][热重载自测] system/render.js 模块已加载');
 try { fs.appendFileSync('./plugins/HoYoGet-Plugin/temp/hot_reload.log', `${new Date().toISOString()} render.js 模块加载\n`) } catch (_) { }
 /* 出图收口（QQ 二次压缩兜底）
-   QQ 服务端按文件体积判定是否重压：实测同样 4480px 宽的面板长图，
-   3279KB 原样送达，9000KB 被压到 300~400KB（宽度同时被缩到 1600）。
-   因此策略是「保分辨率、压体积」：
-   - 体积不超过 3MB 的图原样发送，不做任何处理
-   - 超过时优先降 JPEG 质量（86 → 80 → 74 → 68），保持原始宽度 4480px
-   - 质量降到底仍超标才按 0.85 缩小宽度，再走一遍质量阶梯，最多两轮
-   - 缩放后体积没有下降则保留原图
+   QQ 服务端按账号策略处理图片消息：实测本号发出的 4480px 宽长图，
+   2146KB 被缩到 1600x2770 / 428KB，而同机上另一个号发 3279KB 却原样送达。
+   因此这里做两层兜底：
+   1) 体积不超过 3MB 的图原样发送；超标时优先降 JPEG 质量（86→80→74→68）、
+      保持原始宽度，质量降到底才按 0.85 缩宽度，最多两轮
+   2) 调用方显式传 asFile 时改用文件消息发送 —— 文件不经过图片压缩通道，
+      手机端点开即是完整分辨率
    多帧动图、本地路径与网络链接一律跳过。 */
 const SHRINK_MAX_BYTES = 3 * 1024 * 1024
 const SHRINK_QUALITY_STEPS = [86, 80, 74, 68]
@@ -104,6 +104,14 @@ async function shrinkImage(img) {
   }
 }
 
+/* 把图片包成文件消息：QQ 对图片消息会按账号策略缩放重压，对文件消息不做处理。
+   跨机部署时协议端拿不到本机路径，统一用 base64 传内容。 */
+function toFileSegment(img, name) {
+  const unpacked = unpackImage(img)
+  if (!unpacked || !unpacked.buf.length) return null
+  return { type: 'file', file: `base64://${unpacked.buf.toString('base64')}`, name }
+}
+
 /* 对端连接短暂抖动时发送会抛错，隔几秒重试一次，避免整张图丢掉。 */
 async function sendWithRetry(e, img) {
   try {
@@ -164,11 +172,20 @@ async function render(path, data_, cfg) {
   /* 所有渲染路径统一收口：无论由本函数自发送还是调用方发送，
      都先把超出 QQ 重压阈值的图压到安全体积（见 shrinkImage）。 */
   const payload = await shrinkImage(img);
-  // ret:true 时由 render 统一用 base64 自发送；调用方不要再 e.reply，否则会重复发送。
-  // 发送成功则返回 e.reply 的结果（含 message_id，供 %原图 等缓存用），失败/未发送才返回 base64。
+  // ret:true 时由 render 统一自发送；调用方不要再 e.reply，否则会重复发送。
+  // 发送成功则返回 e.reply 的结果（含 message_id，供 %原图 等缓存用），失败/未发送才返回图片本身。
   if (cfg.ret && e) {
-    const sent = await sendWithRetry(e, payload);
-    return sent ?? payload;
+    let out = payload
+    if (cfg.asFile) {
+      const name = `${(path.split('/').pop() || 'image')}_${Date.now()}.jpg`
+      const fileSeg = toFileSegment(payload, name)
+      if (fileSeg) {
+        out = fileSeg
+        logger.info(`[HoYoGet][render] 改走文件消息发送 · ${name}`)
+      }
+    }
+    const sent = await sendWithRetry(e, out)
+    return sent ?? out
   }
   return payload;
 }
