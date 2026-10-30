@@ -738,22 +738,35 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
       }
       group.list.push(item)
     }
-    // 数据总览：两行 x 四列
+    // 数据总览：可歪池两行 x 四列；常驻/新手池没有 50/50 与 UP 概念，UP 三项不展示
     const fourPity = Number(pool.fourPity || 0) || 0
-    const line = [
-      [
-        { num: fiveNum ? pity : '--', unit: '', lable: '未出五星' },
-        { num: fiveAvg, unit: '', lable: '五星平均' },
-        { num: upRate, unit: upRate === '--' ? '' : '%', lable: '小保底不歪率' },
-        { num: maxPity || '--', unit: '', lable: '最非' },
-      ],
-      [
-        { num: fourPity || '--', unit: '', lable: '未出四星' },
-        { num: upAvg, unit: '', lable: 'UP平均' },
-        { num: upYs, unit: '', lable: `UP花费${conf.currency}` },
-        { num: minPity || '--', unit: '', lable: '最欧' },
-      ],
-    ]
+    const line = upPool
+      ? [
+        [
+          { num: fiveNum ? pity : '--', unit: '', lable: '未出五星' },
+          { num: fiveAvg, unit: '', lable: '五星平均' },
+          { num: upRate, unit: upRate === '--' ? '' : '%', lable: '小保底不歪率' },
+          { num: maxPity || '--', unit: '', lable: '最非' },
+        ],
+        [
+          { num: fourPity || '--', unit: '', lable: '未出四星' },
+          { num: upAvg, unit: '', lable: 'UP平均' },
+          { num: upYs, unit: '', lable: `UP花费${conf.currency}` },
+          { num: minPity || '--', unit: '', lable: '最欧' },
+        ],
+      ]
+      : [
+        [
+          { num: fiveNum ? pity : '--', unit: '', lable: '未出五星' },
+          { num: fiveAvg, unit: '', lable: '五星平均' },
+          { num: maxPity || '--', unit: '', lable: '最非' },
+        ],
+        [
+          { num: fourPity || '--', unit: '', lable: '未出四星' },
+          { num: fiveNum || '--', unit: '', lable: '五星数' },
+          { num: minPity || '--', unit: '', lable: '最欧' },
+        ],
+      ]
     return {
       ...pool,
       key,
@@ -766,7 +779,7 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
       pity,
       maxPity,
       minPity,
-      upRate: `${upRate}%`,
+      upRate: upRate === '--' ? '--' : upRate + '%',
       noWai,
       fiveLog,
       yearGroups,
@@ -776,6 +789,7 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
       lastTime: fiveLog.length ? fiveLog[0].fullDate : '--',
       /* 总览表用的精简字段：模板不直接索引 line[1][1]，避免数据不全时炸模板 */
       upAvgText: upAvg,
+      upYsText: upYs,
       fourPityText: fourPity || '--',
       allNumText: totalPulls || 0,
       fiveNumText: fiveNum || 0,
@@ -786,6 +800,8 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
     const ib = conf.poolOrder.indexOf(b.key)
     return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib)
   })
+  // 零抽卡池（联动池/新手池首次同步后常见 0 抽）没有内容可展示，概览表与卡片一并跳过
+  const shownPools = pools.filter(pool => Number(pool.allNum) > 0)
   // progress 进度条布局：每个卡池生成一个进度区块
   if (layout === 'progress') {
     const nickname = data?.nickname || e?.nickname || e?.user?.nickname || (game === 'zzz' ? '绳匠' : '开拓者')
@@ -825,8 +841,10 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
         allNum: pool.allNum,
         fiveNum: pool.fiveNum,
         avgPity: pool.fiveAvg,
-        upAvg: pool.line?.[1]?.[1]?.num || '--',
-        upYs: pool.line?.[1]?.[2]?.num || '--',
+        upAvg: pool.upAvgText || '--',
+        upYs: pool.upYsText || '--',
+        // 常驻/新手池没有 UP 概念，进度视图不展示「UP需」指标
+        showUp: pool.upYsText !== '--',
         // 进度模板里货币文案写死过「星琼」，绝区零应为「菲林」；模板按该标记分支
         isZzz: game === 'zzz',
         list,
@@ -841,33 +859,11 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
       sections,
     }
   }
-  if (!pools.some(pool => pool.key === defPool.key)) {
-    pools.push({
-      key: defPool.key,
-      type: conf.typeMap[defPool.key] || '',
-      labelClass: conf.labelClassMap[defPool.key] || 'common',
-      name: defPool.name,
-      allNum: 0,
-      fiveNum: 0,
-      upNum: 0,
-      pity: 0,
-      maxPity: 0,
-      minPity: 0,
-      upRate: '--',
-      fiveLog: [],
-      yearGroups: [],
-      line: [
-        [{ num: '--', unit: '', lable: '未出五星' }, { num: '--', unit: '', lable: '五星平均' }, { num: '--', unit: '%', lable: '小保底不歪率' }, { num: '--', unit: '', lable: '最非' }],
-        [{ num: '--', unit: '', lable: '未出四星' }, { num: '--', unit: '', lable: 'UP平均' }, { num: '--', unit: '', lable: `UP花费${conf.currency}` }, { num: '--', unit: '', lable: '最欧' }],
-      ],
-      firstTime: '--',
-      lastTime: '--',
-    })
-  }
+  // 全部卡池都是 0 抽时不再补一张空卡（模板渲染「暂无抽卡记录」提示）
   return {
     uid,
     update_time: data?.update_time || '未知',
-    pools,
+    pools: shownPools,
   }
 }
 
