@@ -46,6 +46,9 @@ const missingGenshinModules = new Set()
  * @param {string|null} named 需要取的具名导出；传 '*' 返回整个模块命名空间；不传则为 default
  */
 async function loadGenshinModule(tag, relPaths, named = null) {
+  // 已判定缺失的模块直接返回。否则每次调用都要把候选路径逐个 import 一遍，
+  // 未安装 genshin 时会白白产生 8 次失败的动态导入。
+  if (missingGenshinModules.has(tag)) return { ok: false, value: null }
   const candidates = resolveGenshinModule(relPaths)
   let lastErr
   for (const url of candidates) {
@@ -60,9 +63,11 @@ async function loadGenshinModule(tag, relPaths, named = null) {
   }
   if (!missingGenshinModules.has(tag)) {
     missingGenshinModules.add(tag)
-    logger.error(
-      `[HoYoGet][sr_gacha] 未能在 genshin 插件中找到 ${tag}（已尝试 ${candidates.length} 个路径，` +
-      `最后错误：${lastErr?.message || lastErr}）。该功能将不可用。`
+    // genshin 属于可选的跨插件依赖：未安装时各调用点都有内置兜底，
+    // 属于常规部署形态而非故障，因此按普通记录输出，不再打 ERROR。
+    logger.mark(
+      `[HoYoGet][sr_gacha] 未找到 genshin 模块 ${tag}（已尝试 ${candidates.length} 个路径），` +
+      `相关能力走内置兜底`
     )
   }
   return { ok: false, value: null }
