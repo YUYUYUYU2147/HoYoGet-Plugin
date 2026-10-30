@@ -79,8 +79,8 @@ async function compressImageBuf(buf, opts = {}) {
 }
 
 // 压缩后若图片过高，切成多张（NapCat 对超高长图也会传失败）
-async function compressAndSplit(buf) {
-  const jpeg = await compressImageBuf(buf);
+async function compressAndSplit(buf, opts = {}) {
+  const jpeg = await compressImageBuf(buf, opts);
   const meta = await sharp(jpeg).metadata();
   const { width, height } = meta;
   if (height <= MAX_IMG_HEIGHT) return [jpeg];
@@ -99,6 +99,47 @@ async function compressAndSplit(buf) {
   }
   logger.mark(`[HoYoGet-meme] 长图 ${height}px 切割为 ${parts} 张`);
   return list;
+}
+
+// ==================== 服务端列表图 ====================
+// 服务端 /memes/render_list 会按 tags 分组生成整张列表长图（白底多列、组名带数量）。
+// 直接取这张图有两个好处：排版与服务端仓库完全一致；本进程不再渲染近千条 DOM，
+// 避免内存峰值顶到 pm2 的 max_memory_restart 造成重启。
+const RENDER_LIST_TTL = 24 * 60 * 60 * 1000;
+let renderListCache = null;
+
+async function fetchRenderList() {
+  if (renderListCache && Date.now() - renderListCache.at < RENDER_LIST_TTL) {
+    return renderListCache.buf;
+  }
+  const base = memeBaseUrl();
+  if (!base) throw new Error('meme_baseUrl 未配置');
+  // 服务端要遍历全部表情排版，耗时明显高于单个表情，超时给到 90 秒
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 90000);
+  try {
+    const res = await fetch(`${base}/memes/render_list`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+      signal: controller.signal,
+    });
+    const type = (res.headers.get('content-type') || '').toLowerCase();
+    if (!res.ok || !type.includes('image')) {
+      throw new Error(`返回 ${res.status} ${type || '未知类型'}`);
+    }
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (!buf.length) throw new Error('返回内容为空');
+    renderListCache = { buf, at: Date.now() };
+    logger.mark(`[HoYoGet-meme] 服务端列表图已获取：${(buf.length / 1024 / 1024).toFixed(2)}MB`);
+    return buf;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function clearRenderListCache() {
+  renderListCache = null;
 }
 
 // puppeteer.render 直接返回 Buffer（bh3_profile 等已验证），拿到后压缩/切割再发送
@@ -418,6 +459,23 @@ export class meme extends plugin {
       await e.reply('meme 资源为空，请先发送 #meme更新 拉取资源', true);
       return true;
     }
+    // 默认（不带页码、或页码为 0）直接用服务端渲染的整张列表图：
+    // 排版与服务端仓库一致，且本机不再渲染近千条 DOM。
+    // 带页码时才走下面的本地模板分页，保留翻页能力。
+    const remotePageMatch = e.msg.match(/\d+/);
+    const remotePage = remotePageMatch ? parseInt(remotePageMatch[0], 10) : 0;
+    if (remotePage === 0) {
+      try {
+        const buf = await fetchRenderList();
+        // 服务端原图为 4K 级宽图（约 4427×6310），压到 1600 宽约 0.5MB，文字仍清晰
+        const parts = await compressAndSplit(buf, { maxWidth: 1600 });
+        await e.reply(parts.map(b => segment.image(b)));
+        return true;
+      } catch (err) {
+        logger.mark(`[HoYoGet-meme] 服务端列表图不可用，改用本地渲染：${err.message}`);
+      }
+    }
+
     const now = Date.now();
     const NEW_MS = 3 * 24 * 60 * 60 * 1000;
     const FALLBACK_GROUP = '其他';
@@ -591,6 +649,7 @@ export class meme extends plugin {
   async memesUpdate(e) {
     await e.reply('米哈游表情包 资源更新中…', true);
     await loadData(true);
+    clearRenderListCache();
     await this.init(true);
     await e.reply(`更新完成，当前共 ${Object.keys(infos).length} 个 meme`, true);
     return true;
