@@ -481,17 +481,22 @@ export class user extends plugin {
             const mid = String(ck || '').match(/mid=([^;]+)/)?.[1] || '';
             const {
                 sendMsg,
-                ltoken
+                ltoken,
+                ck: refreshedCk
             } = await mhy.refresh_cookies(e, headers, SToken, k, {
                 bindGenshinCookie: true,
                 mid
             });
-            if (ltoken && data) {
+            if (data) {
                 /* 按 game_uid 精确写回。同一 stuid 下可能有多个游戏，
                    用 stoken 匹配会把这一轮刷出来的 ltoken 写到所有游戏上。 */
                 if (data[k] && data[k].stoken == SToken) {
-                    data[k].ltoken = ltoken;
-                    kg = 1;
+                    if (ltoken) data[k].ltoken = ltoken;
+                    /* cookie_token 同样要写回：米游社 record 接口认的是它，
+                       只更新 ltoken 时旧 cookie_token 过期会持续返回 -100。 */
+                    const nextCookieToken = String(refreshedCk || '').match(/cookie_token=([^;]+)/)?.[1];
+                    if (nextCookieToken) data[k].cookie_token = nextCookieToken;
+                    if (ltoken || nextCookieToken) kg = 1;
                 }
             }
             msgs.push(...sendMsg);
