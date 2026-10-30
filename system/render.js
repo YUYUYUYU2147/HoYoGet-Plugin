@@ -7,9 +7,75 @@ import { bustTplCache } from './tpl_cache.js';
 // 验证通过后删除本段。
 logger.info?.('[HoYoGet][热重载自测] system/render.js 模块已加载');
 try { fs.appendFileSync('./plugins/HoYoGet-Plugin/temp/hot_reload.log', `${new Date().toISOString()} render.js 模块加载\n`) } catch (_) { }
-/* 原图直发：出图后不缩放、不二次压缩，保持文字与细节的原始清晰度。 */
+/* 出图收口（QQ 二次压缩兜底）
+   QQ 客户端上传图片时会按尺寸与体积自行缩放重压：实测 2560px 宽、8.4MB 的
+   绝区零面板长图发出后只剩约 300KB，文字边缘明显发虚。处理方式是发送前把图
+   收进不会被二次压缩的范围：
+   - 宽度超过 1600px 或体积超过 1.5MB 才处理，其余原样发送
+   - 以宽度为缩放基准，长图高度按比例跟随；按长边缩放会把长图宽度压到几百
+     像素，反而更糊
+   - 一次解码一次编码；缩放后体积没有下降则保留原图
+   多帧动图、本地路径与网络链接一律跳过。 */
+const SHRINK_MAX_WIDTH = 1600
+const SHRINK_MAX_BYTES = 1.5 * 1024 * 1024
+const SHRINK_MIN_WIDTH = 900
+
+/* 从 segment、Buffer、base64 字符串中取出图像字节，并给出对等的回包方式。 */
+function unpackImage(img) {
+  if (Buffer.isBuffer(img)) return { buf: img, pack: b => b }
+  const seg = img && typeof img === 'object' && (img.data || img.file) ? img : null
+  const file = seg ? (seg.data?.file ?? seg.file) : (typeof img === 'string' ? img : null)
+  if (typeof file !== 'string' || !file.startsWith('base64://')) return null
+  const raw = file.slice('base64://'.length)
+  if (!raw) return null
+  return {
+    buf: Buffer.from(raw, 'base64'),
+    pack: b =>
+      seg
+        ? { ...seg, data: { ...seg.data, file: `base64://${b.toString('base64')}` } }
+        : `base64://${b.toString('base64')}`,
+  }
+}
+
 async function shrinkImage(img) {
-  return img;
+  const unpacked = unpackImage(img)
+  if (!unpacked || !unpacked.buf.length) return img
+  const src = unpacked.buf
+  try {
+    const sharp = (await import('sharp')).default
+    const meta = await sharp(src).metadata()
+    const w = meta.width || 0
+    const h = meta.height || 0
+    if (!w || !h) return img
+    if ((meta.pages || 1) > 1) return img
+    if (w <= SHRINK_MAX_WIDTH && src.length <= SHRINK_MAX_BYTES) return img
+    const fmt = meta.format === 'png' ? 'png' : meta.format === 'webp' ? 'webp' : 'jpeg'
+    const encode = pipe =>
+      fmt === 'png'
+        ? pipe.png({ compressionLevel: 9 })
+        : fmt === 'webp'
+          ? pipe.webp({ quality: 88 })
+          : pipe.jpeg({ quality: 88, mozjpeg: true })
+    let width = Math.min(w, SHRINK_MAX_WIDTH)
+    let best = null
+    while (width >= SHRINK_MIN_WIDTH) {
+      const buf = await encode(
+        sharp(src, { animated: false }).resize({ width, withoutEnlargement: true }),
+      ).toBuffer()
+      if (!best || buf.length < best.length) best = buf
+      if (buf.length <= SHRINK_MAX_BYTES) break
+      width = Math.round(width * 0.8)
+    }
+    if (!best || best.length >= src.length) return img
+    const outMeta = await sharp(best).metadata()
+    logger.info(
+      `[HoYoGet][render] 出图收口 ${w}x${h} ${(src.length / 1024).toFixed(0)}KB → ${outMeta.width}x${outMeta.height} ${(best.length / 1024).toFixed(0)}KB`,
+    )
+    return unpacked.pack(best)
+  } catch (err) {
+    logger.warn?.(`[HoYoGet][render] 出图收口跳过，按原图发送：${err?.message || err}`)
+    return img
+  }
 }
 
 /* 对端连接短暂抖动时发送会抛错，隔几秒重试一次，避免整张图丢掉。 */
@@ -69,13 +135,15 @@ async function render(path, data_, cfg) {
       };
     },
   });
+  /* 所有渲染路径统一收口：无论由本函数自发送还是调用方发送，
+     都先把超出 QQ 二次压缩阈值的图缩到安全范围（见 shrinkImage）。 */
+  const payload = await shrinkImage(img);
   // ret:true 时由 render 统一用 base64 自发送；调用方不要再 e.reply，否则会重复发送。
   // 发送成功则返回 e.reply 的结果（含 message_id，供 %原图 等缓存用），失败/未发送才返回 base64。
   if (cfg.ret && e) {
-    const payload = await shrinkImage(img);
     const sent = await sendWithRetry(e, payload);
     return sent ?? payload;
   }
-  return img;
+  return payload;
 }
 export default render;
