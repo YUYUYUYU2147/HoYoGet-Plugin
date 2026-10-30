@@ -8,26 +8,23 @@
 
 <body {{sys.scale}}>
   <div class="container">
-    <img class="bg-character" src="{{ppath}}help/sparkle.png" alt="米哈游" />
     <div class="header">
-      <div class="title">😜 Meme 表情包</div>
-      <div class="sub">共 {{total}} 个 · 第 {{page}}/{{totalPages}} 页 · 发送 <b>#表情名</b> 制作 · <b>#表情名详情</b> 在线查询</div>
+      <div class="title">Meme 表情包</div>
+      <div class="sub">共 {{total}} 个 · 第 {{page}}/{{totalPages}} 页 · 发送 <b>#表情名</b> 制作 · <b>#表情名详情</b> 查询</div>
     </div>
-    <div class="grid">
-      {{each list item}}
-      <div class="card {{item.isNew ? 'is-new' : ''}}">
-        <div class="card-name">{{item.name}}</div>
-        {{if item.aliases}}
-        <div class="card-alias">{{item.aliases}}</div>
-        {{/if}}
-        <div class="card-meta">
-          {{if item.isNew}}<span class="tag tag-new">NEW</span>{{/if}}
-          <span class="tag">{{item.maxImages}}图</span>
-          <span class="tag">{{item.minTexts}}文</span>
-        </div>
+    {{each groups g}}
+    <div class="grp">
+      <div class="grp-head">
+        <span class="grp-name">{{g.name}}</span>
+        <span class="grp-count">{{g.count}}</span>
       </div>
-      {{/each}}
+      <div class="grp-body">
+        {{each g.items item}}
+        <span class="item {{item.isNew ? 'is-new' : ''}}"><span class="nm">{{item.name}}</span><i class="meta">{{item.meta}}</i></span>
+        {{/each}}
+      </div>
     </div>
+    {{/each}}
     <div class="tip">发送 <b>#meme列表 {{nextPage}}</b> 翻页 · <b>#meme搜索+关键词</b> 快速查找 · <b>#meme更新</b> 刷新资源</div>
     <div class="footer"><span style="color:#ff4d4f;font-weight:600">from 米哈游</span></div>
   </div>

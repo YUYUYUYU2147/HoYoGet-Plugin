@@ -419,9 +419,11 @@ export class meme extends plugin {
       return true;
     }
     const now = Date.now();
-    const NEW_MS = 30 * 24 * 60 * 60 * 1000;
-    const list = Object.values(infos)
-      .map(info => ({
+    const NEW_MS = 3 * 24 * 60 * 60 * 1000;
+    const FALLBACK_GROUP = '其他';
+    const list = Object.values(infos).map(info => {
+      const tags = Array.isArray(info.tags) ? info.tags.filter(Boolean) : [];
+      return {
         key: info.key,
         name: (info.keywords && info.keywords[0]) || info.key,
         aliases: (info.keywords || []).slice(1, 4).join('/'),
@@ -429,17 +431,55 @@ export class meme extends plugin {
         isNew: now - new Date(info.date_created || 0).getTime() < NEW_MS,
         maxImages: info.params_type?.max_images ?? 0,
         minTexts: info.params_type?.min_texts ?? 0,
-      }))
-      .sort((a, b) => new Date(a.created) - new Date(b.created))
-      .reverse();
-    const PAGE_SIZE = 48;
+        group: tags[0] || FALLBACK_GROUP,
+      };
+    });
+
+    // 分组规则：组按条目数降序排列，未打标签的固定收尾；组内按创建时间倒序。
+    // 先把分组后的全部条目拼成一维序列再分页，同一分类的条目因此始终相邻，
+    // 翻页只会在页边界处断开，不会出现同类散落各页的情况。
+    const groupSize = new Map();
+    list.forEach(item => {
+      groupSize.set(item.group, (groupSize.get(item.group) || 0) + 1);
+    });
+    const groupOrder = [...groupSize.keys()].sort((a, b) => {
+      if (a === FALLBACK_GROUP) return 1;
+      if (b === FALLBACK_GROUP) return -1;
+      return groupSize.get(b) - groupSize.get(a);
+    });
+    const ordered = [];
+    groupOrder.forEach(name => {
+      list
+        .filter(item => item.group === name)
+        .sort((a, b) => new Date(b.created) - new Date(a.created))
+        .forEach(item => {
+          // 参数摘要在这里拼好，模板内只保留单个表达式，避免模板编译歧义
+          item.meta = `${item.maxImages}图 ${item.minTexts}文`;
+          ordered.push(item);
+        });
+    });
+
+    // 条目改为紧凑排版后单页容量大幅提升，990 个表情约 4 页
+    const PAGE_SIZE = 150;
     const pageMatch = e.msg.match(/\d+/);
     let page = pageMatch ? parseInt(pageMatch[0], 10) : 1;
-    const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+    const totalPages = Math.max(1, Math.ceil(ordered.length / PAGE_SIZE));
     page = Math.max(1, Math.min(page, totalPages));
-    const pageList = list.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+    const pageItems = ordered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+    // 页内按分组聚合，模板只做一层遍历
+    const groups = [];
+    pageItems.forEach(item => {
+      const last = groups[groups.length - 1];
+      if (last && last.name === item.group) {
+        last.items.push(item);
+      } else {
+        groups.push({ name: item.group, count: groupSize.get(item.group) || 0, items: [item] });
+      }
+    });
+
     const nextPage = page < totalPages ? page + 1 : 1;
-    const msg = await renderImg(e, 'meme/meme', { list: pageList, total: list.length, page, totalPages, nextPage });
+    const msg = await renderImg(e, 'meme/meme', { groups, total: ordered.length, page, totalPages, nextPage });
     await e.reply(msg);
     return true;
   }
