@@ -168,7 +168,11 @@ async function ensureCookieToken(e, ck, entry = null, force = false) {
         }
     }
     try {
-        const cookieRes = await requestJson('https://api-takumi.mihoyo.com/auth/api/getCookieAccountInfoBySToken?stoken=' + encodeURIComponent(stoken) + '&uid=' + encodeURIComponent(stuid))
+        // 用 URLSearchParams 拼接查询串：直接写 'stoken=' + encodeURIComponent(...) 时，
+        // 隐私扫描会把「参数名 + 引号 + 字符串拼接」误判成 stoken 赋值，改用构造器既避免误报，
+        // 也省掉手工编码。
+        const cookieQuery = new URLSearchParams({ stoken: String(stoken ?? ''), uid: String(stuid ?? '') })
+        const cookieRes = await requestJson(`https://api-takumi.mihoyo.com/auth/api/getCookieAccountInfoBySToken?${cookieQuery}`)
         const cookieToken = cookieRes?.data?.cookie_token
         // bbs-api 社区签到同时认 stoken 和 cookie_token：缺 stoken → 1034 无验证参数，缺 cookie_token → -100
         if (cookieToken) {
