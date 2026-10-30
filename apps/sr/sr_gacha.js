@@ -314,7 +314,7 @@ function buildGroupStats(pools, keys, title) {
   const totalPulls = sum(list, 'totalPulls')
   const totalUp = sum(list, 'upNum')
   const totalPity = sum(list, 'pity')
-  const avgPity = totalFive ? (totalPulls / totalFive).toFixed(1) : '0.0'
+  const avgPity = totalFive ? ((totalPulls - totalPity) / totalFive).toFixed(1) : '0.0'
   // UP平均与单池口径一致：分子扣掉当前未出五星的垫抽（大小保底总数）
   const upAvg = totalUp ? ((totalPulls - totalPity) / totalUp).toFixed(1) : '0.0'
   const upYs = Number(upAvg) ? (Number(upAvg) * 160).toFixed(0) : '0'
@@ -1538,7 +1538,7 @@ export function buildPoolFromRows(gachaType, pool, rows) {
     fourPity: fourPulls,
     totalPulls: rows.length,
     fiveNum,
-    avgPity: fiveNum ? (rows.length / fiveNum).toFixed(1) : '0.0',
+    avgPity: fiveNum ? (fiveRecs.reduce((n, r) => n + (Number(r.gacha_count) || 0), 0) / fiveNum).toFixed(1) : '0.0',
   }
 }
 
@@ -1702,7 +1702,7 @@ function buildPoolFromPulls(gachaType, rows) {
     totalPulls: rows.length,
     fiveNum: five.length,
     upNum: 0,
-    avgPity: five.length ? (rows.length / five.length).toFixed(1) : '0.0',
+    avgPity: five.length ? (five.reduce((n, r) => n + (Number(r.gacha_count) || 0), 0) / five.length).toFixed(1) : '0.0',
   }
 }
 
@@ -1956,7 +1956,7 @@ export function recountPool(pool, records) {
     records,
     fiveNum,
     totalPulls: totalPulls || pool?.totalPulls || 0,
-    avgPity: fiveNum ? (totalPulls / fiveNum).toFixed(1) : '0.0',
+    avgPity: fiveNum ? (countTotal(records) / fiveNum).toFixed(1) : '0.0',
   }
 }
 
