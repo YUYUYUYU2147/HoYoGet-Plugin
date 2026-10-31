@@ -246,10 +246,7 @@ export class bh3_ledger extends plugin {
         const savedUid = await redis.get(`HoYoGet:bh3_uid:${qq}`);
         const savedRegion = savedUid ? await redis.get(`HoYoGet:bh3_region:${qq}`) : null;
 
-        if (savedUid && savedRegion) {
-            uid = savedUid;
-            region = savedRegion;
-        }
+        if (savedUid && savedRegion) { let _b = null; try { _b = (await (await getNoteUser()).create(qq)).getUid("bh3"); } catch (_) { } const _m = await redis.get("HoYoGet:bh3_manual:" + qq); if (_m || !_b || String(_b) === String(savedUid)) { uid = savedUid; region = savedRegion; } }
 
         if (uid) {
             let stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${qq}.yaml`;
@@ -411,6 +408,7 @@ export class bh3_ledger extends plugin {
             const idx = num - 1;
             await redis.set(`HoYoGet:bh3_uid:${qq}`, uidList[idx].uid);
             await redis.set(`HoYoGet:bh3_region:${qq}`, uidList[idx].region);
+            await redis.set("HoYoGet:bh3_manual:" + qq, "1");
             return this.renderSwitchUidCard(e, uidList, uidList[idx].uid, { mode: 'switch', account: uidList[idx] });
         }
 
