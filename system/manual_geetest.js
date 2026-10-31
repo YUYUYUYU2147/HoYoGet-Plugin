@@ -25,7 +25,7 @@ const MANUAL_GT_TIMEOUT = 120;
 // 后台隧道脚本（tools/manual_gt_tunnel.sh）会把实际地址写到文件里，插件读取它。
 // 路径可移植：环境变量 > 插件数据目录（默认，随仓库走）> /root/.xhh（兼容旧写法）。
 const TUNNEL_URL_FILES = [
-  process.env.XHH_MANUAL_GT_URL_FILE,
+  process.env.HOYOGET_MANUAL_GT_URL_FILE || process.env.XHH_MANUAL_GT_URL_FILE,
   './plugins/HoYoGet-Plugin/data/manual_gt_url',
   '/root/.xhh/manual_gt_url',
 ].filter(Boolean);
@@ -63,7 +63,7 @@ async function waitTunnelUrlFile(timeoutMs = 20000) {
 }
 
 function getManualCfg() {
-  const envPublicUrl = process.env.XHH_MANUAL_GT_PUBLIC_URL || process.env.MANUAL_GT_PUBLIC_URL || '';
+  const envPublicUrl = process.env.HOYOGET_MANUAL_GT_PUBLIC_URL || process.env.XHH_MANUAL_GT_PUBLIC_URL || process.env.MANUAL_GT_PUBLIC_URL || '';
   const configured = String(envPublicUrl).trim().replace(/\/+$/, '');
   // 配置里写的是 trycloudflare 临时域名（或留空）时，优先用后台隧道实际地址
   const isTempDomain = !configured || /trycloudflare\.com$/i.test(configured);
@@ -201,8 +201,8 @@ async function startQuickTunnel(port) {
     }
     logger.mark(`[HoYoGet][manual_gt] 使用 cloudflared：${bin}`);
     try {
-      const extra = process.env.XHH_CLOUDFLARED_PROTOCOL
-        ? ['--protocol', process.env.XHH_CLOUDFLARED_PROTOCOL]
+      const extra = process.env.HOYOGET_CLOUDFLARED_PROTOCOL || process.env.XHH_CLOUDFLARED_PROTOCOL
+        ? ['--protocol', process.env.HOYOGET_CLOUDFLARED_PROTOCOL || process.env.XHH_CLOUDFLARED_PROTOCOL]
         : [];
       child = spawn(bin, ['tunnel', '--url', `http://127.0.0.1:${port}`, '--no-autoupdate', ...extra], {
         detached: true,

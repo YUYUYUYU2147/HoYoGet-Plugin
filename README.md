@@ -309,14 +309,14 @@ git fetch origin && git checkout -B v3 origin/v3 && git pull && pnpm i
 服务只监听 `127.0.0.1`，不对外暴露。过码服务地址可在 `config.yaml` 的 `auto_verify_addr` 改；
 显式配成空字符串则视为「没装」，自动过码整段跳过，只留手动。
 
-服务由 pm2 托管，进程名 `xhh-geetest-solver`。终端里查看与管理：
+服务由 pm2 托管，进程名 `HoYoGet-geetest-solver`。终端里查看与管理：
 
 ```bash
 pm2 list                                        # 全部进程列表
-pm2 describe xhh-geetest-solver                # 这个进程的详情、脚本路径、重启次数
-pm2 logs xhh-geetest-solver --lines 50 --nostream   # 看日志最后 50 行
-pm2 restart xhh-geetest-solver --update-env    # 改完配置重启
-pm2 delete xhh-geetest-solver                  # 停掉并从列表移除
+pm2 describe HoYoGet-geetest-solver                # 这个进程的详情、脚本路径、重启次数
+pm2 logs HoYoGet-geetest-solver --lines 50 --nostream   # 看日志最后 50 行
+pm2 restart HoYoGet-geetest-solver --update-env    # 改完配置重启
+pm2 delete HoYoGet-geetest-solver                  # 停掉并从列表移除
 ```
 
 用不到 pm2 时的排查：
@@ -330,7 +330,7 @@ curl -s http://127.0.0.1:2149/health            # 探活，返回 {"ok":true,...
 会出现「一份进程的应答被另一份误认作自身」的现象，此类故障极难定位。
 
 若 `#过码服务状态` 提示「服务在跑但不在本插件进程表里」，说明是旧版本部署或手动启动（nohup / start /b）遗留的进程：
-执行 `pm2 delete xhh-geetest-solver` 后重发 `#过码部署` 即可接管。
+执行 `pm2 delete HoYoGet-geetest-solver` 后重发 `#过码部署` 即可接管。
 
 完整说明见 [`service/geetest/README.md`](service/geetest/README.md)。
 

@@ -71,7 +71,7 @@ Windows 需要 Python，安装时勾选「Add to PATH」和 venv 组件。
 cd plugins/HoYoGet-Plugin/service/geetest
 python3 -m venv .venv                              # Windows 用 python -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt  # Windows 用 .venv\Scripts\python -m pip
-pm2 start .venv/bin/python --name xhh-geetest-solver -- server.py
+pm2 start .venv/bin/python --name HoYoGet-geetest-solver -- server.py
 ```
 
 > 如果已经在 `plugins/HoYoGet-Plugin` 目录里，则第一行改成 `cd service/geetest`。其余内容不变。
@@ -82,25 +82,25 @@ pm2 start .venv/bin/python --name xhh-geetest-solver -- server.py
 
 ## 日常查看与管理（pm2）
 
-服务进程名固定是 `xhh-geetest-solver`，下面命令里的 `<名字>` 都替换成它。
+服务进程名固定是 `HoYoGet-geetest-solver`，下面命令里的 `<名字>` 都替换成它。
 
 ```bash
 pm2 list                              # 看全部进程列表，带状态/内存/CPU
 pm2 status                            # 同上，是 pm2 list 的别名
-pm2 describe xhh-geetest-solver       # 看这个进程的详情：脚本路径、启动参数、重启次数、报错
-pm2 logs xhh-geetest-solver           # 跟踪日志（实时跟输出）
-pm2 logs xhh-geetest-solver --lines 50        # 只看最后 50 行
-pm2 logs xhh-geetest-solver --nostream        # 看历史日志然后退出
+pm2 describe HoYoGet-geetest-solver       # 看这个进程的详情：脚本路径、启动参数、重启次数、报错
+pm2 logs HoYoGet-geetest-solver           # 跟踪日志（实时跟输出）
+pm2 logs HoYoGet-geetest-solver --lines 50        # 只看最后 50 行
+pm2 logs HoYoGet-geetest-solver --nostream        # 看历史日志然后退出
 pm2 monit                             # 实时面板：CPU/内存曲线
-pm2 restart xhh-geetest-solver --update-env   # 改完配置重启（--update-env 会带上新的环境变量）
-pm2 stop xhh-geetest-solver           # 停止
-pm2 delete xhh-geetest-solver         # 停止并从列表移除（再 start 就是全新一个）
+pm2 restart HoYoGet-geetest-solver --update-env   # 改完配置重启（--update-env 会带上新的环境变量）
+pm2 stop HoYoGet-geetest-solver           # 停止
+pm2 delete HoYoGet-geetest-solver         # 停止并从列表移除（再 start 就是全新一个）
 ```
 
 想只看过码这一个进程：
 
 ```bash
-pm2 list | grep xhh-geetest-solver
+pm2 list | grep HoYoGet-geetest-solver
 pm2 jlist | python3 -c "import sys,json; [print(p['name'], p['pm2_env']['status']) for p in json.load(sys.stdin) if 'geetest' in p['name']]"
 ```
 
@@ -119,7 +119,7 @@ tail -n 100 service/geetest/server.log    # nohup 模式下的日志
 先停掉旧的，再重新部署：
 
 ```bash
-pm2 delete xhh-geetest-solver
+pm2 delete HoYoGet-geetest-solver
 ```
 
 然后群里发 `#过码部署`。或者直接重启一次机器（过码服务不会自启）。

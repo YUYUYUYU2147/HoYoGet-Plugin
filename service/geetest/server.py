@@ -33,7 +33,7 @@ import httpx
 from wsolver import build_w
 
 # ───────────────────────── 可调参数 ─────────────────────────
-# 默认 2149（本机 2147/2148 被 1Panel 占用），刻意不跟 xhh-TL 的 8766 一致：
+# 默认 2149（本机 2147/2148 被 1Panel 占用），刻意不跟 HoYoGet 的 8766 一致：
 # 会出现「一份服务的进程答另一份的请求」，那种错极难定位。改端口最省事。
 PORT = int(os.environ.get('GT_PORT', '2149'))
 MAX_ROUNDS = int(os.environ.get('GT_MAX_ROUNDS', '8'))
