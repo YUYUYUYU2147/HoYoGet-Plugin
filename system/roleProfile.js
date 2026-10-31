@@ -32,6 +32,7 @@ import { api, mhy } from '#HoYoGet';
 import { makeGenshinLoader } from './genshin_loader.js'
 import { getAccount } from './ck_store.js'
 const getMysInfo = makeGenshinLoader('model/mys/mysInfo.js', ['model/mys/mysInfo.js'])
+const getNoteUser = makeGenshinLoader("model/mys/NoteUser.js", ["model/mys/NoteUser.js"])
 
 // 服务器代码 → 中文名
 const SERVER_CN = {
@@ -183,7 +184,16 @@ export async function getRoleProfile(e, uid, game, auth = {}) {
         } else {
             e.uid = Number(uid)
             const acc = getAccount(e.user_id, uid)
-            const ownCk = acc && acc.ck_stoken ? acc.ck_stoken : ''
+            let ownCk = acc && acc.ck_stoken ? acc.ck_stoken : ""
+            /* [刷新ck] 写的是 Stoken 存档，ck_stoken 常已失效；NoteUser 里按 stuid 配对的 ck
+               才是当前可用的那份，优先取它，取不到再退回存档。 */
+            if (acc && acc.stuid) {
+                try {
+                    const _nu = await (await getNoteUser()).create(e.user_id)
+                    const _paired = _nu && _nu.mysUsers ? _nu.mysUsers[String(acc.stuid)] : null
+                    if (_paired && _paired.ck) ownCk = _paired.ck
+                } catch (_) { }
+            }
             // 只有含 ltoken/cookie_token 的完整 ck 能直接用于 record 接口；
             // 只存了 stuid/stoken 的条目拿去请求会得到 -100，不能用来重试
             const ckUsable = /ltoken=/.test(ownCk) && /cookie_token=/.test(ownCk)
@@ -192,7 +202,7 @@ export async function getRoleProfile(e, uid, game, auth = {}) {
                不能直接退化到 genshin —— 那条路用的是随机设备指纹，绝区零 index 会稳定 10041。 */
             const recordCk = ownCk && !ckUsable ? await upgradeCk(e, ownCk, acc) : ownCk
             if (recordCk && /(?:^|; ?)(?:ltoken|cookie_token)=/.test(recordCk)) {
-                const own = await api(e, {
+                var own = await api(e, {
                     type: game + '_index',
                     uid: uid,
                     game: game,
@@ -206,13 +216,17 @@ export async function getRoleProfile(e, uid, game, auth = {}) {
                 /* genshin 那条路的请求头由 MysApi 自己拼，设备指纹是随机值或公共 getFp，
                    绑定的手机指纹根本用不上，10041 因此常驻。把绑定指纹塞进 data.headers，
                    MysApi.getData 会合并进最终请求头 —— 与 mys.req.err 重试时做的完全一致。 */
-                const fb = await (await getMysInfo()).get(e, 'index', { headers: deviceFpHeaders(e) }, { log: false, game })
+                var fb = await (await getMysInfo()).get(e, 'index', { headers: deviceFpHeaders(e) }, { log: false, game })
                 if (fb && fb.retcode === 0) res = fb
                 /* 10041/5003 依旧只降级成空资料：一个 uid 失败不该拖垮整张面板；
                    但要在日志里留痕，否则「头像突然没了」只能靠猜。 */
                 if (!res || res.retcode !== 0) {
+                    /* 记录接口对同一 ck 的高频请求会限流，隔一会儿用 MysApi 通道再试一次 */
+                    await new Promise(r => setTimeout(r, 600))
+                    const retry = await (await getMysInfo()).get(e, 'index', { headers: deviceFpHeaders(e) }, { log: false, game })
+                    if (retry && retry.retcode === 0) res = retry
+                    if (!res || res.retcode !== 0) logger.warn('[HoYoGet][资料] ' + game + ' uid ' + uid + ' 取 index 失败（own=' + (own && own.retcode) + ' fb=' + (fb && fb.retcode) + ' retry=' + (retry && retry.retcode) + '），头像与昵称回退为空')
                     res = null
-                    logger.warn(`[HoYoGet][资料] ${game} uid ${uid} 取 index 失败，头像与昵称回退为空`)
                 }
             }
         }
