@@ -2,7 +2,7 @@ import { yaml, makeForwardMsg, config, pluginPriority } from '#HoYoGet';
 
 const path = './plugins/HoYoGet-Plugin/system/default/gslogs.yaml';
 import common from '../../../../lib/common/common.js';
-import { xhh_gacha_pool } from '../common/gacha_pool.js';
+import { HoYoGetGachaPool } from '../common/gacha_pool.js';
 import { guardModuleByFile } from '../../system/modules.js'
 function latestGsVersion(data = {}) {
   return Object.keys(data?.date || {})
@@ -38,13 +38,13 @@ export class gs_logs extends plugin {
     // 兜底：旧历史卡池如果抢到“原神卡池/#原神卡池”，直接转统一卡池图片。
     if (/^#*(?:米哈游)?原神(?:当前|本期|当期)?卡池$/.test(normalized)) {
       e.msg = normalized;
-      return new xhh_gacha_pool(e).gsCurrentPool(e);
+      return new HoYoGetGachaPool(e).gsCurrentPool(e);
     }
     if (!config().gs_logs) return false;
     let type = e.msg.replace(/#|卡池|原神/g, '').trim();
     if (!type) {
       e.msg = '#原神卡池';
-      return new xhh_gacha_pool(e).gsCurrentPool(e);
+      return new HoYoGetGachaPool(e).gsCurrentPool(e);
     }
     // 崩三/绝区零卡池由 apps/gacha_pool.js 单独处理，避免被原神卡池的宽泛正则抢走。
     if (/^(崩三|崩坏3|崩坏三|BH3|绝区零|ZZZ)/i.test(type)) return false;

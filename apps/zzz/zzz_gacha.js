@@ -1126,7 +1126,7 @@ export class zzz_gacha extends plugin {
         lang: 'zh-cn',
         uigf_version: 'v2.3',
         export_time: formatNow(),
-        export_app: 'xhh',
+        export_app: 'HoYoGet',
       },
       list,
     }

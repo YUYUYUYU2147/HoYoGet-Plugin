@@ -163,7 +163,7 @@ function bh3VersionStart(version = '') {
   return null;
 }
 
-export class xhh_gacha_pool extends plugin {
+export class HoYoGetGachaPool extends plugin {
   constructor(e) {
     super({
       name: '[米哈游]全游戏卡池',

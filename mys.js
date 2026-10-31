@@ -2,7 +2,7 @@ import fetch from 'node-fetch';
 import fs from 'fs';
 import {
     yaml
-} from '#xhh';
+} from '#HoYoGet';
 import YAML from 'yaml';
 // Bwiki 绝区零角色页（列表页头像最高优先级来源）。该文件零 import，不构成循环依赖。
 import { fetchZzzBwikiChar, zzzKey } from './apps/common/wiki/bwiki_zzz.js';

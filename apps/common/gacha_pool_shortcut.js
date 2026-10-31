@@ -1,7 +1,7 @@
-import { xhh_gacha_pool } from './gacha_pool.js';
+import { HoYoGetGachaPool } from './gacha_pool.js';
 
 // 当前卡池快捷入口：避免“原神卡池 / #原神卡池”被历史卡池或通用卡池规则误吞。
-export class xhh_gacha_pool_shortcut extends xhh_gacha_pool {
+export class HoYoGetGachaPoolShortcut extends HoYoGetGachaPool {
   constructor(e) {
     super(e);
     this.name = '[米哈游]全游戏卡池';
