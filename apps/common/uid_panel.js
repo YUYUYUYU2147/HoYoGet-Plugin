@@ -437,6 +437,11 @@ export class uidPanel extends plugin {
   /** !uidN：切换崩坏3当前查询uid */
   async switchBh3() {
     const e = this.e;
+    /* #uidN 归原神、*uidN 归星铁、%uidN 归绝区零，本插件只接管半角与全角叹号 */
+    /* 部分框架会把全角叹号归一化成井号，此时 e.msg 无法区分，改看原始消息 */
+    const originText = String(e.raw_message || '').replace(/\[CQ:[^\]]*\]/g, '').trim()
+      || (Array.isArray(e.message) ? e.message.filter(m => m.type === 'text').map(m => m.data?.text ?? m.text ?? '').join('') : '')
+    if (!/^[!！]/.test(originText || String(e.msg || ''))) return false
     const match = String(e.msg || '').match(/[0-9]{1,2}/);
     if (!match) return false;
     const bh3 = await this.readBh3(false);
