@@ -27,6 +27,21 @@ async function sendMsg(e, msg, opts = {}) {
 }
 
 const HITOKOTO_API = "https://v1.hitokoto.cn/?c=d&encode=json"
+/** 米游社接口按通行证 uid 识别账号：扫码得到的 ck 往往只带 stuid，
+ *  缺 ltuid/account_id 时接口判「未登录」（retcode -100），这里按 stuid 补齐。 */
+function withLtuidCk(ck) {
+    let s = String(ck || "");
+    const m = s.match(/(?:^|;)\s*(?:stuid|ltuid|account_id)=(\d+)/);
+    const id = m ? m[1] : "";
+    if (!id) return s;
+    const add = (key) => {
+        if (new RegExp("(?:^|;)\\s*" + key + "=").test(s)) return;
+        s += (s.endsWith(";") ? "" : ";") + key + "=" + id + ";";
+    };
+    add("ltuid");
+    add("account_id");
+    return s;
+}
 const LEDGER_DATA_DIR = "./data/Bh3Ledger"
 const BH3_LEGACY_REGIONS = ['android01', 'ios01', 'pc01', 'bb01', 'yyb01', 'hun01', 'hun02'];
 const BH3_REGION_LABELS = {
@@ -349,6 +364,7 @@ export class bh3_ledger extends plugin {
         debugLog('[水晶] final auth:', { uid, hasCk: !!ck, region });
         if (!uid || !ck) return e.reply('请先扫码绑定账号！');
 
+        ck = withLtuidCk(ck);
         let headers = mhy.getHeaders(e, ck);
 
         // 从Redis获取正确Bh3服务器码
