@@ -34,21 +34,18 @@ export class zzz extends plugin {
             }
         }
 
-        if (qq) {
-            uid = (await (await getNoteUser()).create(qq)).getUid('zzz');
-            ck = (await (await getNoteUser()).create(qq)).getMysUser('zzz')?.ck
-        }
+        if (!qq) qq = e.user_id
+        const nu = await (await getNoteUser()).create(qq)
+        uid = nu?.getUid("zzz")
+        ck = nu?.getMysUser("zzz")?.ck
 
-        if (!uid || !ck) {
-            uid = e.user?.getUid('zzz');
-            const mys = e.user?.getMysUser('zzz');
-            ck = mys?.ck;
-            qq = e.user_id
-        }
-
-        if (!uid || !ck) return e.reply('请先扫码绑定账号！');
+        if (!uid || !ck) return e.reply("请先扫码绑定账号！");
         
         //获取headers
+
+        //扫码得到的 ck 只带 stuid，米游社按通行证 uid 识别账号，缺 ltuid 会被判未登录
+        const ckStuid = (String(ck).match(/(?:^|;)\s*stuid=(\d+)/) || [])[1]
+        if (ckStuid && !/(?:^|;)\s*ltuid=/.test(ck)) ck += (ck.endsWith(";") ? "" : ";") + "ltuid=" + ckStuid + ";"
         let headers = mhy.getHeaders(e, ck);
 
         let data = {
