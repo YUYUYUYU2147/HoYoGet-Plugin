@@ -15,7 +15,7 @@ try { fs.appendFileSync('./plugins/HoYoGet-Plugin/temp/hot_reload.log', `${new D
    QQ 服务端对图片消息会缩到 1600px 宽，2800px 冗余量已经够用。 */
 const MAX_DSF = 2
 const SHRINK_MAX_BYTES = 1024 * 1024
-const SHRINK_QUALITY_STEPS = [90, 84]
+const SHRINK_QUALITY_STEPS = [92]
 const SHRINK_MIN_WIDTH = 1200
 const SHRINK_SCALE_STEP = 0.85
 
@@ -83,7 +83,7 @@ async function shrinkImage(img) {
     let best = null
     let bestQ = 0
     let picked = null
-    for (let round = 0; round < 2; round++) {
+    for (let round = 0; round < 6; round++) {
       for (const q of steps) {
         const buf = await encode(
           sharp(src, { animated: false, sequentialRead: true }).resize({
