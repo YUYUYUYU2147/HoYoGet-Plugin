@@ -1,4 +1,4 @@
-import { api, mhy, yaml, config, pluginPriority } from '#HoYoGet';
+import { api, mhy, yaml, pluginPriority } from '#HoYoGet';
 import { mhyFetch } from '../../system/mhy_fetch.js';
 import puppeteer from '../../../../lib/puppeteer/puppeteer.js';
 import { getRoleProfile } from '../../system/roleProfile.js';
@@ -61,9 +61,6 @@ function isBh3StokenEntry(entry = {}) {
     return BH3_LEGACY_REGIONS.includes(entry.region || '');
 }
 
-function debugLog(...args) {
-    if (config().debug) logger.mark(...args);
-}
 
 export class bh3_ledger extends plugin {
     constructor(e) {
@@ -132,7 +129,6 @@ export class bh3_ledger extends plugin {
         try {
             fs.mkdirSync(LEDGER_DATA_DIR, { recursive: true });
             fs.writeFileSync(this.getDataPath(uid), JSON.stringify(data, null, 2));
-            debugLog('[水晶] saveLedger:', uid, monthKey, 'equipSupplyCardNum:', data[monthKey]?.equipSupplyCardNum);
             return true;
         } catch (err) {
             logger.error('[水晶] saveLedger failed:', err);
@@ -194,7 +190,6 @@ export class bh3_ledger extends plugin {
                         'User-Agent': 'Mozilla/5.0 (Linux; Android 12; XQ-AT52 Build/58.2.A.7.93; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/100.0.4896.88 Mobile Safari/537.36 miHoYoBBS/2.73.1',
                     },
                 }).then(r => r.json());
-            debugLog(`[水晶] handbook ${isLastMonth ? 'last' : 'current'} count response:`, JSON.stringify(res));
             if (res?.retcode === 0 && res.data && Number.isFinite(Number(res.data.count))) {
                 return Number(res.data.count) || 0;
             }
@@ -250,7 +245,6 @@ export class bh3_ledger extends plugin {
 
         const savedUid = await redis.get(`HoYoGet:bh3_uid:${qq}`);
         const savedRegion = savedUid ? await redis.get(`HoYoGet:bh3_region:${qq}`) : null;
-        debugLog('[水晶] savedUid:', savedUid, 'savedRegion:', savedRegion);
 
         if (savedUid && savedRegion) {
             uid = savedUid;
@@ -263,22 +257,18 @@ export class bh3_ledger extends plugin {
                 try {
                     let stokenData = await yaml.get(stokenPath);
                     let entry = stokenData[uid];
-                    debugLog('[水晶] entry found:', !!entry, 'stuid:', entry?.stuid);
                     if (entry?.stuid) {
                         region = entry.region || region;
                         let nu = await (await getNoteUser()).create(qq);
                         for (let ltuid in nu.mysUsers) {
                             if (String(ltuid) === String(entry.stuid)) {
                                 ck = nu.mysUsers[ltuid].ck;
-                                debugLog('[水晶] matched CK by ltuid:', ltuid);
                                 break;
                             }
                         }
                         if (!ck && entry?.ck_stoken && entry?.stoken && entry?.stuid) {
-                            debugLog('[水晶] refreshing CK for stuid:', entry.stuid);
                             let hdrs = mhy.getHeaders(e, entry.ck_stoken);
                             let result = await mhy.refresh_cookies(e, hdrs, entry.stoken, entry.stuid, { bindGenshinCookie: false });
-                            debugLog('[水晶] refresh result:', { hasLtoken: !!result.ltoken, hasCk: !!result.ck });
                             if (result.ltoken && result.ck) {
                                 let nu2 = await (await getNoteUser()).create(qq);
                                 for (let ltuid in nu2.mysUsers) {
@@ -298,7 +288,6 @@ export class bh3_ledger extends plugin {
         if (!uid) {
             try {
                 uid = (await (await getNoteUser()).create(qq)).getUid('bh3');
-                debugLog('[水晶] fallback uid from NoteUser:', uid);
             } catch (_) {}
         }
         if (!ck) {
@@ -306,19 +295,18 @@ export class bh3_ledger extends plugin {
                 let nu = await (await getNoteUser()).create(qq);
                 for (let g of ['bh3', 'gs', 'sr', 'zzz']) {
                     let mu = nu.getMysUser(g);
-                    if (mu) { ck = mu.ck; debugLog('[水晶] fallback CK from:', g); break; }
+                    if (mu) { ck = mu.ck; break; }
                 }
                 if (!ck) {
                     for (let ltuid in nu.mysUsers) {
                         ck = nu.mysUsers[ltuid].ck;
-                        if (ck) { debugLog('[水晶] fallback CK from mysUsers'); break; }
+                        if (ck) { break; }
                     }
                 }
             } catch (_) {}
         }
 
         if (uid && e.user && String(uid) === String(e.user?.getUid('gs')) && qq) {
-            debugLog('[水晶] uid matches gs, searching Stoken YAML');
             let stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${qq}.yaml`;
             if (fs.existsSync(stokenPath)) {
                 try {
@@ -328,7 +316,6 @@ export class bh3_ledger extends plugin {
                         if (bh3Regions.includes(stokenData[key].region || '')) {
                             uid = key;
                             region = stokenData[key].region;
-                            debugLog('[水晶] found bh3 uid:', uid, region);
                             break;
                         }
                     }
@@ -337,7 +324,6 @@ export class bh3_ledger extends plugin {
         }
 
         if (!uid || !ck) {
-            debugLog('[水晶] step4 scanning Stoken YAML');
             let stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${qq}.yaml`;
             if (fs.existsSync(stokenPath)) {
                 try {
@@ -350,7 +336,6 @@ export class bh3_ledger extends plugin {
                         if (!ck && e2?.ck_stoken && e2?.stoken && e2?.stuid) {
                             let hdrs = mhy.getHeaders(e, e2.ck_stoken);
                             let result = await mhy.refresh_cookies(e, hdrs, e2.stoken, e2.stuid, { bindGenshinCookie: false });
-                            debugLog('[水晶] step4 refresh result:', { uid: key, hasLtoken: !!result.ltoken, hasCk: !!result.ck });
                             if (result.ltoken && result.ck) {
                                 ck = result.ck;
                             }
@@ -361,7 +346,6 @@ export class bh3_ledger extends plugin {
             }
         }
 
-        debugLog('[水晶] final auth:', { uid, hasCk: !!ck, region });
         if (!uid || !ck) return e.reply('请先扫码绑定账号！');
 
         ck = withLtuidCk(ck);
@@ -723,7 +707,6 @@ export class bh3_ledger extends plugin {
     async fetchBh3MonthData(e, auth) {
         const { uid, headers, region } = auth;
         const queryStr = `game_biz=bh3_cn&bind_uid=${uid}&bind_region=${region}`;
-        debugLog('[水晶] query:', queryStr);
         const res = await fetch(`https://api.mihoyo.com/bh3-weekly_finance/api/index?${queryStr}`, {
             method: 'GET',
             headers: {
@@ -736,7 +719,6 @@ export class bh3_ledger extends plugin {
             },
         }).then(r => r.json());
 
-        debugLog('[水晶] API response:', JSON.stringify(res));
         if (!res || res.retcode !== 0 || !res.data) {
             let msg = '获取水晶数据失败';
             if (res?.retcode === -110) msg = `UID:${uid} 该账号没有绑定崩坏3角色`;
@@ -779,14 +761,11 @@ export class bh3_ledger extends plugin {
             }
             const data = res.data;
             const monthKey = this.getLedgerMonthKey(data);
-            debugLog('[水晶] 上月数据:', monthKey, 'group_by=',
-                Array.isArray(data.group_by) ? data.group_by.length + '项' : typeof data.group_by);
             if (!Array.isArray(data.group_by) || !data.group_by.length) return false;
             const existing = this.getHistoryMonth(uid, monthKey);
             // 已有完整数据就别覆盖，避免把已存的 month_hcoin 换成接口的另一套口径
             if (existing && Array.isArray(existing.group_by) && existing.group_by.length) return false;
             await this.saveLedger(uid, data);
-            debugLog('[水晶] 上月 group_by 已入库:', monthKey);
             return true;
         } catch (err) {
             logger.warn?.(`[水晶] 上月数据抓取异常: ${err?.message || err}`);
@@ -953,7 +932,6 @@ export class bh3_ledger extends plugin {
             if (!auth) return false;
             const { uid, headers, qq, region } = auth;
             let queryStr = `game_biz=bh3_cn&bind_uid=${uid}&bind_region=${region}`;
-            debugLog('[水晶] query:', queryStr);
             let res = await fetch(`https://api.mihoyo.com/bh3-weekly_finance/api/index?${queryStr}`, {
                 method: 'GET',
                 headers: {
@@ -966,7 +944,6 @@ export class bh3_ledger extends plugin {
                 },
             }).then(r => r.json());
 
-            debugLog('[水晶] API response:', JSON.stringify(res));
 
             if (!res || res.retcode !== 0 || !res.data) {
                 let msg = '获取水晶数据失败';
@@ -1082,7 +1059,6 @@ export class bh3_ledger extends plugin {
             if (!res || res.retcode !== 0 || !lastMonthData) {
                 if (cachedLastMonthData) {
                     lastMonthData = cachedLastMonthData;
-                    debugLog('[上月水晶] API失败，使用本地缓存:', lastMonthKey);
                 } else {
                     let msg = '获取上月水晶数据失败';
                     if (res?.retcode === -110) msg = `UID:${uid} 该账号没有绑定崩坏3角色`;
@@ -1093,7 +1069,6 @@ export class bh3_ledger extends plugin {
             }
             if (cachedLastMonthData?.equipSupplyCardNum && !lastMonthData.equipSupplyCardNum) {
                 lastMonthData.equipSupplyCardNum = cachedLastMonthData.equipSupplyCardNum;
-                debugLog('[上月水晶] equipSupplyCardNum from cache:', lastMonthData.equipSupplyCardNum);
             }
 
         let hcoinRes = await api(e, {
