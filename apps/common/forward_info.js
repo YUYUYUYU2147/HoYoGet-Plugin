@@ -1,8 +1,10 @@
-import fetch from 'node-fetch';
+import { mhyFetch } from '../../system/mhy_fetch.js';
+import { makeGenshinLoader } from "../../system/genshin_loader.js"
 import { makeForwardMsg, pluginPriority } from '#HoYoGet';
+const getNoteUser = makeGenshinLoader("model/mys/NoteUser.js", ["model/mys/NoteUser.js"])
 
-const GLOBAL_SEARCH_API = 'https://bbs-api.miyoushe.com/post/wapi/searchPosts';
-const POST_FULL_API = 'https://bbs-api.miyoushe.com/post/wapi/getPostFull';
+const GLOBAL_SEARCH_API = 'https://bbs-api.mihoyo.com/post/wapi/searchPosts';
+const POST_FULL_API = 'https://bbs-api.mihoyo.com/post/wapi/getPostFull';
 
 const headers = {
   Referer: 'https://www.miyoushe.com',
@@ -119,7 +121,7 @@ function extractPostSummary(post = {}, maxLen = 2000) {
 
 async function searchGlobalPosts(keyword, gids, size = 10) {
   const url = `${GLOBAL_SEARCH_API}?gids=${encodeURIComponent(gids)}&size=${size}&keyword=${encodeURIComponent(keyword)}&sort_type=2`;
-  const res = await fetch(url, { headers }).then(r => r.json());
+  const res = await mhyFetch(url, { headers }).then(r => r.json());
   return (res?.data?.posts || [])
     .map(v => v?.post)
     .filter(Boolean)
@@ -130,9 +132,11 @@ async function fetchPostFull(post = {}, gids = 1) {
   if (!post?.post_id) return post;
   try {
     const url = `${POST_FULL_API}?gids=${encodeURIComponent(gids)}&read=1&post_id=${encodeURIComponent(post.post_id)}`;
-    const res = await fetch(url, { headers }).then(r => r.json());
+    const res = await mhyFetch(url, { headers }).then(r => r.json());
     const full = res?.data?.post?.post || res?.data?.post || {};
-    return { ...post, ...full, images: full.images?.length ? full.images : post.images };
+    const imgs = (full.images?.length ? full.images : post.images) || [];
+    /* upload-bbs.miyoushe.com 在机房出口连不上，同路径的 upload-bbs.mihoyo.com 可直连 */
+    return { ...post, ...full, images: imgs.map(u => String(u || "").replace("upload-bbs.miyoushe.com", "upload-bbs.mihoyo.com")) };
   } catch (err) {
     logger.warn(`[HoYoGet][前瞻] 获取帖子详情 ${post.post_id} 失败: ${err?.message || err}`);
     return post;
@@ -170,14 +174,27 @@ export class forward_info extends plugin {
       event: 'message',
       priority: pluginPriority('forward_info', -Infinity),
       rule: [
-        { reg: '^#*米哈游(崩三|崩坏三|崩坏3|原神|星铁|绝区零)(前瞻)(信息)?$', fnc: 'forwardInfo' },
+        { reg: "^[#*%]*(米哈游)?(崩三|崩坏三|崩坏3|原神|星铁|崩铁|星穹铁道|绝区零)?(前瞻)(信息)?$", fnc: "forwardInfo" },
       ],
     });
   }
 
   async forwardInfo() {
-    const key = pickGame(this.e.msg);
-    if (!key) return false;
+    let key = pickGame(this.e.msg);
+    if (!key) {
+      /* 指令里没写游戏名时，按该 QQ 已绑定的游戏推断；多个游戏都有绑定则要求指明 */
+      const order = ["sr", "gs", "zzz", "bh3"];
+      try {
+        const nu = await (await getNoteUser()).create(this.e.user_id);
+        const bound = order.filter(g => !!String(nu?.getUid(g) || ""));
+        if (bound.length === 1) key = bound[0];
+        else if (bound.length > 1) {
+          const names = bound.map(g => GAME_CONFIG[g].name).join(" / ");
+          return this.e.reply(`检测到多个游戏绑定（${names}），请指明游戏，例如：#星铁前瞻信息`);
+        }
+      } catch (_) {}
+      if (!key) return this.e.reply("请指明游戏，例如：#星铁前瞻信息");
+    }
     const cfg = GAME_CONFIG[key];
     await this.e.reply(`${cfg.name}前瞻信息获取中，请稍后...`, true, { recallMsg: 60 });
 

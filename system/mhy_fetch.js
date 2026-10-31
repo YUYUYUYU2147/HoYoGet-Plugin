@@ -76,6 +76,7 @@ const MHY_HOSTS = [
     'api-takumi.miyoushe.com',
     'api.mihoyo.com',
     'bbs-api.miyoushe.com',
+    'bbs-api.mihoyo.com',
     'bbs-api-static.miyoushe.com',
     'api-takumi-record.mihoyo.com',
     'public-operation-common.mihoyo.com',
