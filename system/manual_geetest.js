@@ -314,6 +314,17 @@ function makeTask(data, publicUrl = '', test = false) {
   };
 }
 
+/* 热重载会重建本模块，旧实例的 http 服务仍占用端口，重新监听将抛 EADDRINUSE。 */
+/* 因此监听前先回收同端口的既有服务，避免验证码服务因热重载而中断。 */
+function reclaimPort(port) {
+  try {
+    const handles = process._getActiveHandles ? process._getActiveHandles() : [];
+    for (const h of handles) {
+      if (h instanceof http.Server && h.listening && h.address() && h.address().port === port) h.close();
+    }
+  } catch (_) {}
+}
+
 function ensureServer() {
   const cfg = getManualCfg();
   if (!cfg.enable) return false;
@@ -366,6 +377,7 @@ function ensureServer() {
   server.on('error', err => {
     logger.error(`[HoYoGet][manual_gt] 服务启动失败: ${err.message}（端口 ${cfg.port} 可能被占用）`);
   });
+  reclaimPort(cfg.port);
   server.listen(cfg.port, cfg.host, () => logger.mark(`[HoYoGet][manual_gt] 手动验证码服务启动: ${cfg.host}:${cfg.port}${cfg.path}`));
   startedPort = cfg.port;
   return true;

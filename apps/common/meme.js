@@ -17,7 +17,7 @@ import sharp from '../../node_modules/sharp/lib/index.js';
 import puppeteer from '../../../../lib/puppeteer/puppeteer.js';
 import { render, config, pluginPriority, getSource } from '#HoYoGet';
 import { guardModuleByFile } from '../../system/modules.js'
-import { buildMemeListData } from './meme_category.js'
+import { buildMemeListData } from '../../meme_category.js'
 
 const DATA_DIR = './plugins/HoYoGet-Plugin/data/memes/';
 const INFOS_FILE = DATA_DIR + 'infos.json';
