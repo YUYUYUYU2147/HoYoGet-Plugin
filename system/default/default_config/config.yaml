@@ -388,6 +388,10 @@ picture_priority: 1234
 role_combat_priority: 100
 zzz_md_priority: 100
 currency_balance_priority: 100
+# 统一优先级：开启后所有指令至少拿到 priority_base，避免被后装的插件抢走指令
+# 关闭时下面的 xxx_priority 逐条生效（老行为）；修改后需重启
+priority_unified: false
+priority_base: -114514
 meme_priority: 50
 custom_guide_priority: -9999999999
 
