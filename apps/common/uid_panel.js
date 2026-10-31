@@ -345,7 +345,7 @@ export class uidPanel extends plugin {
       rule: [
         { reg: /^#(我的)?uid$/i, fnc: 'showUid' },
         { reg: /^[!！](我的)?uid$/i, fnc: 'showBh3Uid' },
-        { reg: /^[!！]uid[0-9]{1,2}$/i, fnc: 'switchBh3' },
+        { reg: /^[#!！]uid[0-9]{1,2}$/i, fnc: 'switchBh3' },
       ],
     });
   }
