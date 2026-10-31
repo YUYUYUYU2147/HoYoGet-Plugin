@@ -246,10 +246,7 @@ export class bh3_ledger extends plugin {
         const savedUid = await redis.get(`HoYoGet:bh3_uid:${qq}`);
         const savedRegion = savedUid ? await redis.get(`HoYoGet:bh3_region:${qq}`) : null;
 
-        if (savedUid && savedRegion) {
-            uid = savedUid;
-            region = savedRegion;
-        }
+        if (savedUid && savedRegion) { let _b = null; try { _b = (await (await getNoteUser()).create(qq)).getUid("bh3"); } catch (_) { } const _m = await redis.get("HoYoGet:bh3_manual:" + qq); if (_m || !_b || String(_b) === String(savedUid)) { uid = savedUid; region = savedRegion; } }
 
         if (uid) {
             let stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${qq}.yaml`;
@@ -288,6 +285,23 @@ export class bh3_ledger extends plugin {
         if (!uid) {
             try {
                 uid = (await (await getNoteUser()).create(qq)).getUid('bh3');
+        /* uid 与 ck 必须来自同一条 Stoken 记录：按该记录的 stuid 去 NoteUser 取对应 ck。
+           直接用 ck_stoken 或随意一个 ck 会返回 Cookie失效（-100）。 */
+        if (uid && !ck) {
+            try {
+                const _f = "./plugins/HoYoGet-Plugin/data/Stoken/" + qq + ".yaml"
+                if (fs.existsSync(_f)) {
+                    const _sd = await yaml.get(_f)
+                    const _ent = _sd && _sd[uid]
+                    if (_ent) {
+                        if (!region && _ent.region) region = _ent.region
+                        const _nu2 = await (await getNoteUser()).create(qq)
+                        const _mu = _nu2 && _nu2.mysUsers ? _nu2.mysUsers[String(_ent.stuid)] : null
+                        if (_mu && _mu.ck) ck = _mu.ck
+                    }
+                }
+            } catch (_) { }
+        }
             } catch (_) {}
         }
         if (!ck) {
@@ -411,6 +425,7 @@ export class bh3_ledger extends plugin {
             const idx = num - 1;
             await redis.set(`HoYoGet:bh3_uid:${qq}`, uidList[idx].uid);
             await redis.set(`HoYoGet:bh3_region:${qq}`, uidList[idx].region);
+            await redis.set("HoYoGet:bh3_manual:" + qq, "1");
             return this.renderSwitchUidCard(e, uidList, uidList[idx].uid, { mode: 'switch', account: uidList[idx] });
         }
 
