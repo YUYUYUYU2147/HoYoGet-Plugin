@@ -180,7 +180,18 @@ async function fillProfiles(games, e, stoken, noteUser) {
       if (!item.name && player?.name) item.name = player.name;
       if (!item.level && player?.level) item.level = player.level;
       if (imgs.banner) item.banner = imgs.banner;
-      if (imgs.face) item.face = imgs.face;
+      if (imgs.face) {
+        item.face = imgs.face;
+        /* 模板用 background-image 加载，本地路径在渲染时无法解析，这里统一转成 data URI */
+        const rawFace = String(imgs.face);
+        try {
+          if (/^data:/i.test(rawFace) || /^https?:/i.test(rawFace)) item.faceUrl = rawFace;
+          else {
+            const abs = /^(\/|[A-Za-z]:)/.test(rawFace) ? rawFace : process.cwd() + '/' + rawFace.replace(/^\.?\//, '');
+            if (fs.existsSync(abs)) item.faceUrl = 'data:image/png;base64,' + fs.readFileSync(abs).toString('base64');
+          }
+        } catch (_) {}
+      }
     } catch (err) {
       continue;
     }
