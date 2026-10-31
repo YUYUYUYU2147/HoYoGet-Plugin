@@ -344,8 +344,8 @@ export class uidPanel extends plugin {
       priority: pluginPriority('uid_panel', 100),
       rule: [
         { reg: /^#(我的)?uid$/i, fnc: 'showUid' },
-        { reg: /^[!！](我的)?uid$/i, fnc: 'showBh3Uid' },
-        { reg: /^[#!！]uid[0-9]{1,2}$/i, fnc: 'switchBh3' },
+        { reg: /^(我的)?uid$/i, fnc: 'showBh3Uid' },
+        { reg: /^[#!！]?uid[0-9]{1,2}$/i, fnc: 'switchBh3' },
       ],
     });
   }
@@ -429,6 +429,11 @@ export class uidPanel extends plugin {
 
   /** !uid：崩三自己的入口 */
   async showBh3Uid() {
+    /* 井号前缀归 genshin 面板，本入口只处理半角与全角叹号 */
+    const e = this.e;
+    const originText = String(e.raw_message || '').replace(/\[CQ:[^\]]*\]/g, '').trim()
+      || (Array.isArray(e.message) ? e.message.filter(m => m.type === 'text').map(m => m.data?.text ?? m.text ?? '').join('') : '')
+    if (!/^[!！]/.test(originText || String(e.msg || ''))) return false
     const bh3 = await this.readBh3(false);
     if (!bh3 || !bh3.list || !bh3.list.length) return this.e.reply(BH3_EMPTY_TIP);
     return this.replyPanel(bh3);
