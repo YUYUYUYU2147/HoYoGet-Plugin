@@ -332,6 +332,7 @@ async abyss(e) {
     const ckList = (auth.cks && auth.cks.length ? auth.cks : [auth.ck]).filter(Boolean).slice(0, 3);
     let indexRes = null;
     let indexErr = '';
+    let lastCode = 0;
     let hitHeaders = mhy.getHeaders(e, ckList[0]);
     for (const cand of ckList) {
       const candHeaders = mhy.getHeaders(e, cand);
@@ -349,12 +350,19 @@ async abyss(e) {
         break;
       }
       if (typeof res === 'string') indexErr = res;
+      else if (res && typeof res === 'object') lastCode = Number(res.retcode);
       const ckTag = (String(cand || '').match(/ltuid=([^;]+)/) || [])[1] || '无ltuid';
       logger.mark(`[HoYoGet][bh3_abyss] index 失败 uid=${uid} retcode=${res?.retcode ?? '-'} message=${res?.message || indexErr || ''} ck=${ckTag} len=${String(cand || '').length}`);
     }
     if (!indexRes) {
-      bh3Dbg('bh3_index 失败:', `message=${indexErr || ''}`);
-      return sendMsg(e, indexErr || `UID${uid} 获取玩家信息失败，请[刷新ck]或[扫码登录]后重试`);
+      bh3Dbg('bh3_index 失败:', `retcode=${lastCode || '-'}`, `message=${indexErr || ''}`);
+      /* -100/10001/-1 既可能是登录态过期，也可能是机房 IP 被风控。
+         这里区分不出具体原因，别把用户推去反复扫码。 */
+      const riskCodes = [-1, -100, 1001, 10001, 10103, 10041];
+      const tip = riskCodes.includes(lastCode)
+        ? '米游社拒绝访问（登录态失效或机房 IP 风控），请过几分钟再试；持续出现再[刷新ck]或[扫码登录]'
+        : '请[刷新ck]或[扫码登录]后重试';
+      return sendMsg(e, `UID${uid} 获取玩家信息失败：${tip}`);
     }
     const headers = hitHeaders;
 
