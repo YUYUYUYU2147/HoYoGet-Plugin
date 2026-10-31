@@ -30,6 +30,19 @@ const GAME_BIZ = { hk4e_cn: 'gs', hkrpg_cn: 'sr', nap_cn: 'zzz', bh3_cn: 'bh3' }
 const REGION_NAME = { 天空岛: 'gs', 世界树: 'gs', 星穹列车: 'sr', 新艾利都: 'zzz' };
 const GAME_NAME = { gs: '原神', sr: '崩坏：星穹铁道', zzz: '绝区零', bh3: '崩坏3' };
 
+/**
+ * 把新的令牌值合并进完整 cookie 字符串。
+ * ck_stoken 是取数时实际提交的整串 cookie，只更新字段不会传导进去，
+ * 刷新后必须替换其中的同名键，否则请求仍携带旧令牌。
+ */
+function mergeCookieToken(raw, key, value) {
+    if (!raw || !value) return raw;
+    const text = String(raw);
+    const pattern = new RegExp(`(^|;\\s*)${key}=[^;]*`);
+    if (pattern.test(text)) return text.replace(pattern, (matched, prefix) => `${prefix}${key}=${value}`);
+    return `${text}${/;\s*$/.test(text) ? '' : ';'}${key}=${value}`;
+}
+
 function gameOfEntry(entry = {}) {
     if (GAME_BIZ[entry.game_biz]) return GAME_BIZ[entry.game_biz];
     if (REGION_NAME[entry.region_name]) return REGION_NAME[entry.region_name];
@@ -444,7 +457,7 @@ export class user extends plugin {
         if (!fs.existsSync(path)) return e.reply('你没有绑定过设备', true);
         fs.unlinkSync(path);
         //ZZZ-Plugin???
-        const ltuid = e.user.getMysUser('zzz').ltuid
+        const ltuid = e.user?.getMysUser('zzz')?.ltuid
         await redis.del(`ZZZ:DEVICE_FP:${ltuid}:FP`);
         await redis.del(`ZZZ:DEVICE_FP:${ltuid}:ID`);
         e.reply('删除成功!', true);
@@ -481,17 +494,28 @@ export class user extends plugin {
             const mid = String(ck || '').match(/mid=([^;]+)/)?.[1] || '';
             const {
                 sendMsg,
-                ltoken
+                ltoken,
+                ck: refreshedCk
             } = await mhy.refresh_cookies(e, headers, SToken, k, {
                 bindGenshinCookie: true,
                 mid
             });
-            if (ltoken && data) {
+            if (data) {
                 /* 按 game_uid 精确写回。同一 stuid 下可能有多个游戏，
                    用 stoken 匹配会把这一轮刷出来的 ltoken 写到所有游戏上。 */
                 if (data[k] && data[k].stoken == SToken) {
-                    data[k].ltoken = ltoken;
-                    kg = 1;
+                    if (ltoken) data[k].ltoken = ltoken;
+                    /* cookie_token 同样要写回：米游社 record 接口认的是它，
+                       只更新 ltoken 时旧 cookie_token 过期会持续返回 -100。 */
+                    const nextCookieToken = String(refreshedCk || '').match(/cookie_token=([^;]+)/)?.[1];
+                    if (nextCookieToken) data[k].cookie_token = nextCookieToken;
+                    /* ck_stoken 才是取数时提交的整串 cookie，字段级更新不传导，
+                       这里同步替换，避免刷新后继续用旧 cookie_token 请求。 */
+                    if (data[k].ck_stoken) {
+                        if (ltoken) data[k].ck_stoken = mergeCookieToken(data[k].ck_stoken, 'ltoken', ltoken);
+                        if (nextCookieToken) data[k].ck_stoken = mergeCookieToken(data[k].ck_stoken, 'cookie_token', nextCookieToken);
+                    }
+                    if (ltoken || nextCookieToken) kg = 1;
                 }
             }
             msgs.push(...sendMsg);
@@ -597,12 +621,12 @@ export class user extends plugin {
                 name: v.region_name || v.region || '未知服务器',
             }));
         if (!accounts.length) return '';
-        const current = await redis.get(`xhh:bh3_uid:${e.user_id}`);
+        const current = await redis.get(`HoYoGet:bh3_uid:${e.user_id}`);
         let defaultText = '';
         if (!current) {
             const first = accounts[0];
-            await redis.set(`xhh:bh3_uid:${e.user_id}`, first.uid);
-            await redis.set(`xhh:bh3_region:${e.user_id}`, first.region);
+            await redis.set(`HoYoGet:bh3_uid:${e.user_id}`, first.uid);
+            await redis.set(`HoYoGet:bh3_region:${e.user_id}`, first.region);
             defaultText = `\n已自动设为默认水晶查询UID：${first.uid}（${first.name}）`;
         }
         const list = accounts.map((item, i) => `${i + 1}. ${item.uid}（${item.name}）`).join('\n');
@@ -709,7 +733,7 @@ export class user extends plugin {
 
     async yz(e, game, headers) {
         //获取headers
-        if (!headers) headers = mhy.getHeaders(e, e.user.getMysUser().ck)
+        if (!headers) headers = mhy.getHeaders(e, e.user?.getMysUser()?.ck)
         headers['x-rpc-client_type'] = 5
         headers.DS = mhy.getDs2('gids=2&is_high=false', '', 4)
         headers['x-rpc-challenge_game'] = game == 'zzz' ? '8' : game == 'sr' ? '6' : '2'

@@ -2,7 +2,7 @@ import moment from 'moment';
 import fs from 'fs';
 import path from 'path';
 import { render, pluginPriority, mhy, config, mhyFetch } from '#HoYoGet';
-import { xhh_gacha_pool } from './gacha_pool.js';
+import { HoYoGetGachaPool } from './gacha_pool.js';
 import { getRoleProfile, serverName as toServerName } from '../../system/roleProfile.js';
 
 // genshin 的 MysInfo 必须动态加载：静态 import 在 genshin 缺失或版本变动时会让**整个插件**
@@ -101,7 +101,7 @@ const ZZZ_CORNER_LOGO = 'help/games/zzz-logo.png';
 function poolCornerIcon(e, game) {
     if (game === 'zzz') return ZZZ_CORNER_LOGO;
     try {
-        return new xhh_gacha_pool(e).fixedCornerFallback(POOL_GAME_NAME[game] || '') || '';
+        return new HoYoGetGachaPool(e).fixedCornerFallback(POOL_GAME_NAME[game] || '') || '';
     } catch (err) {
         logger.warn?.('[HoYoGet][账本] 取当前卡池角标失败:', err?.message || err);
         return '';

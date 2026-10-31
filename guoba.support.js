@@ -1067,6 +1067,32 @@ export const supportGuoba = () => {
         component: 'InputTextArea',
       },
       {
+        field: 'zzz_remind_enable',
+        label: '绝区零挑战提醒',
+        helpMessage: '式舆防卫战 / 危局强袭战未达标时私聊提醒；个人还需发「%开启挑战提醒」开启',
+        component: 'Switch',
+      },
+      {
+        field: 'zzz_remind_time',
+        label: '绝区零提醒时间',
+        helpMessage: '全局默认提醒时间，形如「每日20时」「每日20时30分」；个人可在群内单独设置',
+        component: 'Input',
+      },
+      {
+        field: 'zzz_remind_abyss_level',
+        label: '式舆防卫战达标层数',
+        helpMessage: '低于该层数视为未达标；默认 5',
+        component: 'InputNumber',
+        componentProps: { min: 0, max: 6, step: 1 },
+      },
+      {
+        field: 'zzz_remind_deadly_stars',
+        label: '危局强袭战达标星数',
+        helpMessage: '低于该星数视为未达标；默认 6',
+        component: 'InputNumber',
+        componentProps: { min: 0, max: 9, step: 1 },
+      },
+      {
         component: 'SOFT_GROUP_BEGIN',
         label: 'B站设置',
       },
@@ -1220,6 +1246,20 @@ export const supportGuoba = () => {
       {
         component: 'SOFT_GROUP_BEGIN',
         label: '插件优先级',
+      },
+      {
+        field: 'priority_unified',
+        label: '统一优先级',
+        helpMessage: '开启后所有指令至少拿到「统一优先级数值」，避免被后装的插件抢走；某条指令自身配置更靠前时仍取更靠前的值',
+        bottomHelpMessage: '改这里就不用逐条调下面的三十多项了；修改后需重启',
+        component: 'Switch',
+      },
+      {
+        field: 'priority_base',
+        label: '统一优先级数值',
+        helpMessage: '默认 -114514；Yunzai 数字越小越优先，修改后需重启',
+        component: 'InputNumber',
+        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
       },
       {
         field: 'tl_priority',
@@ -1555,6 +1595,8 @@ export const supportGuoba = () => {
         zzz_panel_accel_interval: Number.isFinite(Number(cfg.zzz_panel_accel_interval)) ? Number(cfg.zzz_panel_accel_interval) : 400,
         zzz_panel_accel_priority: Number.isFinite(Number(cfg.zzz_panel_accel_priority)) ? Number(cfg.zzz_panel_accel_priority) : -9999999999,
         gacha_pool_priority: cfg.gacha_pool_priority ?? -1000000000,
+        priority_unified: cfg.priority_unified === true,
+        priority_base: cfg.priority_base ?? -114514,
         gs_logs_priority: cfg.gs_logs_priority ?? -99,
         sr_logs_priority: cfg.sr_logs_priority ?? -88,
         mhy_estimate_priority: Number.isFinite(Number(cfg.mhy_estimate_priority)) ? Number(cfg.mhy_estimate_priority) : -9999999999,
@@ -1581,6 +1623,10 @@ export const supportGuoba = () => {
         bh3_remind_at_mode: bh3Remind.at_mode || 'none',
         bh3_remind_at_users: (bh3Remind.at_users || []).join(','),
         bh3_remind_image: bh3Remind.image || '',
+        zzz_remind_enable: cfg.zzz_remind_enable !== false,
+        zzz_remind_time: cfg.zzz_remind_time || '每日20时',
+        zzz_remind_abyss_level: cfg.zzz_remind_abyss_level ?? 5,
+        zzz_remind_deadly_stars: cfg.zzz_remind_deadly_stars ?? 6,
         activity_remind_enable: !!activityRemind.enable,
         activity_remind_hours_before: activityRemind.hours_before ?? 24,
         activity_remind_push_image: activityRemind.push_image !== false,
@@ -1664,6 +1710,8 @@ export const supportGuoba = () => {
         debug: data.debug,
         auto_reload: data.auto_reload,
         bh3_all_note_enable: data.bh3_all_note_enable,
+        priority_unified: data.priority_unified,
+        zzz_remind_enable: data.zzz_remind_enable,
         forwardMsg: data.forwardMsg,
         bh3: data.bh3,
         by: data.by,
@@ -1892,6 +1940,9 @@ export const supportGuoba = () => {
       yaml.set(_path + 'config.yaml', 'abyss_report_zzz_shiyu_stages', String(data.abyss_report_zzz_shiyu_stages || '').trim())
       yaml.set(_path + 'config.yaml', 'abyss_report_zzz_shiyu_periods', String(data.abyss_report_zzz_shiyu_periods || 'last').trim())
       yaml.set(_path + 'config.yaml', 'abyss_report_zzz_deadly_periods', String(data.abyss_report_zzz_deadly_periods || 'last').trim())
+      if (data.zzz_remind_time != null) yaml.set(_path + 'config.yaml', 'zzz_remind_time', String(data.zzz_remind_time || '每日20时').trim())
+      if (data.zzz_remind_abyss_level != null) yaml.set(_path + 'config.yaml', 'zzz_remind_abyss_level', Number(data.zzz_remind_abyss_level) || 0)
+      if (data.zzz_remind_deadly_stars != null) yaml.set(_path + 'config.yaml', 'zzz_remind_deadly_stars', Number(data.zzz_remind_deadly_stars) || 0)
 
       const priorityFields = [
         'tl_priority', 'sign_priority', 'user_priority', 'wiki_priority',
@@ -1902,7 +1953,7 @@ export const supportGuoba = () => {
         'gs_logs_priority', 'sr_logs_priority', 'mhy_estimate_priority', 'zzz_panel_accel_priority',
         'video_priority', 'voice_priority', 'update_priority', 'config_priority',
         'help_priority', 'picture_priority',
-        'role_combat_priority', 'zzz_md_priority', 'currency_balance_priority',
+        'role_combat_priority', 'zzz_md_priority', 'currency_balance_priority', 'priority_base',
         'custom_guide_priority',
         'meme_priority',
       ]

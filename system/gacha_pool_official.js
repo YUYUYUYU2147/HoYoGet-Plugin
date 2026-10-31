@@ -242,7 +242,7 @@ class OfficialGachaPool {
   }
 
   cacheKey(game, version = 'latest') {
-    return `xhh:gacha_pool:official:${CACHE_VER}:${game}:${this.normalizeVersion(version) || 'latest'}`;
+    return `HoYoGet:gacha_pool:official:${CACHE_VER}:${game}:${this.normalizeVersion(version) || 'latest'}`;
   }
 
   async requestNews(game, pageSize = 30) {

@@ -6,7 +6,7 @@ import { render, pluginPriority } from '#HoYoGet';
 
 const NEWS_API = 'https://bbs-api-static.miyoushe.com/painter/wapi/getNewsList?gids=1&page_size=80&type=1';
 const POST_API = 'https://bbs-api.miyoushe.com/post/wapi/getPostFull?gids=1&read=1&post_id=';
-const CACHE_KEY = 'xhh:bh3:calendar:v6';
+const CACHE_KEY = 'HoYoGet:bh3:calendar:v6';
 const BH3_ICON_DIR = './plugins/HoYoGet-Plugin/data/bh3_gacha/icons';
 /** 补给名段里「通用描述」不算名字（装备补给 / 角色补给 / 服装补给…） */
 const BH3_GENERIC_SEG = /^(装备补给|角色补给|服装补给|主题补给|协同补给|协同者补给|精确补给|精准补给|跃升补给|扩充补给|补给|限时开启|开启)?$/;

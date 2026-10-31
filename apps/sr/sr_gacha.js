@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto'
 import { render, mhy, pluginPriority, makeForwardMsg } from '#HoYoGet'
 import { appendTaskRecords } from '../../system/task_history.js'
 import { buildIsUP } from '../../system/join_isup.mjs'
+import { getEventNoteUser } from '../../system/genshin_loader.js'
 // === 跨插件依赖：genshin 插件 ===
 //
 // 这几个模块（gachaLog / srGachaSummary）是 genshin 较新版本才有的，
@@ -45,6 +46,9 @@ const missingGenshinModules = new Set()
  * @param {string|null} named 需要取的具名导出；传 '*' 返回整个模块命名空间；不传则为 default
  */
 async function loadGenshinModule(tag, relPaths, named = null) {
+  // 已判定缺失的模块直接返回。否则每次调用都要把候选路径逐个 import 一遍，
+  // 未安装 genshin 时会白白产生 8 次失败的动态导入。
+  if (missingGenshinModules.has(tag)) return { ok: false, value: null }
   const candidates = resolveGenshinModule(relPaths)
   let lastErr
   for (const url of candidates) {
@@ -59,9 +63,11 @@ async function loadGenshinModule(tag, relPaths, named = null) {
   }
   if (!missingGenshinModules.has(tag)) {
     missingGenshinModules.add(tag)
-    logger.error(
-      `[HoYoGet][sr_gacha] 未能在 genshin 插件中找到 ${tag}（已尝试 ${candidates.length} 个路径，` +
-      `最后错误：${lastErr?.message || lastErr}）。该功能将不可用。`
+    // genshin 属于可选的跨插件依赖：未安装时各调用点都有内置兜底，
+    // 属于常规部署形态而非故障，因此按普通记录输出，不再打 ERROR。
+    logger.mark(
+      `[HoYoGet][sr_gacha] 未找到 genshin 模块 ${tag}（已尝试 ${candidates.length} 个路径），` +
+      `相关能力走内置兜底`
     )
   }
   return { ok: false, value: null }
@@ -308,7 +314,7 @@ function buildGroupStats(pools, keys, title) {
   const totalPulls = sum(list, 'totalPulls')
   const totalUp = sum(list, 'upNum')
   const totalPity = sum(list, 'pity')
-  const avgPity = totalFive ? (totalPulls / totalFive).toFixed(1) : '0.0'
+  const avgPity = totalFive ? ((totalPulls - totalPity) / totalFive).toFixed(1) : '0.0'
   // UP平均与单池口径一致：分子扣掉当前未出五星的垫抽（大小保底总数）
   const upAvg = totalUp ? ((totalPulls - totalPity) / totalUp).toFixed(1) : '0.0'
   const upYs = Number(upAvg) ? (Number(upAvg) * 160).toFixed(0) : '0'
@@ -626,39 +632,78 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
        Character/Weapon 查到的相对路径全部 404（常驻池等没有自带 icon 的记录
        就完全没有图标）。改用本插件 resources，meta-sr 里 face/icon 都在。 */
     const MIAO_RES = '../../../../../plugins/HoYoGet-Plugin/resources'
-    const miaoGame = game === 'zzz' ? 'zzz' : 'sr'
+    const miaoGame = game === 'zzz' ? 'zzz' : game
+    /* 三个游戏的物品类型口径不同：原神「角色 / 武器」、星铁「角色 / 光锥」、
+       绝区零「代理人 / 音擎 / 邦布」。三套都要认，否则原神武器分支永远取不到图标。 */
+    const ROLE_TYPES = new Set(['角色', '代理人'])
+    const WEAPON_TYPES = new Set(['武器', '光锥', '音擎'])
+    /* 武器资源按类型分桶（meta-gs/weapon/<类型>/<名称>/icon.webp），桶名固定，
+       逐个探测比遍历整棵树便宜。 */
+    const WEAPON_BUCKETS = { gs: ['sword', 'claymore', 'polearm', 'bow', 'catalyst'], sr: [], zzz: [] }
+    const resAbs = rel => path.join(process.cwd(), 'plugins/HoYoGet-Plugin/resources', rel)
+    const existsRes = rel => {
+      try { return fs.existsSync(resAbs(rel)) } catch { return false }
+    }
+    /** 去掉资源路径开头的斜杠，便于拼成 MIAO_RES 下的相对地址 */
+    const trimLead = v => {
+      const s = String(v || '')
+      return s.startsWith('/') ? s.slice(1) : s
+    }
+    /** 本地资源兜底：meta-<游戏>/character/<名称>/imgs/face.webp 与武器 icon */
+    const localIcon = (name, kind) => {
+      if (!name || game === 'zzz') return ''
+      if (kind === 'role') {
+        for (const file of ['face.webp', 'face-q.webp', 'face0.webp']) {
+          const rel = 'meta-' + game + '/character/' + name + '/imgs/' + file
+          if (existsRes(rel)) return MIAO_RES + '/' + rel
+        }
+        return ''
+      }
+      if (kind === 'weapon') {
+        for (const bucket of WEAPON_BUCKETS[game] || []) {
+          for (const file of ['icon.webp', 'gacha.webp', 'awaken.webp']) {
+            const rel = 'meta-' + game + '/weapon/' + bucket + '/' + name + '/' + file
+            if (existsRes(rel)) return MIAO_RES + '/' + rel
+          }
+        }
+      }
+      return ''
+    }
     // 绝区零：官方物品配置接口忽略 game 参数只返回星铁数据，miao-plugin 也无绝区零资源，
     // 且图源站点在本机不可达，因此这里只认记录自带的 icon，不做任何猜测性拼接
     const makeIcon = item => {
       if (game === 'zzz') return item?.icon || ''
-      // 记录自带图标优先：星穹工坊云端同步时按 item_id 从官方物品配置反查得到，官方 CDN 可达。
-      // 此前这里直接丢弃 item.icon 改用 miao 查表，而 miao 的星铁 data.json 不提供
-      // imgs.face（98 个角色全为空），于是星铁卡片从来没有头像
-      if (item?.icon) return item.icon
+      // 网络图标只作最后兜底：记录自带的 icon 是 CDN 地址，网络抖动时整张卡片会变空白，
+      // 因此先用本地资源（内置模型 + 资源目录），两者都取不到才用它
+      const remoteIcon = item?.icon || ''
+      const name = String(item?.name || '')
+      const type = String(item?.item_type || '')
+      // 类型缺失（旧数据、云端同步）时两种都试，避免整张卡片没有头像
+      const wantRole = !type || ROLE_TYPES.has(type)
+      const wantWeapon = !type || WEAPON_TYPES.has(type)
       try {
         const { Character, Weapon } = miaoModels || {}
-        if (item.item_type === '角色' && Character) {
-          const char = Character.get(item.name, miaoGame)
+        if (wantRole && Character && name) {
+          const char = Character.get(name, miaoGame)
           const face = char?.imgs?.face || char?.face || ''
-          if (face) return `${MIAO_RES}${face}`
+          if (face) return MIAO_RES + String(face)
         }
-        if (item.item_type === '光锥' && Weapon) {
-          const weapon = Weapon.get(item.name, miaoGame)
+        if (wantWeapon && Weapon && name) {
+          const weapon = Weapon.get(name, miaoGame)
           const img = weapon?.getData?.('img')?.img || weapon?.img || ''
-          if (img) return `${MIAO_RES}/${String(img).replace(/^\//, '')}`
+          if (img) return MIAO_RES + '/' + trimLead(img)
         }
       } catch {}
-      // miao 星铁角色的 imgs 目录里有 face.webp，只是 data.json 未引用，按约定路径兜底
-      const name = String(item?.name || '')
-      if (game === 'sr' && item?.item_type === '角色' && name) {
-        const local = `meta-sr/character/${name}/imgs/face.webp`
-        try {
-          if (fs.existsSync(path.join(process.cwd(), 'plugins/HoYoGet-Plugin/resources', local))) {
-            return `${MIAO_RES}/${local}`
-          }
-        } catch {}
+      // miao 索引缺项（新角色、别名写法）时按约定路径兜底
+      if (wantRole) {
+        const hit = localIcon(name, 'role')
+        if (hit) return hit
       }
-      return ''
+      if (wantWeapon) {
+        const hit = localIcon(name, 'weapon')
+        if (hit) return hit
+      }
+      return remoteIcon
     }
     // 五星历史：按时间倒序，供卡片网格使用
     const fiveLog = recent.map(item => {
@@ -693,22 +738,35 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
       }
       group.list.push(item)
     }
-    // 数据总览：两行 x 四列
+    // 数据总览：可歪池两行 x 四列；常驻/新手池没有 50/50 与 UP 概念，UP 三项不展示
     const fourPity = Number(pool.fourPity || 0) || 0
-    const line = [
-      [
-        { num: fiveNum ? pity : '--', unit: '', lable: '未出五星' },
-        { num: fiveAvg, unit: '', lable: '五星平均' },
-        { num: upRate, unit: upRate === '--' ? '' : '%', lable: '小保底不歪率' },
-        { num: maxPity || '--', unit: '', lable: '最非' },
-      ],
-      [
-        { num: fourPity || '--', unit: '', lable: '未出四星' },
-        { num: upAvg, unit: '', lable: 'UP平均' },
-        { num: upYs, unit: '', lable: `UP花费${conf.currency}` },
-        { num: minPity || '--', unit: '', lable: '最欧' },
-      ],
-    ]
+    const line = upPool
+      ? [
+        [
+          { num: fiveNum ? pity : '--', unit: '', lable: '未出五星' },
+          { num: fiveAvg, unit: '', lable: '五星平均' },
+          { num: upRate, unit: upRate === '--' ? '' : '%', lable: '小保底不歪率' },
+          { num: maxPity || '--', unit: '', lable: '最非' },
+        ],
+        [
+          { num: fourPity || '--', unit: '', lable: '未出四星' },
+          { num: upAvg, unit: '', lable: 'UP平均' },
+          { num: upYs, unit: '', lable: `UP花费${conf.currency}` },
+          { num: minPity || '--', unit: '', lable: '最欧' },
+        ],
+      ]
+      : [
+        [
+          { num: fiveNum ? pity : '--', unit: '', lable: '未出五星' },
+          { num: fiveAvg, unit: '', lable: '五星平均' },
+          { num: maxPity || '--', unit: '', lable: '最非' },
+        ],
+        [
+          { num: fourPity || '--', unit: '', lable: '未出四星' },
+          { num: fiveNum || '--', unit: '', lable: '五星数' },
+          { num: minPity || '--', unit: '', lable: '最欧' },
+        ],
+      ]
     return {
       ...pool,
       key,
@@ -721,7 +779,7 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
       pity,
       maxPity,
       minPity,
-      upRate: `${upRate}%`,
+      upRate: upRate === '--' ? '--' : upRate + '%',
       noWai,
       fiveLog,
       yearGroups,
@@ -731,6 +789,7 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
       lastTime: fiveLog.length ? fiveLog[0].fullDate : '--',
       /* 总览表用的精简字段：模板不直接索引 line[1][1]，避免数据不全时炸模板 */
       upAvgText: upAvg,
+      upYsText: upYs,
       fourPityText: fourPity || '--',
       allNumText: totalPulls || 0,
       fiveNumText: fiveNum || 0,
@@ -741,6 +800,8 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
     const ib = conf.poolOrder.indexOf(b.key)
     return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib)
   })
+  // 零抽卡池（联动池/新手池首次同步后常见 0 抽）没有内容可展示，概览表与卡片一并跳过
+  const shownPools = pools.filter(pool => Number(pool.allNum) > 0)
   // progress 进度条布局：每个卡池生成一个进度区块
   if (layout === 'progress') {
     const nickname = data?.nickname || e?.nickname || e?.user?.nickname || (game === 'zzz' ? '绳匠' : '开拓者')
@@ -780,8 +841,10 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
         allNum: pool.allNum,
         fiveNum: pool.fiveNum,
         avgPity: pool.fiveAvg,
-        upAvg: pool.line?.[1]?.[1]?.num || '--',
-        upYs: pool.line?.[1]?.[2]?.num || '--',
+        upAvg: pool.upAvgText || '--',
+        upYs: pool.upYsText || '--',
+        // 常驻/新手池没有 UP 概念，进度视图不展示「UP需」指标
+        showUp: pool.upYsText !== '--',
         // 进度模板里货币文案写死过「星琼」，绝区零应为「菲林」；模板按该标记分支
         isZzz: game === 'zzz',
         list,
@@ -796,33 +859,11 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
       sections,
     }
   }
-  if (!pools.some(pool => pool.key === defPool.key)) {
-    pools.push({
-      key: defPool.key,
-      type: conf.typeMap[defPool.key] || '',
-      labelClass: conf.labelClassMap[defPool.key] || 'common',
-      name: defPool.name,
-      allNum: 0,
-      fiveNum: 0,
-      upNum: 0,
-      pity: 0,
-      maxPity: 0,
-      minPity: 0,
-      upRate: '--',
-      fiveLog: [],
-      yearGroups: [],
-      line: [
-        [{ num: '--', unit: '', lable: '未出五星' }, { num: '--', unit: '', lable: '五星平均' }, { num: '--', unit: '%', lable: '小保底不歪率' }, { num: '--', unit: '', lable: '最非' }],
-        [{ num: '--', unit: '', lable: '未出四星' }, { num: '--', unit: '', lable: 'UP平均' }, { num: '--', unit: '', lable: `UP花费${conf.currency}` }, { num: '--', unit: '', lable: '最欧' }],
-      ],
-      firstTime: '--',
-      lastTime: '--',
-    })
-  }
+  // 全部卡池都是 0 抽时不再补一张空卡（模板渲染「暂无抽卡记录」提示）
   return {
     uid,
     update_time: data?.update_time || '未知',
-    pools,
+    pools: shownPools,
   }
 }
 
@@ -1057,13 +1098,15 @@ function normalizeRecordsByPool(list = []) {
 
 async function getUserAuth(e) {
   const qq = e.user_id
-  const uid = e.user?.getUid?.('sr')
-  if (!uid) return { error: '请先用 genshin 侧绑定星铁账号，再更新抽卡记录' }
+  const user = await getEventNoteUser(e)
+  const uid = user?.getUid?.('sr') || ''
+  if (!uid) return { error: '未找到绑定的星铁账号，请先 #米哈游扫码绑定' }
 
   const getCookieFile = await getSrSummaryFn('getSrGachaCookieFile')
   const readCookie = await getSrSummaryFn('readSrGachaCookie')
   const cookieFile = getCookieFile ? getCookieFile(qq) : `./data/srGachaSummary/${uid}.json`
   const candidates = [
+    await buildSrStokenCookie(qq, uid),
     readCookie ? readCookie(cookieFile) : null,
     e.cookie,
   ]
@@ -1075,12 +1118,66 @@ async function getUserAuth(e) {
     candidates.push(await mysInfo.getCookie('sr'))
   } catch {}
   try {
-    candidates.push(e.user?.getMysUser?.('sr')?.ck)
+    candidates.push(user?.getMysUser?.('sr')?.ck)
   } catch {}
 
   const cookies = [...new Set(candidates.map(v => String(v || '').trim()).filter(Boolean))]
-  if (!cookies.length) return { error: '请先用 genshin 侧绑定星铁账号，再更新抽卡记录' }
+  if (!cookies.length) return { error: '未找到绑定的星铁账号，请先 #米哈游扫码绑定' }
   return { qq, uid, cookies, cookieFile }
+}
+
+/**
+ * 用 stoken 换一次 fresh cookie_token，再拼出徽章接口认的 ck。
+ *
+ * 扫码登录只落盘 stoken 与（可能已过期的）cookie_token；徽章接口要求 ck 里同时有
+ * account_id 与 cookie_token，直接拿 ck_stoken 去打 badge 只会回「未登录」。
+ */
+async function exchangeCookieToken(stoken, stuid, mid) {
+  const params = new URLSearchParams({ stoken, uid: String(stuid) })
+  const url = "https://api-takumi.mihoyo.com/auth/api/getCookieAccountInfoBySToken?" + params
+  const { data } = await requestJson(url, {
+    headers: {
+      accept: "application/json, text/plain, */*",
+      Cookie: "stuid=" + stuid + ";stoken=" + stoken + ";mid=" + mid,
+    },
+  })
+  if (Number(data?.retcode) !== 0) throw new Error(data?.message || "stoken 换取 cookie_token 失败")
+  return String(data?.data?.cookie_token || "")
+}
+
+/**
+ * 从 data/Stoken/<qq>.yaml 组装星铁 ck。
+ *
+ * @param {string|number} qq 用户 QQ
+ * @param {string|number} uid 星铁 UID
+ * @returns {Promise<string>} 可用 ck，取不到时返回空串
+ */
+async function buildSrStokenCookie(qq, uid) {
+  try {
+    const file = PLUGIN_ROOT + "/data/Stoken/" + qq + ".yaml"
+    if (!fs.existsSync(file)) return ""
+    const YAML = (await import("yaml")).default
+    const parsed = YAML.parse(fs.readFileSync(file, "utf8"))
+    const entries = Array.isArray(parsed) ? parsed : Object.values(parsed || {})
+    const list = entries.filter(entry => entry && typeof entry === "object" && entry.stoken)
+    const entry =
+      list.find(item => String(item.uid) === String(uid) && /hkrpg/.test(String(item.game_biz))) ||
+      list.find(item => /hkrpg/.test(String(item.game_biz)))
+    if (!entry) return ""
+    const stuid = String(entry.stuid || entry.ltuid || "")
+    if (!stuid) return ""
+    let token = ""
+    try { token = await exchangeCookieToken(entry.stoken, stuid, String(entry.mid || "")) } catch { }
+    if (!token) token = String(entry.cookie_token || "")
+    if (!token) return ""
+    const parts = ["ltuid=" + stuid, "stuid=" + stuid, "cookie_token=" + token, "account_id=" + stuid]
+    if (entry.ltoken) parts.push("ltoken=" + entry.ltoken)
+    if (entry.mid) parts.push("mid=" + entry.mid)
+    return parts.join(";")
+  } catch (err) {
+    logger.debug?.("[HoYoGet][sr_gacha] stoken 组装 ck 失败：" + (err?.message || err))
+    return ""
+  }
 }
 
 async function refreshBadgeCookie(uid, ck, region) {
@@ -1116,7 +1213,7 @@ async function refreshBadgeCookie(uid, ck, region) {
  * 所以 ck 更新时必须在这里单独补 type 1，否则常驻会被旧数据顶掉。
  */
 async function fetchCommonPoolByCk(uid, region, ck) {
-  const rows = await fetchPool(uid, region, ck, '1')
+  const rows = await fetchPool(uid, region, ck, 'GachaType_Standard')
   if (!rows?.length) return null
   const pool = buildPoolFromRows('1', { key: 'common', name: '常驻跃迁' }, rows)
   return pool?.records?.length || pool?.totalPulls ? pool : null
@@ -1156,6 +1253,80 @@ async function fetchPool(uid, region, ck, gachaType) {
     if (!versionId || !maxId) break
   }
   return rows
+}
+
+/** 徽章接口（five_star_list）的五星摘要归一化：与 genshin 的 srGachaSummary 同口径 */
+function normalizeCkRows(list) {
+  const records = []
+  let pity = null
+  for (const row of Array.isArray(list) ? list : []) {
+    if (!row || typeof row !== 'object') continue
+    if (row.item === null) {
+      // item 为 null 且 got_item 为 false 的才是「当前垫抽」，其余空条目跳过
+      if (row.got_item === false && Number.isInteger(Number(row.gacha_count)) && Number(row.gacha_count) >= 0) {
+        pity = { gacha_count: Number(row.gacha_count) }
+      }
+      continue
+    }
+    if (row.got_item !== true || row.item?.rarity !== 5) continue
+    const id = String(row.id || row.uuid || '')
+    const item = row.item
+    if (!id || !item.name || !['ItemType_Avatar', 'ItemType_Equipment'].includes(item.item_type)) continue
+    records.push({
+      id,
+      uuid: row.uuid || '',
+      item_id: item.item_id,
+      name: item.name,
+      item_type: item.item_type === 'ItemType_Avatar' ? '角色' : '光锥',
+      rarity: 5,
+      is_up: row.is_up === true,
+      gacha_count: Number.isInteger(Number(row.gacha_count)) ? Number(row.gacha_count) : null,
+      time: row.time || '',
+    })
+  }
+  return { records, pity }
+}
+
+/**
+ * 用本插件的徽章接口实现 ck 更新（不依赖 genshin 的 SrGachaSummary）。
+ *
+ * 原先 ck 更新只能走 genshin 的类，未安装 genshin 的机器上更新必定失败。
+ * 这里用同一套接口逐池拉五星摘要，字段口径与 genshin 一致，
+ * 合并、is_up 校准等后续流程照旧复用。
+ *
+ * @param {string} uid 游戏 UID
+ * @param {string} region 区服
+ * @param {string} ck 可用 Cookie
+ * @returns {Promise<{pools: object}>} 以池 type 为键的五星摘要
+ */
+async function fetchSrCkPools(uid, region, ck) {
+  const pools = {}
+  let cookie = ck
+  let refreshed = false
+  for (const def of POOLS) {
+    let rows = []
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        rows = await fetchPool(uid, region, cookie, def.type)
+        break
+      } catch (err) {
+        // 徽章会话过期会报「请从游戏内打开参与活动」，先换一次 e_hkrpg_token 再试
+        if (attempt === 0 && !refreshed) {
+          refreshed = true
+          try {
+            cookie = await refreshBadgeCookie(uid, cookie, region)
+            continue
+          } catch (e2) {
+            throw err
+          }
+        }
+        throw err
+      }
+    }
+    const incoming = normalizeCkRows(rows)
+    pools[def.type] = { name: def.name, records: incoming.records, pity: incoming.pity }
+  }
+  return { pools }
 }
 
 function getDataFile(uid, qq) {
@@ -1363,7 +1534,7 @@ export function buildPoolFromRows(gachaType, pool, rows) {
     fourPity: fourPulls,
     totalPulls: rows.length,
     fiveNum,
-    avgPity: fiveNum ? (rows.length / fiveNum).toFixed(1) : '0.0',
+    avgPity: fiveNum ? (fiveRecs.reduce((n, r) => n + (Number(r.gacha_count) || 0), 0) / fiveNum).toFixed(1) : '0.0',
   }
 }
 
@@ -1527,7 +1698,7 @@ function buildPoolFromPulls(gachaType, rows) {
     totalPulls: rows.length,
     fiveNum: five.length,
     upNum: 0,
-    avgPity: five.length ? (rows.length / five.length).toFixed(1) : '0.0',
+    avgPity: five.length ? (five.reduce((n, r) => n + (Number(r.gacha_count) || 0), 0) / five.length).toFixed(1) : '0.0',
   }
 }
 
@@ -1762,6 +1933,42 @@ export function unionRecords(oldRecords, newRecords) {
   return [ ...byId.values() ].sort((a, b) => String(b.id).localeCompare(String(a.id)))
 }
 
+// 官方小程序（five_star_list）为唯一权威源时的五星合并：
+// 小程序返回的记录逐条强制覆盖本地同一条（同 id，或同 item_id + time），
+// 本地只保留小程序窗口（约一年）之外的历史，避免整组二选一让旧数据顶掉新五星。
+export function mergeRecordsPreferNew(oldRecords, newRecords) {
+  const EMPTY = String()
+  const PIPE = String.fromCharCode(124)
+  const oldList = Array.isArray(oldRecords) ? oldRecords : []
+  const newList = Array.isArray(newRecords) ? newRecords : []
+  if (!newList.length) return oldList
+  if (!oldList.length) return newList
+  const idOf = r => String(r?.id || EMPTY)
+  const altOf = r => [ r?.item_id ?? r?.name ?? EMPTY, r?.time ?? EMPTY ].join(PIPE)
+  const oldIndex = new Map()
+  for (const row of oldList) {
+    if (idOf(row)) oldIndex.set(idOf(row), row)
+    if (!oldIndex.has(altOf(row))) oldIndex.set(altOf(row), row)
+  }
+  const used = new Set()
+  const out = []
+  for (const row of newList) {
+    const prev = oldIndex.get(idOf(row)) || oldIndex.get(altOf(row))
+    if (prev) used.add(prev)
+    const merged = prev ? { ...prev } : {}
+    for (const [ key, value ] of Object.entries(row)) {
+      if (value !== undefined && value !== null && value !== EMPTY) merged[key] = value
+    }
+    out.push(merged)
+  }
+  for (const row of oldList) {
+    if (used.has(row)) continue
+    if (newList.some(n => (idOf(n) && idOf(n) === idOf(row)) || altOf(n) === altOf(row))) continue
+    out.push({ ...row })
+  }
+  return out.sort((a, b) => String(b.time || EMPTY).localeCompare(String(a.time || EMPTY)) || String(a.id || EMPTY).localeCompare(String(b.id || EMPTY)))
+}
+ 
 function pickFullerRecords(oldRecords, newRecords) {
   const o = oldRecords || []
   const n = newRecords || []
@@ -1772,8 +1979,43 @@ function pickFullerRecords(oldRecords, newRecords) {
 }
 
 // 按选定的五星记录重算统计值；pity 兼容数字或 { gacha_count } 两种格式
+// 同一池内的五星去重：官方记录带 time，小助手/工坊的记录常无 time 且 id 与官方不同，
+// 只按 id 或只按 time 对齐都会漏判，这里三层判重：id、名称+时间、名称+抽数（无时间时）。
+export function dedupePoolRecords(records) {
+  const list = Array.isArray(records) ? records : []
+  const timed = []
+  const untimed = []
+  for (const r of list) {
+    if (String(r?.time || "").length >= 10) timed.push(r)
+    else untimed.push(r)
+  }
+  const seenId = new Set()
+  const seenNameTime = new Set()
+  const timedNameCount = new Set()
+  const out = []
+  const accept = r => {
+    const id = String(r?.id || "")
+    const t = String(r?.time || "").slice(0, 19)
+    const nm = String(r?.name || "")
+    const cnt = String(Number(r?.gacha_count ?? r?.num ?? 0))
+    if (id && seenId.has(id)) return
+    if (t && seenNameTime.has(nm + "|" + t)) return
+    if (!t && timedNameCount.has(nm + "|" + cnt)) return
+    if (id) seenId.add(id)
+    if (t) {
+      seenNameTime.add(nm + "|" + t)
+      timedNameCount.add(nm + "|" + cnt)
+    }
+    out.push(r)
+  }
+  for (const r of timed) accept(r)
+  for (const r of untimed) accept(r)
+  return out.sort((a, b) => String(b?.time || "").localeCompare(String(a?.time || "")))
+}
+ 
 export function recountPool(pool, records) {
   const pity = Number(typeof pool?.pity === 'object' ? pool.pity?.gacha_count : pool.pity || 0) || 0
+  records = dedupePoolRecords(records)
   const fiveNum = records.length
   const totalPulls = countTotal(records) + pity
   return {
@@ -1781,7 +2023,7 @@ export function recountPool(pool, records) {
     records,
     fiveNum,
     totalPulls: totalPulls || pool?.totalPulls || 0,
-    avgPity: fiveNum ? (totalPulls / fiveNum).toFixed(1) : '0.0',
+    avgPity: fiveNum ? (countTotal(records) / fiveNum).toFixed(1) : '0.0',
   }
 }
 
@@ -1807,7 +2049,7 @@ function mergePoolsForCk(oldPools, newPools) {
     if (!newPool?.fourLog?.length) newPool.fourLog = oldPool.fourLog || []
     if (!newPool?.fourNum) newPool.fourNum = oldPool.fourNum || 0
     if (!newPool?.fourPity) newPool.fourPity = oldPool.fourPity || 0
-    newPools[key] = recountPool(newPool, pickFullerRecords(getPoolRecords(oldPool), getPoolRecords(newPool)))
+    newPools[key] = recountPool(newPool, unionRecords(getPoolRecords(oldPool), getPoolRecords(newPool)))
   }
   // ck 接口不返回常驻池，保留旧数据里的常驻记录
   if (oldPools?.common && !newPools?.common) newPools.common = oldPools.common
@@ -2101,91 +2343,120 @@ function fillMissingIcons(pools, itemIndex) {
 
 // 云端只存五星与统计，四星/常驻明细仍以本地既有数据（ck/authkey）为准：
 // 五星取更全的一份，四星与垫抽从旧数据继承
+// 官方小程序（*更新抽卡记录）是唯一权威源：同池五星只认官方，补入源仅提供官方窗口外的历史
+export function limitToOfficialWindow(officialPool, supplyPool) {
+  const official = getPoolRecords(officialPool) || []
+  const supply = getPoolRecords(supplyPool) || []
+  // 官方该池没有任何五星（未覆盖，如常驻）：直接沿用补入源
+  if (!official.length) return supplyPool
+  const ids = new Set()
+  const nameTime = new Set()
+  const ago = new Date(Date.now() - 365 * 86400000)
+  const pad = n => String(n).padStart(2, "0")
+  // 窗口下界固定取「今天减 365 天」：官方页脚写明只保留最近 12 个月，
+  // 不能用官方最早一条代替——本地可能混有更早的历史记录，会把下界拉低导致该补的补不进来
+  let cutoff = ago.getFullYear() + "-" + pad(ago.getMonth() + 1) + "-" + pad(ago.getDate()) + " " + pad(ago.getHours()) + ":" + pad(ago.getMinutes()) + ":" + pad(ago.getSeconds())
+  for (const r of official) {
+    ids.add(String(r?.id || ""))
+    const t = String(r?.time || "").slice(0, 19)
+    if (!t) continue
+    nameTime.add(String(r?.name || "") + "|" + t)
+  }
+  // 小助手 / 工坊的记录常常没有 time，但 id 是雪花 id（前 13 位为毫秒时间戳），据此还原时间
+  const timeOf = r => {
+    const raw = String(r?.time || "").slice(0, 19)
+    if (raw.length >= 10) return raw
+    const id = String(r?.id || "")
+    if (id.length < 13 || !Number.isFinite(Number(id))) return ""
+    const ms = Number(id.slice(0, 13))
+    if (!(ms > 1000000000000 && ms < 4000000000000)) return ""
+    const d = new Date(ms)
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds())
+  }
+  const extra = []
+  for (const r of supply) {
+    if (ids.has(String(r?.id || ""))) continue
+    const t = timeOf(r)
+    if (t && nameTime.has(String(r?.name || "") + "|" + t)) continue
+    if (!t) { extra.push({ ...r }); continue }
+    if (t >= cutoff) continue
+    extra.push({ ...r })
+  }
+  // 逐抽来源（小助手全量）比五星汇总更可靠时，用它算出的抽数覆盖官方 / 工坊的估算值
+  // （工坊缺逐抽时会把区间算大：实测姬子一次被算成 138，逐抽实际 74）
+  const trustSupply = supply.length >= official.length
+  // 最老的一条五星不能覆盖：逐抽数据可能就是从那次开始同步的，之前的抽卡不在库里，累计值会偏小
+  const supplyOldestId = String(supply.reduce((m, r) => (!m || String(r?.id || "") < String(m?.id || "") ? r : m), null)?.id || "")
+  const supplyById = new Map()
+  for (const r of supply) if (r?.id) supplyById.set(String(r.id), r)
+  const officialFixed = official.map(r => {
+    const s = supplyById.get(String(r?.id || ""))
+    if (String(s?.id || "") === supplyOldestId) return r
+    if (!s || !trustSupply) return r
+    const fixed = { ...r }
+    if (Number(s.gacha_count) > 0) fixed.gacha_count = Number(s.gacha_count)
+    if (String(s.time || "").length >= 10) fixed.time = s.time
+    return fixed
+  })
+  const records = officialFixed.concat(extra).sort((a, b) => String(b?.time || "").localeCompare(String(a?.time || "")))
+  const out = recountPool({ ...(officialPool || {}), records }, records)
+  if (!out.fourNum) out.fourNum = Number(supplyPool?.fourNum) || 0
+  if (!(out.fourLog && out.fourLog.length)) out.fourLog = supplyPool?.fourLog || []
+  if (!out.fourPity) out.fourPity = Number(supplyPool?.fourPity) || 0
+  return out
+}
+ 
+// 未跑过官方小程序基准时，禁止用小助手 / 工坊补数据（它们只允许补历史缺口）
+function checkOfficialBase(qq, uid) {
+  const data = readData(getDataFile(qq, uid))
+  if (!data || !data.pools) return "尚未建立官方基准数据，请先发送【*更新抽卡记录】用官方小程序建立基准，再补历史记录"
+  if (String(data.source || "") !== "ck") return "本地记录不是官方小程序口径，请先发送【*更新抽卡记录】重建基准，再补历史记录"
+  return ""
+}
+ 
 function mergeHelperPools(oldPools, newPools) {
+  // 官方小程序为准：同池五星只认官方，补入源仅追加早于官方最早一条的历史记录
   for (const key of Object.keys(newPools || {})) {
     const old = oldPools?.[key]
     if (!old) continue
-    const oldRecs = getPoolRecords(old) || []
-    const newRecs = getPoolRecords(newPools[key]) || []
-    // 原则：来源与本地「谁五星记录多（抽数更多）谁更准」。小助手 / 工坊两个云端任一
-    // 更全即以它为准，避免稀疏来源把更全数据顶掉，也避免旧写法以本地为主追加工坊独有
-    // 五星、在工坊含更多不同名五星时把常驻数量算多（与 mergeSrHelperFull 一致）。
-    // 工坊仅返回五星汇总 + is_up（无四星逐抽），当选中工坊为更全方时，四星 / 垫抽
-    // 仍从旧数据继承，避免本地四星被丢弃。
-    const chosen = pickFullerRecords(oldRecs, newRecs)
-    let merged
-    if (chosen === newRecs) {
-      // 工坊更全：以工坊五星为准（is_up 由工坊提供），仅按 id / 名称+时间把本地
-      // 同名记录的图标等补充字段并入（不覆盖工坊已有字段）
-      const oldById = new Map()
-      for (const r of oldRecs) if (r?.id) oldById.set(String(r.id), r)
-      const oldByNameTime = new Map()
-      for (const r of oldRecs) {
-        const t = String(r?.time || '').slice(0, 19)
-        if (t) oldByNameTime.set(`${r.name}|${t}`, r)
-      }
-      merged = newRecs.map(w => {
-        const id = String(w?.id || '')
-        let hit = id ? oldById.get(id) : null
-        if (!hit) {
-          const t = String(w?.time || '').slice(0, 19)
-          if (t) hit = oldByNameTime.get(`${w.name}|${t}`)
-        }
-        if (!hit) return { ...w }
-        const rec = { ...w }
-        for (const [k, v] of Object.entries(hit)) {
-          if (v !== '' && v !== null && v !== undefined && rec[k] === undefined) rec[k] = v
-        }
-        return rec
-      })
-    } else {
-      // 本地更全（或数量持平）：以本地为主、按 id / 名称+时间补全工坊字段，
-      // 工坊独有五星（本地缺的期次）才追加；本地记录绝不因合并而翻倍。
-      const newById = new Map()
-      for (const r of newRecs) if (r?.id) newById.set(String(r.id), r)
-      const newByNameTime = new Map()
-      for (const r of newRecs) {
-        const t = String(r?.time || '').slice(0, 19)
-        if (t) newByNameTime.set(`${r.name}|${t}`, r)
-      }
-      const usedNew = new Set()
-      merged = []
-      for (const r of oldRecs) {
-        const id = String(r?.id || '')
-        let hit = id ? newById.get(id) : null
-        if (!hit) {
-          const t = String(r?.time || '').slice(0, 19)
-          if (t) hit = newByNameTime.get(`${r.name}|${t}`) || null
-        }
-        if (hit) {
-          usedNew.add(hit)
-          const rec = { ...r }
-          for (const [k, v] of Object.entries(hit)) {
-            if (v !== '' && v !== null && v !== undefined) rec[k] = v
-          }
-          merged.push(rec)
-        } else {
-          merged.push(r)
-        }
-      }
-      // 工坊独有五星（本地缺的期次）：仅当本地无同名记录时才追加，
-      // 避免时间格式不一致导致同名记录被误叠加
-      for (const w of newRecs) {
-        if (usedNew.has(w)) continue
-        if (oldRecs.some(r => r?.name === w?.name)) continue
-        merged.push({ ...w })
-      }
-    }
-    newPools[key] = recountPool(newPools[key], merged)
-    if (!newPools[key].fourLog?.length) newPools[key].fourLog = old.fourLog || []
-    if (!newPools[key].fourNum) newPools[key].fourNum = old.fourNum || 0
-    if (!newPools[key].fourPity) newPools[key].fourPity = old.fourPity || 0
+    newPools[key] = limitToOfficialWindow(old, newPools[key])
   }
-  // 云端没有的卡池（例如尚未解锁的新手池）保留旧数据
   for (const key of Object.keys(oldPools || {})) {
     if (!newPools[key]) newPools[key] = oldPools[key]
   }
   return newPools
+}
+
+/**
+ * 星穹工坊云端同步（只需 UID）。
+ *
+ * 官方小程序接口（five_star_list）要求「米游社登录态 + 游戏内打开过跃迁页」，两者
+ * 任一不满足就取不到数据：ck 不是登录态时回「未登录」，会话过期时回「请从游戏内
+ * 打开参与活动」。这两种情况都与 authkey 链接无关，直接改走工坊云端，只要 UID
+ * 就能出数据。
+ *
+ * @param {string|number} qq 用户 QQ
+ * @param {string|number} uid 星铁 UID
+ * @returns {Promise<{pools: object, stats: string}>} 合并后的卡池与统计文案
+ */
+async function syncSrCloudPools(qq, uid) {
+  let unionId = ""
+  try { unionId = readHelperBind(qq)?.union_id || "" } catch { }
+  if (!unionId) {
+    try { unionId = detectHelperUnionId() || "" } catch { }
+  }
+  const analysis = await fetchHelperCloud(uid, unionId || HELPER_FALLBACK_UNION_ID)
+  const old = readData(getDataFile(qq, uid))
+  const itemIndex = await loadSrItemIndex()
+  const cloudPools = convertHelperPools(analysis, buildNameHint(old?.pools), itemIndex)
+  const pools = fillMissingIcons(old?.pools ? mergeHelperPools(old.pools, cloudPools) : cloudPools, itemIndex)
+  const result = { ...(old || {}), uid: String(uid), pools, update_time: formatNow(), source: "helper" }
+  saveData(getDataFile(qq, uid), result)
+  const stats = Object.values(pools)
+    .filter(p => p.fiveNum || p.totalPulls)
+    .map(p => `【${p.name}】共${p.totalPulls || p.allNum || 0}抽｜五星${p.fiveNum || 0}`)
+    .join("\n")
+  return { pools, stats }
 }
 
 export class sr_gacha extends plugin {
@@ -2253,7 +2524,9 @@ export class sr_gacha extends plugin {
         try {
           const SrGachaSummaryCls = await getSrSummaryClass()
           if (typeof SrGachaSummaryCls !== 'function') {
-            throw new Error('genshin 插件缺少 SrGachaSummary 类，请更新 genshin 插件')
+            // 未安装 genshin：改用本机实现，接口与数据口径一致
+            result = await fetchSrCkPools(auth.uid, getSrRegion(auth.uid), cookie)
+            break
           }
           const saveCookie = await getSrSummaryFn('saveSrGachaCookie')
           const summary = new SrGachaSummaryCls({ uid: auth.uid, cookie, file: `./data/srGachaSummary/${auth.uid}.json` })
@@ -2270,6 +2543,15 @@ export class sr_gacha extends plugin {
       // type 1。彻底移除对 genshin 的 GachaLog 依赖。
       const oldFile = getDataFile(auth.qq, auth.uid)
       const old = readData(oldFile)
+      // 本机实现不返回增量：按更新前后的五星条数差补一份，供回复文案使用
+      if (!result.addedByPool) {
+        result.addedByPool = {}
+        for (const pool of POOLS) {
+          const before = getPoolRecords(old?.pools?.[pool.type]).length
+          const now = getPoolRecords(result.pools?.[pool.type]).length
+          result.addedByPool[pool.type] = Math.max(0, now - before)
+        }
+      }
       for (const ck of auth.cookies) {
         try {
           const common = await fetchCommonPoolByCk(auth.uid, getSrRegion(auth.uid), ck)
@@ -2287,24 +2569,21 @@ export class sr_gacha extends plugin {
         if (getPoolRecords(localCommon).length) result.pools.common = localCommon
       }
       // ck 返回的 pools 深拷贝快照。mergePoolsForCk 会**原地**替换 newPools 里
-      // 各池的 records（pickFullerRecords 整组二选一），只留引用的话快照也跟着
+      // 各池的 records（按官方小程序逐条覆盖），只留引用的话快照也跟着
       // 被改，原始 is_up 就找不回来了，必须深拷贝。
+      result.source = "ck"
       const ckPools = JSON.parse(JSON.stringify(result.pools || {}))
       result.update_time = formatNow()
       // 与已有数据合并（可能是 authkey 全量逐抽），避免 ck 更新覆盖丢四星/常驻；
-      // ck 只负责补全更早的五星（小程序保留一年）与 UP 标记
+      // 五星历史一律以官方小程序为准逐条覆盖，旧数据只补它窗口外的历史
       if (old?.pools) {
         result.pools = mergePoolsForCk(old.pools, result.pools)
         // 把 ck 的 is_up 盖到合并结果上（ck 是唯一带 is_up 的源，优先级最高）。
         //
         // 顺序很关键，必须在 mergePoolsForCk 之后：
-        // 它内部 pickFullerRecords 是「整组二选一」，条数相同时按抽数总和取大的一边，
-        // 联动角色池这类旧数据与 ck 条数一致的池子会选中旧的那组 ——
-        // 而旧记录的 is_up 来自 authkey / 小助手（这两个源都不返回该字段，
-        // 拉取时统一置 false），于是 ck 里正确的标记被整组丢弃。
+        // 旧记录的 is_up 来自 authkey / 小助手（这两个源都不返回该字段，拉取时置 false），
+        // 逐条覆盖后仍需再盖一次，保证历史五星的 UP 标记与官方小程序一致。
         //
-        // 症状：官方 five_star_list 对联动跃迁是有 is_up 的，
-        // 但卡片显示 0.0% 小保底不歪率、UP 平均与 UP 花费均为 --，且无 UP 角标。
         result.pools = applyCkIsUp(ckPools, result.pools)
         result.pools = inheritIsUp(old.pools, result.pools)
       }
@@ -2323,10 +2602,14 @@ export class sr_gacha extends plugin {
       await this.renderSummary(e, [], 'grid')
       return e.reply('发送【#米哈游星铁抽卡帮助】查看全部抽卡指令')
     } catch (err) {
-      logger.error('[HoYoGet][sr_gacha] refresh failed:', err)
-      if (String(err?.message || err).includes('请从游戏内打开参与活动')) {
-        return e.reply('当前账号还没在游戏内打开过跃迁活动页。\n请先进《星穹铁道》里点开一次活动跃迁页面，再发送【#米哈游星铁更新抽卡记录】重试。')
+      // 官方小程序（five_star_list）依赖米游社登录态与游戏内打开的跃迁会话：
+      // ck 不是登录态时回「未登录」，会话过期时回「请从游戏内打开参与活动」。
+      // 两种都不必让用户去找 authkey 链接，直接用星穹工坊云端（只需 UID）兜底。
+      const reason = String(err?.message || err)
+      if (/未登录|请从游戏内打开参与活动/.test(reason)) {
+        return e.reply("官方小程序抽卡接口暂不可用，本次未改动本地记录；请在游戏内打开【跃迁记录】停留几秒后再发送 #米哈游星铁更新抽卡记录")
       }
+      logger.error('[HoYoGet][sr_gacha] refresh failed:', err)
       const formatFailure = await getSrSummaryFn('formatSrGachaFailure')
       return e.reply(formatFailure ? formatFailure(err) : `更新失败：${err?.message || err}`)
     }
@@ -2342,6 +2625,19 @@ export class sr_gacha extends plugin {
     // 剔除混入星铁数据的绝区零池（如 GachaType_Permanent「常驻频段」）；
     // 有剔除时顺手写回本插件的数据文件，把脏数据永久清掉，不必等下次更新覆盖
     const cleaned = cleanSrPools(data.pools)
+    let dedupFixed = false
+    for (const poolKey of Object.keys(cleaned)) {
+      const before = getPoolRecords(cleaned[poolKey]) || []
+      const after = dedupePoolRecords(before)
+      if (after.length === before.length) continue
+      cleaned[poolKey] = recountPool({ ...cleaned[poolKey], records: after, recent: after }, after)
+      dedupFixed = true
+      logger.mark("[HoYoGet][sr_gacha] 已剔除 " + poolKey + " 的 " + (before.length - after.length) + " 条重复五星记录")
+    }
+    if (dedupFixed) {
+      data = { ...data, pools: cleaned }
+      try { saveData(getDataFile(auth.qq, auth.uid), data) } catch (err) { logger.warn(`[HoYoGet][sr_gacha] 去重结果写回失败：${err?.message || err}`) }
+    }
     const dropped = Object.keys(data.pools).filter(k => !cleaned[k])
     if (dropped.length) {
       logger.mark(`[HoYoGet][sr_gacha] 已剔除混入星铁数据的池：${dropped.map(k => `${k}(${data.pools[k]?.name || '?'})`).join('、')}`)
@@ -2521,16 +2817,9 @@ export class sr_gacha extends plugin {
       // 否则刚发链接拉取的新五星会被全部当成非UP，导致角色池统计不准确
       for (const cookie of auth.cookies) {
         try {
-          const SrGachaSummaryCls = await getSrSummaryClass()
-          if (typeof SrGachaSummaryCls !== 'function') {
-            throw new Error('genshin 插件缺少 SrGachaSummary 类，请更新 genshin 插件')
-          }
-          const summary = new SrGachaSummaryCls({ uid: auth.uid, cookie, file: `./data/srGachaSummary/${auth.uid}.json` })
-          const sr = await summary.update()
+          const sr = await fetchSrCkPools(auth.uid, getSrRegion(auth.uid), cookie)
           if (sr?.pools) {
             result.pools = mergeIsUp(sr.pools, result.pools)
-            const saveCookie2 = await getSrSummaryFn('saveSrGachaCookie')
-            saveCookie2?.(auth.cookieFile, cookie)
             break
           }
         } catch (err) {
@@ -2599,6 +2888,10 @@ export class sr_gacha extends plugin {
     const auth = await getUserAuth(e)
     if (auth.error && !arg) return e.reply(auth.error)
     const uid = arg || auth?.uid
+    if (uid) {
+      const baseMissing = checkOfficialBase(auth?.qq || e.user_id, uid)
+      if (baseMissing) return e.reply(baseMissing)
+    }
     if (!uid) return e.reply('请先绑定星铁账号，或使用【#米哈游星铁导入小助手记录 <UID>】指定 UID')
     const full = readSrHelperFullFile(uid)
     if (!full) {
@@ -2613,7 +2906,15 @@ export class sr_gacha extends plugin {
     if (!old?.pools) old = { uid, pools: {} }
     const result = mergeSrHelperFull(old.pools, full)
     if (!result.pools.length) return e.reply('小助手文件里没有识别到可用的卡池数据')
-    for (const pool of result.pools) old.pools[pool.key] = pool
+    for (const pool of result.pools) {
+      const oldKeys = Object.keys(old.pools)
+      const poolKey = pool.key || oldKeys.find(k => old.pools[k] === pool) || oldKeys.find(k => old.pools[k] && old.pools[k].name === pool.name) || pool.name
+      if (!poolKey) continue
+      const basePool = old.pools[poolKey]
+      const mergedPool = basePool ? limitToOfficialWindow(basePool, pool) : { ...pool }
+      mergedPool.key = poolKey
+      old.pools[poolKey] = mergedPool
+    }
     saveData(file, { ...old, update_time: formatNow(), source: `${old.source || ''}+lelaer-full`.replace(/^\+/, '') })
     const detail = result.pools
       .map(p => `【${p.name}】${p.totalPulls}抽/五星${p.fiveNum}/四星${p.fourNum ?? 0}`)
@@ -2641,6 +2942,10 @@ export class sr_gacha extends plugin {
     const auth = await getUserAuth(e)
     if (auth.error && !arg) return e.reply(auth.error)
     const uid = arg || auth?.uid
+    if (uid) {
+      const baseMissing = checkOfficialBase(auth?.qq || e.user_id, uid)
+      if (baseMissing) return e.reply(baseMissing)
+    }
     if (!uid) return e.reply('请先绑定星铁账号，或使用【#米哈游星铁导入小助手记录 <UID>】指定 UID')
     await e.reply(`正在直连小助手云端拉取 UID:${uid} 的全量记录，请稍候……`)
     let full
@@ -2653,7 +2958,15 @@ export class sr_gacha extends plugin {
     if (!old?.pools) old = { uid, pools: {} }
     const result = mergeSrHelperFull(old.pools, full)
     if (!result.pools.length) return e.reply('小助手云端没有识别到可用的卡池数据')
-    for (const pool of result.pools) old.pools[pool.key] = pool
+    for (const pool of result.pools) {
+      const oldKeys = Object.keys(old.pools)
+      const poolKey = pool.key || oldKeys.find(k => old.pools[k] === pool) || oldKeys.find(k => old.pools[k] && old.pools[k].name === pool.name) || pool.name
+      if (!poolKey) continue
+      const basePool = old.pools[poolKey]
+      const mergedPool = basePool ? limitToOfficialWindow(basePool, pool) : { ...pool }
+      mergedPool.key = poolKey
+      old.pools[poolKey] = mergedPool
+    }
     saveData(file, { ...old, update_time: formatNow(), source: `${old.source || ''}+lelaer-db`.replace(/^\+/, '') })
     const detail = result.pools
       .map(p => `【${p.name}】${p.totalPulls}抽/五星${p.fiveNum}/四星${p.fourNum ?? 0}`)
@@ -2674,8 +2987,11 @@ export class sr_gacha extends plugin {
 
   async updateHelper(e) {
     const qq = e.user_id
-    const uid = e.user?.getUid?.('sr')
-    if (!uid) return e.reply('请先用 genshin 侧绑定星铁账号，再更新抽卡记录')
+    const user = await getEventNoteUser(e)
+    const uid = user?.getUid?.('sr') || ''
+    if (!uid) return e.reply('未找到绑定的星铁账号，请先 #米哈游扫码绑定')
+    const baseMissing = checkOfficialBase(qq, uid)
+    if (baseMissing) return e.reply(baseMissing)
     let bind = readHelperBind(qq)
     if (!bind?.union_id) {
       // 未绑定时先尝试从本机微信缓存自动识别，避免让用户手工去挖union_id

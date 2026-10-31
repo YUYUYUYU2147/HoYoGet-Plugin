@@ -4,7 +4,7 @@
  * 数据来源与 #切换水晶uid 完全一致：
  *   HoYoGet 的 Stoken 文件 data/Stoken/<QQ>.yaml（game_biz=bh3_cn）
  *   + 一次 getUserGameRolesByStoken 补昵称/等级
- *   + redis xhh:bh3_uid:<QQ> 记录当前用于查水晶的 UID
+ *   + redis HoYoGet:bh3_uid:<QQ> 记录当前用于查水晶的 UID
  * 任何一步取不到都只返回空列表，调用方保持原样，不影响原有面板。
  */
 import fs from 'node:fs';
@@ -68,7 +68,7 @@ export async function getBh3UidList(e, qq) {
     } catch (err) { /* 昵称取不到不影响列表显示 */ }
     let current = '';
     try {
-        if (typeof redis !== 'undefined') current = String(await redis.get('xhh:bh3_uid:' + user) || '');
+        if (typeof redis !== 'undefined') current = String(await redis.get('HoYoGet:bh3_uid:' + user) || '');
     } catch (err) {}
     return { list, current };
 }

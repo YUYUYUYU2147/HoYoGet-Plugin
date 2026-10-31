@@ -2,7 +2,7 @@ import fetch from 'node-fetch';
 import fs from 'fs';
 import {
     yaml
-} from '#xhh';
+} from '#HoYoGet';
 import YAML from 'yaml';
 // Bwiki 绝区零角色页（列表页头像最高优先级来源）。该文件零 import，不构成循环依赖。
 import { fetchZzzBwikiChar, zzzKey } from './apps/common/wiki/bwiki_zzz.js';
@@ -102,7 +102,7 @@ const isTransientNetError = err => {
 
 const ZZZ_ITEM_ICON_CACHE = './plugins/HoYoGet-Plugin/temp/zzz_item_icons';
 const localFileUrl = file => `file://${process.cwd()}/${String(file).replace(/^\.\//, '')}`;
-// 邦布本地补图目录：resources/xhh/wiki/zzz_bangboo/<邦布名>.png|webp|jpg
+// 邦布本地补图目录：resources/HoYoGet/wiki/zzz_bangboo/<邦布名>.png|webp|jpg
 // 剧情邦布（如伊埃斯）不在 nanoka/官方观测枢/bwiki 任何图鉴里，上游永远拿不到图标；
 // 用户往该目录放一张同名图片即可修复，对以后其它缺图邦布同样通用。
 const ZZZ_BANGBOO_ICON_DIR = './plugins/HoYoGet-Plugin/resources/wiki/zzz_bangboo';
@@ -1386,7 +1386,7 @@ class mys {
         return { content };
     }
 
-    // 邦布本地补图：resources/xhh/wiki/zzz_bangboo/<名>.png|webp|jpg（详情页与列表共用）
+    // 邦布本地补图：resources/HoYoGet/wiki/zzz_bangboo/<名>.png|webp|jpg（详情页与列表共用）
     zzzBangbooLocalIcon(name) {
         return localBangbooIcon(name);
     }

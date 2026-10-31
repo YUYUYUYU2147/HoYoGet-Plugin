@@ -7,7 +7,7 @@
  *
  * 昵称、等级、头像统一在这里补全：原来的实现依赖 miao 的面板存档，没更新过面板的
  * 账号整行都会退化成「暂无uid信息」且头像退回占位图，绝区零更是从来没有资料。
- * !uid 走崩三自己的入口，!uid1 这类序号切换写 redis 的 xhh:bh3_uid / xhh:bh3_region。
+ * !uid 走崩三自己的入口，!uid1 这类序号切换写 redis 的 HoYoGet:bh3_uid / HoYoGet:bh3_region。
  */
 import { pluginPriority, api, mhy } from '#HoYoGet';
 import fs from 'node:fs';
@@ -446,8 +446,8 @@ export class uidPanel extends plugin {
     if (typeof redis === 'undefined') return e.reply('未连接缓存，暂时无法切换崩坏3 uid');
 
     const qq = String(e.at || e.user_id || '');
-    await redis.set('xhh:bh3_uid:' + qq, row.uid);
-    if (row.region) await redis.set('xhh:bh3_region:' + qq, row.region);
+    await redis.set('HoYoGet:bh3_uid:' + qq, row.uid);
+    if (row.region) await redis.set('HoYoGet:bh3_region:' + qq, row.region);
     bh3Cache.delete(qq);
     return this.replyPanel({ list: bh3.list, current: row.uid });
   }

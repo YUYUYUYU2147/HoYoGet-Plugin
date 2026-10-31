@@ -17,6 +17,7 @@ import sharp from '../../node_modules/sharp/lib/index.js';
 import puppeteer from '../../../../lib/puppeteer/puppeteer.js';
 import { render, config, pluginPriority, getSource } from '#HoYoGet';
 import { guardModuleByFile } from '../../system/modules.js'
+import { buildMemeListData } from '../../meme_category.js'
 
 const DATA_DIR = './plugins/HoYoGet-Plugin/data/memes/';
 const INFOS_FILE = DATA_DIR + 'infos.json';
@@ -79,8 +80,8 @@ async function compressImageBuf(buf, opts = {}) {
 }
 
 // 压缩后若图片过高，切成多张（NapCat 对超高长图也会传失败）
-async function compressAndSplit(buf) {
-  const jpeg = await compressImageBuf(buf);
+async function compressAndSplit(buf, opts = {}) {
+  const jpeg = await compressImageBuf(buf, opts);
   const meta = await sharp(jpeg).metadata();
   const { width, height } = meta;
   if (height <= MAX_IMG_HEIGHT) return [jpeg];
@@ -123,7 +124,7 @@ async function renderImg(e, path, data_, cfg = {}) {
     logger.error(`[HoYoGet-meme] 渲染返回异常 ${path}: ${typeof buf}`);
     return [{ type: 'text', data: { text: '图片渲染失败，请稍后再试' } }];
   }
-  const bufs = await compressAndSplit(buf);
+  const bufs = await compressAndSplit(buf, cfg.img || {});
   return bufs.map(b => segment.image(b));
 }
 
@@ -412,36 +413,55 @@ export class meme extends plugin {
 
   // ---------- 列表 ----------
   async memesList(e) {
-    if (!memeEnabled()) return false;
-    await loadData();
+    if (!memeEnabled()) return false
+    await loadData()
     if (!Object.keys(infos).length) {
-      await e.reply('meme 资源为空，请先发送 #meme更新 拉取资源', true);
-      return true;
+      await e.reply("meme 资源为空，请先发送 #meme更新 拉取资源", true)
+      return true
     }
-    const now = Date.now();
-    const NEW_MS = 30 * 24 * 60 * 60 * 1000;
-    const list = Object.values(infos)
-      .map(info => ({
-        key: info.key,
-        name: (info.keywords && info.keywords[0]) || info.key,
-        aliases: (info.keywords || []).slice(1, 4).join('/'),
-        created: info.date_created || 0,
-        isNew: now - new Date(info.date_created || 0).getTime() < NEW_MS,
-        maxImages: info.params_type?.max_images ?? 0,
-        minTexts: info.params_type?.min_texts ?? 0,
-      }))
-      .sort((a, b) => new Date(a.created) - new Date(b.created))
-      .reverse();
-    const PAGE_SIZE = 48;
-    const pageMatch = e.msg.match(/\d+/);
-    let page = pageMatch ? parseInt(pageMatch[0], 10) : 1;
-    const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
-    page = Math.max(1, Math.min(page, totalPages));
-    const pageList = list.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-    const nextPage = page < totalPages ? page + 1 : 1;
-    const msg = await renderImg(e, 'meme/meme', { list: pageList, total: list.length, page, totalPages, nextPage });
-    await e.reply(msg);
-    return true;
+    // 分类交给本地纯函数模块（题材 / 属性 / 功能三层规则），不再依赖远端 tags：
+    // 远端 990 条里只有约 300 条带 tags，按 tags 分组会让七成条目落进未分类。
+    const { groups, stats } = buildMemeListData(infos)
+    const renderGroups = groups.map((group, index) => ({
+      label: group.icon + " " + group.name,
+      cls: "tagx acc-" + (index % 8),
+      count: group.count,
+      memes: group.memes.map(meme => ({
+        primary: meme.primary,
+        key: meme.key,
+        isNew: meme.isNew,
+        badges: (meme.badges || []).map(badge => badge.text),
+      })),
+    }))
+    const subText = "共 " + stats.totalMemes + " 个 · " + stats.groupCount + " 个分类 · " + stats.totalKeywords + " 个关键词 · 发送 #表情名 制作"
+    // 全量单图在 2 倍缩放下高度可达两万像素，sharp 解码峰值会顶到 pm2 内存上限
+    // （历史事故）；1 倍缩放又明显发虚。这里按条目数切片，每片约 260 条单独 2 倍渲染，
+    // 再把各片拼成多条消息发送。
+    const CHUNK_ITEMS = 260
+    const chunks = []
+    let current = []
+    let count = 0
+    for (const group of renderGroups) {
+      const remain = CHUNK_ITEMS - count
+      if (group.memes.length <= remain) {
+        current.push(group)
+        count += group.memes.length
+        continue
+      }
+      current.push({ ...group, memes: group.memes.slice(0, remain) })
+      chunks.push(current)
+      current = [{ ...group, memes: group.memes.slice(remain) }]
+      count = current[0].memes.length
+    }
+    if (current.length) chunks.push(current)
+    const parts = []
+    for (let i = 0; i < chunks.length; i++) {
+      const pageText = chunks.length > 1 ? subText + " · 第 " + (i + 1) + "/" + chunks.length + " 张" : subText
+      const bufs = await renderImg(e, "meme/meme", { title: "MEME 表情包列表", subText: pageText, groups: chunks[i] }, { scale: 2, img: { maxWidth: 1600 } })
+      parts.push(...bufs)
+    }
+    await e.reply(parts)
+    return true
   }
 
   // ---------- 搜索 ----------
@@ -656,12 +676,12 @@ export class meme extends plugin {
     const uid = e.user_id;
     const gid = e.group_id || e.user_id;
     try {
-      const last = await redis.get(`xhh:meme_cd:${gid}:${uid}`);
+      const last = await redis.get(`HoYoGet:meme_cd:${gid}:${uid}`);
       if (last) {
         await e.reply(`操作太频繁了，休息一下吧`, true);
         return true;
       }
-      await redis.set(`xhh:meme_cd:${gid}:${uid}`, 1, { EX: cd });
+      await redis.set(`HoYoGet:meme_cd:${gid}:${uid}`, 1, { EX: cd });
     } catch { }
     return false;
   }

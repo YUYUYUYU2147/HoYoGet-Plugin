@@ -34,12 +34,12 @@ export class video extends plugin {
   }
 
   async video(e) {
-    await redis.del('xhh_vid:gs');
-    await redis.del('xhh_vid:sr');
-    await redis.del('xhh_vid:zzz');
-    if (getother().bh3) await redis.del('xhh_vid:bh3');
-    if (getother().by) await redis.del('xhh_vid:by');
-    if (getother().xbgd) await redis.del('xhh_vid:xbgd');
+    await redis.del('HoYoGet_vid:gs');
+    await redis.del('HoYoGet_vid:sr');
+    await redis.del('HoYoGet_vid:zzz');
+    if (getother().bh3) await redis.del('HoYoGet_vid:bh3');
+    if (getother().by) await redis.del('HoYoGet_vid:by');
+    if (getother().xbgd) await redis.del('HoYoGet_vid:xbgd');
     vid(e);
   }
 }
@@ -85,21 +85,21 @@ async function vid(e) {
     url = 'https://bbs-api.miyoushe.com/post/wapi/userPost?size=20&uid=' + urls[i];
     res = await fetch(url).then(res => res.json());
     list = res.data.list;
-    ti = await redis.get(`xhh_vid:${i}`);
+    ti = await redis.get(`HoYoGet_vid:${i}`);
     //遍历最新发的20个帖子
     for (let n in list) {
       vod_list = list[n].vod_list[0]?.resolutions;
       //发布是否为视频
       if (vod_list) {
         if (!ti) {
-          await redis.set(`xhh_vid:${i}`, time);
+          await redis.set(`HoYoGet_vid:${i}`, time);
           logger.info(`初始化${name}最新视频记录`);
           ti = 1;
         }
         //发布时间戳10位
         time = list[n].post.created_at;
         if (ti >= time) break;
-        await redis.set(`xhh_vid:${i}`, time);
+        await redis.set(`HoYoGet_vid:${i}`, time);
         //地址
         vid_url = vod_list[vod_list.length - 1].url;
         //画质

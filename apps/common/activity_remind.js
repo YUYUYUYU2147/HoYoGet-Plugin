@@ -654,7 +654,7 @@ export class activity_remind extends plugin {
       for (const entry of targetGroups) {
         const { botId, groupId } = parseTarget(entry);
         for (const item of list) {
-          const dedup = `xhh:activity_remind:sent:${game}:${botId || 'default'}:${groupId}:${item.id}:${item.end.format('YYYYMMDDHHmm')}`;
+          const dedup = `HoYoGet:activity_remind:sent:${game}:${botId || 'default'}:${groupId}:${item.id}:${item.end.format('YYYYMMDDHHmm')}`;
           if (!manual && await redis.get(dedup)) continue;
           try {
             await sendGroupMsg(groupId, buildMsg(cfg, item, now), e, botId);

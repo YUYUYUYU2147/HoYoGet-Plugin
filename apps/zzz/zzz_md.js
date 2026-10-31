@@ -34,21 +34,22 @@ export class zzz extends plugin {
             }
         }
 
-        if (qq) {
-            uid = (await (await getNoteUser()).create(qq)).getUid('zzz');
-            ck = (await (await getNoteUser()).create(qq)).getMysUser('zzz')?.ck
-        }
+        if (!qq) qq = e.user_id
+        const nu = await (await getNoteUser()).create(qq)
+        uid = nu?.getUid("zzz")
+        ck = nu?.getMysUser("zzz")?.ck
 
-        if (!uid || !ck) {
-            uid = e.user.getUid('zzz');
-            const mys = e.user.getMysUser('zzz');
-            ck = mys?.ck;
-            qq = e.user_id
-        }
-
-        if (!uid || !ck) return e.reply('请先扫码绑定账号！');
+        if (!uid || !ck) return e.reply("请先扫码绑定账号！");
         
         //获取headers
+
+        //扫码得到的 ck 只带 stuid，米游社按通行证 uid 识别账号，缺 ltuid 会被判未登录
+        const withLtuid = (cookie) => {
+            const id = (String(cookie).match(/(?:^|;)\s*stuid=(\d+)/) || [])[1]
+            if (!id || /(?:^|;)\s*ltuid=/.test(cookie)) return cookie
+            return cookie + (cookie.endsWith(";") ? "" : ";") + "ltuid=" + id + ";"
+        }
+        ck = withLtuid(ck)
         let headers = mhy.getHeaders(e, ck);
 
         let data = {
@@ -66,22 +67,22 @@ export class zzz extends plugin {
         if (!data?.tickets) return logger.mark('未找到母带数据')
 
         let fldp = 0, fl = 0, jmmd = 0, md = 0, bb = 0, level = '未知', name = '未知'
-        let sk = await mhy.getstoken(e, uid);
-        if (sk) {
-            headers = mhy.getHeaders(e, sk);
-            res = await api(e, {
-                type: 'GameRoles',
-                headers
+        //昵称与等级：getUserGameRolesByCookie 同时回这两个字段，域名在代理白名单内，
+        //直连被风控时会自动改走米游社代理
+        try {
+            const roleRes = await api(e, {
+                type: "zzz_user",
+                uid,
+                game: "zzz",
+                headers: mhy.getHeaders(e, ck),
+                silent: true
             })
-            if (res.data?.list) {
-                res.data.list.forEach(v => {
-                    if (v.game_uid == uid) {
-                        level = v.level
-                        name = v.nickname
-                    }
-                });
+            const role = roleRes?.data?.list?.find(v => String(v.game_uid) === String(uid))
+            if (role) {
+                level = role.level || level
+                name = role.nickname || name
             }
-        }
+        } catch (_) { }
         for (let v of data.tickets) {
             if (v.ticket_type == 'GACHA_TICKET_TYPE_RECHARGE_MONOCHROME') fldp = v.ticket_cnt
             else if (v.ticket_type == 'GACHA_TICKET_TYPE_POLYCHROME') fl = v.ticket_cnt

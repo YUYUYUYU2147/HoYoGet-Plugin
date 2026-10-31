@@ -41,13 +41,13 @@ fi
 mkdir -p "$(dirname "$URL_FILE")"
 : > "$URL_FILE"
 
-echo "[xhh-gt] 正在为 http://127.0.0.1:${PORT} 建立临时隧道，地址将写入 ${URL_FILE}"
+echo "[HoYoGet-gt] 正在为 http://127.0.0.1:${PORT} 建立临时隧道，地址将写入 ${URL_FILE}"
 
 exec cloudflared tunnel --url "http://127.0.0.1:${PORT}" --no-autoupdate 2>&1 | while IFS= read -r line; do
   echo "$line"
   url=$(printf '%s' "$line" | grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' | head -1 || true)
   if [ -n "$url" ]; then
     echo "$url" > "$URL_FILE"
-    echo "[xhh-gt] 公网地址：$url"
+    echo "[HoYoGet-gt] 公网地址：$url"
   fi
 done

@@ -6,6 +6,9 @@
   </head>
   <body {{sys.scale}}>
     <div class="container">
+      {{if !pools || !pools.length}}
+      <div class="ov_box"><div class="empty_box">暂无抽卡记录，请先发送【#米哈游星铁更新抽卡记录】</div></div>
+      {{/if}}
       {{if pools && pools.length}}
       <div class="ov_box">
         <div class="ov_head">

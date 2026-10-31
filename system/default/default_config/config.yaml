@@ -1,13 +1,13 @@
 #修改的时候，注意英文冒号后面要有一个空格！！！
 
-#凌晨3:30是否自动更新xhh：true开，false关 (注意：这是强制更新,会覆盖文件的那种,爱改文件的大佬慎用)
+#凌晨3:30是否自动更新HoYoGet：true开，false关 (注意：这是强制更新,会覆盖文件的那种,爱改文件的大佬慎用)
 update: false
 
 #调试模式：true开，false关（输出卡池同步/水晶查询/扫码绑定/图鉴解析等详细日志，平时保持关闭）
 debug: false
 
 #自举热重载：true开，false关。改完 apps/ 与 system/ 里的代码自动生效，不用重启、
-# 也不用发框架的 #重载插件（实测那条命令不会重新 import 插件入口，对 xhh 无效）。
+# 也不用发框架的 #重载插件（实测那条命令不会重新 import 插件入口，对 HoYoGet 无效）。
 # 注意：指令的「处理方法」改了会立刻生效，但**新增/删除指令**还是要 #重启
 # （指令表是在 constructor 里交给基类注册的，换不掉）。
 auto_reload: true
@@ -57,6 +57,8 @@ zzz_panel_bg_url: 'https://api.yppp.net/api.php'
 # 只影响单角色长图（#米哈游xx面板 <角色> / 米游社xx面板），总览列表不受影响。
 # 每次出图现读，改完即生效；默认配置只给新装用户兜底，实际生效值看 config/config.yaml。
 panel_style: dark
+panel_service_gs: auto
+panel_service_sr: auto
 
 # 原神/星铁单角色面板的立绘来源（按顺序取，取到就用）：
 #   1. 咕咕牛管理器：miao-plugin/resources/profile/normal-character/<角色名>/（多张随机一张）
@@ -166,7 +168,7 @@ sm_cd: 60
 #签到功能：true开，false关 (自动签到设置在sign.yaml文件)
 sign: false
 
-#使用xhh绑定设备(作用于genshin、StarRail-plugin、ZZZ-Plugin)：true开，false关 (开启后，还需要给bot发送：xhh开启设备     bot会自动更新文件然后重启！)
+#使用HoYoGet绑定设备(作用于genshin、StarRail-plugin、ZZZ-Plugin)：true开，false关 (开启后，还需要给bot发送：HoYoGet开启设备     bot会自动更新文件然后重启！)
 bdsb: false
 
 #米哈游视频播报(米游社)：QQ群号 (更多设置在other.yaml文件)
@@ -279,7 +281,7 @@ zzz_guide_deadly_sources: |-
 
 #自定义攻略源（锅巴可视化修改）
 #===== 自定义攻略源（极简模式）=====
-#发指令：#角色名攻略 / #角色名一图流 / #角色名配对 / #角色名配队（前缀 xhh/ 或 小花火 也可，可省略）
+#发指令：#角色名攻略 / #角色名一图流 / #角色名配对 / #角色名配队（前缀 HoYoGet/ 或 小花火 也可，可省略）
 #只需填各游戏作者UID，角色名即关键词（自动用别名表归一成正式名，无需列角色）
 #合并转发模式：on=合并转发(带标题)，off=逐条拼接(不带标题)
 custom_guide_enable: true
@@ -386,6 +388,10 @@ picture_priority: 1234
 role_combat_priority: 100
 zzz_md_priority: 100
 currency_balance_priority: 100
+# 统一优先级：开启后所有指令至少拿到 priority_base，避免被后装的插件抢走指令
+# 关闭时下面的 xxx_priority 逐条生效（老行为）；修改后需重启
+priority_unified: false
+priority_base: -114514
 meme_priority: 50
 custom_guide_priority: -9999999999
 

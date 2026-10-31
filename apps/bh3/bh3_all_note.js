@@ -88,8 +88,8 @@ export class bh3_all_note extends plugin {
       if (msg.type === 'at') { qq = msg.qq; break; }
     }
 
-    let uid = await redis.get(`xhh:${game}_uid:${qq}`);
-    let region = uid ? await redis.get(`xhh:${game}_region:${qq}`) : null;
+    let uid = await redis.get(`HoYoGet:${game}_uid:${qq}`);
+    let region = uid ? await redis.get(`HoYoGet:${game}_region:${qq}`) : null;
     let ck = null;
 
     const stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${qq}.yaml`;

@@ -8,8 +8,8 @@ import { runCronTask } from '../../system/task_history.js';
 const ZZZ_HISTORY_URL = 'https://raw.githubusercontent.com/iaoongin/GachaClock/main/spider/data/zzz/history.json';
 const ZZZ_META_URL = 'https://raw.githubusercontent.com/iaoongin/GachaClock/main/spider/data/meta.json';
 const ZZZ_RAW_BASE = 'https://raw.githubusercontent.com/iaoongin/GachaClock/main/spider/';
-const ZZZ_CACHE_KEY = 'xhh:zzz:pool_history:data:v2';
-const ZZZ_CACHE_EXPIRE_KEY = 'xhh:zzz:pool_history:expire:v2';
+const ZZZ_CACHE_KEY = 'HoYoGet:zzz:pool_history:data:v2';
+const ZZZ_CACHE_EXPIRE_KEY = 'HoYoGet:zzz:pool_history:expire:v2';
 const ZZZ_POOL_HISTORY_YAML_PATH = './plugins/HoYoGet-Plugin/system/default/zzz_gacha_pool_history.yaml';
 // ── 米游社公告刷新限速 ──
 // 背景（实测）：卡池详情接口 getPostFull 的 retcode 1034 是「验证码」，但这条链路
@@ -21,8 +21,8 @@ const ZZZ_POOL_HISTORY_YAML_PATH = './plugins/HoYoGet-Plugin/system/default/zzz_
 const POOL_MIN_GAP_MS = 10 * 60 * 1000;
 const POOL_BACKOFF_BASE_S = 30 * 60;
 const POOL_BACKOFF_MAX_S = 4 * 60 * 60;
-const POOL_RISK_KEY = 'xhh:gacha_pool:risk_control';
-const POOL_GAP_KEY = 'xhh:gacha_pool:last_refresh';
+const POOL_RISK_KEY = 'HoYoGet:gacha_pool:risk_control';
+const POOL_GAP_KEY = 'HoYoGet:gacha_pool:last_refresh';
 
 /** 撞码次数 → 冷却秒数（30min → 60min → 120min → 240min 封顶） */
 function poolBackoffSeconds(strikes) {
@@ -163,7 +163,7 @@ function bh3VersionStart(version = '') {
   return null;
 }
 
-export class xhh_gacha_pool extends plugin {
+export class HoYoGetGachaPool extends plugin {
   constructor(e) {
     super({
       name: '[米哈游]全游戏卡池',
@@ -1612,9 +1612,8 @@ export class xhh_gacha_pool extends plugin {
         return;
       }
       await this.poolClearCooldown();
-      const lines = await this.syncLocalPoolsFromOfficial(results);
-      logger.mark(`[HoYoGet][gacha_pool] 卡池自动刷新完成：${results.map(r => `${r.game} ${r.records.length} 条`).join('，')}` +
-        (lines.length ? ` | ${lines.join(' | ')}` : ''));
+      await this.syncLocalPoolsFromOfficial(results);
+      logger.mark('[HoYoGet][gacha_pool] 卡池自动刷新完成');
     } catch (err) {
       logger.error('[HoYoGet][gacha_pool] 卡池自动刷新失败:', err);
     }
@@ -2020,6 +2019,12 @@ export class xhh_gacha_pool extends plugin {
       if (!collabImage && collabSpec) {
         continue;
       }
+      // 已有封面就保持不动：同一期官方可能有多张图，搜索结果每次刷新给出的候选未必相同，
+      // 逐日覆盖会让本地卡池库在两张图之间来回变（git 里天天出现改动，图也来回跳）。
+      // 只有 SR_POOL_IMAGE_KEYWORDS 点名要纠正的池才继续往下重算。
+      const keptImgs = (item.imgs || []).filter(Boolean)
+      const firstUpName = String(item.js_five?.[0] || '')
+      if (keptImgs.length && !SR_POOL_IMAGE_KEYWORDS[firstUpName]) continue
       const roleImg = this.getSrOfficialPoolImage(item, false, records);
       const weaponImg = this.getSrOfficialPoolImage(item, true, records);
       const existingImgs = (item.imgs || []).filter(Boolean);
@@ -2404,7 +2409,7 @@ export class xhh_gacha_pool extends plugin {
   // 参考社区插件做法：扒 wikitable，按「时间/版本/S级代理人|S级音擎|S级邦布」提取每个卡池，写入本地库。
   // 数据形状与 normalizeZzzData 保持一致：{ title, type:'角色'|'武器'|'邦布', version, timer, s, a }。
   async fetchZzzPoolHistoryFromBwiki() {
-    const cacheKey = 'xhh:zzz:bwiki:history:v1';
+    const cacheKey = 'HoYoGet:zzz:bwiki:history:v1';
     try {
       const cached = await redis.get(cacheKey);
       if (cached) return JSON.parse(cached);
@@ -2620,7 +2625,7 @@ export class xhh_gacha_pool extends plugin {
 
   async fetchSrPoolHistoryFromBwiki() {
     // 数据源从「跃迁」改为「历史跃迁」后必须换 key，否则会继续读旧缓存（旧数据里联动池挂在普通版本号下）
-    const cacheKey = 'xhh:sr:bwiki:history:v4';
+    const cacheKey = 'HoYoGet:sr:bwiki:history:v4';
     try { const c = await redis.get(cacheKey); if (c) return JSON.parse(c); } catch (_) {}
     try {
       const res = await fetch(SR_BWIKI_URL, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(15000) });
@@ -2641,7 +2646,7 @@ export class xhh_gacha_pool extends plugin {
   }
 
   async fetchYsPoolHistoryFromBwiki() {
-    const cacheKey = 'xhh:ys:bwiki:history:v1';
+    const cacheKey = 'HoYoGet:ys:bwiki:history:v1';
     try { const c = await redis.get(cacheKey); if (c) return JSON.parse(c); } catch (_) {}
     try {
       const res = await fetch(YS_BWIKI_URL, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(15000) });
@@ -3140,7 +3145,7 @@ export class xhh_gacha_pool extends plugin {
   async refreshBh3VersionStarts() {
     try {
       // 12 小时内只抓一次，且已知的版本不再重复请求，避免 #刷新卡池 被串行网络请求拖超时
-      const cacheKey = 'xhh:bh3:version_start:v1';
+      const cacheKey = 'HoYoGet:bh3:version_start:v1';
       try {
         if (await redis.get(cacheKey)) return null;
       } catch (_) {}
@@ -4874,8 +4879,15 @@ ${r.summary || ''}`;
         return false;
       }
       if (fs.existsSync(path)) {
+        let unchanged = false
         try {
-          fs.copyFileSync(path, `${path}.bak`);
+          unchanged = fs.readFileSync(path, 'utf-8') === text
+        } catch (_) {}
+        // 内容没变就不落盘：否则每次定时刷新都会重写文件（mtime/.bak 天天变），
+        // 白白让工作区看起来「又被改了一次」。
+        if (unchanged) return true
+        try {
+          fs.copyFileSync(path, `${path}.bak`)
         } catch (_) {}
       }
       fs.writeFileSync(path, text, 'utf-8');
@@ -5840,7 +5852,7 @@ ${r.summary || ''}`;
   async searchBh3PostByKeyword(keyword = '') {
     const kw = String(keyword || '').trim();
     if (!kw) return [];
-    const cacheKey = `xhh:bh3:instant:${kw}`;
+    const cacheKey = `HoYoGet:bh3:instant:${kw}`;
     try {
       const cached = await redis.get(cacheKey);
       if (cached) return JSON.parse(cached);

@@ -41,10 +41,12 @@
             <span class="meta_box">总<b>{{sec.allNum}}</b>抽</span>
             <span class="meta_box">金<b>{{sec.fiveNum}}</b></span>
             <span class="meta_box">平均<b>{{sec.avgPity}}</b>抽/金</span>
-            {{if sec.isZzz}}
-            <span class="meta_box">UP需<b>{{sec.upYs}}</b>菲林</span>
-            {{else}}
-            <span class="meta_box">UP需<b>{{sec.upYs}}</b>星琼</span>
+            {{if sec.showUp}}
+              {{if sec.isZzz}}
+              <span class="meta_box">UP需<b>{{sec.upYs}}</b>菲林</span>
+              {{else}}
+              <span class="meta_box">UP需<b>{{sec.upYs}}</b>星琼</span>
+              {{/if}}
             {{/if}}
           </div>
         </div>

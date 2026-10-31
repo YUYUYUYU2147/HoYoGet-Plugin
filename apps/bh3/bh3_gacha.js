@@ -36,6 +36,87 @@ const RECHARGE_LOG_URLS = [
 const BH3_WIKI_BASE = 'https://api-takumi-static.mihoyo.com/common/blackboard/bh3_wiki/v1/home/content/list?app_sn=bh3_wiki';
 let starMapCache = null;
 const ICON_CACHE_DIR = './plugins/HoYoGet-Plugin/data/bh3_gacha/icons';
+const ICON_INDEX_FILE = './plugins/HoYoGet-Plugin/data/bh3_gacha/icon_index.json';
+// 百科星级映射最多缓存 6 小时：接口抖动过一次，不能让失败结果一直生效到进程重启
+const STAR_MAP_TTL = 6 * 60 * 60 * 1000;
+
+/**
+ * 本地图标索引：{ char: {名称: 文件名}, weapon: {}, partner: {}, costume: {} }
+ *
+ * 崩三抽卡的图标地址来自百科接口，出图时按网络地址加载，接口抖动或 CDN 换域都会让
+ * 头像时有时无。索引把「名称 → 已下载到本地的文件」固化下来，出图只读本地文件。
+ */
+let iconIndexSynced = false;
+
+/**
+ * 索引缺失或删掉时，按缓存目录里的文件名（类型_名称.扩展名）反向重建。
+ * 目的：已经下载到本地的图标不因为索引文件丢失而重新走网络。
+ */
+function syncIconIndexFromDisk(index) {
+  if (iconIndexSynced) return index;
+  iconIndexSynced = true;
+  try {
+    const files = fs.readdirSync(ICON_CACHE_DIR);
+    const kinds = ['char', 'weapon', 'partner', 'costume'];
+    let changed = false;
+    for (const file of files) {
+      const dot = file.lastIndexOf('.');
+      if (dot <= 0) continue;
+      const base = file.slice(0, dot);
+      const sep = base.indexOf('_');
+      if (sep <= 0) continue;
+      const kind = base.slice(0, sep);
+      const name = base.slice(sep + 1);
+      if (!kinds.includes(kind) || !name) continue;
+      index[kind] = index[kind] || {};
+      if (!index[kind][name]) {
+        index[kind][name] = file;
+        changed = true;
+      }
+    }
+    if (changed) writeIconIndex(index);
+  } catch (_) {}
+  return index;
+}
+
+function readIconIndex() {
+  let index = {};
+  try {
+    const data = JSON.parse(fs.readFileSync(ICON_INDEX_FILE, 'utf8'));
+    if (data && typeof data === 'object') index = data;
+  } catch (_) {
+    index = {};
+  }
+  return syncIconIndexFromDisk(index);
+}
+
+function writeIconIndex(index) {
+  try {
+    fs.mkdirSync(path.dirname(ICON_INDEX_FILE), { recursive: true });
+    const out = { ...index, updated: moment().format('YYYY-MM-DD HH:mm:ss') };
+    fs.writeFileSync(ICON_INDEX_FILE, JSON.stringify(out, null, 2), 'utf8');
+  } catch (err) {
+    logger.warn?.('[HoYoGet][bh3_gacha] 写入图标索引失败:', err?.message || err);
+  }
+}
+
+/** 索引里的文件名换成相对渲染页面的地址；文件缺失或为空时返回空串，交给下载流程重取 */
+function iconUrlFromFile(file) {
+  if (!file) return '';
+  const abs = path.join(ICON_CACHE_DIR, String(file));
+  try {
+    if (!fs.existsSync(abs) || fs.statSync(abs).size <= 0) return '';
+  } catch (_) {
+    return '';
+  }
+  const rel = path.relative(process.cwd(), abs).split(path.sep).join('/');
+  return '../../../../../' + rel;
+}
+
+/** 按「类型 + 名称」查索引并换成地址 */
+function iconUrlFromIndex(kind, name, index) {
+  return iconUrlFromFile(index?.[kind]?.[name]);
+}
 
 
 async function sendMsg(e, msg) {
@@ -325,8 +406,8 @@ export class bh3_gacha extends plugin {
       if (msg.type === 'at') { qq = msg.qq; break; }
     }
 
-    let uid = await redis.get(`xhh:bh3_uid:${qq}`);
-    let region = uid ? await redis.get(`xhh:bh3_region:${qq}`) : null;
+    let uid = await redis.get(`HoYoGet:bh3_uid:${qq}`);
+    let region = uid ? await redis.get(`HoYoGet:bh3_region:${qq}`) : null;
     let stokenCookie = null;
     let ck = null;
 
@@ -954,7 +1035,8 @@ export class bh3_gacha extends plugin {
   }
 
   async getStarMaps() {
-    if (starMapCache) return starMapCache;
+    // 失败结果带 TTL：接口抖动过一次，不能让空映射一直生效到进程重启
+    if (starMapCache && Date.now() - (starMapCache.at || 0) < STAR_MAP_TTL) return starMapCache;
     const char = {};
     const weapon = {};
     const charIcon = {};
@@ -966,10 +1048,17 @@ export class bh3_gacha extends plugin {
     // 模板就渲染成文字占位块。
     const partnerIcon = {};
     try {
+      // 逐个频道带超时请求：单个频道失败不影响另外两个
+      const fetchChannel = async (channel) => {
+        const url = new URL(BH3_WIKI_BASE);
+        url.searchParams.set('channel_id', String(channel));
+        const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+        return await res.json();
+      };
       const [chars, weapons, partners] = await Promise.all([
-        fetch(`${BH3_WIKI_BASE}&channel_id=18`).then(r => r.json()),
-        fetch(`${BH3_WIKI_BASE}&channel_id=20`).then(r => r.json()),
-        fetch(`${BH3_WIKI_BASE}&channel_id=218`).then(r => r.json()).catch(() => null),
+        fetchChannel(18).catch(() => null),
+        fetchChannel(20).catch(() => null),
+        fetchChannel(218).catch(() => null),
       ]);
       for (const item of chars?.data?.list?.[0]?.list || []) {
         let rank = 0;
@@ -1006,7 +1095,15 @@ export class bh3_gacha extends plugin {
     } catch (err) {
       logger.warn?.('[HoYoGet][bh3_gacha] 获取出金星级映射失败:', err);
     }
-    starMapCache = { char, weapon, charIcon, weaponIcon, partnerIcon };
+    const index = readIconIndex();
+    // 本地索引里的文件同样参与取图：百科接口不可达时出图仍有头像
+    const localIcons = {
+      char: index.char || {},
+      weapon: index.weapon || {},
+      partner: index.partner || {},
+      costume: index.costume || {},
+    };
+    starMapCache = { at: Date.now(), char, weapon, charIcon, weaponIcon, partnerIcon, localIcons };
     return starMapCache;
   }
 
@@ -1081,23 +1178,34 @@ export class bh3_gacha extends plugin {
   }
 
   async cacheIcon(name, url, type = 'item') {
+    const key = String(name || '').trim();
+    if (!key) return '';
+    // 索引命中就直接用本地文件，不再依赖网络
+    const index = readIconIndex();
+    const local = iconUrlFromIndex(type, key, index);
+    if (local) return local;
     if (!url) return '';
     const absUrl = await this.ensureAbsoluteUrl(url);
     try {
       fs.mkdirSync(ICON_CACHE_DIR, { recursive: true });
-      const safe = `${type}_${name}`.replace(/[\\/:*?"<>|\s]/g, '_');
+      // 名称只做最轻的清洗：抽卡名称里不会出现斜杠，其余字符保持原样便于人工核对
+      const safe = (type + '_' + key).split('/').join('_');
       const ext = new URL(absUrl).pathname.split('.').pop()?.split('?')[0] || 'png';
-      const file = path.join(ICON_CACHE_DIR, `${safe}.${ext}`);
-      if (!fs.existsSync(file)) {
-        const res = await fetch(absUrl);
+      const fileName = safe + '.' + ext;
+      const abs = path.join(ICON_CACHE_DIR, fileName);
+      if (!fs.existsSync(abs)) {
+        const res = await fetch(absUrl, { signal: AbortSignal.timeout(20000) });
         if (!res.ok) return absUrl;
         const buf = Buffer.from(await res.arrayBuffer());
-        fs.writeFileSync(file, buf);
+        if (!buf.length) return absUrl;
+        fs.writeFileSync(abs, buf);
       }
-      const relPath = path.relative(process.cwd(), file);
-      return `../../../../../${relPath}`;
+      index[type] = index[type] || {};
+      index[type][key] = fileName;
+      writeIconIndex(index);
+      return iconUrlFromFile(fileName) || absUrl;
     } catch (err) {
-      logger.warn?.('[HoYoGet][bh3_gacha] icon cache failed:', name, err);
+      logger.warn?.('[HoYoGet][bh3_gacha] icon cache failed:', key, err?.message || err);
       return absUrl;
     }
   }
@@ -1105,14 +1213,22 @@ export class bh3_gacha extends plugin {
   async getItemIcon(content = '', poolType = 'char', maps = {}) {
     if (poolType === 'char') {
       const name = this.extractCharacterName(content);
+      const localUrl = iconUrlFromIndex('char', name, maps.localIcons || {});
+      if (localUrl) return localUrl;
       return this.cacheIcon(name, maps.charIcon?.[name], 'char');
     }
     if (poolType === 'weapon') {
       const name = this.extractWeaponName(content);
+      const localUrl = iconUrlFromIndex('weapon', name, maps.localIcons || {});
+      if (localUrl) return localUrl;
       return this.cacheIcon(name, maps.weaponIcon?.[name], 'weapon');
     }
     if (poolType === 'partner') {
       const name = this.extractPartnerName(content);
+      // 记录里是简写（「游云」），索引里是全名（「白鹿游云」），按包含关系取最长命中
+      const localHit = this.lookupPartnerIcon(name, maps.localIcons?.partner || {});
+      const localUrl = iconUrlFromFile(localHit);
+      if (localUrl) return localUrl;
       return this.cacheIcon(name, this.lookupPartnerIcon(name, maps.partnerIcon || {}), 'partner');
     }
     if (poolType === 'costume') {

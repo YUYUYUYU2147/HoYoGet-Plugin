@@ -189,9 +189,15 @@ const config = () => {
 };
 
 const pluginPriority = (name, defaultVal) => {
-    const cfg = config();
-    const key = name + '_priority';
-    return cfg[key] ?? defaultVal;
+    const cfg = config() || {};
+    const own = cfg[name + '_priority'] ?? defaultVal;
+    /* 统一优先级：开关打开后所有指令至少拿到 priority_base 这个数值，
+       免得装了别的插件后被抢走指令；指令自身原本更靠前的配置仍然生效（取更小值）。 */
+    if (cfg.priority_unified === true) {
+        const base = Number(cfg.priority_base);
+        if (Number.isFinite(base)) return Math.min(Number(own) || 0, base);
+    }
+    return own;
 };
 
 // 旧攻略时效提示：满 2 年提醒、满 3 年加重措辞（米游社接口时间戳统一为秒）

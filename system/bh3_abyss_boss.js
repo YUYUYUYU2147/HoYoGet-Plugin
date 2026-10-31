@@ -13,8 +13,8 @@ const STOKEN_DIR = './plugins/HoYoGet-Plugin/data/Stoken';
 // 与 apps/bh3_abyss.js 的 getAuth 保持一致：不从 Stoken 里挑 cn_gf01/cn_qd01 官服条目，
 // 否则多角色用户会捞到与当前 Cookie 不匹配的官服号，米游社返回 1008「用户信息不匹配」
 const BH3_REGIONS = ['android01', 'ios01', 'pc01', 'bb01', 'yyb01', 'hun01', 'hun02'];
-const CACHE_KEY = 'xhh:bh3:current_abyss_info';
-const BATTLEFIELD_CACHE_KEY = 'xhh:bh3:current_battlefield_info';
+const CACHE_KEY = 'HoYoGet:bh3:current_abyss_info';
+const BATTLEFIELD_CACHE_KEY = 'HoYoGet:bh3:current_battlefield_info';
 const SEARCH_API = 'https://bbs-api.miyoushe.com/painter/api/user_instant/search/list';
 const GLOBAL_SEARCH_API = 'https://bbs-api.miyoushe.com/post/wapi/searchPosts';
 
@@ -104,8 +104,8 @@ function fmtBattlefieldArea(area) {
 }
 
 async function getAuthByQQ(qq, preferredUid = '') {
-  let uid = preferredUid || await redis.get(`xhh:bh3_uid:${qq}`);
-  let region = uid ? await redis.get(`xhh:bh3_region:${qq}`) : null;
+  let uid = preferredUid || await redis.get(`HoYoGet:bh3_uid:${qq}`);
+  let region = uid ? await redis.get(`HoYoGet:bh3_region:${qq}`) : null;
   let ck = null;
 
   const stokenPath = `${STOKEN_DIR}/${qq}.yaml`;
@@ -443,11 +443,11 @@ export function formatCurrentBattlefieldInfo(info, compact = false) {
 
 async function getManualAbyssInfo() {
   try {
-    const raw = await redis.get('xhh:bh3:current_abyss_manual');
+    const raw = await redis.get('HoYoGet:bh3:current_abyss_manual');
     if (!raw) return null;
     const info = JSON.parse(raw);
     if (info.expiresAt && Date.now() > Number(info.expiresAt)) {
-      await redis.del('xhh:bh3:current_abyss_manual');
+      await redis.del('HoYoGet:bh3:current_abyss_manual');
       return null;
     }
     return info;

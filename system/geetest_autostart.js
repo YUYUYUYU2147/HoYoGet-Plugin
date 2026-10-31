@@ -26,7 +26,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const SERVICE_DIR = path.join(ROOT, 'service', 'geetest')
 const VENV_DIR = path.join(SERVICE_DIR, '.venv')
 const SERVER_PY = path.join(SERVICE_DIR, 'server.py')
-const PM2_NAME = 'xhh-geetest-solver'
+const PM2_NAME = 'HoYoGet-geetest-solver'
 const IS_WIN = process.platform === 'win32'
 
 const RETRY_GAP = 5 * 60 * 1000

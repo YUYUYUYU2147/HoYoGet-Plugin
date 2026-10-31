@@ -309,14 +309,14 @@ git fetch origin && git checkout -B v3 origin/v3 && git pull && pnpm i
 服务只监听 `127.0.0.1`，不对外暴露。过码服务地址可在 `config.yaml` 的 `auto_verify_addr` 改；
 显式配成空字符串则视为「没装」，自动过码整段跳过，只留手动。
 
-服务由 pm2 托管，进程名 `xhh-geetest-solver`。终端里查看与管理：
+服务由 pm2 托管，进程名 `HoYoGet-geetest-solver`。终端里查看与管理：
 
 ```bash
 pm2 list                                        # 全部进程列表
-pm2 describe xhh-geetest-solver                # 这个进程的详情、脚本路径、重启次数
-pm2 logs xhh-geetest-solver --lines 50 --nostream   # 看日志最后 50 行
-pm2 restart xhh-geetest-solver --update-env    # 改完配置重启
-pm2 delete xhh-geetest-solver                  # 停掉并从列表移除
+pm2 describe HoYoGet-geetest-solver                # 这个进程的详情、脚本路径、重启次数
+pm2 logs HoYoGet-geetest-solver --lines 50 --nostream   # 看日志最后 50 行
+pm2 restart HoYoGet-geetest-solver --update-env    # 改完配置重启
+pm2 delete HoYoGet-geetest-solver                  # 停掉并从列表移除
 ```
 
 用不到 pm2 时的排查：
@@ -330,7 +330,7 @@ curl -s http://127.0.0.1:2149/health            # 探活，返回 {"ok":true,...
 会出现「一份进程的应答被另一份误认作自身」的现象，此类故障极难定位。
 
 若 `#过码服务状态` 提示「服务在跑但不在本插件进程表里」，说明是旧版本部署或手动启动（nohup / start /b）遗留的进程：
-执行 `pm2 delete xhh-geetest-solver` 后重发 `#过码部署` 即可接管。
+执行 `pm2 delete HoYoGet-geetest-solver` 后重发 `#过码部署` 即可接管。
 
 完整说明见 [`service/geetest/README.md`](service/geetest/README.md)。
 
@@ -368,7 +368,7 @@ curl -s http://127.0.0.1:2149/health            # 探活，返回 {"ok":true,...
 - **验证页由插件自己提供**，不经过第三方打码平台
 - 链接有效期 120 秒（写在代码里 `MANUAL_GT_TIMEOUT`），超时自动作废
 - 同时只会有一条任务在等，重复撞码共用同一个 key
-- 链接形如 `<公网地址>/xhh-gt/<8位随机码>`，例如 `https://xxx.trycloudflare.com/xhh-gt/b1ef510e`
+- 链接形如 `<公网地址>/HoYoGet-gt/<8位随机码>`，例如 `https://xxx.trycloudflare.com/HoYoGet-gt/b1ef510e`
 - 验证页默认每 120 秒自动清理一次（每天 4:20 定时），不会堆积
 
 ### 配置项
@@ -378,7 +378,7 @@ curl -s http://127.0.0.1:2149/health            # 探活，返回 {"ok":true,...
 | `XHH_MANUAL_GT_PUBLIC_URL` 环境变量 | `''` | 公网访问地址；留空则由插件拉 cloudflared 临时隧道自动获取 |
 
 监听地址、端口、路径前缀、链接有效期这几项目前**写死在 `system/manual_geetest.js` 里**，
-没有对应的配置项：`127.0.0.1` / `8080` / `/xhh-gt` / 120 秒。
+没有对应的配置项：`127.0.0.1` / `8080` / `/HoYoGet-gt` / 120 秒。
 要改的话直接改那几行常量后重载插件。监听地址请保持 `127.0.0.1`，
 改成 `0.0.0.0` 会把验证页暴露到公网。
 
@@ -390,7 +390,7 @@ export XHH_MANUAL_GT_PUBLIC_URL='https://你的域名'
 ### 四种部署方式
 
 **A. 什么都不配（仅本机浏览器可用）**
-所有配置保持默认，链接是 `http://127.0.0.1:<port>/xhh-gt/<码>`。
+所有配置保持默认，链接是 `http://127.0.0.1:<port>/HoYoGet-gt/<码>`。
 只在跑云崽的这台机器上用浏览器打开即可；手机、其它人打不开。
 
 **B. 插件自动拉 cloudflared 临时隧道（最便捷）**
@@ -472,9 +472,9 @@ docker run -v /usr/local/bin/cloudflared:/usr/local/bin/cloudflared:ro ...
 
 日志会依次出现：
 ```
-[xhh][manual_gt] 使用 cloudflared：/usr/local/bin/cloudflared
-[xhh][manual_gt] 已拉起 cloudflared（pid=xxxx，端口见日志）
-[xhh][manual_gt] 临时公网地址：https://xxx.trycloudflare.com（重启后地址会变）
+[HoYoGet][manual_gt] 使用 cloudflared：/usr/local/bin/cloudflared
+[HoYoGet][manual_gt] 已拉起 cloudflared（pid=xxxx，端口见日志）
+[HoYoGet][manual_gt] 临时公网地址：https://xxx.trycloudflare.com（重启后地址会变）
 ```
 地址会缓存复用，直到云崽重启。适合个人使用、撞码不频繁的场景。
 若日志显示「未找到 cloudflared」，说明插件未在 PATH 中检索到该二进制：
@@ -485,10 +485,10 @@ docker run -v /usr/local/bin/cloudflared:/usr/local/bin/cloudflared:ro ...
 REPO=/path/to/TRSS-Yunzai                  # 换成你的云崽根目录
 sudo cp $REPO/plugins/HoYoGet-Plugin/tools/manual_gt_tunnel.sh /usr/local/bin/
 sudo chmod +x /usr/local/bin/manual_gt_tunnel.sh
-sudo cp $REPO/plugins/HoYoGet-Plugin/tools/xhh-gt-tunnel.service /etc/systemd/system/
+sudo cp $REPO/plugins/HoYoGet-Plugin/tools/HoYoGet-gt-tunnel.service /etc/systemd/system/
 # 记得把 service 里 ExecStart 的端口改成手动过码实际监听的端口（默认 8080）
 sudo systemctl daemon-reload
-sudo systemctl enable --now xhh-gt-tunnel
+sudo systemctl enable --now HoYoGet-gt-tunnel
 ```
 - 隧道常驻（占用约 24MB 内存），`Restart=always` 掉线自动重连
 - 实际地址写入 `<仓库>/plugins/HoYoGet-Plugin/data/manual_gt_url`（可用 `URL_FILE` 环境变量改路径），插件自动读取
@@ -497,15 +497,15 @@ sudo systemctl enable --now xhh-gt-tunnel
 
 常用命令：
 ```bash
-systemctl status xhh-gt-tunnel        # 看状态
-systemctl restart xhh-gt-tunnel       # 重启（会换新地址）
+systemctl status HoYoGet-gt-tunnel        # 看状态
+systemctl restart HoYoGet-gt-tunnel       # 重启（会换新地址）
 cat <仓库>/plugins/HoYoGet-Plugin/data/manual_gt_url
 ```
 
 **D. 固定地址（最稳定，强烈建议生产用）**
 自建 Cloudflare Named Tunnel / frp / Nginx 反代 / VPS，然后把固定域名填进环境变量：
 ```bash
-export XHH_MANUAL_GT_PUBLIC_URL='https://xhh-gt.你的域名'
+export XHH_MANUAL_GT_PUBLIC_URL='https://HoYoGet-gt.你的域名'
 ```
 插件会优先用它，且**不会**再自动拉隧道，也没有地址变动问题。
 
@@ -526,7 +526,7 @@ export XHH_MANUAL_GT_PUBLIC_URL='https://xhh-gt.你的域名'
 
 | 现象 | 原因与处理 |
 | --- | --- |
-| 链接打不开（530） | trycloudflare 是临时域名，隧道进程挂了域名就失效。方案 C 用 `systemctl restart xhh-gt-tunnel` 换地址；方案 D 不受影响 |
+| 链接打不开（530） | trycloudflare 是临时域名，隧道进程挂了域名就失效。方案 C 用 `systemctl restart HoYoGet-gt-tunnel` 换地址；方案 D 不受影响 |
 | 日志「未找到 cloudflared」 | 当前环境没有该二进制（常见于容器/沙箱/精简系统）。装一个，或改用方案 C/D |
 | 手机打不开、只有本机能开 | 还没有公网地址。执行方案 B / C / D 任一即可 |
 | 容器部署不生效 | `systemctl` 在宿主、云崽在容器，两者不通。`tools/manual_gt_tunnel.sh` 要在**云崽所在环境**里跑，且要能访问到 `127.0.0.1:8080` |
@@ -563,7 +563,7 @@ export XHH_MANUAL_GT_PUBLIC_URL='https://xhh-gt.你的域名'
 ## 贡献与反馈
 
 - **报 Bug / 提需求**：开 Issue，附上「云崽版本 + 适配器（NapCat/LLOneBot…）+ 触发指令 + 完整报错日志」
-- **指令无反应 / 出不来图**：先把 `config.yaml` 的 `debug` 改成 `true` 再复现，日志里 `[xhh][...]` 开头的行最有价值
+- **指令无反应 / 出不来图**：先把 `config.yaml` 的 `debug` 改成 `true` 再复现，日志里 `[HoYoGet][...]` 开头的行最有价值
 - **指令被别的插件抢走**：见[常见问题](#指令被其他插件抢占)，云崽里**优先级数字越小越先执行**，可在 `config.yaml` 调小对应 `*_priority`
 - **二次开发**：fork 后向 `v3` 分支提 PR；改动前先看 `apps/` 里同名模块的既有风格
 

@@ -18,6 +18,7 @@ import { fileURLToPath } from 'node:url'
 import { mhy, render, pluginPriority, makeForwardMsg } from '#HoYoGet'
 import { appendTaskRecords } from '../../system/task_history.js'
 import { guardModuleByFile } from '../../system/modules.js'
+import { getEventNoteUser } from '../../system/genshin_loader.js'
 
 // ESM 作用域没有 __dirname，按仓库既有写法（apps/custom_guide.js）从 import.meta 取
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -92,9 +93,10 @@ function getWorkshopBindFile(qq) {
 
 async function getUserAuth(e) {
   const qq = e.user_id
-  const uid = e.user?.getUid?.('zzz')
-  if (!uid) return { error: '请先用 genshin 侧绑定绝区零账号，再更新抽卡记录' }
-  const cookies = [...new Set([e.cookie, e.user?.getMysUser?.('zzz')?.ck].map(v => String(v || '').trim()).filter(Boolean))]
+  const user = await getEventNoteUser(e)
+  const uid = user?.getUid?.('zzz') || ''
+  if (!uid) return { error: '未找到绑定的绝区零账号，请先 #米哈游扫码绑定' }
+  const cookies = [...new Set([e.cookie, user?.getMysUser?.('zzz')?.ck].map(v => String(v || '').trim()).filter(Boolean))]
   try {
     // 动态 import：genshin 版本较旧时可能没有 model/mys/mysInfo.js，
     // 静态 import 会让整个插件 ERR_MODULE_NOT_FOUND 而加载失败（见 sr_gacha.js 顶部说明）
@@ -107,7 +109,7 @@ async function getUserAuth(e) {
     }
   } catch {}
   const list = [...new Set(cookies.filter(Boolean))]
-  if (!list.length) return { error: '请先用 genshin 侧绑定绝区零账号，再更新抽卡记录' }
+  if (!list.length) return { error: '未找到绑定的绝区零账号，请先 #米哈游扫码绑定' }
   return { qq, uid, cookies: list }
 }
 
@@ -1124,7 +1126,7 @@ export class zzz_gacha extends plugin {
         lang: 'zh-cn',
         uigf_version: 'v2.3',
         export_time: formatNow(),
-        export_app: 'xhh',
+        export_app: 'HoYoGet',
       },
       list,
     }
