@@ -72,7 +72,14 @@ function dedupeByVersion(posts = []) {
     const day = Math.floor(Number(post?.created_at || 0) / 86400);
     const key = ver ? `v${ver[1]}` : `d${day}`;
     const exist = groups.get(key);
-    if (!exist || Number(post.created_at || 0) > Number(exist.created_at || 0)) {
+    /* 同一期官方常同时发「前瞻特别节目」（纯文字）与「…回顾长图」（带图），
+       只按时间取最新会选到纯文字那条，用户就只能拿到几行摘要 */
+    const LOOKS_IMAGE_RE = /(回顾|长图|总汇|汇总|一览)/;
+    const existImg = exist ? LOOKS_IMAGE_RE.test(String(exist.subject || "")) : false;
+    const curImg = LOOKS_IMAGE_RE.test(String(post.subject || ""));
+    if (!exist
+      || (curImg && !existImg)
+      || (curImg === existImg && Number(post.created_at || 0) > Number(exist.created_at || 0))) {
       groups.set(key, post);
     }
   }
@@ -134,7 +141,12 @@ async function fetchPostFull(post = {}, gids = 1) {
     const url = `${POST_FULL_API}?gids=${encodeURIComponent(gids)}&read=1&post_id=${encodeURIComponent(post.post_id)}`;
     const res = await mhyFetch(url, { headers }).then(r => r.json());
     const full = res?.data?.post?.post || res?.data?.post || {};
-    const imgs = (full.images?.length ? full.images : post.images) || [];
+    let imgs = (full.images?.length ? full.images : post.images) || [];
+    /* 部分帖子 images 为空，图片只写在正文 HTML 里，这里兜底提取一遍 */
+    if (!imgs.length) {
+      const html = String(full.content || full.structured_content || "");
+      imgs = [...new Set([...html.matchAll(/https:\/\/[^"\s>]+?\.(?:jpg|jpeg|png|webp)/g)].map(m => m[0]))];
+    }
     /* upload-bbs.miyoushe.com 在机房出口连不上，同路径的 upload-bbs.mihoyo.com 可直连 */
     return { ...post, ...full, images: imgs.map(u => String(u || "").replace("upload-bbs.miyoushe.com", "upload-bbs.mihoyo.com")) };
   } catch (err) {
