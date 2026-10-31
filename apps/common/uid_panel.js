@@ -275,6 +275,13 @@ async function fillProfiles(games, e, stoken, noteUser) {
       logger.debug?.('[HoYoGet][uid] 取资料失败：' + (err?.message || err));
     }
     if (avatar) item.faceUrl = avatar;
+    /* 联网拿不到头像时，复用 genshin 面板已缓存到 redis 的头像 URL */
+    if (!avatar) {
+      try {
+        const cached = await redis.get('Yz:genshin:uidFaceUrl:' + row.game.key + ':' + uid);
+        if (cached) avatar = cached;
+      } catch (_) {}
+    }
     saveProfile(row.game.key, uid, avatar);
   }
 }
