@@ -472,9 +472,9 @@ docker run -v /usr/local/bin/cloudflared:/usr/local/bin/cloudflared:ro ...
 
 日志会依次出现：
 ```
-[xhh][manual_gt] 使用 cloudflared：/usr/local/bin/cloudflared
-[xhh][manual_gt] 已拉起 cloudflared（pid=xxxx，端口见日志）
-[xhh][manual_gt] 临时公网地址：https://xxx.trycloudflare.com（重启后地址会变）
+[HoYoGet][manual_gt] 使用 cloudflared：/usr/local/bin/cloudflared
+[HoYoGet][manual_gt] 已拉起 cloudflared（pid=xxxx，端口见日志）
+[HoYoGet][manual_gt] 临时公网地址：https://xxx.trycloudflare.com（重启后地址会变）
 ```
 地址会缓存复用，直到云崽重启。适合个人使用、撞码不频繁的场景。
 若日志显示「未找到 cloudflared」，说明插件未在 PATH 中检索到该二进制：
@@ -485,10 +485,10 @@ docker run -v /usr/local/bin/cloudflared:/usr/local/bin/cloudflared:ro ...
 REPO=/path/to/TRSS-Yunzai                  # 换成你的云崽根目录
 sudo cp $REPO/plugins/HoYoGet-Plugin/tools/manual_gt_tunnel.sh /usr/local/bin/
 sudo chmod +x /usr/local/bin/manual_gt_tunnel.sh
-sudo cp $REPO/plugins/HoYoGet-Plugin/tools/xhh-gt-tunnel.service /etc/systemd/system/
+sudo cp $REPO/plugins/HoYoGet-Plugin/tools/HoYoGet-gt-tunnel.service /etc/systemd/system/
 # 记得把 service 里 ExecStart 的端口改成手动过码实际监听的端口（默认 8080）
 sudo systemctl daemon-reload
-sudo systemctl enable --now xhh-gt-tunnel
+sudo systemctl enable --now HoYoGet-gt-tunnel
 ```
 - 隧道常驻（占用约 24MB 内存），`Restart=always` 掉线自动重连
 - 实际地址写入 `<仓库>/plugins/HoYoGet-Plugin/data/manual_gt_url`（可用 `URL_FILE` 环境变量改路径），插件自动读取
@@ -497,15 +497,15 @@ sudo systemctl enable --now xhh-gt-tunnel
 
 常用命令：
 ```bash
-systemctl status xhh-gt-tunnel        # 看状态
-systemctl restart xhh-gt-tunnel       # 重启（会换新地址）
+systemctl status HoYoGet-gt-tunnel        # 看状态
+systemctl restart HoYoGet-gt-tunnel       # 重启（会换新地址）
 cat <仓库>/plugins/HoYoGet-Plugin/data/manual_gt_url
 ```
 
 **D. 固定地址（最稳定，强烈建议生产用）**
 自建 Cloudflare Named Tunnel / frp / Nginx 反代 / VPS，然后把固定域名填进环境变量：
 ```bash
-export XHH_MANUAL_GT_PUBLIC_URL='https://xhh-gt.你的域名'
+export XHH_MANUAL_GT_PUBLIC_URL='https://HoYoGet-gt.你的域名'
 ```
 插件会优先用它，且**不会**再自动拉隧道，也没有地址变动问题。
 
@@ -526,7 +526,7 @@ export XHH_MANUAL_GT_PUBLIC_URL='https://xhh-gt.你的域名'
 
 | 现象 | 原因与处理 |
 | --- | --- |
-| 链接打不开（530） | trycloudflare 是临时域名，隧道进程挂了域名就失效。方案 C 用 `systemctl restart xhh-gt-tunnel` 换地址；方案 D 不受影响 |
+| 链接打不开（530） | trycloudflare 是临时域名，隧道进程挂了域名就失效。方案 C 用 `systemctl restart HoYoGet-gt-tunnel` 换地址；方案 D 不受影响 |
 | 日志「未找到 cloudflared」 | 当前环境没有该二进制（常见于容器/沙箱/精简系统）。装一个，或改用方案 C/D |
 | 手机打不开、只有本机能开 | 还没有公网地址。执行方案 B / C / D 任一即可 |
 | 容器部署不生效 | `systemctl` 在宿主、云崽在容器，两者不通。`tools/manual_gt_tunnel.sh` 要在**云崽所在环境**里跑，且要能访问到 `127.0.0.1:8080` |
@@ -563,7 +563,7 @@ export XHH_MANUAL_GT_PUBLIC_URL='https://xhh-gt.你的域名'
 ## 贡献与反馈
 
 - **报 Bug / 提需求**：开 Issue，附上「云崽版本 + 适配器（NapCat/LLOneBot…）+ 触发指令 + 完整报错日志」
-- **指令无反应 / 出不来图**：先把 `config.yaml` 的 `debug` 改成 `true` 再复现，日志里 `[xhh][...]` 开头的行最有价值
+- **指令无反应 / 出不来图**：先把 `config.yaml` 的 `debug` 改成 `true` 再复现，日志里 `[HoYoGet][...]` 开头的行最有价值
 - **指令被别的插件抢走**：见[常见问题](#指令被其他插件抢占)，云崽里**优先级数字越小越先执行**，可在 `config.yaml` 调小对应 `*_priority`
 - **二次开发**：fork 后向 `v3` 分支提 PR；改动前先看 `apps/` 里同名模块的既有风格
 
