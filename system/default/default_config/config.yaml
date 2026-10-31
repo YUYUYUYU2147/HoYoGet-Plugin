@@ -57,6 +57,8 @@ zzz_panel_bg_url: 'https://api.yppp.net/api.php'
 # 只影响单角色长图（#米哈游xx面板 <角色> / 米游社xx面板），总览列表不受影响。
 # 每次出图现读，改完即生效；默认配置只给新装用户兜底，实际生效值看 config/config.yaml。
 panel_style: dark
+panel_service_gs: auto
+panel_service_sr: auto
 
 # 原神/星铁单角色面板的立绘来源（按顺序取，取到就用）：
 #   1. 咕咕牛管理器：miao-plugin/resources/profile/normal-character/<角色名>/（多张随机一张）
