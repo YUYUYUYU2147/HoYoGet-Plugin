@@ -1612,9 +1612,8 @@ export class HoYoGetGachaPool extends plugin {
         return;
       }
       await this.poolClearCooldown();
-      const lines = await this.syncLocalPoolsFromOfficial(results);
-      logger.mark(`[HoYoGet][gacha_pool] 卡池自动刷新完成：${results.map(r => `${r.game} ${r.records.length} 条`).join('，')}` +
-        (lines.length ? ` | ${lines.join(' | ')}` : ''));
+      await this.syncLocalPoolsFromOfficial(results);
+      logger.mark('[HoYoGet][gacha_pool] 卡池自动刷新完成');
     } catch (err) {
       logger.error('[HoYoGet][gacha_pool] 卡池自动刷新失败:', err);
     }

@@ -1067,6 +1067,32 @@ export const supportGuoba = () => {
         component: 'InputTextArea',
       },
       {
+        field: 'zzz_remind_enable',
+        label: '绝区零挑战提醒',
+        helpMessage: '式舆防卫战 / 危局强袭战未达标时私聊提醒；个人还需发「%开启挑战提醒」开启',
+        component: 'Switch',
+      },
+      {
+        field: 'zzz_remind_time',
+        label: '绝区零提醒时间',
+        helpMessage: '全局默认提醒时间，形如「每日20时」「每日20时30分」；个人可在群内单独设置',
+        component: 'Input',
+      },
+      {
+        field: 'zzz_remind_abyss_level',
+        label: '式舆防卫战达标层数',
+        helpMessage: '低于该层数视为未达标；默认 5',
+        component: 'InputNumber',
+        componentProps: { min: 0, max: 6, step: 1 },
+      },
+      {
+        field: 'zzz_remind_deadly_stars',
+        label: '危局强袭战达标星数',
+        helpMessage: '低于该星数视为未达标；默认 6',
+        component: 'InputNumber',
+        componentProps: { min: 0, max: 9, step: 1 },
+      },
+      {
         component: 'SOFT_GROUP_BEGIN',
         label: 'B站设置',
       },
@@ -1581,6 +1607,10 @@ export const supportGuoba = () => {
         bh3_remind_at_mode: bh3Remind.at_mode || 'none',
         bh3_remind_at_users: (bh3Remind.at_users || []).join(','),
         bh3_remind_image: bh3Remind.image || '',
+        zzz_remind_enable: cfg.zzz_remind_enable !== false,
+        zzz_remind_time: cfg.zzz_remind_time || '每日20时',
+        zzz_remind_abyss_level: cfg.zzz_remind_abyss_level ?? 5,
+        zzz_remind_deadly_stars: cfg.zzz_remind_deadly_stars ?? 6,
         activity_remind_enable: !!activityRemind.enable,
         activity_remind_hours_before: activityRemind.hours_before ?? 24,
         activity_remind_push_image: activityRemind.push_image !== false,
@@ -1664,6 +1694,7 @@ export const supportGuoba = () => {
         debug: data.debug,
         auto_reload: data.auto_reload,
         bh3_all_note_enable: data.bh3_all_note_enable,
+        zzz_remind_enable: data.zzz_remind_enable,
         forwardMsg: data.forwardMsg,
         bh3: data.bh3,
         by: data.by,
@@ -1892,6 +1923,9 @@ export const supportGuoba = () => {
       yaml.set(_path + 'config.yaml', 'abyss_report_zzz_shiyu_stages', String(data.abyss_report_zzz_shiyu_stages || '').trim())
       yaml.set(_path + 'config.yaml', 'abyss_report_zzz_shiyu_periods', String(data.abyss_report_zzz_shiyu_periods || 'last').trim())
       yaml.set(_path + 'config.yaml', 'abyss_report_zzz_deadly_periods', String(data.abyss_report_zzz_deadly_periods || 'last').trim())
+      if (data.zzz_remind_time != null) yaml.set(_path + 'config.yaml', 'zzz_remind_time', String(data.zzz_remind_time || '每日20时').trim())
+      if (data.zzz_remind_abyss_level != null) yaml.set(_path + 'config.yaml', 'zzz_remind_abyss_level', Number(data.zzz_remind_abyss_level) || 0)
+      if (data.zzz_remind_deadly_stars != null) yaml.set(_path + 'config.yaml', 'zzz_remind_deadly_stars', Number(data.zzz_remind_deadly_stars) || 0)
 
       const priorityFields = [
         'tl_priority', 'sign_priority', 'user_priority', 'wiki_priority',
