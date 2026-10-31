@@ -220,7 +220,13 @@ export async function mhyFetch(url, obj = {}) {
         return makeResponse(resp.ok, resp.status, text);
     }
     const via = await viaProxy(url, obj);
-    if (via) return via;
+    if (via) {
+        /* 记录两条通道的原始返回：机房 IP 上偶发「伪未登录」，只有直连与代理的返回码
+           才能区分是风控还是 ck 真的失效。 */
+        const viaText = await via.text();
+        globalThis.logger?.mark?.(`[HoYoGet][proxy] 直连 ${resp.status} ${String(text).slice(0, 120)} → 代理 ${String(viaText).slice(0, 160)}`);
+        return via;
+    }
     // 没有代理或代理也不行，如实把被拦的事实交回去，由 api_err 归类
     return makeResponse(resp.ok, resp.status, text);
 }

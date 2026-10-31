@@ -165,6 +165,13 @@ export class bh3_abyss extends plugin {
     let uid = await redis.get(`HoYoGet:bh3_uid:${qq}`);
     let region = uid ? await redis.get(`HoYoGet:bh3_region:${qq}`) : null;
     let ck = null;
+    /* 候选 ck 列表：与 Stoken 记录 stuid 配对的那条排第一，其它绑定账号只作备选。
+       record 接口要求 ck 与 uid 属于同一通行证，配对不上时换一条 ck 往往就能过。 */
+    const cks = [];
+    const pushCk = (v) => {
+      const s = String(v || '').trim();
+      if (s && !cks.includes(s)) cks.push(s);
+    };
 
     const stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${qq}.yaml`;
     if (fs.existsSync(stokenPath)) {
@@ -188,7 +195,8 @@ export class bh3_abyss extends plugin {
             const nu = await (await getNoteUser()).create(qq);
             for (const ltuid in nu.mysUsers || {}) {
               if (String(ltuid) === String(entry.stuid)) {
-                ck = nu.mysUsers[ltuid].ck;
+                ck = nu.mysUsers[ltuid]?.ck || null;
+                pushCk(ck);
                 break;
               }
             }
@@ -202,19 +210,19 @@ export class bh3_abyss extends plugin {
     }
     if (!region) region = 'cn_gf01';
 
-    if (!ck) {
+    /* 配对失败或没有 Stoken 记录时，退到该用户其余绑定账号的 ck 作备选 */
+    if (!cks.length) {
       try {
         const nu = await (await getNoteUser()).create(qq);
         for (const ltuid in nu.mysUsers || {}) {
-          if (nu.mysUsers[ltuid]?.ck) {
-            ck = nu.mysUsers[ltuid].ck;
-            break;
-          }
+          if (nu.mysUsers[ltuid]?.ck) pushCk(nu.mysUsers[ltuid].ck);
+          if (cks.length >= 3) break;
         }
       } catch (_) {}
     }
 
-    return { qq, uid, region, ck };
+    if (!ck) ck = cks[0] || null;
+    return { qq, uid, region, ck, cks };
   }
 
 async abyss(e) {
@@ -312,25 +320,43 @@ async abyss(e) {
 
   async _abyss(e, apiList) {
     const auth = await this.getAuth(e);
-    bh3Dbg('取号:', `qq=${auth.qq || e.user_id}`, `uid=${auth.uid || '(无)'}`, `region=${auth.region || '(无)'}`, `ck=${auth.ck ? '有' : '无'}`);
+    bh3Dbg('取号:', `qq=${auth.qq || e.user_id}`, `uid=${auth.uid || '(无)'}`, `region=${auth.region || '(无)'}`, `ck=${auth.ck ? '有' : '无'}`, `候选ck=${(auth.cks || []).length}`);
     if (!auth.uid) return sendMsg(e, '请先扫码绑定崩坏3账号');
     if (!auth.ck) return sendMsg(e, '未找到有效Cookie，请先扫码绑定');
 
-    const { uid, region, ck } = auth;
+    const { uid, region } = auth;
     bh3Dbg('查询目标:', apiList.map(v => v.label).join(' / '));
-    const headers = mhy.getHeaders(e, ck);
 
-    let indexRes;
-    try {
-      indexRes = await api(e, { type: 'bh3_index', uid, headers, game: 'bh3', server: region });
-    } catch (err) {
-      logger.error('[bh3_abyss] API error:', err);
-      return sendMsg(e, '查询失败，请稍后重试');
+    /* 同一 uid 轮换已绑定的 ck：扫码换号后各条 ck 的可用性并不一致，
+       只试第一条会表现成「扫码成功、查询仍报 Cookie失效」。 */
+    const ckList = (auth.cks && auth.cks.length ? auth.cks : [auth.ck]).filter(Boolean).slice(0, 3);
+    let indexRes = null;
+    let indexErr = '';
+    let hitHeaders = mhy.getHeaders(e, ckList[0]);
+    for (const cand of ckList) {
+      const candHeaders = mhy.getHeaders(e, cand);
+      let res;
+      try {
+        res = await api(e, { type: 'bh3_index', uid, headers: candHeaders, game: 'bh3', server: region, silent: true });
+      } catch (err) {
+        logger.error('[bh3_abyss] API error:', err);
+        return sendMsg(e, '查询失败，请稍后重试');
+      }
+      /* silent 时 api 层把错误消息当返回值交回来，只有成功才是响应对象 */
+      if (res && typeof res === 'object' && res.retcode === 0) {
+        indexRes = res;
+        hitHeaders = candHeaders;
+        break;
+      }
+      if (typeof res === 'string') indexErr = res;
+      const ckTag = (String(cand || '').match(/ltuid=([^;]+)/) || [])[1] || '无ltuid';
+      logger.mark(`[HoYoGet][bh3_abyss] index 失败 uid=${uid} retcode=${res?.retcode ?? '-'} message=${res?.message || indexErr || ''} ck=${ckTag} len=${String(cand || '').length}`);
     }
-    if (!indexRes || indexRes.retcode !== 0) {
-      bh3Dbg('bh3_index 失败:', `retcode=${indexRes?.retcode}`, `message=${indexRes?.message || ''}`);
-      return sendMsg(e, `UID${uid} 获取玩家信息失败`);
+    if (!indexRes) {
+      bh3Dbg('bh3_index 失败:', `message=${indexErr || ''}`);
+      return sendMsg(e, indexErr || `UID${uid} 获取玩家信息失败，请[刷新ck]或[扫码登录]后重试`);
     }
+    const headers = hitHeaders;
 
     const role = indexRes.data?.role || {};
     const level = Number(role.level || 0);
