@@ -35,23 +35,11 @@ export class zzz extends plugin {
         }
 
         if (!qq) qq = e.user_id
-        const nu = await (await getNoteUser()).create(qq)
+        let nu = null
+        try { nu = await (await getNoteUser()).create(qq) } catch (_) { }
         uid = nu?.getUid("zzz")
         ck = nu?.getMysUser("zzz")?.ck
-        /* TRSS 环境下 genshin 的 NoteUser 与 HoYoGet 的 Stoken 档案是两份数据，
-           [刷新ck] 只写 data/Stoken，改不到 NoteUser，指令继续用旧 ck 会报 -501002。
-           故优先取 Stoken 中按 uid 匹配的最新整串 cookie，取不到再回退 NoteUser。 */
-        try {
-            const _fs = (await import("node:fs")).default
-            const _YAML = (await import("yaml")).default
-            const _f = "./plugins/HoYoGet-Plugin/data/Stoken/" + qq + ".yaml"
-            if (_fs.existsSync(_f)) {
-                const _d = _YAML.parse(_fs.readFileSync(_f, "utf8")) || {}
-                const _l = Array.isArray(_d) ? _d : Object.values(_d)
-                const _h = _l.find(v => v && String(v.uid) === String(uid) && /nap/.test(String(v.game_biz || ""))) || _l.find(v => v && String(v.uid) === String(uid))
-                if (_h && _h.ck_stoken) ck = _h.ck_stoken
-            }
-        } catch (_) { }
+        ;({ uid, ck } = await resolveZzzCk(e, qq, uid, ck))
 
         if (!uid || !ck) return e.reply("请先扫码绑定账号！");
         
@@ -116,4 +104,43 @@ export class zzz extends plugin {
 
 
 
+}
+
+/**
+ * 统一解析绝区零 ck。
+ *
+ * 两类机器的 ck 存放位置不同：TRSS 上在 genshin 的 NoteUser，JiuLi 上在 HoYoGet 的 data/Stoken 存档，
+ * [刷新ck] 只写后者。这里按 Stoken 优先、现换 ck、20 分钟缓存的顺序取，没有 genshin 时也能走通。
+ */
+async function resolveZzzCk(e, qq, uid, ck) {
+    try {
+        const fs = (await import("node:fs")).default
+        const YAML = (await import("yaml")).default
+        const f = "./plugins/HoYoGet-Plugin/data/Stoken/" + qq + ".yaml"
+        if (!fs.existsSync(f)) return { uid, ck }
+        const d = YAML.parse(fs.readFileSync(f, "utf8")) || {}
+        const list = (Array.isArray(d) ? d : Object.values(d)).filter(v => v && typeof v === "object" && v.uid)
+        const same = uid ? list.filter(v => String(v.uid) === String(uid)) : []
+        const hit = same.find(v => /nap/.test(String(v.game_biz || ""))) || same[0]
+            || list.find(v => /nap/.test(String(v.game_biz || ""))) || null
+        if (!hit) return { uid, ck }
+        const nextUid = uid || hit.uid
+        const key = "zzz:" + qq + ":" + hit.uid
+        const cache = (globalThis.__hoyogetAutoCk = globalThis.__hoyogetAutoCk || new Map())
+        const old = cache.get(key)
+        if (old && Date.now() - old.at < 20 * 60 * 1000) return { uid: nextUid, ck: old.ck }
+        let next = ""
+        if (hit.stoken && hit.stuid) {
+            try {
+                const headers = mhy.getHeaders(e, hit.ck_stoken || "")
+                const r = await mhy.refresh_cookies(e, headers, hit.stoken, hit.stuid, { bindGenshinCookie: false })
+                next = r && r.ck ? r.ck : ""
+            } catch (_) { }
+        }
+        if (!next) next = hit.ck_stoken || ck || ""
+        if (next) cache.set(key, { ck: next, at: Date.now() })
+        return { uid: nextUid, ck: next }
+    } catch (_) {
+        return { uid, ck }
+    }
 }
