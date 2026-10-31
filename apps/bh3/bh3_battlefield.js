@@ -140,6 +140,15 @@ export class bh3_battlefield extends plugin {
       } catch (_) {}
     }
 
+    /* 扫码存下的是 stoken 形式凭证（stuid/stoken/mid），record 接口只认
+       ltoken + cookie_token，缺了必然报「未登录」，这里统一补一次。 */
+    if (ck && !/cookie_token=/.test(String(ck))) {
+      try {
+        const { ensureCookieToken } = await import('../common/TL.js');
+        const full = await ensureCookieToken(e, ck);
+        if (full && /cookie_token=/.test(full)) ck = full;
+      } catch (_) {}
+    }
     return { qq, uid, region, ck };
   }
 

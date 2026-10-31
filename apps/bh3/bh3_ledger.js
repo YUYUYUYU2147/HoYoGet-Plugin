@@ -263,6 +263,16 @@ export class bh3_ledger extends plugin {
                                 break;
                             }
                         }
+                        /* 扫码存下的是 stoken 形式凭证（stuid/stoken/mid，无 cookie_token），
+                           直接查 bh3-weekly_finance 一定是「未登录」，先换一次标准 cookie。 */
+                        if (entry.stoken && (!ck || !/cookie_token=/.test(String(ck)))) {
+                            try {
+                                const { ensureCookieToken } = await import('../common/TL.js');
+                                const base = ck || `stuid=${entry.stuid || ''};stoken=${entry.stoken};mid=${entry.mid || ''};`;
+                                const full = await ensureCookieToken(e, base, entry);
+                                if (full && /cookie_token=/.test(full)) ck = full;
+                            } catch (_) {}
+                        }
                         if (!ck && entry?.ck_stoken && entry?.stoken && entry?.stuid) {
                             let hdrs = mhy.getHeaders(e, entry.ck_stoken);
                             let result = await mhy.refresh_cookies(e, hdrs, entry.stoken, entry.stuid, { bindGenshinCookie: false });
