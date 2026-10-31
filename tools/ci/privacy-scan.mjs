@@ -48,8 +48,8 @@ function trackedFiles() {
 
 const RULES = [
   // 既覆盖 `cookie_token=xxx`，也覆盖对象字面量里的 `cookie_token: 'xxx'`
-  { name: 'Cookie 赋值', re: /\b(cookie_token|ltuid|ltoken_v2|account_mid_v2|stoken)\s*[:=]\s*['"][^'"]{6,}['"]/i },
-  { name: 'Cookie 字面量', re: /['"](cookie_token|ltoken_v2|account_mid_v2)\s*:\s*['"][^'"]{6,}['"]/i },
+  { name: 'Cookie 赋值', re: /\b(cookie_token|ltuid|ltoken_v2|account_mid_v2|stoken)\s*[:=]\s*['"][A-Za-z0-9+/=_.-]{6,}['"]/i },
+  { name: 'Cookie 字面量', re: /['"](cookie_token|ltoken_v2|account_mid_v2)\s*:\s*['"][A-Za-z0-9+/=_.-]{6,}['"]/i },
   { name: '疑似凭据', re: /\b(ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})\b/ },
   { name: '数据库连接串', re: /\b(mysql|postgres):\/\/[^\s'"`]+:[^\s'"`]+@/i },
 ]

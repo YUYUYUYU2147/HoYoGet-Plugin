@@ -10,11 +10,6 @@
   width: 4em;
   height: 4em;
   border-radius: 50%;
-  border-image: url("../images/SuitBg.png");
-  border-image-width: 0;
-  border-image-outset: 0.4em;
-  border-image-repeat: round;
-  border-image-slice: 1 fill;
   overflow: hidden;
 }
 .user-info .avatar img {
@@ -63,11 +58,6 @@
   background-color: rgb(81, 177, 253);
 }
 .user-info .info-bar .uid {
-  border-image: url("../images/UIDBg.png");
-  border-image-slice: 0 100 0 100 fill;
-  border-image-width: 0em 1.6em 0em 1.6em;
-  border-image-outset: 0;
-  border-image-repeat: stretch stretch;
   padding: 0.3em 1.6em;
   font-size: 0.9em;
   color: rgba(255, 255, 255, 0.6);
