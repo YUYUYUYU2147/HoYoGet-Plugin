@@ -355,6 +355,9 @@ function api_err(e, res, uid, type, silent) {
             if (!type.includes('sign')) msg = `${uid ? 'UID:' + uid : ''}米游社查询遇到验证码，${config().bdsb ? '暂时无法查询，可发送：设备帮助\n尝试绑定常用设备后查询！':'暂时无法查询！'}`
             else msg = '签到遇到验证码，暂时无法签到' //res.data.gt   res.data.challenge
             break;
+        case -501002:
+            msg = `米游社未公开该账号的游戏数据：请先[刷新ck]；若刷新后仍报此错，请到米游社-我的-设置里开启游戏数据公开`;
+            break;
         default:
             msg = '米游社接口异常...';
             logger.error(res);
