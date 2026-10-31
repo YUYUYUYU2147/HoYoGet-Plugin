@@ -345,7 +345,7 @@ export class uidPanel extends plugin {
       rule: [
         { reg: /^#(我的)?uid$/i, fnc: 'showUid' },
         { reg: /^[!！](我的)?uid$/i, fnc: 'showBh3Uid' },
-        { reg: /^[!！]uid[0-9]{1,2}$/i, fnc: 'switchBh3' },
+        { reg: /^[#!！]uid[0-9]{1,2}$/i, fnc: 'switchBh3' },
       ],
     });
   }
@@ -448,6 +448,7 @@ export class uidPanel extends plugin {
     const qq = String(e.at || e.user_id || '');
     await redis.set('HoYoGet:bh3_uid:' + qq, row.uid);
     if (row.region) await redis.set('HoYoGet:bh3_region:' + qq, row.region);
+    await redis.set('HoYoGet:bh3_manual:' + qq, '1');
     bh3Cache.delete(qq);
     return this.replyPanel({ list: bh3.list, current: row.uid });
   }
