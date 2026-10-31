@@ -19,7 +19,7 @@ const REGISTER_WINDOW_MS = 60 * 1000;
 const REGISTER_LIMIT = 20;
 const MANUAL_GT_HOST = '127.0.0.1';
 const MANUAL_GT_PORT = 8080;
-const MANUAL_GT_PATH = '/xhh-gt';
+const MANUAL_GT_PATH = '/HoYoGet-gt';
 const MANUAL_GT_TIMEOUT = 120;
 
 // 后台隧道脚本（tools/manual_gt_tunnel.sh）会把实际地址写到文件里，插件读取它。
