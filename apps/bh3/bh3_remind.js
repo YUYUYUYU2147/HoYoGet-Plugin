@@ -236,7 +236,7 @@ export class bh3_remind extends plugin {
       if (!item.cron || !item.msg) continue;
       const due = this.getDueTime(item, now);
       if (!due) continue;
-      const dedupKey = `xhh:bh3_remind:sent:${item.key}:${Math.floor(due.pushTime.getTime() / 60000)}`;
+      const dedupKey = `HoYoGet:bh3_remind:sent:${item.key}:${Math.floor(due.pushTime.getTime() / 60000)}`;
       if (await redis.get(dedupKey)) continue;
       logger.mark(`[bh3_remind] 触发提醒 ${item.key || item.name} push=${fmtTime(due.pushTime)} event=${fmtTime(due.eventTime)} groups=${groups.join(',')}`);
 

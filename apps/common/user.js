@@ -621,12 +621,12 @@ export class user extends plugin {
                 name: v.region_name || v.region || '未知服务器',
             }));
         if (!accounts.length) return '';
-        const current = await redis.get(`xhh:bh3_uid:${e.user_id}`);
+        const current = await redis.get(`HoYoGet:bh3_uid:${e.user_id}`);
         let defaultText = '';
         if (!current) {
             const first = accounts[0];
-            await redis.set(`xhh:bh3_uid:${e.user_id}`, first.uid);
-            await redis.set(`xhh:bh3_region:${e.user_id}`, first.region);
+            await redis.set(`HoYoGet:bh3_uid:${e.user_id}`, first.uid);
+            await redis.set(`HoYoGet:bh3_region:${e.user_id}`, first.region);
             defaultText = `\n已自动设为默认水晶查询UID：${first.uid}（${first.name}）`;
         }
         const list = accounts.map((item, i) => `${i + 1}. ${item.uid}（${item.name}）`).join('\n');

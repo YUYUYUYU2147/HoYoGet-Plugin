@@ -676,12 +676,12 @@ export class meme extends plugin {
     const uid = e.user_id;
     const gid = e.group_id || e.user_id;
     try {
-      const last = await redis.get(`xhh:meme_cd:${gid}:${uid}`);
+      const last = await redis.get(`HoYoGet:meme_cd:${gid}:${uid}`);
       if (last) {
         await e.reply(`操作太频繁了，休息一下吧`, true);
         return true;
       }
-      await redis.set(`xhh:meme_cd:${gid}:${uid}`, 1, { EX: cd });
+      await redis.set(`HoYoGet:meme_cd:${gid}:${uid}`, 1, { EX: cd });
     } catch { }
     return false;
   }

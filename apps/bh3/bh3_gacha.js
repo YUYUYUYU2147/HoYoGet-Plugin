@@ -406,8 +406,8 @@ export class bh3_gacha extends plugin {
       if (msg.type === 'at') { qq = msg.qq; break; }
     }
 
-    let uid = await redis.get(`xhh:bh3_uid:${qq}`);
-    let region = uid ? await redis.get(`xhh:bh3_region:${qq}`) : null;
+    let uid = await redis.get(`HoYoGet:bh3_uid:${qq}`);
+    let region = uid ? await redis.get(`HoYoGet:bh3_region:${qq}`) : null;
     let stokenCookie = null;
     let ck = null;
 

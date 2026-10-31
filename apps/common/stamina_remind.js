@@ -212,7 +212,7 @@ function getThreshold(cfg, game) {
 }
 
 function staminaSwitchKey(groupId, qq, game) {
-  return `xhh:stamina_remind:enabled:${groupId}:${qq}:${game}`;
+  return `HoYoGet:stamina_remind:enabled:${groupId}:${qq}:${game}`;
 }
 
 async function getEnabledGames(groupId, qq) {
@@ -361,7 +361,7 @@ export class stamina_remind extends plugin {
         }
         const current = GAME_META[game].current(data);
         logger.debug?.(`[stamina_remind] ${GAME_META[game].name} 用户${qq} UID${uid}当前${GAME_META[game].label}：${current}，阈值：${threshold}`);
-        const stateKey = `xhh:stamina_remind:sent:${qq}:${game}:${uid}`;
+        const stateKey = `HoYoGet:stamina_remind:sent:${qq}:${game}:${uid}`;
         if (current >= threshold) {
           const sent = !force && await redis.get(stateKey);
           if (sent) {
@@ -391,7 +391,7 @@ export class stamina_remind extends plugin {
 
     const interval = Math.max(1, Math.min(60, Number(cfg.stamina_push_interval || 5)));
     const minute = Math.floor(Date.now() / 60000);
-    const dedupKey = `xhh:stamina_remind:check:${minute}`;
+    const dedupKey = `HoYoGet:stamina_remind:check:${minute}`;
     if (minute % interval !== 0 || await redis.get(dedupKey)) return;
     await redis.set(dedupKey, '1', { EX: Math.max(120, interval * 60) });
     logger.mark(`[stamina_remind] 开始检查，群：${groups.join(',')}，间隔：${interval}分钟`);

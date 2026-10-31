@@ -93,8 +93,8 @@ async function hasXhhBh3Stoken(qq) {
 async function getBh3SignTargets(e) {
     const qq = e.user_id;
     const data = getStokenData(qq);
-    const selectedUid = await redis.get(`xhh:bh3_uid:${qq}`);
-    const selectedRegion = selectedUid ? await redis.get(`xhh:bh3_region:${qq}`) : null;
+    const selectedUid = await redis.get(`HoYoGet:bh3_uid:${qq}`);
+    const selectedRegion = selectedUid ? await redis.get(`HoYoGet:bh3_region:${qq}`) : null;
     const targets = [];
     const add = async (uid, entry = {}) => {
         if (!uid || !entry?.stuid || !entry?.stoken) return;
@@ -1002,7 +1002,7 @@ async function bbsDailyTasks(e, account) {
 function bbsCacheKey(e, account) {
     const d = new Date();
     const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    return `xhh:bbs_sign:${day}:${e.user_id}:${account.stuid || '0'}`;
+    return `HoYoGet:bbs_sign:${day}:${e.user_id}:${account.stuid || '0'}`;
 }
 
 async function bbsSignedToday(e, account) {
@@ -1792,13 +1792,13 @@ async function replyBbsResultImage(e, msgs, lines) {
 }
 
 async function reward(e, data) {
-    let rew = await redis.get(`xhh:sign:${data.game}`);
+    let rew = await redis.get(`HoYoGet:sign:${data.game}`);
     if (rew) return JSON.parse(rew);
     data.type = 'sign_home';
     const res = await api(e, data);
     if (!Array.isArray(res?.data?.awards)) return [];
     const time = getSecondsToMidnight();
-    await redis.set(`xhh:sign:${data.game}`, JSON.stringify(res.data.awards), {
+    await redis.set(`HoYoGet:sign:${data.game}`, JSON.stringify(res.data.awards), {
         EX: time,
     });
     return res.data.awards;

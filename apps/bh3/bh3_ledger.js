@@ -233,8 +233,8 @@ export class bh3_ledger extends plugin {
 
         if (!qq) qq = e.user_id;
 
-        const savedUid = await redis.get(`xhh:bh3_uid:${qq}`);
-        const savedRegion = savedUid ? await redis.get(`xhh:bh3_region:${qq}`) : null;
+        const savedUid = await redis.get(`HoYoGet:bh3_uid:${qq}`);
+        const savedRegion = savedUid ? await redis.get(`HoYoGet:bh3_region:${qq}`) : null;
         debugLog('[水晶] savedUid:', savedUid, 'savedRegion:', savedRegion);
 
         if (savedUid && savedRegion) {
@@ -405,12 +405,12 @@ export class bh3_ledger extends plugin {
 
         if (uidList.length === 0) return e.reply('没有找到已绑定的崩坏3账号');
 
-        const current = await redis.get(`xhh:bh3_uid:${qq}`);
+        const current = await redis.get(`HoYoGet:bh3_uid:${qq}`);
         const num = parseInt(e.msg.replace(/^#*切换水晶uid\s*/, '').trim());
         if (!isNaN(num) && num > 0 && num <= uidList.length) {
             const idx = num - 1;
-            await redis.set(`xhh:bh3_uid:${qq}`, uidList[idx].uid);
-            await redis.set(`xhh:bh3_region:${qq}`, uidList[idx].region);
+            await redis.set(`HoYoGet:bh3_uid:${qq}`, uidList[idx].uid);
+            await redis.set(`HoYoGet:bh3_region:${qq}`, uidList[idx].region);
             return this.renderSwitchUidCard(e, uidList, uidList[idx].uid, { mode: 'switch', account: uidList[idx] });
         }
 
@@ -422,21 +422,21 @@ export class bh3_ledger extends plugin {
         const qq = e.user_id;
         const arg = e.msg.replace(/^#*删除水晶uid\s*/, '').trim();
         const stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${qq}.yaml`;
-        const current = await redis.get(`xhh:bh3_uid:${qq}`);
-        const currentRegion = await redis.get(`xhh:bh3_region:${qq}`);
+        const current = await redis.get(`HoYoGet:bh3_uid:${qq}`);
+        const currentRegion = await redis.get(`HoYoGet:bh3_region:${qq}`);
         const { data: stokenData, uidList } = await this.loadBh3UidList(qq);
 
         if (/^(全部|全删|清空|all)$/i.test(arg)) {
             if (!uidList.length) {
-                await redis.del(`xhh:bh3_uid:${qq}`);
-                await redis.del(`xhh:bh3_region:${qq}`);
+                await redis.del(`HoYoGet:bh3_uid:${qq}`);
+                await redis.del(`HoYoGet:bh3_region:${qq}`);
                 return this.renderSwitchUidCard(e, [], '', { mode: 'delete_empty' });
             }
             for (const item of uidList) delete stokenData[item.uid];
             await this.writeStokenFile(stokenPath, stokenData);
             await this.deleteBh3FromXiaoyao(qq, uidList.map(v => v.uid));
-            await redis.del(`xhh:bh3_uid:${qq}`);
-            await redis.del(`xhh:bh3_region:${qq}`);
+            await redis.del(`HoYoGet:bh3_uid:${qq}`);
+            await redis.del(`HoYoGet:bh3_region:${qq}`);
             return this.renderSwitchUidCard(e, [], '', { mode: 'delete_all', deletedCount: uidList.length });
         }
 
@@ -450,8 +450,8 @@ export class bh3_ledger extends plugin {
             await this.writeStokenFile(stokenPath, stokenData);
             await this.deleteBh3FromXiaoyao(qq, [target.uid]);
             if (String(current) === String(target.uid)) {
-                await redis.del(`xhh:bh3_uid:${qq}`);
-                await redis.del(`xhh:bh3_region:${qq}`);
+                await redis.del(`HoYoGet:bh3_uid:${qq}`);
+                await redis.del(`HoYoGet:bh3_region:${qq}`);
             }
             const rest = uidList.filter(v => String(v.uid) !== String(target.uid));
             return this.renderSwitchUidCard(e, rest, String(current) === String(target.uid) ? '' : current, {
@@ -460,8 +460,8 @@ export class bh3_ledger extends plugin {
             });
         }
 
-        await redis.del(`xhh:bh3_uid:${qq}`);
-        await redis.del(`xhh:bh3_region:${qq}`);
+        await redis.del(`HoYoGet:bh3_uid:${qq}`);
+        await redis.del(`HoYoGet:bh3_region:${qq}`);
         if (!current) return this.renderSwitchUidCard(e, uidList, '', { mode: 'delete_empty' });
         return this.renderSwitchUidCard(e, uidList, '', {
             mode: 'delete',
