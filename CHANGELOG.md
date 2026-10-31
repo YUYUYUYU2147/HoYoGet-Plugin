@@ -16,6 +16,11 @@
 | 修复 | **`meme_category 未导出插件类` 报错** —— 纯函数模块被 `apps/` 当作插件扫描，已移至插件根目录 | 启动日志 |
 | 修复 | **验证码服务热重载后报 EADDRINUSE** —— 监听前回收同端口的既有服务，热重载不再中断验证码服务 | `#米哈游手动验证码服务自测` |
 | 优化 | **验证码服务路径与隧道服务改名** —— `/xhh-gt` 改为 `/HoYoGet-gt`，`xhh-gt-tunnel` 改为 `HoYoGet-gt-tunnel` | 验证码链接、systemd 部署 |
+| 修复 | **`#崩三水晶` 报 `{"retcode":-100,"message":"未登录"}`** —— 扫码写入的 ck 只有 `stuid`，缺 `ltuid`/`account_id`，米游社按通行证 uid 识别账号，缺该键即判未登录；鉴权前按 stuid 自动补齐 | `#崩三水晶` |
+| 修复 | **`母带` 恒提示「请先扫码绑定账号」** —— 本人发送时未调用 `getNoteUser()`，`e.user` 为空导致 uid/ck 取不到；改为始终按 QQ 构造 NoteUser 取绑定 | `母带` |
+| 修复 | **`母带` 昵称/等级显示「未知」并误报「Cookie失效」** —— 原走 `GameRoles`（`api-takumi.miyoushe.com` 的 `getUserGameRolesByStoken`，社区版接口不认客户端请求头）返回 -100 被映射成 Cookie 失效；改走 `getUserGameRolesByCookie`（只认 Cookie、不需要 DS），实测可返回昵称与等级 | `母带` |
+| 优化 | **风控伪装成「未登录」时自动切代理** —— `-100` 纳入 `PROXY_RETCODES`，与 10041 / 1034 / 10035 / 5003 一样触发一次米游社代理重试 | 全部米游社请求 |
+| 优化 | **移除 `#崩三水晶` 调试日志** —— 鉴权与账本流程中的 `debugLog` 埋点及函数本身全部删除，日志不再刷屏 | `#崩三水晶` |
 
 更新日期2026年10月19日
 
