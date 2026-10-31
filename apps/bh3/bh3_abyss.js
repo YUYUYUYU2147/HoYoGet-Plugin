@@ -196,12 +196,23 @@ export class bh3_abyss extends plugin {
             for (const ltuid in nu.mysUsers || {}) {
               if (String(ltuid) === String(entry.stuid)) {
                 ck = nu.mysUsers[ltuid]?.ck || null;
-                pushCk(ck);
                 break;
               }
             }
           } catch (_) {}
         }
+        /* 扫码保存的凭证是 stoken 形式（stuid/stoken/mid），record 接口只认
+           ltoken + cookie_token：缺 cookie_token 时会一直报「未登录」，扫码也救不回来。
+           这里先用 stoken 换一次标准 cookie，换不到才退回原串。 */
+        if (entry.stoken) {
+          try {
+            const base = ck || `stuid=${entry.stuid || ''};stoken=${entry.stoken};mid=${entry.mid || ''};`;
+            const { ensureCookieToken } = await import('../common/TL.js');
+            const full = await ensureCookieToken(e, base, entry);
+            if (full && /cookie_token=/.test(full)) ck = full;
+          } catch (_) {}
+        }
+        pushCk(ck);
       }
     }
 
