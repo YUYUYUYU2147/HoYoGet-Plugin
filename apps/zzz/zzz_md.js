@@ -44,8 +44,12 @@ export class zzz extends plugin {
         //获取headers
 
         //扫码得到的 ck 只带 stuid，米游社按通行证 uid 识别账号，缺 ltuid 会被判未登录
-        const ckStuid = (String(ck).match(/(?:^|;)\s*stuid=(\d+)/) || [])[1]
-        if (ckStuid && !/(?:^|;)\s*ltuid=/.test(ck)) ck += (ck.endsWith(";") ? "" : ";") + "ltuid=" + ckStuid + ";"
+        const withLtuid = (cookie) => {
+            const id = (String(cookie).match(/(?:^|;)\s*stuid=(\d+)/) || [])[1]
+            if (!id || /(?:^|;)\s*ltuid=/.test(cookie)) return cookie
+            return cookie + (cookie.endsWith(";") ? "" : ";") + "ltuid=" + id + ";"
+        }
+        ck = withLtuid(ck)
         let headers = mhy.getHeaders(e, ck);
 
         let data = {
@@ -63,8 +67,9 @@ export class zzz extends plugin {
         if (!data?.tickets) return logger.mark('未找到母带数据')
 
         let fldp = 0, fl = 0, jmmd = 0, md = 0, bb = 0, level = '未知', name = '未知'
-        let sk = await mhy.getstoken(e, uid);
+        let sk = await mhy.getstoken({ user_id: qq }, uid);
         if (sk) {
+            sk = withLtuid(sk)
             headers = mhy.getHeaders(e, sk);
             res = await api(e, {
                 type: 'GameRoles',
