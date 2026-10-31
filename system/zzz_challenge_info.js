@@ -24,10 +24,10 @@ async function getZzzAuth(e) {
     ck = nu.getMysUser('zzz')?.ck || '';
   } catch (_) {}
   if (!uid && e?.user?.getUid) {
-    try { uid = e.user.getUid('zzz'); } catch (_) {}
+    try { uid = e.user?.getUid('zzz'); } catch (_) {}
   }
   if (!ck && e?.user?.getMysUser) {
-    try { ck = e.user.getMysUser('zzz')?.ck || ''; } catch (_) {}
+    try { ck = e.user?.getMysUser('zzz')?.ck || ''; } catch (_) {}
   }
   const region = uid ? mhy.getServer(uid, 'zzz') : 'cn_gf01';
   return { qq, uid, region, ck };

@@ -552,7 +552,7 @@ export class TL extends plugin {
 
   //体力
   async note(e, game = 'gs', san = true, uidOverride = '') {
-    let uid = uidOverride || e.user.getUid(game);
+    let uid = uidOverride || e.user?.getUid(game);
 
     if (!uid) {
       const biz = { gs: 'hk4e_cn', sr: 'hkrpg_cn', zzz: 'nap_cn', bh3: 'bh3_cn' }[game];

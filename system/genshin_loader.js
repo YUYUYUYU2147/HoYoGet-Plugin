@@ -91,7 +91,7 @@ export function makeGenshinLoader(tag, relPaths, named = null) {
  * @returns {Promise<object|null>} 绑定对象；取不到时返回原 e.user（可能为 undefined）
  */
 export async function getEventNoteUser(e) {
-  if (e?.user && typeof e.user.getUid === 'function') return e.user
+  if (e?.user && typeof e.user?.getUid === 'function') return e.user
   const r = await loadGenshinModule('model/mys/NoteUser.js', ['model/mys/NoteUser.js'])
   if (!r.ok || !r.value) return e?.user || null
   try {

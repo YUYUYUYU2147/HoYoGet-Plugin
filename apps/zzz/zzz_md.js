@@ -40,8 +40,8 @@ export class zzz extends plugin {
         }
 
         if (!uid || !ck) {
-            uid = e.user.getUid('zzz');
-            const mys = e.user.getMysUser('zzz');
+            uid = e.user?.getUid('zzz');
+            const mys = e.user?.getMysUser('zzz');
             ck = mys?.ck;
             qq = e.user_id
         }

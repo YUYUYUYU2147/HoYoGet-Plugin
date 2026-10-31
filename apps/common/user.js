@@ -457,7 +457,7 @@ export class user extends plugin {
         if (!fs.existsSync(path)) return e.reply('你没有绑定过设备', true);
         fs.unlinkSync(path);
         //ZZZ-Plugin???
-        const ltuid = e.user.getMysUser('zzz').ltuid
+        const ltuid = e.user?.getMysUser('zzz')?.ltuid
         await redis.del(`ZZZ:DEVICE_FP:${ltuid}:FP`);
         await redis.del(`ZZZ:DEVICE_FP:${ltuid}:ID`);
         e.reply('删除成功!', true);
@@ -733,7 +733,7 @@ export class user extends plugin {
 
     async yz(e, game, headers) {
         //获取headers
-        if (!headers) headers = mhy.getHeaders(e, e.user.getMysUser().ck)
+        if (!headers) headers = mhy.getHeaders(e, e.user?.getMysUser()?.ck)
         headers['x-rpc-client_type'] = 5
         headers.DS = mhy.getDs2('gids=2&is_high=false', '', 4)
         headers['x-rpc-challenge_game'] = game == 'zzz' ? '8' : game == 'sr' ? '6' : '2'

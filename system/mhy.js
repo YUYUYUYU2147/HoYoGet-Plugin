@@ -244,7 +244,7 @@ class mhy {
   }
 
   getUser(e) {
-    return e.user.getMysUser('zzz');
+    return e.user?.getMysUser('zzz');
   }
 
   /**

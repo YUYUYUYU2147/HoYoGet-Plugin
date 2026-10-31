@@ -215,10 +215,10 @@ async function MysSign(e, games = DEFAULT_SIGN_GAMES) {
     const hasBh3Xhh = games.includes('bh3') && await hasXhhBh3Stoken(e.user_id);
     const xiaoyaoAll = getXiaoyaoEntries(e.user_id);
     if (
-        !e.user.getMysUser() &&
-        !e.user.getMysUser('sr') &&
-        !e.user.getMysUser('zzz') &&
-        !e.user.getMysUser('bh3') &&
+        !e.user?.getMysUser() &&
+        !e.user?.getMysUser('sr') &&
+        !e.user?.getMysUser('zzz') &&
+        !e.user?.getMysUser('bh3') &&
         !hasBh3Xhh &&
         !xiaoyaoAll.length
     )
@@ -232,7 +232,7 @@ async function MysSign(e, games = DEFAULT_SIGN_GAMES) {
             targets = await getBh3SignTargets(e);
         }
         if (!targets.length) {
-            const mys = e.user.getMysUser(game);
+            const mys = e.user?.getMysUser(game);
             if (mys) {
                 const uids = Array.isArray(mys.uids?.[game]) ? mys.uids[game] : [];
                 for (const uid of uids) {
@@ -1627,7 +1627,7 @@ async function BbsSign(e) {
     // 社区签到必须用 Stoken 文件里的 stoken（米游社 bbs-api 认 stoken，getMysUser 只有 ltoken 无法签社区）
     const accounts = getBbsAccounts(e);
     if (!accounts.length) {
-        const mys = e.user.getMysUser('gs');
+        const mys = e.user?.getMysUser('gs');
         if (!mys) return e.reply('未绑定米游社,请发送[扫码绑定]', true, { recallMsg: 60 });
         accounts.push({ stuid: '', ck: mys.ck, device_id: stableDeviceId(mys.ck || e.user_id) });
         if (!/stoken=/.test(mys.ck || '')) await e.reply('未找到米游社SToken(社区签到只认stoken)，请先[米哈游扫码登录]绑定', true, { recallMsg: 60 });

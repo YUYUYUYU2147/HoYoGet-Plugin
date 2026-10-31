@@ -302,7 +302,7 @@ export class bh3_ledger extends plugin {
             } catch (_) {}
         }
 
-        if (uid && e.user && String(uid) === String(e.user.getUid('gs')) && qq) {
+        if (uid && e.user && String(uid) === String(e.user?.getUid('gs')) && qq) {
             debugLog('[水晶] uid matches gs, searching Stoken YAML');
             let stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${qq}.yaml`;
             if (fs.existsSync(stokenPath)) {
