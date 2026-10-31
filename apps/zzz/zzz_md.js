@@ -38,6 +38,20 @@ export class zzz extends plugin {
         const nu = await (await getNoteUser()).create(qq)
         uid = nu?.getUid("zzz")
         ck = nu?.getMysUser("zzz")?.ck
+        /* TRSS 环境下 genshin 的 NoteUser 与 HoYoGet 的 Stoken 档案是两份数据，
+           [刷新ck] 只写 data/Stoken，改不到 NoteUser，指令继续用旧 ck 会报 -501002。
+           故优先取 Stoken 中按 uid 匹配的最新整串 cookie，取不到再回退 NoteUser。 */
+        try {
+            const _fs = (await import("node:fs")).default
+            const _YAML = (await import("yaml")).default
+            const _f = "./plugins/HoYoGet-Plugin/data/Stoken/" + qq + ".yaml"
+            if (_fs.existsSync(_f)) {
+                const _d = _YAML.parse(_fs.readFileSync(_f, "utf8")) || {}
+                const _l = Array.isArray(_d) ? _d : Object.values(_d)
+                const _h = _l.find(v => v && String(v.uid) === String(uid) && /nap/.test(String(v.game_biz || ""))) || _l.find(v => v && String(v.uid) === String(uid))
+                if (_h && _h.ck_stoken) ck = _h.ck_stoken
+            }
+        } catch (_) { }
 
         if (!uid || !ck) return e.reply("请先扫码绑定账号！");
         
