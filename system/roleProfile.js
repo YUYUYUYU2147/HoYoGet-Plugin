@@ -32,6 +32,7 @@ import { api, mhy } from '#HoYoGet';
 import { makeGenshinLoader } from './genshin_loader.js'
 import { getAccount } from './ck_store.js'
 const getMysInfo = makeGenshinLoader('model/mys/mysInfo.js', ['model/mys/mysInfo.js'])
+const getNoteUser = makeGenshinLoader("model/mys/NoteUser.js", ["model/mys/NoteUser.js"])
 
 // 服务器代码 → 中文名
 const SERVER_CN = {
@@ -183,7 +184,16 @@ export async function getRoleProfile(e, uid, game, auth = {}) {
         } else {
             e.uid = Number(uid)
             const acc = getAccount(e.user_id, uid)
-            const ownCk = acc && acc.ck_stoken ? acc.ck_stoken : ''
+            let ownCk = acc && acc.ck_stoken ? acc.ck_stoken : ""
+            /* [刷新ck] 写的是 Stoken 存档，ck_stoken 常已失效；NoteUser 里按 stuid 配对的 ck
+               才是当前可用的那份，优先取它，取不到再退回存档。 */
+            if (acc && acc.stuid) {
+                try {
+                    const _nu = await (await getNoteUser()).create(e.user_id)
+                    const _paired = _nu && _nu.mysUsers ? _nu.mysUsers[String(acc.stuid)] : null
+                    if (_paired && _paired.ck) ownCk = _paired.ck
+                } catch (_) { }
+            }
             // 只有含 ltoken/cookie_token 的完整 ck 能直接用于 record 接口；
             // 只存了 stuid/stoken 的条目拿去请求会得到 -100，不能用来重试
             const ckUsable = /ltoken=/.test(ownCk) && /cookie_token=/.test(ownCk)
