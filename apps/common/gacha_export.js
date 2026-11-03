@@ -257,17 +257,34 @@ export class gacha_export extends plugin {
       event: 'message',
       priority: pluginPriority('gacha_export', -900),
       rule: [
-        { reg: '^([#*%％])[ \\t]*导出抽卡记录(?:[ \\t]+(\\d{6,12}))?[ \\t]*$', fnc: 'exportLog' },
+        {
+          // 指令分发前框架会把星铁前缀 `*` 改写成 `#星铁`、绝区零 `%` 改写成 `#绝区零`，
+          // 所以这里同时认原始前缀和改写后的形式。
+          reg: '^(?:[#\\*%％]|#?(?:星铁|绝区零|绝区|原神))?[ \\t]*导出抽卡记录(?:[ \\t]+(\\d{6,12}))?[ \\t]*$',
+          fnc: 'exportLog'
+        },
       ],
     })
   }
 
   async exportLog (e) {
-    const m = String(e.msg || '').trim().match(/^([#*%％])[ \t]*导出抽卡记录(?:[ \t]+(\d{6,12}))?[ \t]*$/)
+    const msg = String(e.msg || '').trim()
+    const m = msg.match(/^(?:([#\\*%％])|#?(星铁|绝区零|绝区|原神))?[ \t]*导出抽卡记录(?:[ \t]+(\d{6,12}))?[ \t]*$/)
     if (!m) return false
-    const prefix = m[1] === '％' ? '%' : m[1]
-    const game = GAMES[prefix]
-    const wantUid = m[2] || ''
+    const wantUid = m[3] || ''
+    // 分发前 `*`/`%` 会被框架改写成 `#星铁`/`#绝区零`，所以游戏不能只看首字符：
+    // 优先用 e.game（框架已标好），再看改写后的名称，最后才看原始前缀。
+    const raw = m[1] || ''
+    let prefix = raw.replace(/^#/, '')
+    if (m[2] === '星铁') prefix = '*'
+    else if (m[2] === '绝区零' || m[2] === '绝区') prefix = '%'
+    else if (m[2] === '原神') prefix = '#'
+    if (e?.game === 'sr') prefix = '*'
+    else if (e?.game === 'zzz') prefix = '%'
+    else if (prefix === '％') prefix = '%'
+    if (!prefix) prefix = '#' // 无前缀 = 原神
+    const game = GAMES[prefix] || GAMES['#']
+    if (!game) return false
 
     if (game.key === 'gs' && !fs.existsSync(GS_DIR)) {
       return e.reply('暂无原神抽卡记录。请先发送【#刷新抽卡记录】更新后再导出。')
