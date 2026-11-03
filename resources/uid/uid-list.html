@@ -2,7 +2,7 @@
 {{extend elemLayout}}
 
 {{block 'css'}}
-<link rel="stylesheet" type="text/css" href="{{uidRes}}uid-list.css"/>
+<link rel="stylesheet" type="text/css" href="{{uidResAbs || uidRes}}uid-list.css"/>
 {{/block}}
 
 {{block 'main'}}
@@ -29,13 +29,13 @@ bh3:{mark:'!',cls:'Bh3'}
         <div class="game-idx">
           <span>{{idx+1}}</span>
         </div>
-        {{set bg = uidRes + 'banner/' + game.key + '.png'}}
+        {{set bg = (uidResAbs || uidRes) + 'banner/' + game.key + '.png'}}
         <div class="game-bar game-bar{{cls}}" style="background-image:url({{bg}})">
           <div class="game-inner">
             {{if uid.faceUrl}}
             <div class="face" style="background-image:url({{uid.faceUrl}})"></div>
             {{else}}
-            {{set av = uidRes + 'avatar/' + game.key + '.png'}}
+            {{set av = (uidResAbs || uidRes) + 'avatar/' + game.key + '.png'}}
             <div class="face" style="background-image:url({{av}})"></div>
             {{/if}}
             <div class="info">
