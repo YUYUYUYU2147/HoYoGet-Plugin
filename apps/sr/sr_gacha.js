@@ -705,8 +705,10 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
       }
       return remoteIcon
     }
-    // UP 出金抽数超过硬保底（角色 90 / 光锥 80）的标 ≧：属数据异常或跨池累计，
-    // 给个视觉提醒，不影响统计数值。
+    // 出金抽数超过硬保底的标 ≧（数据异常/跨池累计的视觉提醒，不影响统计数值）：
+    //   限定角色 90、限定光锥 80，且必须是 UP；
+    //   常驻/新手没有 UP 概念，角色、光锥一律 >90 即标。
+    const noUpPool = ['common', 'GachaType_Standard', 'GachaType_Normal', 'GachaType_Newbie'].includes(key)
     const overLimit = ['GachaType_EquipmentUp', 'GachaType_CollabEquipmentUp'].includes(key) ? 80 : 90
     // 五星历史：按时间倒序，供卡片网格使用
     const fiveLog = recent.map(item => {
@@ -721,8 +723,8 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
         icon: makeIcon(item),
         num: pulls,
         isUp: up,
-        // 仅对 UP 且超出硬保底的标注 ≧
-        overPity: up && pulls > overLimit,
+        // 常驻/新手：角色与光锥 >90 都标；限定池：仅 UP 且超对应硬保底才标
+        overPity: noUpPool ? pulls > 90 : (up && pulls > overLimit),
         isNull: false,
         year: full.slice(0, 4) || '----',
         fullDate: full || '--',
