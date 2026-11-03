@@ -454,6 +454,7 @@ export class uidPanel extends plugin {
           /* 绝对 file:// 前缀：相对路径依赖截图输出目录的深度，换个宿主/目录层级就容易 404
              （表现为卡片只剩底色、没有横幅背景图）。这里直接用本插件 resources/uid 的绝对地址。 */
           data.uidResAbs = pathToFileURL(path.join(process.cwd(), 'plugins/HoYoGet-Plugin/resources/uid/')).href;
+          data.commonResAbs = pathToFileURL(path.join(process.cwd(), 'plugins/HoYoGet-Plugin/resources/common/')).href;
           data.elemLayout = LAYOUT_FILE;
           /* 布局里的公共样式（背景、字体）取本插件 resources/common，不依赖 miao */
           data.commonRes = String(data.uidRes || '').replace('/resources/uid/', '/resources/common/');
