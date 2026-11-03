@@ -140,7 +140,11 @@ function writeBh3VersionStarts(map = {}) {
     if (k && v) merged[String(k)] = String(v);
   }
   try {
-    fs.writeFileSync(BH3_VERSION_START_FILE, JSON.stringify(merged, null, 2), 'utf-8');
+    const text = JSON.stringify(merged, null, 2);
+    // 内容没变就不写，避免定时任务每轮都刷新 mtime、把默认文件弄成「已修改」
+    let unchanged = false;
+    try { unchanged = fs.readFileSync(BH3_VERSION_START_FILE, 'utf-8') === text; } catch (_) {}
+    if (!unchanged) fs.writeFileSync(BH3_VERSION_START_FILE, text, 'utf-8');
     return merged;
   } catch (_) {
     return null;
@@ -2396,7 +2400,7 @@ export class HoYoGetGachaPool extends plugin {
       for (const [k, v] of Object.entries(data.date)) {
         if (k !== latestKey) nextDate[k] = v;
       }
-      fs.writeFileSync(GS_POOL_HISTORY_YAML_PATH, YAML.stringify({ date: nextDate, imgs: data.imgs || {}, imgs_src: data.imgs_src || {} }), 'utf-8');
+      this.writeIfChanged(GS_POOL_HISTORY_YAML_PATH, { date: nextDate, imgs: data.imgs || {}, imgs_src: data.imgs_src || {} }, '原神预录时间修正');
       return `原神：已修正 v${version}${phase} 预录时间（${version}版本更新后生效，当前仍为 v${this.currentVersionByGame('gs')}）`;
     } catch (err) {
       logger.error('[HoYoGet][gacha_pool] gslogs.yaml 预录时间修正失败:', err);
@@ -2892,12 +2896,8 @@ export class HoYoGetGachaPool extends plugin {
     // 这里统一落盘一次，保证维护动作是幂等的：下一轮刷新应显示「无新增」。
     if (bh3Maintenance > 0) {
       try {
-        fs.writeFileSync(BH3_POOL_HISTORY_YAML_PATH, YAML.stringify({
-          ...(data || {}),
-          updated: new Date().toISOString().slice(0, 10),
-          pools: history.pools
-        }), 'utf-8');
-        logger.mark(`[HoYoGet][gacha_pool] 崩三本地库维护已落盘（${bh3Maintenance} 处：清理/归一化/归位/封面）`);
+        const wrote = this.saveBh3History(data, history.pools, '崩三维护');
+        if (wrote) logger.mark(`[HoYoGet][gacha_pool] 崩三本地库维护已落盘（${bh3Maintenance} 处：清理/归一化/归位/封面）`);
       } catch (err) {
         logger.error('[HoYoGet][gacha_pool] bh3 维护落盘失败:', err);
       }
@@ -2961,11 +2961,7 @@ export class HoYoGetGachaPool extends plugin {
           const movedPools = this.reassignBh3PoolsByTime(history);
           if (movedPools.length) logger.mark(`[HoYoGet][gacha_pool] 崩三补给按时间归位：${movedPools.join('、')}`);
           try {
-            fs.writeFileSync(BH3_POOL_HISTORY_YAML_PATH, YAML.stringify({
-              ...(data || {}),
-              updated: new Date().toISOString().slice(0, 10),
-              pools: history.pools
-            }), 'utf-8');
+            this.saveBh3History(data, history.pools, '崩三旧数据修复');
             logger.mark(`[HoYoGet][gacha_pool] 崩三同步明细：修复 ${rebuilt.pools.length} 条旧数据`);
             return `崩坏3：本地库已同步 官方补给（最新 v${Number(maxYamlVer).toFixed(1)}）`;
           } catch (err) {
@@ -3027,11 +3023,7 @@ export class HoYoGetGachaPool extends plugin {
           const movedPools = this.reassignBh3PoolsByTime(history);
           if (movedPools.length) logger.mark(`[HoYoGet][gacha_pool] 崩三补给按时间归位：${movedPools.join('、')}`);
           try {
-            fs.writeFileSync(BH3_POOL_HISTORY_YAML_PATH, YAML.stringify({
-              ...(data || {}),
-              updated: new Date().toISOString().slice(0, 10),
-              pools: history.pools
-            }), 'utf-8');
+            this.saveBh3History(data, history.pools, '崩三并入新补给');
             logger.mark(`[HoYoGet][gacha_pool] 崩三同步明细：并入 ${addTotal} 条新补给（${addedNames.slice(0, 3).join('、')}）`);
             return `崩坏3：本地库已同步 官方补给（最新 v${Number(maxYamlVer).toFixed(1)}）`;
           } catch (err) {
@@ -3054,11 +3046,7 @@ export class HoYoGetGachaPool extends plugin {
         const r = this.alignBh3PrevVersionEnd(restPools, nextVer, nextTs);
         if (r) {
           try {
-            fs.writeFileSync(BH3_POOL_HISTORY_YAML_PATH, YAML.stringify({
-              ...(data || {}),
-              updated: new Date().toISOString().slice(0, 10),
-              pools: restPools
-            }), 'utf-8');
+            this.saveBh3History(data, restPools, '崩三结束时间对齐');
             logger.mark(`[HoYoGet][gacha_pool] 崩三同步明细：v${r.version} 结束时间已对齐为 ${r.to}`);
             return `崩坏3：本地库已同步 官方补给（最新 v${Number(nextVer).toFixed(1)}）`;
           } catch (err) {
@@ -3092,14 +3080,8 @@ export class HoYoGetGachaPool extends plugin {
       }
       const movedPools = this.reassignBh3PoolsByTime(history);
       if (movedPools.length) logger.mark(`[HoYoGet][gacha_pool] 崩三补给按时间归位：${movedPools.join('、')}`);
-      const next = {
-        ...(data || {}),
-        version: data?.version || '1.0',
-        updated: new Date().toISOString().slice(0, 10),
-        source: data?.source || '米游社官方公告+社区整理',
-        pools: [...newGroups, ...restPools]
-      };
-      fs.writeFileSync(BH3_POOL_HISTORY_YAML_PATH, YAML.stringify(next), 'utf-8');
+      const nextPools = [...newGroups, ...restPools];
+      this.saveBh3History(data, nextPools, '崩三新增补给');
       logger.mark(`[HoYoGet][gacha_pool] 崩三同步明细：新增 v${newGroups.map(g => g.version).join('、v')}（${newGroups.map(g => `${g.start.slice(5, 16)}~${g.end.slice(5, 16)}`).join('、')}）` +
         (aligned.length ? `；${aligned.join('、')}` : '') +
         (skipped.length ? `；v${skipped.join('、')} 因缺少 UP 未写入` : ''));
@@ -4898,6 +4880,45 @@ ${r.summary || ''}`;
     }
   }
 
+  /**
+   * 内容没变就不落盘。运行时会把卡池库（system/default/*.yaml）按最新数据重建，
+   * 即使数据没变也会整份重写，导致工作区天天「被改了一次」。
+   * 统一在这里比对序列化结果，一致就不写（返回 false）。
+   */
+  writeIfChanged(path, data, label = '') {
+    try {
+      const text = YAML.stringify(data);
+      if (!text || !text.trim()) {
+        logger.error(`[HoYoGet][gacha_pool] 序列化结果为空，拒绝写入（${label}）：${path}`);
+        return false;
+      }
+      if (fs.existsSync(path)) {
+        try {
+          if (fs.readFileSync(path, 'utf-8') === text) return false;
+        } catch (_) { /* 读失败就按变化处理 */ }
+      }
+      fs.writeFileSync(path, text, 'utf-8');
+      return true;
+    } catch (err) {
+      logger.error(`[HoYoGet][gacha_pool] 卡池库写入失败（${label}）:`, err);
+      return false;
+    }
+  }
+
+  /**
+   * 写回崩三卡池库。
+   * 只有 pools 真的变化时才把 updated 更新到今天；内容没变则完全不写盘。
+   * 这样「维护/归位/补封面」每轮跑一遍也不会反复改文件，真正做到「写入一次，直到下次变化」。
+   */
+  saveBh3History(base, pools, label = '') {
+    const current = base || {};
+    const withPools = YAML.stringify({ ...current, pools });
+    const withoutUpdated = YAML.stringify({ ...current, pools: current.pools });
+    const next = { ...current, pools };
+    if (withPools !== withoutUpdated) next.updated = new Date().toISOString().slice(0, 10);
+    return this.writeIfChanged(BH3_POOL_HISTORY_YAML_PATH, next, label);
+  }
+
   loadYamlDoc(path) {
     try {
       if (!fs.existsSync(path)) return null;
@@ -6196,11 +6217,7 @@ ${r.summary || ''}`;
       const r = await this.fillBh3PoolTimes(data, recs);
       const times = r?.times || 0, covers = r?.covers || 0;
       if (!times && !covers) return '';
-      fs.writeFileSync(BH3_POOL_HISTORY_YAML_PATH, YAML.stringify({
-        ...(data || {}),
-        updated: new Date().toISOString().slice(0, 10),
-        pools: data.pools
-      }), 'utf-8');
+      this.saveBh3History(data, data.pools, '崩三风控补录');
       logger.mark(`[HoYoGet][gacha_pool] 风控期间补录崩三补给信息：开放时间 ${times} 条、封面 ${covers} 张`);
       return `\n崩坏3：风控期间仍补录了 ${times} 条开放时间、${covers} 张封面`;
     } catch (err) {
