@@ -123,6 +123,8 @@ async function replyBindImage(e, accounts, title) {
         const qqAvatar = /^\d{5,12}$/.test(qq)
             ? `https://q1.qlogo.cn/g?b=qq&nk=${qq}&s=640`
             : '';
+        // 群名片优先，其次 QQ 昵称，最后退回 QQ 号；模板里空值回退「米哈游」
+        const userName = String(e?.sender?.card || e?.sender?.nickname || qq || '').trim();
         /* 之前这里传了 sys:{scale:''}，会在 render.js 的 beforeRender 里把算好的
            style=zoom:… 覆盖成空值，结果只按 CSS 的 900px 宽截图 —— 发到手机/电脑上
            一放大就糊。去掉 sys，并显式给 pct:2（=zoom 2，约 1800px 宽），
@@ -133,6 +135,7 @@ async function replyBindImage(e, accounts, title) {
             statusClass: '',
             accounts,
             qqAvatar,
+            userName,
             saveId: 'bind_result',
         }, { e, ret: true, pct: 2 });
         return true;
