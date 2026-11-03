@@ -1,4 +1,4 @@
-import { yaml, mhy, api, pluginPriority, makeForwardMsg } from '#HoYoGet';
+import { yaml, mhy, api, pluginPriority, makeForwardMsg, scaleStyle } from '#HoYoGet';
 import fs from 'fs';
 import puppeteer from '../../../../lib/puppeteer/puppeteer.js';
 import moment from 'moment';
@@ -502,8 +502,7 @@ async abyss(e) {
         // 层数 = 资源目录段数 + 3：小花火/bh3_abyss/abyss 落在 temp/html/下同深度目录。
         ppath: '../../../../../plugins/HoYoGet-Plugin/resources/',
         ...data,
-        sys: { scale: 'style=transform:scale(1)' },
-        deviceScaleFactor: 2,
+        sys: { scale: scaleStyle() },
         tplFile: process.cwd() + '/plugins/HoYoGet-Plugin/resources/bh3_abyss/abyss.html',
         saveId: 'bh3_abyss',
       });

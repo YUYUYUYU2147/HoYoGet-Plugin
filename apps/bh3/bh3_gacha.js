@@ -1,4 +1,4 @@
-import { yaml, mhy, api, pluginPriority } from '#HoYoGet';
+import { yaml, mhy, api, pluginPriority, scaleStyle } from '#HoYoGet';
 import fs from 'fs';
 import path from 'path';
 import YAML from 'yaml';
@@ -1435,7 +1435,7 @@ export class bh3_gacha extends plugin {
         ...data,
         ...player,
         bg: ['bg', 'bg1', 'IMG_20250717_034154'][Math.floor(Math.random() * 3)],
-        sys: { scale: 'style=transform:scale(1)' },
+        sys: { scale: scaleStyle() },
         // 这里直接调 puppeteer.render，绕过了 system/render.js 里注入 ppath 的
         // beforeRender，模板里的 {{ppath}} 会被渲染成空串：CSS 与背景图全部 404，
         // 页面退化成没有样式的裸 HTML（文字纵向堆叠、原图按原始尺寸铺开）。

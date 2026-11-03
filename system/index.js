@@ -1,5 +1,5 @@
 import mys from './mys.js';
-import render from './render.js';
+import render, { qualityScale, scaleStyle } from './render.js';
 import splitImage from './process_images.js';
 import yaml from './yaml.js';
 import yyjson from './yyjson.js';
@@ -245,6 +245,8 @@ async function getSource(e) {
 export {
     mys,
     render,
+    qualityScale,
+    scaleStyle,
     splitImage,
     yaml,
     yyjson,

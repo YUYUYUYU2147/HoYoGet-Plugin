@@ -130,6 +130,25 @@ async function sendWithRetry(e, img) {
   }
 }
 
+/**
+ * 锅巴「图片渲染精度」(img_quality, %) → CSS 缩放倍数。
+ *
+ * 统一映射：scale = (img_quality / 100) * 2.4，最低 1。
+ * 原先只有走本文件 render() 的图会用到它；直接调 puppeteer.render 的那些页面
+ * （如崩三深渊）写死了 transform:scale(1) + 无效的 deviceScaleFactor，结果只有 1 倍像素、发糊。
+ * 现在导出给那些页面复用，让锅巴里的精度设置作用于整个插件。
+ */
+export function qualityScale() {
+  const q = Number(config().img_quality)
+  const scale = (Number.isFinite(q) ? q : 80) / 100 * 2.4
+  return Math.max(1, scale)
+}
+
+/** 给 <body {{sys.scale}}> 用的缩放样式串（zoom 在元素截图下更稳定） */
+export function scaleStyle() {
+  return `style=zoom:${qualityScale()}`
+}
+
 async function render(path, data_, cfg) {
   let tplFile =
     data_.tplFile || process.cwd() + '/plugins/HoYoGet-Plugin/resources/' + path + '.html';
@@ -158,7 +177,7 @@ async function render(path, data_, cfg) {
       // 正文字号回到默认、角色详细那种长段落也不换行约束，图高能到 7000+ px。
       const depth = path.split('/').filter(Boolean).length + 3;
       const ppath = '../'.repeat(depth) + 'plugins/HoYoGet-Plugin/resources/';
-      const scale = cfg.pct || (config().img_quality / 100) * 2.4 || 2.4 * 0.8
+      const scale = cfg.pct || qualityScale()
       const dsf = cfg.dsf ? Math.min(Number(cfg.dsf) || 0, MAX_DSF) : 0
       return {
         sys: {

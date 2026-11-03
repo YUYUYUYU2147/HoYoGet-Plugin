@@ -15,7 +15,7 @@ import path from 'node:path';
 import lodash from 'lodash';
 import sharp from '../../node_modules/sharp/lib/index.js';
 import puppeteer from '../../../../lib/puppeteer/puppeteer.js';
-import { render, config, pluginPriority, getSource } from '#HoYoGet';
+import { render, config, pluginPriority, getSource, scaleStyle } from '#HoYoGet';
 import { guardModuleByFile } from '../../system/modules.js'
 import { buildMemeListData } from '../../meme_category.js'
 
@@ -109,8 +109,7 @@ async function renderImg(e, path, data_, cfg = {}) {
   try {
     buf = await puppeteer.render('米哈游/' + path, {
       ...data_,
-      sys: { scale: 'style=transform:scale(1)' },
-      deviceScaleFactor: cfg.scale || 2,
+      sys: { scale: scaleStyle() },
       // 落盘深度 = path 段数 + 3（temp/html/小花火/{path}/{saveId}.html），同 render.js
       ppath: data_.ppath || '../'.repeat(path.split('/').filter(Boolean).length + 3) + 'plugins/HoYoGet-Plugin/resources/',
       tplFile: tplFile,

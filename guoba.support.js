@@ -244,9 +244,9 @@ export const supportGuoba = () => {
       {
         field: 'img_quality',
         label: '图片渲染精度',
-        helpMessage: '数字，单位%',
+        helpMessage: '数字，单位%。作用于整个插件的出图；100 约等于 2.4 倍像素，越高越清晰但图更大',
         component: 'InputNumber',
-        componentProps: { min: 1, max: 100, step: 1 },
+        componentProps: { min: 1, max: 200, step: 1 },
       },
       {
         field: 'wiki',
