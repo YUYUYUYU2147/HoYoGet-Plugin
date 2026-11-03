@@ -331,18 +331,39 @@ class mhy {
   //依赖 stoken 那一侧，故默认不再强依赖它；确有需要时由调用方显式打开。
   async refresh_cookies(e, headers, SToken, id, opts = {}) {
     if (config().debug) logger.mark('[refresh_cookies] refreshing for id:', id);
-    let urls = [
-      `https://api-takumi.mihoyo.com/auth/api/getCookieAccountInfoBySToken?stoken=${SToken}&uid=${id}`,
-      'https://passport-api.mihoyo.com/account/auth/api/getLTokenBySToken',
-    ];
-    let res, Cookie, ltoken, ltuid;
-    for (let url of urls) {
-      res = await fetchJson(url, { method: 'GET', headers }, '刷新 Cookie');
-      if (res.data?.cookie_token) Cookie = res.data?.cookie_token;
-      if (res.data?.ltoken) ltoken = res.data?.ltoken;
-      /* getCookieAccountInfoBySToken 会回带通行证 uid：它与 game_uid 常常不是同一个值，
-         而 genshin 校验 CK 时认的是通行证 uid，用 game_uid 当 ltuid 会被判「Cookie错误」 */
-      if (res.data?.uid) ltuid = String(res.data.uid);
+    /* 新的 passport 接口：
+       - 两个接口都在 passport-api，query 只带 stoken，不再用老的 api-takumi 老接口
+         （老接口对 v2 stoken / game_uid 容易返回 -200「登录状态失效」）；
+       - uid 参数用的是「通行证 uid(stuid)」，不是 game_uid：从 Cookie 里取，
+         调用方给了 opts.stuid 就用它，最后才退回传入的 id。 */
+    const cookieStr = String(headers?.Cookie || headers?.cookie || '');
+    const cookieGet = name => (cookieStr.match(new RegExp(`(?:^|;)\\s*${name}=([^;]*)`)) || [])[1] || '';
+    const stuid = String(opts.stuid || cookieGet('stuid') || id || '').trim();
+    const mid = opts.mid || cookieGet('mid');
+    if (!SToken) {
+      return { sendMsg: [`米游社UID:${id}刷新cookie失败,请重新[扫码绑定]`] };
+    }
+    const query = `?stoken=${encodeURIComponent(SToken)}`;
+    // 保证 Cookie 里 stuid/stoken/mid 齐全，缺了接口会判登录态失效
+    const cookieParts = [`stuid=${stuid}`, `stoken=${SToken}`];
+    if (mid) cookieParts.push(`mid=${mid}`);
+    const baseHeaders = { ...headers, Cookie: cookieParts.join(';') + ';' };
+    // getLTokenBySToken 用 client_type 5，getCookieAccountInfoBySToken 用 client_type 2
+    const getPassport = (path, clientType) => fetchJson(
+      `https://passport-api.mihoyo.com/account/auth/api/${path}${query}`,
+      { method: 'GET', headers: { ...baseHeaders, 'x-rpc-client_type': String(clientType) } },
+      '刷新 Cookie',
+    );
+    let Cookie, ltoken, ltuid;
+    const ltRes = await getPassport('getLTokenBySToken', 5);
+    if (ltRes.data?.ltoken) ltoken = ltRes.data.ltoken;
+    const ctRes = await getPassport('getCookieAccountInfoBySToken', 2);
+    if (ctRes.data?.cookie_token) Cookie = ctRes.data.cookie_token;
+    /* 回带的是通行证 uid，优先用它，避免 game_uid 当 ltuid 导致 genshin 校验失败 */
+    if (ctRes.data?.uid) ltuid = String(ctRes.data.uid);
+    else if (stuid) ltuid = stuid;
+    if (config().debug) {
+      logger.mark(`[refresh_cookies] LToken retcode=${ltRes?.retcode} Cookie retcode=${ctRes?.retcode}`);
     }
     if (config().debug) logger.mark('[refresh_cookies] got Cookie:', !!Cookie, 'ltoken:', !!ltoken);
     if (!e.no_reply) e.no_reply = e.reply;
@@ -367,7 +388,7 @@ class mhy {
     let bound = { ok: false, msgs: [] };
     if (opts.mid && opts.cookieTokenV2 && opts.ltokenV2) {
       const v2Ck =
-        `ltuid=${id};account_mid_v2=${opts.mid};` +
+        `ltuid=${ltuid || id};account_mid_v2=${opts.mid};` +
         `cookie_token_v2=${opts.cookieTokenV2};ltoken_v2=${opts.ltokenV2};ltmid_v2=${opts.mid};`;
       bound = await this.tryBindGenshinCookie(e, v2Ck);
       if (config().debug) logger.mark('[refresh_cookies] v2 CK 结果:', bound.ok, 'id:', id);

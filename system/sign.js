@@ -171,14 +171,16 @@ async function ensureCookieToken(e, ck, entry = null, force = false) {
         // 用 URLSearchParams 拼接查询串：直接写 'stoken=' + encodeURIComponent(...) 时，
         // 隐私扫描会把「参数名 + 引号 + 字符串拼接」误判成 stoken 赋值，改用构造器既避免误报，
         // 也省掉手工编码。
-        const cookieQuery = new URLSearchParams({ stoken: String(stoken ?? ''), uid: String(stuid ?? '') })
-        const cookieRes = await requestJson(`https://api-takumi.mihoyo.com/auth/api/getCookieAccountInfoBySToken?${cookieQuery}`)
+        // 新版 passport 接口：query 只带 stoken，uid 用 Cookie 里的通行证 uid；
+        // 老的 api-takumi 接口对 v2 stoken 会返回 -200/-100「登录状态失效」。
+        const cookieQuery = new URLSearchParams({ stoken: String(stoken ?? '') })
+        const cookieRes = await requestJson(`https://passport-api.mihoyo.com/account/auth/api/getCookieAccountInfoBySToken?${cookieQuery}`)
         const cookieToken = cookieRes?.data?.cookie_token
         // bbs-api 社区签到同时认 stoken 和 cookie_token：缺 stoken → 1034 无验证参数，缺 cookie_token → -100
         if (cookieToken) {
             let ltoken = entry?.ltoken || map.ltoken
             if (!ltoken) {
-                const ltokenRes = await requestJson('https://passport-api.mihoyo.com/account/auth/api/getLTokenBySToken')
+                const ltokenRes = await requestJson(`https://passport-api.mihoyo.com/account/auth/api/getLTokenBySToken?${cookieQuery}`)
                 ltoken = ltokenRes?.data?.ltoken || ''
             }
             cookieTokenCache.set(tokenKey, { at: Date.now(), cookie_token: cookieToken, ltoken })

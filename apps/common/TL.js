@@ -35,9 +35,12 @@ export async function ensureCookieToken(e, ck, entry = null) {
   const stoken = entry?.stoken || cookiePart(ck, 'stoken');
   if (!stuid || !stoken) return ck;
   try {
-    const headers = mhy.getHeaders(e, ck);
-    const cookieRes = await fetch(`https://api-takumi.mihoyo.com/auth/api/getCookieAccountInfoBySToken?stoken=${encodeURIComponent(stoken)}&uid=${encodeURIComponent(stuid)}`, { method: 'GET', headers }).then(r => r.json());
-    const ltokenRes = await fetch('https://passport-api.mihoyo.com/account/auth/api/getLTokenBySToken', { method: 'GET', headers }).then(r => r.json());
+    const mid = entry?.mid || cookiePart(ck, 'mid');
+    const baseHeaders = mhy.getHeaders(e, `stuid=${stuid};stoken=${stoken};${mid ? `mid=${mid};` : ''};`);
+    // 新版 passport 接口：query 只带 stoken，uid 用通行证 uid；老的 api-takumi 对 v2 stoken 会报 -200
+    const query = `?stoken=${encodeURIComponent(stoken)}`;
+    const cookieRes = await fetch(`https://passport-api.mihoyo.com/account/auth/api/getCookieAccountInfoBySToken${query}`, { method: 'GET', headers: { ...baseHeaders, 'x-rpc-client_type': '2' } }).then(r => r.json());
+    const ltokenRes = await fetch(`https://passport-api.mihoyo.com/account/auth/api/getLTokenBySToken${query}`, { method: 'GET', headers: { ...baseHeaders, 'x-rpc-client_type': '5' } }).then(r => r.json());
     const cookieToken = cookieRes?.data?.cookie_token;
     const ltoken = ltokenRes?.data?.ltoken || entry?.ltoken;
     logger.mark(`[HoYoGet][ck] stuid=${stuid} ct=${cookieRes?.retcode} lt=${ltokenRes?.retcode} ck=${cookieToken?1:0} lk=${ltoken?1:0}`);

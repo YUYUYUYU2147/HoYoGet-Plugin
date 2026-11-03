@@ -498,7 +498,9 @@ export class user extends plugin {
                 ck: refreshedCk
             } = await mhy.refresh_cookies(e, headers, SToken, k, {
                 bindGenshinCookie: true,
-                mid
+                mid,
+                // 新版 passport 接口要通行证 uid，不是 game_uid(k)
+                stuid: data?.[k]?.stuid || data?.[k]?.ltuid
             });
             if (data) {
                 /* 按 game_uid 精确写回。同一 stuid 下可能有多个游戏，
