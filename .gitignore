@@ -48,8 +48,6 @@ resources/bh3_calendar/icons/
 # 本地备份
 *.bak
 *.bak[0-9]*
-resources/meta-gs/
-resources/meta-sr/
 *.zip
 
 # 绝区零面板：裁掉咕咕牛水印栏后的自动缓存，不入库
