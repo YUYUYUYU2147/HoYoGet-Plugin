@@ -1,0 +1,89 @@
+/* HoYoGet 原神角色：角色总览（半身立绘卡片）+ 练度表（紧凑表格）
+   宽度：练度表 1180px；角色总览收窄到 960px（body.narrow），字号相对更大，头像昵称更清楚。
+   定宽写在 body 上（框架按 body 边界截图），内部全部百分比 / 1fr，不会向右溢出。 */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { width: 1180px; font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif; background: #0f131c; color: #e6ebf4; }
+body.narrow { width: 960px; }
+.page { width: 100%; padding: 16px 18px 20px; background: radial-gradient(900px 380px at 88% -6%, rgba(214,178,96,0.16), transparent 62%), radial-gradient(720px 380px at 2% 6%, rgba(96,140,214,0.14), transparent 60%), linear-gradient(160deg, #131826 0%, #0d1018 100%); }
+
+/* ---------- 页头 ---------- */
+.hero { display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.09); }
+.eyebrow { display: block; font-size: 10px; letter-spacing: 3px; color: #d6b260; margin-bottom: 4px; }
+.hero h1 { font-size: 26px; font-weight: 700; letter-spacing: 2px; }
+.hero .meta { text-align: right; font-size: 12px; color: #8f9bb3; line-height: 1.6; }
+.hero .who { display: flex; align-items: center; gap: 12px; }
+.hero .pava { width: 54px; height: 54px; border-radius: 50%; object-fit: cover; background: rgba(255,255,255,0.08); border: 2px solid rgba(214,178,96,0.6); }
+.hero .wt { text-align: left; line-height: 1.45; }
+.hero .wt b { display: block; font-size: 20px; font-weight: 700; color: #f2f5fa; letter-spacing: 0.5px; }
+.hero .wt span { font-size: 13px; color: #b3bed2; }
+.hero .ttl { text-align: right; }
+.hero .ttl h1 { font-size: 22px; font-weight: 700; letter-spacing: 2px; }
+.hero .ttl i { display: block; font-style: normal; font-size: 11px; color: #7d889c; margin-top: 2px; }
+
+/* ---------- 元素图标 ---------- */
+.el-ic { flex: none; width: 13px; height: 13px; object-fit: contain; vertical-align: middle; }
+
+/* ---------- 角色卡片网格（#角色 / #角色列表） ---------- */
+.cards { display: grid; grid-template-columns: repeat(6, 1fr); gap: 9px; margin-top: 12px; }
+.card { position: relative; border-radius: 10px; overflow: hidden; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); }
+.card.star5 { background: linear-gradient(160deg, rgba(214,178,96,0.20), rgba(255,255,255,0.03)); border-color: rgba(214,178,96,0.42); }
+.card.star4 { background: linear-gradient(160deg, rgba(150,118,214,0.18), rgba(255,255,255,0.03)); border-color: rgba(150,118,214,0.38); }
+.card .pic { position: relative; height: 190px; background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(0,0,0,0.25)); }
+.card .pic img.art { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+.card .pic .el-ic { position: absolute; top: 5px; left: 5px; width: 19px; height: 19px; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.85)); }
+.card .lvt { position: absolute; right: 5px; top: 5px; padding: 0 5px; font-size: 10.5px; line-height: 17px; border-radius: 9px; color: #ffe9b0; background: rgba(8,10,16,0.72); }
+.card .nm { padding: 4px 7px 1px; font-size: 13.5px; }
+.card .nm b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card .meta { display: flex; align-items: center; gap: 10px; padding: 1px 7px 0; font-size: 11.5px; color: #d3dcea; }
+.card .meta .m { display: flex; align-items: center; gap: 3px; }
+.card .meta .mini { width: 13px; height: 13px; object-fit: contain; }
+.card .meta2 { display: flex; align-items: center; gap: 6px; padding: 2px 7px 5px; font-size: 11px; color: #a9b4c7; }
+.card .meta2 .ico { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+.card .ic { width: 14px; height: 14px; border-radius: 3px; background: rgba(0,0,0,0.3); }
+
+/* ---------- 练度表（#练度 / #练度统计） ---------- */
+.list { width: 100%; table-layout: fixed; border-collapse: collapse; margin-top: 10px; }
+.list thead th { padding: 0 6px 4px; font-size: 10.5px; font-weight: 500; color: #8b97ae; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.10); }
+.list th.c-name { width: 25%; }
+.list th.c-lv { width: 8%; }
+.list th.c-cons { width: 8%; }
+.list th.c-fet { width: 8%; }
+.list th.c-tal { width: 16%; }
+.list th.c-wp { width: 16%; }
+.list th.c-art { width: 19%; }
+.list tbody td { padding: 1px 6px; height: 24px; font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; border-bottom: 1px solid rgba(255,255,255,0.045); }
+.list tbody tr:nth-child(even) td { background: rgba(255,255,255,0.028); }
+.list tbody tr.star5 td:first-child { box-shadow: inset 3px 0 0 #d6b260; }
+.list tbody tr.star4 td:first-child { box-shadow: inset 3px 0 0 #9676d6; }
+.nm { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.nm img.ava { flex: none; width: 18px; height: 18px; border-radius: 50%; object-fit: cover; background: rgba(0,0,0,0.35); }
+.nm .el-ic { width: 14px; height: 14px; }
+.nm b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.ic { width: 16px; height: 16px; margin-right: 4px; border-radius: 3px; vertical-align: -4px; background: rgba(0,0,0,0.3); }
+.tal { letter-spacing: 0.5px; color: #d9cfae; }
+.tal.full { color: #f6d98a; font-weight: 700; }
+.wp { color: #b9c4d6; }
+.art { color: #9fabbf; }
+.list td.c-lv, .list td.c-cons, .list td.c-fet { color: #cdd6e6; }
+.artc { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.artt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.avgn { flex: none; font-style: normal; font-size: 10px; line-height: 14px; padding: 0 4px; border-radius: 4px; color: #cfd8e6; background: rgba(255,255,255,0.08); }
+
+/* ---------- 战绩数据板 ---------- */
+.board { margin-top: 12px; }
+.btop { display: flex; padding: 4px 0 10px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.bt { flex: 1; text-align: center; }
+.bt + .bt { border-left: 1px solid rgba(255,255,255,0.08); }
+.bt b { display: block; font-size: 26px; font-weight: 700; color: #f4f6fb; }
+.bt span { font-size: 11.5px; color: #8f9bb3; }
+.bgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+.bs { padding: 8px 12px; text-align: center; border-radius: 8px; background: rgba(255,255,255,0.045); border: 1px solid rgba(255,255,255,0.06); }
+.bs b { display: block; font-size: 18px; font-weight: 700; color: #eef1f7; }
+.bs span { font-size: 11px; color: #8b97ae; }
+
+/* ---------- 汇总与页脚 ---------- */
+.summary { display: flex; gap: 8px; margin-top: 12px; }
+.summary .stat { flex: 1; padding: 7px 10px; border-radius: 9px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07); }
+.summary .stat b { display: block; font-size: 17px; color: #f3e2b4; }
+.summary .stat span { font-size: 10.5px; color: #8f9bb3; }
+.foot { margin-top: 10px; font-size: 10px; color: #6b7589; text-align: right; }

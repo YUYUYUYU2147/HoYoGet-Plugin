@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+  <link rel="stylesheet" type="text/css" href="{{ppath}}meme/meme.css" />
+</head>
+
+<body {{sys.scale}}>
+  <div class="container">
+    <div class="header">
+      <div class="title">{{title}}</div>
+      <div class="sub">{{subText}}</div>
+    </div>
+    {{each groups g}}
+    <div class="grp">
+      <div class="grp-head">
+        <span class="{{g.cls}}">
+          {{g.label}}
+        </span>
+        <span class="grp-count">{{g.count}}</span>
+      </div>
+      <div class="grp-body">
+        {{each g.memes m}}
+        <span class="item">
+          <span class="nm">{{m.primary}}</span>
+          <i class="key">{{m.key}}</i>
+          {{each m.badges b}}
+          <i class="bd">{{b}}</i>
+          {{/each}}
+        </span>
+        {{/each}}
+      </div>
+    </div>
+    {{/each}}
+    <div class="tip">发送 <b>#表情名</b> 制作 · <b>#表情名详情</b> 查询 · <b>#meme列表</b> 查看分类</div>
+    <div class="footer"><span style="color:#ff4d4f;font-weight:600">from 米哈游</span></div>
+  </div>
+</body>
+
+</html>

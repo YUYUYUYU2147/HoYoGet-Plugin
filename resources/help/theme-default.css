@@ -1,0 +1,189 @@
+/* 帮助页总览主题：综合米游社社区的三张参考截图
+ *   - 米黄纸张底（#fffdf0 ~ #fff8e4）+ 细网格，长时间阅读不刺眼
+ *   - 橙色 #f8aa79 / 蓝色 #2b7ccb 双强调，标题蓝、标签橙
+ *   - 大量留白，条目之间留呼吸感
+ *   - 顶部封面保留房子图水印，做成斜切的橙色色块
+ * 分游戏页仍用 body.theme-xxx 覆盖 --g-* 变量，互不影响。
+ */
+body.theme-default {
+  --g-primary: #2b7ccb;
+  --g-secondary: #f8aa79;
+  --g-title: #1f5f9e;
+  --g-text: #7a7266;
+  --g-card: rgba(255, 253, 244, .92);
+  --g-item: #fffefa;
+  --g-border: rgba(248, 170, 121, .34);
+  --g-shadow: rgba(180, 150, 110, .16);
+  --g-head-a: #f8aa79;
+  --g-head-b: #f2c48d;
+  --g-head-text: #fff;
+  --g-head-sub: #1a5c9e;
+  --g-head-sub-bg: rgba(255, 252, 244, .95);
+  --g-label-a: #2b7ccb;
+  --g-label-b: #4f9fe0;
+  --g-strip-a: #f8aa79;
+  --g-strip-b: #f5c98e;
+  --g-strip-c: #2b7ccb;
+  --g-strip-d: #7db8e8;
+  --g-accent: #e07b4a;
+  --g-base-a: #fffdf2;
+  --g-base-b: #fff6e2;
+  --g-grid: rgba(200, 170, 130, .16);
+  --g-radius: 20px;
+  --g-title-font: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+}
+
+/* 纸张底：不用 srlogs 的图，改成纯色 + 细网格，避免和橙蓝撞色 */
+body.theme-default .container {
+  background-image:
+    radial-gradient(circle at 92% 2%, rgba(248, 170, 121, .20), transparent 26%),
+    radial-gradient(circle at 4% 12%, rgba(43, 124, 203, .10), transparent 24%),
+    linear-gradient(160deg, var(--g-base-a), var(--g-base-b));
+}
+
+/* 封面：斜切橙色块 + 房子图水印 */
+body.theme-default .head_box {
+  min-height: 168px;
+  padding: 30px 510px 30px 38px;
+  border-radius: 24px;
+  background:
+    linear-gradient(120deg, #f8aa79 0%, #f5a065 46%, #ef8f52 100%);
+  box-shadow: 0 16px 34px rgba(214, 138, 92, .30), inset 0 1px 0 rgba(255, 255, 255, .45);
+}
+/* 四游戏官方字标：横排一行，右侧留出等宽的横向面板。
+   素材见 resources/help/games/（原神/星铁/绝区零/崩坏3）。
+   四个字标宽高比差异大，统一按「高度固定、宽度自适应」对齐中线。 */
+body.theme-default .head_box::before {
+  /* 四游戏官方字标横排。素材已按各自品牌色/原色处理，统一高度 76px。
+     宽高比 1.28 / 1.82 / 0.94 / 1.68 → 宽度 97/138/71/127，间距 26。 */
+  right: 18px;
+  top: 50%;
+  width: 540px;
+  height: 128px;
+  margin-top: -64px;
+  transform: none;
+  opacity: 1;
+  filter: drop-shadow(0 3px 7px rgba(110, 55, 18, .40));
+  background:
+    url('../help/games/genshin-logo.png') no-repeat 15px center / 97px 76px,
+    url('../help/games/sr-logo.png') no-repeat 138px center / 138px 76px,
+    url('../help/games/zzz-logo.png') no-repeat 302px center / 71px 76px,
+    url('../help/games/bh3-logo.png') no-repeat 399px center / 127px 76px,
+    linear-gradient(100deg, rgba(38, 20, 10, .93), rgba(24, 12, 6, .95));
+  border-radius: 22px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .30), 0 8px 20px rgba(110, 55, 18, .26);
+}
+body.theme-default .head_box::after {
+  right: -60px;
+  bottom: -90px;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(255, 255, 255, .30), transparent 64%);
+}
+body.theme-default .head_box .id_text {
+  font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+  font-weight: 400;
+  font-size: 52px;
+  letter-spacing: 4px;
+  /* 不要用宽投影：白字外围裹一圈深色会在缩放后糊成「黑边空字」。
+     这里用纯白 + 极细描边，笔画边界干净。 */
+  color: #ffffff;
+  -webkit-text-stroke: 1px rgba(150, 74, 26, .55);
+  text-shadow: 0 1px 0 rgba(150, 74, 26, .35);
+}
+body.theme-default .head_box .day_text {
+  font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+  font-weight: 400;
+  font-size: 22px;
+  letter-spacing: .8px;
+  /* 用深蓝：橙色封面上蓝是互补色，对比度最高；棕/红在这块橙底上都发闷 */
+  color: #1a5c9e;
+  box-shadow: 0 4px 12px rgba(140, 70, 24, .18), inset 0 0 0 1px rgba(255, 255, 255, .95);
+}
+body.theme-default .head_box .day_text {
+  margin-top: 14px;
+  font-weight: 800;
+  box-shadow: 0 6px 16px rgba(150, 90, 50, .18), inset 0 0 0 1px rgba(255, 255, 255, .7);
+}
+
+/* 分组卡片：白纸 + 橙色细边，标题做成蓝色标签压左上角 */
+body.theme-default .data_box {
+  margin-top: 26px;
+  padding: 28px 20px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(240, 214, 186, .9);
+  box-shadow: 0 10px 24px rgba(180, 150, 110, .13), inset 0 1px 0 #fff;
+  backdrop-filter: none;
+}
+body.theme-default .tab_lable {
+  font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+  font-weight: 400;
+  top: -15px;
+  left: 22px;
+  min-width: 112px;
+  padding: 7px 20px 8px;
+  border-radius: 999px;
+  font-size: 21px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--g-label-a), var(--g-label-b));
+  box-shadow: 0 6px 14px rgba(43, 124, 203, .28);
+}
+
+/* 条目：纯白卡 + 橙色左条，hover 感更轻 */
+body.theme-default .list { gap: 14px; }
+body.theme-default .list .item,
+body.theme-default .list .item_ {
+  min-height: 78px;
+  padding: 12px 14px 12px 18px;
+  border-radius: 12px;
+  background: var(--g-item);
+  border: 1px solid rgba(240, 214, 186, .8);
+  box-shadow: 0 4px 12px rgba(180, 150, 110, .09);
+}
+body.theme-default .list .item::before,
+body.theme-default .list .item_::before {
+  width: 5px;
+  border-radius: 3px;
+  background: linear-gradient(var(--g-strip-a), var(--g-strip-b));
+}
+body.theme-default .list .item:nth-child(3n+1)::before {
+  background: linear-gradient(var(--g-strip-a), var(--g-strip-b));
+}
+body.theme-default .list .item:nth-child(3n+2)::before {
+  background: linear-gradient(var(--g-strip-c), var(--g-strip-d));
+}
+body.theme-default .list .item:nth-child(3n)::before {
+  background: linear-gradient(#6fbf8f, #a8d9b8);
+}
+
+/* 文字：指令行用蓝色等宽观感，描述用暖灰 */
+body.theme-default .title .text {
+  font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+  font-size: 21px;
+  font-weight: 400;
+  letter-spacing: .3px;
+  color: var(--g-title);
+}
+body.theme-default .title .dec {
+  margin-top: 7px;
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--g-text);
+  text-shadow: none;
+  font-family: 'HelpMicroHei', 'HelpSans', 'Microsoft YaHei', sans-serif;
+  font-weight: 400;
+}
+
+/* 页脚 */
+body.theme-default .logo {
+  margin-top: 24px;
+  padding: 12px 0 4px;
+  color: #c9622c;
+  font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+  font-weight: 400;
+  font-size: 18px;
+  letter-spacing: 2px;
+  text-shadow: 0 1px 2px rgba(255, 240, 220, .85);
+}

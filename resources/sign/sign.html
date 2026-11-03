@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}sign/qd.css" />
+    <link rel="shortcut icon" href="#" />
+  </head>
+
+  <body {{sys.scale}}>
+    <div class="container" id="container">
+      <div class="sign-card">
+        <div class="sign-head">
+          <img class="avatar" src="{{xhhAvatar ? ppath + 'sign/xhh_avatar.png' : 'https://q1.qlogo.cn/g?b=qq&s=140&nk=' + qq + '.jpg'}}" />
+          <div class="head-text">
+            <div class="nick">{{name ?? qq}}</div>
+            <div class="sub">米游社签到</div>
+          </div>
+          <div class="head-badge">签到结果</div>
+        </div>
+
+        <div class="sign-list">
+          {{each msgs s}}
+          {{set st = (s.tip && s.tip.indexOf('今日已签') >= 0) ? 'signed' : ((s.tip && s.tip.indexOf('成功') >= 0) ? 'ok' : 'fail')}}
+          <div class="row {{st}}">
+            {{if s.avatar}}<img class="row-avatar" src="{{s.avatar}}" onerror="this.style.display='none'" />{{/if}}
+            {{if s.game}}
+            <div class="row-ico">
+              {{if s.game}}
+              <img src="{{s.game == '崩坏3' ? ppath + 'bh3_note/bh3_icon.png' : ppath + 'sign/' + (s.game == '原神' ? 'gs' : s.game == '星铁' ? 'sr' : 'zzz') + '.png'}}" />
+                            {{/if}}
+            </div>
+            {{/if}}
+            <div class="row-main">
+              <div class="row-title">{{s.title}}</div>
+              <div class="row-tip">{{s.tip}}</div>
+            </div>
+            <div class="row-state">
+              {{if st === 'ok'}}签到成功{{else if st === 'signed'}}今日已签{{else}}未完成{{/if}}
+            </div>
+            {{if s.icon}}
+            <div class="row-reward">
+              <div class="reward-icon"><img src="{{s.icon}}" /></div>
+              <div class="reward-text">
+                <div class="reward-day">第{{s.day}}天</div>
+                <div class="reward-cnt">×{{s.cnt}}</div>
+              </div>
+            </div>
+            {{else}}
+            <div class="row-reward empty"></div>
+            {{/if}}
+          </div>
+          {{/each}}
+        </div>
+
+        <div class="sign-foot">
+          <span class="src"><span style="color:#ff4d4f;font-weight:600">from 米哈游</span></span>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

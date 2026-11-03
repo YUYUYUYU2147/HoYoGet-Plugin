@@ -1,0 +1,106 @@
+/* 抽卡欧非榜 */
+
+.head-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  background: linear-gradient(150deg, rgba(240, 190, 80, .22), rgba(40, 70, 130, .55));
+  border: 1px solid rgba(230, 180, 70, .40);
+}
+
+.thead {
+  display: flex;
+  align-items: center;
+  margin-top: 14px;
+  padding: 0 18px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(28, 54, 102, .55);
+  border: 1px solid rgba(110, 160, 240, .22);
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #ffd479;
+}
+.th { flex: 0 0 auto; }
+.c-rank { width: 84px; }
+.c-uid { width: 240px; }
+.c-main { width: 220px; }
+.c-num { width: 190px; text-align: right; }
+
+.rows {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.row {
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  height: 62px;
+  border-radius: 12px;
+  background: linear-gradient(100deg, rgba(38, 74, 138, .58), rgba(26, 48, 92, .40));
+  border: 1px solid rgba(100, 150, 230, .18);
+}
+.row.r1 {
+  background: linear-gradient(100deg, rgba(88, 74, 40, .52), rgba(40, 52, 86, .42));
+  border-color: rgba(240, 190, 80, .52);
+}
+.row.r2 { border-color: rgba(200, 215, 240, .42); }
+.row.r3 { border-color: rgba(220, 150, 90, .44); }
+
+.medal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  transform: rotate(45deg);
+  font-style: normal;
+}
+.medal em {
+  font-style: normal;
+  font-size: 18px;
+  font-weight: 900;
+  color: #0b1730;
+  transform: rotate(-45deg);
+}
+.medal.m1 { background: linear-gradient(150deg, #ffe08a, #e8a92c); }
+.medal.m2 { background: linear-gradient(150deg, #eef4ff, #a9bdd8); }
+.medal.m3 { background: linear-gradient(150deg, #ffc79a, #d4793a); }
+.plain {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 15px;
+  color: #a8c3e8;
+  background: rgba(20, 38, 72, .65);
+  border: 1px solid rgba(110, 160, 240, .30);
+}
+
+.c-uid {
+  font-size: 16px;
+  letter-spacing: 1px;
+  color: #cfe0ff;
+  font-weight: 700;
+}
+.c-main { display: flex; align-items: baseline; gap: 6px; }
+.streak {
+  font-size: 26px;
+  font-weight: 900;
+  color: #ffca6a;
+  text-shadow: 0 0 14px rgba(255, 200, 90, .30);
+}
+.unit { font-size: 13px; color: #8fa9cd; }
+.c-num { font-size: 18px; font-weight: 700; color: #cfe0ff; }
+.c-num.gold { color: #ffca6a; font-weight: 900; }
+.c-num.dim { color: #7f9dc4; }

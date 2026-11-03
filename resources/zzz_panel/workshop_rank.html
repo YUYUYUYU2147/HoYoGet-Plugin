@@ -1,0 +1,91 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}zzz_panel/workshop_rank.css" />
+  </head>
+  <body>
+    <div class="page">
+      <div class="head">
+        <div class="head-left">
+          <div class="title">{{character}}<span class="title-sub">面板排名</span></div>
+          <div class="subtitle">{{subtitle}}</div>
+        </div>
+        <div class="scope {{if isGroup}}group{{else}}all{{/if}}">{{scopeText}}</div>
+      </div>
+
+      <div class="rules">
+        <div class="rules-title">排名说明</div>
+        <div class="rule">综合练度排行，按驱动盘总分降序排列，总分相同时按接口顺序</div>
+        <div class="rule">面板属性、驱动盘与音擎取自工坊角色柜，仅前 {{detailLimit}} 名展示</div>
+        <div class="rule">数据并非实时刷新，刚上传的角色柜可能尚未纳入统计</div>
+      </div>
+
+      <div class="thead">
+        <span class="th c-rank">#</span>
+        <span class="th c-user">代理人</span>
+        <span class="th">攻击力</span>
+        <span class="th">暴击率</span>
+        <span class="th">暴击伤害</span>
+        <span class="th">穿透率</span>
+        <span class="th">伤害加成</span>
+        <span class="th">异常掌控</span>
+        <span class="th c-score">评分</span>
+      </div>
+
+      <div class="rows">
+        {{each list r}}
+        <div class="row {{if r.rank === 1}}top1{{else if r.rank === 2}}top2{{else if r.rank === 3}}top3{{/if}}">
+          <div class="c-rank">#{{r.rank}}</div>
+
+          <div class="c-user">
+            <div class="avatar">
+              {{if r.avatar}}<img src="{{r.avatar}}" onerror="this.style.visibility='hidden'">{{/if}}
+            </div>
+            <div class="uinfo">
+              <div class="uline">
+                <span class="uid">{{r.uid}}</span>
+                {{if r.constellationText}}<span class="chip con">{{r.constellationText}}</span>{{/if}}
+                <span class="chip lv">Lv{{r.level}}</span>
+              </div>
+              {{if r.nickname}}<div class="nick">{{r.nickname}}</div>{{/if}}
+              <div class="gear">
+                {{if r.weaponIcon}}<img class="gicon wq" src="{{r.weaponIcon}}" onerror="this.style.display='none'">{{/if}}
+                {{each r.discIcons d}}<img class="gicon" src="{{d.icon}}" onerror="this.style.display='none'">{{/each}}
+                {{if r.setText}}<span class="setname">{{r.setText}}</span>{{/if}}
+              </div>
+            </div>
+          </div>
+
+          {{if r.stats}}
+          <div class="c-stat">{{r.stats.atk}}</div>
+          <div class="c-stat">{{r.stats.crit}}</div>
+          <div class="c-stat">{{r.stats.critdam}}</div>
+          <div class="c-stat">{{r.stats.pen}}</div>
+          <div class="c-stat">{{r.stats.dmg}}</div>
+          <div class="c-stat">{{r.stats.abnormal}}</div>
+          {{else}}
+          <div class="c-stat empty">-</div>
+          <div class="c-stat empty">-</div>
+          <div class="c-stat empty">-</div>
+          <div class="c-stat empty">-</div>
+          <div class="c-stat empty">-</div>
+          <div class="c-stat empty">-</div>
+          {{/if}}
+
+          <div class="c-score">
+            <div class="score">{{r.pointText}}</div>
+            <div class="score-sub">期望 {{r.damageText}}</div>
+            <div class="score-sub dim">全服 #{{r.globalRank}}</div>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+
+      <div class="footer">
+        <span>{{if isGroup}}本群共 {{list.length}} 人上榜{{else}}共 {{total}} 条 · 接口单页 50 条{{/if}}</span>
+        <span class="src"><span style="color:#ff4d4f;font-weight:600">from 米哈游</span></span>
+      </div>
+    </div>
+  </body>
+</html>

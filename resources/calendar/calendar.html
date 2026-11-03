@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}calendar/calendar.css" />
+  </head>
+  <body class="game-{{game}}" {{sys.scale}}>
+    <div class="page">
+      <div class="head">
+        <img class="gicon" src="{{ppath}}game_icons/{{game}}.webp" onerror="this.style.display='none'" />
+        <div class="head-copy">
+          <div class="title">{{gameCn}}大事件日历</div>
+          <div class="sub">当前时间 {{nowText}} · 14 天窗口 · 数据来自米游社公告</div>
+        </div>
+        <div class="stats">
+          <div class="stat"><span class="k">进行中</span><b>{{active}}</b></div>
+          <div class="stat"><span class="k">即将开始</span><b>{{soon}}</b></div>
+          <div class="stat"><span class="k">大事件</span><b>{{marks}}</b></div>
+        </div>
+      </div>
+
+      <div class="tl-card">
+        <div class="tl-head">
+          <div class="tl-label">活动</div>
+          <div class="tl-dates">
+            {{each days d}}
+            <span class="{{if d.today}}today{{/if}} {{if d.weekend}}weekend{{/if}}"><b>{{d.md}}</b><i>周{{d.week}}</i></span>
+            {{/each}}
+          </div>
+        </div>
+
+        {{if markList.length}}
+        <div class="tl-marks">
+          {{each markList m}}
+          <div class="mark-row">
+            <div class="mark-label"><i class="mark-dot {{m.kind}}"></i>{{m.kindLabel}}</div>
+            <div class="mark-track">
+              <span class="mark-pin {{m.kind}}" style="left: {{m.pos}}%" title="{{m.title}}">
+                {{if m.avatar}}<img class="mark-avatar" src="{{m.avatar}}" />{{/if}}
+                <b>{{m.short}}</b>
+              </span>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+        {{/if}}
+
+        <div class="tl-body">
+          <div class="tl-now" style="left: {{nowPos}}%"><span>今天</span></div>
+          {{each list a}}
+          <div class="tl-row">
+            <div class="tl-label">
+              {{if a.portrait}}
+              <span class="tl-portrait" style="background-image:url('{{a.portrait}}')"></span>
+              {{/if}}
+              {{if a.banner}}<span class="tl-thumb" style="background-image:url('{{a.banner}}')"></span>{{/if}}
+              <div class="tl-txt">
+                <div class="tl-name" title="{{a.title}}">{{a.title}}</div>
+                <div class="tl-meta"><i class="pill {{a.statusClass}}">{{a.status}}</i><span class="tag kind-{{a.kind}}">{{a.kindLabel}}</span></div>
+              </div>
+            </div>
+            <div class="tl-track">
+              <div class="tl-bar {{a.statusClass}}" style="left: {{a.left}}%; width: {{a.width}}%;">
+                {{if a.clipLeft}}<i class="clip l">‹</i>{{/if}}
+                <span>{{a.barText}}</span>
+                {{if a.clipRight}}<i class="clip r">›</i>{{/if}}
+              </div>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+      </div>
+
+      <div class="foot">
+        <span class="foot-note">时间轴只显示今天前后各 7 天 · 条带长度对应周期 · 大事件按公告时间标记</span>
+        <span class="foot-from"><span style="color:#ff4d4f;font-weight:600">from 米哈游</span></span>
+      </div>
+    </div>
+  </body>
+</html>

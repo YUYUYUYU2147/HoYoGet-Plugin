@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>式舆防卫战排名</title>
+  <link rel="stylesheet" type="text/css" href="{{ppath}}zzz_challenge/rank_zzz/common/style/index.css">
+  <link rel="stylesheet" type="text/css" href="{{ppath}}zzz_challenge/rank_zzz/common/layout/index.css" />
+  <link rel="stylesheet" type="text/css" href="{{ppath}}zzz_challenge/rank_zzz/index.css">
+</head>
+
+<body>
+  <div class="container" id="container">
+    <div class="card">
+      <div class="special-title">
+        <div class="bg-content">{{titleEn}}</div>
+        <div class="parallelograms"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="content">{{titleCn}}</div>
+        <div class="parallelograms"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+      {{each scoredData record i}}
+      <div class="record{{if record.hardInfo}} hard-row{{/if}}">
+        <div class="user-info">
+          <link rel="stylesheet" type="text/css" href="{{ppath}}zzz_challenge/rank_zzz/common/layout/playerinfo.css" />
+          <div class="avatar">
+            <img src="{{record.player.avatar}}" alt="Avatar">
+          </div>
+          <div class="info-bar">
+            <div class="info">
+              <div class="nickname">{{record.player.player.nickname}}</div>
+            </div>
+            <div class="info">
+              {{if record.player.player.level}}
+              <div class="label level">Lv{{record.player.player.level}}</div>
+              {{/if}}
+              {{if record.player.player.region_name}}
+              <div class="label server">{{record.player.player.region_name}}</div>
+              {{/if}}
+            </div>
+            <div class="uid">UID {{record.player.player.game_uid}}</div>
+          </div>
+          <div class="result">
+            <div class="value">
+              <div class="label">总得分</div>
+              {{if record.score.maxScore}}
+              <div class="max-score-icon score{{record.score.maxScore}}"></div>
+              {{else}}
+              <div class="total-score">{{record.score.score}}</div>
+              {{/if}}
+            </div>
+            {{if record.score.ratingClass}}
+            <div class="rank">
+              <div class="label">评级</div>
+              <div class="rating-icon {{record.score.ratingClass}}"></div>
+            </div>
+            {{else if record.score.maxStars}}
+            <div class="rank">
+              <div class="label">总星数</div>
+              <div class="stars-value">
+                <b>{{record.score.stars}}</b>
+                <i>/{{record.score.maxStars}}</i>
+              </div>
+            </div>
+            {{/if}}
+          </div>
+        </div>
+        {{each record.stages layer}}
+        <div class="item-card">
+          {{if layer}}
+          <div class="content">
+            <div class="header">
+              <div class="name">{{layer.title}}</div>
+              <div class="value">
+                {{if layer.maxScore}}
+                <div class="max-score-icon score{{layer.maxScore}}"></div>
+                {{else}}
+                <div class="val">{{layer.score}}</div>
+                {{/if}}
+                {{if layer.ratingClass}}
+                <div class="rating-icon {{layer.ratingClass}}"></div>
+                {{else}}
+                <div class="stars">
+                  {{each layer.starList s}}
+                  {{if s}}
+                  {{if layer.hard}}
+                  <img class="star" src="{{ppath}}zzz_challenge/rank_zzz/images/star-icon-red.png" />
+                  {{else}}
+                  <img class="star" src="{{ppath}}zzz_challenge/rank_zzz/images/star-icon-light.png" />
+                  {{/if}}
+                  {{else}}
+                  <img class="star" src="{{ppath}}zzz_challenge/rank_zzz/images/star-icon-dark.png" />
+                  {{/if}}
+                  {{/each}}
+                </div>
+                {{/if}}
+              </div>
+            </div>
+            <div class="list">
+              {{each layer.avatars av}}
+              <div class="char-container">
+                {{if av}}
+                <div class="item char">
+                  {{if av.rank}}
+                  <div class="count">{{av.rank}}</div>
+                  {{/if}}
+                  <div class="rank_disp">
+                    <div class="rank rank-icon {{av.rarity}}"></div>
+                  </div>
+                  <div class="image">
+                    <img src="{{av.role_square_url}}" alt="">
+                  </div>
+                </div>
+                {{else}}
+                <div class="item char"></div>
+                {{/if}}
+              </div>
+              {{/each}}
+              <div class="bangboo-container">
+                {{if layer.buddy}}
+                <div class="item bangboo">
+                  <div class="rank_disp">
+                    <div class="rank rank-icon {{layer.buddy.rarity}}"></div>
+                  </div>
+                  <div class="image">
+                    <img src="{{layer.buddy.bangboo_rectangle_url}}" alt="">
+                  </div>
+                </div>
+                {{else}}
+                <div class="item bangboo"></div>
+                {{/if}}
+              </div>
+            </div>
+          </div>
+          {{/if}}
+        </div>
+        {{/each}}
+        {{if record.hardInfo}}
+        <div class="hard-fill">
+          <div class="hf-top">
+            <span class="hf-title">{{record.hardInfo.bossName}}</span>
+            <span class="hf-rank">{{record.hardInfo.rankText}}</span>
+          </div>
+          <div class="hf-tags">
+            {{each record.hardInfo.weakness w}}
+            <span class="hf-tag weak">{{if w.icon}}<img class="hf-elem" src="{{ppath}}{{w.icon}}" />{{/if}}{{w.name}} {{w.resText}}</span>
+            {{/each}}
+            {{each record.hardInfo.resistance r}}
+            <span class="hf-tag resist">{{if r.icon}}<img class="hf-elem" src="{{ppath}}{{r.icon}}" />{{/if}}{{r.name}} {{r.resText}}</span>
+            {{/each}}
+          </div>
+          <div class="hf-stats">
+            {{each record.hardInfo.stats.top st}}
+            <span class="hf-stat"><i>{{st.label}}</i>{{st.value}}</span>
+            {{/each}}
+            {{each record.hardInfo.stats.bottom st}}
+            <span class="hf-stat"><i>{{st.label}}</i>{{st.value}}</span>
+            {{/each}}
+          </div>
+          {{if record.hardInfo.bufferName}}
+          <div class="hf-buffer">
+            <span class="hf-buffer-name">{{record.hardInfo.bufferName}}</span>
+            <span class="hf-buffer-desc">{{record.hardInfo.bufferDesc}}</span>
+          </div>
+          {{/if}}
+          <div class="hf-meta">
+            <span>{{record.hardInfo.time}}</span>
+          </div>
+        </div>
+        {{/if}}
+      </div>
+      {{/each}}
+      <div class="notes-container">
+        <ul class="notes">
+          {{each notes nt}}
+          <li>{{nt}}</li>
+          {{/each}}
+        </ul>
+        {{if signature}}<div class="signature">{{signature}}</div>{{/if}}
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>

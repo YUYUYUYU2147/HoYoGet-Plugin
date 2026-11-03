@@ -1,0 +1,54 @@
+/config/
+data/
+node_modules/
+temp/
+resources/srstrategy/
+# 卡池库写盘备份（由 safeWritePoolYaml 自动生成）
+system/default/*.yaml.bak
+# 过码服务的 Python 虚拟环境与字节码，由 #过码部署 自动生成，不入库
+service/geetest/.venv/
+service/geetest/__pycache__/
+*.pyc
+
+# 仅本地留存的开发笔记与排查记录
+AGENTS.md
+HANDOFF_*.md
+
+# 绝区零面板：用户自定义立绘目录，放的是自己下载的图片，不入库
+resources/zzz_panel/images/panel/
+# 原神/星铁面板：用户自己上传/拷贝的自定义立绘，同样不入库（目录说明 README 例外）
+resources/hoyo_panel/images/panel/*
+!resources/hoyo_panel/images/panel/README.md
+# 裁掉左侧二维码栏后的自动缓存
+resources/hoyo_panel/images/panel_crop/
+
+# 内置数据层（vendor/miao）的用户配置：从 miao-plugin 迁移过来的本地设置，不入库
+system/vendor/miao/config/cfg/*
+!system/vendor/miao/config/cfg/.gitkeep
+
+# meta 资源里的图片（角色立绘/武器/圣遗物，约 300MB）不入库：
+# 由 #米哈游同步资源包 或启动时的在线同步从作者服务拉取，落地到这两个目录
+resources/meta-gs/**/*.webp
+resources/meta-gs/**/*.png
+resources/meta-gs/**/*.jpg
+resources/meta-sr/**/*.webp
+resources/meta-sr/**/*.png
+resources/meta-sr/**/*.jpg
+# 通用图标（元素/武器/属性），与 meta-* 图片同源：同步或从 miao 兜底补齐，不入库
+resources/common/
+# 同步版本标记（每台机器不一样，不入库）
+resources/meta-gs/.sha
+resources/meta-sr/.sha
+
+# 崩三日历的女武神/生日立绘缓存（运行时从官方 wiki 下载，不入库）
+resources/bh3_calendar/icons/
+
+# 本地备份
+*.bak
+*.bak[0-9]*
+resources/meta-gs/
+resources/meta-sr/
+*.zip
+
+# 绝区零面板：裁掉咕咕牛水印栏后的自动缓存，不入库
+resources/zzz_panel/images/panel_crop/

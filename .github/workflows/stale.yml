@@ -1,0 +1,46 @@
+name: "stale"
+
+# 每天跑一次：给长期没动静的 issue / PR 打上标签并到期关闭。
+# 参数在下面，按需调：
+#   days-before-issue-stale / pr-stale   —— 多久没动算「陈旧」（先只提醒）
+#   days-before-*-close                 —— 打标后再过多久自动关闭
+on:
+  schedule:
+    - cron: '30 2 * * *' # 每天 UTC 02:30
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: stale
+  cancel-in-progress: true
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          days-before-issue-stale: 30
+          days-before-issue-close: 7
+          days-before-pr-stale: 30
+          days-before-pr-close: 7
+          stale-issue-message: >
+            这个 issue 已经 30 天没有新评论或修改了。
+            如果问题仍然存在，麻烦补充一下复现步骤与新现象；
+            7 天内没有响应就会自动关闭，之后仍可随时重新打开。
+          stale-pr-message: >
+            这个 PR 已经 30 天没有新提交或评论了。
+            如果还在推进，麻烦更新一下进展；7 天内没有响应就会自动关闭。
+          close-issue-message: >
+            超过 37 天没有新活动，已自动关闭。问题仍存在的话重新开一个 issue 即可。
+          close-pr-message: >
+            超过 37 天没有新活动，已自动关闭。还需要的话重新开 PR 或重新提交均可。
+          # 打了 stale / 维护者手动加的标签的条目一律不碰
+          exempt-issue-labels: 'pinned,security,help wanted,priority/high,priority/urgent'
+          exempt-pr-labels: 'pinned,security,help wanted,priority/high,priority/urgent'
+          ascending: true
+          operations-per-run: 100
+          delete-branch: true

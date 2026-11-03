@@ -1,0 +1,293 @@
+@font-face {
+  font-family: 'yuan';
+  src: url('../font/yuan.ttf');
+}
+
+@font-face {
+  font-family: '宋';
+  src: url('../font/宋.ttf');
+}
+
+@font-face {
+  font-family: 'i';
+  src: url('../font/i.ttf');
+}
+
+* {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-size: 16px;
+  font-family: 'yuan';
+  width: 500px;
+  transform-origin: 0 0;
+}
+
+.container {
+  /* background: #add8e6; */
+  background-image: url('./imgs/bg.png');
+  background-repeat: no-repeat;
+  background-size: cover;
+  padding: 10px;
+  width: 600px;
+}
+.box {
+  min-height: 40px;
+  margin-top: 15px;
+  display: flex;
+  gap: 5px 32px;
+  flex-wrap: wrap;
+  border: 4px solid #e2e8f0;
+  outline: 1px solid #8ebde3;
+  outline-offset: -6px;
+  padding: 3px 3px 15px 3px;
+  background: #f3ddb0dc;
+  position: relative;
+  color: #464c3d;
+  box-shadow: 2px 6px 6px 0px rgba(49, 48, 48, 0.4);
+  /* text-shadow:  0.5px 0.5px 1px #2d2c2c; */
+}
+
+.box_ {
+  /* height: 100px; */
+  width: 90px;
+  font-size: 10px;
+  text-align: center;
+}
+
+.box_ p {
+  background: #b4f6ee;
+  border-radius: 12px;
+}
+
+/* 名字牌按星级上色：S/五星=金，A/四星=紫，B/三星=蓝，低星=灰（与头像描边同一套色） */
+.box_ p.r5 { background: #f7d67e; color: #6b4a00; font-weight: 700; box-shadow: inset 0 0 0 1px #d8a93e; }
+.box_ p.r4 { background: #dcbcf2; color: #4a2470; font-weight: 700; box-shadow: inset 0 0 0 1px #a874e0; }
+.box_ p.r3 { background: #b3d9f7; color: #1d4a70; font-weight: 700; box-shadow: inset 0 0 0 1px #5fa8e8; }
+.box_ p.r2,
+.box_ p.r1 { background: #dde5df; color: #5a6b60; font-weight: 700; box-shadow: inset 0 0 0 1px #9fb6a8; }
+
+.box_ img {
+  width: 90px;
+  height: 90px;
+  object-fit: cover;
+  object-position: top center;
+  border: 2px solid rgba(255, 255, 255, 0.75);
+  border-radius: 10px;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* 无图占位：显示名字首字（如剧情邦布伊埃斯，上游图鉴均未收录） */
+.box_ .img-ph {
+  width: 90px;
+  height: 90px;
+  border: 2px solid rgba(255, 255, 255, 0.75);
+  border-radius: 10px;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  font-weight: 700;
+  color: #9aa8b6;
+}
+.box_ .img-ph.r5 { color: #c9a23a; }
+.box_ .img-ph.r4 { color: #9a6cd0; }
+.box_ .img-ph.r3 { color: #5fa8e8; }
+
+.tab {
+  position: absolute;
+  left: -5px;
+  top: -22px;
+  padding: 2px;
+  background: #b4f6ee;
+  border-radius: 8px 0px 8px 0px;
+  color: rgb(81, 6, 232);
+  font-size: 14px;
+  box-shadow:
+    0 8px 32px 0 rgba(51, 51, 52, 0.5),
+    inset 6px 6px 20px 0px rgba(255, 255, 255, 0.8);
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+}
+
+.tab_right {
+  position: absolute;
+  right: -5px;
+  top: -17px;
+  padding: 2px;
+  background: #b4f6ee;
+  border-radius: 0px 8px 0px 8px;
+  color: rgb(81, 6, 232);
+  font-size: 14px;
+  box-shadow:
+    0 8px 32px 0 rgba(51, 51, 52, 0.5),
+    inset 6px 6px 20px 0px rgba(255, 255, 255, 0.8);
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+}
+
+.logo {
+  font-size: 18px;
+  text-align: center;
+  text-shadow: 0.5px 0.5px 1px #2d2c2c;
+  padding-left: 20px;
+  color: #ee8e8ef8;
+}
+.badge-row {
+  width: 90px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  justify-content: start;
+  align-items: center;
+  gap: 2px;
+  margin-top: 3px;
+}
+/* 星级描边：原神五星/绝区零S级=金色，四星/A级=紫色，三星/B级=蓝色 */
+/* 幻化武器的Gacha 图标是 512×1024 竖图，90×90 方框用 cover 只能看到剑身中段一小条。
+   改用 contain 整幅缩放显示（图片变成 45×90 细长一条，但整把武器完整可见，
+   透明区域也能透出下面的星级底色 —— 四星是紫色）。 */
+.box_ img.tall { object-fit: contain; object-position: center; }
+
+.box_ img.r5 {
+  border: 2px solid #e8b53a;
+  box-shadow:
+    0 0 7px 0 rgba(232, 181, 58, 0.85),
+    inset 0 0 8px 0 rgba(232, 181, 58, 0.3);
+  background: rgba(232, 181, 58, 0.22);
+}
+
+.box_ img.r4 {
+  border: 2px solid #a874e0;
+  box-shadow:
+    0 0 7px 0 rgba(168, 116, 224, 0.85),
+    inset 0 0 8px 0 rgba(168, 116, 224, 0.28);
+  background: rgba(168, 116, 224, 0.2);
+}
+
+.box_ img.r3 {
+  border: 2px solid #5fa8e8;
+  box-shadow: 0 0 6px 0 rgba(95, 168, 232, 0.7);
+  background: rgba(95, 168, 232, 0.16);
+}
+
+.box_ img.r2,
+.box_ img.r1 {
+  border: 2px solid #9fb6a8;
+  box-shadow: 0 0 5px 0 rgba(159, 182, 168, 0.6);
+}
+
+/* 怪物分级配色：BOSS 金 / 精英 紫 / 小怪 灰青，与名字牌同一套色 */
+.box_ img.rank-boss {
+  border: 2px solid #e8b53a;
+  box-shadow:
+    0 0 8px 0 rgba(232, 181, 58, 0.9),
+    inset 0 0 8px 0 rgba(232, 181, 58, 0.32);
+  background: rgba(232, 181, 58, 0.22);
+}
+
+.box_ img.rank-elite {
+  border: 2px solid #a874e0;
+  box-shadow:
+    0 0 8px 0 rgba(168, 116, 224, 0.85),
+    inset 0 0 8px 0 rgba(168, 116, 224, 0.28);
+  background: rgba(168, 116, 224, 0.2);
+}
+
+.box_ img.rank-normal {
+  border: 2px solid #9fb6a8;
+  box-shadow: 0 0 4px 0 rgba(159, 182, 168, 0.45);
+  background: rgba(159, 182, 168, 0.12);
+}
+
+.box_ p.rank-boss { background: #f7d67e; color: #6b4a00; font-weight: 700; box-shadow: inset 0 0 0 1px #d8a93e; }
+.box_ p.rank-elite { background: #dcbcf2; color: #4a2470; font-weight: 700; box-shadow: inset 0 0 0 1px #a874e0; }
+.box_ p.rank-normal { background: #dde5df; color: #5a6b60; font-weight: 700; box-shadow: inset 0 0 0 1px #9fb6a8; }
+.box_ .img-ph.rank-boss { color: #c9a23a; }
+.box_ .img-ph.rank-elite { color: #9a6cd0; }
+.box_ .img-ph.rank-normal { color: #94a89d; }
+
+.mini-badge { display: inline-flex; width: 100%; min-width: 0; align-items: center; justify-content: center; gap: 1px; max-width: 100%; padding: 1px 0; border-radius: 999px; background: rgba(255,255,255,.68); color: #3f4a42; font-size: 7px; line-height: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* TEST 角标：Bwiki 一览里查不到、数据只来自 nanoka 的条目 */
+.mini-badge.test { background: rgba(255,138,0,.92); color: #fff; font-weight: 700; letter-spacing: .5px; }
+.mini-badge img { width: 12px; height: 12px; object-fit: contain; flex: 0 0 12px; }
+.mini-badge.icon-only,
+.mini-badge:has(img) { width: 100%; max-width: 100%; padding: 1px; font-size: 0; }
+
+/* 头像容器：为了让稀有度金星条能压在头像顶部，这里必须是 relative。
+   头像本体的 90×90、圆角、描边全部照旧，只是多包了一层。 */
+.box_ .ava {
+  position: relative;
+  width: 90px;
+  height: 90px;
+  margin: 0 auto;
+}
+/* TEST 角标（测试服标记）：贴在头像右上角。
+   之前它混在名字下方的徽章行里，跟星级/属性徽章挤成一列，看不出是「这条是测试服」。
+   放右上角后一眼可辨，位置与游戏内角色卡一致。
+   ⚠️ 定位用 top:2px / right:2px（收在 .ava 内），**不要用负值外扩**：
+     .ava 的父级 .box_ 没有 z-index，负偏移溢出的部分会被同一行
+     右侧相邻卡片的背景盖掉（实测右上角被切掉一截）。
+   金星条是 top:4px 居中、宽 76px，左右各留 7px，角标贴最右上角不与之重叠。 */
+.box_ .ava-test {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 3;
+  padding: 1px 4px;
+  border-radius: 8px 2px 8px 2px;
+  background: linear-gradient(135deg, #ff9a2e, #ff6a00);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: .3px;
+  white-space: nowrap;
+  box-shadow: 0 0 0 1.5px rgba(255,255,255,.9), 0 1px 3px rgba(0,0,0,.3);
+  pointer-events: none;
+}
+
+/* 阵营角标（只有绝区零角色列表挂：Bwiki「角色图鉴」的 Logo-阵营图标-*.png）：
+   贴在头像右上角，与 Bwiki 图鉴页的观感一致。
+   ⚠️ .box_ img 那条通用规则给了 90×90、白描边、圆角与内阴影，
+   角标必须把这几项全部显式复位，否则会被撑成整张脸的尺寸。
+   定位同样收在 .ava 内（top/right 用正值），理由见 .ava-test 注释。
+   TEST 角标只在 test 数据模式出现，而 test 模式下不挂阵营角标（Bwiki 是正式服源），
+   两者不会同时出现。 */
+.box_ img.ava-camp {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 2;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: none;
+  object-fit: contain;
+  object-position: center;
+  pointer-events: none;
+}
+
+/* 稀有度金星条（维基原图是 162x25 的五星条，缩到头像宽度即可）：
+   压在头像上沿居中，盖在描边之上，和游戏内角色卡的观感一致。 */
+.box_ img.ava-stars {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 76px;
+  height: auto;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: none;
+  object-fit: contain;
+  object-position: center;
+  pointer-events: none;
+}

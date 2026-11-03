@@ -1,0 +1,37 @@
+/* 配装统计：两列进度条 + 星魂分布 */
+
+.note {
+  margin-top: 12px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #ffd479;
+  background: rgba(214, 160, 40, .12);
+  border: 1px solid rgba(230, 180, 70, .32);
+}
+
+.boards { align-items: flex-start; }
+
+/* 星魂分布：整行铺开 */
+.ranks {
+  margin-top: 14px;
+  padding: 14px 18px 16px;
+  border-radius: 14px;
+  background: rgba(34, 64, 118, .34);
+  border: 1px solid rgba(110, 160, 240, .20);
+}
+.rank-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px 20px;
+}
+.rank-cell { min-width: 0; }
+.rank-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.rank-label { color: #b7cdea; }
+.rank-value { font-weight: 900; color: #ffca6a; }

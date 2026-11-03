@@ -1,0 +1,95 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}sr_workshop/common.css" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}sr_workshop/detail.css" />
+  </head>
+  <body>
+    <div class="page">
+      <div class="head">
+        <div class="head-left">
+          <div class="head-face">
+            {{if face}}<img src="{{face}}" onerror="this.style.display='none';this.parentNode.innerHTML='{{initial}}'">{{else}}<span class="initial">{{initial}}</span>{{/if}}
+          </div>
+          <div>
+            <div class="title">{{title}}<span class="title-sub">练度详情</span></div>
+            <div class="subtitle">玩家 {{nick}}</div>
+            <div class="tags">
+              {{if stars}}<span class="tag gold">{{stars}}</span>{{/if}}
+              {{if elem}}<span class="tag">{{elem}}属性</span>{{/if}}
+              {{if path}}<span class="tag">{{path}}</span>{{/if}}
+              <span class="tag">Lv.{{level}}</span>
+              <span class="tag">{{rank}} 星魂</span>
+            </div>
+          </div>
+        </div>
+        <div class="badge">星穹铁道工坊</div>
+      </div>
+
+      <div class="summary">
+        <div class="sum-cell">
+          <div class="sum-label">遗器总分</div>
+          <div class="sum-value gold">{{pointText}}</div>
+        </div>
+        <div class="sum-cell">
+          <div class="sum-label">光锥</div>
+          <div class="sum-value sm">{{weapon}}</div>
+          {{if refine}}<div class="sum-sub">叠影 {{refine}}</div>{{/if}}
+        </div>
+        <div class="sum-cell wide">
+          <div class="sum-label">遗器套装</div>
+          <div class="sum-value sm">{{sets}}</div>
+        </div>
+        <div class="sum-cell">
+          <div class="sum-label">数据更新</div>
+          <div class="sum-value sm">{{updatedAt}}</div>
+        </div>
+      </div>
+
+      {{if globalRank}}
+      <div class="global">
+        <div class="global-head">
+          <span class="global-title">{{if globalRank.rankStat === 'wrqs'}}fort off fans 全球遗器评分榜{{else}}fort off fans 全球练度榜{{/if}}</span>
+          <span class="global-bracket">{{globalRank.bracket}} 星魂档位</span>
+        </div>
+        <div class="global-body">
+          <div class="global-rank">
+            <div class="gr-num">{{globalRank.rank}}</div>
+            <div class="gr-label">全球第 {{globalRank.rank}} 名{{if globalRank.total}} / 共 {{globalRank.total}} 人{{/if}}</div>
+          </div>
+          <div class="global-stats">
+            {{if globalRank.wrqs}}<div class="gs"><span class="v">{{globalRank.wrqs}}</span><span class="l">遗器评分</span></div>{{/if}}
+            {{if globalRank.statTcv}}<div class="gs"><span class="v">{{globalRank.statTcv}}</span><span class="l">CRIT 值</span></div>{{/if}}
+            {{if globalRank.statCritRate}}<div class="gs"><span class="v">{{globalRank.statCritRate}}</span><span class="l">暴率</span></div>{{/if}}
+            {{if globalRank.statCritDmg}}<div class="gs"><span class="v">{{globalRank.statCritDmg}}</span><span class="l">暴伤</span></div>{{/if}}
+            {{if globalRank.statSpd}}<div class="gs"><span class="v">{{globalRank.statSpd}}</span><span class="l">速度</span></div>{{/if}}
+          </div>
+        </div>
+        {{if globalRank.stale}}<div class="global-warn">⚠ 网站配装可能未同步，名次对应的是旧面板</div>{{/if}}
+      </div>
+      {{else if globalRankMiss}}
+      <div class="global-miss">该玩家未在 fort off fans 提交展柜，无法查询全球名次</div>
+      {{/if}}
+
+      {{if panel.length}}
+      <div class="panel">
+        <div class="panel-title">面板属性</div>
+        <div class="panel-grid">
+          {{each panel item}}
+          <div class="pv">
+            <div class="pv-label">{{item.label}}</div>
+            <div class="pv-value">{{item.value}}</div>
+          </div>
+          {{/each}}
+        </div>
+      </div>
+      {{/if}}
+
+      <div class="footer">
+        <span>数据来自玩家上传至工坊的角色柜，仅供参考</span>
+        <span class="src"><span style="color:#ff4d4f;font-weight:600">from 米哈游</span></span>
+      </div>
+    </div>
+  </body>
+</html>

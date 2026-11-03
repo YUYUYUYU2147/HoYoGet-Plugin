@@ -1,0 +1,46 @@
+name: "check"
+
+# 语法与配置自检。xhh 没有构建步骤，核心代码全是 ESM，
+# 一次 node --check 就能把「少一个分号/括号不配对」这类低级错误挡在推送之外。
+#
+# 只装一个依赖：yaml（config-check 需要它解析 YAML）。运行期依赖里 sharp 是原生
+# 模块、mysql2 也不参与检查，--omit=dev 之外还要整体跳过生产依赖，才不会因为
+# 装 sharp 失败或拖慢 CI。
+on:
+  push:
+    branches: [v3]
+  pull_request:
+  workflow_dispatch:
+
+# 同一分支连续推送只保留最新一次运行，避免一次改动连收好几封通知
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 安装检查用依赖（仅 yaml）
+        run: npm install --no-save --no-package-lock --no-audit --no-fund yaml@^2.6.1
+
+      - name: 语法预检
+        run: node tools/ci/syntax-check.mjs
+
+      - name: 配置与卡池表自检
+        run: node tools/ci/config-check.mjs
+
+      - name: 模板 ppath 检查
+        run: node tools/ci/ppath-check.mjs
+
+      - name: 极限面板预设检查
+        run: node tools/ci/extreme-preset-check.mjs
+
+      - name: 隐私信息扫描
+        run: node tools/ci/privacy-scan.mjs

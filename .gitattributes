@@ -1,0 +1,56 @@
+# 统一换行符：仓库内一律存 LF，检出时按平台自动转换。
+#
+# 背景：本仓库历史上部分文件在 Windows 上编辑，混入过 CRLF。
+# 配合 core.autocrlf=input 提交时虽会被转成 LF，但不同机器的
+# core.autocrlf 设置不同（有人是 true、有人是 unset），一旦不一致，
+# diff 会出现整文件全变红、review 无法进行。
+#
+# .gitattributes 随仓库走，对所有克隆者生效，优先级高于各人本地的
+# core.autocrlf，因此比只靠本地配置可靠。
+#
+# text=auto 让 git 自行判断哪些是文本；*.bat 等 Windows 脚本固定 CRLF，
+# 因为它们在 cmd 下按 LF 解析会出问题。
+
+*               text=auto eol=lf
+
+*.sh            text eol=lf
+*.js            text eol=lf
+*.mjs           text eol=lf
+*.cjs           text eol=lf
+*.ts            text eol=lf
+*.json          text eol=lf
+*.yaml          text eol=lf
+*.yml           text eol=lf
+*.html          text eol=lf
+*.htm           text eol=lf
+*.css           text eol=lf
+*.md            text eol=lf
+*.txt           text eol=lf
+*.xml           text eol=lf
+*.csv           text eol=lf
+*.py            text eol=lf
+*.java          text eol=lf
+*.go            text eol=lf
+*.rs            text eol=lf
+*.sql           text eol=lf
+*.toml          text eol=lf
+*.ini           text eol=lf
+
+# 二进制，不参与换行符转换
+*.png           binary
+*.jpg           binary
+*.jpeg          binary
+*.gif           binary
+*.webp          binary
+*.ico           binary
+*.mp3           binary
+*.mp4           binary
+*.woff          binary
+*.woff2         binary
+*.ttf           binary
+*.zip           binary
+*.gz            binary
+
+# Windows 批处理必须保持 CRLF
+*.bat           text eol=crlf
+*.cmd           text eol=crlf

@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}help/help.css" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}help/theme-default.css" />
+    <link rel="shortcut icon" href="#" />
+  </head>
+
+  <body class="theme-{{theme}}" {{sys.scale}}>
+    <div class="container" id="container">
+      <div class="head_box">
+        <div class="id_text">{{headTitle}}</div>
+        <p class="day_text">{{headSub}}</p>
+      </div>
+      {{each data val}}
+      <div class="data_box">
+        <div class="tab_lable">{{val.group}}</div>
+        <div class="list">
+          {{each val.list item}} {{if val.group.indexOf('主人') === -1}}
+          <div class="item">
+            <div class="title">
+              <div class="text">{{item.title}}</div>
+              <div class="dec">{{item.desc}}</div>
+            </div>
+          </div>
+          {{else}} {{if au}}
+          <div class="item_">
+            <div class="title">
+              <div class="text">{{item.title}}</div>
+              <div class="dec">{{item.desc}}</div>
+            </div>
+          </div>
+          {{/if}} {{/if}} {{/each}}
+        </div>
+      </div>
+      {{/each}}
+      <div class="logo"><span style="color:#ff4d4f;font-weight:600">from 米哈游</span></div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}akasha/rank.css" />
+  </head>
+  <body>
+    <div class="page">
+      {{if randomBg}}<img class="bg-random" src="{{randomBg}}" onerror="this.style.display='none'">{{/if}}
+      <div class="head">
+        <div class="head-left">
+          <div class="head-user">
+            {{if ownerAvatar}}<img class="head-avatar" src="{{ownerAvatar}}" onerror="this.style.display='none'">{{/if}}
+            <div class="head-user-text">
+              <div class="title">我的全球排名</div>
+              <div class="subtitle">{{if nickname}}{{nickname}} · {{/if}}UID {{uid}}{{if level}} · AR{{level}}{{/if}}{{if region}} · {{region}}{{/if}}</div>
+              {{if signature}}<div class="signature">{{signature}}</div>{{/if}}
+            </div>
+          </div>
+        </div>
+        <div class="head-right">
+          <div class="badge">AKASHA</div>
+        </div>
+      </div>
+
+      <div class="legend">
+        <span>按全球百分位排序（越靠前越强）</span>
+        <span class="sep">·</span>
+        <span>数据来源 akasha.cv</span>
+      </div>
+      <div class="legend legend-tip">
+        仅统计游戏内「角色展柜」公开的角色（最多 8 个）。想看到更多排名，
+        请在游戏里把常练的角色摆上展柜，再到 akasha.cv 更新一次。
+      </div>
+
+      <div class="list myrank">
+        {{each rows r i}}
+        <div class="row {{if i === 0}}top1{{else if i === 1}}top2{{else if i === 2}}top3{{/if}}">
+          <div class="rank">{{i + 1}}</div>
+
+          <div class="avatar">
+            {{if r.icon}}<img src="{{r.icon}}" onerror="this.style.visibility='hidden'">{{/if}}
+          </div>
+
+          <div class="char-cell">
+            <span class="nick">{{r.name}}</span>
+            <span class="cons-chip">{{r.consText}}</span>
+          </div>
+
+          <div class="plan-cell">{{r.planName}}</div>
+
+          <div class="dmg-cell">{{r.result}}</div>
+
+          <div class="score-cell">
+            <div class="rank-line"><span class="dmg">#{{r.rank}}</span><span class="dmg-total">/ {{r.outOf}}</span></div>
+            <div class="beat-line"><span class="beat-bar" style="--beat: {{r.beatPercent}}%"></span><span class="dmg-beat">{{r.beatPercent}}%</span></div>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+
+      <div class="footer"><span style="color:#ff4d4f;font-weight:600">from 米哈游</span> · Akasha System</div>
+    </div>
+  </body>
+</html>

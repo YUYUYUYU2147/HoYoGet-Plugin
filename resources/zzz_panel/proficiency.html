@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}zzz_panel/proficiency.css" />
+  </head>
+  <body>
+    <div class="prof-page">
+      {{if bgImage}}<div class="panel-bg" style="background-image:url('{{bgImage}}')"></div>{{/if}}
+
+      <div class="head">
+        <div class="head-main">
+          <div class="head-uid">UID: {{uid}}</div>
+          <div class="head-sub">共 {{total}} 名代理人</div>
+          <div class="head-sub">S级 {{sCount}} · 满级 {{maxLevel}}</div>
+        </div>
+        <div class="head-right">
+          {{if playerAvatar}}
+          <img class="head-avatar" src="{{playerAvatar}}" onerror="this.style.display='none'" />
+          {{/if}}
+          <div class="head-user">
+            {{if playerName}}
+            <div class="head-name">{{playerName}}</div>
+            {{/if}}
+            <div class="head-badge">绝区零 · 练度统计</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">代理人详情列表</div>
+
+        <div class="thead">
+          <div class="c-idx">#</div>
+          <div class="c-name">代理人</div>
+          <div class="c-lv">等级</div>
+          <div class="c-rank">影画</div>
+          {{each cols c}}
+          <div class="c-sk">{{c.label}}</div>
+          {{/each}}
+          <div class="c-drive">驱动盘</div>
+          <div class="c-dmg">最高伤害</div>
+          <div class="c-wq">音擎</div>
+        </div>
+
+        {{each rows r}}
+        <div class="trow rar-{{r.rarity}}">
+          <div class="c-idx">{{r.rankIndex}}</div>
+          <div class="c-name">
+            {{if r.icon}}
+            <img class="avatar" src="{{r.icon}}" onerror="this.style.visibility='hidden'" />
+            {{/if}}
+            <span class="name-text">{{r.name}}</span>
+          </div>
+          <div class="c-lv">{{r.level}}</div>
+          <div class="c-rank">影{{r.rank}}</div>
+          {{each r.skills s}}
+          <div class="c-sk {{s.tier}}">{{s.text}}</div>
+          {{/each}}
+          <div class="c-drive">
+            <span class="drive-score">{{r.equipScoreText}}</span>
+            <span class="drive-rating">{{r.equipRating}}</span>
+          </div>
+          <div class="c-dmg{{if r.damageMissing}} miss{{/if}}">{{r.damageText}}</div>
+          <div class="c-wq">
+            {{if r.hasWeapon}}
+            {{if r.weapon.icon}}
+            <img class="wq-icon" src="{{r.weapon.icon}}" onerror="this.style.display='none'" />
+            {{/if}}
+            <span class="wq-lv">Lv{{r.weapon.level}}</span>
+            <span class="wq-star">精{{r.weapon.star}}</span>
+            <span class="wq-name">{{r.weapon.name}}</span>
+            {{else}}
+            <span class="wq-empty">未装备</span>
+            {{/if}}
+          </div>
+        </div>
+        {{/each}}
+      </div>
+
+      <div class="footer">from 米哈游</div>
+    </div>
+  </body>
+</html>

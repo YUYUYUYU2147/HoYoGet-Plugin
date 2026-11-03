@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}akasha/rank.css" />
+  </head>
+  <body>
+    <div class="page">
+      {{if randomBg}}<img class="bg-random" src="{{randomBg}}" onerror="this.style.display='none'">{{/if}}
+      <div class="head">
+        <div class="head-left">
+          <div class="title">{{roleName}}</div>
+          <div class="subtitle">Akasha System 全球练度榜 · {{planCount}} 套配装方案</div>
+        </div>
+        <div class="head-right">
+          <div class="badge">AKASHA</div>
+        </div>
+      </div>
+
+      {{each boards b}}
+      <div class="board">
+        <div class="board-head">
+          <div class="board-name">{{b.planName}}</div>
+          <div class="board-meta">
+            <span class="short">{{b.planShort}}</span>
+            <span class="count">{{b.playerCount}} 份有效成绩</span>
+          </div>
+        </div>
+
+        <div class="list">
+          {{each b.rows r}}
+          <div class="row {{if r.rank === 1}}top1{{else if r.rank === 2}}top2{{else if r.rank === 3}}top3{{/if}}">
+            <div class="rank">{{r.rank}}</div>
+
+            <div class="player">
+              <div class="nick">{{r.nickname}}</div>
+              <div class="meta">
+                <span class="uid">UID {{r.uid}}</span>
+                <span class="region">{{r.region}}</span>
+                <span class="ar">AR{{r.ar}}</span>
+              </div>
+            </div>
+
+            <div class="build">
+              <span class="cons">{{r.consText}}</span>
+              {{if r.weapon.name}}
+              <span class="weapon rarity-{{r.weapon.rarity}}">{{r.weapon.name}}{{if r.weapon.refineText}} {{r.weapon.refineText}}{{/if}}</span>
+              {{/if}}
+            </div>
+
+            <div class="score">
+              <div class="dmg">{{r.result}}</div>
+              <div class="dmg-label">期望伤害</div>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+      </div>
+      {{/each}}
+
+      <div class="footer"><span style="color:#ff4d4f;font-weight:600">from 米哈游</span> · Akasha System</div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,684 @@
+/* 原版模板依赖 ZZZ-Plugin 的 font/fonts.css（数字字体 Number、原神字体 HYWenHei），
+   复制模板时那条 @import 被去掉了，TEAM 这类文字就落到系统默认字体（发斜、发扁）。
+   这里把用到的两个字体定义补回来，路径相对本 CSS 所在目录。 */
+@font-face {
+    font-family: "Number";
+    src: url("../font/tttgbnumber.ttf") format("truetype");
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "HYWenHei-55W";
+    src: url("../font/HYWenHei-55W.ttf") format("truetype");
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Chinese";
+    src: url("../font/SR.ttf") format("truetype");
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+}
+
+html {
+    background: transparent;
+    width: fit-content;
+    height: fit-content;
+}
+
+body {
+    font-size: 14px;
+    color: #fff;
+    width: 500px;
+    transform: scale(2);
+    transform-origin: 0 0;
+}
+
+.container {
+    font-family: "Number", "Chinese";
+    background-image: url("../deadly_img/page-bg.png");
+    background-size: cover;
+    padding: 8px;
+}
+
+.header {
+    padding: 2px 6px 2px;
+}
+
+.header .title {
+    padding-top: 2px;
+    font-size: 16px;
+    font-weight: 800;
+    text-align: center;
+}
+
+.header .period {
+    font-size: 15px;
+    margin-top: 4px;
+}
+
+.summary {
+    height: 150px;
+    background-image: url("../deadly_img/block-bg.png");
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    border-radius: 10px;
+    padding: 0;
+    margin: 6px 0 10px;
+    overflow: hidden;
+}
+
+.summary .user {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    column-gap: 10px;
+    align-items: center;
+    width: 220px;
+}
+
+.summary .avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 6px;
+    border: 2px solid #fff;
+}
+
+.summary .info {
+    margin-left: 8px;
+}
+
+.summary .nick {
+    font-size: 20px;
+    font-weight: 800;
+}
+
+.summary .uid {
+    font-size: 12px;
+    opacity: .9;
+    margin-top: 4px;
+}
+
+.score-row {
+    position: absolute;
+    left: 520px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-block;
+    white-space: nowrap;
+}
+
+.score {
+    font-size: 46px;
+    font-weight: 900;
+    line-height: 1;
+    color: #fff;
+    display: inline-block;
+}
+
+.rank-pill {
+    position: absolute;
+    right: 84px;
+    left: auto;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 34px;
+    padding: 0 16px;
+    background: #e6e6e6;
+    color: #1a1a1a;
+    font-weight: 800;
+    border-radius: 999px;
+    z-index: 3;
+}
+
+.rank-pill::after {
+    content: "";
+    position: absolute;
+    right: -14px;
+    top: 50%;
+    transform: translateY(-50%) rotate(-25deg);
+    width: 18px;
+    height: 18px;
+    background: #e6e6e6;
+    border-radius: 70% 30% 70% 30% / 60% 40% 60% 40%;
+}
+
+.star-box-right {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.star-box-right img {
+    width: 20px;
+    height: 20px;
+}
+
+.card {
+    background-size: cover;
+    background-position: center;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, .3);
+}
+
+.card .boss {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background: rgba(0, 0, 0, .6);
+    position: relative;
+}
+
+.card .boss-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+}
+
+.card .boss-name {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.card .race-icon {
+    position: absolute;
+    right: 8px;
+    width: 26px;
+    height: 26px;
+    opacity: .95;
+}
+
+.card-body {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    gap: 14px;
+    background: rgba(0, 0, 0, .45);
+    padding: 12px;
+}
+
+.boss-left {
+    grid-column: 1;
+    position: relative;
+    width: 160px;
+    height: 255px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.boss-cover {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.race-mark {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    width: 35px;
+    height: 35px;
+}
+
+.info {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.title {
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.score-line {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.star-icons {
+    display: flex;
+}
+
+.star-icon {
+    width: 30px;
+    height: 30px;
+    display: block;
+}
+
+.star-icons .star-icon+.star-icon {
+    margin-left: -6px;
+}
+
+.time {
+    font-size: 12px;
+}
+
+.team {
+    margin-top: 3px;
+}
+
+.buffer {
+    margin-top: 3px;
+}
+
+.buff-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+}
+
+.buff-title .buff-bg {
+    width: 30px;
+    height: 30px;
+    background-image: url("../deadly_img/buff-icon-bg.png");
+    background-size: contain;
+    background-repeat: no-repeat;
+    display: inline-block;
+}
+
+.buff-title .buff-icon {
+    width: 24px;
+    height: 24px;
+    position: absolute;
+    left: 3px;
+    top: 3px;
+}
+
+.buff-title .buff-name {
+    font-weight: 700;
+    font-size: 12px;
+}
+
+.buff-desc {
+    font-size: 10px;
+    margin-top: 4px;
+    line-height: 1.4;
+}
+
+.team {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+}
+
+.agent,
+.buddy {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, .5);
+    border: 3px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, .6) inset;
+}
+
+.agent img,
+.buddy img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: 8px;
+}
+
+.agent {
+    width: 48px;
+    height: 58px;
+}
+
+.buddy {
+    width: 48px;
+    height: 58px;
+    grid-column: auto;
+}
+
+.tag {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    font-size: 12px;
+    padding: 1px 4px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, .6);
+    color: #fff;
+    line-height: 1;
+    font-weight: 800;
+}
+
+.rarity-S {
+    background-image: url(../other/RANK_S.png);
+    background-size: 100% 100%;
+    width: 15px;
+    height: 15px;
+    top: -1px;
+    margin-left: -2px;
+    /* .tag 带 padding:1px 4px，box-sizing 是 border-box，
+       不重置的话 15px 盒子里只剩 7px 宽的内容区，段位图被压扁 */
+    padding: 0;
+}
+
+.rarity-A {
+    background-image: url(../other/RANK_A.png);
+    background-size: 100% 100%;
+    width: 15px;
+    height: 15px;
+    top: -1px;
+    margin-left: -2px;
+    padding: 0;
+}
+
+.rank {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    font-size: 12px;
+    background: rgba(0, 0, 0, .8);
+    padding: 0 4px;
+    border-bottom-left-radius: 6px;
+    color: #fff;
+    line-height: 16px;
+    height: 16px;
+}
+
+.tip {
+    font-size: 9px;
+    color: rgba(255, 255, 255, .85);
+    text-align: center;
+    margin-top: 2px;
+}
+
+.summary-new {
+    height: 150px;
+    background-image: url("../deadly_img/block-bg.png");
+    background-size: cover;
+    background-position: center;
+    border-radius: 10px;
+    margin: 6px 0 10px;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 1fr 120px;
+    grid-template-rows: 1fr;
+    align-items: center;
+    padding: 12px 16px;
+}
+
+.summary-new * {
+    box-sizing: border-box;
+}
+
+.summary-user {
+    grid-column: 1;
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    column-gap: 10px;
+    align-items: center;
+    margin-left: 10px;
+}
+
+.summary-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 6px;
+}
+
+.summary-text {
+    margin-top: 10px;
+    margin-left: 6px;
+}
+
+.summary-nick {
+    font-size: 18px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+}
+
+.summary-score-row {
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.summary-score {
+    font-size: 36px;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1;
+}
+
+.summary-percent {
+    font-size: 14px;
+    font-weight: 800;
+    background-image: url(../deadly_img/rank-bg.png);
+    background-size: 100% 100%;
+    width: 90px;
+    color: #1a1a1a;
+    height: 24px;
+    line-height: 24px;
+    padding: 0 10px;
+}
+
+.summary-coin {
+    margin-top: 50px;
+    margin-right: 20px;
+    grid-column: 2;
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #fff;
+    font-weight: 700;
+}
+
+.summary-coin img {
+    width: 30px;
+    height: 30px;
+}
+
+.card-bg {
+    background-image: url("../deadly_img/detail-card-bg.png");
+    background-size: cover;
+    background-size: 100% 100%;
+}
+
+.bg-boss-1 {
+    background-image: url("../deadly_img/boss_bg_1.png");
+}
+
+.bg-boss-2 {
+    background-image: url("../deadly_img/boss_bg_2.png");
+}
+
+.bg-boss-3 {
+    background-image: url("../deadly_img/boss_bg_3.png");
+}
+
+.bg-boss-4 {
+    background-image: url("../deadly_img/boss_bg_4.png");
+}
+
+.logo {
+    font-size: 12px;
+    text-align: center;
+    color: #ff4d4f;
+    letter-spacing: .5px;
+    margin: 10px 0 4px;
+}
+/* 弱点/抗性的元素徽章（原版靠模板内联样式，这里收进 CSS 便于统一） */
+.element-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 6px 1px 3px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .12);
+    white-space: nowrap;
+}
+
+.element-tag img {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.element-tag.resist-tag {
+    background: rgba(255, 80, 80, .16);
+}
+
+.element-tag .res-num {
+    font-style: normal;
+    margin-left: 3px;
+    opacity: .85;
+    font-size: .92em;
+}
+
+/* 怪物面板数值：两列网格，标签在上、数值在下 */
+.boss-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px 10px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, .12);
+}
+
+.bs-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+    line-height: 1.2;
+}
+
+.bs-item i {
+    font-style: normal;
+    font-size: 10px;
+    color: rgba(255, 255, 255, .5);
+}
+
+.bs-item b {
+    font-size: 13px;
+    color: #fff;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* 立绘在上、名称/弱点/抗性/基础数据在下，与防卫战一致 */
+.card-body { grid-template-columns: 1fr; }
+.boss-left { grid-column: 1; margin: 0 auto; }
+.info { grid-column: 1; }
+
+/* 覆盖：立绘保持左列，名称/弱点/抗性/基础数据移到其下方整行 */
+.card-body { grid-template-columns: 160px 1fr; }
+.boss-left { grid-column: 1; margin: 0; }
+.info { grid-column: 1 / -1; margin-top: 10px; }
+
+/* 左窄列：立绘在上、信息卡在下；分数与队伍在右列 */
+.card-body { grid-template-columns: 190px 1fr; align-items: start; }
+.boss-col { grid-column: 1; display: flex; flex-direction: column; gap: 8px; }
+.boss-left { grid-column: auto; width: 190px; height: 190px; margin: 0; }
+.boss-info { padding: 8px; border-radius: 8px; background: rgba(0, 0, 0, .48); border: 1px solid rgba(255, 255, 255, .12); }
+.boss-info .title { font-size: 14px; text-align: center; }
+.info { grid-column: 2; }
+
+/* 窄列适配：左列略加宽，基础数据两列，长数字折行不叠 */
+.card-body { grid-template-columns: 210px 1fr; }
+.boss-left { width: 210px; height: 210px; }
+.boss-info .boss-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 8px; }
+.boss-info .bs-item b { font-size: 12px; white-space: normal; overflow-wrap: anywhere; }
+
+/* 窄列内弱点/抗性标签自适应：允许折行并缩小一档 */
+.card-body { grid-template-columns: 220px 1fr; }
+.boss-left { width: 220px; height: 220px; }
+.boss-info .element-tag { font-size: 11px; padding: 1px 5px; }
+
+/* 左栏与右栏等高：立绘固定，信息框自动填满剩余高度 */
+.card-body { align-items: stretch; }
+.boss-col { align-self: stretch; }
+.boss-left { flex: 0 0 auto; }
+.boss-info { flex: 1 1 auto; }
+.boss-info { display: flex; flex-direction: column; }
+.boss-info .boss-stats { margin-top: auto; }
+
+/* 队伍落到右栏底部，与防卫战一致 */
+.info .team { margin-top: auto; }
+
+/* 绝境难度标签 */
+.boss-info .title .hard-tag {
+    display: inline-block;
+    margin-right: 6px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #ff8a3d, #ff3b3b);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    vertical-align: middle;
+    letter-spacing: 1px;
+}
+
+/* 绝境卡片置顶：DOM 里仍在普通卡片之后，用 flex order 重排，避免复制整段卡片模板 */
+.container { display: flex; flex-direction: column; }
+.header { order: 0; }
+.card.hard-card { order: 1; }
+.summary-new { order: 2; }
+.card { order: 3; }
+.tip, .logo { order: 4; }
+
+/* 绝境卡片：橙红描边，卡片内右上方是绝境自己的排名 */
+.card.hard-card { position: relative; border: 1px solid rgba(255, 96, 62, .55); }
+.hard-rank-row { display: flex; justify-content: flex-end; margin-bottom: 2px; }
+.hard-rank {
+    min-width: 62px;
+    height: 24px;
+    line-height: 24px;
+    padding: 0 10px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 800;
+    color: #1a1a1a;
+    background-image: url(../deadly_img/rank-bg.png);
+    background-size: 100% 100%;
+}
+
+/* 绝境的星星是红橙色，与普通（金色）区分 */
+.hard-card .star-icon { filter: hue-rotate(-30deg) saturate(1.8) brightness(1.05); }

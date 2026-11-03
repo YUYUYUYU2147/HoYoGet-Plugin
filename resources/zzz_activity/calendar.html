@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}zzz_activity/calendar.css" />
+  </head>
+  <body {{sys.scale}}>
+    <div class="cal-wrap">
+      <div class="cal-head">
+        <div class="cal-title">绝 区 零 · 活 动 日 历</div>
+        <div class="cal-meta">
+          <div>UID {{uid}}</div>
+          <div>更新于 {{time}}</div>
+        </div>
+      </div>
+      {{if poolCards.length}}
+      <div class="cal-section">调 频 日 历</div>
+      <div class="cal-pools">
+        {{each poolCards p}}
+        <div class="cal-pool {{p.status}}">
+          <div class="cal-pool-head">
+            <span class="cal-group">{{p.group}}</span>
+            {{if p.version}}<span class="cal-ver">v{{p.version}}</span>{{/if}}
+            {{if p.isDiscount}}<span class="cal-tag">重映</span>{{/if}}
+            <span class="cal-status">{{p.statusText}}</span>
+          </div>
+          <div class="cal-members">
+            {{each p.members m}}
+            <div class="cal-member">
+              <div class="cal-portrait {{if m.rank === 'S'}}s{{else}}a{{/if}}" style="background-image:url({{m.icon}})">
+                <span class="cal-rank">{{m.rank}}</span>
+              </div>
+              <div class="cal-mname">{{m.name}}</div>
+            </div>
+            {{/each}}
+          </div>
+          <div class="cal-pool-foot">
+            <span class="cal-period">{{p.period}}</span>
+            {{if p.countdownText}}<span class="cal-cd">{{p.countdownText}}</span>{{/if}}
+          </div>
+        </div>
+        {{/each}}
+      </div>
+      {{/if}}
+      <div class="cal-section">我 的 活 动 · 共 {{activityCount}} 项</div>
+      <div class="cal-events">
+        {{each activities a}}
+        <div class="cal-event {{a.status}}">
+          <div class="cal-ename">{{a.title}}</div>
+          <div class="cal-eright">
+            {{if a.countdownText}}<span class="cal-cd">{{a.countdownText}}</span>{{/if}}
+            <span class="cal-status">{{a.statusText}}</span>
+            <span class="cal-reward">{{a.rewardText}}</span>
+          </div>
+        </div>
+        {{/each}}
+        {{if !activities.length}}<div class="cal-empty">暂无个人活动数据</div>{{/if}}
+      </div>
+      {{if errorNote}}<div class="cal-note">{{errorNote}}</div>{{/if}}
+      <div class="cal-foot"><span>数据来源：米游社战绩 · 需本人 CK</span></div>
+      <div class="cal-from">from 米哈游</div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="{{ppath}}gs_role/role.css" />
+</head>
+<body {{sys.scale}}>
+<div class="page">
+  <header class="hero">
+    <div>
+      <span class="eyebrow">GENSHIN IMPACT</span>
+      <h1>{{if showStat}}练度统计{{else}}练度一览{{/if}}</h1>
+    </div>
+    <div class="meta">
+      <div>UID {{uid}}</div>
+      <div>共 {{stat.total}} 名 · 5★{{stat.star5}} / 4★{{stat.star4}}</div>
+      <div>{{time}}</div>
+    </div>
+  </header>
+
+  <table class="list">
+    <thead>
+      <tr>
+        <th class="c-name">角色</th>
+        <th class="c-lv">等级</th>
+        <th class="c-cons">命座</th>
+        <th class="c-fet">好感</th>
+        <th class="c-tal">天赋 普攻/战技/爆发</th>
+        <th class="c-wp">武器</th>
+        <th class="c-art">圣遗物</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{each roles r}}
+      <tr class="star{{r.star}}">
+        <td class="c-name"><div class="nm"><img class="ava" src="{{r.face}}" />{{if r.elemCn}}<img class="el-ic" src="{{ppath}}gs_role/imgs/elem/{{r.elemKey}}.png" title="{{r.elemCn}}" />{{/if}}<b>{{r.name}}</b></div></td>
+        <td class="c-lv">{{r.levelText}}</td>
+        <td class="c-cons">{{r.cons}}</td>
+        <td class="c-fet">{{r.fetter}}</td>
+        <td class="c-tal tal{{if r.talentFull}} full{{/if}}">{{r.talentText}}</td>
+        <td class="c-wp wp">{{if r.weaponIcon}}<img class="ic" src="{{r.weaponIcon}}" />{{/if}}{{r.weaponText}}</td>
+        <td class="c-art art"><div class="artc"><span class="artt">{{if r.artifactIcon}}<img class="ic" src="{{r.artifactIcon}}" />{{/if}}{{r.artifactText}}</span>{{if r.artifactAvg}}<i class="avgn">均{{r.artifactAvg}}{{if r.artifactFull}}·满{{r.artifactFull}}{{/if}}</i>{{/if}}</div></td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+
+  {{if showStat}}
+  <section class="summary">
+    <div class="stat"><b>{{stat.total}}</b><span>角色总数</span></div>
+    <div class="stat"><b>{{stat.star5}}</b><span>五星角色</span></div>
+    <div class="stat"><b>{{stat.maxLevel}}</b><span>满级 90</span></div>
+    <div class="stat"><b>{{stat.talentDone}}</b><span>天赋满级</span></div>
+    <div class="stat"><b>{{stat.artifactDone}}</b><span>圣遗物五件满级</span></div>
+    <div class="stat"><b>{{stat.avgLevel}}</b><span>平均等级</span></div>
+  </section>
+  {{/if}}
+
+  <div class="foot">天赋顺序为 普攻 / 元素战技 / 元素爆发 · 数据来自米游社战绩</div>
+</div>
+</body>
+</html>

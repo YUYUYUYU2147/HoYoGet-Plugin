@@ -1,0 +1,9 @@
+#!/bin/sh
+# 推送前自动执行 npm run ci，未通过则中止本次推送。
+# 临时跳过：SKIP_CI=1 git push
+env | grep -qx SKIP_CI=1 && exit 0
+echo [pre-push] 运行 npm run ci
+if npm run ci; then exit 0; fi
+echo [pre-push] npm run ci 未通过，已中止推送
+echo [pre-push] 确需推送可执行：SKIP_CI=1 git push
+exit 1

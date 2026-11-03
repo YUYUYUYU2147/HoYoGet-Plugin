@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}akasha/rank.css" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}sr_rank/my.css" />
+  </head>
+  <body>
+    <div class="page">
+      <div class="head">
+        <div class="head-left">
+          <div class="head-user">
+            {{if ownerAvatar}}<img class="head-avatar" src="{{ownerAvatar}}" onerror="this.style.display='none'">{{/if}}
+            <div class="head-user-text">
+              <div class="title">我的全球排名</div>
+              <div class="subtitle">{{if nickname}}{{nickname}} · {{/if}}UID {{uid}}{{if level}} · 等级 {{level}}{{/if}}{{if region}} · {{region}}{{/if}}</div>
+              {{if signature}}<div class="signature">{{signature}}</div>{{/if}}
+            </div>
+          </div>
+        </div>
+        <div class="head-right">
+          <div class="badge">HSR</div>
+        </div>
+      </div>
+
+      <div class="legend">
+        <span>优先按遗器评分（wrqs）同档位名次排序</span>
+        <span class="sep">·</span>
+        <span>数据来源 hsr.fortoffans.com</span>
+      </div>
+      <div class="legend legend-tip">
+        只统计已提交到 fort off fans 的角色；名次为同角色同星魂档位，参榜数也是该档位人数。
+      </div>
+
+      <div class="list myrank">
+        {{each rows r i}}
+        <div class="row {{if i === 0}}top1{{else if i === 1}}top2{{else if i === 2}}top3{{/if}}">
+          <div class="rank">{{i + 1}}</div>
+
+          <div class="avatar">
+            {{if r.face}}<img src="{{_miao_path}}{{r.face}}" onerror="this.style.visibility='hidden'">{{/if}}
+          </div>
+
+          <div class="char-cell">
+            <span class="nick">{{r.name}}</span>
+            {{if r.eidolon}}<span class="cons-chip">E{{r.eidolon}}</span>{{/if}}
+          </div>
+
+          <div class="plan-cell">CRIT {{r.critValue}}</div>
+
+          <div class="dmg-cell">{{r.critRate}} / {{r.critDmg}}</div>
+
+          <div class="score-cell">
+            <div class="rank-line"><span class="dmg">#{{r.rank}}</span><span class="dmg-total">/ {{r.total || '?'}} · {{r.rankKind}}</span></div>
+            <div class="beat-line"><span class="beat-bar" style="--beat: {{r.beatPercent}}%"></span><span class="dmg-beat">{{r.beatPercent}}%</span></div>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+
+      <div class="footer"><span style="color:#ff4d4f;font-weight:600">from 米哈游</span> · fort off fans</div>
+    </div>
+  </body>
+</html>

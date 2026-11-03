@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { width: 1200px; background: #14161f; color: #e8ecf5; font-family: 'HarmonyOS Sans SC', 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif; }
+  .page { padding: 28px 34px 24px; }
+  .head { display: flex; align-items: flex-end; justify-content: space-between; padding-bottom: 14px; border-bottom: 2px solid #2a3040; }
+  .title { font-size: 36px; font-weight: 700; letter-spacing: 2px; }
+  .sub { margin-top: 8px; font-size: 16px; color: #8b93a7; }
+  .tip { font-size: 15px; color: #7b849c; }
+  .row { display: flex; align-items: center; gap: 16px; padding: 13px 0; border-bottom: 1px solid #232838; }
+  .no { width: 54px; font-size: 26px; font-weight: 700; color: #7b849c; text-align: center; }
+  .no.g1 { color: #ffcc4d; }
+  .no.g2 { color: #cfd6e4; }
+  .no.g3 { color: #d08a4e; }
+  .avatar { width: 62px; height: 62px; border-radius: 50%; background: #232838; object-fit: cover; }
+  .who { width: 330px; }
+  .nick { font-size: 21px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .uid { margin-top: 5px; font-size: 14px; color: #7b849c; }
+  .stages { display: flex; gap: 10px; flex: 1; }
+  .stage { width: 120px; padding: 8px 6px; background: #1b2030; border-radius: 8px; text-align: center; }
+  .stage .sv { font-size: 19px; font-weight: 600; color: #cdd6ea; }
+  .stage .sn { margin-top: 3px; font-size: 12px; color: #7b849c; }
+  .total { width: 150px; text-align: right; }
+  .total .tv { font-size: 28px; font-weight: 700; color: #ffd166; }
+  .total .tn { margin-top: 3px; font-size: 12px; color: #7b849c; }
+  .notes { margin-top: 16px; font-size: 13px; line-height: 1.95; color: #7b849c; }
+  .empty { padding: 40px 0; text-align: center; color: #7b849c; font-size: 18px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="head">
+    <div>
+      <div class="title">{{title}}</div>
+      <div class="sub">{{period}}　共 {{list.length}} 人</div>
+    </div>
+    <div class="tip">数据来自本群内的挑战记录</div>
+  </div>
+  {{each list r i}}
+  <div class="row">
+    <div class="no {{if i === 0}}g1{{else if i === 1}}g2{{else if i === 2}}g3{{/if}}">{{i + 1}}</div>
+    {{if r.avatar}}<img class="avatar" src="{{r.avatar}}" />{{else}}<div class="avatar"></div>{{/if}}
+    <div class="who">
+      <div class="nick">{{r.nickname}}</div>
+      <div class="uid">UID {{r.uid}}{{if r.rating}}　评级 {{r.rating}}{{/if}}</div>
+    </div>
+    <div class="stages">
+      {{each r.stages st}}
+      <div class="stage"><div class="sv">{{st.score}}</div><div class="sn">{{st.name}}</div></div>
+      {{/each}}
+    </div>
+    <div class="total"><div class="tv">{{r.score}}</div><div class="tn">总得分</div></div>
+  </div>
+  {{/each}}
+  <div class="notes">
+    <div>· {{note}}</div>
+    <div>· 请在群内查询「{{cmd}}」，以参与对应排名</div>
+    <div>· 分数相同时按存档时间排序，越早的排名越靠前</div>
+  </div>
+</div>
+</body>
+</html>

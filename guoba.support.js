@@ -1,0 +1,2230 @@
+import yaml from './system/yaml.js'
+import { refreshGroupNames, cacheGroupList } from './system/group_name.js'
+
+const _path = './plugins/HoYoGet-Plugin/config/'
+
+function getCfg() {
+  return yaml.get(_path + 'config.yaml') || {}
+}
+
+/** 图鉴数据模式：official=正式服 / test=测试服（与 config.yaml 的 data_mode 一致） */
+function getDataMode() {
+  const v = String(getCfg().data_mode || 'official').trim()
+  return v === 'test' ? 'test' : 'official'
+}
+
+/** 单角色面板风格：dark=暗色霓虹（默认） / apple=Apple 深色玻璃 */
+function getPanelStyle() {
+  return String(getCfg().panel_style || 'dark').trim().toLowerCase() === 'apple' ? 'apple' : 'dark'
+}
+
+function getOther() {
+  return yaml.get(_path + 'other.yaml') || {}
+}
+
+function getSign() {
+  return yaml.get(_path + 'sign.yaml') || {}
+}
+
+function getBh3Remind() {
+  return yaml.get(_path + 'bh3_remind.yaml') || {}
+}
+
+function getActivityRemind() {
+  return yaml.get(_path + 'activity_remind.yaml') || {}
+}
+
+const defaultBh3GuideSources = {
+  abyss: [
+    '寂灭|11956740|0,1,3,4,5,6,7,8,9,10,11,12,13,14,15|残月',
+    '红莲|11956740|0,1,3,4,5,6,7,8,9,10,11,12,13,14,15|残月',
+    '红莲|15491760|0,1,3,4,5,6,7,8,9,10,11,12,13,14,15|墨之羽',
+    '红莲|30269990|0,1,3,4,5,6,7,8,9,10,11,12,13,14,15|朔守',
+  ].join('\n'),
+  battlefield: [
+    '记忆战场|11956740|0,1,2,3,4,5,6,7,8,9|残月',
+    '战场作业|15491760|0,1,2,3,4,5,6,7,8,9|墨之羽',
+    '终极区战场|30269990|0,1,2,3,4,5,6,7,8,9|朔守',
+  ].join('\n'),
+  godwar: [
+    '往世乐土|11956740|0,1,2,3,4,5,6,7,8,9|残月',
+    '乐土攻略|15491760|0,1,2,3,4,5,6,7,8,9|墨之羽',
+    '乐土因子|30269990|0,1,2,3,4,5,6,7,8,9|朔守',
+  ].join('\n'),
+  zzzDefense: [
+    '式舆防卫战|4068738|0,1,2,3,4,5,6,7,8,9|洗礼酱',
+    '防卫战攻略|285802042|0,1,2,3,4,5|HoYo青枫',
+  ].join('\n'),
+  zzzDeadly: [
+    '危局强袭战|4068738|0,1,2,3,4,5,6,7,8,9|洗礼酱',
+    '危局攻略|285802042|0,1,2,3,4,5|HoYo青枫',
+  ].join('\n'),
+}
+
+const priorityInput = (field, label, defaultValue) => ({
+  field,
+  label,
+  helpMessage: `默认 ${defaultValue}；Yunzai 数字越小优先级越高，修改后需重启`,
+  component: 'InputNumber',
+  componentProps: { min: -9999999999, max: 9999999999, step: 1 },
+})
+
+export const supportGuoba = () => {
+  const cfg = getCfg()
+  const bh3Remind = getBh3Remind()
+  const sign = getSign()
+  const activityRemind = getActivityRemind()
+  const toGroupArray = (groups) => {
+    if (!groups) return []
+    if (typeof groups.values === 'function') return Array.from(groups.values())
+    if (Array.isArray(groups)) return groups
+    if (typeof groups === 'object') return Object.values(groups)
+    return []
+  }
+  const bot = globalThis.Bot || {}
+  const botGroupList = [
+    ...toGroupArray(bot.gl),
+    ...Object.values(bot.bots || {}).flatMap(item => toGroupArray(item?.gl)),
+  ]
+  const pickGroupId = (item = {}) =>
+    item.group_id ?? item.groupId ?? item.id ?? item.gid ?? item.group ?? ''
+  const pickGroupName = (item = {}) =>
+    item.group_name ?? item.groupName ?? item.name ?? item.group_name_ ?? ''
+  /* TRSS 的 Bot.getGroupMap() 汇总了所有 bot 的群，值是群对象；
+     锅巴的群下拉读的就是它，插件跟同一份数据才不会出现「名称未知」。 */
+  const botGroupNames = new Map()
+  try {
+    const groupMap = typeof bot.getGroupMap === 'function' ? bot.getGroupMap() : null
+    if (groupMap && typeof groupMap.forEach === 'function') {
+      groupMap.forEach((item, id) => {
+        const name = typeof item === 'string' ? item.trim() : String(pickGroupName(item || {}) || '').trim()
+        if (id && name) botGroupNames.set(String(id), name)
+      })
+    }
+  } catch (_) {}
+  const groupOptions = botGroupList
+    .map(item => {
+      const value = String(pickGroupId(item) ?? '')
+      const name = String(pickGroupName(item) ?? '').trim()
+      return { label: name ? `${name} - ${value}` : value, value }
+    })
+    .filter(item => item.value && item.value !== 'undefined')
+  const configuredGroups = [
+    ...(bh3Remind.groups || []),
+    ...(bh3Remind.all_note_groups || []),
+    ...(sign.sign_group || []),
+    ...(sign.bbs_sign_group || []),
+    ...Object.values(activityRemind.groups || {}).flatMap(v => parseGroupValue(v)),
+    ...(Array.isArray(cfg.groups) ? cfg.groups : []),
+    ...(Array.isArray(cfg.zzz_activity_push_groups) ? cfg.zzz_activity_push_groups : []),
+  ].map(v => String(v).trim()).filter(Boolean)
+  /* 先把机器人内存里的群名落盘，再把仍缺名的群交给适配器补齐。
+     锅巴每次读取插件列表都会重新执行这里，补到名字后下一次打开就显示真名。 */
+  const nameMap = cacheGroupList()
+  // 机器人内存里实时拿到的群名优先于落盘缓存
+  for (const [id, name] of botGroupNames) nameMap.set(id, name)
+  const missingGroups = [...new Set(configuredGroups)].filter(id => !nameMap.get(String(id)))
+  if (missingGroups.length) refreshGroupNames(missingGroups).catch(() => {})
+  const cachedOptions = [...nameMap.entries()].map(([id, name]) => ({ label: `${name} - ${id}`, value: id }))
+  const groupList = [...new Map(
+    [...groupOptions, ...cachedOptions, ...configuredGroups.map(value => {
+      const name = nameMap.get(String(value))
+      return { label: name ? `${name} - ${value}` : `群 ${value}（名称未知）`, value }
+    })]
+      .map(item => [String(item.value), { ...item, value: String(item.value) }]),
+  ).values()]
+
+  return ({
+  pluginInfo: {
+    // 必须与目录名一致：锅巴卸载走 plugins/${name}，写 HoYoGet 会找不到目录
+    name: 'HoYoGet-Plugin',
+    title: '米哈游',
+    description: '多功能辅助插件，支持米游社签到、B站解析、攻略查询等',
+    author: '@YUYUYUYU2147',
+    authorLink: 'https://github.com/YUYUYUYU2147',
+    link: 'https://github.com/YUYUYUYU2147/HoYoGet-Plugin',
+    isV3: true,
+    isV2: false,
+    showInMenu: 'auto',
+    icon: 'mdi:fire',
+    iconColor: '#ff6b35',
+    // 显示成图片：使用插件自带的花火立绘（绝对路径，锅巴优先展示 iconPath）
+    iconPath: process.cwd() + '/plugins/HoYoGet-Plugin/resources/Tl/imgs/米哈游.png',
+  },
+  configInfo: {
+    schemas: [      {
+        component: 'SOFT_GROUP_BEGIN',
+        label: '基本设置',
+      },
+      {
+        component: 'SOFT_GROUP_BEGIN',
+        label: '模块开关',
+      },
+      // 模块总开关：关掉后对应指令静默不响应（不提示、不报错），
+      // 与 system/modules.js 的 MODULES 一一对应
+      {
+        field: 'Tl',
+        label: '模块 · 体力查询',
+        component: 'Switch',
+      },
+      {
+        field: 'gs_logs',
+        label: '模块 · 原神历史卡池',
+        component: 'Switch',
+      },
+      {
+        field: 'sr_logs',
+        label: '模块 · 星铁历史卡池',
+        component: 'Switch',
+      },
+      {
+        field: 'zzz_logs',
+        label: '模块 · 绝区零历史卡池',
+        component: 'Switch',
+      },
+      {
+        field: 'gs_gacha_enable',
+        label: '模块 · 原神抽卡记录',
+        component: 'Switch',
+      },
+      {
+        field: 'sr_gacha_enable',
+        label: '模块 · 星铁抽卡记录',
+        component: 'Switch',
+      },
+      {
+        field: 'zzz_gacha_enable',
+        label: '模块 · 绝区零抽卡记录',
+        component: 'Switch',
+      },
+      {
+        field: 'bh3_gacha_enable',
+        label: '模块 · 崩坏三抽卡记录',
+        component: 'Switch',
+      },
+      {
+        field: 'sign',
+        label: '模块 · 米游社签到',
+        component: 'Switch',
+      },
+      {
+        field: 'gacha_pool_enable',
+        label: '模块 · 卡池日程维护',
+        component: 'Switch',
+      },
+      {
+        field: 'meme_enable',
+        label: '模块 · 表情包',
+        component: 'Switch',
+      },
+      {
+        field: 'module_switch_enable',
+        label: '模块 · 模块开关指令',
+        helpMessage: '关掉后连 #米哈游模块 这条开关指令也不响应',
+        component: 'Switch',
+      },
+      {
+        field: 'data_mode',
+        label: '图鉴数据模式',
+        helpMessage: 'official=正式服（列表/查询都不出测试服条目）；test=测试服（只显示测试服条目）。也可用群指令 #切换正式服模式 / #切换测试服模式。改动实时生效',
+        component: 'RadioGroup',
+        componentProps: {
+          options: [
+            { label: '正式服', value: 'official' },
+            { label: '测试服', value: 'test' },
+          ],
+        },
+      },
+      {
+        field: 'update',
+        label: '凌晨自动更新',
+        helpMessage: '凌晨3:30强制更新（会覆盖文件）',
+        component: 'Switch',
+      },
+      {
+        field: 'img_quality',
+        label: '图片渲染精度',
+        helpMessage: '数字，单位%',
+        component: 'InputNumber',
+        componentProps: { min: 1, max: 100, step: 1 },
+      },
+      {
+        field: 'wiki',
+        label: '图鉴启用',
+        component: 'Switch',
+      },
+      {
+        field: 'gs_bg',
+        label: '角色图鉴随机背景',
+        helpMessage: '用随机图接口给原神角色图鉴加一层底纹背景（接口失败自动退回纯色）',
+        component: 'Switch',
+      },
+      {
+        field: 'gs_bg_api',
+        label: '随机背景图接口',
+        helpMessage: '返回图片的地址，留空用默认 api.yppp.net/api.php',
+        component: 'Input',
+      },
+      {
+        field: 'bdsb',
+        label: '使用HoYoGet绑定设备',
+        helpMessage: '作用于genshin/StarRail/ZZZ-Plugin',
+        component: 'Switch',
+      },
+      {
+        component: 'SOFT_GROUP_BEGIN',
+        label: '签到设置',
+      },
+      {
+        component: 'GButtons',
+        componentProps: {
+          buttons: [
+            {
+              label: '立即游戏签到',
+              action: 'runSign',
+              type: 'primary',
+              confirm: '将按 sign.yaml 登记的群与成员立即签一次，确定继续？',
+              tooltip: { title: '不等定时任务，马上执行一轮游戏签到' },
+            },
+            {
+              label: '立即社区签到',
+              action: 'runBbsSign',
+              type: 'primary',
+              confirm: '将按 sign.yaml 的社区签到名单立即执行，确定继续？',
+              tooltip: { title: '马上执行一轮米游社社区签到' },
+            },
+          ],
+        },
+      },
+      {
+        field: 'sign',
+        label: '签到功能',
+        helpMessage: '自动签到在sign.yaml配置',
+        component: 'Switch',
+      },
+      {
+        field: 'zd_sign',
+        label: '自动签到',
+        helpMessage: '0关闭 1开启',
+        component: 'RadioGroup',
+        componentProps: {
+          options: [
+            { label: '关闭', value: 0 },
+            { label: '开启', value: 1 },
+          ],
+        },
+      },
+      {
+        field: 'sign_hour',
+        label: '自动签到时',
+        helpMessage: '0~23，保存后无需重启，下一次到点执行',
+        component: 'InputNumber',
+        componentProps: { min: 0, max: 23, step: 1 },
+      },
+      {
+        field: 'sign_minute',
+        label: '自动签到分',
+        helpMessage: '0~59，保存后无需重启，下一次到点执行',
+        component: 'InputNumber',
+        componentProps: { min: 0, max: 59, step: 1 },
+      },
+      {
+        field: 'bbs_zd_sign',
+        label: '社区自动签到',
+        helpMessage: '开启后按下方时间，使用 sign.yaml 中登记的群成员执行米游社社区签到',
+        component: 'RadioGroup',
+        componentProps: {
+          options: [
+            { label: '关闭', value: 0 },
+            { label: '开启', value: 1 },
+          ],
+        },
+      },
+      {
+        field: 'bbs_sign_hour',
+        label: '社区签到时',
+        helpMessage: '0~23，保存后无需重启，下一次到点执行',
+        component: 'InputNumber',
+        componentProps: { min: 0, max: 23, step: 1 },
+      },
+      {
+        field: 'bbs_sign_minute',
+        label: '社区签到分',
+        helpMessage: '0~59，保存后无需重启，下一次到点执行',
+        component: 'InputNumber',
+        componentProps: { min: 0, max: 59, step: 1 },
+      },
+      {
+        field: 'sbai',
+        label: '签到失败@提醒',
+        helpMessage: '自动签到结束后@失败用户，游戏签到与社区签到都适用',
+        component: 'Switch',
+      },
+      {
+        field: 'sign_group',
+        label: '游戏签到白名单群',
+        helpMessage: '直接选择群，留空则不限制',
+        component: 'Select',
+        componentProps: {
+          mode: 'multiple',
+          allowAdd: true,
+          allowDel: true,
+          options: groupList,
+        },
+      },
+      {
+        field: 'bbs_sign_group',
+        label: '社区签到白名单群',
+        helpMessage: '直接选择群，留空则不限制',
+        component: 'Select',
+        componentProps: {
+          mode: 'multiple',
+          allowAdd: true,
+          allowDel: true,
+          options: groupList,
+        },
+      },
+      {
+        field: 'sign_users',
+        label: '游戏自动签到用户白名单',
+        helpMessage: '格式：群号:QQ1,QQ2；多个群用换行或分号分隔',
+        component: 'InputTextArea',
+      },
+      {
+        field: 'bbs_sign_users',
+        label: '社区自动签到用户白名单',
+        helpMessage: '格式：群号:QQ1,QQ2；和游戏自动签到用户分开配置',
+        component: 'InputTextArea',
+      },
+      {
+        component: 'SOFT_GROUP_BEGIN',
+        label: '过码（撞米游社风控 1034 时用）',
+      },
+      {
+        field: 'auto_backfill',
+        label: '自动补齐绑定',
+        helpMessage: '开=某人只有逍遥插件的数据时，第一次签到会自动补一份到本插件（不需要扫码）；关=只签不改文件',
+        component: 'RadioGroup',
+        componentProps: {
+          options: [
+            { label: '自动补齐', value: true },
+            { label: '只签不改', value: false },
+          ],
+        },
+      },
+      {
+        field: 'sign_list_private',
+        label: '签到名单只私聊',
+        helpMessage: '关=「#签到名单」在群里也发一份（默认，方便群主直接看）；开=只私聊主人。名单含全体成员 QQ 号',
+        component: 'RadioGroup',
+        componentProps: {
+          options: [
+            { label: '群里也发', value: false },
+            { label: '只私聊', value: true },
+          ],
+        },
+      },
+      {
+        field: 'auto_verify_addr',
+        label: '本机过码服务地址',
+        helpMessage: '留空表示不启用自动过码，只保留手动验证链接。改了要重载插件才生效',
+        component: 'Input',
+      },
+      {
+        field: 'mhy_proxy',
+        label: '米游社接口代理地址',
+        helpMessage: '留空=不启用。默认直连米游社，只有被风控拦了（返回的不是数据而是一整页「已阻断」）才自动改走这个代理。⚠️ 走代理的请求会把该账号的 Cookie 发给代理站，等于把账号交出去，介意就别填',
+        component: 'Input',
+      },
+      {
+        field: 'mhy_proxy_key',
+        label: '米游社接口代理密钥',
+        helpMessage: '配合上面的地址使用，会放进 x-mihoyo-api-token 请求头。留空视为未配置代理',
+        component: 'Input',
+      },
+      {
+        field: 'activity_proxy',
+        label: '活动公告请求代理（HTTP）',
+        helpMessage: '留空=直连。填标准 HTTP 代理，如 http://127.0.0.1:7890。只用于活动到期提醒的公告请求，不携带 Cookie。上面的米游社接口代理不支持活动公告域名，所以这里单独配',
+        component: 'Input',
+      },
+      {
+        field: 'ttocr_appkey',
+        label: '打码平台密钥',
+        helpMessage: '可留空。本机服务解开时不会用到它，只有本机失败才调平台（滑块 5 点/次）。⚠️ 平台只提供 http 没有 https，这个密钥会以明文过网，介意就别填',
+        component: 'Input',
+      },
+      {
+        field: 'ttocr_itemid',
+        label: '打码平台项目类型',
+        helpMessage: '32=三代滑块（5 点，米游社用这个）；388=三代全类别（10 点，兼容更多题型）',
+        component: 'InputNumber',
+        componentProps: { min: 0, step: 1 },
+      },
+      {
+        component: 'SOFT_GROUP_BEGIN',
+        label: '米游社',
+      },
+      {
+        field: 'groups',
+        label: '米游社视频播报群',
+        helpMessage: '直接选择播报群；也可用“添加播报群”命令维护',
+        component: 'Select',
+        componentProps: {
+          mode: 'multiple',
+          allowAdd: true,
+          allowDel: true,
+          options: groupList,
+        },
+      },
+      {
+        field: 'forwardMsg',
+        label: '播报合并转发',
+        helpMessage: '米游社视频播报是否用合并转发发送',
+        component: 'Switch',
+      },
+      {
+        field: 'bh3',
+        label: '播报崩坏3',
+        helpMessage: '米游社视频播报是否包含崩坏3',
+        component: 'Switch',
+      },
+      {
+        field: 'by',
+        label: '播报崩坏因缘精灵',
+        helpMessage: '米游社视频播报是否包含崩坏因缘精灵',
+        component: 'Switch',
+      },
+      {
+        field: 'xbgd',
+        label: '播报星布谷地',
+        helpMessage: '米游社视频播报是否包含星布谷地',
+        component: 'Switch',
+      },
+      {
+        field: 'cover',
+        label: '播报封面原图',
+        helpMessage: '开启后米游社视频播报封面尽量使用原图下载',
+        component: 'Switch',
+      },
+      {
+        field: 'group_config',
+        label: '群播报屏蔽配置',
+        helpMessage: '每行一个群：群号=gs,sr,zzz,bh3,by,xbgd；表示该群屏蔽这些游戏播报',
+        component: 'InputTextArea',
+      },
+      {
+        field: 'sm',
+        label: '米游社扫码绑定',
+        component: 'Switch',
+      },
+      {
+        field: 'sm_cd',
+        label: '扫码绑定CD',
+        helpMessage: '单位：秒',
+        component: 'InputNumber',
+        componentProps: { min: 0, max: 3600, step: 10 },
+      },
+      {
+        component: 'SOFT_GROUP_BEGIN',
+        label: '卡池/图鉴外观',
+      },
+      {
+        field: 'gacha_header_art_source',
+        label: '右上角立绘来源',
+        helpMessage: '自定义=优先 fixed_splash/custom_splash/本地随机图；官方=优先游戏官方角色立绘',
+        component: 'Select',
+        componentProps: {
+          options: [
+            { label: '自定义立绘', value: 'custom' },
+            { label: '官方立绘', value: 'official' },
+          ],
+        },
+      },
+      {
+        field: 'gacha_up_icon_source',
+        label: 'UP小图来源',
+        helpMessage: '自定义=优先本地/面板图；官方=优先游戏官方头像/图标',
+        component: 'Select',
+        componentProps: {
+          options: [
+            { label: '自定义小图', value: 'custom' },
+            { label: '官方小图', value: 'official' },
+          ],
+        },
+      },
+      {
+        component: 'SOFT_GROUP_BEGIN',
+        label: '面板',
+      },
+      {
+        field: 'panel_style',
+        label: '单角色面板风格',
+        helpMessage: 'dark=暗色霓虹（默认）；apple=Apple 深色玻璃（半透明卡片 + 背景模糊，保留立绘）。只影响单角色长图（#米哈游xx面板 / 米游社xx面板，含绝区零），改完即生效',
+        component: 'RadioGroup',
+        componentProps: {
+          options: [
+            { label: '暗色霓虹', value: 'dark' },
+            { label: 'Apple 玻璃', value: 'apple' },
+          ],
+        },
+      },
+      {
+        field: 'panel_service_gs',
+        label: '原神面板服务',
+        helpMessage: '只影响「#更新面板 / #原神更新面板」的展示柜模式；「#米游社更新面板」仍走米游社。自动=Enka',
+        component: 'Select',
+        componentProps: {
+          options: [
+            { label: '自动（Enka）', value: 'auto' },
+            { label: 'Enka', value: 'enka' },
+            { label: '喵 API（需 Token）', value: 'miao' },
+            { label: 'MiniGG', value: 'mgg' },
+            { label: 'X-Enka', value: 'hanxuan' },
+            { label: 'Lyln 代理', value: 'lyln' },
+          ],
+        },
+      },
+      {
+        field: 'panel_service_sr',
+        label: '星铁面板服务',
+        helpMessage: '只影响「*更新面板 / #星铁更新面板」的展示柜模式；「*米游社更新面板」仍走米游社。自动=EnkaHSR',
+        component: 'Select',
+        componentProps: {
+          options: [
+            { label: '自动（EnkaHSR）', value: 'auto' },
+            { label: 'EnkaHSR', value: 'enka' },
+            { label: '喵 API（需 Token）', value: 'miao' },
+            { label: 'Mihomo', value: 'homo' },
+            { label: 'Avocado（鳄梨）', value: 'avocado' },
+          ],
+        },
+      },
+      {
+        component: 'SOFT_GROUP_BEGIN',
+        label: '游戏攻略',
+      },
+      {
+        field: 'gs_logs',
+        label: '原神历史卡池',
+        component: 'Switch',
+      },
+      {
+        field: 'sr_logs',
+        label: '星铁历史卡池',
+        component: 'Switch',
+      },
+      {
+        field: 'zzz_logs',
+        label: '绝区零历史卡池',
+        component: 'Switch',
+      },
+      {
+        field: 'bh3_logs',
+        label: '崩坏3历史卡池',
+        component: 'Switch',
+      },
+      {
+        field: 'gacha_pool_cron',
+        label: '卡池自动刷新间隔',
+        helpMessage:
+          'cron 表达式，保存后需重启插件生效。默认 0 */30 * * * * 即每 30 分钟一次。间隔太长时，若某一轮撞上米游社风控就要等到下一轮才同步',
+        component: 'Input',
+      },
+      {
+        field: 'all_voice',
+        label: '角色语音总开关',
+        helpMessage: '关闭后四个游戏语音全部停用',
+        component: 'Switch',
+      },
+      {
+        field: 'gs_voice',
+        label: '原神语音',
+        component: 'Switch',
+      },
+      {
+        field: 'sr_voice',
+        label: '星铁语音',
+        component: 'Switch',
+      },
+      {
+        field: 'zzz_voice',
+        label: '绝区零语音',
+        helpMessage: '开关已预留；当前仓库暂无绝区零角色语音数据源',
+        component: 'Switch',
+      },
+      {
+        field: 'bh3_voice',
+        label: '崩坏3语音',
+        helpMessage: '开关已预留；当前仓库暂无崩坏3角色语音数据源',
+        component: 'Switch',
+      },
+      {
+        component: 'SOFT_GROUP_BEGIN',
+        label: '攻略源',
+      },
+      {
+        field: 'mys_global_guide_search',
+        label: '攻略全站搜索兜底',
+        helpMessage: '开启后攻略源作者搜不到时，会使用米游社全站搜索关键词兜底（类似 genshin 的 #米游社搜索）',
+        component: 'Switch',
+      },
+      {
+        field: 'bh3_guide_abyss_sources',
+        label: '深渊攻略源',
+        helpMessage: '每行：关键词|米游社UID|图片序号|作者名；如 红莲|11956740|0,1,3|残月',
+        component: 'InputTextArea',
+      },
+      {
+        field: 'bh3_guide_battlefield_sources',
+        label: '战场攻略源',
+        helpMessage: '每行：关键词|米游社UID|图片序号|作者名；按顺序搜索，搜不到会回退通用源',
+        component: 'InputTextArea',
+      },
+      {
+        field: 'bh3_guide_godwar_sources',
+        label: '乐土攻略源',
+        helpMessage: '每行：关键词|米游社UID|图片序号|作者名；支持定向搜索角色/装甲名',
+        component: 'InputTextArea',
+      },
+      {
+        field: 'zzz_guide_defense_sources',
+        label: '防卫战攻略源',
+        helpMessage: '每行：关键词|米游社UID|图片序号|作者名；如 式舆防卫战|4068738|0,1,2|洗礼酱',
+        component: 'InputTextArea',
+      },
+      {
+        field: 'zzz_guide_deadly_sources',
+        label: '危局强袭战攻略源',
+        helpMessage: '每行：关键词|米游社UID|图片序号|作者名；危局会优先识别当前Boss',
+        component: 'InputTextArea',
+      },
+      {
+        field: 'custom_guide_enable',
+        label: '自定义攻略源开关',
+        helpMessage: '开启后可用 #角色名攻略 触发（也支持米哈游前缀 前缀）；角色名即关键词，自动用别名表归一成正式名，无需手填角色列表',
+        component: 'Switch',
+      },
+      {
+        field: 'custom_guide_forward',
+        label: '合并转发模式',
+        helpMessage: '开启=合并转发发送（带标题）；关闭=逐条拼接消息发送（不带标题文字，直接发 作者/标题/发布时间/原帖+图片）',
+        component: 'Select',
+        componentProps: {
+          options: [
+            { label: '开启合并转发', value: 'on' },
+            { label: '关闭合并转发(拼接消息)', value: 'off' },
+          ],
+        },
+      },
+      {
+        field: 'custom_guide_uid',
+        label: '全局兜底源(作者UID)',
+        helpMessage: '仅当对应游戏没填下面的默认源、或角色不在别名表时才用它；代码内置默认 74019947',
+        component: 'Input',
+      },
+      {
+        field: 'custom_guide_gs_uid',
+        label: '原神默认源(作者UID)',
+        helpMessage: '原神角色的默认攻略作者；发 #原神角色名攻略 时自动以角色正式名搜索该UID',
+        component: 'Input',
+      },
+      {
+        field: 'custom_guide_gs_index',
+        label: '原神默认图片序号',
+        helpMessage: '留空取该帖全部图片；填序号取指定张，如 0(第一张) 或 0,2,3（从0开始，英文逗号分隔）',
+        component: 'Input',
+      },
+      {
+        field: 'custom_guide_sr_uid',
+        label: '星铁默认源(作者UID)',
+        helpMessage: '星铁角色的默认攻略作者；发 #星铁角色名攻略 时自动以角色正式名搜索该UID',
+        component: 'Input',
+      },
+      {
+        field: 'custom_guide_sr_index',
+        label: '星铁默认图片序号',
+        helpMessage: '留空取该帖全部图片；填序号取指定张，如 0(第一张) 或 0,2（英文逗号分隔）',
+        component: 'Input',
+      },
+      {
+        field: 'custom_guide_zzz_uid',
+        label: '绝区零默认源(作者UID)',
+        helpMessage: '绝区零角色的默认攻略作者；发 #绝区零角色名攻略 时自动以角色正式名搜索该UID',
+        component: 'Input',
+      },
+      {
+        field: 'custom_guide_zzz_index',
+        label: '绝区零默认图片序号',
+        helpMessage: '留空取该帖全部图片；填序号取指定张，如 0(第一张) 或 0,2（英文逗号分隔）',
+        component: 'Input',
+      },
+      {
+        field: 'custom_guide_priority',
+        label: '自定义攻略源优先级',
+        helpMessage: '默认 -9999999999（极高优先级，确保优先于其它攻略插件抢到指令）；数字越小越优先，修改后需重启',
+        component: 'InputNumber',
+        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
+      },
+      {
+        field: 'abyss_report_repos',
+        label: '深渊速报图片仓库',
+        helpMessage: '每行一个raw仓库地址；用于原神深渊/剧诗/幽境与星铁混沌/虚构/末日图片',
+        component: 'InputTextArea',
+      },
+      {
+        field: 'abyss_report_gs_version',
+        label: '原神默认速报版本',
+        helpMessage: '留空自动读取Nanoka live版本，如 6.7',
+        component: 'Input',
+      },
+      {
+        field: 'abyss_report_sr_version',
+        label: '星铁默认速报版本',
+        helpMessage: '留空自动读取Nanoka live版本，如 4.3',
+        component: 'Input',
+      },
+      {
+        field: 'abyss_report_sr_fiction_levels',
+        label: '星铁虚构叙事关卡筛选',
+        helpMessage: '留空显示全部；用数字1-5指定要显示的关卡序号，如 3,4 只显示其三、其四',
+        component: 'Input',
+      },
+      {
+        field: 'abyss_report_sr_maze_levels',
+        label: '星铁混沌回忆难度筛选',
+        helpMessage: '留空默认只显示第十一、十二层（深层才有参考价值）；想看其他层用数字指定，如 1,2 只显示第一、二层',
+        component: 'Input',
+      },
+      {
+        field: 'abyss_report_sr_doom_levels',
+        label: '星铁末日幻影难度筛选',
+        helpMessage: '留空默认只显示难度三、四；想看其他难度用数字指定，如 1,2 只显示难度一、二',
+        component: 'Input',
+      },
+      {
+        field: 'abyss_report_zzz_shiyu_stages',
+        label: '绝区零式舆防卫战关卡筛选',
+        helpMessage: '留空显示全部；按 stage_num 筛选，如 4,5 只显示第四防线和节点5',
+        component: 'Input',
+      },
+      {
+        field: 'abyss_report_sr_invasion',
+        label: '星铁深渊星启模式',
+        helpMessage: '显示混沌回忆/虚构叙事/末日幻影最高难度的星启模式（污染入侵）区块',
+        component: 'Switch',
+      },
+      {
+        field: 'abyss_report_zzz_shiyu_periods',
+        label: '式舆防卫战返回期数',
+        helpMessage: '默认"末期"只显示当前期（每版本最后一期）；选"全部期"会返回该版本全部期（如 3.1 的 3 期），多期时自动逐条发送',
+        component: 'Select',
+        componentProps: {
+          options: [
+            { label: '末期（默认）', value: 'last' },
+            { label: '全部期', value: 'all' },
+          ],
+        },
+      },
+      {
+        field: 'abyss_report_zzz_deadly_periods',
+        label: '危局强袭战返回期数',
+        helpMessage: '默认"末期"只显示当前期（每版本最后一期）；选"全部期"会返回该版本全部期（如 3.1 的 3 期），多期时自动逐条发送',
+        component: 'Select',
+        componentProps: {
+          options: [
+            { label: '末期（默认）', value: 'last' },
+            { label: '全部期', value: 'all' },
+          ],
+        },
+      },
+      {
+        component: 'SOFT_GROUP_BEGIN',
+        label: '活动到期提醒',
+      },
+      {
+        field: 'activity_remind_enable',
+        label: '活动到期提醒总开关',
+        helpMessage: '原神/星铁/绝区零/崩三活动到期推送',
+        component: 'Switch',
+      },
+      {
+        field: 'activity_remind_hours_before',
+        label: '提前提醒小时数',
+        helpMessage: '默认24；活动结束前多少小时内推送一次',
+        component: 'InputNumber',
+        componentProps: { min: 1, max: 168, step: 1 },
+      },
+      {
+        field: 'activity_remind_push_image',
+        label: '推送公告图片',
+        component: 'Switch',
+      },
+      {
+        field: 'activity_remind_permission',
+        label: '活动提醒开关权限',
+        helpMessage: '谁可以在群内开启/关闭活动到期提醒；主人始终可用',
+        component: 'Select',
+        componentProps: {
+          options: [
+            { label: '仅主人', value: 'master' },
+            { label: '仅群主', value: 'owner' },
+            { label: '群管理', value: 'admin' },
+            { label: '所有人', value: 'all' },
+          ],
+        },
+      },
+      {
+        field: 'activity_remind_at_mode',
+        label: '活动提醒艾特',
+        component: 'Select',
+        componentProps: {
+          options: [
+            { label: '不艾特', value: 'none' },
+            { label: '艾特全体', value: 'all' },
+            { label: '艾特指定QQ', value: 'users' },
+          ],
+        },
+      },
+      {
+        field: 'activity_remind_at_users',
+        label: '活动提醒指定QQ',
+        helpMessage: '艾特指定QQ时生效，多个QQ用英文逗号/换行分隔',
+        component: 'InputTextArea',
+      },
+      {
+        field: 'activity_remind_ban_words',
+        label: '活动提醒屏蔽关键词（通用）',
+        helpMessage: '正则写法，使用 | 分隔；标题包含则不推送。各游戏还能单独追加，最终取并集',
+        component: 'InputTextArea',
+      },
+      {
+        field: 'activity_remind_gs_groups',
+        label: '原神活动到期提醒群',
+        helpMessage: '直接选择提醒群，留空则不推送；也可群内发送 #原神开启活动到期推送。多机器人可填「机器人QQ:群号」',
+        component: 'Select',
+        componentProps: {
+          mode: 'multiple',
+          allowAdd: true,
+          allowDel: true,
+          options: groupList,
+        },
+      },
+      {
+        field: 'activity_remind_ban_words_gs',
+        label: '原神额外屏蔽关键词',
+        helpMessage: '只对原神生效，正则写法，使用 | 分隔；会与通用关键词合并',
+        component: 'Input',
+      },
+      {
+        field: 'activity_remind_sr_groups',
+        label: '星铁活动到期提醒群',
+        helpMessage: '直接选择提醒群，留空则不推送；也可群内发送 #星铁开启活动到期推送。多机器人可填「机器人QQ:群号」',
+        component: 'Select',
+        componentProps: {
+          mode: 'multiple',
+          allowAdd: true,
+          allowDel: true,
+          options: groupList,
+        },
+      },
+      {
+        field: 'activity_remind_ban_words_sr',
+        label: '星铁额外屏蔽关键词',
+        helpMessage: '只对星铁生效，正则写法，使用 | 分隔；会与通用关键词合并',
+        component: 'Input',
+      },
+      {
+        field: 'activity_remind_zzz_groups',
+        label: '绝区零活动到期提醒群',
+        helpMessage: '直接选择提醒群，留空则不推送；也可群内发送 #绝区零开启活动到期推送。多机器人可填「机器人QQ:群号」',
+        component: 'Select',
+        componentProps: {
+          mode: 'multiple',
+          allowAdd: true,
+          allowDel: true,
+          options: groupList,
+        },
+      },
+      {
+        field: 'activity_remind_ban_words_zzz',
+        label: '绝区零额外屏蔽关键词',
+        helpMessage: '只对绝区零生效，正则写法，使用 | 分隔；会与通用关键词合并',
+        component: 'Input',
+      },
+      {
+        field: 'activity_remind_bh3_groups',
+        label: '崩三活动到期提醒群',
+        helpMessage: '直接选择提醒群，留空则不推送；也可群内发送 #崩三开启活动到期推送。多机器人可填「机器人QQ:群号」',
+        component: 'Select',
+        componentProps: {
+          mode: 'multiple',
+          allowAdd: true,
+          allowDel: true,
+          options: groupList,
+        },
+      },
+      {
+        field: 'activity_remind_ban_words_bh3',
+        label: '崩三额外屏蔽关键词',
+        helpMessage: '只对崩三生效，正则写法，使用 | 分隔；会与通用关键词合并',
+        component: 'Input',
+      },
+      {
+        component: 'SOFT_GROUP_BEGIN',
+        label: '崩坏3扩展',
+      },
+      {
+        field: 'bh3_all_note_enable',
+        label: '启用四游戏体力聚合',
+        helpMessage: '控制 #体力/#米哈游体力 等四游戏总览；关闭后仍可使用 #原神体力/#星铁体力 等单游戏查询',
+        component: 'Switch',
+      },
+      {
+        field: 'bh3_all_note_groups',
+        label: '四游戏体力推送群',
+        helpMessage: '直接选择推送群，留空则不推送',
+        component: 'Select',
+        componentProps: {
+          mode: 'multiple',
+          allowAdd: true,
+          allowDel: true,
+          options: groupList,
+        },
+      },
+      {
+        field: 'stamina_push_enable',
+        label: '启用体力自动推送',
+        helpMessage: '按群成员的绑定账号检查原神/星铁/绝区零/崩坏3体力，达到阈值后推送一次',
+        component: 'Switch',
+      },
+      {
+        field: 'stamina_push_interval',
+        label: '体力检查间隔（分钟）',
+        helpMessage: '插件每分钟轮询一次，按这里的间隔实际请求；建议 5 分钟以上',
+        component: 'InputNumber',
+        componentProps: { min: 1, max: 60, step: 1 },
+      },
+      {
+        field: 'stamina_push_at_user',
+        label: '体力推送艾特用户',
+        helpMessage: '推送某位群成员的体力时，是否在消息开头艾特该成员',
+        component: 'Switch',
+      },
+      {
+        field: 'stamina_push_gs_threshold',
+        label: '原神体力推送阈值',
+        helpMessage: '原粹树脂达到该数值后推送；默认 200',
+        component: 'InputNumber',
+        componentProps: { min: 1, max: 300, step: 1 },
+      },
+      {
+        field: 'stamina_push_sr_threshold',
+        label: '星铁体力推送阈值',
+        helpMessage: '开拓力达到该数值后推送；默认 240',
+        component: 'InputNumber',
+        componentProps: { min: 1, max: 500, step: 1 },
+      },
+      {
+        field: 'stamina_push_zzz_threshold',
+        label: '绝区零体力推送阈值',
+        helpMessage: '电量达到该数值后推送；默认 240',
+        component: 'InputNumber',
+        componentProps: { min: 1, max: 500, step: 1 },
+      },
+      {
+        field: 'stamina_push_bh3_threshold',
+        label: '崩坏3体力推送阈值',
+        helpMessage: '体力达到该数值后推送；默认 240',
+        component: 'InputNumber',
+        componentProps: { min: 1, max: 500, step: 1 },
+      },
+      {
+        field: 'bh3_remind_enable',
+        label: '崩三周期提醒',
+        helpMessage: '深渊/战场/乐土开始和结算提醒',
+        component: 'Switch',
+      },
+      {
+        field: 'bh3_remind_groups',
+        label: '崩三提醒群',
+        helpMessage: '直接选择提醒群，也可群内发送 #米哈游开启崩三提醒',
+        component: 'Select',
+        componentProps: {
+          mode: 'multiple',
+          allowAdd: true,
+          allowDel: true,
+          options: groupList,
+        },
+      },
+      {
+        field: 'bh3_remind_at_mode',
+        label: '崩三提醒艾特',
+        helpMessage: '控制深渊/战场/乐土提醒是否艾特全体或指定成员',
+        component: 'Select',
+        componentProps: {
+          options: [
+            { label: '不艾特', value: 'none' },
+            { label: '艾特全体', value: 'all' },
+            { label: '艾特指定QQ', value: 'users' },
+          ],
+        },
+      },
+      {
+        field: 'bh3_remind_at_users',
+        label: '崩三提醒指定QQ',
+        helpMessage: '艾特指定QQ时生效，多个QQ用英文逗号/换行分隔',
+        component: 'InputTextArea',
+      },
+      {
+        field: 'bh3_remind_image',
+        label: '崩三提醒附图',
+        helpMessage: '支持网络图片URL或本地图片路径，留空则不发送图片',
+        component: 'InputTextArea',
+      },
+      {
+        field: 'zzz_remind_enable',
+        label: '绝区零挑战提醒',
+        helpMessage: '式舆防卫战 / 危局强袭战未达标时私聊提醒；个人还需发「%开启挑战提醒」开启',
+        component: 'Switch',
+      },
+      {
+        field: 'zzz_remind_time',
+        label: '绝区零提醒时间',
+        helpMessage: '全局默认提醒时间，形如「每日20时」「每日20时30分」；个人可在群内单独设置',
+        component: 'Input',
+      },
+      {
+        field: 'zzz_remind_abyss_level',
+        label: '式舆防卫战达标层数',
+        helpMessage: '低于该层数视为未达标；默认 5',
+        component: 'InputNumber',
+        componentProps: { min: 0, max: 6, step: 1 },
+      },
+      {
+        field: 'zzz_remind_deadly_stars',
+        label: '危局强袭战达标星数',
+        helpMessage: '低于该星数视为未达标；默认 6',
+        component: 'InputNumber',
+        componentProps: { min: 0, max: 9, step: 1 },
+      },
+      {
+        field: 'zzz_activity_push_start_lead',
+        label: '活动开启前提醒（分钟）',
+        helpMessage: '活动还没开始时提前多少分钟提醒；1440 = 1 天，10080 = 7 天',
+        component: 'InputNumber',
+        componentProps: { min: 5, max: 10080, step: 60 },
+      },
+      {
+        field: 'zzz_activity_push_end_lead',
+        label: '活动到期前提醒（分钟）',
+        helpMessage: '活动快结束时提前多少分钟提醒；1440 = 1 天，2880 = 2 天，10080 = 7 天',
+        component: 'InputNumber',
+        componentProps: { min: 5, max: 10080, step: 60 },
+      },
+      {
+        field: 'zzz_activity_push_groups',
+        label: '绝区零活动推送群',
+        helpMessage: '推到这些群（群内发「%开启活动推送」也能自助订阅）；不填则只走私聊',
+        component: 'Select',
+        componentProps: {
+          mode: 'multiple',
+          allowAdd: true,
+          allowDel: true,
+          options: groupList,
+        },
+      },
+      {
+        component: 'SOFT_GROUP_BEGIN',
+        label: 'B站设置',
+      },
+      {
+        field: 'bilibili',
+        label: 'B站功能开关',
+        component: 'Switch',
+      },
+      {
+        field: 'list_num',
+        label: '评论区显示条数',
+        helpMessage: '1-20条',
+        component: 'InputNumber',
+        componentProps: { min: 1, max: 20, step: 1 },
+      },
+      {
+        field: 'qn',
+        label: '视频下载清晰度',
+        component: 'Select',
+        componentProps: {
+          options: [
+            { label: '360P', value: 0 },
+            { label: '480P', value: 1 },
+            { label: '720P', value: 2 },
+            { label: '1080P', value: 3 },
+            { label: '1080P+高码率', value: 4 },
+            { label: '4K超清', value: 5 },
+          ],
+        },
+      },
+      {
+        field: 'dow_size',
+        label: '自动下载大小阈值',
+        helpMessage: '小于此MB数自动下载，0代表不自动下载；超过99MB会作为群文件发送',
+        component: 'InputNumber',
+        componentProps: { min: 0, max: 2048, step: 1 },
+      },
+      {
+        field: 'b_lj',
+        label: '解析时弹出原链接',
+        component: 'Switch',
+      },
+      {
+        field: 'b_cd',
+        label: '同视频/动态3分钟CD',
+        component: 'Switch',
+      },
+      {
+        field: 'b_img_num',
+        label: '图片合并阈值',
+        helpMessage: '小于几张图片时不合并消息，0表示始终合并',
+        component: 'InputNumber',
+        componentProps: { min: 0, max: 20, step: 1 },
+      },
+      {
+        component: 'SOFT_GROUP_BEGIN',
+        label: 'B站直播解析',
+      },
+      {
+        field: 'bili_live',
+        label: '自动解析直播间',
+        helpMessage: '消息里出现直播间链接/b23短链时自动解析，默认开启；关闭后仍可用「#直播解析 房间号」手动解析',
+        component: 'Switch',
+      },
+      {
+        field: 'bili_live_only_live',
+        label: '仅回复开播中的',
+        helpMessage: '开启后，未开播的直播间自动解析时不回复',
+        component: 'Switch',
+      },
+      {
+        field: 'bili_live_cd',
+        label: '同一直播间CD',
+        helpMessage: '单位秒，0表示不限制；手动解析不受限制',
+        component: 'InputNumber',
+        componentProps: { min: 0, max: 3600, step: 10 },
+      },
+      {
+        field: 'bili_live_video',
+        label: '手动解析后录制视频',
+        helpMessage: '手动「#直播解析」时，解析完再录一段直播直接发出去',
+        component: 'Switch',
+      },
+      {
+        field: 'bili_live_video_auto',
+        label: '自动解析也录制视频',
+        helpMessage: '群里每条直播链接都录一段会很吃带宽，默认关；想全自动就开',
+        component: 'Switch',
+      },
+      {
+        field: 'bili_live_video_time',
+        label: '录制时长',
+        helpMessage: '单位秒，默认60（1分钟）；录满就发',
+        component: 'InputNumber',
+        componentProps: { min: 5, max: 600, step: 5 },
+      },
+      {
+        field: 'bili_live_video_size',
+        label: '录制大小上限',
+        helpMessage: '单位MB，录到这个大小就停（默认99）；0表示只按时长停',
+        component: 'InputNumber',
+        componentProps: { min: 0, max: 2048, step: 1 },
+      },
+      {
+        field: 'bili_live_dm',
+        label: '直播间发弹幕',
+        helpMessage: '开启后可用「#弹幕 内容」往直播间发弹幕，需要先「#米哈游b站登录」',
+        component: 'Switch',
+      },
+      {
+        field: 'bili_live_dm_perm',
+        label: '发弹幕权限',
+        helpMessage: '默认「群管理」；私聊不受限制',
+        component: 'Select',
+        componentProps: {
+          options: [
+            { label: '所有人', value: 'all' },
+            { label: '群管理(含主人)', value: 'admin' },
+            { label: '仅主人', value: 'master' },
+          ],
+        },
+      },
+      {
+        field: 'bili_live_dm_cd',
+        label: '弹幕冷却',
+        helpMessage: '单位秒，默认5；0表示不限制。主人不受限制',
+        component: 'InputNumber',
+        componentProps: { min: 0, max: 600, step: 1 },
+      },
+      {
+        field: 'bili_live_qn',
+        label: '录制清晰度',
+        helpMessage: '房间没开该档会自动降级到可用档位',
+        component: 'Select',
+        componentProps: {
+          options: [
+            { label: '原画', value: 10000 },
+            { label: '蓝光', value: 400 },
+            { label: '超清', value: 250 },
+            { label: '高清', value: 150 },
+            { label: '流畅', value: 80 },
+          ],
+        },
+      },
+      {
+        field: 'emoji',
+        label: 'Emoji CDN渲染',
+        helpMessage: '浏览器不支持emoji时用CDN渲染',
+        component: 'Switch',
+      },
+      {
+        component: 'SOFT_GROUP_BEGIN',
+        label: '插件优先级',
+      },
+      {
+        field: 'priority_unified',
+        label: '统一优先级',
+        helpMessage: '开启后所有指令至少拿到「统一优先级数值」，避免被后装的插件抢走；某条指令自身配置更靠前时仍取更靠前的值',
+        bottomHelpMessage: '改这里就不用逐条调下面的三十多项了；修改后需重启',
+        component: 'Switch',
+      },
+      {
+        field: 'priority_base',
+        label: '统一优先级数值',
+        helpMessage: '默认 -114514；Yunzai 数字越小越优先，修改后需重启',
+        component: 'InputNumber',
+        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
+      },
+      {
+        field: 'tl_priority',
+        label: '体力小组件(TL)',
+        helpMessage: '默认 -99',
+        component: 'InputNumber',
+        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
+      },
+      {
+        field: 'sign_priority',
+        label: '签到(sign)',
+        helpMessage: '默认 -26',
+        component: 'InputNumber',
+        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
+      },
+      {
+        field: 'user_priority',
+        label: '扫码绑定(user)',
+        helpMessage: '默认 -9999999999',
+        component: 'InputNumber',
+        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
+      },
+      {
+        field: 'wiki_priority',
+        label: '图鉴(wiki)',
+        helpMessage: '默认 100',
+        component: 'InputNumber',
+        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
+      },
+      {
+        field: 'bh3_remind_priority',
+        label: '崩三提醒(bh3_remind)',
+        helpMessage: '默认 -1000001（提醒拦截）',
+        component: 'InputNumber',
+        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
+      },
+      {
+        field: 'activity_remind_priority',
+        label: '活动到期提醒(activity_remind)',
+        helpMessage: '默认 -1000002，建议低于genshin以优先抢到活动到期指令',
+        component: 'InputNumber',
+        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
+      },
+      {
+        field: 'bh3_note_priority',
+        label: '崩三体力(bh3_note)',
+        helpMessage: '默认 100',
+        component: 'InputNumber',
+        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
+      },
+      {
+        field: 'bh3_abyss_priority',
+        label: '崩三深渊(bh3_abyss)',
+        helpMessage: '默认 100',
+        component: 'InputNumber',
+        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
+      },
+      {
+        field: 'bh3_battlefield_priority',
+        label: '崩三战场(bh3_battlefield)',
+        helpMessage: '默认 100',
+        component: 'InputNumber',
+        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
+      },
+      {
+        field: 'bh3_godwar_priority',
+        label: '崩三乐土(bh3_godwar)',
+        helpMessage: '默认 100',
+        component: 'InputNumber',
+        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
+      },
+      {
+        field: 'bh3_profile_priority',
+        label: '崩三主页(bh3_profile)',
+        helpMessage: '默认 100',
+        component: 'InputNumber',
+        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
+      },
+      {
+        field: 'bh3_all_note_priority',
+        label: '四体力聚合(bh3_all_note)',
+        helpMessage: '默认 100',
+        component: 'InputNumber',
+        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
+      },
+      {
+        field: 'bh3_gacha_priority',
+        label: '崩三抽卡(bh3_gacha)',
+        helpMessage: '默认 100',
+        component: 'InputNumber',
+        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
+      },
+      {
+        field: 'bh3_ledger_priority',
+        label: '崩三水晶(bh3_ledger)',
+        helpMessage: '默认 100',
+        component: 'InputNumber',
+        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
+      },
+      {
+        field: 'abyss_report_priority',
+        label: '原神/星铁深渊速报(abyss_report)',
+        helpMessage: '默认 100，修改后需重启',
+        component: 'InputNumber',
+        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
+      },
+      priorityInput('bilibili_priority', 'B站解析卡片(bilibili)', -120),
+      priorityInput('bilibili_push_priority', 'B站推送(bilibili_push)', -119),
+      priorityInput('bili_live_priority', 'B站直播解析(bili_live)', -115),
+      {
+        field: 'zzz_panel_accel_enabled',
+        label: '绝区零面板加速开关',
+        bottomHelpMessage:
+          '把 ZZZ-Plugin「%更新面板」的串行等待改为并发（不改 ZZZ-Plugin 源码）。原版每个角色之间固定等 3 秒，44 个角色就是 132 秒；开启后约 1.6~5.7 秒。修改后需重启',
+        component: 'Switch',
+      },
+      {
+        field: 'zzz_panel_accel_concurrency',
+        label: '面板加速并发数',
+        helpMessage: '默认 4',
+        bottomHelpMessage: '越大越快，也越容易被米游社限流；被拦时会自动改走代理兜底',
+        component: 'InputNumber',
+        componentProps: { min: 1, max: 16, step: 1 },
+      },
+      {
+        field: 'zzz_panel_accel_interval',
+        label: '面板加速请求间隔(ms)',
+        helpMessage: '默认 400',
+        bottomHelpMessage: '每个角色请求后的等待，取代 ZZZ-Plugin 原有的固定 3000ms',
+        component: 'InputNumber',
+        componentProps: { min: 100, max: 10000, step: 100 },
+      },
+      priorityInput('zzz_panel_accel_priority', '绝区零面板加速(zzz_panel_accel)', -9999999999),
+      priorityInput('gacha_pool_priority', '全游戏当前卡池(gacha_pool)', -1000000000),
+      priorityInput('gs_logs_priority', '原神历史卡池(gs_logs)', -99),
+      priorityInput('sr_logs_priority', '星铁历史卡池(sr_logs)', -88),
+      priorityInput('mhy_estimate_priority', '预估/攻略搜索(mhy_estimate)', -9999999999),
+      priorityInput('video_priority', '米哈游最新视频(video)', 1),
+      priorityInput('voice_priority', '角色语音(voice)', 15),
+      priorityInput('update_priority', '插件更新(update)', 10),
+      priorityInput('config_priority', '插件配置(config)', 15),
+      priorityInput('help_priority', '帮助菜单(help)', 100),
+      priorityInput('picture_priority', '图片处理(picture)', 1234),
+      priorityInput('role_combat_priority', '剧诗可用角色(role_combat)', 100),
+      priorityInput('zzz_md_priority', '绝区零母带(zzz_md)', 100),
+      priorityInput('currency_balance_priority', '货币统计(currency_balance)', 100),
+      {
+        component: 'SOFT_GROUP_BEGIN',
+        label: 'Meme表情包',
+      },
+      priorityInput('meme_priority', 'Meme表情(meme)', 50),
+      {
+        field: 'meme',
+        label: 'Meme表情包总开关',
+        helpMessage: '开启后可制作/查询 meme 表情包',
+        component: 'Switch',
+      },
+      {
+        field: 'meme_baseUrl',
+        label: 'Meme服务地址',
+        helpMessage: 'yunzai-meme 服务地址，一般无需修改',
+        component: 'Input',
+      },
+      {
+        field: 'meme_reply',
+        label: '制作时引用回复',
+        helpMessage: '发送制作结果时是否引用原消息',
+        component: 'Switch',
+      },
+      {
+        field: 'meme_forceSharp',
+        label: '必须带#前缀',
+        helpMessage: '开启后不带 # 前缀不触发 meme 制作',
+        component: 'Switch',
+      },
+      {
+        field: 'meme_CD',
+        label: '制作冷却CD',
+        helpMessage: '单位：秒，0 表示无冷却',
+        component: 'InputNumber',
+        componentProps: { min: 0, max: 3600, step: 1 },
+      },
+      {
+        field: 'meme_maxFileSize',
+        label: '图片大小限制',
+        helpMessage: '制作时单张图片最大 MB 数',
+        component: 'InputNumber',
+        componentProps: { min: 1, max: 100, step: 1 },
+      },
+      {
+        field: 'meme_masterProtectDo',
+        label: '主人保护',
+        helpMessage: '制作对象是主人时改用发送者本人头像',
+        component: 'Switch',
+      },
+      {
+        component: 'SOFT_GROUP_BEGIN',
+        label: '其他',
+      },
+      {
+        field: 'Tl',
+        label: '启用体力组件',
+        helpMessage: '开启后由本插件处理体力指令；#体力/#米哈游体力等为四游戏总览，#原神体力等为单游戏查询',
+        component: 'Switch',
+      },
+      {
+        field: 'hbxx',
+        label: '修复合并消息报错',
+        helpMessage: '解决某些适配器的合并消息内嵌报错',
+        component: 'Switch',
+      },
+      {
+        field: 'debug',
+        label: '调试模式',
+        helpMessage: '输出卡池同步、水晶查询、扫码绑定等详细日志',
+        component: 'Switch',
+      },
+      {
+        field: 'auto_reload',
+        label: '自举热重载',
+        helpMessage: '改完 apps/ 与 system/ 里的代码自动生效，不用重启（框架的 #重载插件 对 HoYoGet 无效）。新增/删除指令仍需 #重启',
+        component: 'Switch',
+      },
+    ],
+    getConfigData() {
+      const cfg = getCfg()
+      const other = getOther()
+      const sign = getSign()
+      const bh3Remind = getBh3Remind()
+      const activityRemind = getActivityRemind()
+      const activityGroups = activityRemind.groups || {}
+      return {
+        // 数据模式：面板上要能读到当前值，否则单选框显示不出选中的那一项
+        data_mode: getDataMode(),
+        panel_style: getPanelStyle(),
+        panel_service_gs: cfg.panel_service_gs || 'auto',
+        panel_service_sr: cfg.panel_service_sr || 'auto',
+        update: !!cfg.update,
+        img_quality: cfg.img_quality ?? 80,
+        wiki: !!cfg.wiki,
+        gs_bg: cfg.gs_bg !== false,
+        gs_bg_api: cfg.gs_bg_api ?? 'https://api.yppp.net/api.php',
+        bdsb: !!cfg.bdsb,
+        gs_logs: !!cfg.gs_logs,
+        sr_logs: !!cfg.sr_logs,
+        zzz_logs: !!cfg.zzz_logs,
+        bh3_logs: !!cfg.bh3_logs,
+        gacha_pool_cron: String(cfg.gacha_pool_cron || '0 */30 * * * *'),
+        all_voice: !!cfg.all_voice,
+        gs_voice: cfg.gs_voice !== false,
+        sr_voice: cfg.sr_voice !== false,
+        zzz_voice: cfg.zzz_voice !== false,
+        bh3_voice: cfg.bh3_voice !== false,
+        sign: !!cfg.sign,
+        zd_sign: sign.zd_sign ?? 0,
+        sign_hour: sign.sign_hour ?? 0,
+        sign_minute: sign.sign_minute ?? 0,
+        bbs_zd_sign: sign.bbs_zd_sign ?? 0,
+        bbs_sign_hour: sign.bbs_sign_hour ?? 3,
+        bbs_sign_minute: sign.bbs_sign_minute ?? 30,
+        sbai: !!sign.sbai,
+        sign_group: (sign.sign_group || []).map(String),
+        bbs_sign_group: (sign.bbs_sign_group || []).map(String),
+        sign_users: formatSignUsers(sign.sign || {}),
+        bbs_sign_users: formatSignUsers(sign.bbs_sign || {}),
+        auto_backfill: cfg.auto_backfill !== false,
+        sign_list_private: cfg.sign_list_private === true,
+        // 过码相关。回读时给默认值，避免面板空白看着像没配
+        auto_verify_addr: cfg.auto_verify_addr ?? 'http://127.0.0.1:2149/solve',
+        // 米游社接口代理。默认空 = 不启用，只有被风控拦了才走它
+        mhy_proxy: cfg.mhy_proxy ?? '',
+        mhy_proxy_key: cfg.mhy_proxy_key ?? '',
+        // 活动公告单独的标准 HTTP 代理（公告域名不在米游社接口代理的白名单里）
+        activity_proxy: cfg.activity_proxy ?? '',
+        ttocr_appkey: cfg.ttocr_appkey ?? '',
+        ttocr_itemid: Number(cfg.ttocr_itemid) || 32,
+        bh3_remind_groups: parseMultiList(bh3Remind.groups),
+        bh3_all_note_groups: parseMultiList(bh3Remind.all_note_groups),
+        groups: parseMultiList(cfg.groups),
+        forwardMsg: other.forwardMsg !== false,
+        bh3: !!other.bh3,
+        by: !!other.by,
+        xbgd: !!other.xbgd,
+        cover: !!other.cover,
+        group_config: formatGroupConfig(other.group_config),
+        sm: !!cfg.sm,
+        sm_cd: cfg.sm_cd ?? 60,
+        bilibili: !!cfg.bilibili,
+        list_num: cfg.list_num ?? 12,
+        qn: cfg.qn ?? 3,
+        dow_size: cfg.dow_size ?? 0,
+        b_lj: !!cfg.b_lj,
+        b_cd: !!cfg.b_cd,
+        b_img_num: cfg.b_img_num ?? 0,
+        bili_live: cfg.bili_live !== false,
+        bili_live_only_live: !!cfg.bili_live_only_live,
+        bili_live_cd: cfg.bili_live_cd ?? 60,
+        bili_live_video: cfg.bili_live_video !== false,
+        bili_live_video_auto: !!cfg.bili_live_video_auto,
+        bili_live_video_time: cfg.bili_live_video_time ?? 60,
+        bili_live_video_size: cfg.bili_live_video_size ?? 99,
+        bili_live_qn: cfg.bili_live_qn ?? 250,
+        bili_live_dm: cfg.bili_live_dm !== false,
+        bili_live_dm_perm: cfg.bili_live_dm_perm || 'admin',
+        bili_live_dm_cd: cfg.bili_live_dm_cd ?? 5,
+        emoji: !!cfg.emoji,
+        Tl: !!cfg.Tl,
+        hbxx: !!cfg.hbxx,
+        debug: !!cfg.debug,
+        auto_reload: cfg.auto_reload !== false,
+        gacha_art_source: cfg.gacha_art_source || 'custom',
+        gacha_header_art_source: cfg.gacha_header_art_source || cfg.gacha_art_source || 'custom',
+        gacha_up_icon_source: cfg.gacha_up_icon_source || cfg.gacha_art_source || 'custom',
+        tl_priority: cfg.tl_priority ?? -99,
+        sign_priority: cfg.sign_priority ?? -26,
+        user_priority: cfg.user_priority ?? -9999999999,
+        wiki_priority: other.wiki ?? 100,
+        bh3_remind_priority: cfg.bh3_remind_priority ?? -1000001,
+        activity_remind_priority: cfg.activity_remind_priority ?? -1000002,
+        bh3_note_priority: cfg.bh3_note_priority ?? 100,
+        bh3_abyss_priority: cfg.bh3_abyss_priority ?? 100,
+        bh3_battlefield_priority: cfg.bh3_battlefield_priority ?? 100,
+        bh3_godwar_priority: cfg.bh3_godwar_priority ?? 100,
+        bh3_profile_priority: cfg.bh3_profile_priority ?? 100,
+        bh3_all_note_priority: cfg.bh3_all_note_priority ?? 100,
+        bh3_gacha_priority: cfg.bh3_gacha_priority ?? 100,
+        bh3_ledger_priority: cfg.bh3_ledger_priority ?? 100,
+        bilibili_priority: cfg.bilibili_priority ?? -120,
+        bilibili_push_priority: cfg.bilibili_push_priority ?? -119,
+        bili_live_priority: cfg.bili_live_priority ?? -115,
+        zzz_panel_accel_enabled: cfg.zzz_panel_accel_enabled ?? true,
+        zzz_panel_accel_concurrency: Number.isFinite(Number(cfg.zzz_panel_accel_concurrency)) ? Number(cfg.zzz_panel_accel_concurrency) : 4,
+        zzz_panel_accel_interval: Number.isFinite(Number(cfg.zzz_panel_accel_interval)) ? Number(cfg.zzz_panel_accel_interval) : 400,
+        zzz_panel_accel_priority: Number.isFinite(Number(cfg.zzz_panel_accel_priority)) ? Number(cfg.zzz_panel_accel_priority) : -9999999999,
+        gacha_pool_priority: cfg.gacha_pool_priority ?? -1000000000,
+        priority_unified: cfg.priority_unified === true,
+        priority_base: cfg.priority_base ?? -114514,
+        gs_logs_priority: cfg.gs_logs_priority ?? -99,
+        sr_logs_priority: cfg.sr_logs_priority ?? -88,
+        mhy_estimate_priority: Number.isFinite(Number(cfg.mhy_estimate_priority)) ? Number(cfg.mhy_estimate_priority) : -9999999999,
+        video_priority: cfg.video_priority ?? 1,
+        voice_priority: cfg.voice_priority ?? 15,
+        update_priority: cfg.update_priority ?? 10,
+        config_priority: cfg.config_priority ?? 15,
+        help_priority: cfg.help_priority ?? 100,
+        picture_priority: cfg.picture_priority ?? 1234,
+        role_combat_priority: cfg.role_combat_priority ?? 100,
+        zzz_md_priority: cfg.zzz_md_priority ?? 100,
+        currency_balance_priority: cfg.currency_balance_priority ?? 100,
+        bh3_remind_enable: !!bh3Remind.enable,
+        bh3_all_note_enable: !!cfg.bh3_all_note_enable,
+        bh3_all_note_groups: (bh3Remind.all_note_groups || []).map(String),
+        stamina_push_enable: !!bh3Remind.stamina_push_enable,
+        stamina_push_interval: Number(bh3Remind.stamina_push_interval || 5),
+        stamina_push_at_user: !!bh3Remind.stamina_push_at_user,
+        stamina_push_gs_threshold: Number(bh3Remind.stamina_push_gs_threshold || 200),
+        stamina_push_sr_threshold: Number(bh3Remind.stamina_push_sr_threshold || 240),
+        stamina_push_zzz_threshold: Number(bh3Remind.stamina_push_zzz_threshold || 240),
+        stamina_push_bh3_threshold: Number(bh3Remind.stamina_push_bh3_threshold || 240),
+        bh3_remind_groups: parseMultiList(bh3Remind.groups),
+        bh3_remind_at_mode: bh3Remind.at_mode || 'none',
+        bh3_remind_at_users: (bh3Remind.at_users || []).join(','),
+        bh3_remind_image: bh3Remind.image || '',
+        zzz_remind_enable: cfg.zzz_remind_enable !== false,
+        zzz_remind_time: cfg.zzz_remind_time || '每日20时',
+        zzz_remind_abyss_level: cfg.zzz_remind_abyss_level ?? 5,
+        zzz_remind_deadly_stars: cfg.zzz_remind_deadly_stars ?? 6,
+        zzz_activity_push_start_lead: Number(cfg.zzz_activity_push_start_lead ?? 1440),
+        zzz_activity_push_end_lead: Number(cfg.zzz_activity_push_end_lead ?? 2880),
+        zzz_activity_push_groups: parseMultiList(cfg.zzz_activity_push_groups),
+        activity_remind_enable: !!activityRemind.enable,
+        activity_remind_hours_before: activityRemind.hours_before ?? 24,
+        activity_remind_push_image: activityRemind.push_image !== false,
+        activity_remind_permission: activityRemind.permission || 'master',
+        activity_remind_at_mode: activityRemind.at_mode || 'none',
+        activity_remind_at_users: (activityRemind.at_users || []).join(','),
+        activity_remind_ban_words: activityRemind.ban_words || '',
+        activity_remind_ban_words_gs: activityRemind.ban_words_game?.gs || '',
+        activity_remind_ban_words_sr: activityRemind.ban_words_game?.sr || '',
+        activity_remind_ban_words_zzz: activityRemind.ban_words_game?.zzz || '',
+        activity_remind_ban_words_bh3: activityRemind.ban_words_game?.bh3 || '',
+        activity_remind_gs_groups: parseGroupValue(activityGroups.gs),
+        activity_remind_sr_groups: parseGroupValue(activityGroups.sr),
+        activity_remind_zzz_groups: parseGroupValue(activityGroups.zzz),
+        activity_remind_bh3_groups: parseGroupValue(activityGroups.bh3),
+        mys_global_guide_search: cfg.mys_global_guide_search !== false,
+        bh3_guide_abyss_sources: cfg.bh3_guide_abyss_sources || defaultBh3GuideSources.abyss,
+        bh3_guide_battlefield_sources: cfg.bh3_guide_battlefield_sources || defaultBh3GuideSources.battlefield,
+        bh3_guide_godwar_sources: cfg.bh3_guide_godwar_sources || defaultBh3GuideSources.godwar,
+        zzz_guide_defense_sources: cfg.zzz_guide_defense_sources || defaultBh3GuideSources.zzzDefense,
+        zzz_guide_deadly_sources: cfg.zzz_guide_deadly_sources || defaultBh3GuideSources.zzzDeadly,
+        custom_guide_enable: cfg.custom_guide_enable !== false,
+        custom_guide_forward: cfg.custom_guide_forward || 'on',
+        custom_guide_uid: cfg.custom_guide_uid || '74019947',
+        custom_guide_gs_uid: cfg.custom_guide_gs_uid || '',
+        custom_guide_gs_index: cfg.custom_guide_gs_index || '',
+        custom_guide_sr_uid: cfg.custom_guide_sr_uid || '',
+        custom_guide_sr_index: cfg.custom_guide_sr_index || '',
+        custom_guide_zzz_uid: cfg.custom_guide_zzz_uid || '',
+        custom_guide_zzz_index: cfg.custom_guide_zzz_index || '',
+        custom_guide_priority: cfg.custom_guide_priority ?? -9999999999,
+        abyss_report_repos: cfg.abyss_report_repos || 'https://cnb.cool/JIUXJIU/Abyss/-/git/raw/main\nhttps://cnb.cool/JIUXJIU/AbyssBeta/-/git/raw/main',
+        abyss_report_gs_version: cfg.abyss_report_gs_version || '',
+        abyss_report_sr_version: cfg.abyss_report_sr_version || '',
+        abyss_report_sr_fiction_levels: cfg.abyss_report_sr_fiction_levels || '3,4',
+        abyss_report_sr_maze_levels: cfg.abyss_report_sr_maze_levels || '11,12',
+        abyss_report_sr_doom_levels: cfg.abyss_report_sr_doom_levels || '3,4',
+        abyss_report_zzz_shiyu_stages: cfg.abyss_report_zzz_shiyu_stages || '4,5',
+        abyss_report_sr_invasion: cfg.abyss_report_sr_invasion !== false,
+        abyss_report_zzz_shiyu_periods: cfg.abyss_report_zzz_shiyu_periods || 'last',
+        abyss_report_zzz_deadly_periods: cfg.abyss_report_zzz_deadly_periods || 'last',
+        abyss_report_priority: cfg.abyss_report_priority ?? 100,
+        meme: cfg.meme !== false,
+        meme_baseUrl: cfg.meme_baseUrl || 'http://113.31.103.19:50835',
+        meme_reply: cfg.meme_reply !== false,
+        meme_forceSharp: cfg.meme_forceSharp !== false,
+        meme_CD: cfg.meme_CD ?? 0,
+        meme_maxFileSize: cfg.meme_maxFileSize ?? 10,
+        meme_masterProtectDo: cfg.meme_masterProtectDo !== false,
+        meme_priority: cfg.meme_priority ?? 50,
+      }
+    },
+    setConfigData(data, { Result }) {
+      const boolMap = {
+        update: data.update,
+        wiki: data.wiki,
+        gs_bg: data.gs_bg,
+        bdsb: data.bdsb,
+        gs_logs: data.gs_logs,
+        sr_logs: data.sr_logs,
+        zzz_logs: data.zzz_logs,
+        bh3_logs: data.bh3_logs,
+        all_voice: data.all_voice,
+        gs_voice: data.gs_voice,
+        sr_voice: data.sr_voice,
+        zzz_voice: data.zzz_voice,
+        bh3_voice: data.bh3_voice,
+        sign: data.sign,
+        sm: data.sm,
+        bilibili: data.bilibili,
+        b_lj: data.b_lj,
+        b_cd: data.b_cd,
+        bili_live: data.bili_live,
+        bili_live_only_live: data.bili_live_only_live,
+        bili_live_video: data.bili_live_video,
+        bili_live_video_auto: data.bili_live_video_auto,
+        bili_live_dm: data.bili_live_dm,
+        emoji: data.emoji,
+        Tl: data.Tl,
+        hbxx: data.hbxx,
+        debug: data.debug,
+        auto_reload: data.auto_reload,
+        bh3_all_note_enable: data.bh3_all_note_enable,
+        priority_unified: data.priority_unified,
+        zzz_remind_enable: data.zzz_remind_enable,
+        forwardMsg: data.forwardMsg,
+        bh3: data.bh3,
+        by: data.by,
+        xbgd: data.xbgd,
+        cover: data.cover,
+        meme: data.meme,
+        meme_reply: data.meme_reply,
+        meme_forceSharp: data.meme_forceSharp,
+        meme_masterProtectDo: data.meme_masterProtectDo,
+        abyss_report_sr_invasion: data.abyss_report_sr_invasion,
+      }
+      /* 数据模式单独处理：只认 official / test 两个值，其它一律当正式服。
+         之前这个字段只在群指令里写盘，锅巴面板改完存不进去 ——
+         schema 有字段、getter 也能读，唯独保存时没写回去。 */
+      if (data.data_mode != null) {
+        yaml.set(_path + 'config.yaml', 'data_mode', String(data.data_mode).trim() === 'test' ? 'test' : 'official')
+      }
+      /* 面板风格同样只认 dark / apple，其它值一律回落到 dark */
+      if (data.panel_style != null) {
+        yaml.set(_path + 'config.yaml', 'panel_style', String(data.panel_style).trim().toLowerCase() === 'apple' ? 'apple' : 'dark')
+      }
+      if (data.panel_service_gs != null) {
+        const v = String(data.panel_service_gs).trim().toLowerCase()
+        yaml.set(_path + 'config.yaml', 'panel_service_gs', ['auto', 'enka', 'miao', 'mgg', 'hanxuan', 'lyln'].includes(v) ? v : 'auto')
+      }
+      if (data.panel_service_sr != null) {
+        const v = String(data.panel_service_sr).trim().toLowerCase()
+        yaml.set(_path + 'config.yaml', 'panel_service_sr', ['auto', 'enka', 'miao', 'homo', 'avocado'].includes(v) ? v : 'auto')
+      }
+      for (const [k, v] of Object.entries(boolMap)) {
+        const target = ['forwardMsg', 'bh3', 'by', 'xbgd', 'cover'].includes(k) ? 'other.yaml' : 'config.yaml'
+        yaml.set(_path + target, k, !!v)
+      }
+
+      const numMap = {
+        img_quality: data.img_quality,
+        sm_cd: data.sm_cd,
+        list_num: data.list_num,
+        qn: data.qn,
+        dow_size: data.dow_size,
+        b_img_num: data.b_img_num,
+        meme_CD: data.meme_CD,
+        meme_maxFileSize: data.meme_maxFileSize,
+        bili_live_cd: data.bili_live_cd,
+        bili_live_video_time: data.bili_live_video_time,
+        bili_live_video_size: data.bili_live_video_size,
+        bili_live_qn: data.bili_live_qn,
+        
+        bili_live_dm_cd: data.bili_live_dm_cd,
+
+        zzz_panel_accel_concurrency: data.zzz_panel_accel_concurrency,
+        zzz_panel_accel_interval: data.zzz_panel_accel_interval,
+      }
+      for (const [k, v] of Object.entries(numMap)) {
+        if (v != null) yaml.set(_path + 'config.yaml', k, Number(v))
+      }
+
+      // 面板加速开关：关闭时要落 false，所以不能用 if (v) 真值判断
+      if (data.zzz_panel_accel_enabled !== undefined) {
+        yaml.set(_path + 'config.yaml', 'zzz_panel_accel_enabled', !!data.zzz_panel_accel_enabled)
+      }
+
+      // 随机背景接口：留空就回落到默认地址，不要把空串写进配置
+      const gsBgApi = String(data.gs_bg_api || '').trim()
+      if (gsBgApi) yaml.set(_path + 'config.yaml', 'gs_bg_api', gsBgApi)
+      if (data.gacha_art_source) yaml.set(_path + 'config.yaml', 'gacha_art_source', data.gacha_art_source === 'official' ? 'official' : 'custom')
+      if (data.gacha_header_art_source) yaml.set(_path + 'config.yaml', 'gacha_header_art_source', data.gacha_header_art_source === 'official' ? 'official' : 'custom')
+      if (data.gacha_up_icon_source) yaml.set(_path + 'config.yaml', 'gacha_up_icon_source', data.gacha_up_icon_source === 'official' ? 'official' : 'custom')
+      const memeBaseUrl = String(data.meme_baseUrl || '').trim()
+      if (memeBaseUrl) yaml.set(_path + 'config.yaml', 'meme_baseUrl', memeBaseUrl)
+      // 弹幕权限是字符串选项，之前混在 numMap 里被 Number() 转成了 NaN 写进 yaml
+      if (has(data, 'bili_live_dm_perm')) {
+        yaml.set(_path + 'config.yaml', 'bili_live_dm_perm', ['all', 'admin', 'master'].includes(data.bili_live_dm_perm) ? data.bili_live_dm_perm : 'admin')
+      }
+      // 卡池刷新间隔：schema 里有这个字段，但保存时没写盘 —— 面板改了永远不生效
+      if (has(data, 'gacha_pool_cron')) {
+        yaml.set(_path + 'config.yaml', 'gacha_pool_cron', String(data.gacha_pool_cron || '').trim() || '0 */30 * * * *')
+      }
+
+      yaml.set(_path + 'sign.yaml', 'zd_sign', Number(data.zd_sign) ?? 0)
+      const signHour = Number.isFinite(Number(data.sign_hour))
+        ? Math.max(0, Math.min(23, Math.trunc(Number(data.sign_hour))))
+        : 0
+      const signMinute = Number.isFinite(Number(data.sign_minute))
+        ? Math.max(0, Math.min(59, Math.trunc(Number(data.sign_minute))))
+        : 0
+      yaml.set(_path + 'sign.yaml', 'sign_hour', signHour)
+      yaml.set(_path + 'sign.yaml', 'sign_minute', signMinute)
+      yaml.set(_path + 'sign.yaml', 'bbs_zd_sign', Number(data.bbs_zd_sign) ? 1 : 0)
+      const bbsSignHour = Number.isFinite(Number(data.bbs_sign_hour))
+        ? Math.max(0, Math.min(23, Math.trunc(Number(data.bbs_sign_hour))))
+        : 3
+      const bbsSignMinute = Number.isFinite(Number(data.bbs_sign_minute))
+        ? Math.max(0, Math.min(59, Math.trunc(Number(data.bbs_sign_minute))))
+        : 30
+      yaml.set(_path + 'sign.yaml', 'bbs_sign_hour', bbsSignHour)
+      yaml.set(_path + 'sign.yaml', 'bbs_sign_minute', bbsSignMinute)
+      yaml.set(_path + 'sign.yaml', 'sbai', !!data.sbai)
+      const signGroups = parseMultiList(data.sign_group)
+      yaml.set(_path + 'sign.yaml', 'sign_group', signGroups)
+      const bbsSignGroups = parseMultiList(data.bbs_sign_group)
+      yaml.set(_path + 'sign.yaml', 'bbs_sign_group', bbsSignGroups)
+      // 白名单只有在字段真的出现在这次提交里才写。
+      // 无条件写的话，只要表单是旧版本缓存的、或这个字段被临时去掉，
+      // parseSignUsers(undefined) 会得到 {}，一键把整份白名单清空 —— 而界面上看不出来。
+      if (has(data, 'sign_users')) {
+        yaml.set(_path + 'sign.yaml', 'sign', parseSignUsers(data.sign_users))
+      }
+      if (has(data, 'bbs_sign_users')) {
+        yaml.set(_path + 'sign.yaml', 'bbs_sign', parseSignUsers(data.bbs_sign_users))
+      }
+      // 过码配置同理：字段缺失就保持原样，绝不用默认值去覆盖。
+      // auto_verify_addr 允许显式清空（那是「关掉自动过码」的意思），所以判空字符串也算提交。
+      if (has(data, 'auto_backfill')) {
+        yaml.set(_path + 'config.yaml', 'auto_backfill', data.auto_backfill === true)
+      }
+      if (has(data, 'sign_list_private')) {
+        yaml.set(_path + 'config.yaml', 'sign_list_private', data.sign_list_private === true)
+      }
+      if (has(data, 'auto_verify_addr')) {
+        yaml.set(_path + 'config.yaml', 'auto_verify_addr', String(data.auto_verify_addr || '').trim())
+      }
+      // 代理两项都允许显式清空 —— 那是「关掉代理、只走直连」的意思
+      if (has(data, 'mhy_proxy')) {
+        yaml.set(_path + 'config.yaml', 'mhy_proxy', String(data.mhy_proxy || '').trim())
+      }
+      if (has(data, 'mhy_proxy_key')) {
+        yaml.set(_path + 'config.yaml', 'mhy_proxy_key', String(data.mhy_proxy_key || '').trim())
+      }
+      if (has(data, 'activity_proxy')) {
+        yaml.set(_path + 'config.yaml', 'activity_proxy', String(data.activity_proxy || '').trim())
+      }
+      if (has(data, 'ttocr_appkey')) {
+        yaml.set(_path + 'config.yaml', 'ttocr_appkey', String(data.ttocr_appkey || '').trim())
+      }
+      if (has(data, 'ttocr_itemid')) {
+        const itid = Number(data.ttocr_itemid)
+        if (Number.isFinite(itid) && itid > 0) {
+          yaml.set(_path + 'config.yaml', 'ttocr_itemid', Math.trunc(itid))
+        }
+      }
+      const broadcastGroups = parseMultiList(data.groups)
+        .map(v => Number(v))
+        .filter(v => Number.isSafeInteger(v) && v > 0)
+      yaml.set(_path + 'config.yaml', 'groups', broadcastGroups)
+      yaml.set(_path + 'other.yaml', 'group_config', parseGroupConfig(data.group_config))
+
+      const currentBh3Remind = getBh3Remind()
+      const valueOrCurrent = (key, fallback) => data[key] !== undefined ? data[key] : (currentBh3Remind[key] ?? fallback)
+      const toBool = (value, fallback = false) => {
+        if (value === undefined || value === null || value === '') return fallback
+        if (typeof value === 'string') return ['true', '1', 'on', 'yes'].includes(value.trim().toLowerCase())
+        return !!value
+      }
+      yaml.set(_path + 'bh3_remind.yaml', 'enable', toBool(valueOrCurrent('bh3_remind_enable', false)))
+      const currentCfg = getCfg()
+      yaml.set(_path + 'config.yaml', 'bh3_all_note_enable', data.bh3_all_note_enable !== undefined
+        ? !!data.bh3_all_note_enable
+        : !!currentCfg.bh3_all_note_enable)
+      const groups = parseMultiList(valueOrCurrent('bh3_remind_groups', currentBh3Remind.groups || []))
+      yaml.set(_path + 'bh3_remind.yaml', 'groups', groups)
+      const allNoteGroups = parseMultiList(valueOrCurrent('bh3_all_note_groups', currentBh3Remind.all_note_groups || []))
+      yaml.set(_path + 'bh3_remind.yaml', 'all_note_groups', allNoteGroups)
+      const pushEnable = toBool(valueOrCurrent('stamina_push_enable', false))
+      const pushInterval = Number(valueOrCurrent('stamina_push_interval', 5))
+      const pushAtUser = toBool(valueOrCurrent('stamina_push_at_user', false))
+      const numberSetting = (key, fallback, max = 9999) => {
+        const value = Number(valueOrCurrent(key, fallback))
+        return Number.isFinite(value) ? Math.max(1, Math.min(max, Math.trunc(value))) : fallback
+      }
+      yaml.set(_path + 'bh3_remind.yaml', 'stamina_push_enable', pushEnable)
+      yaml.set(_path + 'bh3_remind.yaml', 'stamina_push_interval', Number.isFinite(pushInterval) ? Math.max(1, Math.min(60, Math.trunc(pushInterval))) : 5)
+      yaml.set(_path + 'bh3_remind.yaml', 'stamina_push_at_user', pushAtUser)
+      yaml.set(_path + 'bh3_remind.yaml', 'stamina_push_gs_threshold', numberSetting('stamina_push_gs_threshold', 200, 300))
+      yaml.set(_path + 'bh3_remind.yaml', 'stamina_push_sr_threshold', numberSetting('stamina_push_sr_threshold', 240, 500))
+      yaml.set(_path + 'bh3_remind.yaml', 'stamina_push_zzz_threshold', numberSetting('stamina_push_zzz_threshold', 240, 500))
+      yaml.set(_path + 'bh3_remind.yaml', 'stamina_push_bh3_threshold', numberSetting('stamina_push_bh3_threshold', 240, 500))
+      const atMode = valueOrCurrent('bh3_remind_at_mode', 'none')
+      yaml.set(_path + 'bh3_remind.yaml', 'at_mode', ['all', 'users', 'none'].includes(atMode) ? atMode : 'none')
+      const remindAtUsers = String(valueOrCurrent('bh3_remind_at_users', currentBh3Remind.at_users || '') || '').split(/[,，\s]+/).map(v => v.trim()).filter(Boolean)
+      yaml.set(_path + 'bh3_remind.yaml', 'at_users', remindAtUsers)
+      yaml.set(_path + 'bh3_remind.yaml', 'image', String(valueOrCurrent('bh3_remind_image', currentBh3Remind.image || '') || '').trim())
+
+      yaml.set(_path + 'activity_remind.yaml', 'enable', !!data.activity_remind_enable)
+      yaml.set(_path + 'activity_remind.yaml', 'hours_before', Number(data.activity_remind_hours_before || 24))
+      yaml.set(_path + 'activity_remind.yaml', 'push_image', data.activity_remind_push_image !== false)
+      const activityPerm = ['master', 'owner', 'admin', 'all'].includes(data.activity_remind_permission) ? data.activity_remind_permission : 'master'
+      yaml.set(_path + 'activity_remind.yaml', 'permission', activityPerm)
+      yaml.set(_path + 'activity_remind.yaml', 'ban_words_game', {
+        gs: String(data.activity_remind_ban_words_gs || '').trim(),
+        sr: String(data.activity_remind_ban_words_sr || '').trim(),
+        zzz: String(data.activity_remind_ban_words_zzz || '').trim(),
+        bh3: String(data.activity_remind_ban_words_bh3 || '').trim(),
+      })
+      yaml.set(_path + 'activity_remind.yaml', 'at_mode', ['all', 'users', 'none'].includes(data.activity_remind_at_mode) ? data.activity_remind_at_mode : 'none')
+      const activityAtUsers = String(data.activity_remind_at_users || '').split(/[,，\s]+/).map(v => v.trim()).filter(Boolean)
+      yaml.set(_path + 'activity_remind.yaml', 'at_users', activityAtUsers)
+      yaml.set(_path + 'activity_remind.yaml', 'ban_words', String(data.activity_remind_ban_words || '').trim())
+      yaml.set(_path + 'activity_remind.yaml', 'groups', {
+        gs: parseMultiList(data.activity_remind_gs_groups),
+        sr: parseMultiList(data.activity_remind_sr_groups),
+        zzz: parseMultiList(data.activity_remind_zzz_groups),
+        bh3: parseMultiList(data.activity_remind_bh3_groups),
+      })
+      yaml.set(_path + 'config.yaml', 'bh3_guide_abyss_sources', String(data.bh3_guide_abyss_sources || '').trim())
+      yaml.set(_path + 'config.yaml', 'mys_global_guide_search', data.mys_global_guide_search !== false)
+      yaml.set(_path + 'config.yaml', 'bh3_guide_battlefield_sources', String(data.bh3_guide_battlefield_sources || '').trim())
+      yaml.set(_path + 'config.yaml', 'bh3_guide_godwar_sources', String(data.bh3_guide_godwar_sources || '').trim())
+      yaml.set(_path + 'config.yaml', 'zzz_guide_defense_sources', String(data.zzz_guide_defense_sources || '').trim())
+      yaml.set(_path + 'config.yaml', 'zzz_guide_deadly_sources', String(data.zzz_guide_deadly_sources || '').trim())
+      yaml.set(_path + 'config.yaml', 'custom_guide_enable', !!data.custom_guide_enable)
+      yaml.set(_path + 'config.yaml', 'custom_guide_forward', data.custom_guide_forward === 'off' ? 'off' : 'on')
+      yaml.set(_path + 'config.yaml', 'custom_guide_uid', String(data.custom_guide_uid || '').trim())
+      yaml.set(_path + 'config.yaml', 'custom_guide_gs_uid', String(data.custom_guide_gs_uid || '').trim())
+      yaml.set(_path + 'config.yaml', 'custom_guide_gs_index', String(data.custom_guide_gs_index || '').trim())
+      yaml.set(_path + 'config.yaml', 'custom_guide_sr_uid', String(data.custom_guide_sr_uid || '').trim())
+      yaml.set(_path + 'config.yaml', 'custom_guide_sr_index', String(data.custom_guide_sr_index || '').trim())
+      yaml.set(_path + 'config.yaml', 'custom_guide_zzz_uid', String(data.custom_guide_zzz_uid || '').trim())
+      yaml.set(_path + 'config.yaml', 'custom_guide_zzz_index', String(data.custom_guide_zzz_index || '').trim())
+      yaml.set(_path + 'config.yaml', 'abyss_report_repos', String(data.abyss_report_repos || '').trim())
+      yaml.set(_path + 'config.yaml', 'abyss_report_gs_version', String(data.abyss_report_gs_version || '').trim())
+      yaml.set(_path + 'config.yaml', 'abyss_report_sr_version', String(data.abyss_report_sr_version || '').trim())
+      yaml.set(_path + 'config.yaml', 'abyss_report_sr_fiction_levels', String(data.abyss_report_sr_fiction_levels || '').trim())
+      yaml.set(_path + 'config.yaml', 'abyss_report_sr_maze_levels', String(data.abyss_report_sr_maze_levels || '').trim())
+      yaml.set(_path + 'config.yaml', 'abyss_report_sr_doom_levels', String(data.abyss_report_sr_doom_levels || '').trim())
+      yaml.set(_path + 'config.yaml', 'abyss_report_zzz_shiyu_stages', String(data.abyss_report_zzz_shiyu_stages || '').trim())
+      yaml.set(_path + 'config.yaml', 'abyss_report_zzz_shiyu_periods', String(data.abyss_report_zzz_shiyu_periods || 'last').trim())
+      yaml.set(_path + 'config.yaml', 'abyss_report_zzz_deadly_periods', String(data.abyss_report_zzz_deadly_periods || 'last').trim())
+      if (data.zzz_remind_time != null) yaml.set(_path + 'config.yaml', 'zzz_remind_time', String(data.zzz_remind_time || '每日20时').trim())
+      if (data.zzz_remind_abyss_level != null) yaml.set(_path + 'config.yaml', 'zzz_remind_abyss_level', Number(data.zzz_remind_abyss_level) || 0)
+      if (data.zzz_remind_deadly_stars != null) yaml.set(_path + 'config.yaml', 'zzz_remind_deadly_stars', Number(data.zzz_remind_deadly_stars) || 0)
+      if (data.zzz_activity_push_start_lead != null) yaml.set(_path + 'config.yaml', 'zzz_activity_push_start_lead', Math.min(Math.max(Number(data.zzz_activity_push_start_lead) || 1440, 5), 10080))
+      if (data.zzz_activity_push_end_lead != null) yaml.set(_path + 'config.yaml', 'zzz_activity_push_end_lead', Math.min(Math.max(Number(data.zzz_activity_push_end_lead) || 2880, 5), 10080))
+      if (has(data, 'zzz_activity_push_groups')) yaml.set(_path + 'config.yaml', 'zzz_activity_push_groups', parseMultiList(data.zzz_activity_push_groups))
+
+      const priorityFields = [
+        'tl_priority', 'sign_priority', 'user_priority', 'wiki_priority',
+        'bh3_remind_priority', 'activity_remind_priority', 'bh3_note_priority', 'bh3_abyss_priority',
+        'bh3_battlefield_priority', 'bh3_godwar_priority', 'bh3_profile_priority',
+        'bh3_all_note_priority', 'bh3_gacha_priority', 'bh3_ledger_priority', 'abyss_report_priority',
+        'bilibili_priority', 'bilibili_push_priority', 'bili_live_priority', 'gacha_pool_priority',
+        'gs_logs_priority', 'sr_logs_priority', 'mhy_estimate_priority', 'zzz_panel_accel_priority',
+        'video_priority', 'voice_priority', 'update_priority', 'config_priority',
+        'help_priority', 'picture_priority',
+        'role_combat_priority', 'zzz_md_priority', 'currency_balance_priority', 'priority_base',
+        'custom_guide_priority',
+        'meme_priority',
+      ]
+      for (const f of priorityFields) {
+        if (data[f] != null) yaml.set(_path + 'config.yaml', f, Number(data[f]))
+      }
+      // wiki优先级在other.yaml
+      if (data.wiki_priority != null) yaml.set(_path + 'other.yaml', 'wiki', Number(data.wiki_priority))
+
+      return Result.ok({}, '保存成功，部分配置需重启生效')
+    },
+
+    /**
+     * 面板上「立即执行」按钮的后端。
+     * 锅巴前端点 GButtons 会 POST /plugin/do/<插件>/action 到这里，
+     * 按钮定义里写 action: 'runSign' 即可。
+     *
+     * 签到耗时较长（逐个号请求米游社），这里只负责**发起**，立刻返回，
+     * 进度与结果看「米哈游任务记录」页。
+     */
+    actions: {
+      /** 立即执行游戏签到（按 sign.yaml 的群与成员） */
+      runSign() {
+        runTaskInBackground('游戏签到', async () => {
+          const yamlData = yaml.get(_path + 'sign.yaml') || {}
+          const qqs = [...new Set(
+            Object.values(yamlData.sign || {}).flat().map(v => String(v).trim()).filter(Boolean),
+          )]
+          if (!qqs.length) return { skipped: '没有登记自动签到成员' }
+          /* 走定时任务那条批处理路径（zd_MysSign），而不是合成事件调 MysSign：
+             后者依赖 e.user.getMysUser()，合成事件里没有这个方法；
+             zd_MysSign 本来就是给「没有消息上下文、按 QQ 批量签」写的。 */
+          const { zd_MysSign } = await import('./system/sign.js')
+          const { default: Runtime } = await import('../../lib/plugins/runtime.js')
+          let okAll = 0, failAll = 0
+          // 按群分别签、分别出图，和定时任务完全一致（sign/end_list 是名单式结果图）
+          for (const group of Object.keys(yamlData.sign || {})) {
+            const members = (yamlData.sign[group] || []).map(v => String(v).trim()).filter(Boolean)
+            if (!members.length) continue
+            const r = await zd_MysSign(members)
+            const fail = r?.sbai_qqs?.length || 0
+            const okCount = (r?.num || 0) + (r?.z_num || 0)
+            okAll += okCount
+            failAll += fail
+            try {
+              /* 锅巴里没有消息事件，不能走 system/render.js（它要 cfg.e）。
+                 按 apps/common/sign.js 的做法用 new Runtime() 直接渲染，
+                 ppath 按「路径段数 + 3」算，与其它模板保持一致。 */
+              const tplPath = 'sign/end_list'
+              const depth = tplPath.split('/').filter(Boolean).length + 3
+              const view = {
+                num: r?.num || 0,
+                z_num: r?.z_num || 0,
+                cg_qqs: r?.cg_qqs || [],
+                sbai_qqs: r?.sbai_qqs || [],
+              }
+              /* 必须走 beforeRender：Runtime.render 会在合并 data 之后又把
+                 tplFile/saveId 覆盖成它自己的默认值（插件名会变成「米哈游」，
+                 模板路径直接 404）。beforeRender 是最后一道，才能定死这几个字段。 */
+              const img = await new Runtime().render('米哈游', tplPath, view, {
+                retType: 'base64',
+                beforeRender({ data }) {
+                  return {
+                    ...data,
+                    sys: { scale: `style=zoom:${(getCfg().img_quality / 100) * 2.4 || 1.92}` },
+                    ...view,
+                    ppath: '../'.repeat(depth) + 'plugins/HoYoGet-Plugin/resources/',
+                    tplFile: process.cwd() + '/plugins/HoYoGet-Plugin/resources/' + tplPath + '.html',
+                    saveId: tplPath.split('/').pop(),
+                  }
+                },
+              })
+              /* Runtime.render(retType:'base64') 返回的已经是 segment.image(...)，
+                 不能再包一层 segment.image —— 那会得到 uri 为空的图片段，
+                 发送时报「识别URL失败, uri=」。 */
+              if (img) await Bot.pickGroup(Number(group)).sendMsg(img)
+            } catch (err) {
+              logger.warn(`[HoYoGet][guoba] 群${group} 签到结果出图失败：${err?.message || err}`)
+            }
+            try {
+              const { appendTaskRecords } = await import('./system/task_history.js')
+              appendTaskRecords([{
+                task: 'sign',
+                source: 'manual',
+                tip: `手动批量签到（群 ${group}）：成功 ${okCount}，失败 ${fail}`,
+                status: fail > 0 ? 'fail' : (okCount > 0 ? 'ok' : 'skip'),
+              }])
+            } catch { /* 记录失败不影响签到 */ }
+          }
+          return { ok: okAll, fail: failAll }
+        })
+        return { ok: true, code: 0, message: '已开始签到，结果见「米哈游任务记录」', result: true }
+      },
+      /** 立即执行社区签到（按 sign.yaml 的 bbs_sign） */
+      runBbsSign() {
+        runTaskInBackground('社区签到', async () => {
+          const yamlData = yaml.get(_path + 'sign.yaml') || {}
+          const groups = Object.keys(yamlData.bbs_sign || {})
+          if (!groups.length) return { skipped: '没有登记社区签到群' }
+          const { BbsAutoSign, sendBbsAutoResult, collapseMsgs } = await import('./system/sign.js')
+          const { default: Runtime } = await import('../../lib/plugins/runtime.js')
+          let count = 0
+          for (const group of groups) {
+            const result = await BbsAutoSign(yamlData.bbs_sign[group], group)
+            // 和定时任务一致：出 sign/sign 结果图，失败再退回文字（sendBbsAutoResult 内部处理）
+            let img = ''
+            try {
+              const tplPath = 'sign/sign'
+              const depth = tplPath.split('/').filter(Boolean).length + 3
+              const view = {
+                msgs: collapseMsgs(result.msgs || []),
+                qq: '',
+                xhhAvatar: true,
+              }
+              img = await new Runtime().render('米哈游', tplPath, view, {
+                retType: 'base64',
+                beforeRender({ data }) {
+                  return {
+                    ...data,
+                    sys: { scale: `style=zoom:${(getCfg().img_quality / 100) * 2.4 || 1.92}` },
+                    ...view,
+                    ppath: '../'.repeat(depth) + 'plugins/HoYoGet-Plugin/resources/',
+                    tplFile: process.cwd() + '/plugins/HoYoGet-Plugin/resources/' + tplPath + '.html',
+                    saveId: 'bbs_auto_sign',
+                  }
+                },
+              })
+            } catch (err) {
+              logger.warn(`[HoYoGet][guoba] 群${group} 社区签到出图失败，退回文字：${err?.message || err}`)
+            }
+            await sendBbsAutoResult(group, result, img, yamlData)
+            count++
+          }
+          return { count }
+        })
+        return { ok: true, code: 0, message: '已开始社区签到，结果见「米哈游任务记录」', result: true }
+      },
+    },
+  },
+  })
+}
+
+function parseList(value) {
+  return String(value || '').split(/[,，\s]+/).map(v => v.trim()).filter(Boolean)
+}
+
+function parseMultiList(value) {
+  if (Array.isArray(value)) return value.map(v => String(v).trim()).filter(Boolean)
+  return parseList(value)
+}
+
+// 群配置兼容旧的扁平数组与 { 机器人QQ: [群号] } 两种写法
+function parseGroupValue(value) {
+  if (Array.isArray(value)) return parseMultiList(value)
+  if (value && typeof value === 'object') {
+    return Object.entries(value).flatMap(([botId, list]) => parseMultiList(list).map(gid => `${botId}:${gid}`))
+  }
+  return parseMultiList(value)
+}
+
+// 判断这次提交里到底有没有这个字段。
+// 面板可能带着旧版本的表单缓存过来，也可能某次提交漏了字段 ——
+// 这种情况下宁可什么都不写，也不能拿默认值把已有配置覆盖掉。
+const has = (obj, key) => !!obj && Object.prototype.hasOwnProperty.call(obj, key)
+
+function formatSignUsers(users = {}) {
+  if (!users || typeof users !== 'object') return ''
+  return Object.entries(users)
+    .filter(([, qqs]) => Array.isArray(qqs) && qqs.length)
+    .map(([group, qqs]) => `${group}:${qqs.join(',')}`)
+    .join('\n')
+}
+
+function parseSignUsers(value = '') {
+  const result = {}
+  for (const line of String(value || '').split(/[\n;]+/)) {
+    const text = line.trim()
+    if (!text) continue
+    const [group, usersText = ''] = text.split(/[=：:]/)
+    const gid = String(group || '').trim()
+    if (!/^\d+$/.test(gid)) continue
+    const users = usersText.split(/[,，\s]+/)
+      .map(v => v.trim())
+      .filter(v => /^\d+$/.test(v))
+    if (users.length) result[gid] = [...new Set(users)]
+  }
+  return result
+}
+
+function formatGroupConfig(groupConfig = {}) {
+  if (!groupConfig || typeof groupConfig !== 'object') return ''
+  return Object.entries(groupConfig)
+    .map(([group, games]) => `${group}=${Array.isArray(games) ? games.join(',') : games}`)
+    .join('\n')
+}
+
+function parseGroupConfig(value = '') {
+  const result = {}
+  for (const line of String(value || '').split(/\n+/)) {
+    const text = line.trim()
+    if (!text) continue
+    const [group, gamesText = ''] = text.split(/[=：:]/)
+    const gid = group?.trim()
+    if (!/^\d+$/.test(gid || '')) continue
+    const games = parseList(gamesText).filter(v => ['gs', 'sr', 'zzz', 'bh3', 'by', 'xbgd'].includes(v))
+    if (games.length) result[gid] = games
+  }
+  return result
+}
+
+/**
+ * 在后台跑一个「立即执行」任务。
+ * 锅巴的 action 是同步返回的，签到一跑就是几分钟，所以不 await，
+ * 只把启动/完成写进任务记录，异常也只记日志，不抛给前端。
+ */
+function runTaskInBackground(name, fn) {
+  logger.mark(`[HoYoGet][guoba] 手动触发：${name}`)
+  Promise.resolve()
+    .then(fn)
+    .then(ret => {
+      logger.mark(`[HoYoGet][guoba] ${name} 执行完成：${JSON.stringify(ret || {}).slice(0, 160)}`)
+    })
+    .catch(err => {
+      logger.error(`[HoYoGet][guoba] ${name} 执行失败：${err?.message || err}`)
+    })
+}

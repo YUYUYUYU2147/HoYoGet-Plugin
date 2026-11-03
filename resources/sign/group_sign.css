@@ -1,0 +1,226 @@
+@font-face {
+  font-family: '主';
+  src: url('../font/主.ttf');
+}
+
+@font-face {
+  font-family: '正';
+  src: url('../font/yuan.ttf');
+}
+
+@font-face {
+  font-family: '宋';
+  src: url('../font/宋.ttf');
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 1000px;
+  font-size: 16px;
+  transform-origin: 0 0;
+  /* 浅蓝底：截图区域比内容大时，露出的部分不会因透明被写成黑块 */
+  background-color: #eaf3ff;
+}
+
+.container {
+  padding: 26px 24px 20px;
+  background-color: #eaf3ff;
+  background-image:
+    radial-gradient(760px 340px at 88% -14%, rgba(255, 255, 255, 0.9), transparent 62%),
+    radial-gradient(620px 300px at -10% 108%, rgba(150, 200, 255, 0.45), transparent 62%),
+    linear-gradient(160deg, #eef6ff 0%, #e2efff 55%, #d8e8ff 100%);
+}
+
+/* ───── 主卡片 ───── */
+.gs-card {
+  border-radius: 22px;
+  padding: 20px 22px 16px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 14px 36px rgba(96, 140, 200, 0.18);
+}
+
+/* ───── 头部 ───── */
+.gs-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(150, 185, 225, 0.35);
+}
+
+.gs-head .avatar {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  flex: none;
+  background: #fff;
+  box-shadow: 0 0 0 3px #fff, 0 4px 12px rgba(96, 140, 200, 0.25);
+}
+
+.gs-head-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.gs-head-text .brand {
+  font-family: '正';
+  font-size: 26px;
+  font-weight: 700;
+  color: #1f3350;
+  letter-spacing: 0.5px;
+}
+
+.gs-head-text .sub {
+  margin-top: 4px;
+  font-family: '宋';
+  font-size: 14px;
+  color: #7b8fa8;
+  letter-spacing: 1px;
+}
+
+.gs-badge {
+  flex: none;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-family: '宋';
+  font-size: 13px;
+  color: #2f6fd0;
+  background: #e8f2ff;
+  border: 1px solid rgba(120, 170, 235, 0.45);
+}
+
+.gs-badge.done {
+  color: #15803d;
+  background: #e7f9ee;
+  border-color: rgba(60, 190, 110, 0.4);
+}
+
+/* ───── 统计 ───── */
+.gs-stats {
+  display: flex;
+  gap: 10px;
+  padding: 14px 0 4px;
+}
+
+.gs-stat {
+  flex: 1;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f5f9ff;
+  border: 1px solid rgba(200, 220, 245, 0.8);
+}
+
+.gs-stat .k {
+  font-family: '宋';
+  font-size: 12px;
+  color: #7b8fa8;
+}
+
+.gs-stat .v {
+  margin-top: 4px;
+  font-family: '正';
+  font-size: 26px;
+  font-weight: 700;
+  color: #1f3350;
+  line-height: 1.1;
+}
+
+.gs-stat.ok .v { color: #16a34a; }
+.gs-stat.fail .v { color: #dc2626; }
+.gs-stat.total .v { color: #2563eb; }
+
+/* ───── 用户分组 ───── */
+.gs-group {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(150, 185, 225, 0.35);
+}
+
+.gs-group-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-family: '宋';
+  font-size: 14px;
+  color: #4a6485;
+}
+
+.gs-group-title .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex: none;
+}
+
+.gs-group.fail .gs-group-title .dot { background: #ef4444; }
+
+.gs-group-title .count {
+  margin-left: auto;
+  font-size: 13px;
+  color: #93a6bd;
+}
+
+.gs-users {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.gs-user {
+  width: 74px;
+  text-align: center;
+}
+
+.gs-user img {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: block;
+  margin: 0 auto;
+  background: #f2f7ff;
+  box-shadow: 0 0 0 3px #fff, 0 3px 10px rgba(96, 140, 200, 0.22);
+}
+
+.gs-group.fail .gs-user img {
+  box-shadow: 0 0 0 3px #fff, 0 0 0 5px rgba(239, 68, 68, 0.35), 0 3px 10px rgba(200, 96, 96, 0.22);
+}
+
+.gs-user .qq {
+  margin-top: 5px;
+  font-family: '宋';
+  font-size: 11px;
+  color: #93a6bd;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gs-empty {
+  padding: 6px 2px 2px;
+  font-family: '宋';
+  font-size: 13px;
+  color: #a8b8cc;
+}
+
+/* ───── 页脚 ───── */
+.gs-foot {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(150, 185, 225, 0.35);
+  text-align: center;
+}
+
+.gs-foot .src {
+  font-family: '宋';
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: #e5484d;
+}

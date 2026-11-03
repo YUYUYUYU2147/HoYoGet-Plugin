@@ -1,0 +1,35 @@
+# 式舆防卫战 Boss 额外信息
+# 格式：图片hash: { weakness: 弱点, resistance: 抗性 }
+17f5e0c39d34640f98da76cec5f70704:
+  weakness: 火 / 物理
+  resistance: 以太
+0e155bf60bb8cb2a865b636e659cb768:
+  weakness: 以太 / 风
+  resistance: 电
+88f46b168ebffe88b028d39a3a349ec5:
+  weakness: 冰
+  resistance: 物理
+4dba90f6c3dc64842c9321dec3bc44d9:
+  weakness: 火 / 以太
+  resistance: 电
+8fcca877f246fdb1b978314e0df07c06:
+  weakness: 电 / 以太
+  resistance: 火
+280944f4e04dea73a92605a2f4ad2469:
+  weakness: 火 / 物理
+  resistance: 以太
+eeb1ad4ab2be38f802e96d67f5ab3c97:
+  weakness: 以太 / 风
+  resistance: 电
+a9f598219354ce6189e61be35e5e309b:
+  weakness: 冰
+  resistance: 物理
+a409ce5bed844ede7d25b0cf2b0e4497:
+  weakness: 物理 / 风
+  resistance: 火
+6b32f90beb8e567a4d1e5dc14919a977:
+  weakness: 火 / 电
+  resistance: 物理
+b54d5e9aefc998cf1a4956c875804086:
+  weakness: 冰 / 电
+  resistance: 火

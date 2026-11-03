@@ -1,0 +1,412 @@
+#修改的时候，注意英文冒号后面要有一个空格！！！
+
+#凌晨3:30是否自动更新HoYoGet：true开，false关 (注意：这是强制更新,会覆盖文件的那种,爱改文件的大佬慎用)
+update: false
+
+#调试模式：true开，false关（输出卡池同步/水晶查询/扫码绑定/图鉴解析等详细日志，平时保持关闭）
+debug: false
+
+#自举热重载：true开，false关。改完 apps/ 与 system/ 里的代码自动生效，不用重启、
+# 也不用发框架的 #重载插件（实测那条命令不会重新 import 插件入口，对 HoYoGet 无效）。
+# 注意：指令的「处理方法」改了会立刻生效，但**新增/删除指令**还是要 #重启
+# （指令表是在 constructor 里交给基类注册的，换不掉）。
+auto_reload: true
+
+#绝区零面板更新加速：把 ZZZ-Plugin「%更新面板」的串行等待改为并发。
+# ZZZ-Plugin 原本每个角色之间固定 sleep 3 秒，44 个角色就是 132 秒纯等待；
+# 这里改成并发窗口 + 小间隔，实测 44 个角色约 1.6~5.7 秒。
+# 改的是本插件的接管逻辑，不动 ZZZ-Plugin 源码，所以更新上游不会被冲掉。
+# 开关在下面 zzz_panel_accel_priority 之前生效；并发越大越快、越容易被米游社限流。
+# 请求被风控拦下时会由 genshin 的 mhyFetch 自动改走代理（见 mhy_proxy 配置）。
+zzz_panel_accel_enabled: true
+zzz_panel_accel_concurrency: 4
+zzz_panel_accel_interval: 400
+# 主人批量更新群友面板（%更新群友面板）的节奏：
+# interval 两次请求间隔（毫秒，低于 1000 会被强制提到 1000，米游社对 IP 有频次风控）
+# max 单次最多处理多少个 UID，超出部分需再执行一次
+# 绝区零排名类指令的优先级。
+# ⚠ 数值越小越先执行：框架用 orderBy(priority, asc) 排 accept 队列，
+#    accept 命中即 return 结束事件，后面的插件轮不到。
+# 因此要抢在 ZZZ-Plugin(-30000) 之前，必须比 -30000 更小（更负）。
+#   sr_workshop    -37000  星铁工坊榜单（*星铁… 全部指令，先于喵喵 50 与 ZZZ-Plugin -30000）
+#   zzz_workshop   -36000  工坊练度榜（范围=全部时接管 %<角色>排名）
+#   zzz_panel_rank -35000  本地面板排名（范围=本群时接管）
+sr_workshop_priority: -37000
+zzz_workshop_priority: -36000
+zzz_panel_rank_priority: -35000
+zzz_bulk_update_interval: 2000
+zzz_bulk_update_max: 50
+
+#绝区零自研面板数据探针（米游社更新面板）：把真实接口响应原样落盘，供写归一化用。
+# 默认 -100，压过 miao-plugin 与原神/ZZZ-Plugin 的同名面板指令，确保本插件先抢到。
+zzz_panel_allow_original: true
+zzz_remind_enable: true
+zzz_remind_time: 每日20时
+zzz_remind_abyss_level: 5
+zzz_remind_deadly_stars: 6
+# 绝区零活动推送提前量（分钟）：开启前与到期前分别配置，1440 = 1 天，上限 10080（7 天）。
+zzz_activity_push_start_lead: 1440
+zzz_activity_push_end_lead: 2880
+# 绝区零活动推送群：填群号，多个用逗号或换行分隔（也可群内发 %开启活动推送 自助订阅）
+zzz_activity_push_groups: []
+zzz_panel_list_priority: -40000
+# 绝区零式舆防卫战 / 危局强袭战优先级（需 < ZZZ-Plugin 的 abyss=-1000 / deadly=70）
+zzz_challenge_priority: -37000
+
+# 绝区零单角色面板/伤害详情页的随机背景图；留空则使用纯黑底。
+zzz_panel_bg_url: 'https://api.yppp.net/api.php'
+
+# 原神/星铁/绝区零单角色面板的视觉风格：
+#   dark  = 默认暗色霓虹（青色描边、深色卡片）
+#   apple = Apple 深色玻璃（半透明卡片 + 模糊 + 系统配色，保留立绘背景）
+# 只影响单角色长图（#米哈游xx面板 <角色> / 米游社xx面板），总览列表不受影响。
+# 每次出图现读，改完即生效；默认配置只给新装用户兜底，实际生效值看 config/config.yaml。
+panel_style: dark
+panel_service_gs: auto
+panel_service_sr: auto
+
+# 原神/星铁单角色面板的立绘来源（按顺序取，取到就用）：
+#   1. 咕咕牛管理器：miao-plugin/resources/profile/normal-character/<角色名>/（多张随机一张）
+#   2. 本插件自定义目录：plugins/HoYoGet-Plugin/resources/hoyo_panel/images/panel/<gs|sr>/<角色名>/
+#      可以自己往里放图，也可以发「#米哈游上传<角色>面板图」并附带图片
+#   3. 官方立绘
+# 设为 false 则始终用官方立绘。
+panel_custom_art: true
+# 咕咕牛面板图左侧二维码/编号栏的裁切比例（0~0.5），默认 0.24；设 0 不裁
+panel_custom_art_crop: 0.24
+
+#图鉴数据模式：official=正式服 / test=测试服
+# 这个键必须写在默认配置里：#切换测试服模式 是把它写回 config/config.yaml，
+# 但引导逻辑是「拿默认配置补齐用户配置里缺的键」，默认配置里没有这一项时，
+# 它会被当成不在schema 里的键，重启后就被丢掉、模式回到 official。
+# 现在也可用 #切换正式服模式 / #切换测试服模式 / #数据模式 切换，或在锅巴面板里改。
+data_mode: official
+
+#全自动过码服务地址：发一次 #过码部署 把它装在本机，之后撞米游社风控会自动调用。
+# 留空（写成 ''）表示不装，自动过码整段跳过，只保留手动验证链接。
+# 服务只监听 127.0.0.1，不对外暴露。
+auto_verify_addr: 'http://127.0.0.1:2149/solve'
+
+# 米游社接口代理。默认留空 = 不启用，一切照直连走。
+# 填了之后也只是「兜底」：直连被风控拦了（米游社返回的不是数据而是一整页
+# 「已阻断」，实测表现为 HTTP 405）才自动改走代理，平时一个代理请求都不发。
+# ⚠️ 走代理的请求会把该账号的 Cookie 发给代理站，等于把账号交出去，介意就别填。
+# 想关掉或换成自己的，把这两项清空即可（锅巴 → 接口设置 → 米游社接口代理）。
+mhy_proxy: 'https://mhy.989894366.xyz/mihoyo_api'
+mhy_proxy_key: '2147'
+
+# 活动公告请求单独走的标准 HTTP 代理（可选）。留空 = 直连。
+# 填 http://127.0.0.1:7890 这类地址；只用于活动到期提醒，不携带 Cookie。
+# 上面的米游社接口代理只转发记录接口，不支持活动公告域名，所以需要另配。
+activity_proxy: ''
+
+# 自动补齐：某个 QQ 只有逍遥插件的数据、还没有本插件的 Stoken 文件时，
+# 第一次签到会顺手把文件补出来（调一次 GameRoles 列出各游戏 uid，不需要扫码）。
+# 关掉就只签不改文件。补出来的内容与手动发「#刷新ck」一致。
+auto_backfill: true
+
+# 签到名单（#签到名单）发到哪里：true=只私聊主人，false=群里也发。
+# 名单里有全体成员的 QQ 号，默认 false 方便群主直接看。
+sign_list_private: false
+
+# 打码平台（可选，第二级兜底）：本机服务没解开时才会用到，每次滑块 5 点。
+# 留空表示不启用，只走「本机服务 → 手动验证」两级。
+# ⚠️ 官方只提供 http:// 没有 https，appkey 会以明文过网。它是计费凭证，
+#    被截获就能刷掉余额，介意就别配。
+# 官方限速很硬：查点数超过每秒 1 次会被拉黑 IP 24 小时，插件已做 5 分钟缓存。
+ttocr_appkey: ''
+
+# 打码平台的项目类型：32=三代滑块（5 点，米游社用这个）；388=三代全类别（10 点）
+ttocr_itemid: 32
+
+#图片渲染精度：填数字（单位：%）
+img_quality: 80
+
+# 原神角色图鉴的随机图背景：true开（默认），false关
+gs_bg: true
+# 随机图接口地址，留空则用默认的 api.yppp.net
+gs_bg_api: 'https://api.yppp.net/api.php'
+
+
+
+
+#是否启用体力组件：true开，false关
+Tl: false
+
+#崩坏3扩展中的四游戏体力聚合：true开，false关
+bh3_all_note_enable: false
+#角色语音总开关：true开，false关
+all_voice: true
+
+#各游戏语音开关（当前已实现原神/星铁；绝区零/崩坏3开关预留）
+gs_voice: true
+sr_voice: true
+zzz_voice: true
+bh3_voice: true
+
+#原神历史卡池功能: true开，false关
+gs_logs: true
+
+#星铁历史卡池功能: true开，false关
+sr_logs: true
+
+#绝区零历史卡池功能: true开，false关
+zzz_logs: true
+
+#崩坏3历史卡池功能: true开，false关
+bh3_logs: true
+
+#卡池数据自动刷新间隔(cron)：默认每30分钟一次。改完需重启插件生效。
+#原来写死在代码里、每天 05:30 跑一轮，那一轮撞上风控就得再等 24 小时。
+gacha_pool_cron: '0 */30 * * * *'
+
+
+#图鉴是否启用？：true是，false否 (优先级设置在other.yaml文件)
+wiki: false
+
+#米游社扫码绑定功能：true开，false关
+sm: false
+
+#米游社扫码绑定的触发CD：填数字 (单位：秒)
+sm_cd: 60
+
+#签到功能：true开，false关 (自动签到设置在sign.yaml文件)
+sign: false
+
+#使用HoYoGet绑定设备(作用于genshin、StarRail-plugin、ZZZ-Plugin)：true开，false关 (开启后，还需要给bot发送：HoYoGet开启设备     bot会自动更新文件然后重启！)
+bdsb: false
+
+#米哈游视频播报(米游社)：QQ群号 (更多设置在other.yaml文件)
+#groups:
+#    - 123456789
+#    - 987654321
+#
+groups: 
+
+#是否启用bilibili相关功能：true开，false关 (注意：如果是首次启用，记得发送：b站登录，你得让bot有个B站账号吧)
+bilibili: false
+
+#bilibili视频的主评论区，显示几条评论((1-20)不建议设置过多)
+list_num: 12
+
+#bilibili下载视频的清晰度：填数字 （0：360p，1：480p，2：720P，3：1080p，继续往上需要bili大会员，4：1080P+ 高码率，5：4K 超清）
+#注意: 很多90MB以下的视频是没有4k超清的，如果你选择了4k超清，但是视频没有的话，会自动降级到1080p+高码率下载
+#请量力而行，自己服务器网速不行，就不要开高了
+qn: 3
+
+#bilibili视频小于多少MB时自动下载：填数字（0代表永远不自动下载；超过99MB会作为群文件发送）
+#注意：视频大小会随你的清晰度设置而变化
+dow_size: 30
+
+#bilibili收藏视频的收藏夹序号(1就是默认收藏夹)
+mlid_n: 1
+
+#解析bilibili视频分享卡片时弹出原B站链接：true是，false否
+b_lj: true
+
+#解析bili同一视频id或同一动态id时是否加入3分钟CD：true是，false否
+b_cd: false
+
+#bilibili自动下载图片时，小于几张图片时，不再合并消息：填数字 (0表示始终合并)
+b_img_num: 0
+
+#是否自动解析消息里的B站直播间链接：true开，false关 (关掉后仍可用「#直播解析 房间号」手动解析)
+bili_live: true
+
+#自动解析直播间时，未开播的直播间是否也回复：true只回复开播中的，false都回复
+bili_live_only_live: false
+
+#自动解析同一直播间的CD：填数字 (单位：秒，0表示不限制)
+bili_live_cd: 60
+
+#手动「#直播解析」时是否顺带录一段直播并发送视频：true开，false关
+bili_live_video: true
+
+#自动解析直播链接时也录制视频：true开，false关 (群里每条链接都录很吃带宽，默认关)
+bili_live_video_auto: false
+
+#录制时长：填数字 (单位：秒，默认60=1分钟)
+bili_live_video_time: 60
+
+#录制大小上限：填数字 (单位：MB，录到这个大小就停；0表示只按时长停)
+bili_live_video_size: 99
+
+#录制清晰度：10000原画 / 400蓝光 / 250超清 / 150高清 / 80流畅 (房间没有该档会自动降级)
+bili_live_qn: 250
+
+#直播间发弹幕功能：true开，false关 (需先「小花火b站登录」扫码登录)
+bili_live_dm: true
+
+#发弹幕权限：all所有人 / admin群管理(含主人) / master仅主人 (私聊不受限制)
+bili_live_dm_perm: 'admin'
+
+#弹幕冷却：填数字 (单位：秒，0表示不限制；主人不受限制)
+bili_live_dm_cd: 5
+
+#bilibili的Cookie(别手动加,首次获取请发送：b站登录)
+bili_ck: ''
+
+#bilibili刷新ck需要用到的刷新口令(不要乱改，这是b站登录获取的)
+refresh_token: ''
+
+#（bilibili解析图片）浏览器不支持emoji时，用cdn渲染emoji的表情：true开，false关
+emoji: false
+
+#解决扫码绑定和刷新ck最后的合并消息报错（解决某些适配器插件的合并消息内嵌合并消息会报错的bug)
+#如果你bot有这种问题，就改成：true
+hbxx: false
+
+#卡池立绘来源：兼容旧配置；新配置见下面两个字段
+gacha_art_source: custom
+#右上角立绘来源：custom 随机/本地立绘，official 官方角色立绘
+gacha_header_art_source: custom
+#UP小图来源：custom 本地/面板图，official 官方头像/图标
+gacha_up_icon_source: official
+
+#崩坏3攻略源配置（锅巴可视化修改）
+#格式：关键词|米游社UID|图片序号(英文逗号分隔)|作者名
+#攻略源搜不到时自动回退米游社全站搜索（同 genshin #米游社搜索 的搜索方式）
+mys_global_guide_search: true
+bh3_guide_abyss_sources: |-
+  官服红莲|7042629|0,1,2,3,4,5|雷电女王的康纳酱
+bh3_guide_battlefield_sources: |-
+  记忆战场|11956740|0,1,2,3,4,5,6,7,8,9|残月
+  战场作业|15491760|0,1,2,3,4,5,6,7,8,9|墨之羽
+  终极区战场|30269990|0,1,2,3,4,5,6,7,8,9|朔守
+bh3_guide_godwar_sources: |-
+  往世乐土|11956740|0,1,2,3,4,5,6,7,8,9|残月
+  乐土攻略|15491760|0,1,2,3,4,5,6,7,8,9|墨之羽
+  乐土因子|30269990|0,1,2,3,4,5,6,7,8,9|朔守
+zzz_guide_defense_sources: |-
+  式舆防卫战|4068738|0,1,2,3,4,5,6,7,8,9|洗礼酱
+  防卫战攻略|285802042|0,1,2,3,4,5|HoYo青枫
+zzz_guide_deadly_sources: |-
+  危局强袭战|4068738|0,1,2,3,4,5,6,7,8,9|洗礼酱
+  危局攻略|285802042|0,1,2,3,4,5|HoYo青枫
+
+#自定义攻略源（锅巴可视化修改）
+#===== 自定义攻略源（极简模式）=====
+#发指令：#角色名攻略 / #角色名一图流 / #角色名配对 / #角色名配队（前缀 HoYoGet/ 或 小花火 也可，可省略）
+#只需填各游戏作者UID，角色名即关键词（自动用别名表归一成正式名，无需列角色）
+#合并转发模式：on=合并转发(带标题)，off=逐条拼接(不带标题)
+custom_guide_enable: true
+custom_guide_forward: on
+#默认源(兜底作者UID)：某游戏未单独填、或角色不在别名表时使用；内置默认 74019947
+custom_guide_uid: 74019947
+#各游戏作者UID（留空则用默认源）；index 留空取帖全部图，如 0(第一张) 或 0,2 取指定张
+custom_guide_gs_uid: ''
+custom_guide_gs_index: ''
+custom_guide_sr_uid: ''
+custom_guide_sr_index: ''
+custom_guide_zzz_uid: ''
+custom_guide_zzz_index: ''
+
+#原神/星铁深渊速报图片仓库（每行一个，留空用默认Abyss仓库）
+abyss_report_repos: |-
+  https://cnb.cool/JIUXJIU/Abyss/-/git/raw/main
+  https://cnb.cool/JIUXJIU/AbyssBeta/-/git/raw/main
+#原神/星铁深渊速报默认版本，留空自动读取Nanoka live版本
+abyss_report_gs_version: ''
+abyss_report_sr_version: ''
+#绝区零深渊速报默认版本（和上面两个一样留空自动读 live 版本）
+#这个键之前漏声明了，代码里一直在读但默认配置里没有 —— 绝区零的版本号设不了
+abyss_report_zzz_version: ''
+
+#星铁虚构叙事关卡筛选：填要显示的关卡，逗号分隔（如 3,4 表示只显示第3、4关）
+abyss_report_sr_fiction_levels: '3,4'
+#星铁混沌回忆难度筛选：填要显示的难度编号，逗号分隔（如 11,12）
+abyss_report_sr_maze_levels: '11,12'
+#星铁末日幻影难度筛选：填要显示的难度编号，逗号分隔（如 3,4）
+abyss_report_sr_doom_levels: '3,4'
+#绝区零式舆防卫战关卡筛选：填要显示的关卡，逗号分隔（如 4,5）
+abyss_report_zzz_shiyu_stages: '4,5'
+#式舆防卫战返回期数：last=只返回末期（默认），all=返回全部期
+abyss_report_zzz_shiyu_periods: last
+#危局强袭战返回期数：last=只返回末期（默认），all=返回全部期
+abyss_report_zzz_deadly_periods: last
+#星铁深渊星启模式：true开，false关
+abyss_report_sr_invasion: true
+
+#Meme表情包设置
+#meme表情包总开关：true开，false关
+meme: true
+#meme表情制作服务地址（yunzai-meme，无需改动）
+meme_baseUrl: http://113.31.103.19:50835
+#制作表情时是否引用回复：true是，false否
+meme_reply: true
+#是否必须带#前缀触发：true是，false否
+meme_forceSharp: true
+#制作表情冷却时间：填数字（单位：秒，0为无冷却）
+meme_CD: 0
+#制作时图片大小限制：填数字（单位：MB）
+meme_maxFileSize: 10
+#主人保护：制作主人时使用发送者本人头像：true开，false关
+meme_masterProtectDo: true
+
+#插件优先级（修改后需重启）
+tl_priority: -99
+sign_priority: -26
+user_priority: -9999999999
+wiki_priority: 100
+bh3_remind_priority: -1000001
+activity_remind_priority: -1000002
+bh3_note_priority: 100
+bh3_abyss_priority: 100
+bh3_battlefield_priority: 100
+bh3_godwar_priority: 100
+bh3_profile_priority: 100
+bh3_all_note_priority: 100
+bh3_gacha_priority: 100
+bh3_ledger_priority: 100
+abyss_report_priority: 100
+bilibili_priority: -120
+bilibili_push_priority: -119
+bili_live_priority: -115
+gacha_pool_priority: -1000000000
+gs_logs_priority: -99
+sr_logs_priority: -88
+#以下 7 个之前只存在于代码的 pluginPriority 兜底里，默认配置没声明，
+#用户看不到也没法改，补齐。值与代码兜底一一对应，行为不变。
+abyss_now_priority: 100
+currency_ledger_priority: 100
+stamina_remind_priority: 100
+sr_gacha_priority: 1
+monster_priority: -200
+gacha_timer_priority: -3000
+#代码兜底是 -Infinity（永远最优先），但 YAML 读回 -Infinity 会变成字符串
+#"-Infinity"，pluginPriority 就返回字符串了，所以这里用一个小于所有现有值
+#（最小是 -9999999999）的有限值来保持「永远最优先」。
+forward_info_priority: -99999999999
+# 绝区零面板更新加速：需早于 ZZZ-Plugin 的面板指令（其 priority 取自自身
+# config 的 panel，默认 70），否则规则抢不过它、接管不生效。
+# 取 -9999999999 而非更小的值：锅巴 priorityInput 的 min 是 -9999999999，
+# 填更小的数会被判为越界而在面板上标红。这个值与 custom_guide_priority、
+# user_priority 同档，语义一致（都要「必须优先」）。
+zzz_panel_accel_priority: -9999999
+mhy_estimate_priority: -9999999
+video_priority: 1
+voice_priority: 15
+update_priority: 10
+config_priority: 15
+help_priority: 60
+picture_priority: 1234
+role_combat_priority: 100
+zzz_md_priority: 100
+currency_balance_priority: 100
+# 统一优先级：开启后所有指令至少拿到 priority_base，避免被后装的插件抢走指令
+# 关闭时下面的 xxx_priority 逐条生效（老行为）；修改后需重启
+priority_unified: false
+priority_base: -114514
+meme_priority: 50
+custom_guide_priority: -9999999999
+
+# ===== 功能模块开关（true 开，false 关；关掉后该模块指令静默不响应）=====
+# 下面这些键与 system/modules.js 的 MODULES 一一对应，增删请两边同步。
+# 没配过的键一律按「开」处理，老用户升级不会因为缺键被停用。
+gs_gacha_enable: true
+sr_gacha_enable: true
+zzz_gacha_enable: true
+bh3_gacha_enable: true
+gacha_pool_enable: true
+meme_enable: true
+module_switch_enable: true

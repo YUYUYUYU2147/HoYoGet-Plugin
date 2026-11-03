@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="shortcut icon" href="#" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}global_help/web.css" />
+    <style>
+      {{if bgMode === 'api' && bgUrl}}
+      body { --w-bg: url("{{@bgUrl}}"); }
+      {{else}}
+      body { --w-bg: url("{{ppath}}global_help/theme/{{themeName}}/bg.jpg"); }
+      {{/if}}
+      {{if layout === 'app'}}
+      .w-hero { background-image: none; }
+      {{else}}
+      .w-hero { background-image: linear-gradient(135deg, rgba(7,12,24,.88), rgba(9,16,32,.92)), url("{{ppath}}global_help/theme/{{themeName}}/main.png"); }
+      {{/if}}
+    </style>
+    {{@style}}
+    <title>{{helpCfg.title || '全局帮助'}}</title>
+  </head>
+  <body class="w-layout-{{layout}}" {{sys.scale}}>
+    <div class="w-bg"><div class="w-bg-blur"></div><div class="w-bg-full"></div></div>
+    <div class="w-page">
+      <header class="w-hero">
+        {{if layout === 'app'}}<img class="w-theme-art" src="{{ppath}}global_help/theme/{{themeName}}/main.png" alt="" />{{/if}}
+        <img class="w-logo" src="{{ppath}}Tl/imgs/米哈游.png" alt="" />
+        <div class="w-hero-copy">
+          <div class="w-kicker">HoYoGet · Global Help</div>
+          <h1>{{helpCfg.title || '全局帮助'}}</h1>
+          <p>{{helpCfg.subTitle || ''}}</p>
+          <div class="w-chips">
+            {{each chips c}}
+            <span class="w-chip {{c.key}}">
+              {{if c.key !== 'common'}}<img src="{{ppath}}game_icons/{{c.key}}.webp" alt="" />{{else}}<i>✦</i>{{/if}}
+              {{c.name}}<b>{{c.count}}</b>
+            </span>
+            {{/each}}
+          </div>
+        </div>
+        <div class="w-stats">
+          {{each stats s}}
+          <div class="w-stat"><span>{{s.k}}</span><b>{{s.v}}</b></div>
+          {{/each}}
+        </div>
+      </header>
+
+      <div class="w-groups">
+      {{each groups g}}
+      <section class="w-group" style="--w-accent: {{g.color}}">
+        <div class="w-group-head">
+          <i class="w-dot"></i>
+          <span class="w-group-name">{{g.group}}</span>
+          <em class="w-count">{{g.items.length}}</em>
+          {{if g.auth === 'master'}}<b class="w-master">主人专用</b>{{/if}}
+        </div>
+        <div class="w-grid" style="grid-template-columns: repeat({{g.cols}}, 1fr);">
+          {{each g.items item}}
+          <div class="w-card">
+            <span class="w-icon"><i style="{{item.css}}"></i></span>
+            <div class="w-main">
+              <div class="w-title">{{item.title}}</div>
+              {{if item.desc}}<div class="w-desc">{{item.desc}}</div>{{/if}}
+              {{if item.tags.length}}
+              <div class="w-tags">{{each item.tags t}}<span class="w-tag {{t.cls}}">{{t.text}}</span>{{/each}}</div>
+              {{/if}}
+            </div>
+          </div>
+          {{/each}}
+        </div>
+      </section>
+      {{/each}}
+      </div>
+
+      <footer class="w-foot"><span class="w-foot-from"><span style="color:#ff4d4f;font-weight:600">from 米哈游</span></span> · <span class="w-foot-bg">{{bgLabel}}</span></footer>
+    </div>
+  </body>
+</html>

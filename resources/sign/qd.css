@@ -1,0 +1,247 @@
+@font-face {
+  font-family: '主';
+  src: url('../font/主.ttf');
+}
+
+@font-face {
+  font-family: '正';
+  src: url('../font/yuan.ttf');
+}
+
+@font-face {
+  font-family: '宋';
+  src: url('../font/宋.ttf');
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-size: 16px;
+  width: 1000px;
+  transform-origin: 0 0;
+  /* 浅蓝底：截图区域若比内容大，露出的部分不会因透明被写成黑块 */
+  background-color: #eaf3ff;
+}
+
+.container {
+  padding: 26px 24px 20px;
+  background-color: #eaf3ff;
+  background-image:
+    radial-gradient(760px 340px at 88% -14%, rgba(255, 255, 255, 0.9), transparent 62%),
+    radial-gradient(620px 300px at -10% 108%, rgba(150, 200, 255, 0.45), transparent 62%),
+    linear-gradient(160deg, #eef6ff 0%, #e2efff 55%, #d8e8ff 100%);
+}
+
+/* ───── 主卡片 ───── */
+.sign-card {
+  border-radius: 22px;
+  padding: 20px 22px 14px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 14px 36px rgba(96, 140, 200, 0.18);
+}
+
+/* ───── 头部 ───── */
+.sign-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 16px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(150, 185, 225, 0.35);
+}
+
+.sign-head .avatar {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  flex: none;
+  background: #fff;
+  box-shadow: 0 0 0 3px #fff, 0 4px 12px rgba(96, 140, 200, 0.25);
+}
+
+.head-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.head-text .nick {
+  font-family: '正';
+  font-size: 26px;
+  font-weight: 700;
+  color: #1f3350;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.head-text .sub {
+  margin-top: 4px;
+  font-family: '宋';
+  font-size: 14px;
+  color: #7b8fa8;
+  letter-spacing: 1px;
+}
+
+.head-badge {
+  flex: none;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-family: '宋';
+  font-size: 13px;
+  color: #2f6fd0;
+  background: #e8f2ff;
+  border: 1px solid rgba(120, 170, 235, 0.45);
+}
+
+/* ───── 列表 ───── */
+.sign-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0 8px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid rgba(200, 220, 245, 0.7);
+  border-left: 3px solid transparent;
+  box-shadow: 0 2px 8px rgba(96, 140, 200, 0.08);
+}
+
+.row.ok { border-left-color: #22c55e; }
+.row.signed { border-left-color: #3b82f6; }
+.row.fail { border-left-color: #ef4444; background: #fff6f6; }
+
+.row-ico {
+  width: 46px;
+  height: 46px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: #f2f7ff;
+  border: 1px solid rgba(200, 220, 245, 0.7);
+}
+
+.row-ico img {
+  max-width: 40px;
+  max-height: 34px;
+}
+
+/* 社区签到：通行证头像（放在行首，比版块图标更能区分账号） */
+.row-avatar {
+  width: 46px;
+  height: 46px;
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #f2f7ff;
+  border: 2px solid rgba(147, 180, 230, 0.55);
+}
+
+.row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.row-title {
+  font-family: '宋';
+  font-size: 16px;
+  color: #24384f;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row-tip {
+  margin-top: 3px;
+  font-family: '宋';
+  font-size: 13px;
+  color: #7b8fa8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row-state {
+  flex: none;
+  font-family: '宋';
+  font-size: 13px;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.row.ok .row-state { color: #15803d; background: #e7f9ee; }
+.row.signed .row-state { color: #2563eb; background: #e8f1ff; }
+.row.fail .row-state { color: #dc2626; background: #ffeaea; }
+
+.row-reward {
+  width: 128px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 12px;
+  border-left: 1px solid rgba(200, 220, 245, 0.8);
+}
+
+.row-reward.empty {
+  border-left-color: transparent;
+}
+
+.reward-icon {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 10px;
+  background: #f2f7ff;
+  border: 1px solid rgba(200, 220, 245, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reward-icon img {
+  width: 34px;
+  height: 34px;
+}
+
+.reward-day {
+  font-family: '宋';
+  font-size: 12px;
+  color: #7b8fa8;
+}
+
+.reward-cnt {
+  margin-top: 2px;
+  font-family: '正';
+  font-size: 15px;
+  font-weight: 700;
+  color: #d97706;
+}
+
+/* ───── 页脚 ───── */
+.sign-foot {
+  padding-top: 10px;
+  border-top: 1px solid rgba(150, 185, 225, 0.35);
+  text-align: center;
+}
+
+.sign-foot .src {
+  font-family: '宋';
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: #e5484d;
+}

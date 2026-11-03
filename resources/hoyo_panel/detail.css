@@ -1,0 +1,1343 @@
+body {
+  width: 1160px;
+  margin: 0;
+  background: #08192b;
+  font-family: 'HelpSans', 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', sans-serif;
+}
+
+.card {
+  position: relative;
+  width: 1160px;
+  padding: 16px 16px 12px;
+  box-sizing: border-box;
+  overflow: hidden;
+  color: #e8e6ff;
+  background:
+    radial-gradient(620px 340px at 84% -12%, rgba(92, 172, 236, .34), transparent 66%),
+    radial-gradient(520px 300px at 6% 106%, rgba(38, 108, 188, .32), transparent 64%),
+    linear-gradient(158deg, #16395a 0%, #0f2a44 48%, #08192b 100%);
+}
+
+/* 两列长图：左列 立绘 + 装备九宫格（武器 1 + 圣遗物 5），右列 属性/ROLLS/Akasha */
+.layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.col-left {
+  width: 620px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.col-right {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 角色面板背景：底层元素图 + 上层角色专属图，再压一层暗色保证文字可读 */
+.bg-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  opacity: .5;
+}
+.bg-layer.bg-char { opacity: .72; }
+/* 随机图（api.yppp.net）通常偏亮、细节多，压暗 + 轻微模糊，避免和文字抢视线 */
+.bg-layer.bg-random {
+  opacity: .55;
+  filter: saturate(.9) blur(1px);
+}
+
+.card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(6, 20, 35, .3) 0%, rgba(6, 20, 35, .52) 56%, rgba(6, 20, 35, .74) 100%);
+}
+
+/* 内容压在背景与遮罩之上 */
+.card > *:not(.bg-layer):not(.glow) {
+  position: relative;
+  z-index: 2;
+}
+
+/* 背景光斑 */
+.glow {
+  z-index: 1;
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(52px);
+  pointer-events: none;
+}
+.glow.g1 { width: 340px; height: 340px; left: -80px; top: 30px; background: rgba(58, 140, 214, .3); }
+.glow.g2 { width: 280px; height: 280px; right: -70px; bottom: 40px; background: rgba(44, 124, 204, .26); }
+
+/* ───── 左侧：立绘 ───── */
+.hero {
+  position: relative;
+  min-height: 430px;
+  border-radius: 14px;
+  overflow: hidden;
+  background:
+    radial-gradient(300px 230px at 52% 16%, rgba(96, 182, 240, .24), transparent 70%),
+    linear-gradient(180deg, rgba(16, 46, 72, .6), rgba(8, 20, 34, .28));
+  border: 1px solid rgba(90, 170, 220, .28);
+}
+
+.splash {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 16%;
+  /* 面板浮在右侧，立绘整体放大一点再往左让，避免角色被面板压住 */
+  transform: scale(1.06) translateX(-4%);
+  transform-origin: 50% 35%;
+  filter: drop-shadow(0 8px 26px rgba(0, 0, 0, .55));
+}
+
+.hero-fade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(5, 18, 30, .04) 0%, rgba(5, 18, 30, .22) 52%, rgba(5, 18, 30, .52) 84%),
+    linear-gradient(0deg, rgba(5, 18, 30, .9) 0%, transparent 40%),
+    linear-gradient(180deg, rgba(5, 18, 30, .48) 0%, transparent 26%);
+}
+
+/* 命座图标：竖排在立绘左缘，点亮为原色，未点亮灰度处理 */
+.char-cons {
+  position: absolute;
+  left: 18px;
+  bottom: 40px;
+  z-index: 3;
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+}
+.cons-item {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(10, 30, 50, .55);
+  border: 1px solid rgba(150, 220, 255, .75);
+  box-shadow: 0 0 8px rgba(96, 200, 255, .35), 0 2px 8px rgba(0, 0, 0, .35);
+}
+/* 命座点亮色跟角色元素走：miao 的命座图标是白色剪影，只改描边还是发白，
+   所以圆片本身也铺一层元素色径向渐变，白图标落上去就带上了属性色。
+   未识别元素时回落到原来的青蓝。 */
+.cons-item.on {
+  border-color: var(--elem-line, rgba(150, 220, 255, .75));
+  background: radial-gradient(circle at 50% 38%, var(--elem-fill, rgba(20, 60, 90, .6)), var(--elem-bg, rgba(10, 30, 50, .55)) 80%);
+  box-shadow: 0 0 10px var(--elem-glow, rgba(96, 200, 255, .35)), 0 2px 8px rgba(0, 0, 0, .35);
+}
+body.elem-pyro { --elem-line: rgba(255, 154, 118, .95); --elem-glow: rgba(255, 110, 70, .55); --elem-fill: rgba(255, 118, 76, .5); --elem-bg: rgba(58, 22, 14, .75); }
+body.elem-hydro { --elem-line: rgba(111, 184, 255, .95); --elem-glow: rgba(70, 150, 255, .55); --elem-fill: rgba(64, 146, 255, .48); --elem-bg: rgba(12, 34, 62, .78); }
+body.elem-electro { --elem-line: rgba(201, 166, 255, .95); --elem-glow: rgba(170, 120, 255, .55); --elem-fill: rgba(164, 118, 255, .48); --elem-bg: rgba(36, 22, 62, .78); }
+body.elem-cryo { --elem-line: rgba(140, 220, 255, .95); --elem-glow: rgba(90, 195, 255, .55); --elem-fill: rgba(84, 194, 255, .46); --elem-bg: rgba(12, 38, 56, .78); }
+body.elem-anemo { --elem-line: rgba(143, 224, 192, .95); --elem-glow: rgba(100, 215, 175, .55); --elem-fill: rgba(92, 214, 172, .46); --elem-bg: rgba(12, 44, 38, .78); }
+body.elem-geo { --elem-line: rgba(255, 210, 122, .95); --elem-glow: rgba(255, 190, 80, .55); --elem-fill: rgba(255, 186, 72, .46); --elem-bg: rgba(52, 38, 14, .78); }
+body.elem-dendro { --elem-line: rgba(166, 224, 106, .95); --elem-glow: rgba(135, 215, 70, .55); --elem-fill: rgba(128, 212, 62, .46); --elem-bg: rgba(26, 46, 14, .78); }
+body.elem-quantum { --elem-line: rgba(169, 155, 255, .95); --elem-glow: rgba(135, 115, 255, .55); --elem-fill: rgba(128, 108, 255, .48); --elem-bg: rgba(26, 22, 62, .78); }
+body.elem-imaginary { --elem-line: rgba(255, 215, 106, .95); --elem-glow: rgba(255, 195, 60, .55); --elem-fill: rgba(255, 196, 62, .46); --elem-bg: rgba(54, 44, 12, .78); }
+body.elem-physical { --elem-line: rgba(207, 216, 227, .9); --elem-glow: rgba(180, 196, 214, .5); --elem-fill: rgba(170, 190, 212, .42); --elem-bg: rgba(30, 36, 46, .78); }
+
+.cons-item.off {
+  filter: grayscale(1) brightness(.8);
+  opacity: .45;
+  border-color: rgba(140, 165, 185, .32);
+  box-shadow: none;
+}
+.cons-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.hero-text {
+  position: absolute;
+  left: 18px;
+  top: 16px;
+  right: 18px;
+}
+
+.cname {
+  font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+  font-size: 34px;
+  line-height: 1.1;
+  letter-spacing: 1px;
+  color: #f4fbff;
+  text-shadow: 0 2px 14px rgba(90, 190, 255, .5);
+}
+
+.cmeta {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.cmeta .lv { color: #9fe0ff; }
+.cmeta .cons {
+  padding: 1px 8px;
+  border-radius: 6px;
+  color: #ffe3a8;
+  background: rgba(255, 205, 120, .14);
+  border: 1px solid rgba(255, 205, 120, .42);
+}
+.cmeta .nick { color: #8fb6d0; font-weight: 700; }
+
+/* 玩家头像 + 昵称：与「原石统计」卡片左上角同源（index 接口） */
+.player-chip {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 210px;
+  padding: 4px 11px 4px 4px;
+  border-radius: 999px;
+  background: rgba(6, 24, 40, .55);
+  border: 1px solid rgba(120, 190, 240, .22);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .25);
+}
+.pc-avatar {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+  background: rgba(255, 255, 255, .08);
+}
+.pc-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #d9ecfa;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.uid {
+  position: absolute;
+  left: 18px;
+  bottom: 12px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .5px;
+  color: #8fb6d0;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, .7);
+}
+
+/* ───── 右侧：武器 + 属性 + 雷达 ───── */
+.right {
+  display: grid;
+  grid-template-columns: 1fr 224px;
+  gap: 12px;
+  min-width: 0;
+}
+
+.right-main { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+
+.weapon {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 9px 8px;
+  border-radius: 11px;
+  background: linear-gradient(180deg, rgba(24, 74, 112, .72), rgba(9, 28, 46, .9));
+  border: 1px solid rgba(90, 170, 220, .34);
+  overflow: hidden;
+}
+
+.wq-head { display: flex; align-items: center; gap: 8px; }
+
+.wq-icon {
+  width: 46px;
+  height: 46px;
+  flex: none;
+  border-radius: 8px;
+  object-fit: contain;
+  background: rgba(255, 255, 255, .06);
+}
+
+.wq-info { min-width: 0; flex: 1; }
+
+.wq-name {
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.25;
+  color: #f2fbff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wq-meta {
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #93bcd6;
+}
+.wq-star { margin-top: 2px; display: flex; align-items: center; gap: 1px; }
+.wq-refine { color: #8fe0c8; }
+
+.wq-props {
+  margin-top: 7px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(110, 180, 224, .18);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.wq-prop { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #9fc4dc; }
+.wq-prop-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wq-prop-value { color: #ffe08f; font-weight: 900; }
+
+.wq-passive {
+  margin-top: 7px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(110, 180, 224, .2);
+}
+.wq-passive-name {
+  font-size: 11px;
+  font-weight: 900;
+  color: #bfe6ff;
+  margin-bottom: 2px;
+}
+.wq-passive-desc {
+  font-size: 10px;
+  line-height: 1.5;
+  color: #9dbdd4;
+}
+
+.attrs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1px;
+}
+
+/* 面板与立绘同框：右下浮层，立绘从左侧透出 */
+.hero .attrs {
+  /* 不固定高度：属性条数多时跟着内容长高，避免数字顶出方框 */
+  position: relative;
+  right: auto;
+  top: auto;
+  bottom: auto;
+  width: 262px;
+  margin: 10px 0 0 auto;
+  z-index: 2;
+  padding: 10px 8px 12px;
+  gap: 2px;
+  border-radius: 12px;
+  background: rgba(6, 20, 34, .46);
+  border: 1px solid rgba(96, 176, 224, .16);
+}
+
+.attr {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 6px 7px;
+  border-radius: 7px;
+  background: rgba(6, 24, 40, .26);
+}
+.attr:nth-child(odd) { background: rgba(8, 30, 48, .4); }
+
+.a-left { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; }
+/* 没有对应图标的词条也要占位，否则同一列文字会左移、与上面行不齐 */
+.aicon-wrap {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.aicon {
+  width: 14px;
+  height: 14px;
+  opacity: .78;
+  filter: brightness(1.15);
+}
+
+.a-label { min-width: 0; font-size: 13px; font-weight: 700; color: #9fb8cc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 词条权重徽章：双爆 100 这类高权重给金色，其余中性色 */
+.a-weight {
+  flex: none;
+  margin-left: 1px;
+  padding: 0 4px;
+  border-radius: 4px;
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 13px;
+  color: #a6c6dd;
+  background: rgba(120, 180, 220, .22);
+}
+.a-weight.hi { color: #ffd27a; background: rgba(255, 210, 122, .2); }
+
+/* 右侧两行：总数值 + 基础/圣遗物加成 */
+.a-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex: none;
+  max-width: 64%;
+  line-height: 1.1;
+}
+.a-value {
+  font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+  font-size: 15px;
+  font-weight: 900;
+  color: #f4fbff;
+  white-space: nowrap;
+  letter-spacing: -.25px;
+  font-variant-numeric: tabular-nums;
+}
+.a-sub { margin-top: 1px; display: flex; gap: 3px; font-size: 9px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.a-sub i { font-style: normal; color: #7f9db4; }
+.a-sub em { font-style: normal; color: #9fe0c8; }
+/* 基础值为 0（miao 没给这一项的基础）时按喵喵的做法淡显，不再整列隐藏 */
+.a-sub.zero i { color: #5d6b80; }
+
+/* 雷达 */
+.side {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  grid-template-areas:
+    "talents talents"
+    "radar overall";
+  gap: 10px;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.radar-wrap {
+  grid-area: radar;
+  border-radius: 14px;
+  padding: 4px;
+  background: rgba(6, 24, 40, .5);
+  border: 1px solid rgba(96, 176, 224, .2);
+}
+
+.radar { width: 100%; max-width: 300px; height: auto; display: block; margin: 0 auto; }
+
+.rg { fill: none; stroke: rgba(138, 205, 244, .26); stroke-width: 1; }
+.rs { stroke: rgba(138, 205, 244, .22); stroke-width: 1; }
+.rv { fill: rgba(88, 190, 246, .28); stroke: #8fe0ff; stroke-width: 1.6; }
+.rl {
+  font-size: 9px;
+  font-weight: 700;
+  fill: #9fb8cc;
+  dominant-baseline: middle;
+}
+
+.talents {
+  grid-area: talents;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+/* 星铁五项天赋：三列会把「终结技」挤出省略号，改成两列 */
+.talents-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.talent {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 5px;
+  border-radius: 9px;
+  background: rgba(6, 24, 40, .52);
+  border: 1px solid rgba(110, 180, 220, .18);
+}
+.t-icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+  background: rgba(255, 255, 255, .08);
+}
+.t-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 10px;
+  color: #9dc0d8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.t-lv { font-size: 12px; font-weight: 900; color: #d9f2ff; }
+
+/* 圣遗物总评 */
+.overall {
+  grid-area: overall;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 8px 12px 9px;
+  border-radius: 11px;
+  background: rgba(6, 24, 40, .52);
+  border: 1px solid rgba(90, 170, 220, .26);
+}
+.ov-head { font-size: 10px; font-weight: 900; letter-spacing: 1px; color: #7fa2bd; }
+.ov-score-row { margin-top: 3px; display: flex; align-items: baseline; gap: 4px; }
+.ov-score {
+  font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+  font-size: 26px;
+  line-height: 1;
+  font-weight: 900;
+  color: #ffd27a;
+}
+.ov-unit { font-size: 11px; color: #7fa2bd; }
+/* 圣遗物评级：纯文字字母，配色与 miao-plugin 的 .mark-XXX 一致 */
+.badge-mark {
+  display: inline-flex;
+  align-items: baseline;
+  margin-left: auto;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: .5px;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+.badge-mark .bm-shape { display: none; }
+.badge-mark .bm-text { display: inline; }
+
+/* 与 miao 保持一致：ACE / MAX 红，SSS / SS 金，S / A 紫，B / C / D 用低饱和灰蓝 */
+.badge-mark.t7 .bm-text,
+.badge-mark.t8 .bm-text { color: #e85656; }
+.badge-mark.t5 .bm-text,
+.badge-mark.t6 .bm-text { color: #ffe699; }
+.badge-mark.t3 .bm-text,
+.badge-mark.t4 .bm-text { color: #d699ff; }
+.badge-mark.t0 .bm-text,
+.badge-mark.t1 .bm-text,
+.badge-mark.t2 .bm-text { color: #8fa9cd; }
+
+/* 单件卡片右上角：略小一号，与分数同行 */
+.badge-mark.sm {
+  margin-left: 0;
+  font-size: 12px;
+  letter-spacing: .3px;
+}
+
+.ov-valid { margin-top: 3px; font-size: 11px; color: #9fb8cc; }
+.ov-valid b { color: #e8f6ff; font-weight: 900; }
+.ov-sep { margin: 0 5px; color: #4f7391; }
+
+/* 有效词条分：词条数 × 角色权重，口径与喵喵面板一致 */
+.ov-eff {
+  margin-top: 7px;
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(90, 160, 210, .18);
+}
+.ov-eff-label {
+  flex: none;
+  font-size: 11px;
+  color: #8fb0c8;
+}
+.ov-eff-tag {
+  flex: 1;
+  min-width: 0;
+  font-size: 10px;
+  color: #6d8ca4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 词条统计：×词条数 词条 累计值 */
+.ov-stats {
+  margin-top: 7px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+.ov-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(8, 34, 54, .72);
+  border: 1px solid rgba(80, 150, 200, .22);
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+.ov-stat i { font-style: normal; }
+.ov-stat .os-r { color: #7fd3ff; font-weight: 900; }
+.ov-stat .os-k { color: #cfe4f2; }
+.ov-stat .os-v { color: #ffe699; font-weight: 800; }
+
+/* ───── Akasha 排名 / 伤害构成 / 全服榜 ───── */
+.akasha {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ak-rank,
+.ak-detail,
+.ak-board {
+  min-width: 0;
+  padding: 9px 12px 10px;
+  border-radius: 11px;
+  background: rgba(6, 24, 40, .52);
+  border: 1px solid rgba(90, 170, 220, .26);
+}
+
+.ak-title {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #7fa2bd;
+}
+
+.ak-main {
+  margin-top: 5px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.ak-no {
+  font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 900;
+  color: #8fd4ff;
+}
+.ak-of { font-size: 12px; font-weight: 800; color: #7899b3; }
+
+.ak-beat { margin-top: 3px; font-size: 11px; font-weight: 800; color: #7fe0b6; }
+.ak-dmg-num { margin-top: 5px; font-size: 14px; font-weight: 900; color: #ffd27a; }
+.ak-plan {
+  margin-top: 4px;
+  font-size: 10px;
+  color: #6f90a8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ak-none { margin-top: 8px; font-size: 12px; color: #7899b3; }
+
+/* 队伍配队：AKASHA 卡片下方的两列成员，头像描边取元素色 */
+.ak-team {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(120, 180, 220, .18);
+}
+.ak-team-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 6px;
+  margin-top: 5px;
+}
+.ak-trow { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.ak-tava {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(120, 180, 220, .38);
+}
+.ak-tava img { width: 100%; height: 100%; object-fit: cover; }
+.ak-tname {
+  min-width: 0;
+  font-size: 10px;
+  color: #cfe4f2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ak-tcons { flex: none; font-size: 9px; color: #7fa2bd; }
+
+.ak-tava.pyro { border-color: #ff9a76; }
+.ak-tava.hydro { border-color: #6fb8ff; }
+.ak-tava.electro { border-color: #c9a6ff; }
+.ak-tava.cryo { border-color: #9fe4ff; }
+.ak-tava.anemo { border-color: #8fe0c0; }
+.ak-tava.geo { border-color: #ffd27a; }
+.ak-tava.dendro { border-color: #a6e06a; }
+
+/* 伤害计算表：标题条 + 表头 + 斑马行 + 脚注 */
+.ak-dhead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(120, 180, 220, .24);
+}
+.ak-dico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border-radius: 5px;
+  color: #dff0ff;
+  background: linear-gradient(160deg, #4d7ba8, #2f5580);
+  box-shadow: 0 0 0 1px rgba(150, 205, 240, .35) inset;
+}
+.ak-dico svg { width: 10px; height: 10px; }
+.ak-dtitle { font-size: 13px; font-weight: 900; letter-spacing: .5px; color: #eef6ff; }
+.ak-dbadge {
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  color: #7fa2bd;
+  background: rgba(120, 180, 220, .12);
+}
+.ak-dhint { margin-left: auto; font-size: 9px; color: #6f90a8; }
+
+.ak-dcols {
+  display: grid;
+  grid-template-columns: 34px 1fr 30px 60px;
+  gap: 6px;
+  align-items: center;
+  padding: 5px 0 3px;
+  font-size: 9px;
+  color: #5f819b;
+  border-bottom: 1px solid rgba(120, 180, 220, .16);
+}
+.ak-h-type { grid-column: 1 / 3; text-align: left; }
+.ak-h-q, .ak-h-val { text-align: right; }
+
+.ak-drow {
+  display: grid;
+  grid-template-columns: 34px 1fr 30px 60px;
+  gap: 6px;
+  align-items: center;
+  /* 负外边距把斑马底色铺到卡片内边距之外，与参考图一致 */
+  margin: 0 -12px;
+  padding: 4px 12px;
+  font-size: 11px;
+}
+.ak-drow:nth-child(even) { background: rgba(120, 180, 220, .11); }
+.ak-dtag {
+  padding: 1px 0;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 800;
+  text-align: center;
+  color: #8fb8d8;
+  background: rgba(90, 170, 220, .16);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.ak-dname {
+  min-width: 0;
+  color: #9dc0d8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ak-dq { text-align: right; font-size: 10px; color: #6f90a8; }
+.ak-dval {
+  text-align: right;
+  font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+  font-weight: 900;
+  color: #eaf4ff;
+}
+
+.ak-dfoot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding-top: 5px;
+  font-size: 9px;
+  color: #5f819b;
+  border-top: 1px solid rgba(120, 180, 220, .16);
+}
+.ak-dsrc { margin-left: auto; letter-spacing: 1px; }
+
+/* 喵喵伤害计算表：与上面 Akasha 表同款外观，三列（招式 / 暴击 / 期望） */
+.md-cols,
+.md-row {
+  display: grid;
+  grid-template-columns: 1fr 74px 74px;
+  gap: 6px;
+  align-items: center;
+}
+.md-cols {
+  padding: 5px 0 3px;
+  font-size: 9px;
+  color: #5f819b;
+  border-bottom: 1px solid rgba(120, 180, 220, .16);
+}
+.md-cols span:not(:first-child) { text-align: right; }
+.md-row {
+  /* 负外边距把斑马底色铺到卡片内边距之外，与 Akasha 表一致 */
+  margin: 0 -12px;
+  padding: 4px 12px;
+  font-size: 11px;
+}
+.md-row:nth-child(even) { background: rgba(120, 180, 220, .11); }
+.md-name {
+  min-width: 0;
+  color: #9dc0d8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.md-dmg,
+.md-avg {
+  text-align: right;
+  font-family: 'HelpBold', 'HelpSans', 'Microsoft YaHei', sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+.md-dmg { font-weight: 900; color: #eaf4ff; }
+.md-avg { font-weight: 800; color: #9dc0d8; }
+
+.ak-row {
+  display: grid;
+  grid-template-columns: 18px 20px 1fr 44px 62px;
+  gap: 5px;
+  align-items: center;
+  padding: 2px 0;
+  font-size: 11px;
+}
+
+/* 玩家所在地区（akasha owner.region），用国家小旗标出 */
+.ak-flag { display: inline-flex; align-items: center; justify-content: center; }
+.flag-img {
+  width: 18px;
+  height: 12px;
+  object-fit: cover;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .2);
+}
+/* 亚服（ASIA）没有统一国旗，用地球图标占位，避免整列忽有忽无 */
+.flag-globe { width: 13px; height: 13px; color: #7fa2bd; }
+.ak-rk { font-weight: 900; color: #7fa2bd; }
+.ak-nick {
+  color: #d8d2f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ak-wq {
+  text-align: center;
+  color: #7fa2bd;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ak-rdmg { text-align: right; font-weight: 800; color: #ffd27a; }
+
+/* ───── 星铁工坊：遗器排名 / 队伍配队（替代星铁缺失的 Akasha 模块） ───── */
+.sw-note {
+  margin-left: 6px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: #5f819b;
+}
+.sw-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) 34px 52px;
+  gap: 6px;
+  align-items: center;
+  padding: 3px 0;
+  font-size: 11px;
+}
+.sw-cons { text-align: center; font-size: 9px; color: #7fa2bd; white-space: nowrap; }
+.sw-pt {
+  text-align: right;
+  font-weight: 800;
+  color: #ffd27a;
+  font-variant-numeric: tabular-nums;
+}
+
+.sw-team { margin-top: 7px; }
+.sw-team + .sw-team {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(120, 180, 220, .14);
+}
+.sw-thead { display: flex; align-items: center; gap: 6px; }
+.sw-tname {
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 800;
+  color: #cfe4f2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sw-stars { flex: none; margin-left: auto; font-size: 9px; letter-spacing: .5px; color: #ffd27a; }
+.sw-members {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px 6px;
+  margin-top: 4px;
+}
+.sw-m { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.sw-ava {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(120, 180, 220, .34);
+}
+.sw-ava img { width: 100%; height: 100%; object-fit: cover; }
+.sw-mname {
+  min-width: 0;
+  font-size: 10px;
+  color: #cfe4f2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 当前面板角色高亮，方便一眼看出队伍里哪个是 TA */
+.sw-m.on .sw-ava { border-color: #ffd27a; box-shadow: 0 0 0 1px rgba(255, 210, 122, .35); }
+.sw-m.on .sw-mname { color: #ffe699; font-weight: 800; }
+.sw-foot { font-size: 9px; color: #5f819b; letter-spacing: .3px; }
+
+/* ───── 提瓦特小助手：练度 / 圣遗物分排行（Akasha 被拦时兜底） ───── */
+.ys-cols,
+.ys-row {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 32px 42px 54px;
+  gap: 5px;
+  align-items: center;
+}
+.ys-cols {
+  padding: 5px 0 3px;
+  font-size: 9px;
+  color: #5f819b;
+  border-bottom: 1px solid rgba(120, 180, 220, .16);
+}
+.ys-cols span:nth-child(n + 3) { text-align: right; }
+.ys-row { padding: 3px 0; font-size: 10px; }
+.ys-rk { font-weight: 900; color: #7fa2bd; }
+.ys-uid {
+  min-width: 0;
+  color: #d8d2f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ys-cons { text-align: right; color: #7fa2bd; white-space: nowrap; }
+.ys-art {
+  text-align: right;
+  font-weight: 800;
+  color: #9dc0d8;
+  font-variant-numeric: tabular-nums;
+}
+.ys-dmg {
+  text-align: right;
+  font-weight: 800;
+  color: #ffd27a;
+  font-variant-numeric: tabular-nums;
+}
+.ys-foot { font-size: 9px; color: #5f819b; letter-spacing: .3px; }
+
+/* ───── 圣遗物 / 遗器 ───── */
+.equip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  align-items: start;
+}
+
+/* 星铁属性行比原神多（速度/击破/命中/抵抗/治疗/充能），立绘卡加高一点，
+   否则 Apple 主题（面板 top 82 / bottom 12）会把最后一行裁掉。 */
+body.game-sr .hero { min-height: 500px; }
+
+/* 星铁有 6 件遗器：武器单独占满一行（横向排布），遗器正好 3 个一行、排两行，
+   否则最后一件会孤零零掉到第三行。 */
+body.game-sr .weapon {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  grid-template-areas:
+    "head props"
+    "passive passive";
+  column-gap: 18px;
+  row-gap: 9px;
+  align-items: start;
+  padding: 10px 14px 11px;
+}
+body.game-sr .wq-head { grid-area: head; }
+body.game-sr .wq-icon { width: 54px; height: 54px; border-radius: 10px; }
+body.game-sr .wq-props {
+  grid-area: props;
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px 26px;
+  align-content: start;
+}
+body.game-sr .wq-prop { gap: 6px; }
+body.game-sr .wq-prop-label { flex: 0 1 auto; }
+body.game-sr .wq-passive {
+  grid-area: passive;
+  margin-top: 0;
+  padding-top: 8px;
+}
+
+.art {
+  position: relative;
+  padding: 8px 9px 7px;
+  border-radius: 11px;
+  background: linear-gradient(180deg, rgba(18, 56, 86, .9), rgba(7, 22, 36, .94));
+  border: 1px solid rgba(90, 170, 220, .28);
+  overflow: hidden;
+}
+/* 卡片描边跟徽章同一套档位（模板里 class 直接用 miao 的 markClass：D/C/…/ACE/MAX） */
+.art.MAX, .art.ACE {
+  border-color: rgba(255, 190, 120, .78);
+  box-shadow: 0 0 16px rgba(255, 190, 90, .22) inset;
+}
+.art.SSS { border-color: rgba(255, 215, 140, .72); }
+.art.SS { border-color: rgba(150, 230, 220, .66); }
+.art.S { border-color: rgba(170, 180, 255, .62); }
+.art.A { border-color: rgba(120, 206, 255, .58); }
+/* 兼容旧写法（小写 + mark- 前缀） */
+.art.ace, .art.sss, .art.mark-ace, .art.mark-sss { border-color: rgba(255, 205, 120, .72); }
+.art.ss, .art.mark-ss { border-color: rgba(150, 208, 255, .7); }
+.art.s, .art.mark-s { border-color: rgba(122, 206, 255, .62); }
+
+.art-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  font-weight: 800;
+  color: #7fa8c6;
+}
+.art-rating { display: flex; align-items: center; gap: 5px; }
+.art-score { color: #ffd27a; font-size: 12px; }
+
+.art-mid {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.art-icon {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 8px;
+  object-fit: contain;
+  background: rgba(255, 255, 255, .06);
+}
+
+.art-text { min-width: 0; }
+
+.art-name {
+  font-size: 12px;
+  font-weight: 900;
+  color: #eaf7ff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.art-star {
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+/* 五角星：不用字符 ★，直接按游戏内星级画金色星形（与网站一致） */
+.star {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  background: linear-gradient(180deg, #ffeaa6 0%, #ffc94d 52%, #ffab2e 100%);
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+.wq-star .star { width: 12px; height: 12px; }
+.art-star .star { width: 9px; height: 9px; }
+
+/* 主词条独占整行：放在图标行下方，避免「雷元素伤害加成 46.6%」被图标挤到换行 */
+.art-main { margin-top: 5px; display: flex; flex-direction: column; gap: 1px; }
+.main-prop {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 13px;
+  font-weight: 900;
+  color: #ffe08f;
+}
+.mp-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mp-value { flex: none; white-space: nowrap; }
+
+.art-subs {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(110, 180, 224, .18);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sub {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 3px;
+  border-radius: 4px;
+  font-size: 11px;
+  overflow: hidden;
+}
+/* 有效词条（角色权重 > 0）：左侧亮条 + 淡蓝底 + 高亮文字，和无效词条一眼区分 */
+.sub.sub-on {
+  background: linear-gradient(90deg, rgba(86, 196, 255, .2), rgba(86, 196, 255, .02) 72%);
+  box-shadow: inset 2px 0 0 #56c4ff;
+}
+.sub.sub-on .s-label { color: #d9f2ff; font-weight: 800; }
+.sub.sub-on .s-value { color: #ffffff; }
+.sub:not(.sub-on) { opacity: .62; }
+/* 命中进度条：贴左铺底，长度按词条数占比（5 档封顶） */
+.sub-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 4px;
+  background: linear-gradient(90deg, rgba(96, 172, 232, .30), rgba(96, 172, 232, .04));
+  pointer-events: none;
+}
+.sub > *:not(.sub-bar) { position: relative; z-index: 1; }
+
+/* 命中次数标签：有效词条用亮金徽章，其余灰 */
+.sub-roll {
+  min-width: 24px;
+  flex: none;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1.5;
+  border-radius: 4px;
+  color: #7c9db6;
+  background: rgba(120, 180, 220, .12);
+}
+.sub.sub-on .sub-roll {
+  color: #3a2400;
+  background: linear-gradient(180deg, #ffe9a8, #ffc44d);
+  box-shadow: 0 0 6px rgba(255, 200, 90, .35);
+}
+.sub:not(.sub-on) .s-label { color: #7d9bb1; }
+.sub:not(.sub-on) .s-value { color: #b7cee0; }
+.picon-wrap {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: -2px;
+}
+.picon {
+  width: 12px;
+  height: 12px;
+  opacity: .75;
+  filter: brightness(1.15);
+}
+.s-label {
+  flex: 1;
+  min-width: 0;
+  color: #96b9d1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.s-value { flex: none; color: #e8f6ff; font-weight: 800; }
+
+.art-set {
+  margin-top: 5px;
+  font-size: 10px;
+  color: #7fa8c6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ───── 页脚 ───── */
+.footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding-top: 2px;
+}
+
+.set-effects {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .04);
+  border: 1px solid rgba(255, 255, 255, .08);
+}
+.set-eff + .set-eff {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(255, 255, 255, .1);
+}
+.se-head { display: flex; align-items: baseline; gap: 6px; }
+.se-name { font-size: 12px; font-weight: 800; color: #a9e6ff; }
+.se-count { font-size: 11px; font-weight: 700; color: rgba(169, 230, 255, .6); }
+.se-line { display: flex; gap: 6px; font-size: 11px; line-height: 1.5; margin-top: 2px; }
+.se-piece { flex: 0 0 auto; color: #d3bc8e; font-weight: 700; }
+.se-desc { color: rgba(255, 255, 255, .66); }
+.sets { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.set-pill {
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #a9e6ff;
+  background: rgba(70, 170, 220, .14);
+  border: 1px solid rgba(110, 200, 240, .32);
+}
+
+.src { font-size: 11px; font-weight: 700; color: #ff4d4f; }
+
+/* ───── FortOfFans 全球排名（高级卡片） ───── */
+.fortoffans { padding-bottom: 12px; }
+.ff-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.ff-kicker {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 2.4px;
+  background: linear-gradient(90deg, #6fe3b0, #9aa4ff 55%, #ffcf5c);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.ff-bracket { margin-top: 3px; font-size: 10px; color: #7899b3; }
+.ff-src { font-size: 9px; color: #5d7186; letter-spacing: 1.2px; text-transform: uppercase; }
+
+.ff-hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(111, 227, 176, .22);
+  background:
+    radial-gradient(120px 80px at 0% 0%, rgba(111, 227, 176, .14), transparent 70%),
+    radial-gradient(160px 100px at 100% 100%, rgba(154, 164, 255, .12), transparent 70%),
+    rgba(255, 255, 255, .025);
+}
+.ff-ring {
+  --p: 0%;
+  position: relative;
+  flex: none;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(#6fe3b0 var(--p), rgba(255, 255, 255, .07) 0);
+  filter: drop-shadow(0 0 8px rgba(111, 227, 176, .22));
+}
+.ff-ring::before { content: ''; position: absolute; inset: 5px; border-radius: 50%; background: #111722; }
+.ff-ring b {
+  position: relative;
+  z-index: 1;
+  font-size: 14px;
+  font-weight: 900;
+  color: #dff7ec;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.3px;
+}
+.ff-hero-main { min-width: 0; }
+.ff-hero-label { font-size: 10px; letter-spacing: 1px; color: #8fb3a6; }
+.ff-hero-value {
+  margin-top: 1px;
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.05;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+.ff-hero-sub { margin-top: 2px; font-size: 10px; color: #7899b3; }
+
+.ff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+.ff-metric {
+  padding: 8px 9px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, .07);
+  background: rgba(255, 255, 255, .03);
+}
+.ff-metric:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.ff-m-top { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+.ff-m-top span { font-size: 10px; color: #8fa3bb; }
+.ff-m-top b { font-size: 14px; font-weight: 900; color: #c8cfff; font-variant-numeric: tabular-nums; }
+.ff-m-val { margin-top: 2px; font-size: 15px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
+.ff-m-bar { margin-top: 5px; height: 3px; border-radius: 999px; background: rgba(255, 255, 255, .08); overflow: hidden; }
+.ff-m-bar i {
+  display: block;
+  height: 100%;
+  width: var(--p, 0%);
+  border-radius: inherit;
+  background: linear-gradient(90deg, #6fe3b0, #9aa4ff);
+}
+.ff-m-sub { margin-top: 4px; font-size: 9px; color: #6f8298; }
+
+.ff-foot { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; }
+.ff-foot span {
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 9px;
+  color: #6f8298;
+  background: rgba(255, 255, 255, .035);
+  border: 1px solid rgba(255, 255, 255, .05);
+}
+.attrs .a-right{flex-direction:row;align-items:baseline;gap:5px}.attrs .a-sub{margin-top:0}.attrs .attr{align-items:center}
+.hero .attrs{margin-top:46px}
+.hero .attrs{margin-top:46px}
+.player-chip{position:static;margin:0 0 6px auto;max-width:100%}
+.player-chip{top:-2px;right:16px;transform:scale(.9);transform-origin:right top}
+.attrs .a-right{flex-direction:column;align-items:flex-end;gap:0}.attrs .a-sub{margin-top:1px}
+.player-chip{top:auto;bottom:72px;left:24px;right:auto;transform:none}
+.attrs .attr{align-items:flex-start}.attrs .a-left{padding-top:3px}
+.player-chip{position:absolute;top:auto;bottom:72px;left:24px;right:auto;transform:none}
+.player-chip{position:absolute;top:4px;left:14px;right:auto;bottom:auto;padding:1px 8px 1px 1px;gap:4px;transform:none;max-width:none}
+.pc-avatar{width:20px;height:20px}.pc-name{font-size:11px;max-width:100px}
+.hero-text{padding-top:16px}
+.attrs .a-sub{justify-content:flex-end}.attrs .a-right{align-items:flex-end}
+.cons-item.on{box-shadow:0 0 13px var(--elem-glow,rgba(96,200,255,.6)),inset 0 0 8px rgba(255,255,255,.16)}
+.cons-item.on .cons-img{filter:brightness(1.3) saturate(1.15)}body.elem-electro{--elem-fill:rgba(164,118,255,.7);--elem-glow:rgba(175,125,255,.85)}
+body.elem-pyro{--elem-fill:rgba(255,118,76,.7)}body.elem-hydro{--elem-fill:rgba(64,146,255,.68)}body.elem-cryo{--elem-fill:rgba(84,194,255,.66)}body.elem-dendro{--elem-fill:rgba(128,212,62,.66)}
+.hero{margin-bottom:30px}
+.splash{object-position:28% 16%;transform:scale(1.06) translateX(0)}

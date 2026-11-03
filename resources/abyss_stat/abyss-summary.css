@@ -1,0 +1,820 @@
+.font-YS {
+  font-family: Number, "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+}
+.font-NZBZ {
+  font-family: Number, "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+}
+body,
+.container {
+  /* 左栏内容收紧到 985px 后，整图宽度也跟着收，
+     去掉右栏和左栏内容之间那一大片空白；BOSS 栏保持 654px */
+  width: 1685px;
+  background: url(./imgs/bg1.png) top left no-repeat #2a3860;
+  background-size: 100% auto;
+}
+.container {
+  padding: 5px 0 10px 5px;
+}
+.head-box {
+  display: flex;
+  width: 100%;
+}
+.head-box .title {
+  font-size: 45px;
+  padding-bottom: 10px;
+  width: 70%;
+}
+.head-box .title span {
+  font-size: 30px;
+  margin-left: 10px;
+  color: #d3bc8e;
+}
+.head-box .uid {
+  text-align: right;
+  width: 30%;
+  padding-top: 25px;
+  padding-right: 10px;
+  font-size: 25px;
+}
+.head-user {
+  width: 30%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 8px 10px 0 0;
+  box-sizing: border-box;
+}
+.head-user-info {
+  min-width: 0;
+  text-align: right;
+}
+.head-avatar {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  object-fit: cover;
+  background: rgba(255, 255, 255, .12);
+  border: 2px solid rgba(255, 255, 255, .68);
+  box-shadow: 0 0 8px rgba(0, 0, 0, .35);
+}
+.head-nick {
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #fff;
+  text-shadow: 0 0 3px rgba(0, 0, 0, .6);
+}
+.head-box .head-user .uid {
+  width: auto;
+  padding: 0;
+  font-size: 20px;
+  line-height: 1.3;
+  color: #fff;
+}
+.abyss-stat-cont {
+  display: flex;
+  padding: 5px;
+}
+.abyss-stat {
+  display: flex;
+  /* 5 项统计（最强一击/最高承伤/最多击破/战技/爆发）横排会超出画布，
+     允许换行，避免后几项被挤到可视区外 */
+  flex-wrap: wrap;
+  gap: 6px 0;
+  /* 和下方 11/12 层左栏同宽（15~1000px）：5 张卡总宽 950px，
+     用 space-between 把多出的 50px 分到卡片间隙，最右卡右缘落到 1000px */
+  width: 1000px;
+}
+.abyss-stat .cont {
+  margin: 5px 10px 5px 5px;
+  /* 5 张卡等分左栏宽度（15~1000px），卡片本身也一起变宽，
+     不再只靠加大卡片间隙来对齐右缘 */
+  flex: 1 1 0;
+  min-width: 0;
+}
+.abyss-stat .avatar-banner { width: 100%; }
+.abyss-stat strong {
+  text-shadow: 0 0 3px #000;
+}
+.abyss-stat .stat-title {
+  position: absolute;
+  top: 0;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 5px 10px;
+  width: 100%;
+  text-shadow: 0 0 1px #000;
+}
+.abyss-stat .stat-title span {
+  display: block;
+  font-weight: normal;
+  font-family: Number, "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  font-size: 24px;
+}
+.abyss-stat .stat-title strong {
+  display: block;
+  font-size: 30px;
+}
+.abyss-stat .stat-msg {
+  position: absolute;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+  padding: 5px 10px;
+  width: 100%;
+  text-shadow: 0 0 1px #000;
+  font-size: 14px;
+}
+.abyss-stat .stat-msg .msg {
+  display: block;
+  line-height: 25px;
+}
+.abyss-stat .stat-msg .msg strong {
+  font-size: 20px;
+  padding: 0 2px;
+  font-weight: normal;
+  color: #d3bc8e;
+}
+.avatar-banner {
+  height: 300px;
+  width: 175px;
+  background-repeat: no-repeat;
+  background-size: 100% auto;
+  background-position: 0 10%;
+}
+.abyss-data {
+  display: flex;
+  padding: 0 6px;
+}
+.abyss-data .abyss-item {
+  color: #fff;
+  margin: 5px;
+}
+.abyss-data .abyss-item .info {
+  text-align: center;
+  text-shadow: 0 0 1px #000, 1px 1px 3px #000;
+}
+.abyss-data .abyss-item .info strong {
+  display: block;
+  font-weight: normal;
+  font-family: Number, "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+}
+.abyss-data .abyss-item .info span {
+  font-size: 24px;
+  display: block;
+}
+.abyss-data .abyss-item .info span:after {
+  content: "次";
+  font-size: 15px;
+  margin-left: 2px;
+}
+.abyss-title {
+  margin: 0 0 4px;
+}
+.abyss-title strong {
+  color: #d3bc8e;
+  font-size: 18px;
+  font-family: Number, "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  font-weight: normal;
+  margin-right: 10px;
+}
+.abyss-title .abyss-star {
+  font-size: 15px;
+  color: #fff;
+}
+.abyss-title .abyss-star:before {
+  content: "";
+  vertical-align: bottom;
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  background: url("./imgs/star.png") center no-repeat;
+  background-size: contain;
+  margin-right: 5px;
+}
+.abyss-floor-team {
+  /* 队伍卡改用 mini（105px）后，8 张横排约 930px，985 的左栏放得下，
+     恢复「上半 | 下半」并排，避免一上一下把整层拉高一倍。
+     整体靠左：和顶部的「第N层」标题左对齐，不再居中缩进；
+     上下半之间只留分隔线两侧的间距，不再两端撑开 */
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  /* 和 .abyss-level 的左右 10px 内距对齐，首间上半与本层上半左边缘一致 */
+  padding: 0 10px;
+  box-sizing: border-box;
+}
+.abyss-floor-team .line {
+  width: 1px;
+  height: 80px;
+  background: rgba(255, 255, 255, 0.35);
+  /* 左右各 15px：把下半整体右移约 13.5px（CSS），让下半右边缘
+     和第三间下半（以及通关时间）对得上，同时保持分隔线居中 */
+  margin: 15px 15px 0;
+}
+.abyss-team {
+  display: flex;
+  margin-right: -5px;
+  margin-left: -5px;
+  min-width: 0;
+}
+/* 兜底：框架的 html 模板有进程内缓存（Renderer.html），模板改成 mini 后
+   如果还没刷新，4 人队仍会拿到 wide 卡（219px），8 张会压到右侧 BOSS 栏。
+   这里对「队伍里有第 4 张卡」的情况强制按 mini 的尺寸/结构显示，
+   1~3 人队不受影响（仍用 wide / wide2）。 */
+.abyss-team:has(> .avatar-card:nth-child(4)) .avatar-card.card-wide .card {
+  width: 105px;
+  display: block;
+}
+.abyss-team:has(> .avatar-card:nth-child(4)) .avatar-card.card-wide .avatar-face {
+  width: 105px;
+  height: 105px;
+  border-radius: 10.5px 10.5px 22.5px 0;
+}
+.abyss-team:has(> .avatar-card:nth-child(4)) .avatar-card.card-wide .avatar-face .img.wide {
+  display: none;
+}
+.abyss-team:has(> .avatar-card:nth-child(4)) .avatar-card.card-wide .avatar-face .img.mini,
+.abyss-team:has(> .avatar-card:nth-child(4)) .avatar-card.card-wide .avatar-face .cons.mini {
+  display: block;
+}
+.abyss-team:has(> .avatar-card:nth-child(4)) .avatar-card.card-wide .avatar-face .img {
+  height: 100%;
+  margin-top: 0;
+  background-size: 100% 100%;
+  background-position: center bottom;
+}
+.abyss-team:has(> .avatar-card:nth-child(4)) .avatar-card.card-wide .avatar-info {
+  width: auto;
+  padding-left: 0;
+}
+.abyss-team:has(> .avatar-card:nth-child(4)) .avatar-card.card-wide .avatar-name,
+.abyss-team:has(> .avatar-card:nth-child(4)) .avatar-card.card-wide .line {
+  display: none;
+}
+.abyss-detail {
+  display: flex;
+  width: calc(100% + 40px);
+  margin: 10px -15px -10px;
+}
+.abyss-level {
+  padding: 5px 10px 7px;
+  /* 宽度跟内容走：上下半队伍挨着，不再把三间硬撑成 1/3 拉出空白。
+     三间由 .abyss-detail 的 space-between 分布，首尾贴住左右边缘 */
+  width: auto;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  box-shadow: 0 0 1px 0 #fff;
+}
+.abyss-level:nth-child(even) {
+  background: rgba(255, 255, 255, 0.1);
+}
+.abyss-level .info {
+  margin-bottom: 5px;
+  display: flex;
+  padding-left: 8px;
+}
+.abyss-level .title {
+  font-size: 16px;
+  white-space: nowrap;
+  font-weight: bold;
+}
+.abyss-level .star {
+  height: 18px;
+  display: inline-block;
+  background: url(./imgs/star.png);
+  background-size: 18px 18px;
+  margin-left: 5px;
+}
+.abyss-level .star.star1 {
+  width: 18px;
+  margin-right: 36px;
+}
+.abyss-level .star.star2 {
+  width: 36px;
+  margin-right: 18px;
+}
+.abyss-level .star.star3 {
+  width: 54px;
+  margin-right: 0;
+}
+.abyss-level .time {
+  /* 时间居中在下半队伍正上方：宽度跟下半人数一致（每个头像 35px），
+     时间中心就和下半队伍中心对齐；人数太少时保底 76px，防止文字溢出 */
+  text-align: center;
+  width: 140px;
+  margin-left: auto;
+  color: #aaa;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.abyss-level:has(.avatar-list.down .avatar-icon:nth-child(1)) .time { width: max(35px, 76px); }
+.abyss-level:has(.avatar-list.down .avatar-icon:nth-child(2)) .time { width: max(70px, 76px); }
+.abyss-level:has(.avatar-list.down .avatar-icon:nth-child(3)) .time { width: 105px; }
+.abyss-level:has(.avatar-list.down .avatar-icon:nth-child(4)) .time { width: 140px; }
+.abyss-level .avatars {
+  display: flex;
+  width: 100%;
+}
+.abyss-level .avatars .avatar-list {
+  display: flex;
+  position: relative;
+  flex: 1 1 0;
+  box-sizing: border-box;
+}
+.abyss-level .avatars .avatar-list.up {
+  padding-right: 15px;
+}
+/* 下半队伍靠右，右边缘与上方「通关时间」对齐 */
+.abyss-level .avatars .avatar-list.down {
+  justify-content: flex-end;
+}
+.abyss-level .avatars .avatar-list.up:after {
+  content: "";
+  display: block;
+  position: absolute;
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.3);
+  right: 8px;
+  top: 50%;
+  margin-top: -8px;
+}
+.abyss-level .avatars .avatar-icon {
+  width: 33px;
+  height: 33px;
+  border-radius: 50%;
+  margin-right: 2px;
+}
+.abyss-level .avatars .avatar-icon .img {
+  background-size: auto 100%;
+  background-position: center;
+  width: 29px;
+  height: 29px;
+  margin: 2px;
+}
+.abyss-notice .cont-body {
+  font-size: 16px;
+}
+.abyss-notice .from-mhy {
+  margin-top: 6px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  color: #ff4d4f;
+}
+.avatar-banner.avatar-枫原万叶,
+.img.wide.avatar-枫原万叶 {
+  background-position: 0 -13%;
+}
+.avatar-banner.avatar-九条裟罗,
+.img.wide.avatar-九条裟罗 {
+  background-position: 0 0;
+}
+.avatar-banner.avatar-香菱,
+.img.wide.avatar-香菱 {
+  background-position: 0 -16%;
+}
+.avatar-banner.avatar-行秋,
+.img.wide.avatar-行秋 {
+  background-position: 0 -16%;
+}
+.avatar-banner.avatar-甘雨,
+.img.wide.avatar-甘雨 {
+  background-position: 0 -8%;
+}
+.avatar-banner.avatar-刻晴,
+.img.wide.avatar-刻晴 {
+  background-position: 0 -5%;
+}
+.avatar-banner.avatar-神里绫华,
+.img.wide.avatar-神里绫华 {
+  background-position: 0 13%;
+}
+.avatar-banner.avatar-班尼特,
+.img.wide.avatar-班尼特 {
+  background-position: 0 15%;
+}
+.avatar-banner.avatar-五郎,
+.img.wide.avatar-五郎 {
+  background-position: 0 15%;
+}
+.avatar-banner.avatar-托马,
+.img.wide.avatar-托马 {
+  background-position: 0 -5%;
+}
+/*# sourceMappingURL=abyss-summary.css.map */
+/* 每层卡片：左栏保持原来的战绩内容，右栏补该层深渊怪物/BOSS 信息 */
+.floor-split {
+  /* 两栏用 grid 排版，行高取左右两栏的较大值：
+     右栏怪物多时整行跟着长高，不再把 BOSS 列表裁掉。 */
+  display: grid;
+  grid-template-columns: 985px minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+}
+.floor-main {
+  width: auto;
+  min-width: 0;
+  display: flex;
+}
+.floor-main > .cont-body {
+  flex: 1;
+  box-sizing: border-box;
+}
+
+.floor-boss {
+  min-width: 0;
+  overflow: visible;
+  box-sizing: border-box;
+  /* 左栏「第N层」标题在 .cont-body 内，比卡片顶部低 14px；
+     右栏顶部直接是卡片边缘，所以 padding-top 要补足这 14px，
+     让「本层怪物/BOSS」和「第N层」在同一条水平线上 */
+  padding: 7px 15px 15px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, .5);
+  border: 1px solid rgba(255, 255, 255, .12);
+  box-shadow: 0 0 1px 0 rgba(255, 255, 255, .35);
+  color: #fff;
+}
+.floor-boss .boss-title {
+  font-size: 18px;
+  font-weight: 400;
+  font-family: Number, "汉仪文黑-65W", YS, PingFangSC-Medium, "PingFang SC", sans-serif;
+  color: #d3bc8e;
+  line-height: 1.3;
+  margin: 0 0 4px;
+}
+.boss-half { margin-bottom: 4px; }
+.boss-half:last-child { margin-bottom: 0; }
+.boss-half-title { font-size: 12.5px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+.boss-wave { font-size: 12px; color: #b9a8ff; margin: 0; }
+
+.boss-monsters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px 6px; margin-bottom: 0; }
+.boss-item {
+  /* 三列并排，单只内部一行：图标 + 名字 + 血量 + 弱点/抗性 */
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 6px;
+  margin-bottom: 0;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .1);
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+.boss-item:last-child { margin-bottom: 0; }
+.boss-icon {
+  width: 22px; height: 22px; flex: 0 0 auto;
+  border-radius: 9px; background: rgba(255, 255, 255, .08);
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.boss-icon img { width: 100%; height: 100%; object-fit: contain; }
+.boss-icon span { font-size: 15px; font-weight: 800; color: rgba(255, 255, 255, .55); }
+.boss-info {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0 5px;
+  /* 名字独占第一行（完整显示），血量/弱点/抗性换到第二行；
+     原来名字和血量/标签挤在同一行，长名字会被 ellipsis 截断 */
+  flex-wrap: wrap;
+  overflow: hidden;
+}
+.boss-name {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #fff;
+  flex: 1 1 100%;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
+.boss-hp { font-size: 11px; color: rgba(255, 255, 255, .55); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.boss-tags {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 9.5px;
+  white-space: normal;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+}
+.boss-tags .tag-label { display: none; }
+.boss-tags i {
+  display: inline-block;
+  font-style: normal; padding: 1px 6px; border-radius: 999px;
+  background: rgba(255, 255, 255, .08); color: #cfe4f2;
+  white-space: nowrap;
+  line-height: 1.25;
+}
+.boss-tags .elem { display: inline-block; }
+.boss-tags .elem + .elem { margin-left: 3px; }
+.boss-tags i img,
+.boss-tags .elem-all {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 3px;
+}
+.boss-tags .elem-all {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: conic-gradient(#ff5a5a 0 25%, #f5b942 0 50%, #35c98b 0 75%, #3d9dff 0 100%);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .3);
+}
+.boss-tags.weak i { background: rgba(255, 190, 90, .16); color: #ffd27a; }
+.boss-tags.res i { background: rgba(255, 100, 100, .16); color: #ff9e9e; }
+.boss-tags.shield i { background: rgba(100, 170, 255, .18); color: #9fd4ff; border: 1px solid rgba(120, 180, 255, .35); }
+.boss-tags img { width: 12px; height: 12px; object-fit: contain; }
+.boss-tags em { display: inline; margin-left: 4px; font-style: normal; font-weight: 700; }
+.boss-mech { font-size: 10.5px; color: rgba(255, 255, 255, .55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+
+/* 分栏时左栏内容不能撑破（.abyss-detail 原本用 calc(100% + 40px) 抵消内距，
+   在 flex 子项里会把左栏撑宽，导致左右不等宽） */
+.floor-main { overflow: visible; }
+.floor-main .abyss-detail {
+  /* 原版用 calc(100% + 40px) + 负边距抵消 .cont-body 的 15px 内距；
+     分栏后左栏要和队伍左对齐，直接铺满并去掉负边距 */
+  width: 100%;
+  margin: 10px 0 0;
+  /* 三间按内容宽度排并靠左：和标题左对齐，间内上下半队伍挨在一起，
+     三间连成一条，不会被硬撑成 1/3 拉出一大段空白 */
+  justify-content: flex-start;
+}
+.floor-main .abyss-level { box-sizing: border-box; }
+
+/* 第一层 BOSS 栏上移到统计行顶部，填掉右上角空白；
+   层卡本身要放开 overflow，否则 BOSS 栏上半截会被裁掉 */
+.info_box > .abyss-stat-cont + .cont { overflow: visible; }
+.info_box > .abyss-stat-cont + .cont .cont-body { border-radius: 10px; }
+/* 第一层右栏上移，顶部和统计行对齐；负 margin 只改绘制位置，
+   行高仍由内容撑开，列表底部不会被裁。 */
+.info_box > .abyss-stat-cont + .cont .floor-boss {
+  margin-top: -320px;
+  align-self: stretch;
+}
+/* 层卡右边距去掉：右边缘和顶部统计行/UID 对齐 */
+.info_box > .cont { margin-right: 0; }
+
+/* 左栏底部：各出战角色的圣遗物详情（图标 + 套装 + 等级 + 主副词条，两列网格） */
+.abyss-artis {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(255, 255, 255, .22);
+}
+.abyss-artis .artis-title {
+  font-size: 13px;
+  color: #d3bc8e;
+  margin-bottom: 6px;
+  letter-spacing: 1px;
+}
+.artis-char { margin-bottom: 8px; }
+.artis-char:last-child { margin-bottom: 0; }
+.artis-char-name {
+  font-size: 12.5px;
+  color: #fff;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.artis-char-name span {
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, .6);
+}
+.artis-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 6px;
+}
+.artis-card {
+  padding: 4px 6px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .08);
+  min-width: 0;
+}
+.artis-card-head { display: flex; align-items: center; gap: 5px; }
+.artis-icon {
+  width: 24px; height: 24px; flex: 0 0 auto;
+  border-radius: 5px; object-fit: contain;
+  background: rgba(0, 0, 0, .25);
+}
+.artis-card-meta { min-width: 0; }
+.artis-set {
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, .88);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.artis-lv { font-size: 10px; color: #d3bc8e; }
+.artis-main { font-size: 10.5px; color: #9fe0c8; margin-top: 2px; }
+.artis-sub {
+  font-size: 10px;
+  color: rgba(255, 255, 255, .58);
+  line-height: 1.4;
+  margin-top: 1px;
+  word-break: break-all;
+}
+
+/* 层与层之间不要留空：原版 .cont 上下各 5px，两层的卡会隔开一段 */
+.cont { margin-top: 0; margin-bottom: 0; }
+.cont + .cont { margin-top: 0; }
+
+/* 长段「应对」攻略不放进摘要图：内容比楼层高太多，放进去会撑高整图；
+   需要完整攻略时用单独的命令输出 */
+.boss-guide { display: none; }
+
+/* 行高由 grid 按左右两栏内容自动取最大值，不再给第二层写死 560px。 */
+
+/* BOSS 技能应对：跨满整行，避免挤在 1/3 列里 */
+.boss-guide {
+  grid-column: 1 / -1;
+  margin: 2px 0 6px;
+  padding: 6px 9px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .05);
+  border-left: 2px solid #d3bc8e;
+}
+.boss-guide .guide-for {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #d3bc8e;
+  margin-bottom: 3px;
+}
+.boss-guide .guide-title {
+  font-size: 11px;
+  color: #fff;
+  margin-top: 3px;
+}
+.boss-guide .guide-line {
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, .66);
+  line-height: 1.5;
+}
+
+/* 圣遗物评分：挂在每个角色头像下方（评级 + 分数） */
+.avatar-icon { position: relative; }
+.av-score {
+  position: absolute;
+  left: 50%;
+  bottom: -12px;
+  transform: translateX(-50%);
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, .62);
+  color: #ffe699;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 13px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.av-score i { font-style: normal; opacity: .8; font-weight: 600; }
+.abyss-level .avatars { padding-bottom: 16px; }
+
+/* 第 12 层下方：顶部五位角色的培养雷达 + 圣遗物评分。
+   右栏变高时左栏会跟着拉长，底部用这张卡补内容，一行五张。 */
+.abyss-build {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(255, 255, 255, .22);
+}
+.abyss-build .build-title {
+  font-size: 13px;
+  color: #d3bc8e;
+  margin-bottom: 6px;
+  letter-spacing: 1px;
+}
+.abyss-build .build-list {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+.build-card {
+  min-width: 0;
+  padding: 6px 7px 7px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .09);
+  box-sizing: border-box;
+}
+.build-head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 2px;
+  min-width: 0;
+}
+.build-face {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center top;
+  border: 1px solid rgba(255, 255, 255, .28);
+}
+.build-name {
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.build-body {
+  min-width: 0;
+}
+.build-radar {
+  width: 100%;
+  max-width: 146px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+.build-radar .rg { fill: none; stroke: rgba(138, 205, 244, .24); stroke-width: 1; }
+.build-radar .rs { stroke: rgba(138, 205, 244, .20); stroke-width: 1; }
+.build-radar .rv { fill: rgba(88, 190, 246, .26); stroke: #8fe0ff; stroke-width: 1.6; }
+.build-radar .rl {
+  font-size: 15px;
+  font-weight: 700;
+  fill: #9fb8cc;
+  dominant-baseline: middle;
+}
+.build-score {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 1px;
+  min-width: 0;
+}
+.bs-label {
+  font-size: 9px;
+  color: rgba(255, 255, 255, .52);
+  white-space: nowrap;
+}
+.bs-num {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.05;
+  color: #ffe699;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.bs-num i {
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 400;
+  margin-left: 1px;
+  color: rgba(255, 255, 255, .6);
+}
+.bs-mark {
+  display: inline-block;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 13px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, .35);
+  border: 1px solid rgba(255, 255, 255, .14);
+  color: #9aa7b8;
+  white-space: nowrap;
+}
+.bs-mark.mark-c { color: #8ee0a8; }
+.bs-mark.mark-b { color: #86c8ff; }
+.bs-mark.mark-a { color: #c8a6ff; }
+.bs-mark.mark-s { color: #ffd76e; }
+.bs-mark.mark-ss,
+.bs-mark.mark-sss { color: #ffc24d; }
+.bs-mark.mark-ace,
+.bs-mark.mark-max { color: #ff6b6b; }
+.bs-empty {
+  font-size: 11px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, .45);
+}
+.bs-set {
+  margin-top: 1px;
+  font-size: 8.5px;
+  line-height: 1.25;
+  color: rgba(255, 255, 255, .6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}

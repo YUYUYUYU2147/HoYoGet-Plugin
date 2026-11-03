@@ -1,0 +1,590 @@
+/* ─────────────────────────────────────────────────────────────
+ * Apple 风格预览层（叠在 detail.css 之后加载，只覆盖观感不改结构）
+ *
+ * 走的是 macOS / Apple TV 深色「玻璃」路线：
+ * 保留立绘与氛围背景，卡片改为半透明深灰 + 模糊 + 1px 高光边，
+ * 文字用系统灰阶，彩色只给数据、评级与状态。
+ * ───────────────────────────────────────────────────────────── */
+
+:root {
+  --ap-text: #f5f5f7;
+  --ap-sub: #a1a1a6;
+  --ap-mute: #98989d;
+  --ap-line: rgba(255, 255, 255, .09);
+  --ap-glass: rgba(28, 28, 30, .52);
+  --ap-glass-hi: rgba(255, 255, 255, .12);
+  --ap-blue: #0a84ff;
+  --ap-orange: #ff9f0a;
+  --ap-yellow: #ffd60a;
+  --ap-green: #30d158;
+  --ap-red: #ff453a;
+  --ap-purple: #bf5af2;
+  --ap-shadow: 0 1px 1px rgba(0, 0, 0, .2), 0 10px 30px rgba(0, 0, 0, .35);
+}
+
+body {
+  width: 1160px;
+  background: #000;
+  color: var(--ap-text);
+  font-family: "SF Pro Text", -apple-system, "Helvetica Neue", "Noto Sans SC", "PingFang SC", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.card { padding: 20px 20px 14px; }
+/* 立绘背景保留并稍微提亮，别被玻璃卡压没 */
+.bg-layer.bg-char { opacity: .86; }
+.bg-layer.bg-random { opacity: .5; }
+
+/* ───── 立绘卡 ───── */
+.hero {
+  border: none;
+  border-radius: 28px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .08), 0 24px 60px rgba(0, 0, 0, .55);
+}
+.hero-fade {
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, .32) 0%, rgba(0, 0, 0, .02) 46%, transparent 62%),
+    linear-gradient(180deg, rgba(0, 0, 0, .38) 0%, transparent 28%),
+    linear-gradient(0deg, rgba(0, 0, 0, .55) 0%, transparent 36%);
+}
+
+.cname {
+  font-size: 38px;
+  font-weight: 700;
+  letter-spacing: -.6px;
+  color: #fff;
+  text-shadow: 0 1px 20px rgba(0, 0, 0, .4);
+}
+.cmeta .lv { color: rgba(255, 255, 255, .72); font-weight: 500; letter-spacing: .2px; }
+.cmeta .cons {
+  color: #fff;
+  background: rgba(255, 255, 255, .16);
+  border-color: rgba(255, 255, 255, .22);
+  backdrop-filter: blur(12px);
+  font-weight: 600;
+}
+.uid { color: rgba(255, 255, 255, .6); font-weight: 500; letter-spacing: .3px; }
+
+/* 命座：玻璃圆片 */
+.cons-item {
+  border: 1px solid rgba(255, 255, 255, .38);
+  background: rgba(255, 255, 255, .12);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .3);
+}
+/* 点亮命座：元素色描边 + 外发光 + 元素色底（变量来自 detail.css 的 body.elem-*） */
+.cons-item.on {
+  border-color: var(--elem-line, rgba(255, 255, 255, .55));
+  background: radial-gradient(circle at 50% 38%, var(--elem-fill, rgba(255, 255, 255, .22)), var(--elem-bg, rgba(28, 28, 30, .55)) 82%);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .3), 0 0 12px var(--elem-glow, rgba(255, 255, 255, .2));
+}
+.cons-item.off {
+  filter: grayscale(1);
+  opacity: .34;
+  border-color: rgba(255, 255, 255, .2);
+  box-shadow: none;
+}
+
+/* 属性面板：深色磨砂浮层 */
+.hero .attrs {
+  /* 自适应高度：属性再多也不超出方框 */
+  position: relative;
+  right: auto;
+  top: auto;
+  bottom: auto;
+  width: 252px;
+  margin: 10px 0 0 auto;
+  padding: 13px 12px;
+  gap: 3px;
+  border-radius: 20px;
+  background: rgba(28, 28, 30, .46);
+  backdrop-filter: blur(30px) saturate(160%);
+  -webkit-backdrop-filter: blur(30px) saturate(160%);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .1) inset, 0 10px 30px rgba(0, 0, 0, .35);
+}
+.attr { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px; background: transparent; border-radius: 10px; padding: 7px 8px; }
+.attr:nth-child(odd) { background: transparent; }
+.attr + .attr { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07); }
+.a-label { min-width: 0; color: var(--ap-mute); font-weight: 500; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.a-right { max-width: 64%; }
+.a-value {
+  color: var(--ap-text);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -.3px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.a-sub { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.player-chip {
+  background: rgba(255, 255, 255, .08);
+  border-color: rgba(255, 255, 255, .14);
+  box-shadow: none;
+  backdrop-filter: blur(14px);
+}
+.pc-name { color: var(--ap-text); font-weight: 600; }
+
+.a-weight { color: var(--ap-mute); background: rgba(255, 255, 255, .1); font-weight: 600; }
+.a-weight.hi { color: var(--ap-orange); background: rgba(255, 159, 10, .16); }
+.a-sub i { color: var(--ap-mute); }
+.a-sub em { color: var(--ap-green); }
+.a-sub.zero i { color: rgba(255, 255, 255, .3); }
+.aicon { filter: none; opacity: .95; }
+
+/* ───── 通用玻璃卡 ───── */
+.weapon, .art, .radar-wrap, .overall,
+.akasha .ak-rank, .akasha .ak-detail, .akasha .ak-board {
+  background: var(--ap-glass);
+  border: 1px solid var(--ap-line);
+  border-radius: 16px;
+  box-shadow: var(--ap-shadow), inset 0 1px 0 rgba(255, 255, 255, .06);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+}
+.talent {
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+/* ───── 武器 ───── */
+.wq-name { color: var(--ap-text); font-weight: 600; font-size: 14px; letter-spacing: -.2px; }
+.wq-meta { color: var(--ap-mute); font-weight: 500; }
+.wq-refine { color: var(--ap-blue); }
+.wq-prop { color: var(--ap-sub); }
+.wq-prop-value { color: var(--ap-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.wq-props, .wq-passive { border-color: rgba(255, 255, 255, .08); }
+.wq-passive-name { color: var(--ap-text); font-weight: 600; }
+.wq-passive-desc { color: var(--ap-sub); line-height: 1.55; }
+
+/* ───── 圣遗物 ───── */
+.art-top { color: var(--ap-mute); font-weight: 500; }
+.art-score { color: var(--ap-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.art-name { color: var(--ap-text); font-weight: 600; }
+.art-main { margin-top: 6px; }
+.main-prop { color: var(--ap-text); font-weight: 600; }
+.mp-value { color: var(--ap-blue); }
+.art-subs { border-top: 1px solid rgba(255, 255, 255, .08); }
+.art-set { color: var(--ap-mute); font-weight: 500; }
+
+.sub { border-radius: 8px; }
+.sub.sub-on {
+  background: rgba(10, 132, 255, .16);
+  box-shadow: inset 2px 0 0 var(--ap-blue);
+}
+.sub.sub-on .s-label { color: var(--ap-text); font-weight: 600; }
+.sub.sub-on .s-value { color: #fff; }
+.sub:not(.sub-on) { opacity: .42; }
+.sub:not(.sub-on) .s-label { color: var(--ap-sub); }
+.sub:not(.sub-on) .s-value { color: var(--ap-sub); }
+.sub-bar { display: none; }
+.sub-roll {
+  background: rgba(255, 255, 255, .1);
+  color: var(--ap-mute);
+  border-radius: 6px;
+  font-weight: 600;
+}
+.sub.sub-on .sub-roll { background: var(--ap-blue); color: #fff; box-shadow: none; }
+.s-label { color: var(--ap-sub); }
+.s-value { color: var(--ap-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.picon { filter: none; opacity: .95; }
+
+/* 评级：系统色文字，卡片不描彩边 */
+.art.MAX, .art.ACE, .art.SSS, .art.SS, .art.S, .art.A,
+.art.ace, .art.sss, .art.mark-ace, .art.mark-sss,
+.art.ss, .art.mark-ss, .art.s, .art.mark-s { border-color: var(--ap-line); }
+.art.MAX .art-score, .art.ACE .art-score { color: var(--ap-red); }
+.art.SSS .art-score { color: var(--ap-orange); }
+.art.SS .art-score { color: var(--ap-green); }
+.art.S .art-score { color: var(--ap-purple); }
+.art.A .art-score { color: var(--ap-blue); }
+
+.badge-mark.t7 .bm-text, .badge-mark.t8 .bm-text { color: var(--ap-red); }
+.badge-mark.t5 .bm-text, .badge-mark.t6 .bm-text { color: var(--ap-orange); }
+.badge-mark.t3 .bm-text, .badge-mark.t4 .bm-text { color: var(--ap-purple); }
+.badge-mark.t0 .bm-text, .badge-mark.t1 .bm-text, .badge-mark.t2 .bm-text { color: var(--ap-mute); }
+
+/* ───── 雷达 / 天赋 ───── */
+.rg { stroke: rgba(255, 255, 255, .13); }
+.rs { stroke: rgba(255, 255, 255, .1); }
+.rv { fill: rgba(10, 132, 255, .24); stroke: var(--ap-blue); stroke-width: 1.8; }
+.rl { fill: var(--ap-sub); font-weight: 500; }
+.t-name { color: #e5e5ea; font-weight: 500; }
+.t-lv { color: var(--ap-blue); font-weight: 700; }
+
+/* ───── 总评 ───── */
+.ov-head { color: var(--ap-mute); letter-spacing: 1.4px; }
+.ov-score {
+  color: var(--ap-text);
+  font-weight: 700;
+  letter-spacing: -1.6px;
+  font-variant-numeric: tabular-nums;
+}
+.ov-unit { color: var(--ap-mute); }
+.ov-valid { color: var(--ap-sub); }
+.ov-valid b { color: #fff; }
+.ov-sep { color: rgba(255, 255, 255, .2); }
+.ov-eff-label { color: var(--ap-mute); }
+.ov-eff-tag { color: var(--ap-mute); }
+.ov-stat { background: rgba(255, 255, 255, .07); border-color: transparent; }
+.ov-stat .os-r { color: var(--ap-blue); }
+.ov-stat .os-k { color: #c7c7cc; }
+.ov-stat .os-v { color: var(--ap-yellow); }
+
+/* ───── Akasha ───── */
+.ak-title { color: var(--ap-mute); letter-spacing: 1.4px; }
+.ak-no { color: var(--ap-text); font-weight: 700; letter-spacing: -1px; }
+.ak-of { color: var(--ap-mute); }
+.ak-beat { color: var(--ap-green); }
+.ak-dmg-num { color: var(--ap-blue); }
+.ak-plan, .ak-none { color: var(--ap-sub); }
+.ak-tname { color: #e5e5ea; font-weight: 500; }
+.ak-tcons { color: var(--ap-mute); }
+.ak-tava { border-color: rgba(255, 255, 255, .2); background: rgba(255, 255, 255, .06); }
+
+.ak-dhead { border-bottom: 1px solid rgba(255, 255, 255, .1); }
+.ak-dico { background: var(--ap-blue); color: #fff; box-shadow: none; border-radius: 6px; }
+.ak-dtitle { color: var(--ap-text); font-weight: 600; letter-spacing: 0; }
+.ak-dbadge { background: rgba(255, 255, 255, .08); color: var(--ap-mute); }
+.ak-dhint { color: var(--ap-mute); }
+.ak-dcols { color: var(--ap-mute); border-bottom: 1px solid rgba(255, 255, 255, .08); }
+.ak-drow:nth-child(even) { background: rgba(255, 255, 255, .04); }
+.ak-dtag { background: rgba(10, 132, 255, .2); color: #6cb6ff; font-weight: 600; }
+.ak-dname { color: #d1d1d6; }
+.ak-dq { color: var(--ap-mute); }
+.ak-dval { color: var(--ap-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.ak-dfoot { color: var(--ap-mute); border-top: 1px solid rgba(255, 255, 255, .08); }
+
+/* 喵喵伤害计算表 */
+.md-cols { color: var(--ap-mute); border-bottom: 1px solid rgba(255, 255, 255, .08); }
+.md-row:nth-child(even) { background: rgba(255, 255, 255, .04); }
+.md-name { color: #d1d1d6; }
+.md-dmg { color: var(--ap-text); font-weight: 600; }
+.md-avg { color: var(--ap-sub); font-weight: 600; }
+
+.flag-globe { color: var(--ap-mute); }
+
+/* shotium 无 JS：detail.css 里这几层是 flex，会让整块塌成 0 高 */
+.akasha { gap: 8px; }
+.akasha,
+.akasha .ak-main,
+.akasha .ak-team-list { display: block; }
+.akasha .ak-main { line-height: 1; }
+.akasha .ak-no,
+.akasha .ak-of { display: inline-block; vertical-align: baseline; }
+.akasha .ak-of { margin-left: 7px; }
+.akasha .ak-trow {
+  display: inline-block;
+  vertical-align: top;
+  width: 48%;
+  line-height: 20px;
+  margin: 3px 1% 0 0;
+  box-sizing: border-box;
+}
+.akasha .ak-trow + .ak-trow { margin-top: 3px; }
+.akasha .ak-tname,
+.akasha .ak-tcons { margin-left: 6px; }
+
+/* ───── Akasha：Apple 排名版式 ─────
+   大号名次 + 超越百分比进度条 + 奖牌色排行榜 */
+.akasha .ak-rank {
+  padding: 12px 14px 12px;
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgba(10, 132, 255, .22) 0%, transparent 62%),
+    var(--ap-glass);
+}
+.akasha .ak-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: var(--ap-mute);
+  text-transform: uppercase;
+}
+.akasha .ak-main {
+  margin-top: 6px;
+  align-items: flex-end;
+  gap: 7px;
+}
+.akasha .ak-no {
+  font-family: "SF Pro Display", -apple-system, "Helvetica Neue", "Noto Sans SC", sans-serif;
+  font-size: 34px;
+  line-height: .95;
+  font-weight: 700;
+  letter-spacing: -1.6px;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 22px rgba(10, 132, 255, .45);
+}
+.akasha .ak-of {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ap-sub);
+  letter-spacing: 0;
+  padding-bottom: 5px;
+}
+.akasha .ak-beat {
+  margin-top: 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ap-green);
+  letter-spacing: .2px;
+}
+/* 超越百分比：进度条用渐变表现，宽度由 data-beat 驱动，缺省 100% */
+.akasha .ak-beat::before {
+  content: "";
+  display: block;
+  height: 3px;
+  margin-bottom: 5px;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, var(--ap-green), rgba(48, 209, 88, .25)) no-repeat,
+    rgba(255, 255, 255, .1);
+  background-size: min(100%, var(--ak-beat, 100%)) 100%, 100% 100%;
+}
+.akasha .ak-dmg-num {
+  margin-top: 5px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: -.2px;
+  font-variant-numeric: tabular-nums;
+}
+.akasha .ak-plan {
+  margin-top: 4px;
+  display: inline-block;
+  max-width: 100%;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--ap-sub);
+  background: rgba(255, 255, 255, .07);
+  border: 1px solid rgba(255, 255, 255, .08);
+}
+.akasha .ak-none {
+  margin-top: 10px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ap-mute);
+}
+
+/* 队伍配队：胶囊成员卡 */
+.akasha .ak-team { border-top: 1px solid var(--ap-line); margin-top: 9px; padding-top: 8px; }
+.akasha .ak-team .ak-title { margin-bottom: 5px; }
+.akasha .ak-team-list { gap: 4px; }
+.akasha .ak-trow {
+  padding: 1px 7px 1px 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .07);
+}
+.akasha .ak-tava {
+  border-radius: 999px;
+  border-color: rgba(255, 255, 255, .18);
+}
+.akasha .ak-tname { font-size: 12px; font-weight: 500; color: var(--ap-text); }
+.akasha .ak-tcons {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ap-yellow);
+  background: rgba(255, 214, 10, .12);
+  border-radius: 999px;
+  padding: 1px 6px;
+}
+
+/* 排行榜：前三名奖牌色，行间用细分隔线 */
+.akasha .ak-board { padding: 11px 13px; }
+.akasha .ak-board .ak-title { margin-bottom: 6px; }
+.akasha .ak-row {
+  padding: 4px 0;
+  font-size: 11.5px;
+  line-height: 16px;
+  border-top: 1px solid rgba(255, 255, 255, .055);
+  white-space: nowrap;
+}
+/* 全服前 10：用固定列宽排一行，名次 / 国旗 / 昵称 / 命座 / 伤害 */
+.akasha .ak-rk,
+.akasha .ak-flag,
+.akasha .ak-nick,
+.akasha .ak-wq,
+.akasha .ak-rdmg {
+  display: inline-block;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.akasha .ak-rk {
+  width: 26px;
+  font-family: "SF Pro Display", -apple-system, sans-serif;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ap-mute);
+  font-variant-numeric: tabular-nums;
+}
+.akasha .ak-flag {
+  width: 18px;
+  margin-left: 2px;
+  text-align: center;
+}
+.akasha .ak-nick {
+  width: 118px;
+  margin-left: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #e5e5ea;
+  font-weight: 400;
+  letter-spacing: .1px;
+}
+.akasha .ak-wq {
+  width: 42px;
+  margin-left: 4px;
+  font-size: 11px;
+  color: var(--ap-mute);
+  font-variant-numeric: tabular-nums;
+}
+.akasha .ak-rdmg {
+  width: 68px;
+  margin-left: 4px;
+  text-align: right;
+  font-family: "SF Pro Display", -apple-system, sans-serif;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ap-text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.2px;
+}
+/* 前三名：金 / 银 / 铜 */
+.akasha .ak-row:nth-child(2) .ak-rk { color: #ffd60a; }
+.akasha .ak-row:nth-child(3) .ak-rk { color: #d1d1d6; }
+.akasha .ak-row:nth-child(4) .ak-rk { color: #e08a4b; }
+.akasha .ak-row:nth-child(2) .ak-nick,
+.akasha .ak-row:nth-child(3) .ak-nick,
+.akasha .ak-row:nth-child(4) .ak-nick { color: #fff; font-weight: 500; }
+.akasha .ak-row:nth-child(2) { border-top: 0; }
+.akasha .flag-img { border-radius: 3px; box-shadow: 0 0 0 .5px rgba(255, 255, 255, .25); }
+
+/* 伤害计算表：Apple 列表风 */
+.akasha .ak-detail { padding: 11px 13px; }
+.akasha .ak-dcols,
+.akasha .ak-dfoot { border-color: var(--ap-line); }
+.akasha .ak-drow { border-radius: 8px; padding: 3px 0; }
+.akasha .ak-drow:nth-child(even) { background: rgba(255, 255, 255, .035); }
+.akasha .ak-dval {
+  font-family: "SF Pro Display", -apple-system, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.2px;
+}
+.akasha .ak-dtag { border-radius: 999px; }
+
+/* 星铁工坊模块（遗器排名 / 队伍配队） */
+.sw-note, .sw-cons, .sw-foot { color: var(--ap-mute); }
+.sw-pt { color: var(--ap-text); font-weight: 600; }
+.sw-tname, .sw-mname { color: #d1d1d6; }
+.sw-stars { color: var(--ap-yellow); }
+.sw-m.on .sw-ava { border-color: var(--ap-yellow); box-shadow: none; }
+.sw-m.on .sw-mname { color: var(--ap-yellow); font-weight: 600; }
+.sw-team + .sw-team { border-top-color: var(--ap-line); }
+
+/* ───── 页脚 ───── */
+.set-pill {
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .12);
+  color: var(--ap-text);
+  font-weight: 500;
+  box-shadow: none;
+}
+.src { color: var(--ap-red); font-weight: 500; }
+
+/* ───── FortOfFans 全球排名（高级卡片） ───── */
+.fortoffans { padding-bottom: 12px; }
+.ff-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.ff-kicker {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 2.4px;
+  background: linear-gradient(90deg, #6fe3b0, #9aa4ff 55%, #ffcf5c);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.ff-bracket { margin-top: 3px; font-size: 10px; color: #7899b3; }
+.ff-src { font-size: 9px; color: #5d7186; letter-spacing: 1.2px; text-transform: uppercase; }
+
+.ff-hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(111, 227, 176, .22);
+  background:
+    radial-gradient(120px 80px at 0% 0%, rgba(111, 227, 176, .14), transparent 70%),
+    radial-gradient(160px 100px at 100% 100%, rgba(154, 164, 255, .12), transparent 70%),
+    rgba(255, 255, 255, .025);
+}
+.ff-ring {
+  --p: 0%;
+  position: relative;
+  flex: none;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(#6fe3b0 var(--p), rgba(255, 255, 255, .07) 0);
+  filter: drop-shadow(0 0 8px rgba(111, 227, 176, .22));
+}
+.ff-ring::before { content: ''; position: absolute; inset: 5px; border-radius: 50%; background: #12161f; }
+.ff-ring b {
+  position: relative;
+  z-index: 1;
+  font-size: 14px;
+  font-weight: 900;
+  color: #dff7ec;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.3px;
+}
+.ff-hero-main { min-width: 0; }
+.ff-hero-label { font-size: 10px; letter-spacing: 1px; color: #8fb3a6; }
+.ff-hero-value {
+  margin-top: 1px;
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.05;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+.ff-hero-sub { margin-top: 2px; font-size: 10px; color: #7899b3; }
+
+.ff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+.ff-metric {
+  padding: 8px 9px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, .07);
+  background: rgba(255, 255, 255, .03);
+}
+.ff-metric:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.ff-m-top { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+.ff-m-top span { font-size: 10px; color: #8fa3bb; }
+.ff-m-top b { font-size: 14px; font-weight: 900; color: #c8cfff; font-variant-numeric: tabular-nums; }
+.ff-m-val { margin-top: 2px; font-size: 15px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
+.ff-m-bar { margin-top: 5px; height: 3px; border-radius: 999px; background: rgba(255, 255, 255, .08); overflow: hidden; }
+.ff-m-bar i {
+  display: block;
+  height: 100%;
+  width: var(--p, 0%);
+  border-radius: inherit;
+  background: linear-gradient(90deg, #6fe3b0, #9aa4ff);
+}
+.ff-m-sub { margin-top: 4px; font-size: 9px; color: #6f8298; }
+
+.ff-foot { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; }
+.ff-foot span {
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 9px;
+  color: #6f8298;
+  background: rgba(255, 255, 255, .035);
+  border: 1px solid rgba(255, 255, 255, .05);
+}

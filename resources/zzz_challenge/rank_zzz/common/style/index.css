@@ -1,0 +1,184 @@
+@font-face {
+  font-family: "tttgbnumber";
+  src: url("../../../../common/font/tttgbnumber.ttf");
+}
+@font-face {
+  font-family: "HYWenHei-55W";
+  src: url("../../../font/HYWenHei-55W.ttf");
+}
+.zzz-font {
+  font-family: "zzz", "tttgbnumber", "HYWenHei-55W", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+}
+
+.no-zzz-font {
+  font-family: "tttgbnumber", "HYWenHei-55W", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+}
+.no-zzz-font strong,
+.no-zzz-font b {
+  font-family: "zzz", "tttgbnumber", "HYWenHei-55W", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+}
+
+.rank-icon {
+  aspect-ratio: 1;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+.rank-icon.s, .rank-icon.S {
+  background-image: url("../images/RANK_S.png");
+}
+.rank-icon.a, .rank-icon.A {
+  background-image: url("../images/RANK_A.png");
+}
+.rank-icon.b, .rank-icon.B {
+  background-image: url("../images/RANK_B.png");
+}
+
+.rating-icon {
+  aspect-ratio: 1;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+.rating-icon.sp, .rating-icon.SP {
+  background-image: url("../images/rating/SP.png");
+}
+.rating-icon.s, .rating-icon.S {
+  background-image: url("../images/rating/S.png");
+}
+.rating-icon.s-corner, .rating-icon.S-corner {
+  background-image: url("../images/rating/S-corner.png");
+}
+.rating-icon.a, .rating-icon.A {
+  background-image: url("../images/rating/A.png");
+}
+.rating-icon.a-corner, .rating-icon.A-corner {
+  background-image: url("../images/rating/A-corner.png");
+}
+.rating-icon.b, .rating-icon.B {
+  background-image: url("../images/rating/B.png");
+}
+.rating-icon.b-corner, .rating-icon.B-corner {
+  background-image: url("../images/rating/B-corner.png");
+}
+
+.team-icon {
+  aspect-ratio: 1;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+
+.max-score-icon {
+  aspect-ratio: 1;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+.max-score-icon.score50000 {
+  background-image: url("../images/max_score/50000.png");
+}
+.max-score-icon.score65000 {
+  background-image: url("../images/max_score/65000.png");
+}
+.max-score-icon.score149500 {
+  background-image: url("../images/max_score/149500.png");
+}
+.max-score-icon.score150000 {
+  background-image: url("../images/max_score/150000.png");
+}
+.max-score-icon.score182000 {
+  background-image: url("../images/max_score/182000.png");
+}
+.max-score-icon.score195000 {
+  background-image: url("../images/max_score/195000.png");
+}
+.max-score-icon.score481000 {
+  background-image: url("../images/max_score/481000.png");
+}
+.max-score-icon.score663000 {
+  background-image: url("../images/max_score/663000.png");
+}
+
+.rarity-icon {
+  aspect-ratio: 1;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+
+.element-icon {
+  aspect-ratio: 1;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.prop-icon {
+  aspect-ratio: 1;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.pro-icon {
+  aspect-ratio: 1;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.skill-icon {
+  aspect-ratio: 1;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.special-title {
+  width: 100%;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  display: flex;
+  align-items: stretch;
+  padding: 0 2.4em;
+  position: relative;
+  margin: 0.5em 0;
+}
+.special-title .parallelograms {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  position: inherit;
+  padding-bottom: 0.4em;
+  z-index: 1;
+}
+.special-title .parallelograms span {
+  width: 1.3em;
+  height: 80%;
+  background-color: rgb(246, 202, 69);
+  margin-right: -0.2em;
+  -webkit-clip-path: polygon(0.7em 0%, 100% 0%, calc(100% - 0.7em) 100%, 0% 100%);
+  clip-path: polygon(0.7em 0%, 100% 0%, calc(100% - 0.7em) 100%, 0% 100%);
+}
+.special-title .bg-content {
+  position: absolute;
+  bottom: -0.1em;
+  left: 0;
+  transform: skewX(-8deg);
+  color: rgba(255, 255, 255, 0.1);
+  font-size: 2.7em;
+  width: 100%;
+  text-align: center;
+}
+.special-title .content {
+  flex-grow: 1;
+  flex-shrink: 1;
+  font-size: 1.5em;
+  text-align: center;
+  position: inherit;
+  z-index: 1;
+}
+
+/*# sourceMappingURL=index.css.map */

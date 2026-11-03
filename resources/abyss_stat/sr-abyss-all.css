@@ -1,0 +1,996 @@
+@import url("../font/fonts.css");
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+body {
+  font-size: 14px;
+  color: #fff;
+  width: max-content;
+  transform: scale(2);
+  transform-origin: 0 0;
+}
+
+.container {
+  font-family: "Number", "SR";
+  padding: 16px;
+  background:
+    linear-gradient(rgba(8, 10, 18, 0.78), rgba(8, 10, 18, 0.9)),
+    url("genshin_img/abyss/chaos_bg.png");
+  background-size: cover;
+}
+
+.summary-header {
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.46);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.title {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.columns {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.column {
+  width: 430px;
+  flex: 0 0 430px;
+  min-width: 0;          /* flex 子项默认 min-width:auto，会被内容撑宽 */
+  max-width: 430px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.column-title {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: bold;
+  color: #ffc870;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.48);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.overview-card,
+.floor-card {
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.overview-card {
+  background:
+    linear-gradient(rgba(0, 0, 0, 0.36), rgba(0, 0, 0, 0.48)),
+    url("genshin_img/story/top_bg.png");
+  background-size: cover;
+}
+
+.overview-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.star-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.star-mark {
+  color: #ffc870;
+  font-size: 30px;
+  line-height: 1;
+  text-shadow: 0 0 8px rgba(255, 200, 112, 0.65);
+}
+
+.star-count {
+  font-size: 22px;
+  font-weight: bold;
+}
+
+.summary-star4 {
+  width: 30px;
+  height: 30px;
+}
+
+.mini-star4 {
+  width: 16px;
+  height: 16px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.overview-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  text-align: right;
+}
+
+.overview-stats span {
+  color: #ccc;
+}
+
+.overview-stats b,
+.floor-meta b {
+  color: #ffc870;
+}
+
+.boss-brief {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.boss-item {
+  min-width: 0;
+  padding: 6px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.34);
+  text-align: center;
+}
+
+.boss-item span {
+  display: block;
+  font-size: 11px;
+  color: #fff;
+}
+
+.boss-item img {
+  width: 42px;
+  height: 42px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin: 4px 0;
+}
+
+.boss-item p {
+  font-size: 10px;
+  color: #ccc;
+  line-height: 1.2;
+}
+
+.period-info {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  text-align: center;
+  color: #ffc870;
+  font-size: 11px;
+}
+
+/* 楼层卡单列排（每类只渲染最后 2 层，高度已经够低）。 */
+.floor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.floor-list > * { min-width: 0; }
+
+.floor-card {
+  background:
+    linear-gradient(rgba(0, 0, 0, 0.24), rgba(0, 0, 0, 0.46)),
+    url("genshin_img/abyss/floor.png");
+  background-size: cover;
+}
+
+.floor-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  margin: -12px -12px 8px;
+  border-radius: 10px 10px 0 0;
+  background: #724d80;
+}
+
+.floor-name {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.floor-stars {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: #ffc870;
+  font-size: 14px;
+}
+
+.nostar {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.floor-star-sep {
+  color: rgba(255, 255, 255, 0.45);
+  margin: 0 3px;
+}
+
+.star4 {
+  width: 17px;
+  height: 17px;
+}
+
+.nostar-img {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
+.floor-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 16px;
+  margin-bottom: 8px;
+  color: #ccc;
+  font-size: 11px;
+}
+
+.round-info {
+  min-width: 0;
+}
+
+.total-info {
+  margin-left: auto;
+  text-align: right;
+}
+
+.node-card {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.node3 {
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(82, 56, 102, 0.3);
+}
+
+.node3 .node-head {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background-image: url("genshin_img/story/memory_node3.png");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+
+.node-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 11px;
+}
+
+.node-head span {
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.node-head em {
+  font-style: normal;
+  color: #ccc;
+  text-align: right;
+}
+
+.node-head b {
+  color: #ffc870;
+  font-weight: bold;
+}
+
+.node3-crown {
+  width: 17px;
+  height: auto;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+.buff {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.34);
+}
+
+.buff img {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.buff span {
+  flex: 1;
+  font-size: 9px;
+  line-height: 1.35;
+  color: #ddd;
+}
+
+.avatars-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.avatar-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: 0 6px 0 0;
+}
+
+.avatar-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 82%;
+  object-fit: cover;
+}
+
+.avatar-level {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 18%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+  font-size: 10px;
+}
+
+.avatar-rank {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0 6px 0 0;
+  background: rgba(0, 0, 0, 0.62);
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.element-icon {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  z-index: 2;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  padding: 2px;
+  background: rgba(0, 0, 0, 0.62);
+}
+
+.element-icon img {
+  width: 12px;
+  height: 12px;
+  object-fit: contain;
+}
+
+.bg4 {
+  background-image: url("genshin_img/other/4.png");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+
+.bg5 {
+  background-image: url("genshin_img/other/5.png");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+
+.logo {
+  font-size: 10px;
+  text-align: center;
+  color: #7994a7;
+  padding: 12px 0 0;
+  margin-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 顶部：本插件自己的标题栏（套用 genshin abyss_all 的列布局，只在最上面加一条） */
+.hoyo-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding: 16px 22px;
+  border-radius: 14px;
+  background: linear-gradient(120deg, rgba(34, 32, 56, .92), rgba(18, 20, 32, .9));
+  border: 1px solid rgba(150, 160, 255, .28);
+}
+.hoyo-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+  background: rgba(255, 255, 255, .08);
+  border: 2px solid rgba(150, 160, 255, .35);
+}
+.hoyo-head-copy { flex: 1; min-width: 0; }
+.hoyo-title {
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  color: #c8cfff;
+}
+.hoyo-sub {
+  margin-top: 4px;
+  font-size: 13px;
+  color: rgba(231, 235, 243, .55);
+}
+.hoyo-uid {
+  flex: none;
+  font-size: 14px;
+  color: rgba(231, 235, 243, .6);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 异相仲裁：小怪星数 */
+.mob-star {
+  font-size: 10px;
+  color: #7fd4c0;
+  margin-left: 4px;
+}
+
+/* 本期增益 / 战技（每个玩法显示一次） */
+.col-buffs {
+  margin-bottom: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(120, 140, 255, .10);
+  border: 1px solid rgba(150, 160, 255, .18);
+}
+.col-buffs-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #c8cfff;
+  margin-bottom: 4px;
+}
+.col-buff {
+  font-size: 10px;
+  line-height: 1.55;
+  color: rgba(231, 235, 243, .72);
+  margin-top: 2px;
+}
+.col-buff b { color: #ffd66b; font-weight: 700; }
+
+/* ---- 布局修正：等宽列 / 图标尺寸 / 文本换行（本次新增） ---- */
+#container .columns { display: flex; align-items: flex-start; gap: 12px; }
+#container .column { flex: 0 0 430px; width: 430px; min-width: 0; box-sizing: border-box; }
+#container .col-buff, #container .col-buff span { word-break: break-word; white-space: normal; line-height: 1.5; }
+#container .buff { align-items: flex-start; }
+#container .buff span { word-break: break-word; }
+#container .buff img { flex: 0 0 auto; width: 26px; height: 26px; object-fit: contain; }
+#container .boss-item img { width: 64px; height: 64px; object-fit: contain; }
+#container .boss-item p { font-size: 13px; line-height: 1.25; text-align: center; }
+/* ---- 节点卡头像与图标尺寸：无 JS 环境必须写死（本次新增） ---- */
+#container .avatars-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+#container .avatar-wrapper {
+  position: relative; width: 62px; flex: 0 0 62px;
+  height: 78px; aspect-ratio: auto; overflow: hidden;
+  border-radius: 0 6px 0 0; border: 2px solid transparent;
+}
+#container .avatar-img {
+  position: static; display: block; width: 62px; height: 62px;
+  object-fit: cover; object-position: top center;
+}
+#container .avatar-level {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 16px; line-height: 16px;
+  font-size: 10px; text-align: center; background: rgba(0, 0, 0, .72);
+}
+#container .avatar-rank {
+  position: absolute; top: 0; right: 0; z-index: 2; width: 16px; height: 16px;
+  line-height: 16px; font-size: 11px; text-align: center; font-weight: 700;
+  color: #ffd66b; background: rgba(0, 0, 0, .62);
+}
+#container .element-icon {
+  position: absolute; top: 2px; left: 2px; z-index: 2; width: 16px; height: 16px;
+  border-radius: 50%; padding: 2px; background: rgba(0, 0, 0, .62);
+}
+#container .element-icon img { display: block; width: 12px; height: 12px; object-fit: contain; }
+#container .buff { display: flex; align-items: flex-start; gap: 6px; }
+#container .buff img { flex: 0 0 auto; width: 22px; height: 22px; object-fit: contain; }
+#container .buff span { word-break: break-word; line-height: 1.5; }
+#container .col-buff { font-size: 10px; line-height: 1.55; word-break: break-word; }
+#container .node3-crown { width: 14px; height: 14px; vertical-align: middle; }
+#container .star4 { width: 14px; height: 14px; vertical-align: middle; }
+#container .floor-list { display: flex; flex-direction: column; gap: 10px; }
+/* ---- 星级图标统一为 PNG（与单个挑战页一致，本次新增） ---- */
+#container .floor-stars { display: flex; align-items: center; gap: 3px; }
+#container .floor-star { width: 15px; height: 15px; object-fit: contain; display: block; }
+#container .floor-star.nostar-img { opacity: .22; filter: grayscale(1); }
+#container .star-icon { width: 17px; height: 17px; object-fit: contain; vertical-align: middle; margin-right: 4px; }
+#container .star4 { width: 15px; height: 15px; object-fit: contain; vertical-align: middle; }
+/* ---- 摘要星图标：与 *虚构 页一致（本次新增） ---- */
+#container .star-summary { display: flex; align-items: center; gap: 6px; }
+#container .star-mark { display: block; width: 20px; height: 20px; object-fit: contain; }
+/* ---- 王棋怪物标签（复用单个王棋页观感，本次新增） ---- */
+#container .peak-boss-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 4px 0 2px; }
+#container .peak-boss-title { font-size: 11px; font-weight: 700; color: #cfe6ff; }
+#container .sr-boss-mech-tag { font-size: 10px; line-height: 14px; padding: 0 5px; border-radius: 4px; color: #ffd66b; background: rgba(255, 214, 107, .12); border: 1px solid rgba(255, 214, 107, .3); }
+#container .peak-boss-mons { display: flex; flex-wrap: wrap; gap: 3px 8px; margin: 2px 0 4px; }
+#container .sr-boss-mon { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; }
+#container .sr-boss-main { display: inline-flex; align-items: center; gap: 4px; }
+#container .sr-boss-ico { display: inline-block; width: 16px; height: 16px; background-size: contain; background-repeat: no-repeat; background-position: center; }
+#container .sr-boss-name { font-size: 11px; color: #e7ebf3; }
+#container .sr-boss-hpv { font-size: 10px; color: #9aa6b8; }
+#container .sr-boss-tags { display: inline-flex; align-items: center; gap: 3px; }
+#container .sr-boss-elem { display: inline-flex; align-items: center; gap: 2px; font-size: 10px; padding: 0 4px; border-radius: 3px; color: #bcd8ff; background: rgba(120, 170, 255, .12); }
+#container .sr-boss-res { display: inline-flex; align-items: center; gap: 2px; font-size: 10px; padding: 0 4px; border-radius: 3px; color: #ffb3b3; background: rgba(255, 120, 120, .12); }
+/* ---- 各列等高：拉伸 + 面板底色（本次新增） ---- */
+#container .columns { display: flex; align-items: stretch; gap: 12px; }
+#container .column {
+  flex: 0 0 430px; width: 430px; min-width: 0; box-sizing: border-box;
+  height: auto; align-self: stretch;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 10px; border-radius: 12px;
+  background: linear-gradient(180deg, rgba(60, 70, 132, .55) 0%, rgba(30, 34, 62, .82) 100%);
+  border: 1px solid rgba(126, 146, 226, .28);
+}
+#container .column .floor-list { flex: 1 1 auto; }
+#container { height: auto !important; min-height: 0 !important; }
+/* ---- 上期赛季面板（本次新增） ---- */
+#container .prev-peak { margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+  background: linear-gradient(180deg, rgba(92, 78, 176, .55) 0%, rgba(40, 34, 78, .78) 100%);
+  border: 1px solid rgba(150, 130, 240, .3); }
+#container .prev-peak-title { font-size: 10px; color: #b9a8ff; }
+#container .prev-peak-name { font-size: 15px; font-weight: 900; color: #f2f7ff; margin: 2px 0 8px; }
+#container .prev-peak-row { display: flex; justify-content: space-between; font-size: 11px; color: #dbe4ff; margin-bottom: 6px; }
+#container .prev-peak-knights { display: flex; gap: 8px; }
+#container .prev-peak-knight { flex: 1; text-align: center; padding: 6px 0; border-radius: 6px; background: rgba(0, 0, 0, .28); }
+#container .prev-peak-knight-name { font-size: 10px; color: #cfd8ee; }
+#container .prev-peak-knight-star { font-size: 10px; color: #ffd66b; margin-top: 2px; }
+/* ---- 快速通关汇总条（与单个挑战页一致，本次新增） ---- */
+#container .fast-summary { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 7px 10px;
+  border-radius: 8px; background: rgba(96, 110, 190, .18); border: 1px dashed rgba(150, 170, 255, .35); }
+#container .fast-summary-tag { font-size: 10px; font-weight: 700; color: #9fe6c8; }
+#container .fast-summary-text { flex: 1; font-size: 11px; color: #dbe4ff; }
+#container .fast-summary-count { font-size: 10px; color: #9aa6b8; }
+/* ---- 快速通关卡片（对齐单个挑战页，本次新增） ---- */
+#container .column > .floor-list { flex: 1 1 auto !important; }
+#container .column { justify-content: flex-start; }
+#container .fast-card {
+  margin-top: 8px;
+  background: linear-gradient(180deg, rgba(146, 96, 186, .58) 0%, rgba(58, 38, 82, .82) 100%);
+  border: 1px solid rgba(196, 150, 240, .42);
+  border-radius: 10px;
+  padding: 10px 12px 12px;
+}
+#container .fast-card .floor-name { font-size: 15px; font-weight: 900; color: #fbf4ff; }
+#container .fast-card .floor-stars { display: flex; align-items: center; gap: 3px; }
+#container .fast-card-sub { margin-top: 4px; font-size: 11px; color: #f0c98a; }
+/* ---- 列内弹性占位：让各列末块底边平行（本次新增） ---- */
+#container .column { display: flex; flex-direction: column; justify-content: flex-start; }
+#container .column > .col-spacer { flex: 1 1 auto; min-height: 0; }
+#container .column > .floor-list { flex: 0 0 auto; }
+#container .column > .fast-card,
+#container .column > .prev-peak { flex: 0 0 auto; margin-top: 10px; }
+/* ---- 列内均匀分布：卡片铺开填满，末块贴底（本次新增） ---- */
+#container .column { display: flex; flex-direction: column; justify-content: flex-start; }
+#container .column > .col-spacer { display: none; }
+#container .column > .floor-list {
+  flex: 1 1 auto;
+  display: flex; flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+}
+#container .column > .fast-card,
+#container .column > .prev-peak { flex: 0 0 auto; margin-top: 10px; }
+/* ---- 列内均匀分布（覆盖，本次新增） ---- */
+#container .column { display: flex; flex-direction: column; justify-content: flex-start; }
+#container .column > .col-spacer { display: none !important; }
+#container .column > .floor-list {
+  flex: 1 1 auto !important;
+  display: flex !important; flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+}
+#container .column > .fast-card,
+#container .column > .prev-peak { flex: 0 0 auto; margin-top: 10px; }
+/* ---- 自然高度：按内容堆叠，靠内容量接近（本次新增） ---- */
+#container .column { display: flex; flex-direction: column; justify-content: flex-start; }
+#container .column > .col-spacer { display: none !important; }
+#container .column > .floor-list {
+  flex: 0 0 auto !important;
+  display: flex !important; flex-direction: column !important;
+  justify-content: flex-start !important;
+  gap: 10px;
+}
+#container .column > .floor-list > .floor-card { flex: 0 0 auto; }
+#container .floor-card { display: block; }
+#container .column > .fast-card,
+#container .column > .prev-peak { flex: 0 0 auto; margin-top: 10px; }
+/* ---- 分区标题：XX通关战绩（本次新增） ---- */
+#container .section-label {
+  display: flex; align-items: center; gap: 8px;
+  margin: 6px 0 2px; font-size: 12px; font-weight: 700;
+  color: #e6edff; letter-spacing: 1px; white-space: nowrap;
+}
+#container .section-label::before,
+#container .section-label::after {
+  content: ""; flex: 1 1 auto; height: 1px;
+  background: linear-gradient(90deg, rgba(140, 160, 230, 0), rgba(140, 160, 230, .55), rgba(140, 160, 230, 0));
+}
+/* ---- 列头定高：四列「通关战绩」严格同线（本次新增） ---- */
+#container .column > .col-head {
+  display: flex; flex-direction: column; gap: 8px;
+  height: 250px; min-height: 250px; overflow: hidden;
+}
+#container .col-head .column-title { flex: 0 0 auto; }
+#container .col-head .overview-card { margin: 0; flex: 0 0 auto; }
+/* 增益文字限 3 行，避免长文本把线顶下去 */
+#container .col-head .col-buffs { flex: 0 0 auto; max-height: 62px; overflow: hidden; }
+#container .col-head .col-buff { margin-top: 1px; }
+/* BOSS 预览压成紧凑条 */
+#container .col-head .boss-brief { flex: 0 0 auto; gap: 6px; margin-top: 6px; }
+#container .col-head .boss-item { padding: 2px; }
+#container .col-head .boss-item img { width: 30px; height: 30px; margin: 2px 0; border-radius: 4px; }
+#container .col-head .boss-item span { font-size: 9px; }
+#container .col-head .boss-item p { font-size: 9px; line-height: 1.15; }
+#container .col-head .period-info { margin-top: auto; }
+/* ---- 方框回顾标题（本次新增） ---- */
+#container .overview-title {
+  text-align: center;
+  font-size: 15px; font-weight: 900; letter-spacing: .5px;
+  color: #f4f8ff; margin-bottom: 8px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .45);
+}
+/* ---- 终版：卡片伸展填满，连续且底边齐平（本次新增） ---- */
+#container .column { display: flex; flex-direction: column; justify-content: flex-start; }
+#container .column > .col-spacer { display: none !important; }
+#container .column > .floor-list {
+  flex: 1 1 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  gap: 10px;
+  min-height: 0;
+}
+#container .column > .floor-list > .floor-card {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+#container .column > .floor-list > .floor-card > .node-card:last-child { margin-bottom: 0; }
+#container .column > .fast-card,
+#container .column > .prev-peak { flex: 0 0 auto; margin-top: 10px; }
+/* ---- 楼层方框对齐 Pyra（本次新增） ---- */
+#container .floor-card {
+  background: linear-gradient(180deg, rgba(102, 74, 158, .58) 0%, rgba(42, 32, 70, .88) 100%);
+  border: 1px solid rgba(152, 124, 222, .38);
+  border-radius: 12px;
+  padding: 10px 12px 12px;
+}
+#container .floor-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: 6px; border-bottom: 1px solid rgba(180, 156, 240, .22);
+}
+#container .floor-name { font-size: 15px; font-weight: 900; color: #f8f4ff; }
+#container .floor-meta {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 11px; color: #cfc7e8; margin: 6px 0 8px;
+}
+#container .node-card {
+  margin-top: 8px; padding: 8px 9px 9px;
+  border-radius: 8px; background: rgba(0, 0, 0, .22);
+  border: 1px solid rgba(150, 130, 210, .18);
+}
+#container .node-head { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #e8e2ff; }
+#container .node-head em { font-style: normal; font-size: 10px; color: #9fb0cc; margin-left: auto; }
+#container .node-head b { font-size: 11px; color: #ffd66b; }
+#container .avatar-level { font-size: 9px; line-height: 13px; color: #c9d2e6; }
+/* ---- 增益块窄条：内缩 + 限 3 行（本次新增） ---- */
+#container .buff {
+  display: flex; align-items: flex-start; gap: 8px;
+  margin: 6px 0 8px; padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, .30);
+  border: 1px solid rgba(150, 130, 210, .16);
+}
+#container .buff img {
+  flex: 0 0 auto; width: 20px; height: 20px; border-radius: 50%;
+  padding: 2px; background: rgba(255, 255, 255, .10); object-fit: contain;
+}
+#container .buff span {
+  flex: 1 1 auto; min-width: 0;
+  font-size: 10px; line-height: 1.6; color: #cfd6e6;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+/* ---- 等高收尾（最高优先级，本次新增） ---- */
+#container .columns {
+  display: grid !important;
+  grid-auto-flow: column !important;
+  grid-auto-columns: 430px !important;
+  gap: 12px !important;
+  align-items: stretch !important;
+}
+#container .column {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  height: 100% !important;
+  min-height: 0 !important;
+}
+#container .column > .col-head { flex: 0 0 auto !important; }
+#container .column > .col-spacer { display: none !important; }
+#container .column > .floor-list {
+  flex: 1 1 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  min-height: 0 !important;
+}
+#container .column > .floor-list > .floor-card {
+  flex: 1 1 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+}
+#container .column > .fast-card,
+#container .column > .prev-peak { flex: 0 0 auto !important; }
+/* ---- 列头对齐收尾：四列结构一致（本次新增） ---- */
+/* 1. 列头取消定高，改由统一结构撑出相同高度 */
+#container .column > .col-head {
+  height: auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+/* 2. 汇总卡里的 BOSS 预览移除（节点卡内已有同样信息） */
+#container .col-head .boss-brief { display: none !important; }
+/* 3. 增益区固定为 3 行高度，行数不同也不影响总高 */
+#container .col-head .col-buffs {
+  min-height: 66px !important;
+  max-height: 66px !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+/* 4. 统计周期统一一行高度 */
+#container .col-head .period-info {
+  margin-top: auto !important;
+  min-height: 15px !important;
+  line-height: 15px !important;
+}
+/* 5. 汇总卡内部两行结构统一 */
+#container .col-head .overview-card { min-height: 74px !important; }
+/* ---- 最终统一：等高 + 连续 + 卡片伸缩（最高优先级） ---- */
+#container .columns {
+  display: grid !important;
+  grid-auto-flow: column !important;
+  grid-auto-columns: 430px !important;
+  gap: 12px !important;
+  align-items: stretch !important;
+}
+#container .column {
+  flex: none !important;
+  width: auto !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  height: 100% !important;
+}
+#container .column > .col-head {
+  flex: 0 0 auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+}
+#container .column > .col-spacer { display: none !important; }
+#container .column > .floor-list {
+  flex: 1 1 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  min-height: 0 !important;
+}
+#container .column > .floor-list > .floor-card {
+  flex: 1 1 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+}
+#container .column > .fast-card,
+#container .column > .prev-peak {
+  flex: 0 0 auto !important;
+  margin-top: 10px !important;
+}
+/* ---- 节点块等高：节点1/2/3 跨列对齐（本次新增） ---- */
+#container .column.story .node-card,
+#container .column.boss .node-card,
+#container .column.abyss .node-card {
+  height: 212px !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+#container .column.story .node-head,
+#container .column.boss .node-head,
+#container .column.abyss .node-head { height: 20px !important; align-items: center !important; }
+
+/* 头像行固定高度 */
+#container .column.story .avatars-grid,
+#container .column.boss .avatars-grid,
+#container .column.abyss .avatars-grid { min-height: 84px !important; align-content: flex-start !important; }
+
+/* 增益框固定高度：统一 3 行，超出裁掉 */
+#container .column.story .buff,
+#container .column.boss .buff,
+#container .column.abyss .buff {
+  min-height: 72px !important;
+  max-height: 72px !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+#container .column.story .buff span,
+#container .column.boss .buff span,
+#container .column.abyss .buff span {
+  -webkit-line-clamp: 3 !important;
+  overflow: hidden !important;
+}
+/* ---- 节点占位槽：保证每层 3 个节点位，楼层卡等高（本次新增） ---- */
+#container .column.story .node-empty,
+#container .column.boss .node-empty,
+#container .column.abyss .node-empty {
+  height: 212px !important;
+  box-sizing: border-box !important;
+  background: rgba(0, 0, 0, .14) !important;
+  border: 1px dashed rgba(150, 130, 210, .22) !important;
+}
+/* ---- 列头定高：四列楼层起点同一水平线（本次新增） ---- */
+#container .column > .col-head {
+  height: 232px !important;
+  min-height: 232px !important;
+  max-height: 232px !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  box-sizing: border-box !important;
+}
+/* 增益块固定在列头内占 3 行，无数据时也保留空间 */
+#container .column > .col-head .col-buffs {
+  min-height: 66px !important;
+  max-height: 66px !important;
+  overflow: hidden !important;
+}
+#container .column > .col-head .period-info { margin-top: auto !important; }
+/* ---- 取消拉伸：卡片自然高度，避免卡片内空白（本次新增） ---- */
+#container .columns {
+  display: grid !important;
+  grid-auto-flow: column !important;
+  grid-auto-columns: 430px !important;
+  gap: 12px !important;
+  align-items: flex-start !important;
+}
+#container .column {
+  height: auto !important;
+  align-self: flex-start !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+}
+#container .column > .floor-list {
+  flex: 0 0 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  min-height: 0 !important;
+}
+#container .column > .floor-list > .floor-card {
+  flex: 0 0 auto !important;
+  display: block !important;
+}
+#container .column > .fast-card,
+#container .column > .prev-peak { flex: 0 0 auto !important; }
+/* ---- 关闭节点占位槽：楼层按实际内容收束（本次新增） ---- */
+#container .node-card.node-empty { display: none !important; }
+/* ---- 增益全展开：不截断、不省略（本次新增） ---- */
+/* 列头：解除定高，长增益自然撑开 */
+#container .column > .col-head {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+#container .column > .col-head .col-buffs {
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+/* 节点增益框：解除定高与行数限制 */
+#container .column.story .buff,
+#container .column.boss .buff,
+#container .column.abyss .buff,
+#container .buff {
+  min-height: 0 !important;
+  max-height: none !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+#container .buff span {
+  display: block !important;
+  -webkit-line-clamp: unset !important;
+  -webkit-box-orient: unset !important;
+  max-height: none !important;
+  overflow: visible !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+}
+/* ---- 列头定高：增益完整显示且「通关战绩」同线（本次新增） ---- */
+#container .column > .col-head {
+  height: 286px !important;
+  min-height: 286px !important;
+  max-height: 286px !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  box-sizing: border-box !important;
+}
+/* 列头里的增益保持完整（不截断），只是列头整体限高 */
+#container .column > .col-head .col-buffs {
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+#container .column > .col-head .period-info { margin-top: auto !important; }
+
+/* 移除「本期增益 / 战技」后，列头不再为该块预留 250px 高度 */
+#container .column > .col-head { height: auto !important; min-height: 0 !important; }
+
+/* 顶部信息区：昵称与头像置于右上 */
+.hoyo-user { flex: none; display: flex; align-items: flex-start; gap: 10px; align-self: flex-start; }
+.hoyo-user-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.hoyo-nick { max-width: 240px; font-size: 15px; font-weight: 700; color: #e8ecff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.mob-star-label { font-size: 12px; color: rgba(231, 235, 243, .7); }

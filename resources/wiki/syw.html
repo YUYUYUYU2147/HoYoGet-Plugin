@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}wiki/yq_syw.css" />
+  </head>
+
+  <body {{sys.scale}}>
+    <div class="container" id="container">
+      <div class="box">
+        <table>
+          <tr>
+            <!-- 名称与图标左右两格、左对齐，和星铁 wiki/yiqi、绝区零 wiki/zzz_syw 一致。
+                 之前这里是 colspan=2 的 .pic_ 居中块，图标小、留白多，三个游戏里只有
+                 原神是那个版式。图标是单数，用 {{icon}} 直接取，不用 each。 -->
+            <td class="name">{{name}}</td>
+            <td class="pic"><img src="{{icon}}" onerror="this.style.visibility='hidden'" /></td>
+          </tr>
+          {{each table t}}
+          <tr>
+            <td class="key">{{t.key}}</td>
+            <td>{{t.value}}</td>
+          </tr>
+          {{/each}}
+        </table>
+      </div>
+      <div class="logo"><span style="color:#ff4d4f;font-weight:600">from 米哈游</span></div>
+    </div>
+  </body>
+</html>

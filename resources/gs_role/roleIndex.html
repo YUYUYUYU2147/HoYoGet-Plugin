@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="{{ppath}}gs_role/role.css" />
+</head>
+<body class="narrow" {{sys.scale}}>
+<div class="page">
+  <header class="hero">
+    <div class="who">
+      {{if avatarUrl}}<img class="pava" src="{{avatarUrl}}" />{{/if}}
+      <div class="wt">
+        <b>{{if nickname}}{{nickname}}{{else}}旅行者{{/if}}</b>
+        <span>UID {{uid}}{{if region}} · {{region}}{{/if}}</span>
+      </div>
+    </div>
+    <div class="ttl">
+      <span class="eyebrow">GENSHIN IMPACT</span>
+      <h1>角色总览</h1>
+      <i>{{stat.total}} 名角色 · 5★{{stat.star5}} / 4★{{stat.star4}} · {{time}}</i>
+    </div>
+  </header>
+
+  {{if board}}
+  <section class="board">
+    <div class="btop">
+      {{each board.top t}}
+      <div class="bt"><b>{{t.value}}</b><span>{{t.label}}</span></div>
+      {{/each}}
+    </div>
+    <div class="bgrid">
+      {{each board.grid g}}
+      <div class="bs"><b>{{g.value}}</b><span>{{g.label}}</span></div>
+      {{/each}}
+    </div>
+  </section>
+  {{/if}}
+
+  <section class="cards">
+    {{each roles r}}
+    <div class="card star{{r.star}}">
+      <div class="pic">
+        <img class="art" src="{{r.art}}" />
+        {{if r.elemCn}}<img class="el-ic" src="{{ppath}}gs_role/imgs/elem/{{r.elemKey}}.png" title="{{r.elemCn}}" />{{/if}}
+        <div class="lvt">{{r.levelText}}</div>
+      </div>
+      <div class="nm"><b>{{r.name}}</b></div>
+      <div class="meta">
+        <span class="m"><img class="mini" src="{{ppath}}common/item/cons0.webp" />{{r.cons}}</span>
+        <span class="m"><img class="mini" src="{{ppath}}common/item/fetter.png" />{{r.fetter}}</span>
+      </div>
+      <div class="meta2">
+        <span class="tal{{if r.talentFull}} full{{/if}}">{{if r.hasDetail}}{{r.a}}/{{r.e}}/{{r.q}}{{else}}—{{/if}}</span>
+        <span class="ico">
+          {{if r.weaponIcon}}<img class="ic" src="{{r.weaponIcon}}" title="{{r.weaponText}}" />{{/if}}
+          {{if r.artifactIcon}}<img class="ic" src="{{r.artifactIcon}}" title="{{r.artifactText}}" />{{/if}}
+        </span>
+      </div>
+    </div>
+    {{/each}}
+  </section>
+
+  <div class="foot">数据来自米游社战绩 · 天赋顺序为 普攻 / 元素战技 / 元素爆发</div>
+</div>
+</body>
+</html>

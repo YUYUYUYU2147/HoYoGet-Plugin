@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}zzz_panel/list.css" />
+  </head>
+
+  <body {{sys.scale}}>
+    {{if bgImage}}<div class="panel-bg" style="background-image:url('{{bgImage}}')"></div>{{/if}}
+    <div class="wrap">
+      <div class="head-box">
+        <div class="player-row">
+          {{if playerAvatar}}
+          <img class="player-avatar" src="{{playerAvatar}}" onerror="this.style.display='none'">
+          {{/if}}
+          <div class="player-info">
+            <div class="title">绝区零 · 代理人面板</div>
+            <div class="player-name">{{playerName}}</div>
+            <div class="label">UID:{{uid}} · 共 {{count}} 名代理人 · {{time}}</div>
+          </div>
+        </div>
+        <div class="label-tip">你可以使用<span>%&lt;名字&gt;面板</span>查看代理人详情</div>
+      </div>
+
+      <div class="cont">
+        <div class="char-list">
+          {{each cards c}}
+          <div class="char-item">
+            <div class="item-icon char-icon star{{c.rarity === 'S' ? 5 : 4}}{{if showSource && c.source === 'Enka'}} enka{{/if}}">
+              <span class="img" style="background-image:url('{{c.icon}}')"
+                    onerror="this.style.visibility='hidden'"></span>
+              <span class="cons-tag">影{{c.rank}}</span>
+              <span class="lv-tag">Lv{{c.level}}</span>
+            </div>
+            <span class="name">{{if c.updated}}<i class="new-dot"></i>{{/if}}{{c.name}}</span>
+            {{if showSource}}<span class="src{{if c.source === 'Enka'}} enka{{/if}}">{{c.source}}</span>{{/if}}
+            <div class="char-icons">
+              <img class="type-icon" src="{{ppath}}wiki/imgs/zzz_{{c.element}}.png"
+                   onerror="this.style.display='none'" title="{{c.element}}">
+              <img class="type-icon" src="{{ppath}}wiki/imgs/zzz_{{c.typeCn}}.png"
+                   onerror="this.style.display='none'" title="{{c.typeCn}}">
+            </div>
+            {{if c.equip_score != null}}
+            <span class="score-tag">{{c.equip_rating}} {{c.equip_score.toFixed(1)}}分</span>
+            {{else}}
+            <span class="score-tag no-score">暂无评分</span>
+            {{/if}}
+          </div>
+          {{/each}}
+        </div>
+        <div class="cont-footer">
+          <div class="foot-meta">
+            <span class="foot-left"><i class="legend-dot"></i>本次更新角色{{if updatedCount}} · {{updatedCount}}{{/if}}</span>
+            <span class="foot-sep">|</span>
+            <span class="foot-right">当前更新服务：{{serviceLabel}}</span>
+          </div>
+          <div class="foot-from"><span style="color:#ff4d4f;font-weight:600">from 米哈游</span></div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,146 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}team_dmg/team.css" />
+  </head>
+  <body class="game-{{game}} tier-{{rankTier}}" {{sys.scale}}>
+    <div class="container">
+      <div class="bg">{{if wallpaper}}<i style="background-image: url({{ppath}}{{wallpaper}})"></i>{{/if}}<b></b></div>
+      <div class="top-left">
+        <div class="uid">{{if uid}}UID {{uid}}{{else}}星穹铁道 · 队伍伤害{{/if}}</div>
+
+        <div class="rank">
+          <div class="rank-cell"><b>{{cell1Value}}</b><span>{{cell1Label}}</span></div>
+          <div class="rank-cell"><b>{{dpsText}}</b><span>{{dpsLabel}}</span></div>
+          <div class="rank-cell"><b>{{cell3Value}}</b><span>{{cell3Label}}</span></div>
+          <div class="rank-cell"><b>{{totalText}}</b><span>输出总伤</span></div>
+        </div>
+
+        <div class="pie">
+          <div class="pie-title">伤害构成</div>
+          <div class="pie-ring" style="background: {{pieGradient}}">
+            <div class="pie-hole"><span>总计</span><b>{{totalText}}</b></div>
+          </div>
+        </div>
+
+        <div class="legend">
+          {{each members m}}
+          <div class="legend-item">
+            <i style="background: {{m.color}}"></i>
+            <span class="legend-name">{{m.name}}</span>
+            <span class="legend-pct">{{m.pct}}%</span>
+          </div>
+          {{/each}}
+        </div>
+      </div>
+
+      <div class="avatars">
+        {{each members m}}
+        <div class="avatar">
+          <div class="a-head">
+            <div class="face-box r{{m.star}}"><span class="face-ph">{{m.name}}</span>
+              {{if m.face}}<div class="face-img" style="background-image: url({{ppath}}{{m.face}})"></div>{{/if}}
+              {{if m.consText}}<div class="corner cons c{{m.cons}}">{{m.consText}}</div>{{/if}}
+              <div class="corner lvl">Lv.{{m.level}}</div>
+            </div>
+            <div class="weapon-box">
+              {{if m.weaponIcon}}<div class="weapon-img" style="background-image: url({{ppath}}{{m.weaponIcon}})"></div>{{/if}}
+              <div class="weapon-affix">{{m.weaponAffix}}</div>
+            </div>
+          </div>
+
+          <div class="a-name">{{m.name}}</div>
+          <div class="a-weapon">{{m.weapon}}</div>
+
+          <div class="stat-grid">
+            <div class="stat"><b>{{m.crit}}</b><span>暴击</span></div>
+            <div class="stat"><b>{{m.critDmg}}</b><span>暴伤</span></div>
+            <div class="stat"><b>{{m.hpText}}</b><span>生命</span></div>
+            <div class="stat"><b>{{m.keyValue}}</b><span>{{m.keyLabel}}</span></div>
+            <div class="stat"><b>{{m.rechargeRate}}</b><span>充能</span></div>
+            <div class="stat"><b>{{m.sameText}} / {{m.diffText}}</b><span>同色 / 异色</span></div>
+          </div>
+
+          {{if m.artisItems.length}}
+          <div class="arti-row">
+            {{each m.artisItems s}}
+            <span class="arti-chip">{{s.name}} {{s.count}}</span>
+            {{/each}}
+          </div>
+          {{/if}}
+
+          {{if m.talents.length}}
+          <div class="talent-row">
+            {{each m.talents t}}
+            <span class="talent-chip">{{t.label}} {{t.level}}</span>
+            {{/each}}
+          </div>
+          {{/if}}
+
+          <div class="dmg-row">
+            <span class="dmg-num">{{m.dmgText}}</span>
+            <span class="dmg-pct">{{m.pct}}%</span>
+          </div>
+          <div class="dmg-bar"><i style="width: {{m.pct}}%; background: {{m.color}}"></i></div>
+        </div>
+        {{/each}}
+      </div>
+
+      {{if combo.length}}
+      <div class="panel">
+        <div class="panel-title">操作手法<span>默认手法可能并非最优，如需自定义操作手法请使用微信小程序</span></div>
+        <div class="act-list">
+          {{each combo step}}<div class="act">{{step}}</div>{{/each}}
+        </div>
+      </div>
+      {{/if}}
+
+      {{if teamBuffs.length}}
+      <div class="panel">
+        <div class="panel-title">队伍增益{{if mainName}}<span>叠加于 {{mainName}}</span>{{/if}}</div>
+        <ul class="rows">
+          {{each teamBuffs b}}
+          <li><div class="row-k">{{b.src}}</div><div class="row-v">{{b.title}}</div></li>
+          {{/each}}
+        </ul>
+      </div>
+      {{/if}}
+
+      {{if buffs.length}}
+      <div class="panel">
+        <div class="panel-title">Buff 情况<span>部分 Buff 描述可能异常但通常影响较小</span></div>
+        <ul class="rows">
+          {{each buffs b}}
+          <li><div class="row-k">{{b.time}}</div><div class="row-v">{{b.title}}</div><div class="row-d">{{b.desc}}</div></li>
+          {{/each}}
+        </ul>
+      </div>
+      {{/if}}
+
+      {{if showAdvices && advices.length}}
+      <div class="panel">
+        <div class="panel-title">伤害过程{{if adviceTotal > advices.length}}<span>共 {{adviceTotal}} 条，显示前 {{advices.length}} 条</span>{{/if}}</div>
+        <ul class="rows five">
+          <li class="head"><div>时间</div><div>动作</div><div>暴击</div><div>未暴击</div><div>期望</div></li>
+          {{each advices a}}
+          <li><div>{{a.time}}</div><div>{{a.name}}</div><div>{{a.crit}}</div><div>{{a.nocrit}}</div><div>{{a.expect}}</div></li>
+          {{/each}}
+        </ul>
+      </div>
+      {{/if}}
+
+      {{if footNote}}
+      <div class="foot">{{footNote}}</div>
+      {{else if teamBuffs.length}}
+      <div class="foot">口径：主 C 的伤害已叠加队友增益（按本地技能等级与面板求值）；未收录的辅助不计入，可用 buff= 手动补</div>
+      {{else if local}}
+      <div class="foot">口径：各角色自身面板的最优招式期望伤害之和，不含队友增益</div>
+      {{/if}}
+      {{if source}}
+      <div class="foot">数据来源：{{source}}</div>
+      {{/if}}
+      <div class="brand">from 米哈游</div>
+    </div>
+  </body>
+</html>

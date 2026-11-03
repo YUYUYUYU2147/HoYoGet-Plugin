@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="{{ppath}}wiki/sr_role_nk.css" />
+</head>
+<body {{sys.scale}}>
+<div class="page">
+  <!-- 测试服数据标记：右上角 TEST 角标。正式服数据不显示（unreleased 由数据层判定） -->
+  {{if unreleased}}<div class="corner-test">TEST</div>{{/if}}
+  {{if bgFile}}<img class="bg" src="file://{{bgFile}}" alt="" />{{/if}}
+  <div class="topbar"></div>
+
+  <header class="hero">
+    {{if icon}}<img class="avatar" src="{{icon}}" alt="" />
+    {{else}}<img class="avatar" src="https://static.nanoka.cc/assets/hsr/avatarshopicon/{{id}}.webp" alt="" />{{/if}}
+    <div class="hero-txt">
+      <h1>
+        {{name}}
+        {{if rarityIcon}}<img class="rarity-icon" src="{{rarityIcon}}" alt="" />{{/if}}
+        {{if !rarityIcon}}<span class="rarity">{{rarity}}</span>{{/if}}
+      </h1>
+      <div class="tags">
+        <span class="tag">{{if pathIcon}}{{if pathIconUrl}}<img class="tag-ic" src="{{pathIcon}}" alt="" />{{else}}<img class="tag-ic" src="{{ppath}}wiki/imgs/{{pathIcon}}" alt="" />{{/if}}{{/if}}{{path}}</span>
+        <span class="tag">{{if damageIcon}}{{if damageIconUrl}}<img class="tag-ic" src="{{damageIcon}}" alt="" />{{else}}<img class="tag-ic" src="{{ppath}}wiki/imgs/{{damageIcon}}" alt="" />{{/if}}{{/if}}{{damage}}</span>
+        {{if camp}}<span class="tag">{{camp}}</span>{{/if}}
+        {{if spNeed}}<span class="tag">能量 {{spNeed}}</span>{{/if}}
+      </div>
+      {{if badges && badges.length}}
+      <div class="badges">
+        {{each badges b}}
+        <div class="badge">
+          <span class="bk">{{b.k}}</span>
+          <span class="bv">{{if b.icon}}{{if b.iconUrl}}<img src="{{b.icon}}" alt="" />{{else}}<img src="{{ppath}}wiki/imgs/{{b.icon}}" alt="" />{{/if}}{{/if}}{{b.v}}</span>
+        </div>
+        {{/each}}
+      </div>
+      {{/if}}
+    </div>
+  </header>
+
+  {{if detailStory}}
+  <div class="panel">
+    <div class="ptitle">角色详情</div>
+    <div class="story">{{detailStory.body}}</div>
+  </div>
+  {{/if}}
+
+  <div class="panel">
+    <div class="ptitle">基础属性 · 80级</div>
+    <div class="base-attrs">
+      <div class="attr"><span>生命值</span><b>{{hp}}</b></div>
+      <div class="attr"><span>攻击力</span><b>{{atk}}</b></div>
+      <div class="attr"><span>防御力</span><b>{{def}}</b></div>
+      <div class="attr"><span>暴击率</span><b>{{crit}}</b></div>
+      <div class="attr"><span>暴击伤害</span><b>{{critDmg}}</b></div>
+      <div class="attr"><span>速度</span><b>{{speed}}</b></div>
+      {{if traceBonus}}<div class="attr attr-wide"><span>行迹加成</span><b>{{traceBonus}}</b></div>{{/if}}
+      <div class="attr attr-wide"><span>终结技启动所需</span><b>{{spNeed}}</b></div>
+    </div>
+  </div>
+
+  {{if skills && skills.length}}
+  <div class="panel">
+    <div class="ptitle">技能</div>
+    <div class="skills">
+      {{each skills s}}
+      <div class="skill">
+        <div class="skill-head">
+          {{if s.icon}}<img src="{{s.icon}}" alt="" />{{/if}}
+          <span class="skill-type">{{s.type}}</span>
+          <b>{{s.name}}</b>
+          <span class="lv">Lv.{{s.maxLevel}}</span>
+        </div>
+        <div class="skill-desc">{{s.desc}}</div>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+  {{/if}}
+
+  {{if ranks && ranks.length}}
+  <div class="panel">
+    <div class="ptitle">星魂</div>
+    <div class="ranks">
+      {{each ranks r}}
+      <div class="rank">
+        <div class="rank-head">
+          {{if r.icon}}<img src="{{r.icon}}" alt="" />{{/if}}
+          <b>{{r.no}}</b><span>{{r.name}}</span>
+        </div>
+        <div class="rank-desc">{{r.desc}}</div>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+  {{/if}}
+
+  {{if materials.length}}
+  <div class="panel">
+    <div class="ptitle">培养材料</div>
+    <div class="mat-note">行迹与技能全部点满的合计用量</div>
+    <div class="mats">
+      {{each materials m}}
+      <div class="mat">
+        {{if m.icon}}{{if m.iconUrl}}<img src="{{m.icon}}" alt="" />{{else}}<img src="{{ppath}}wiki/imgs/{{m.icon}}" alt="" />{{/if}}{{/if}}
+        <span class="mat-name">{{m.name}}</span><i>×{{m.total}}</i>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+  {{/if}}
+
+  {{if recoLightcones.length}}
+  <div class="panel">
+    <div class="ptitle">推荐光锥</div>
+    <div class="mats">
+      {{each recoLightcones lc}}
+      <div class="mat">
+        {{if lc.icon}}<img src="{{lc.icon}}" alt="" />{{/if}}
+        <span class="mat-name">{{lc.name}}</span>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+  {{/if}}
+
+  {{if relicSets4.length}}
+  <div class="panel">
+    <div class="ptitle">推荐遗器</div>
+    {{if relicSets4.length}}
+    <div class="mat-label">四件套</div>
+    <div class="chips">
+      {{each relicSets4 r}}<span class="chip">{{if r.icon}}<img class="chip-ic" src="{{r.icon}}" />{{/if}}{{r.name}}</span>{{/each}}
+    </div>
+    {{/if}}
+    {{if relicSets2.length}}
+    <div class="mat-label">二件套</div>
+    <div class="chips">
+      {{each relicSets2 r}}<span class="chip">{{if r.icon}}<img class="chip-ic" src="{{r.icon}}" />{{/if}}{{r.name}}</span>{{/each}}
+    </div>
+    {{/if}}
+    {{if mainStats.length}}
+    <div class="mat-label">主词条</div>
+    <div class="chips">
+      {{each mainStats s}}<span class="chip chip-slot">{{if s.icon}}<img class="chip-ic" src="{{s.icon}}" />{{/if}}{{s.slot}} · {{s.stat}}</span>{{/each}}
+    </div>
+    {{/if}}
+    {{if subStats.length}}
+    <div class="mat-label">副词条推荐</div>
+    <div class="chips">
+      {{each subStats s}}<span class="chip">{{s}}</span>{{/each}}
+    </div>
+    {{/if}}
+  </div>
+  {{/if}}
+
+  {{if srGuide && srGuide.lightcones.length}}
+  <div class="panel">
+    <div class="ptitle">光锥推荐</div>
+    <div class="lc-list">
+      {{each srGuide.lightcones l}}
+      <div class="lc-item">
+        {{if l.icon}}<img class="lc-ic" src="{{l.icon}}" alt="" />{{/if}}
+        <div class="lc-txt">
+          <b>{{l.name}}</b>
+          {{if l.tag}}<span class="lc-tag">{{l.tag}}</span>{{/if}}
+          {{if l.score}}<span class="lc-score">{{l.score}}</span>{{/if}}
+        </div>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+  {{/if}}
+
+  {{if srGuide && srGuide.relics.length}}
+  <div class="panel">
+    <div class="ptitle">遗器推荐</div>
+    <div class="rc-list">
+      {{each srGuide.relics r}}
+      <div class="rc-item">
+        {{if r.icon}}<img class="lc-ic" src="{{r.icon}}" alt="" />{{/if}}
+        <div class="rc-txt">
+          <b>{{r.set4}} 四件套</b>
+          <span class="rc-sub">{{r.planar}} · {{r.score}}</span>
+          {{if r.main.length}}
+          <span class="rc-main">{{each r.main m}}【{{m.slot}}】{{m.value}} {{/each}}</span>
+          {{/if}}
+          {{if r.sub}}<span class="rc-sub2">副词条 {{r.sub}}</span>{{/if}}
+        </div>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+  {{/if}}
+
+  {{if gacha}}
+  <div class="panel">
+    <div class="ptitle">卡池信息 <span class="hint">UP {{gacha.upCount}} 次</span></div>
+    <div class="banners">
+      {{each gacha.banners b}}
+      <div class="banner">
+        <span class="bv">{{b.version}}</span>
+        <span class="bp">{{b.period}}</span>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+  {{/if}}
+
+  <footer><span style="color:#ff4d4f;font-weight:600">from 米哈游</span></footer>
+</div>
+</body>
+</html>

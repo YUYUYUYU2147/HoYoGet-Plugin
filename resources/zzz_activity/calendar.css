@@ -1,0 +1,36 @@
+.cal-empty { padding: 10px 14px; border-radius: 6px; background: #1a1c22; color: #7d8494; font-size: 12px; }
+.cal-note { margin-top: 12px; padding: 8px 12px; border-radius: 6px; background: #2a1d1d; color: #ff9b9b; font-size: 12px; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { width: 760px; overflow: hidden; background: #0f1013; }
+.cal-wrap { width: 760px; padding: 22px 20px 14px; }
+.cal-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-radius: 6px; background: linear-gradient(100deg, #f5e33f, #e3cd22); color: #17181c; }
+.cal-title { font-size: 20px; font-weight: 800; letter-spacing: 2px; }
+.cal-meta { text-align: right; font-size: 12px; line-height: 1.7; opacity: 0.72; }
+.cal-section { margin: 14px 0 10px; text-align: center; font-size: 13px; letter-spacing: 4px; color: #9aa3b2; }
+.cal-pools { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.cal-pool { padding: 12px 12px 10px; border-radius: 6px; border: 1px solid #2a2d35; background: #1a1c22; }
+.cal-pool.upcoming { opacity: 0.72; }
+.cal-pool-head { display: flex; align-items: center; gap: 8px; }
+.cal-group { padding: 1px 6px; border-radius: 3px; background: #f5e33f; color: #17181c; font-size: 12px; font-weight: 700; }
+.cal-ver { color: #f5e33f; font-size: 12px; font-weight: 700; }
+.cal-tag { padding: 1px 5px; border-radius: 3px; background: #ff6b6b; color: #ffffff; font-size: 11px; }
+.cal-status { margin-left: auto; color: #8f97a6; font-size: 12px; }
+.cal-members { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 8px; }
+.cal-member { width: 70px; text-align: center; }
+.cal-portrait { position: relative; width: 70px; height: 70px; border: 1px solid #33363d; border-radius: 6px; background-color: #22252c; background-size: cover; background-position: center top; }
+.cal-portrait.s { border-color: #d3a34a; }
+.cal-portrait.a { border-color: #6b5bd6; }
+.cal-rank { position: absolute; top: 0; right: 0; padding: 0 4px; border-bottom-left-radius: 5px; background: rgba(0, 0, 0, 0.66); color: #ffd166; font-size: 11px; }
+.cal-mname { margin-top: 4px; color: #d8dce4; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-pool-foot { display: flex; justify-content: space-between; color: #7d8494; font-size: 12px; }
+.cal-cd { color: #ffd166; }
+.cal-events { display: flex; flex-direction: column; gap: 8px; }
+.cal-event { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-left: 3px solid #3d4250; border-radius: 6px; background: #1a1c22; }
+.cal-event.active { border-left-color: #f5e33f; }
+.cal-event.upcoming { border-left-color: #5a6ff0; }
+.cal-event.done { border-left-color: #4a4f5c; opacity: 0.75; }
+.cal-ename { color: #e6e9f0; font-size: 14px; }
+.cal-eright { display: flex; align-items: center; gap: 12px; font-size: 12px; }
+.cal-reward { color: #8fd48f; font-weight: 700; }
+.cal-foot { display: flex; justify-content: space-between; margin-top: 14px; color: #7d8494; font-size: 12px; }
+.cal-from { margin-top: 6px; color: #ff6b6b; font-size: 12px; text-align: center; }

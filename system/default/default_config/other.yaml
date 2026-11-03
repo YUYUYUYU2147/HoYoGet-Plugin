@@ -1,0 +1,34 @@
+#修改的时候注意英文冒号后面要有一个空格
+
+#米游社视频播报是否合并消息转发？: true是 false否
+forwardMsg: true
+
+#米游社视频播报是否再加个崩坏三？: true是 false否
+bh3: false
+
+#米游社视频播报是否再加个崩坏因缘精灵？: true是 false否
+by: false
+
+#米游社视频播报是否再加个星布谷地？: true是 false否
+xbgd: false
+
+#米游社视频播报的封面是否采取原图下载？: true是 false否
+cover: false
+
+#米哈游视频播报群聊单独设置屏蔽:
+#（原神：gs）（崩铁：sr）（绝区零：zzz）（崩坏3：bh3）（崩坏因缘精灵：by）（星布谷地：xbgd）
+#
+#例如屏蔽123群聊的原神和崩坏三视频播报，屏蔽456群聊的崩铁和崩缘：
+#
+#group_config:
+#      123:
+#         - gs
+#         - bh3
+#      456:
+#         - sr
+#         - by
+group_config:
+
+
+#图鉴优先级(修改后需要重启):
+wiki: -99

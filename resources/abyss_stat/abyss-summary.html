@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-cn"><head><meta charset="utf-8">
+<link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/common.css"/>
+
+<link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/common.css?v=1.0"/>
+<link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/tpl.css?v=1.0"/>
+<link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/abyss-summary.css?v=1.0"/>
+</head>
+<body class="elem-hydro" {{sys.scale}}>
+<div class="container" id="container">
+{{ set upDown = {up:'上半', down:'下半'} }}
+<div class="head-box type">
+  <div class="title">#{{msg}}深渊<span>{{abyss.schedule}} · {{abyss.total}}次战斗</span></div>
+  <div class="head-user">
+    {{if profile.avatar}}<img class="head-avatar" src="{{profile.avatar}}" alt="" />{{/if}}
+    <div class="head-user-info">
+      {{if profile.nickname}}<div class="head-nick">{{profile.nickname}}</div>{{/if}}
+      <div class="uid">UID:{{uid}}</div>
+    </div>
+  </div>
+</div>
+{{if upTip}}
+<div class="cont abyss-notice">
+  <div class="cont-body">
+    <ul class="cont-msg">
+      <li><strong>#上传深渊</strong>{{if [200,400].includes(upTip.code)}}成功，{{upTip.result}}{{else}}失败，{{upTip.result}}，请联系管理员修复{{/if}}</li>
+    </ul>
+  </div>
+</div>
+{{/if}}
+<div class="info_box">
+
+  <div class="abyss-stat-cont">
+
+    <div class="abyss-stat">
+      {{each stat ds}}
+      {{set avatar = avatars[ds.id]}}
+      <div class="cont">
+        {{if avatar}}
+        <div class="stat-title">
+          <span>{{ds.title}}</span>
+          <strong>{{ds.value}}</strong>
+        </div>
+        <div class="avatar-banner avatar-{{avatar.name}}"
+             style="background-image:url('{{_miao_path}}{{avatar.gacha}}')"></div>
+
+        {{if ds.msg}}
+        <div class="stat-msg">
+          {{each ds.msg msg}}
+          {{if msg.txt}}
+          <div class="msg">{{msg.txt}}</div>
+          {{else}}
+          <div class="msg">{{msg.title}}<strong>{{msg.value}}%</strong>的{{msg.name}}</div>
+          {{/if}}
+          {{/each}}
+        </div>
+        {{/if}}
+        {{/if}}
+      </div>
+      {{/each}}
+    </div>
+
+  </div>
+  {{set cardTypes={1:['wide wide2'],2:['wide','wide'],3:['wide','mini','mini'],4:['mini','mini','mini','mini']} }}
+  {{each abyss?.floors floor}}
+  <div class="cont">
+    {{set floorBosses = bossesByFloor[floor.index] || [] }}
+
+    <div class="floor-split{{if floorBosses.length}} has-boss{{/if}}">
+    <div class="floor-main">
+    <div class="cont-body">
+      <div class="abyss-title">
+        <strong>第{{floor.index}}层</strong>
+        <span class="abyss-star">{{floor.star}}/9</span>
+      </div>
+      <div class="abyss-floor-team">
+        <div class="abyss-team">
+          {{set ds=floor?.display?.up?.avatars||[] }}
+          {{each ds id idx}}
+          <% include(_tpl_path+'/avatar-card.html', [avatars[id],{_res_path, cardType:cardTypes[ds.length][idx]}]) %>
+          {{/each}}
+        </div>
+        <div class="line"></div>
+        <div class="abyss-team">
+          {{set ds=floor?.display?.down?.avatars||[] }}
+          {{each ds id idx}}
+          <% include(_tpl_path+'/avatar-card.html', [avatars[id],{_res_path, cardType:cardTypes[ds.length][idx]}]) %>
+          {{/each}}
+        </div>
+      </div>
+      <div class="abyss-detail">
+        {{each floor.levels level levelIdx}}
+        <div class="abyss-level">
+          <div class="info">
+            <div class="title">
+              第{{level.index}}间
+            </div>
+            <span class="star star{{level.star}}"></span>
+            <div class="time">{{level?.up?.time}}</div>
+          </div>
+          <div class="avatars">
+            {{each upDown v k}}
+            <div class="avatar-list {{k}}">
+              {{each level[k]?.avatars||[] id}}
+              {{set avatar = avatars[id] || {} }}
+              <div class="avatar-icon item-icon star{{avatar.star==4?4:5}}">
+                <span class="img" style="background-image:url('{{_miao_path}}{{avatar.face}}')"></span>
+                {{if avatar.artisSummary && (avatar.artisSummary.mark || avatar.artisSummary.score)}}
+                <span class="av-score">{{avatar.artisSummary.mark}}{{if avatar.artisSummary.score}} <i>{{avatar.artisSummary.score}}</i>{{/if}}</span>
+                {{/if}}
+              </div>
+              {{/each}}
+            </div>
+            {{/each}}
+          </div>
+        </div>
+        {{/each}}
+      </div>
+      {{if floor.artisTeams && floor.artisTeams.length}}
+      <div class="abyss-build">
+        <div class="build-title">出战角色培养 · 圣遗物评分</div>
+        <div class="build-list">
+          {{each floor.artisTeams c}}
+          <div class="build-card">
+            <div class="build-head">
+              {{if c.face}}<span class="build-face" style="background-image:url('{{_miao_path}}{{c.face}}')"></span>{{/if}}
+              <span class="build-name">{{c.name}}</span>
+            </div>
+            <div class="build-body">
+              {{if c.radar}}
+              <svg class="build-radar" viewBox="-26 0 236 186">
+                {{each c.radar.grid g}}<polygon class="rg" points="{{g}}"></polygon>{{/each}}
+                {{each c.radar.spokes s}}<line class="rs" x1="{{s.x1}}" y1="{{s.y1}}" x2="{{s.x2}}" y2="{{s.y2}}"></line>{{/each}}
+                <polygon class="rv" points="{{c.radar.polygon}}"></polygon>
+                {{each c.radar.labels l}}<text class="rl" x="{{l.x}}" y="{{l.y}}" text-anchor="{{l.anchor}}">{{l.label}}</text>{{/each}}
+              </svg>
+              {{/if}}
+              <div class="build-score">
+                <span class="bs-label">圣遗物</span>
+                {{if c.score}}
+                <span class="bs-num">{{c.score}}<i>分</i></span>
+                {{if c.mark}}<span class="bs-mark mark-{{c.markKey}}">{{c.mark}}</span>{{/if}}
+                {{else}}
+                <span class="bs-empty">暂无评分</span>
+                {{/if}}
+              </div>
+              {{if c.setText}}
+              <div class="bs-set" title="{{c.setText}}">{{c.setText}}</div>
+              {{else}}
+              {{if c.setName}}<div class="bs-set">{{c.setName}}</div>{{/if}}
+              {{/if}}
+            </div>
+          </div>
+          {{/each}}
+        </div>
+      </div>
+      {{/if}}
+    </div>
+    </div>
+
+    {{if floorBosses.length}}
+    <div class="floor-boss">
+      <div class="boss-title">本层怪物 / BOSS</div>
+      {{each floorBosses room}}
+      {{each room.halves half}}
+      <div class="boss-half">
+        <div class="boss-half-title">{{half.label}}{{if half.level}} · Lv.{{half.level}}{{/if}}</div>
+        {{each half.waves w}}
+        {{if w.name}}<div class="boss-wave">{{w.name}}</div>{{/if}}
+        <div class="boss-monsters">
+        {{each w.monsters m}}
+        <div class="boss-item">
+          <div class="boss-icon">{{if m.icon}}<img src="{{m.icon}}" alt="" />{{else}}<span>{{m.name.slice(0,1)}}</span>{{/if}}</div>
+          <div class="boss-info">
+            <div class="boss-name">{{m.name}}</div>
+            {{if m.hp}}<div class="boss-hp">{{m.hp}}</div>{{/if}}
+            {{if m.shield && m.shield.length}}
+            <div class="boss-tags shield">
+              <i class="tag-label">护盾</i>
+              {{each m.shield s}}<i>{{each s.elems e}}<span class="elem">{{if e.icon}}<img src="{{e.icon}}" alt="" />{{/if}}{{e.cn}}</span>{{/each}}{{if s.value}}<em>{{s.value}}</em>{{/if}}</i>{{/each}}
+            </div>
+            {{/if}}
+            {{if m.weak && m.weak.length}}
+            <div class="boss-tags weak">
+              <i class="tag-label">弱点</i>
+              {{each m.weak e}}<i><span class="elem">{{if e.icon}}<img src="{{e.icon}}" alt="" />{{/if}}{{e.cn}}</span></i>{{/each}}
+            </div>
+            {{/if}}
+            {{if m.res && m.res.length}}
+            <div class="boss-tags res">
+              <i class="tag-label">抗性</i>
+              {{each m.res r}}<i>{{each r.elems e}}<span class="elem">{{if e.icon}}<img src="{{e.icon}}" alt="" />{{else if e.key === 'All'}}<span class="elem-all"></span>{{/if}}{{e.cn}}</span>{{/each}}<em>{{r.value}}</em></i>{{/each}}
+            </div>
+            {{/if}}
+            {{if m.mech}}<div class="boss-mech">{{m.mech}}</div>{{/if}}
+          </div>
+        </div>
+        {{if m.guides && m.guides.length}}
+        <div class="boss-guide">
+          <div class="guide-for">{{m.name}} · 应对</div>
+          {{each m.guides g}}
+          {{if g.title}}<div class="guide-title">{{g.title}}</div>{{/if}}
+          {{each g.lines l}}<div class="guide-line">· {{l}}</div>{{/each}}
+          {{/each}}
+        </div>
+        {{/if}}
+        {{/each}}
+        </div>
+        {{/each}}
+      </div>
+      {{/each}}
+      {{/each}}
+    </div>
+    {{/if}}
+    </div>
+  </div>
+  {{/each}}
+
+  <div class="cont abyss-notice">
+    <div class="cont-body">
+      <ul class="cont-msg">
+        <li>统计服务由提瓦特小助手<strong>YShelper API</strong>提供，上传的数据将会用于<strong>#深渊使用率</strong><strong>#角色持有率</strong>等统计</li>
+        <li><strong>#上传深渊</strong>仅会上传<strong>当期深渊12层满星</strong>挑战数据，<strong>不会上传其他信息</strong>，感谢支持，喵~</li>
+        <li>每期深渊仅可通过<strong>#上传深渊</strong>上传<strong>1</strong>次<strong>当期12层满星</strong>数据，重复提交将不计入统计</li>
+        <li>角色装备与圣遗物为当前最新状态</li>
+      </ul>
+      <div class="from-mhy"><span style="color:#ff4d4f;font-weight:600">from 米哈游</span></div>
+    </div>
+  </div>
+</div>
+</div>
+</body></html>

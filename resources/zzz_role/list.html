@@ -1,0 +1,83 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}zzz_role/list.css" />
+  </head>
+  <body {{sys.scale}}>
+    <div class="rl-wrap">
+      <div class="rl-head">
+        <div class="rl-player">
+          {{if playerAvatar}}<img class="rl-avatar" src="{{playerAvatar}}" onerror="this.style.display='none'" />{{/if}}
+          <div class="rl-pinfo">
+            <div class="rl-tags">
+              {{if playerTitle}}<span class="rl-tag">{{playerTitle}}</span>{{/if}}
+              {{if playerRegion}}<span class="rl-region">{{playerRegion}}</span>{{/if}}
+            </div>
+            <div class="rl-namerow">
+              <span class="rl-name">{{playerName}}</span>
+              {{if playerLevel}}<span class="rl-lvbox">LV.{{playerLevel}}</span>{{/if}}
+            </div>
+            <div class="rl-uid">UID {{uid}}</div>
+          </div>
+        </div>
+        {{if medals.length}}
+        <div class="rl-medals">
+          {{each medals m}}
+          <div class="rl-medal">
+            <img src="{{m.icon}}" onerror="this.style.display='none'" />
+            <div class="rl-medal-n">{{m.text}}</div>
+          </div>
+          {{/each}}
+        </div>
+        {{/if}}
+      </div>
+      {{if statItems.length}}
+      <div class="rl-stats">
+        {{each statItems s}}
+        <div class="rl-stat{{if s.big}} big{{/if}}">
+          <div class="n">{{s.v}}</div>
+          <div class="t">{{s.label}}</div>
+        </div>
+        {{/each}}
+      </div>
+      {{/if}}
+      <div class="rl-title">我 的 代 理 人</div>
+      <div class="rl-grid">
+        {{each cards c}}
+        <div class="rl-cell">
+          <div class="rl-portrait {{if c.rarity === 'S'}}s{{else}}a{{/if}}" style="background-image:url({{c.icon}})">
+            <span class="rl-rank">影{{c.rank}}</span>
+            <span class="rl-lv">Lv{{c.level}}</span>
+          </div>
+          <div class="rl-cname">{{c.name}}</div>
+          <div class="rl-icons">
+            <img src="{{ppath}}wiki/imgs/zzz_{{c.element}}.png" onerror="this.style.display='none'" />
+            <img src="{{ppath}}wiki/imgs/zzz_{{c.typeCn}}.png" onerror="this.style.display='none'" />
+          </div>
+        </div>
+        {{/each}}
+      </div>
+      {{if buddyTotal}}
+      <div class="rl-title">我 的 邦 布</div>
+      <div class="rl-grid">
+        {{each buddies b}}
+        <div class="rl-cell">
+          <div class="rl-portrait {{if b.rarity === 'S'}}s{{else}}a{{/if}}" style="background-image:url({{b.icon}})">
+            {{if b.star}}<span class="rl-rank">{{b.star}}星</span>{{/if}}
+            <span class="rl-lv">Lv{{b.level}}</span>
+          </div>
+          <div class="rl-cname">{{b.name}}</div>
+        </div>
+        {{/each}}
+      </div>
+      {{/if}}
+      <div class="rl-foot">
+        <span>共 {{count}} 名代理人</span>
+        <span>数据来源 {{serviceLabel}}</span>
+        <span>更新于 {{time}}</span>
+      </div>
+      <div class="rl-from">from 米哈游</div>
+    </div>
+  </body>
+</html>
