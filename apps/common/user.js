@@ -118,6 +118,11 @@ async function collectBindAccounts(e, stokenData) {
 async function replyBindImage(e, accounts, title) {
     if (!accounts.length) return false;
     try {
+        /* 左上角头像改成触发指令的用户 QQ 头像（取不到时模板回退到默认 xhh_avatar.png）。 */
+        const qq = String(e?.user_id || e?.sender?.user_id || '').trim();
+        const qqAvatar = /^\d{5,12}$/.test(qq)
+            ? `https://q1.qlogo.cn/g?b=qq&nk=${qq}&s=640`
+            : '';
         /* 之前这里传了 sys:{scale:''}，会在 render.js 的 beforeRender 里把算好的
            style=zoom:… 覆盖成空值，结果只按 CSS 的 900px 宽截图 —— 发到手机/电脑上
            一放大就糊。去掉 sys，并显式给 pct:2（=zoom 2，约 1800px 宽），
@@ -127,6 +132,7 @@ async function replyBindImage(e, accounts, title) {
             statusText: '成功',
             statusClass: '',
             accounts,
+            qqAvatar,
             saveId: 'bind_result',
         }, { e, ret: true, pct: 2 });
         return true;
