@@ -87,13 +87,30 @@ async function unzipTo(zipPath, destDir) {
   }
 }
 
-/** zip 里通常包一层顶层目录，找到真正的资源根（含 character/） */
+/** meta 资源里认识的顶层目录；增量包可能只改了其中一个（如只改 artifact/） */
+const META_TOP_DIRS = ['character', 'weapon', 'artifact', 'public', 'waves', 'relic', 'lightcone', 'bangboo', 'material', 'wiki']
+
+/** 目录是否是 meta 资源根（含任一已知顶层目录） */
+function isMetaRoot(dir) {
+  try {
+    return META_TOP_DIRS.some(name => fs.existsSync(path.join(dir, name)))
+  } catch {
+    return false
+  }
+}
+
+/**
+ * zip 里通常包一层顶层目录，找到真正的资源根。
+ * 之前只认 `character/`：当某个增量包只改了 artifact/ 或 weapon/（例如只更新一个
+ * artis-mark.js）时会被判「结构不认识」直接跳过，导致该版本永远应用不上
+ * （表现为「更新 0 个提交 / 资源仍不完整」）。现在接受任意已知顶层目录。
+ */
 function resolveSourceDir(extractDir) {
-  if (fs.existsSync(path.join(extractDir, 'character'))) return extractDir
+  if (isMetaRoot(extractDir)) return extractDir
   for (const entry of fs.readdirSync(extractDir, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue
     const sub = path.join(extractDir, entry.name)
-    if (fs.existsSync(path.join(sub, 'character'))) return sub
+    if (isMetaRoot(sub)) return sub
   }
   return null
 }
@@ -111,10 +128,12 @@ function copyDir(src, dest) {
 
 /**
  * 角色子目录数量：判断 meta 资源是否装全的粗判据。
- * 完整时应接近全部角色数（实测 gs 128、sr 109 个目录），取下限 100；
- * 只有增量包时目录数远少于此，据此识别半套资源。
+ * 完整时实测 gs 128、sr 99 个角色目录（character/ 下另有 alias.js/data.json 等文件，
+ * 不计入）。之前写 100，比 sr 的实际数量还高，导致 sr 永远判定「不完整」、一直不写
+ * 版本标记、每次同步都重来（看起来像没生效）。取下限 90，既低于 sr 99，又远高于
+ * 半套增量包的目录数。
  */
-const MIN_CHAR_DIRS = 100
+const MIN_CHAR_DIRS = 90
 
 function countCharDirs(game) {
   try {
