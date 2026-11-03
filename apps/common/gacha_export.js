@@ -358,6 +358,7 @@ export class gacha_export extends plugin {
       const uids = [...found.keys()].join(' / ')
       return e.reply(`没有 UID:${uid} 的${game.name}记录。可选：${uids}\n用法：${prefix}导出抽卡记录 ${uid}`)
     }
+    logger.mark?.(`[HoYoGet][导出] ${game.name} uid=${uid} source=${hit.source} list=${hit.list.length} all=${[...found.entries()].map(([k, v]) => `${k}:${v.list.length}(${v.source})`).join(',')}`)
     if (found.size > 1 && !wantUid) {
       // 提示一下还有别的 UID，避免以为漏了
       const others = [...found.keys()].filter(k => k !== uid)
