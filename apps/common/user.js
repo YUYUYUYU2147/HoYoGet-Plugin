@@ -118,14 +118,17 @@ async function collectBindAccounts(e, stokenData) {
 async function replyBindImage(e, accounts, title) {
     if (!accounts.length) return false;
     try {
+        /* 之前这里传了 sys:{scale:''}，会在 render.js 的 beforeRender 里把算好的
+           style=zoom:… 覆盖成空值，结果只按 CSS 的 900px 宽截图 —— 发到手机/电脑上
+           一放大就糊。去掉 sys，并显式给 pct:2（=zoom 2，约 1800px 宽），
+           不依赖 img_quality，出图更清晰；体积仍在 1MB 收口阈值内，不会被二次缩图。 */
         await render('sign/bind_result', {
             title,
             statusText: '成功',
             statusClass: '',
             accounts,
-            sys: { scale: '' },
             saveId: 'bind_result',
-        }, { e, ret: true });
+        }, { e, ret: true, pct: 2 });
         return true;
     } catch (err) {
         logger.warn(`[HoYoGet][user] 绑定结果出图失败，回退文字：${err?.message || err}`);
