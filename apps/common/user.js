@@ -516,6 +516,13 @@ export class user extends plugin {
                     if (data[k].ck_stoken) {
                         if (ltoken) data[k].ck_stoken = mergeCookieToken(data[k].ck_stoken, 'ltoken', ltoken);
                         if (nextCookieToken) data[k].ck_stoken = mergeCookieToken(data[k].ck_stoken, 'cookie_token', nextCookieToken);
+                        /* 取数接口（getUserGameRolesByCookie / record 等）只认 ltuid/account_id，
+                           只有 stuid= 会被判「登录状态失效 -100」。这里补齐通行证 uid。 */
+                        const ltuid = String(data[k].stuid || data[k].ltuid || '');
+                        if (ltuid) {
+                            data[k].ck_stoken = mergeCookieToken(data[k].ck_stoken, 'ltuid', ltuid);
+                            data[k].ck_stoken = mergeCookieToken(data[k].ck_stoken, 'account_id', ltuid);
+                        }
                     }
                     if (ltoken || nextCookieToken) kg = 1;
                 }
