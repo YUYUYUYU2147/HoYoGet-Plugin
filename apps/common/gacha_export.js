@@ -72,6 +72,9 @@ function srFullToList (data) {
 
 /** 星铁 summary.json（只有五星/四星）→ UIGF list */
 /** summary 的池 key（GachaType_xxx / common）→ 数字 gacha_type */
+/** summary 没存 gacha_id；Mys 导入要求记录带正整数 gacha_id，这里按池给一个占位值 */
+const SR_POOL_GACHA_ID = { '11': '2001', '12': '3001', '21': '2001', '22': '3001', '1': '1001', '2': '1001' }
+
 const SR_POOL_TYPE = {
   GachaType_AvatarUp: '11',
   GachaType_EquipmentUp: '12',
@@ -97,6 +100,7 @@ function srSummaryToList (data, uid) {
       out.push({
         uid: String(uid),
         gacha_type: gachaType,
+        gacha_id: SR_POOL_GACHA_ID[gachaType] || '1001',
         count: isFive ? String(Number(row.gacha_count) || 1) : '1',
         time: String(row.time || ''),
         name: String(row.name || '未知'),
