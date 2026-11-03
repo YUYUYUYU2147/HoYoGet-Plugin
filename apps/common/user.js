@@ -107,7 +107,17 @@ async function collectBindAccounts(e, stokenData) {
             ok: true,
         });
     }
-    return accounts;
+    /* 出图按游戏分组：原神 → 星铁 → 绝区零 → 崩三，同游戏内保持原有（存档）顺序。
+       存档按 game_uid 存，直接遍历会三种游戏穿插着排，看着乱。 */
+    const GAME_ORDER = { gs: 0, sr: 1, zzz: 2, bh3: 3 };
+    return accounts
+        .map((acc, idx) => ({ acc, idx }))
+        .sort((a, b) => {
+            const ga = GAME_ORDER[a.acc.game] ?? 99;
+            const gb = GAME_ORDER[b.acc.game] ?? 99;
+            return ga - gb || a.idx - b.idx;
+        })
+        .map(item => item.acc);
 }
 
 /* 出图；渲染失败就回退文字，保证绑定/刷新本身不受影响。
