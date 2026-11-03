@@ -234,18 +234,41 @@ function collect (game) {
 /** 统一的发文件：优先进群/好友的上传接口，其次文件消息，最后退化成链接/提示 */
 async function sendFile (e, file, name) {
   const target = e.isGroup ? e.group : e.friend
-  try {
-    if (e.isGroup && e.group?.fs?.upload) return await e.group.fs.upload(file)
-    if (target?.sendFile) return await target.sendFile(file)
-  } catch (err) {
-    logger.debug?.(`[HoYoGet][导出] sendFile 失败：${err?.message || err}`)
-  }
-  try {
+  const tryList = []
+  // 1) 适配器封装好的 sendFile（群/好友）
+  if (target?.sendFile) tryList.push(() => target.sendFile(file, name))
+  // 2) 群文件上传（优先放到群文件根）
+  if (e.isGroup && e.group?.fs?.upload) tryList.push(() => e.group.fs.upload(file))
+  // 3) 直接调 OneBot 上传接口（NapCat 支持 base64，最稳）
+  tryList.push(async () => {
+    const fs = await import('node:fs')
+    const base64 = `base64://${fs.readFileSync(file).toString('base64')}`
+    const bot = e.bot || globalThis.Bot?.bots?.[e.self_id] || globalThis.Bot
+    if (!bot?.sendApi) throw new Error('无 sendApi')
+    if (e.isGroup) {
+      return await bot.sendApi('upload_group_file', { group_id: e.group_id, file: base64, name, folder: '' })
+    }
+    return await bot.sendApi('upload_private_file', { user_id: e.user_id, file: base64, name })
+  })
+  // 4) 文件消息段（少数适配器支持）
+  tryList.push(() => {
     const segment = globalThis.segment
-    if (segment?.file) return await e.reply(segment.file(file, name))
-  } catch (err) {
-    logger.debug?.(`[HoYoGet][导出] segment.file 失败：${err?.message || err}`)
+    if (!segment?.file) throw new Error('无 segment.file')
+    return e.reply(segment.file(file, name))
+  })
+
+  for (const run of tryList) {
+    try {
+      const ret = await run()
+      if (ret !== false && ret !== undefined) {
+        logger.mark?.(`[HoYoGet][导出] 已发送文件 ${name}`)
+        return true
+      }
+    } catch (err) {
+      logger.debug?.(`[HoYoGet][导出] 发送文件尝试失败：${err?.message || err}`)
+    }
   }
+  logger.warn?.('[HoYoGet][导出] 所有发送方式都失败')
   return false
 }
 
@@ -297,10 +320,15 @@ export class gacha_export extends plugin {
 
     let uid = wantUid
     if (!uid) {
-      // 默认取「最近还有抽卡」的 UID（列表按时间倒序，取最新一条的时间最大者），
-      // 这样默认导出的是当前在玩的号，而不是历史记录最多的老号。
+      // 默认选号规则：
+      //   1) 优先有「全量逐抽」的号（summary 只有五星/四星，导出会少很多）；
+      //   2) 其次按最近抽卡时间；
+      //   3) 再次按记录条数。
       const latest = entry => entry.list.reduce((max, x) => (x.time > max ? x.time : max), '')
+      const isFull = entry => !/统计/.test(entry.source)
       uid = [...found.entries()].sort((a, b) => {
+        const fa = isFull(a[1]) ? 1 : 0; const fb = isFull(b[1]) ? 1 : 0
+        if (fa !== fb) return fb - fa
         const ta = latest(a[1]); const tb = latest(b[1])
         if (ta !== tb) return tb > ta ? 1 : -1
         return b[1].list.length - a[1].list.length
@@ -336,11 +364,15 @@ export class gacha_export extends plugin {
     fs.writeFileSync(file, JSON.stringify(payload, null, '\t'), 'utf8')
 
     const five = list.filter(x => x.rank_type === '5').length
-    await e.reply(`✅ ${game.name} UID:${uid} 抽卡记录导出成功\n来源：HoYoGet（${hit.source}）\n共 ${list.length} 条（五星 ${five} 条）\n文件：${fileName}`)
+    const head = `${game.name} UID:${uid} 抽卡记录导出${'\n'}来源：HoYoGet（${hit.source}）${'\n'}共 ${list.length} 条（五星 ${five} 条）`
+    // 先发文件，成功了再说「成功」；文件发不出去就把保存路径给出来，别让人以为发出去了。
     const sent = await sendFile(e, file, fileName)
-    if (!sent) await e.reply('导出已完成，但当前适配器不支持发送文件；文件已保存在机器人 temp/gacha-export 下。')
-    // 发送完就删掉临时文件；发送失败也留着方便排查
-    if (sent) fs.unlink(file, () => {})
+    if (sent) {
+      await e.reply(`✅ ${head}\n文件：${fileName}`)
+      fs.unlink(file, () => {})
+    } else {
+      await e.reply(`⚠️ ${head}\n文件发送失败（适配器不支持或网络问题）。已保存在机器人：\n${file}`)
+    }
     return true
   }
 }
