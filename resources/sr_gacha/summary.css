@@ -286,6 +286,26 @@ body::before {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
+.item .over-pity {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  z-index: 4;
+  background: #e05a4f;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* 同时有 UP 角标时，把 UP 下移，避免和 ≧ 重叠 */
+.item .minimum:has(+ .over-pity) {
+  top: 22px;
+}
+
 .item .gacha_num {
   position: absolute;
   left: 6px;

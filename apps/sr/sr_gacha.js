@@ -705,18 +705,24 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
       }
       return remoteIcon
     }
+    // UP 出金抽数超过硬保底（角色 90 / 光锥 80）的标 ≧：属数据异常或跨池累计，
+    // 给个视觉提醒，不影响统计数值。
+    const overLimit = ['GachaType_EquipmentUp', 'GachaType_CollabEquipmentUp'].includes(key) ? 80 : 90
     // 五星历史：按时间倒序，供卡片网格使用
     const fiveLog = recent.map(item => {
       const pulls = Number(item.gacha_count || 0)
       const time = item.time || timeFromId(item.id)
       const full = String(time || '').slice(0, 10)
+      const up = isUpRec(item)
       return {
         name: item.name || '未知',
         id: String(item.id || ''),
         item_type: item.item_type || '',
         icon: makeIcon(item),
         num: pulls,
-        isUp: isUpRec(item),
+        isUp: up,
+        // 仅对 UP 且超出硬保底的标注 ≧
+        overPity: up && pulls > overLimit,
         isNull: false,
         year: full.slice(0, 4) || '----',
         fullDate: full || '--',

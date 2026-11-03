@@ -76,6 +76,9 @@
                   {{if val.isUp}}
                   <span class="minimum">UP</span>
                   {{/if}}
+                  {{if val.overPity}}
+                  <span class="over-pity">≧</span>
+                  {{/if}}
                   {{if val.icon}}
                   <span class="role_img" style="background-image:url('{{val.icon}}')"></span>
                   {{else}}
