@@ -71,9 +71,24 @@ function srFullToList (data) {
 }
 
 /** 星铁 summary.json（只有五星/四星）→ UIGF list */
+/** summary 的池 key（GachaType_xxx / common）→ 数字 gacha_type */
+const SR_POOL_TYPE = {
+  GachaType_AvatarUp: '11',
+  GachaType_EquipmentUp: '12',
+  GachaType_CollabAvatarUp: '21',
+  GachaType_CollabEquipmentUp: '22',
+  GachaType_Newbie: '2',
+  GachaType_Standard: '1',
+  GachaType_Normal: '1',
+  common: '1'
+}
+
 function srSummaryToList (data, uid) {
   const out = []
-  for (const pool of Object.values(data?.pools || {})) {
+  for (const [key, pool] of Object.entries(data?.pools || {})) {
+    // summary 的 pool 本身没有 type 字段，类型只在 key 上；之前因此导出成空 gacha_type，
+    // 导入时无法按池识别、甚至被当成原神。这里按 key 映射出数字类型。
+    const gachaType = SR_POOL_TYPE[key] || SR_POOL_TYPE[pool?.key] || String(pool?.type || '').replace(/^GachaType_/, '') || ''
     const fiveIds = new Set((pool.records || []).map(r => String(r?.id || '')))
     for (const row of [...(pool.records || []), ...(pool.fourLog || [])]) {
       const id = String(row?.id || '')
@@ -81,7 +96,7 @@ function srSummaryToList (data, uid) {
       const isFive = fiveIds.has(id)
       out.push({
         uid: String(uid),
-        gacha_type: String(pool.type || '').replace(/^GachaType_/, '') || '',
+        gacha_type: gachaType,
         count: isFive ? String(Number(row.gacha_count) || 1) : '1',
         time: String(row.time || ''),
         name: String(row.name || '未知'),
