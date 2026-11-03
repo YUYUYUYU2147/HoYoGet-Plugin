@@ -383,7 +383,12 @@ export class gacha_export extends plugin {
     fs.writeFileSync(file, JSON.stringify(payload, null, '\t'), 'utf8')
 
     const five = list.filter(x => x.rank_type === '5').length
-    const head = `${game.name} UID:${uid} 抽卡记录导出${'\n'}来源：HoYoGet（${hit.source}）${'\n'}共 ${list.length} 条（五星 ${five} 条）`
+    // summary 只有五星/四星，缺 3 星逐抽；导入 Mys 后会被当成「每金一抽」。给个明确警告。
+    const partial = /统计/.test(hit.source)
+    const warn = partial
+      ? `${'\n'}⚠️ 本次是「五星/四星统计」版，缺少三星逐抽，导入 Mys 会显示异常（像每金一抽）。建议先更新全量记录再导出。`
+      : ''
+    const head = `${game.name} UID:${uid} 抽卡记录导出${'\n'}来源：HoYoGet（${hit.source}）${'\n'}共 ${list.length} 条（五星 ${five} 条）${warn}`
     // 先发文件，成功了再说「成功」；文件发不出去就把保存路径给出来，别让人以为发出去了。
     const sent = await sendFile(e, file, fileName)
     if (sent) {
