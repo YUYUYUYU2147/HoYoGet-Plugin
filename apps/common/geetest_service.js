@@ -127,7 +127,17 @@ async function pm2HasProcess() {
         const start = stdout.indexOf('[');
         if (start < 0) return false;
         const list = JSON.parse(stdout.slice(start));
-        return Array.isArray(list) && list.some(p => p?.name === PM2_NAME);
+        if (!Array.isArray(list)) return false;
+        /* 名字可能被旧版本改过（如 xxx-solver-old），或被 pm2 截断显示；
+           除精确匹配外，再按「名字前缀」和「启动脚本路径」兜底，避免误判为野生进程。 */
+        return list.some(p => {
+            if (!p) return false;
+            if (p.name === PM2_NAME) return true;
+            if (String(p.name || '').startsWith('HoYoGet-geetest')) return true;
+            const env = p.pm2_env || {};
+            const script = String(env.pm_exec_path || env.pm_cwd || env.script || '') + ' ' + String(p.pm2_env?.args || '');
+            return /service[\\/]geetest[\\/]server\.py/.test(script);
+        });
     } catch {
         return false;
     }
@@ -254,10 +264,10 @@ export class GeetestService extends plugin {
             // 熔断中是瞬时状态，得看得见，否则「一直失败」和「被熔断拒了」分不清
             (s.breakerOpen ? `⚡ 熔断中（连续失败 ${s.breakerFail} 次），期间请求会秒回并走兜底，稍后自动恢复\n` : '') +
             (orphan
-                ? `\n⚠️ 服务在跑，但不在本插件的进程表里（pm2 里没有 ${PM2_NAME}）\n` +
-                  `多半是旧版本部署或手工起（nohup / start /b）留下的。想让本插件接管：\n` +
+                ? `\nℹ️ 过码服务可用，但它不是由本插件登记的进程（pm2 里没有 ${PM2_NAME}）。\n` +
+                  `不影响使用；如果需要插件统一托管（开机自启、状态显示更完整）：\n` +
                   `· 执行 pm2 delete ${PM2_NAME} 后重发 #过码部署\n` +
-                  '· 或直接重启一次机器后重发 #过码部署\n'
+                  '· 或重启一次机器后重发 #过码部署\n'
                 : '') +
             (managed && !autoStart
                 ? `\n⚠️ 未设置开机自启：机器重启后过码服务不会自己回来。\n`
@@ -278,14 +288,14 @@ export class GeetestService extends plugin {
             if (managed === false) {
                 return e.reply(
                     [
-                        `过码服务正在运行（${addr()}），但不在本插件的进程表里`
-                            + `（pm2 里没有 ${PM2_NAME}）。`,
+                        `过码服务已在运行（${addr()}），可以直接使用；`
+                            + `但它不是本插件登记的进程（pm2 里没有 ${PM2_NAME}）。`,
                         '',
-                        '这多半是旧版本部署或手工启动留下的进程。要让本插件接管：',
+                        '想让插件统一托管（开机自启、状态更完整）时再处理：',
                         `· 机器人所在设备执行：pm2 delete ${PM2_NAME}`,
-                        '· 或直接重启一次机器，再重发本指令',
+                        '· 或重启一次机器后，再重发本指令',
                         '',
-                        '停掉之后再发一次本指令。',
+                        '若只是想过码，无需理会这条。',
                     ].join('\n'),
                     true
                 );

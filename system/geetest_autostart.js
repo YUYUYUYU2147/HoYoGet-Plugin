@@ -27,6 +27,15 @@ const SERVICE_DIR = path.join(ROOT, 'service', 'geetest')
 const VENV_DIR = path.join(SERVICE_DIR, '.venv')
 const SERVER_PY = path.join(SERVICE_DIR, 'server.py')
 const PM2_NAME = 'HoYoGet-geetest-solver'
+
+function isGeetestProc(p) {
+  if (!p) return false
+  if (p.name === PM2_NAME) return true
+  if (String(p.name || '').startsWith('HoYoGet-geetest')) return true
+  const env = p.pm2_env || {}
+  const text = String(env.pm_exec_path || env.pm_cwd || env.script || '') + ' ' + String(env.args || '')
+  return /service[\\/]geetest[\\/]server\.py/.test(text)
+}
 const IS_WIN = process.platform === 'win32'
 
 const RETRY_GAP = 5 * 60 * 1000
@@ -74,7 +83,7 @@ async function pm2HasProcess() {
     const start = stdout.indexOf('[')
     if (start < 0) return false
     const list = JSON.parse(stdout.slice(start))
-    return Array.isArray(list) && list.some(p => p?.name === PM2_NAME)
+    return Array.isArray(list) && list.some(isGeetestProc)
   } catch {
     return false
   }
@@ -118,7 +127,7 @@ async function pm2EntryBroken() {
     const start = stdout.indexOf('[')
     if (start < 0) return false
     const list = JSON.parse(stdout.slice(start))
-    const proc = list.find(p => p?.name === PM2_NAME)
+    const proc = list.find(isGeetestProc)
     if (!proc) return false
     const env = proc.pm2_env || {}
     const exec = String(env.pm_exec_path || '')
