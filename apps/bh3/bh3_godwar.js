@@ -321,6 +321,9 @@ export class bh3_godwar extends plugin {
       return `<div class="record-card"><div class="gw-top"><span>结算 ${settle}</span><span class="gw-diff">${diffName}</span><span>${cost}</span></div><div class="gw-body"><div class="gw-chars">${chars}</div><div class="gw-score"><div class="gw-score-val">${r.score || 0}</div><div class="gw-score-lbl">最高积分</div></div></div><div class="gw-buffs-row">${buffHtml}</div>${cbuffHtml ? `<div class="gw-cbuffs">${cbuffHtml}</div>` : ''}</div>`;
     }).join('\n');
 
+    const gameIcon = fs.readFileSync(new URL('../../resources/game_icons/bh3.webp', import.meta.url));
+    const gameLogo = fs.readFileSync(new URL('../../resources/help/games/bh3-logo.png', import.meta.url));
+
     const bgs = ['bg', 'bg1', 'IMG_20250717_034154'];
     const bg = bgs[Math.floor(Math.random() * bgs.length)];
 
@@ -340,6 +343,8 @@ export class bh3_godwar extends plugin {
       transTotal: avatarTranscript.length,
       transShown: transList.length,
       records,
+      gameIcon: `data:image/webp;base64,${gameIcon.toString('base64')}`,
+      gameLogo: `data:image/png;base64,${gameLogo.toString('base64')}`,
       dataTime: moment().format('MM-DD HH:mm'),
       fillExtra: Math.max(0, Number(options.fillExtra) || 0),
       recordTotal: allRecords.length,
