@@ -258,6 +258,7 @@ export class bh3_godwar extends plugin {
       (a, b) => parseInt(b.settle_time_second || 0) - parseInt(a.settle_time_second || 0)
     )
     const records = allRecords.slice(0, recordLimit)
+    logger.mark(`[bh3_godwar] 装甲 ${avatarTranscript.length} 台，挑战记录 ${allRecords.length} 条（显示 ${records.length}）`)
 
     const collabRank = ['', 'S', 'SS', 'SSS'];
     const recordCards = records.map((r) => {
