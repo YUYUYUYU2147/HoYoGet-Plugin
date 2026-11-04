@@ -355,6 +355,7 @@ bh3_note_priority: 100
 bh3_abyss_priority: 100
 bh3_battlefield_priority: 100
 bh3_godwar_priority: 100
+bh3_elysian_priority: 200
 bh3_profile_priority: 100
 bh3_all_note_priority: 100
 bh3_gacha_priority: 100

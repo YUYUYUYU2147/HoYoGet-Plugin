@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="{{ppath}}elysian/elysian.css" />
+    <title>{{detail ? detail.name : '往世乐土热门角色榜'}}</title>
+  </head>
+  <body>
+    <main id="container" class="container {{detail ? 'detail' : 'ranking'}}">
+      <header class="page-header"
+        ><span class="header-mark">◇</span><h1>{{detail ? detail.name : '往世乐土热门角色榜'}}</h1
+        ><span class="help-mark">?</span></header
+      >
+      {{if detail}}
+      <div class="hero"><img src="{{detail.icon}}" alt="{{detail.name}}" /><h2>{{detail.name}}</h2></div>
+      <div class="detail-content">
+        <h2 class="section-title">专属刻印推荐</h2>
+        {{each detail.exclusive buff}}
+        <div class="buff-row"
+          ><span class="order">{{buff.order}}</span>{{if buff.icon}}<img src="{{buff.icon}}" alt="" />{{/if}}<span
+            >{{buff.name}}</span
+          ></div
+        >
+        {{/each}} {{if !detail.exclusive.length}}<p class="empty">暂无专属刻印推荐</p>{{/if}}
+        <h2 class="section-title">核心刻印推荐</h2>
+        {{each detail.core buff}}
+        <section class="core-card">
+          <div class="core-heading"
+            ><span class="order">{{buff.order}}</span>{{if buff.icon}}<img src="{{buff.icon}}" alt="" />{{/if}}<span
+              >{{buff.name}}</span
+            ></div
+          >
+          <div class="augment-label">增幅刻印推荐</div>
+          {{if buff.assistants.length}}
+          <div class="augment-list"
+            >{{each buff.assistants item}}<div class="augment-row"
+              ><span class="order">{{item.order}}</span>{{if item.icon}}<img src="{{item.icon}}" alt="" />{{/if}}<span
+                >{{item.name}}</span
+              ></div
+            >{{/each}}</div
+          >
+          {{else}}<p class="empty">暂无增幅刻印推荐</p>{{/if}}
+        </section>
+        {{/each}} {{if !detail.core.length}}<p class="empty">暂无核心刻印推荐</p>{{/if}}
+        <h2 class="section-title">追忆之证推荐</h2>
+        {{each detail.stages stage}}
+        <section class="stage-card"
+          ><h3>{{stage.label}}：</h3
+          ><div class="pair">
+            {{each stage.items item index}}{{if index}}<span class="plus">+</span>{{/if}}<div class="equipment"
+              >{{if item.icon}}<div class="item-icon"
+                ><img src="{{item.icon}}" alt="" /><span class="stars">{{item.stars}}</span></div
+              >{{/if}}<div>{{item.name || '追忆之证'}}</div></div
+            >{{/each}} {{if !stage.items.length}}<p class="empty">暂无推荐</p>{{/if}}
+          </div></section
+        >
+        {{/each}}
+        <h2 class="section-title">助战女武神推荐</h2>
+        {{each detail.stages stage}}
+        <section class="stage-card"
+          ><h3>{{stage.label}}：</h3
+          ><div class="pair">
+            {{each stage.supports item index}}{{if index}}<span class="plus">+</span>{{/if}}<div
+              class="equipment support"
+              >{{if item.icon}}<img src="{{item.icon}}" alt="" />{{/if}}<div>{{item.name || '助战女武神'}}</div></div
+            >{{/each}} {{if !stage.supports.length}}<p class="empty">暂无推荐</p>{{/if}}
+          </div></section
+        >
+        {{/each}}
+        <p class="hint"
+          >本期时间：{{schedule.schedule_begin}}—{{schedule.schedule_end}}<br />返回榜单：#崩三乐土热门榜</p
+        >
+      </div>
+      {{else}}
+      <div class="period"
+        ><strong>本期关卡效果 ⓘ</strong><span>时间：{{schedule.schedule_begin}}—{{schedule.schedule_end}}</span></div
+      >
+      <div class="schedule-buff">{{schedule.schedule_buff || '本期关卡效果暂未公布'}}</div>
+      <p class="hint list-hint">查看推荐详情：#崩三乐土详情 + 序号 / 角色名</p>
+      <div class="character-list">
+        {{each characters role index}}
+        <article class="character-card">
+          <div class="portrait"
+            ><span class="rank">{{index + 1}}</span>{{if role.icon}}<img
+              src="{{role.icon}}"
+              alt="{{role.name}}"
+            />{{/if}}<h2>{{role.name}}</h2></div
+          >
+          <div class="recommendations">
+            <div class="loadout"
+              >{{each role.stages[0].items item}}{{if item.icon}}<img
+                src="{{item.icon}}"
+                alt="追忆之证"
+              />{{/if}}{{/each}}<span class="loadout-gap"></span>{{each role.stages[0].supports item}}{{if item.icon}}<img src="{{item.icon}}" alt="助战女武神" />{{/if}}{{/each}}</div
+            >
+            <div class="exclusive-summary"
+              >{{if role.exclusive[0] && role.exclusive[0].icon}}<img
+                src="{{role.exclusive[0].icon}}"
+                alt="专属刻印"
+              />{{/if}}<div
+                >{{each role.exclusive.slice(0, 3) item}}<span>{{item.order}}{{item.name}}</span>{{/each}}</div
+              ></div
+            >
+            <div class="core-summary"
+              >{{each role.core.slice(0, 3) item}}<div
+                >{{if item.icon}}<img src="{{item.icon}}" alt="" />{{/if}}<span>{{item.name}}</span></div
+              >{{/each}}</div
+            >
+          </div>
+          <span class="detail-command">详情 {{index + 1}} ›</span>
+        </article>
+        {{/each}}
+      </div>
+      <p class="hint">数据来源：米游社 · 推荐随当期环境变化<br />例如：#崩三乐土详情1　/　#崩三乐土详情时序之律者</p>
+      {{/if}}
+      <footer class="logo">{{@copy()}}</footer>
+    </main>
+  </body>
+</html>
