@@ -625,6 +625,12 @@ export const supportGuoba = () => {
         component: 'Switch',
       },
       {
+        field: 'gacha_pool_auto_refresh',
+        label: '启用卡池自动刷新',
+        helpMessage: '开启后按下方刷新间隔自动同步全游戏卡池；默认关闭，保存后需重启插件生效',
+        component: 'Switch',
+      },
+      {
         field: 'gacha_pool_cron',
         label: '卡池自动刷新间隔',
         helpMessage:
@@ -1549,6 +1555,7 @@ export const supportGuoba = () => {
         sr_logs: !!cfg.sr_logs,
         zzz_logs: !!cfg.zzz_logs,
         bh3_logs: !!cfg.bh3_logs,
+        gacha_pool_auto_refresh: !!cfg.gacha_pool_auto_refresh,
         gacha_pool_cron: String(cfg.gacha_pool_cron || '0 */30 * * * *'),
         all_voice: !!cfg.all_voice,
         gs_voice: cfg.gs_voice !== false,
@@ -1789,6 +1796,10 @@ export const supportGuoba = () => {
       for (const [k, v] of Object.entries(boolMap)) {
         const target = ['forwardMsg', 'bh3', 'by', 'xbgd', 'cover'].includes(k) ? 'other.yaml' : 'config.yaml'
         yaml.set(_path + target, k, !!v)
+      }
+
+      if (data.gacha_pool_auto_refresh !== undefined) {
+        yaml.set(_path + 'config.yaml', 'gacha_pool_auto_refresh', !!data.gacha_pool_auto_refresh)
       }
 
       const numMap = {

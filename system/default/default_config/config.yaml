@@ -158,6 +158,7 @@ bh3_logs: true
 
 #卡池数据自动刷新间隔(cron)：默认每30分钟一次。改完需重启插件生效。
 #原来写死在代码里、每天 05:30 跑一轮，那一轮撞上风控就得再等 24 小时。
+gacha_pool_auto_refresh: false
 gacha_pool_cron: '0 */30 * * * *'
 
 

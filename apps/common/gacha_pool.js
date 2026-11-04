@@ -221,12 +221,12 @@ export class HoYoGetGachaPool extends plugin {
     // 半小时一轮则最多等半小时；冷却期本来就存 30 分钟，下一轮正好解冻，
     // 不会因此加重风控。
     const cfg = config() || {};
-    this.task = {
+    this.task = cfg.gacha_pool_auto_refresh ? {
       cron: String(cfg.gacha_pool_cron || '0 */30 * * * *').trim() || '0 */30 * * *',
       name: '[米哈游]全游戏卡池数据自动刷新',
       fnc: () => runCronTask('卡池数据刷新', () => this.autoRefreshPools()),
       log: true
-    };
+    } : [];
   }
 
   /**
