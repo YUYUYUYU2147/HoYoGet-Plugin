@@ -287,7 +287,7 @@ export default class MysInfo {
             if (!e?.noTips) e.noTips = true
             return false
         }
-        return {
+        const info = {
             uid,
             game,
             ckInfo: {
@@ -297,7 +297,29 @@ export default class MysInfo {
                 ltuid: acc.stuid || '',
                 type,
             },
-        }
+        };
+        /* 米游社对频繁查询会返回 1034/10035/10041/5003（验证码/账号异常）。
+           内置处理器会把这些交给注册的请求异常处理器，用常用设备指纹
+           重试后通常就能拿到数据；内置 mysInfo 之前没有 checkCode，导致
+           HoYoGet 的请求直接把这些码当失败返回（表现：*深渊 主接口无数据）。
+           这里补一个等价实现，处理器存在时才生效，失败仍按原响应返回。 */
+        info.checkCode = async (res, type, mysApi, data) => {
+            if (!res) return res;
+            const code = Number(res.retcode);
+            if (![1034, 10035, 10041, 5003].includes(code)) return res;
+            const handler = e?.runtime?.handler;
+            if (!handler?.has?.('mys.req.err')) return res;
+            const reject = async () => res;
+            try {
+                const handled = await handler.call('mys.req.err', e, {
+                    mysApi, type, res, data, mysInfo: info,
+                }, reject);
+                return handled || res;
+            } catch (_) {
+                return res;
+            }
+        };
+        return info;
     }
 
     /** 取该 QQ 在当前游戏下的 UID */

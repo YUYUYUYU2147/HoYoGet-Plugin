@@ -4,14 +4,14 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width">
     <link rel="shortcut icon" href="#"/>
-    <link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/common.css"/>
+    <link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/common.css?v={{assetVer}}"/>
     <title>HoYoGet</title>
     
-<link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/tpl.css?v=1.0"/>
-<link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/challenge-peak.css?v=1.0"/>
+<link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/tpl.css?v={{assetVer}}"/>
+<link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/challenge-peak.css?v={{assetVer}}"/>
 
   </head>
-  <body class="elem-hydro" {{sys.scale}}>
+  <body class="elem-hydro{{if wide}} wide-layout{{/if}}" {{sys.scale}}>
     <div class="container" id="container">
       
 {{set record = challenge_peak_records}}

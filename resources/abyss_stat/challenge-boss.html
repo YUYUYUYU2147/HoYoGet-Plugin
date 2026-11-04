@@ -4,14 +4,14 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width">
     <link rel="shortcut icon" href="#"/>
-    <link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/common.css"/>
+    <link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/common.css?v={{assetVer}}"/>
     <title>HoYoGet</title>
     
-<link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/tpl.css?v=1.0"/>
-<link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/challenge-boss.css?v=1.0"/>
-  <link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/sr-bosses.css"/>
+<link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/tpl.css?v={{assetVer}}"/>
+<link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/challenge-boss.css?v={{assetVer}}"/>
+  <link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/sr-bosses.css?v={{assetVer}}"/>
 </head>
-  <body class="elem-hydro" {{sys.scale}}>
+  <body class="elem-hydro{{if wide}} wide-layout{{/if}}" {{sys.scale}}>
     <div class="container{{if srBosses && srBosses.length}} has-sr-boss{{/if}}" id="container">
       
 <div class="story-body{{if !srBosses || !srBosses.length}} no-boss{{/if}}">

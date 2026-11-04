@@ -152,7 +152,7 @@ export class bh3_battlefield extends plugin {
     return { qq, uid, region, ck };
   }
 
-  async battlefield(e) {
+  async battlefield(e, options = {}) {
     const auth = await this.getAuth(e);
     if (!auth.uid) return sendMsg(e, '请先扫码绑定崩坏3账号');
     if (!auth.ck) return sendMsg(e, '未找到有效Cookie，请先扫码绑定');
@@ -206,46 +206,56 @@ export class bh3_battlefield extends plugin {
 
     if (!reports.length) return sendMsg(e, `UID${uid} 暂无战场数据`);
 
-    const latest = reports[0];
+    const displayReports = reports.slice(0, 8);
+    const latest = displayReports[0];
     const totalScore = latest.score || 0;
     const rank = latest.rank || 0;
     const rankingPct = latest.ranking_percentage || '0';
     const area = latest.area || 0;
 
-    const battleInfos = (latest.battle_infos || []).slice(0, 3);
+    const reportCards = displayReports.map((report, reportIndex) => {
+      const battleInfos = (report.battle_infos || []).slice(0, 3);
+      const bossCards = battleInfos.map((bi, bossIndex) => {
+        const boss = bi.boss || {};
+        const bossIcon = absIcon(boss.avatar || '');
+        const bossImg = bossIcon
+          ? `<img src="${bossIcon}" alt="">`
+          : `<span>${(boss.name || '?')[0]}</span>`;
+        const bossName = boss.name || '未知Boss';
+        const bossScore = bi.score || 0;
 
-    const infoCards = battleInfos.map((bi) => {
-      const boss = bi.boss || {};
-      const bossIcon = absIcon(boss.avatar || '');
-      const bossImg = bossIcon
-        ? `<img src="${bossIcon}" alt="">`
-        : `<span>${(boss.name || '?')[0]}</span>`;
-      const bossName = boss.name || '未知Boss';
-      const bossScore = bi.score || 0;
+        const lineup = (bi.lineup || []).slice(0, 3).map(c => {
+          const icon = absIcon(c.icon_path || '');
+          const cname = c.name || '';
+          const badge = rankBadge(charStars[cname]);
+          if (icon) {
+            return `<div class="char"><div class="char-icon-wrap"><img class="char-icon" src="${icon}" alt="">${badge}</div><div class="char-name">${cname}</div></div>`;
+          }
+          return `<div class="char"><div class="char-icon-wrap"><div class="char-icon char-placeholder">${(cname || '?')[0]}</div>${badge}</div><div class="char-name">${cname}</div></div>`;
+        }).join('');
 
-      const lineup = (bi.lineup || []).slice(0, 3).map(c => {
-        const icon = absIcon(c.icon_path || '');
-        const cname = c.name || '';
-        const badge = rankBadge(charStars[cname]);
-        if (icon) {
-          return `<div class="char"><div class="char-icon-wrap"><img class="char-icon" src="${icon}" alt="">${badge}</div><div class="char-name">${cname}</div></div>`;
-        }
-        return `<div class="char"><div class="char-icon-wrap"><div class="char-icon char-placeholder">${(cname || '?')[0]}</div>${badge}</div><div class="char-name">${cname}</div></div>`;
+        const support = bi.elf || bi.collaborator || bi.collaboration || bi.assist || bi.support || bi.partner;
+        const elfHtml = support ? (() => {
+          const avatar = support.avatar;
+          const eIcon = absIcon(typeof avatar === 'string' ? avatar : (avatar?.icon || avatar?.icon_path || support.icon_path || ''));
+          const supportName = support.name || support.character_name || support.avatar_name || avatar?.name || support.character?.name || support.avatar_info?.name || '';
+          const fallbackName = '协同者';
+          const eImg = eIcon ? `<img src="${eIcon}" alt="">` : `<span>${supportName[0] || fallbackName[0]}</span>`;
+          const rankText = collabRank[support.star] || 'S';
+          return `<div class="elf-card"><div class="elf-icon">${eImg}</div><div class="collab-rank">${rankText}</div><div class="elf-name">${supportName || fallbackName}</div></div>`;
+        })() : '';
+
+        return `<div class="battle-boss"><div class="boss-icon">${bossImg}</div><div class="boss-details"><div class="boss-title"><span class="boss-index">BOSS ${bossIndex + 1}</span><span class="boss-name">${bossName}</span></div><div class="boss-score">${bossScore}</div></div><div class="lineup">${lineup}${elfHtml}</div></div>`;
       }).join('');
-
-      const elf = bi.elf;
-      const elfHtml = elf ? (() => {
-        const eIcon = absIcon(elf.avatar || '');
-        const eImg = eIcon ? `<img src="${eIcon}" alt="">` : `<span>${(elf.name || '?')[0]}</span>`;
-        const rankText = collabRank[elf.star] || 'S';
-        return `<div class="elf-card"><div class="elf-icon">${eImg}</div><div class="collab-rank">${rankText}</div><div class="elf-name">${elf.name || ''}</div></div>`;
-      })() : '';
-
-      return `<div class="report-card"><div class="boss-section"><div class="boss-icon">${bossImg}</div><div class="boss-name">${bossName}</div></div><div class="boss-score">${bossScore}</div><div class="lineup">${lineup}${elfHtml}</div></div>`;
+      const reportRank = report.rank || 0;
+      const reportPct = report.ranking_percentage || '0';
+      return `<section class="report-card"><div class="report-heading"><div class="period"><span class="period-index">RECORD ${String(reportIndex + 1).padStart(2, '0')}</span><span class="period-date">${fmtTs(report.time_second)}</span></div><div class="period-stats"><div><span>总分</span><b>${report.score || 0}</b></div><div><span>档位</span><b>${reportRank}</b></div><div><span>排名</span><b>前${reportPct}%</b></div><div><span>分组</span><b>${fmtArea(report.area || 0)}</b></div></div></div><div class="boss-list">${bossCards || '<div class="empty-report">本期暂无 Boss 记录</div>'}</div></section>`;
     }).join('\n');
 
     const bgs = ['bg', 'bg1', 'IMG_20250717_034154'];
     const bg = bgs[Math.floor(Math.random() * bgs.length)];
+    const gameIcon = fs.readFileSync(new URL('../../resources/game_icons/bh3.webp', import.meta.url));
+    const gameLogo = fs.readFileSync(new URL('../../resources/help/games/bh3-logo.png', import.meta.url));
 
     const data = {
       uid,
@@ -253,6 +263,9 @@ export class bh3_battlefield extends plugin {
       nickname: role.nickname || '未知舰长',
       level: role.level || 0,
       avatarUrl: absIcon(role.AvatarUrl || ''),
+      gameIcon: `data:image/webp;base64,${gameIcon.toString('base64')}`,
+      gameLogo: `data:image/png;base64,${gameLogo.toString('base64')}`,
+      hideFooter: options.hideFooter ? 'hide-footer' : '',
       activeDays: stats.active_day_number || 0,
       rating: getMysRating(pref),
       totalScore,
@@ -260,7 +273,8 @@ export class bh3_battlefield extends plugin {
       rankingPct,
       area: fmtArea(area),
       bg,
-      infoCards,
+      reportCards,
+      reportCount: displayReports.length,
       dataTime: moment().format('MM-DD HH:mm'),
     };
 
@@ -280,17 +294,20 @@ export class bh3_battlefield extends plugin {
       logger.error('[bh3_battlefield] render failed:', err);
     }
 
-    if (buf && Buffer.isBuffer(buf)) return sendMsg(e, buf);
+    if (buf && Buffer.isBuffer(buf)) return options.returnBuffer ? buf : sendMsg(e, buf);
 
     const lines = [
       `⚔️ UID${uid} 记忆战场战报`,
       `舰长: ${data.nickname}  Lv.${data.level}`,
       `${data.area} 总分:${totalScore}  ${rank}档  前${rankingPct}%`,
-      ...battleInfos.map((bi, i) => {
-        const boss = bi.boss || {};
-        const chars = (bi.lineup || []).map(c => c.name || '').join('、');
-        return `  #${i+1} ${boss.name || '?'} ${bi.score || 0}分\n  阵容: ${chars}`;
-      }),
+      ...displayReports.flatMap((report, reportIndex) => [
+        `\n[第${reportIndex + 1}期] ${fmtTs(report.time_second)}  ${report.score || 0}分  ${report.rank || 0}档  前${report.ranking_percentage || '0'}%`,
+        ...(report.battle_infos || []).slice(0, 3).map((bi, i) => {
+          const boss = bi.boss || {};
+          const chars = (bi.lineup || []).map(c => c.name || '').join('、');
+          return `  #${i+1} ${boss.name || '?'} ${bi.score || 0}分\n  阵容: ${chars}`;
+        }),
+      ]),
       `更新时间: ${data.dataTime}`,
     ];
     return sendMsg(e, lines.join('\n'));

@@ -185,3 +185,22 @@ body .story-body:not(.no-boss) { width: 1200px; }
 #container .story-row > .story-cell { display: flex; flex-direction: column; align-self: stretch; }
 #container .story-row > .story-cell > .floor-card,
 #container .story-row > .story-cell > .sr-boss-floor { flex: 1 1 auto; }
+
+/* ---- 单页强制宽屏布局 ----
+   框架截图时浏览器默认视口是 800px，会命中上面的 @media (max-width:900px)，
+   把整体压到 800、左栏 384 / 右栏 404（用户看到的“左栏变窄、发糊”）。
+   单页渲染会带 body.wide-layout，这里用更高优先级把布局锁回 1200（574+574），
+   王棋页本就是 1776 宽，不受这段影响。 */
+body.wide-layout:has(.has-sr-boss) { width: 1200px !important; }
+body.wide-layout .story-body:not(.no-boss) { width: 1200px !important; }
+body.wide-layout .container.has-sr-boss { width: 1200px !important; }
+body.wide-layout #container .story-row { gap: 16px !important; }
+body.wide-layout #container .story-row .story-left { width: 574px !important; }
+body.wide-layout #container .story-row .story-right { width: 574px !important; }
+
+/* 框架截图不认 deviceScaleFactor，只按 CSS 像素出图；这里用 transform 放大排版，
+   等效于合并图的 body{transform:scale(2)}，文字/图片是矢量放大，不会糊。 */
+body.wide-layout {
+  transform: scale(2.5) !important;
+  transform-origin: 0 0 !important;
+}

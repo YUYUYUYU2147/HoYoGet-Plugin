@@ -10,6 +10,7 @@
  * 优先级必须高于 ZZZ-Plugin（-30000）才抢得到指令。
  */
 import { pluginPriority, render } from '#HoYoGet'
+import { COPYRIGHT_TEXT } from '../../system/copyright.js'
 import { normalizeShiyu, normalizeDeadly, bossCodexLookup, toElementTags, formatMonsterStats } from '../../system/zzz_challenge.js'
 import { saveChallengeRecord, listChallengeRecords, readChallengeRecord } from '../../system/zzz_challenge_history.js'
 import { zzz_panel_list } from './zzz_panel_list.js'
@@ -135,7 +136,7 @@ export class zzz_challenge extends zzz_panel_list {
     // 落盘历史（往期查询时也能看到当期/上期）
     if (data.period) saveChallengeRecord(uid, 'shiyu', data.period, data)
 
-    return render('zzz_challenge/challenge', { ...data, footer: 'from 米哈游' }, { e, ret: true, dsf: 2.4 })
+    return render('zzz_challenge/challenge', { ...data, footer: COPYRIGHT_TEXT }, { e, ret: true, dsf: 2.4 })
   }
 
   /** 危局强袭战 */
@@ -165,7 +166,7 @@ export class zzz_challenge extends zzz_panel_list {
 
     if (data.period) saveChallengeRecord(uid, 'deadly', data.period, data)
 
-    return render('zzz_challenge/deadly', { ...withDeadlyEntries(data), footer: 'from 米哈游' }, { e, ret: true, dsf: 2.4 })
+    return render('zzz_challenge/deadly', { ...withDeadlyEntries(data), footer: COPYRIGHT_TEXT }, { e, ret: true, dsf: 2.4 })
   }
 
   /** 式舆防卫战 + 危局强袭战：左右拼成一张图 */
@@ -269,7 +270,7 @@ export class zzz_challenge extends zzz_panel_list {
     const strip = Buffer.from(
       `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${stripH}">` +
       `<text x="${cx}" y="${Math.round(stripH * 0.42)}" text-anchor="middle" font-size="${fsTip}" fill="#8b93a7" font-family="${fontStack}">* 总得分与排名并非即时刷新，挑战详情存在约2小时延迟</text>` +
-      `<text x="${cx}" y="${Math.round(stripH * 0.8)}" text-anchor="middle" font-size="${fsFrom}" fill="#ff4d4f" font-family="${fontStack}">from 米哈游</text>` +
+      `<text x="${cx}" y="${Math.round(stripH * 0.8)}" text-anchor="middle" font-size="${fsFrom}" fill="#ff4d4f" font-family="${fontStack}">${COPYRIGHT_TEXT}</text>` +
       `</svg>`
     )
     composite.push({ input: strip, left: 0, top: contentH })
@@ -547,7 +548,7 @@ export class zzz_challenge extends zzz_panel_list {
       const label = type === 'shiyu' ? '式舆防卫战' : type === 'deadly_hard' ? '绝境强袭战' : '危局强袭战'
       return e.reply('还没有' + label + '记录，请先查询一次。')
     }
-    return render('zzz_challenge/rank_zzz/index', { ...data, signature: 'from 米哈游' }, { e, ret: true, dsf: 2 })
+    return render('zzz_challenge/rank_zzz/index', { ...data, signature: COPYRIGHT_TEXT }, { e, ret: true, dsf: 2 })
   }
 
   /** 深渊排名：式舆 + 危局两张榜上下拼接 */
@@ -578,7 +579,7 @@ export class zzz_challenge extends zzz_panel_list {
 
     const [r1, r2] = await Promise.all([
       render('zzz_challenge/rank_zzz/index', { ...a, signature: '' }, { e, ret: false, dsf: 2 }),
-      render('zzz_challenge/rank_zzz/index', { ...b, signature: 'from 米哈游' }, { e, ret: false, dsf: 2 }),
+      render('zzz_challenge/rank_zzz/index', { ...b, signature: COPYRIGHT_TEXT }, { e, ret: false, dsf: 2 }),
     ])
     const b1 = toBuf(r1)
     const b2 = toBuf(r2)
@@ -620,7 +621,7 @@ export class zzz_challenge extends zzz_panel_list {
     if (!rec) return e.reply(`没有第 ${index} 期记录（共 ${list.length} 期）。`)
     const data = type === 'deadly' ? withDeadlyEntries(rec.data || {}) : rec.data || {}
     const tpl = type === 'shiyu' ? 'zzz_challenge/challenge' : 'zzz_challenge/deadly'
-    return render(tpl, { ...data, footer: 'from 米哈游 · 历史记录' }, { e, ret: true, dsf: 2.4 })
+    return render(tpl, { ...data, footer: `${COPYRIGHT_TEXT} · 历史记录` }, { e, ret: true, dsf: 2.4 })
   }
 
   /** 往期查询串（zzzRemindFetch 只封装了当期，往期要自己拼） */

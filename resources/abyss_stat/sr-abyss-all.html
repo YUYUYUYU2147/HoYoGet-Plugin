@@ -3,7 +3,7 @@
 <head>
   <meta http-equiv="content-type" content="text/html;charset=utf-8" />
   <link rel="shortcut icon" href="#" />
-  <link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/sr-abyss-all.css" />
+  <link rel="stylesheet" type="text/css" href="{{ppath}}abyss_stat/sr-abyss-all.css?v={{assetVer}}" />
 </head>
 <body>
   <div class="container" id="container" style="width: {{totalWidth}}px;">
@@ -23,8 +23,8 @@
     <div class="columns" style="width: {{contentWidth}}px;">
       {{each columns col}}
       <div class="column {{col.type}}">
-        <div class="col-head">
-        <div class="column-title">{{col.title}}</div>
+        <div class="report">
+        <div class="report-heading">{{col.title}}</div>
         <div class="overview-card">
           <div class="overview-title">{{col.sectionTitle || col.title}}挑战回顾</div>
           <div class="overview-main">
@@ -72,7 +72,6 @@
           </div>
           {{/if}}
           <div class="period-info">{{col.periodText}}{{if col.periodName}} · {{col.periodName}}{{/if}}</div>
-        </div>
         </div>
         <div class="section-label">{{col.sectionTitle || col.title}}通关战绩</div>
         <div class="floor-list">
@@ -197,45 +196,25 @@
           </div>
           {{/each}}
         </div>
-        <div class="col-spacer"></div>
-        <!-- 快速通关卡已关闭（恢复时把下面的 if false 改回 col.fastSummary 条件） -->
-        {{if false}}
-        <div class="floor-card fast-card">
+        {{each col.fastFloors f}}
+        <div class="floor-card fast-clear">
           <div class="floor-head">
-            <div class="floor-name">{{col.fastSummary.first}}{{if col.fastSummary.count > 1}} ~ {{col.fastSummary.last}}{{/if}}</div>
+            <div class="floor-name">{{f.name}}</div>
             <div class="floor-stars">
-              <img class="floor-star {{if col.fastSummary.star<1}}nostar-img{{/if}}" src="{{ppath}}abyss_stat/imgs/challenge/peak/mob_star.png" />
-              <img class="floor-star {{if col.fastSummary.star<2}}nostar-img{{/if}}" src="{{ppath}}abyss_stat/imgs/challenge/peak/mob_star.png" />
-              <img class="floor-star {{if col.fastSummary.star<3}}nostar-img{{/if}}" src="{{ppath}}abyss_stat/imgs/challenge/peak/mob_star.png" />
+              <img class="floor-star {{if f.star<1}}nostar-img{{/if}}" src="{{ppath}}abyss_stat/imgs/challenge/peak/mob_star.png" />
+              <img class="floor-star {{if f.star<2}}nostar-img{{/if}}" src="{{ppath}}abyss_stat/imgs/challenge/peak/mob_star.png" />
+              <img class="floor-star {{if f.star<3}}nostar-img{{/if}}" src="{{ppath}}abyss_stat/imgs/challenge/peak/mob_star.png" />
             </div>
           </div>
-          <div class="fast-card-sub">快速通关，共 {{col.fastSummary.count}} 关</div>
+          <div class="fast-card-sub">快速通关</div>
         </div>
-        {{/if}}
-        {{if col.prevPeak}}
-        <div class="prev-peak">
-          <div class="prev-peak-title">{{col.prevPeak.version}}{{if col.prevPeak.version && col.prevPeak.range}} · {{/if}}{{col.prevPeak.range}}</div>
-          <div class="prev-peak-name">{{col.prevPeak.name}}</div>
-          <div class="prev-peak-row">
-            <span>王棋通关战绩</span>
-            <span>使用次数 {{col.prevPeak.kingStar}} ★</span>
-          </div>
-          {{if col.prevPeak.knights && col.prevPeak.knights.length}}
-          <div class="prev-peak-knights">
-            {{each col.prevPeak.knights k}}
-            <div class="prev-peak-knight">
-              <div class="prev-peak-knight-name">骑士 {{k.label}}</div>
-              <div class="prev-peak-knight-star">{{k.star}} ★</div>
-            </div>
-            {{/each}}
-          </div>
-          {{/if}}
+        {{/each}}
         </div>
-        {{/if}}
       </div>
       {{/each}}
     </div>
-    <div class="logo">{{layoutcopyright}}</div>
+    {{include footerTpl}}
   </div>
+  <script src="{{ppath}}abyss_stat/fill.js?v={{assetVer}}"></script>
 </body>
 </html>

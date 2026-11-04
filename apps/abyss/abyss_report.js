@@ -6,6 +6,7 @@ import moment from 'moment';
 import { render, config, pluginPriority, makeForwardMsg } from '#HoYoGet';
 import sharp from '../../node_modules/sharp/lib/index.js';
 import { enrichFromAlioth, pickEnrich } from '../../system/sr_enrich.js';
+import { COPYRIGHT_TEXT } from '../../system/copyright.js';
 
 const MANIFEST_URL = 'https://static.nanoka.cc/manifest.json';
 const DEFAULT_REPOS = [
@@ -1445,7 +1446,7 @@ async function mergeImages(imageList = [], meta = {}) {
     <rect width="100%" height="100%" fill="url(#bg)"/>
     <text x="${pad}" y="48" fill="#ffe8a8" font-size="22" font-family="sans-serif" letter-spacing="3">XHH ABYSS REPORT</text>
     <text x="${pad}" y="88" fill="#ffffff" font-size="34" font-family="sans-serif" font-weight="700">${meta.gameName || ''} v${meta.version || ''} ${meta.type || ''}</text>
-    <text x="${(width + pad * 2) / 2}" y="${totalH - 24}" text-anchor="middle" fill="#c8d2ea" font-size="18" font-family="sans-serif">数据来源：Abyss Repo / Nanoka · from 米哈游</text>
+    <text x="${(width + pad * 2) / 2}" y="${totalH - 24}" text-anchor="middle" fill="#c8d2ea" font-size="18" font-family="sans-serif">数据来源：Abyss Repo / Nanoka · ${COPYRIGHT_TEXT}</text>
   </svg>`);
   let top = titleH + pad;
   const composite = [];

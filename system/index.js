@@ -1,5 +1,13 @@
 import mys from './mys.js';
 import render, { qualityScale, scaleStyle } from './render.js';
+/* 统一版权注释：注册 art-template 全局 copy()，所有模板共用一份定义 */
+try {
+    const { default: artTemplate } = await import('art-template');
+    const { installCopyright } = await import('./copyright.js');
+    installCopyright(artTemplate);
+} catch (err) {
+    logger.warn?.(`[HoYoGet] 版权注释注册失败：${err?.message || err}`);
+}
 import splitImage from './process_images.js';
 import yaml from './yaml.js';
 import yyjson from './yyjson.js';

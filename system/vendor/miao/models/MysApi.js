@@ -306,13 +306,22 @@ export default class MysApi {
     let ret
     try {
       ret = await mys.getData(reqApi, data)
-      if (mysInfo && mysInfo.checkCode) ret = await mysInfo.checkCode(ret, api, this.mys, data)
+      /* 传 reqApi（下划线名）而不是 api（驼峰名）：mys.req.err 处理器重试时
+         会直接拿这个值调 getData，而底层 apiTool 只认下划线名。 */
+      if (mysInfo && mysInfo.checkCode) ret = await mysInfo.checkCode(ret, reqApi, this.mys, data)
     } finally {
       e._reqCount--
       if (e._reqCount === 0) e.reply = e._original_reply
     }
     if (!ret) return false
-    if (ret.retcode !== 0) e._retcode = ret.retcode
+    /* 有些接口失败时 data 为 null：旧写法 `ret.data || ret` 会把整个错误响应
+       当成数据返回，调用方看到的是 truthy，就既不算失败也不出错误提示
+       （*深渊 里表现为某一列凭空消失）。这里明确按失败处理，让调用方
+       能拿到 e._retcode 并走 brief 兜底。 */
+    if (ret.retcode !== undefined && ret.retcode !== 0) {
+      e._retcode = ret.retcode
+      return false
+    }
     return ret.data || ret
   }
 

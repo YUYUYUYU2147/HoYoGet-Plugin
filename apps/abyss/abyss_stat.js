@@ -429,7 +429,7 @@ export class abyss_stat extends plugin {
     const data = buildSrChallengeData(raw, cfg, type)
     if (!data) return e.reply(`没有查到本期${cfg.title}记录，可能还没打或未公开。`)
     const modeKey = { chaos: 'sr_chaos', story: 'sr_fiction', boss: 'sr_shadow' }[key]
-    const [avatars, bossMap] = await Promise.all([
+    const [avatars, bossMap, buffList] = await Promise.all([
       this.fetchSrAvatars(e, mys, data),
       key === 'peak'
         ? import('./abyss_now.js')
@@ -440,7 +440,33 @@ export class abyss_stat extends plugin {
             .then(m => m.getSrBossesByFloor(modeKey, { offset: type === 2 ? 1 : 0 }))
             .catch(() => ({}))
           : Promise.resolve({}),
+      modeKey
+        ? import('./abyss_now.js')
+          .then(m => m.getSrBuffs?.(modeKey) || [])
+          .catch(() => [])
+        : Promise.resolve([]),
     ])
+    /* 混沌/虚构/末日的接口节点里经常没有 buff（尤其混沌），单页就会整块「队伍增益」消失。
+       用 Alioth 速览的当期关卡增益/战技兜底，挂到每个缺 buff 的节点上。 */
+    const clean = s => String(s || '')
+      .replace(/<color=[^>]*>/gi, '').replace(/<\/color>/gi, '')
+      .replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ').trim()
+    if (buffList?.length) {
+      const synthetic = {
+        id: 'alioth_buff',
+        icon: '',
+        name_mi18n: buffList.map(x => x.name).filter(Boolean).join(' / '),
+        desc_mi18n: buffList.map(x => clean(x.desc)).filter(Boolean).join('\n'),
+      }
+      for (const f of (data.floors || [])) {
+        for (const node of [f.node1, f.node2, f.node3, ...(f.nodes || [])]) {
+          if (node && node.avatars?.length && !node.buff && !node.raw?.buff && !node.raw?.maze_buff) {
+            node.buff = synthetic
+          }
+        }
+      }
+    }
     /* 王棋：右栏 BOSS 与左栏关卡一一对应，直接用 { knight, king } 索引表，
        不再走混沌/虚构/末日那套按楼层对齐的逻辑。 */
     const peakBosses = key === 'peak' ? (bossMap || {}) : null
@@ -539,14 +565,17 @@ export class abyss_stat extends plugin {
       srBosses,
       srBossByFloor,
       peakBosses,
-      /* 混沌/虚构/末日两栏总宽 1200 CSS；王棋左右等宽各 880 → 1776 CSS，
-         视窗要盖住整宽，否则右栏会被裁掉 */
+      /* 框架截图默认视口只有 800px，会触发 sr-bosses.css 的窄屏兜底把左栏压到 384。
+         传 wide 让页面强制走 1200 宽两栏（王棋走 1776）。 */
+      wide: true,
+      /* 单页 CSS 也带时间戳，避免浏览器缓存旧样式 */
+      assetVer: Date.now(),
       viewport: { width: key === 'peak' ? 1900 : 1600, height: 600 },
       timeCalc,
       elemIcon,
       repeat,
       sys: { copyright: '' },
-    }, { e, ret: true, dsf: 4 })
+    }, { e, ret: true, dsf: 3, maxDsf: 3 })
   }
 
   srChaos(e) { return this.srChallenge(e, 'chaos') }
@@ -659,11 +688,18 @@ export class abyss_stat extends plugin {
             battle_num: Number(sch.times || 0),
           },
           floors: [],
+          fastFloors: [],
+          history: [],
         });
         have.add(key);
         logger.mark?.(`[HoYoGet][abyss_stat] *深渊 ${cfg.title} 主接口无数据，已用概览接口补一列`)
       }
     }
+
+    /* 王棋本期没打（无楼层且挑战次数为 0）就整列不显示，避免只剩「上期未参与」占位。 */
+    const peakEmpty = columns.findIndex(c => c.key === 'peak'
+      && !(c.floors?.length) && !Number(c.list?.battle_num))
+    if (peakEmpty !== -1) columns.splice(peakEmpty, 1)
 
     if (!columns.length) {
       if (errors.some(e => /限流|-10001|-502/.test(e))) {
@@ -687,7 +723,7 @@ export class abyss_stat extends plugin {
 
     /* 王棋列：把 Alioth 的王棋/骑士关卡信息（等级、机制 tag、怪物弱点）挂到各层卡片 */
     const peakCol = columns.find(c => c.key === 'peak')
-    if (peakCol && peakCol.floors?.length) {
+    if (peakCol?.floors?.length) {
       try {
         const now3 = await import('./abyss_now.js')
         const pb = await now3.getSrArbKingBosses?.({ offset: type === 2 ? 1 : 0 }) || {}
@@ -697,22 +733,6 @@ export class abyss_stat extends plugin {
             : (pb.knight?.[i] || null)
           if (i === 0 && fl.bossHalf) fl.bossHalf.label = '王棋 BOSS'
         })
-        /* 上期赛季面板：填掉王棋列下方空白，信息与单个王棋页一致 */
-        const prevRaw = await mys.getChallengePeak?.(2)
-        const prevRec = prevRaw?.challenge_peak_records?.[0]
-        if (prevRec && prevRec.has_challenge_record) {
-          const pg = prevRec.group || {}
-          const knightCount = (prevRec.mob_records || []).filter(r => (r.avatars || []).length).length
-          const mobStars = Number(prevRec.mob_stars || 0)
-          const perStar = knightCount ? Math.round(mobStars / knightCount) : 0
-          peakCol.prevPeak = {
-            version: pg.version ? `${pg.version}版本` : '',
-            range: [timeCalc(pg.begin_time), timeCalc(pg.end_time)].filter(Boolean).join(' ~ '),
-            name: pg.name_mi18n || pg.name || '王棋关卡',
-            kingStar: Number(prevRec.boss_stars || 0),
-            knights: Array.from({ length: knightCount }, (_, i) => ({ label: String(i + 1).padStart(2, '0'), star: perStar })),
-          }
-        }
       } catch (err) {
         logger.debug?.(`[HoYoGet][abyss_stat] 取王棋关卡信息失败：${err?.message || err}`)
       }
@@ -741,7 +761,12 @@ export class abyss_stat extends plugin {
       columns,
       totalWidth,
       contentWidth: totalWidth - 32,
-      layoutcopyright: 'from 米哈游',
+      /* CSS / fill.js 必须带版本号：Chromium 会缓存同一 URL，
+         改完样式或脚本不换 URL 就永远跑旧文件（表现为「怎么改都没变化」）。 */
+      assetVer: Date.now(),
+      /* 版权注释统一放在 abyss_stat/_footer.html，由合并模板 include 一次；
+         不在每一列/每个子图里各写一份。 */
+      footerTpl: path.join(PLUGIN_ROOT, 'resources', 'abyss_stat', '_footer.html'),
       sys: { copyright: '' },
     }, { e, ret: true, dsf: 2, viewport: { width: Math.max(1000, totalWidth), height: 900 } })
     /* render 失败返回 false 时框架会 continue 到下一个插件（genshin 会接手出它自己的图）。
@@ -770,7 +795,6 @@ export class abyss_stat extends plugin {
     }
     const allFloors = (data.floors || [])
       .filter(f => (f.nodes || []).some(n => n?.avatars?.length))
-      .filter(f => Number(f.index) !== 10)
       .sort((a, b) => (Number(b.index) || 0) - (Number(a.index) || 0))
       .sort((a, b) => (Number(b.index) || 0) - (Number(a.index) || 0))
     /* 只渲染最后 2 层：混沌回忆有 12 层，全画出来整图能到 15000px，
@@ -840,7 +864,7 @@ export class abyss_stat extends plugin {
       showRound: key !== 'boss',
       showTotalScore: key !== 'chaos',
       showNodeScore: true,
-      /* 快速通关层：与单个挑战页一致，压缩成一行汇总，不出空卡 */
+      /* 快速通关层：既保留汇总文案，也逐层给出候选卡（fill.js 用来补齐列高） */
       fastSummary: (() => {
         const fast = (data.floors || [])
           .filter(f => f.isFast)
@@ -854,6 +878,14 @@ export class abyss_stat extends plugin {
           }
           : null
       })(),
+      fastFloors: (data.floors || [])
+        .filter(f => f.isFast)
+        .sort((a, b) => (Number(a.index) || 0) - (Number(b.index) || 0))
+        .map(f => ({
+          name: String(f.name || '').trim(),
+          star: Number(f.star ?? f.star_num ?? 0) || 0,
+          round: Number(f.roundNum ?? f.round_num ?? 0) || 0,
+        })),
       sectionTitle: String(cfg.title || '').replace(/（.*?）/g, '').trim(),
       periodText: timeCalc(data.beginTime) && timeCalc(data.endTime)
         ? `${timeCalc(data.beginTime)} - ${timeCalc(data.endTime)}`

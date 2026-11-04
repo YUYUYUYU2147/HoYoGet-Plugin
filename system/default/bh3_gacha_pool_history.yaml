@@ -90,6 +90,23 @@ pools:
         end: 2026-11-12 12:00:00
         imgs:
           - https://upload-bbs.miyoushe.com/upload/2026/10/21/73565430/85eb46d621f3fe93437c168242841642_2496375179384353086.png
+      - name: 【补给】跃升武装丨龙威燎天烈&游戏人生
+        type: weapon
+        s: 龙威燎天烈
+        a:
+          - 游戏人生
+        imgs:
+          - https://upload-bbs.miyoushe.com/upload/2026/11/03/73565430/dde713a17a9c2dd9bc9069dafed7e383_4030354165657759875.png
+        start: 2026-11-06 12:00:00
+        end: 2026-11-26 04:00:00
+      - name: 【补给】跃升补给丨逆命魔龙·降临！
+        type: char
+        s: 逆命魔龙·降临！
+        a: []
+        imgs:
+          - https://upload-bbs.miyoushe.com/upload/2026/11/03/73565430/f21e7a297b26f4b757ff259580d96121_7503733768861854716.png
+        start: 2026-11-06 12:00:00
+        end: 2026-11-26 04:00:00
   - version: "9.0"
     start: 2026-07-23 12:00:00
     end: 2026-09-24 04:00:00

@@ -14,8 +14,8 @@ try { fs.appendFileSync('./plugins/HoYoGet-Plugin/temp/hot_reload.log', `${new D
    sharp 的常驻缓存与并发，避免单张图把进程推到重启。
    QQ 服务端对图片消息会缩到 1600px 宽，2800px 冗余量已经够用。 */
 const MAX_DSF = 2
-const SHRINK_MAX_BYTES = 1024 * 1024
-const SHRINK_QUALITY_STEPS = [92]
+const SHRINK_MAX_BYTES = 4 * 1024 * 1024
+const SHRINK_QUALITY_STEPS = [92, 88, 84, 78, 70]
 const SHRINK_MIN_WIDTH = 1200
 const SHRINK_SCALE_STEP = 0.85
 
@@ -71,14 +71,10 @@ async function shrinkImage(img) {
     if (!w || !h) return img
     if ((meta.pages || 1) > 1) return img
     if (src.length <= SHRINK_MAX_BYTES) return img
-    const fmt = meta.format === 'png' ? 'png' : meta.format === 'webp' ? 'webp' : 'jpeg'
-    const encode = (pipe, q) =>
-      fmt === 'png'
-        ? pipe.png({ compressionLevel: 9 })
-        : fmt === 'webp'
-          ? pipe.webp({ quality: q })
-          : pipe.jpeg({ quality: q, mozjpeg: true })
-    const steps = fmt === 'png' ? [0] : SHRINK_QUALITY_STEPS
+    /* 超阈值时优先「保持分辨率、转 JPEG 降质量」，不要先缩宽度：
+       缩放会让所有列变窄、文字发糊（*深渊 曾因此整图被缩到 2288 宽）。 */
+    const encode = (pipe, q) => pipe.jpeg({ quality: q, mozjpeg: true })
+    const steps = SHRINK_QUALITY_STEPS
     let width = w
     let best = null
     let bestQ = 0
@@ -178,7 +174,8 @@ async function render(path, data_, cfg) {
       const depth = path.split('/').filter(Boolean).length + 3;
       const ppath = '../'.repeat(depth) + 'plugins/HoYoGet-Plugin/resources/';
       const scale = cfg.pct || qualityScale()
-      const dsf = cfg.dsf ? Math.min(Number(cfg.dsf) || 0, MAX_DSF) : 0
+      /* 允许单页按需放宽像素密度（cfg.maxDsf），大长图仍用全局 MAX_DSF 兜内存 */
+      const dsf = cfg.dsf ? Math.min(Number(cfg.dsf) || 0, Number(cfg.maxDsf) || MAX_DSF) : 0
       return {
         sys: {
           // dsf 模式不走 CSS zoom：Chromium 在 `zoom` 下元素截图会按未缩放盒裁剪，
@@ -187,6 +184,8 @@ async function render(path, data_, cfg) {
           scale: dsf ? 'style=zoom:1' : `style=zoom:${scale}`,
         },
         ...(dsf ? { deviceScaleFactor: dsf } : {}),
+        /* 框架默认 jpeg q90；这里拉满，避免二次有损压缩 */
+        quality: 100,
         ...data_,
         // 自定义模板目录（模板里 <% include(_tpl_path+'/x.html') %> 用），默认仍是框架给的 miao 目录
         ...(data_.tplPath ? { _tpl_path: data_.tplPath } : {}),
@@ -196,9 +195,9 @@ async function render(path, data_, cfg) {
       };
     },
   });
-  /* 所有渲染路径统一收口：无论由本函数自发送还是调用方发送，
-     都先把超出阈值的图压到安全体积（见 shrinkImage）。 */
-  const payload = await shrinkImage(img);
+  /* 按用户要求：渲染图不再做任何压缩/缩放，原图直发（内存足够）。
+     保留 shrinkImage 函数但不再调用；如需恢复旧行为把这里改回 shrinkImage(img)。 */
+  const payload = img;
   // ret:true 时由 render 统一用图片消息自发送；调用方不要再 e.reply，否则会重复发送。
   // 发送成功则返回 e.reply 的结果（含 message_id，供 %原图 等缓存用），失败/未发送才返回图片本身。
   if (cfg.ret && e) {

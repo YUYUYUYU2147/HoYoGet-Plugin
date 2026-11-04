@@ -994,3 +994,146 @@ body {
 .hoyo-nick { max-width: 240px; font-size: 15px; font-weight: 700; color: #e8ecff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .mob-star-label { font-size: 12px; color: rgba(231, 235, 243, .7); }
+
+/* ============================================================
+   *深渊 等高出图（fill.js 补位版）
+   每类挑战是独立列；列内 report 用固定行高的表头行 + 自然高度楼层卡。
+   不再拉伸卡片：较矮的列由 fill.js 用「快速通关 / 王棋历史」卡片补齐，
+   图片本身不变形、不发糊。
+   ============================================================ */
+#container .columns {
+  display: grid !important;
+  grid-auto-flow: column !important;
+  grid-auto-columns: 430px !important;
+  gap: 12px !important;
+  align-items: start !important;
+}
+#container .column {
+  width: 430px !important;
+  flex: none !important;
+  height: auto !important;
+  align-self: start !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  padding: 10px !important;
+  border-radius: 12px !important;
+  background: linear-gradient(180deg, rgba(60, 70, 132, .55) 0%, rgba(30, 34, 62, .82) 100%) !important;
+  border: 1px solid rgba(126, 146, 226, .28) !important;
+}
+#container .column > .report {
+  display: grid !important;
+  grid-template-rows: 42px 220px 26px !important;
+  grid-auto-rows: auto !important;
+  gap: 8px !important;
+  align-content: start !important;
+}
+#container .column > .report > .report-heading {
+  grid-row: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 42px !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  color: #ffc870 !important;
+  border-radius: 8px !important;
+  background: rgba(0, 0, 0, .48) !important;
+  border: 1px solid rgba(255, 255, 255, .16) !important;
+}
+#container .column > .report > .overview-card {
+  grid-row: 2 !important;
+  margin: 0 !important;
+  height: 220px !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+#container .column > .report > .section-label {
+  grid-row: 3 !important;
+  margin: 0 !important;
+  height: 26px !important;
+}
+#container .column > .report > .floor-list {
+  grid-row: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  min-height: 0 !important;
+}
+#container .column > .report > .floor-list > .floor-card,
+#container .column > .report > .fast-clear,
+#container .column > .report > .history-card {
+  flex: 0 0 auto !important;
+  height: auto !important;
+}
+/* 候选卡默认隐藏，由 fill.js 决定显示多少张 */
+#container .fast-clear,
+#container .history-floor,
+#container .history-candidates,
+#container .history-card {
+  display: none !important;
+}
+#container .fast-clear.is-filler-visible,
+#container .history-floor.is-filler-visible,
+#container .history-card.is-filler-visible {
+  display: block !important;
+}
+#container .history-candidates { display: none !important; }
+/* 历史记录卡（王棋） */
+#container .history-card {
+  background: linear-gradient(180deg, rgba(92, 78, 176, .55) 0%, rgba(40, 34, 78, .78) 100%) !important;
+  border: 1px solid rgba(150, 130, 240, .32) !important;
+  border-radius: 10px !important;
+  padding: 10px 12px 12px !important;
+}
+#container .history-card .floor-name { font-size: 15px !important; font-weight: 900 !important; color: #f2f7ff !important; }
+#container .history-card-sub { margin-top: 4px !important; font-size: 10px !important; color: #b9a8ff !important; }
+#container .history-card-meta { display: flex !important; justify-content: space-between !important; margin-top: 6px !important; font-size: 11px !important; color: #dbe4ff !important; }
+/* 快速通关卡（紧凑） */
+#container .fast-clear {
+  background: linear-gradient(180deg, rgba(146, 96, 186, .58) 0%, rgba(58, 38, 82, .82) 100%) !important;
+  border: 1px solid rgba(196, 150, 240, .42) !important;
+  border-radius: 10px !important;
+}
+#container .fast-clear .fast-card-sub { margin-top: 4px !important; font-size: 11px !important; color: #f0c98a !important; }
+/* 取消一切旧的拉伸/占位 */
+#container .column > .col-spacer { display: none !important; }
+#container .column > .fast-card,
+#container .column > .prev-peak { display: none !important; }
+
+/* ---- 各类挑战使用自己的顶部概览背景（此前所有列都套了虚构叙事的 top_bg） ---- */
+#container .column.abyss > .report > .overview-card {
+  background-image:
+    linear-gradient(rgba(0, 0, 0, .34), rgba(0, 0, 0, .5)),
+    url("genshin_img/abyss/top_bg.png") !important;
+  background-size: cover !important;
+  background-position: center top !important;
+  background-repeat: no-repeat !important;
+}
+#container .column.story > .report > .overview-card {
+  background-image:
+    linear-gradient(rgba(0, 0, 0, .34), rgba(0, 0, 0, .5)),
+    url("imgs/challenge/story/top_bg.png") !important;
+  background-size: cover !important;
+  background-position: center top !important;
+  background-repeat: no-repeat !important;
+}
+#container .column.boss > .report > .overview-card {
+  background-image:
+    linear-gradient(rgba(0, 0, 0, .34), rgba(0, 0, 0, .5)),
+    url("imgs/challenge/boss/boss_bg.png") !important;
+  background-size: cover !important;
+  background-position: center top !important;
+  background-repeat: no-repeat !important;
+}
+#container .column.peak > .report > .overview-card {
+  background-image:
+    linear-gradient(rgba(0, 0, 0, .34), rgba(0, 0, 0, .5)),
+    url("imgs/challenge/peak/boss_bg_top.png") !important;
+  background-size: cover !important;
+  background-position: center top !important;
+  background-repeat: no-repeat !important;
+}

@@ -212,10 +212,36 @@ export default class apiTool {
           url: `${hostRecord}game_record/app/hkrpg/api/role/basicInfo`,
           query: `role_id=${this.uid}&server=${this.server}`,
         },
-        /** 深渊 （混沌回忆） */
+        /** 逐光捡金概览（主接口 10041 时用于兜底出概览卡） */
+        brief: {
+          url: `${hostRecord}game_record/app/hkrpg/api/challenge_brief`,
+          query: `role_id=${this.uid}&server=${this.server}`,
+        },
+        /** 深渊 （混沌回忆）
+            必须带 need_all=true，否则只返回最高层（表现为混沌列只有 1 层、铺不满）。 */
         spiralAbyss: {
           url: `${hostRecord}game_record/app/hkrpg/api/challenge`,
-          query: `role_id=${this.uid}&schedule_type=${data.schedule_type || 1}&server=${this.server}`,
+          query: `isPrev=&need_all=true&role_id=${this.uid}&schedule_type=${data.schedule_type || 1}&server=${this.server}`,
+        },
+        /** 混沌回忆（新版 miao 驼峰 spiralAbyss 的下划线别名） */
+        challenge_chaos: {
+          url: `${hostRecord}game_record/app/hkrpg/api/challenge`,
+          query: `isPrev=true&need_all=true&role_id=${this.uid}&schedule_type=${data.schedule_type || 1}&server=${this.server}`,
+        },
+        /** 虚构叙事 */
+        challenge_story: {
+          url: `${hostRecord}game_record/app/hkrpg/api/challenge_story`,
+          query: `isPrev=true&need_all=true&role_id=${this.uid}&schedule_type=${data.schedule_type || 1}&server=${this.server}`,
+        },
+        /** 末日幻影 */
+        challenge_boss: {
+          url: `${hostRecord}game_record/app/hkrpg/api/challenge_boss`,
+          query: `isPrev=true&need_all=true&role_id=${this.uid}&schedule_type=${data.schedule_type || 1}&server=${this.server}`,
+        },
+        /** 异相仲裁（王棋） */
+        challenge_peak: {
+          url: `${hostRecord}game_record/app/hkrpg/api/challenge_peak`,
+          query: `isPrev=true&need_all=true&role_id=${this.uid}&schedule_type=${data.schedule_type || 1}&server=${this.server}`,
         },
         /** 角色面板 */
         avatarInfo: {

@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { config, mhy, pluginPriority, render, yaml, makeForwardMsg, mys } from '#HoYoGet'
+import { COPYRIGHT_TEXT } from '../../system/copyright.js'
 import { resolveWikiAlias } from "../common/wiki/name_alias.js"
 import { damageSkillsAt, getCharRates } from '../../system/zzz_skill_rate.js'
 import { getBuffAreas } from '../../system/zzz_buff.js'
@@ -3156,7 +3157,7 @@ export class zzz_panel_list extends plugin {
 
     const detail = await normalizeDetail(avatar, uid)
     const charData = detail.charData
-    const footer = 'from 米哈游'
+    const footer = COPYRIGHT_TEXT
     try {
       let gamePlayer = null
       try { gamePlayer = await this.fetchPlayer(e, uid, ck) } catch { /* 取不到游戏昵称就回落 QQ */ }
@@ -3768,7 +3769,7 @@ export class zzz_panel_list extends plugin {
       const detail = await normalizeDetail(raw, '100000000')
       const img = await render('zzz_panel/detail', {
         ...detail,
-        footer: 'from 米哈游 · 理论极限',
+        footer: `${COPYRIGHT_TEXT} · 理论极限`,
         appleStyle: panelAppleStyle(),
         bgImage: await resolvePanelBg(e),
         playerName: '理论极限',
@@ -4265,7 +4266,7 @@ export class zzz_panel_list extends plugin {
       ])
     }
     const cur = skills[idx]
-    const footer = 'from 米哈游'
+    const footer = COPYRIGHT_TEXT
     try {
       const img = await render('zzz_panel/damage', {
         ...detail,

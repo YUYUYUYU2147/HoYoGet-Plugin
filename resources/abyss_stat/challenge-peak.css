@@ -1332,3 +1332,9 @@ body:has(.body.has-sr-boss) {
   text-shadow: 0 1px 3px rgba(0, 0, 0, .4);
   white-space: nowrap;
 }
+
+/* 单页王棋：同样用 transform 放大排版，避免 dsf 无效导致只有 1x */
+body.wide-layout {
+  transform: scale(2) !important;
+  transform-origin: 0 0 !important;
+}

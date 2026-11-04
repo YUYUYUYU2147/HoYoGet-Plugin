@@ -329,7 +329,7 @@ async abyss(e) {
     return sendMsg(e, abyssText + extra);
   }
 
-  async _abyss(e, apiList) {
+  async _abyss(e, apiList, options = {}) {
     const auth = await this.getAuth(e);
     bh3Dbg('取号:', `qq=${auth.qq || e.user_id}`, `uid=${auth.uid || '(无)'}`, `region=${auth.region || '(无)'}`, `ck=${auth.ck ? '有' : '无'}`, `候选ck=${(auth.cks || []).length}`);
     if (!auth.uid) return sendMsg(e, '请先扫码绑定崩坏3账号');
@@ -439,6 +439,16 @@ async abyss(e) {
     const isSimpleLevel = label === '量子流形' || label === '旧深渊';
     const simpleLevelMap = { 1: '禁忌', 2: '原罪', 3: '苦痛', 4: '红莲', 5: '寂灭' };
     const letterLevelMap = { S: '寂灭', A: '红莲', B: '苦痛', C: '原罪', D: '禁忌' };
+    const newRankMap = { 1: [1, 1], 2: [2, 1], 3: [2, 2], 4: [2, 3], 5: [3, 1], 6: [3, 2], 7: [3, 3], 8: [4, 1], 9: [5, 1] };
+    const oldRankMap = { 1: [1, 1], 2: [2, 1], 3: [3, 1], 4: [4, 1], 5: [5, 1] };
+    const rankEmblems = Object.fromEntries([1, 2, 3, 4, 5].map(tier => {
+      const image = fs.readFileSync(new URL(`../../resources/bh3_abyss/rank-${tier}.png`, import.meta.url));
+      return [tier, `data:image/png;base64,${image.toString('base64')}`];
+    }));
+    const rankStar = fs.readFileSync(new URL('../../resources/bh3_abyss/rank-star.png', import.meta.url));
+    const rankStarData = `data:image/png;base64,${rankStar.toString('base64')}`;
+    const gameIcon = fs.readFileSync(new URL('../../resources/game_icons/bh3.webp', import.meta.url));
+    const gameLogo = fs.readFileSync(new URL('../../resources/help/games/bh3-logo.png', import.meta.url));
     const fmtLv = lv => {
       if (lv === undefined || lv === null) return '?';
       if (typeof lv === 'string') {
@@ -448,6 +458,13 @@ async abyss(e) {
       if (isSimpleLevel && simpleLevelMap[lv]) return simpleLevelMap[lv];
       return fmtLevel(lv);
     };
+    const getRankMeta = lv => {
+      const clean = String(lv ?? '').replace(/^LV\.?/i, '').toUpperCase();
+      const oldLevel = ({ D: 1, C: 2, B: 3, A: 4, S: 5 })[clean] || Number.parseInt(clean, 10);
+      const level = Number.parseInt(clean, 10);
+      const meta = isSimpleLevel ? oldRankMap[oldLevel] : newRankMap[level];
+      return meta || (isSimpleLevel ? oldRankMap[3] : newRankMap[7]);
+    };
 
     const reportList = reports.slice(0, 8).map((r, ri) => {
       const bossAvatar = absIcon(r.boss?.avatar || '');
@@ -455,6 +472,9 @@ async abyss(e) {
         ? `<img src="${bossAvatar}" alt="">`
         : `<span>${(r.boss?.name || '?')[0]}</span>`;
       const bossName = r.boss?.name || '未知';
+      const [rankTier, rankStarCount] = getRankMeta(r.level);
+      const rankStars = Array.from({ length: rankStarCount }, () => `<img src="${rankStarData}" alt="星">`).join('');
+      const rankIcon = `<span class="rank-mark"><img class="rank-emblem" src="${rankEmblems[rankTier]}" alt=""><span class="rank-stars">${rankStars}</span></span>`;
       const cupText = r.cup_number != null ? `${r.cup_number}杯` : '';
       const settledCup = r.settled_cup_number;
       const cupChange = settledCup ? ` (${settledCup > 0 ? '+' : ''}${settledCup})` : '';
@@ -467,14 +487,17 @@ async abyss(e) {
         }
         return `<div class="char"><div class="char-icon-wrap"><div class="char-icon char-placeholder">${(cname || '?')[0]}</div>${badge}</div><div class="char-name">${cname}</div></div>`;
       }).join('');
-      const elf = r.elf;
-      const elfHtml = elf ? (() => {
-        const eIcon = absIcon(elf.avatar || '');
-        const eImg = eIcon ? `<img src="${eIcon}" alt="">` : `<span>${(elf.name || '?')[0]}</span>`;
-        const rankText = elfRank[elf.star] || 'S';
-        return `<div class="elf-card"><div class="elf-icon">${eImg}</div><div class="collab-rank">${rankText}</div><div class="elf-name">${elf.name || ''}</div></div>`;
+      const support = r.elf || r.collaborator || r.collaboration || r.assist || r.support || r.partner;
+      const elfHtml = support ? (() => {
+        const avatar = support.avatar;
+        const eIcon = absIcon(typeof avatar === 'string' ? avatar : (avatar?.icon || avatar?.icon_path || support.icon_path || ''));
+        const supportName = support.name || support.character_name || support.avatar_name || avatar?.name || support.character?.name || support.avatar_info?.name || '';
+        const fallbackName = '协同者';
+        const eImg = eIcon ? `<img src="${eIcon}" alt="">` : `<span>${supportName[0] || fallbackName[0]}</span>`;
+        const rankText = elfRank[support.star] || 'S';
+        return `<div class="elf-card"><div class="elf-icon">${eImg}</div><div class="collab-rank">${rankText}</div><div class="elf-name">${supportName || fallbackName}</div></div>`;
       })() : '';
-      return `<div class="report-card"><div class="card-header"><div class="level-badge">${fmtLv(r.level)}</div><div class="score-wrap"><div class="score">${r.score || 0}</div><div class="boss-name-right">${bossName}</div></div></div><div class="card-body"><div class="lineup-wrap"><div class="lineup">${lined}${elfHtml}</div></div><div class="boss-area"><div class="boss-icon">${bossIcon}</div><div class="right-info"><div class="ri-line">#${r.rank || 0}</div><div class="ri-line">${cupText}${cupChange}</div><div class="ri-line time">结算 ${fmtTs(getSettleTs(r))}</div></div></div></div></div>`;
+      return `<div class="report-card"><div class="card-header"><div class="level-badge">${rankIcon}<span>${fmtLv(r.level)}</span></div><div class="score-wrap"><div class="score">${r.score || 0}</div><div class="score-caption">战绩积分</div></div></div><div class="boss-strip"><span class="boss-label">作战目标</span><span class="boss-name">${bossName}</span></div><div class="card-body"><div class="lineup-wrap"><div class="lineup">${lined}${elfHtml}</div></div><div class="boss-area"><div class="boss-icon">${bossIcon}</div><div class="right-info"><div class="ri-line">排名 #${r.rank || 0}</div><div class="ri-line">${cupText}${cupChange}</div><div class="ri-line time">结算 ${fmtTs(getSettleTs(r))}</div></div></div></div></div>`;
     }).join('\n');
 
     const bgs = ['bg', 'bg1', 'IMG_20250717_034154'];
@@ -488,6 +511,9 @@ async abyss(e) {
       avatarUrl: absIcon(role.AvatarUrl || ''),
       activeDays: stats.active_day_number || 0,
       rating: getMysRating(pref),
+      gameIcon: `data:image/webp;base64,${gameIcon.toString('base64')}`,
+      gameLogo: `data:image/png;base64,${gameLogo.toString('base64')}`,
+      hideFooter: options.hideFooter ? 'hide-footer' : '',
       label, bg,
       reportHtml: reportList,
       dataTime: moment().format('MM-DD HH:mm'),
@@ -511,7 +537,7 @@ async abyss(e) {
     }
     bh3Dbg('渲染:', buf && Buffer.isBuffer(buf) ? `图片 ${Math.round((buf.length || 0) / 1024)}KB ${Date.now() - t0}ms` : `失败，降级为文本 ${Date.now() - t0}ms`);
 
-    if (buf && Buffer.isBuffer(buf)) return sendMsg(e, buf);
+    if (buf && Buffer.isBuffer(buf)) return options.returnBuffer ? buf : sendMsg(e, buf);
 
     const lines = [
       `📊 UID${uid} ${data.label}战报`,
