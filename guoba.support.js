@@ -152,10 +152,7 @@ export const supportGuoba = () => {
     iconPath: process.cwd() + '/plugins/HoYoGet-Plugin/resources/Tl/imgs/米哈游.png',
   },
   configInfo: {
-    schemas: [      {
-        component: 'SOFT_GROUP_BEGIN',
-        label: '基本设置',
-      },
+    schemas: [
       {
         component: 'SOFT_GROUP_BEGIN',
         label: '模块开关',
@@ -224,6 +221,10 @@ export const supportGuoba = () => {
         component: 'Switch',
       },
       {
+        component: 'SOFT_GROUP_BEGIN',
+        label: '通用设置',
+      },
+      {
         field: 'data_mode',
         label: '图鉴数据模式',
         helpMessage: 'official=正式服（列表/查询都不出测试服条目）；test=测试服（只显示测试服条目）。也可用群指令 #切换正式服模式 / #切换测试服模式。改动实时生效',
@@ -249,6 +250,10 @@ export const supportGuoba = () => {
         componentProps: { min: 1, max: 200, step: 1 },
       },
       {
+        component: 'SOFT_GROUP_BEGIN',
+        label: '图鉴与显示',
+      },
+      {
         field: 'wiki',
         label: '图鉴启用',
         component: 'Switch',
@@ -269,6 +274,12 @@ export const supportGuoba = () => {
         field: 'bdsb',
         label: '使用HoYoGet绑定设备',
         helpMessage: '作用于genshin/StarRail/ZZZ-Plugin',
+        component: 'Switch',
+      },
+      {
+        field: 'emoji',
+        label: 'Emoji CDN渲染',
+        helpMessage: '浏览器不支持emoji时用CDN渲染',
         component: 'Switch',
       },
       {
@@ -463,7 +474,7 @@ export const supportGuoba = () => {
       },
       {
         component: 'SOFT_GROUP_BEGIN',
-        label: '米游社',
+        label: '米游社播报与绑定',
       },
       {
         field: 'groups',
@@ -527,7 +538,7 @@ export const supportGuoba = () => {
       },
       {
         component: 'SOFT_GROUP_BEGIN',
-        label: '卡池/图鉴外观',
+        label: '卡池与图鉴外观',
       },
       {
         field: 'gacha_header_art_source',
@@ -555,7 +566,7 @@ export const supportGuoba = () => {
       },
       {
         component: 'SOFT_GROUP_BEGIN',
-        label: '面板',
+        label: '角色面板',
       },
       {
         field: 'panel_style',
@@ -602,7 +613,7 @@ export const supportGuoba = () => {
       },
       {
         component: 'SOFT_GROUP_BEGIN',
-        label: '游戏攻略',
+        label: '历史卡池',
       },
       {
         field: 'gs_logs',
@@ -638,6 +649,10 @@ export const supportGuoba = () => {
         component: 'Input',
       },
       {
+        component: 'SOFT_GROUP_BEGIN',
+        label: '角色语音',
+      },
+      {
         field: 'all_voice',
         label: '角色语音总开关',
         helpMessage: '关闭后四个游戏语音全部停用',
@@ -667,7 +682,7 @@ export const supportGuoba = () => {
       },
       {
         component: 'SOFT_GROUP_BEGIN',
-        label: '攻略源',
+        label: '角色攻略设置',
       },
       {
         field: 'mys_global_guide_search',
@@ -771,6 +786,10 @@ export const supportGuoba = () => {
         helpMessage: '默认 -9999999999（极高优先级，确保优先于其它攻略插件抢到指令）；数字越小越优先，修改后需重启',
         component: 'InputNumber',
         componentProps: { min: -9999999999, max: 9999999999, step: 1 },
+      },
+      {
+        component: 'SOFT_GROUP_BEGIN',
+        label: '深渊速报设置',
       },
       {
         field: 'abyss_report_repos',
@@ -978,7 +997,7 @@ export const supportGuoba = () => {
       },
       {
         component: 'SOFT_GROUP_BEGIN',
-        label: '崩坏3扩展',
+        label: '四游戏体力推送',
       },
       {
         field: 'bh3_all_note_enable',
@@ -1046,6 +1065,10 @@ export const supportGuoba = () => {
         componentProps: { min: 1, max: 500, step: 1 },
       },
       {
+        component: 'SOFT_GROUP_BEGIN',
+        label: '崩坏3周期提醒',
+      },
+      {
         field: 'bh3_remind_enable',
         label: '崩三周期提醒',
         helpMessage: '深渊/战场/乐土开始和结算提醒',
@@ -1089,6 +1112,10 @@ export const supportGuoba = () => {
         component: 'InputTextArea',
       },
       {
+        component: 'SOFT_GROUP_BEGIN',
+        label: '绝区零挑战提醒',
+      },
+      {
         field: 'zzz_remind_enable',
         label: '绝区零挑战提醒',
         helpMessage: '式舆防卫战 / 危局强袭战未达标时私聊提醒；个人还需发「%开启挑战提醒」开启',
@@ -1113,6 +1140,10 @@ export const supportGuoba = () => {
         helpMessage: '低于该星数视为未达标；默认 6',
         component: 'InputNumber',
         componentProps: { min: 0, max: 9, step: 1 },
+      },
+      {
+        component: 'SOFT_GROUP_BEGIN',
+        label: '绝区零活动推送',
       },
       {
         field: 'zzz_activity_push_start_lead',
@@ -1286,14 +1317,8 @@ export const supportGuoba = () => {
         },
       },
       {
-        field: 'emoji',
-        label: 'Emoji CDN渲染',
-        helpMessage: '浏览器不支持emoji时用CDN渲染',
-        component: 'Switch',
-      },
-      {
         component: 'SOFT_GROUP_BEGIN',
-        label: '插件优先级',
+        label: '指令优先级与面板加速',
       },
       {
         field: 'priority_unified',
