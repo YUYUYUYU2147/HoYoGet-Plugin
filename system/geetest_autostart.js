@@ -147,6 +147,8 @@ async function pm2EntryBroken() {
 export async function ensureStarted(opts = {}) {
   const logger = opts.logger || globalThis.logger
   if (!deployed()) return { started: false, reason: '未部署' }
+  /* 端口已经有人应答就不再起，避免和已有实例抢 2149（重复 pm2 记录就是这么来的） */
+  if (await probePort()) return { started: false, reason: '已在运行' }
   const now = Date.now()
   if (!opts.force && now - lastTry < RETRY_GAP) return { started: false, reason: '刚试过，稍后再试' }
   if (starting) return starting

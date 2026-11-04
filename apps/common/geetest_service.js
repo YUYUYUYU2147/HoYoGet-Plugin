@@ -120,6 +120,24 @@ async function health() {
  * 会出现），直接 JSON.parse 会把提示里的 [ 当成数组开头而报错，误判成「没部署」。
  * 所以这里从第一个 [ 开始截取再解析。
  */
+/** 2149 端口当前监听的进程是不是本插件的过码服务（不依赖 pm2 记录） */
+async function portIsGeetest() {
+    try {
+        const { stdout } = await run(`ss -ltnp 2>/dev/null | grep :${PORT} || true`, 8000);
+        const m = String(stdout).match(/pid=(\d+)/);
+        if (!m) return null; // 没在监听
+        const pid = Number(m[1]);
+        try {
+            const cmd = fs.readFileSync(`/proc/${pid}/cmdline`).toString().replace(/\0/g, ' ');
+            return /geetest[\\/]server\.py/.test(cmd);
+        } catch {
+            return null;
+        }
+    } catch {
+        return null;
+    }
+}
+
 async function pm2HasProcess() {
     if (!await has('pm2 -v')) return null; // 没装 pm2，返回 null 表示「说不准」
     try {
@@ -269,29 +287,13 @@ export class GeetestService extends plugin {
     async deploy(e) {
         const pre = await health();
         if (pre?.ok) {
-            // 端口已经在响应，但进程不一定归本插件管。旧版本部署留下的是直连 pm2 或
-            // 手工 nohup 起的进程，端口被它占着，新进程根本起不来。
-            // 不做检查就往下走，最后会「看起来部署成功、实际还是旧进程在答」。
-            const managed = await pm2HasProcess();
-            if (managed === false) {
-                return e.reply(
-                    [
-                        `过码服务已在运行（${addr()}），可以直接使用；`
-                            + `但它不是本插件登记的进程（pm2 里没有 ${PM2_NAME}）。`,
-                        '',
-                        '想让插件统一托管（开机自启、状态更完整）时再处理：',
-                        `· 机器人所在设备执行：pm2 delete ${PM2_NAME}`,
-                        '· 或重启一次机器后，再重发本指令',
-                        '',
-                        '若只是想过码，无需理会这条。',
-                    ].join('\n'),
-                    true
-                );
-            }
-            const autoStart = await pm2StartupEnabled();
+            /* 端口已经在应答就是可用。不同机器上机器人进程的 pm2 视图可能和部署时不一致
+               （pm2 in-memory out-of-date 等），不要再拿 pm2 名字去否定它。 */
+            const owner = await portIsGeetest();
             return e.reply(
-                `过码服务已经在跑了（${addr()}）。\n` +
-                (autoStart ? '已设开机自启，机器重启后会自动恢复。' : '⚠️ 未设开机自启，机器重启后会掉线。\n重发一次本指令即可补上。') +
+                `过码服务已经在运行（${addr()}），可以直接使用。\n` +
+                (owner === true ? '已确认是本插件的过码服务进程。' :
+                 owner === false ? `（2149 被其他程序占用，命令行不含 service/geetest/server.py；若过码异常请先停掉它）` : '') +
                 '\n发「#过码服务状态」看统计',
                 true
             );
