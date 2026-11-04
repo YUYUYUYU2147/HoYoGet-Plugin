@@ -91,7 +91,7 @@ export class bh3_godwar extends plugin {
       event: 'message',
       priority: pluginPriority('bh3_godwar', 100),
       rule: [
-        { reg: '^#*(崩三|崩坏3|崩坏三|BH3)(乐土|往世乐土)$', fnc: 'godwar' },
+        { reg: '^#*(崩三|崩坏3|崩坏三|BH3)(乐土|往世乐土)\\s*(\\d{1,2})?$', fnc: 'godwar' },
       ],
     });
   }
@@ -251,10 +251,13 @@ export class bh3_godwar extends plugin {
       return `<div class="trans-card"${bgStyle}><div class="trans-bg-cover"></div><div class="trans-rank">${badge}</div><div class="trans-info"><div class="trans-name">${name} Lv.${t.level || '?'}</div><div class="trans-stats"><span>通关 ${t.challenge_success_times ?? 0}</span><span class="trans-div">|</span><span>最佳 ${t.max_challenge_score ?? 0}</span></div></div></div>`;
     }).join('\n');
 
-    // Records
-    const records = rawRecords.sort(
+    // Records：默认展示接口返回的全部记录（最多 20 条）；可用 #崩三乐土 10 指定条数
+    const msgNum = Number((String(e.msg || '').match(/\d+/) || [])[0])
+    const recordLimit = Number.isFinite(msgNum) && msgNum > 0 ? Math.min(20, msgNum) : 20
+    const allRecords = rawRecords.sort(
       (a, b) => parseInt(b.settle_time_second || 0) - parseInt(a.settle_time_second || 0)
-    ).slice(0, 6);
+    )
+    const records = allRecords.slice(0, recordLimit)
 
     const collabRank = ['', 'S', 'SS', 'SSS'];
     const recordCards = records.map((r) => {
@@ -332,6 +335,8 @@ export class bh3_godwar extends plugin {
       avatarTranscript,
       records,
       dataTime: moment().format('MM-DD HH:mm'),
+      recordTotal: allRecords.length,
+      recordShown: records.length,
     };
 
     let buf;

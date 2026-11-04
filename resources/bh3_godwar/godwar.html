@@ -51,7 +51,7 @@
       </section>
 
       <section class="panel">
-        <h2 class="section-title"><span class="bar"></span>挑战记录</h2>
+        <h2 class="section-title"><span class="bar"></span>挑战记录{{if recordTotal}}<span class="section-count">共 {{recordTotal}} 条 · 显示 {{recordShown}} 条</span>{{/if}}</h2>
         {{if records && records.length > 0}}
         {{# recordCards}}
         {{else}}
