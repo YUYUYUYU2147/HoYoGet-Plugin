@@ -286,6 +286,7 @@ export class bh3_battlefield extends plugin {
         // 层数 = 资源目录段数 + 3：小花火/bh3_battlefield/battlefield 落在 temp/html/下同深度目录。
         ppath: '../../../../../plugins/HoYoGet-Plugin/resources/',
         ...data,
+        ...(options.quality ? { quality: options.quality } : {}),
         sys: { scale: scaleStyle() },
         tplFile: process.cwd() + '/plugins/HoYoGet-Plugin/resources/bh3_battlefield/battlefield.html',
         saveId: 'bh3_battlefield',

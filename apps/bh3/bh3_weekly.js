@@ -94,7 +94,7 @@ async function mergeSideBySide(abyss, battlefield) {
       { input: await sharp(battlefield).png().toBuffer(), left: wA, top: 0 },
       { input: footer, left: 0, top: height },
     ])
-    .jpeg({ quality: 95, mozjpeg: true })
+    .jpeg({ quality: 100, mozjpeg: true })
     .toBuffer();
 }
 
@@ -164,7 +164,7 @@ async function mergeByPeriod(abyss, battlefield) {
 
   return sharp({ create: { width, height: contentHeight + footerHeight, channels: 3, background: '#0878cf' } })
     .composite(composite)
-    .jpeg({ quality: 95, mozjpeg: true })
+    .jpeg({ quality: 100, mozjpeg: true })
     .toBuffer();
 }
 
@@ -188,8 +188,8 @@ export class bh3_weekly extends plugin {
       abyssPlugin._abyss(e, [
         { type: 'bh3_new_abyss', label: '超弦空间' },
         { type: 'bh3_old_abyss', label: '量子流形' },
-      ], { returnBuffer: true, hideFooter: true }),
-      battlefieldPlugin.battlefield(e, { returnBuffer: true, hideFooter: true }),
+      ], { returnBuffer: true, hideFooter: true, quality: 100 }),
+      battlefieldPlugin.battlefield(e, { returnBuffer: true, hideFooter: true, quality: 100 }),
     ]);
 
     if (!Buffer.isBuffer(abyss) || !Buffer.isBuffer(battlefield)) {
