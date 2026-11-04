@@ -5071,10 +5071,29 @@ export class zzz_panel_list extends plugin {
     }
   }
   getZzzUid(e) {
-    const uid = e.user?.getUid?.('zzz')
-    if (uid) return uid
-    const hit = findZzzStokenEntry(e.user_id)
-    return hit ? (hit[1]?.uid || hit[0]) : null
+    /* e.user.getUid('zzz') 在部分框架里会退回「当前选中的 UID」（原神/星铁），
+       于是绝区零查询拿到原神 UID，Enka 报 wrong_uid、米游社 -400005。
+       先把 Stoken 里 game_biz 含 nap 的名单列出来，只认这些 UID。 */
+    const zzzUids = []
+    try {
+      const file = `./plugins/HoYoGet-Plugin/data/Stoken/${e.user_id}.yaml`
+      if (fs.existsSync(file)) {
+        const data = yaml.get(file) || {}
+        for (const [key, v] of Object.entries(data)) {
+          if (!v?.ck_stoken) continue
+          if (!String(v?.game_biz || '').includes('nap')) continue
+          const uid = String(v?.uid || key)
+          if (uid && uid !== '0' && !zzzUids.includes(uid)) zzzUids.push(uid)
+        }
+      }
+    } catch { /* 读不到就只用 e.user */ }
+    const fromUser = e.user?.getUid?.('zzz')
+    if (fromUser) {
+      const u = String(fromUser)
+      if (!zzzUids.length || zzzUids.includes(u)) return u
+    }
+    if (zzzUids.length) return zzzUids[0]
+    return fromUser ? String(fromUser) : null
   }
 
   /**
