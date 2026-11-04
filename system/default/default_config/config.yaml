@@ -159,7 +159,7 @@ bh3_logs: true
 #卡池数据自动刷新间隔(cron)：默认每30分钟一次。改完需重启插件生效。
 #原来写死在代码里、每天 05:30 跑一轮，那一轮撞上风控就得再等 24 小时。
 gacha_pool_auto_refresh: false
-gacha_pool_cron: '0 */30 * * * *'
+gacha_pool_cron: '0 0 4 * * *'
 
 
 #图鉴是否启用？：true是，false否 (优先级设置在other.yaml文件)
@@ -366,8 +366,7 @@ bili_live_priority: -115
 gacha_pool_priority: -1000000000
 gs_logs_priority: -99
 sr_logs_priority: -88
-#以下 7 个之前只存在于代码的 pluginPriority 兜底里，默认配置没声明，
-#用户看不到也没法改，补齐。值与代码兜底一一对应，行为不变。
+#以下 7 个之前只存在于代码的 pluginPriority 兜底里，默认配置没声明，值与代码兜底一一对应，行为不变。
 abyss_now_priority: 100
 currency_ledger_priority: 100
 stamina_remind_priority: 100

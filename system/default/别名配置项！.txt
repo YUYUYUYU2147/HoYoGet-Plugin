@@ -1,0 +1,181 @@
+HoYoGet-Plugin / system/default 配置文件说明
+================================================
+本目录存放插件内置的「静态数据 / 别名表 / 历史卡池 / 面板数据」等只读资源。
+大多数文件由脚本或人工整理，插件运行时只读；改错会导致图鉴、卡池、面板查询异常。
+
+通用格式约定
+------------
+- 别名表（*_names.yaml、*alias.json、wqname/syw/yiqi/gz/yq）：
+      "正式名": ["别名1", "别名2", ...]
+  查询时用户输入的任意别名会先被这张表映射回「正式名」，再决定走哪个渲染分支。
+- 键一般是游戏内的官方中文名；值为可接受的叫法（英文、简称、黑话、错别字等）。
+
+
+一、别名表（图鉴 / 查询用）
+----------------------------------------
+
+原神：
+- gs_js_names.yaml        角色别名（如「空」→ 男旅行者/男主/黄毛）
+- wqname.yaml             武器别名（如「蝶变」→ 薇斯纳专武）
+- syw.yaml                圣遗物套装别名（如「乐园遗落之花」→ 乐园套/遗落套）
+- gsalias.json            角色别名补充表（与 gs_js_names 同用途，来源于社区整理）
+- gs_en_id.yaml           神/中文名 → enka 英文 id（如 神里绫华 → ayaka），akasha 等外部接口用
+
+星铁：
+- sr_js_names.yaml        角色别名
+- gz_names.yaml           光锥别名（如「记一位星神的陨落」→ 星神陨落）
+- yiqi.yaml               遗器套装别名（如「不老者的仙舟」→ 仙舟套/咸粥套）
+- sralias.json            角色别名补充表（含「欢愉主/记忆主/同谐主」等主角形态）
+- sr_en_id.yaml           中文名 → enka 英文 id
+
+绝区零：
+- zzz_js_names.yaml       代理人别名
+- zzz_wq_names.yaml       音擎别名
+- zzz_syw_names.yaml      驱动盘套装别名
+- zzz_yq_names.yaml       邦布别名
+- zzzalias.json           代理人别名补充表
+
+崩坏3：
+- bh3_js_names.yaml       角色别名
+- bh3_wq_names.yaml       武器别名
+- bh3_syw_names.yaml      圣痕别名
+- bh3_yq_names.yaml       人偶别名
+- bh3_boss_names.yaml     深渊/战场 BOSS 别名
+
+别名索引说明：以上表会被 apps/common/wiki/name_alias.js 一次性摊平成
+「别名 → 正式名 + 类型」的总索引（角色/武器/光锥/遗器/圣痕/邦布…），
+所以新增条目只要写进对应文件即可，不需要改代码。
+
+
+二、历史卡池 / 卡池记录
+----------------------------------------
+
+- gslogs.yaml
+    原神历史卡池。结构：
+      date: {"【7.2下半】2026/11/24 18:00 ~ ...": [五星角色, 五星武器, ...], ...}
+      imgs: 每个卡池对应的米游社官方图 URL
+      imgs_src: 图片来源标记
+    被 gacha_pool.js 用于「历史卡池」图与当前卡池判定。
+
+- sr_logs.yaml
+    星铁历史卡池，数组，每项：
+      {ver, time, js_five, js_four, gz_five, gz_four, imgs}
+    （版本、时间、五星/四星角色、五星/四星光锥、官方图）
+
+- bh3_gacha_pool_history.yaml
+    崩坏3卡池库。结构：
+      version/updated/source 元信息
+      pools: [{version, start, end, pools: [...]}, ...] 按时间区间的补给列表
+    用于判定「当前版本/当前卡池」，也用于历史卡池查询。
+
+- zzz_gacha_pool_history.yaml
+    绝区零历史卡池，数组，每项：
+      {title, type, version, timer, s(五星), a(四星), ...}
+
+
+三、帮助 / 菜单配置
+----------------------------------------
+
+- help.yaml
+    插件内置帮助菜单（精简版）。结构：数组，每项 {group, list:[{icon,title,desc}]}
+- help-detail.yaml
+    帮助详情（分组更细、条目更多），结构同上。
+- global_help.yaml
+    全局帮助主题配置：
+      helpCfg: {title, subTitle, colCount, colWidth, theme, bgBlur, ...}
+      helpList: [{group, list:[{icon,title,desc}]}, ...]
+
+
+四、面板 / 攻略 / 排行数据
+----------------------------------------
+
+- akasha_categories.json
+    akasha 配队/伤害榜分类缓存：
+      {at: 更新时间戳, data: [{characterId, characterName, name, short, count, weapons:[...]}]}
+    hoyo_panel / akasha_rank 在拿不到远程数据时用它兜底。
+
+- gs_artifact_cn.json
+    原神圣遗物英文名 → 中文名对照（akasha 只给英文名）：
+      sets: {"英文套装名": "中文名", ...}
+      pieces: 单件英文 → 中文
+
+- sr_workshop_names.json
+    星铁工坊榜单的名称表：
+      chars: {角色id: {name, star, elem, path}}
+      weapons: {光锥id: {name, star, type}}
+      供 sr_rank / sr_workshop 出榜。
+
+- sr_content_id.json
+    星铁角色/光锥名 → 米游社 wiki content_id 映射：
+      {"46": {title:"娜塔莎", type:"role"}, ...}
+
+- manual_overrides.yaml
+    人工覆盖项（脚本自动判定之外的修正）：
+      artifact_4star_ranges_extra: 四星圣遗物主词条区间补充
+      sr_standard_lc_extra: 星铁常驻光锥补充
+      weapon_type_override: 武器类型人工指定
+    被 system/mys.js 读取，用于图鉴判定。
+
+- gsalias.json / sralias.json / zzzalias.json
+    见「一、别名表」，也可视作角色别名补充。
+
+
+五、绝区零面板 / 伤害计算数据
+----------------------------------------
+
+- zzz_char_stat.json
+    代理人基础属性/成长表（由 tools/extract_zzz_char_stat.mjs 提取）：
+      _comment/_source/_formula 说明，chars: {角色id: {...}}
+    用于面板评分与伤害计算。
+
+- zzz_item_stat.json
+    驱动盘/音擎数值表：
+      weapons / suits 的id → 属性
+- zzz_weapon_stat.json
+    音擎满级攻击等数据（Bwiki 抓取 + 缺失按 Lv1×14.85 推导）。
+
+- zzz_buff.json
+    音擎/套装/角色的增益定义：
+      weapons / sets / chars，伤害计算时按名字匹配。
+- zzz_skill_rate.json
+    技能倍率表：
+      chars: {角色id: {技能: 倍率}}
+- zzz_chip_icons.json
+    驱动盘/音擎图标映射（camp/profession/element）。
+- zzz_icons.json
+    装备/套装/音擎图标映射（equip/suit/weapon）。
+
+- zzz_extreme.yaml
+    「极限面板」预设：
+      "角色名": {char_id, weapon_id, drive_main:{4/5/6词条id}, sub_layout:{...}}
+    一键生成该角色的理论极限面板。
+
+- zzz_display_weapon.json
+    面板展示用专武/推荐音擎：
+      chars: {角色: 音擎信息}
+
+- zzz_boss_name.yaml / zzz_boss_meta.yaml
+    式舆/危局 BOSS 数据（键为 BOSS 的 hash id）：
+      name: 名称（如 秽蚀·多佩冈亚·「变节者」）
+      meta: {weakness:"弱点", resistance:"抗性"}
+    被 system/zzz_challenge.js 读取，用于挑战图鉴与伤害计算。
+
+
+六、default_config/
+----------------------------------------
+插件默认配置模板（首次运行会复制到 config/）：
+  activity_remind.yaml  活动到期提醒默认项
+  bh3_remind.yaml       崩三定时提醒默认项
+  config.yaml           插件主配置默认值
+  other.yaml            其它杂项
+  sign.yaml             签到相关默认项
+注意：这里改的是「默认模板」，实际生效的是 config/ 下的同名文件。
+
+
+七、修改注意事项
+----------------------------------------
+1. 只加条目、别改键名；正式名必须与游戏内一致（大小写/括号全半角都敏感）。
+2. 历史卡池按时间区间判断当前卡池，时间格式别写错。
+3. *_stat.json / zzz_buff.json 等多为脚本生成，建议改脚本重新生成，不要手改大表。
+4. 改完模板/别名后如不生效：#重启 或重启 JiuLi；部分内容有进程内缓存。
+5. 本目录文件会随插件更新被覆盖（除 .bak），重要自定义请放 config/ 或提交上游。
