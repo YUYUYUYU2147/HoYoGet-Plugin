@@ -697,24 +697,35 @@ export class user extends plugin {
             data.headers['x-rpc-device_id'] = data_.device_id
             if (!e.deviceFp) e.reply(`米游社访问异常,正在调用QQ：${e.user_id}常用设备重试米游社......`)
             e.deviceFp = true
-        } else if ([1034, 10035].includes(Number(args?.res?.retcode))) {
-            let create = await mysApi.getData('createVerification')
-            if (!create || create.retcode !== 0) return reject();
-            let verify = await this.ManualVerify(e, create.data)
-            if (!verify) {
-                if (e.isGroup) {
-                    Bot.pickGroup(e.group_id).sendMsg('验证码验证失败或已超时🥀')
+        } else {
+            const code = Number(args?.res?.retcode)
+            /* 没绑设备指纹时，验证码(10035/1034)以前直接走「手动验证码」，
+               没有 cloudflared 公网隧道就必然失败。现在先试本地自动过码(2149)，
+               自动过码失败再回退手动。 */
+            const autoOk = await this.tryAutoVerify(e, mysApi)
+            if (!autoOk) {
+                if ([1034, 10035].includes(code)) {
+                    let create = await mysApi.getData('createVerification')
+                    if (!create || create.retcode !== 0) return reject();
+                    let verify = await this.ManualVerify(e, create.data)
+                    if (!verify) {
+                        if (e.isGroup) {
+                            Bot.pickGroup(e.group_id).sendMsg('验证码验证失败或已超时🥀')
+                        } else {
+                            Bot.pickFriend(e.user_id).sendMsg('验证码验证失败或已超时🥀')
+                        }
+                        e.mysReq = true
+                        return reject();
+                    }
+                    let submit = await mysApi.getData('verifyVerification', verify)
+                    if (!submit || submit.retcode !== 0) return reject();
+                    e.mysReq = true
+                    await sleep(2000)
                 } else {
-                    Bot.pickFriend(e.user_id).sendMsg('验证码验证失败或已超时🥀')
+                    return reject()
                 }
-                e.mysReq = true
-                return reject();
             }
-            let submit = await mysApi.getData('verifyVerification', verify)
-            if (!submit || submit.retcode !== 0) return reject();
-            e.mysReq = true
-            await sleep(2000)
-        }else{logger.mark('[mysover] enter uid:'+mysApi.uid+' ckLen:'+(e.bindCk||'').length);const a=config()?.auto_verify_addr||'http://127.0.0.1:2149/solve',k=await(await import('./TL.js')).ensureCookieToken(e,args?.mysApi?.cookie||e.bindCk||'');if(!a||!k)return reject();const r=await fetch(a,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cookie:k,clientType:'2',game:String(mysApi.game||(mysApi.isSr?'sr':'gs'))}),signal:AbortSignal.timeout(360000)}).then(x=>x.json()).catch(e=>{logger.warn('[mysover] ferr '+(e?.message||e));return null});if(r?.data?.result!=='ok')return reject();data=data||{};logger.mark('[mysover] ch='+String(r.data.challenge).slice(0,14)+' g='+String(mysApi.isSr?6:(mysApi.game==='zzz'?8:2)));}
+        }
 
         let res = await mysApi.getData(type, data);
         if (![1034, 5003, 10035, 10041].includes(Number(res?.retcode))) {
@@ -722,6 +733,31 @@ export class user extends plugin {
             return res;
         }
         return reject();
+    }
+
+    /** 调用本地自动过码服务（默认 127.0.0.1:2149） */
+    async tryAutoVerify(e, mysApi) {
+        try {
+            const a = config()?.auto_verify_addr || 'http://127.0.0.1:2149/solve'
+            if (!a) return false
+            const k = await (await import('./TL.js')).ensureCookieToken(e, mysApi?.cookie || e.bindCk || '')
+            if (!k) return false
+            const r = await fetch(a, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cookie: k, clientType: '2', game: String(mysApi.game || (mysApi.isSr ? 'sr' : 'gs')) }),
+                signal: AbortSignal.timeout(360000),
+            }).then(x => x.json()).catch(err => {
+                logger.warn('[mysover] auto verify failed: ' + (err?.message || err))
+                return null
+            })
+            if (r?.data?.result !== 'ok') return false
+            logger.mark('[mysover] auto verify ok')
+            return true
+        } catch (err) {
+            logger.warn('[mysover] auto verify error: ' + (err?.message || err))
+            return false
+        }
     }
 
     getUrl(type, data = {}) {
