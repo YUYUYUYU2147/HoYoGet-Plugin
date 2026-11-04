@@ -5715,6 +5715,7 @@ ${r.summary || ''}`;
         title: '崩坏3当前卡池',
         subtitle: this.formatCurrentPoolSubtitle(local[0]?.version, local[0]?.time, `v${this.currentVersionByGame('bh3')} · 本地补给记录`),
         mode: 'bh3',
+        poolStyle: 'bh3-current',
         markIcon,
         markWide,
         cards: local
@@ -5730,6 +5731,7 @@ ${r.summary || ''}`;
       title: '崩坏3当前卡池',
       subtitle: `v${this.currentVersionByGame('bh3')} · 米游社公告`,
       mode: 'bh3',
+      poolStyle: 'bh3-current',
       markIcon,
       markWide: true,
       cards

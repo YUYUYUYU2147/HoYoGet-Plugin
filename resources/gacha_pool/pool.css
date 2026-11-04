@@ -583,6 +583,69 @@ h1 {
   display: none;
 }
 
+/* 崩三当前补给：舰装蓝底、金色识别线与清晰的补给信息层级 */
+.bh3-current .header {
+  color: #d9c27a;
+  border: 1px solid rgba(227, 199, 112, .48);
+  border-bottom: 3px solid #d6b653;
+  border-radius: 2px;
+  background: linear-gradient(112deg, rgba(8, 32, 51, .97), rgba(15, 54, 79, .94) 68%, rgba(20, 67, 91, .9));
+  box-shadow: inset 0 0 0 4px rgba(214, 182, 83, .06), 0 8px 18px rgba(0, 0, 0, .24);
+}
+.bh3-current .eyebrow { color: #e4c95e; }
+.bh3-current h1 { color: #f4f0df; text-shadow: none; }
+.bh3-current .header p { color: #a8c3d0; }
+.bh3-current .mark-wide { filter: drop-shadow(0 3px 8px rgba(0, 0, 0, .5)); }
+.bh3-current .cards { gap: 12px; }
+.bh3-current .pool-card,
+.bh3-current.official .pool-card.bh3 {
+  min-height: 226px;
+  border: 1px solid rgba(222, 197, 111, .48);
+  border-radius: 3px;
+  background: linear-gradient(112deg, #12364d, #102d43 60%, #0a2135);
+  box-shadow: 0 8px 20px rgba(2, 12, 21, .34), inset 0 0 0 3px rgba(231, 202, 112, .045);
+}
+.bh3-current .pool-card::before {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(#f3d66e, #b38a37);
+}
+.bh3-current .pool-bg { opacity: .42; filter: saturate(.72) contrast(1.08); }
+.bh3-current .pool-overlay {
+  background: linear-gradient(90deg, rgba(5, 23, 37, .94), rgba(7, 28, 44, .78) 57%, rgba(6, 24, 38, .38));
+}
+.bh3-current .pool-content,
+.bh3-current.official .pool-card.bh3 .pool-content {
+  min-height: 226px;
+  max-width: 370px;
+  padding: 17px 20px;
+  justify-content: center;
+}
+.bh3-current .pool-tag {
+  border: 1px solid rgba(226, 199, 112, .65);
+  border-radius: 1px;
+  color: #f0d775;
+  background: rgba(18, 46, 63, .82);
+}
+.bh3-current .pool-tag.type { color: #d7e4e7; border-color: rgba(187, 211, 218, .42); }
+.bh3-current .pool-title,
+.bh3-current.official .pool-card.bh3 .pool-title {
+  color: #fff9e7;
+  font-size: 21px;
+  line-height: 1.35;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, .78);
+}
+.bh3-current .pool-time,
+.bh3-current.official .pool-card.bh3 .pool-time { color: #e4d59f; }
+.bh3-current .rank-badge.s { color: #1b2b35; background: linear-gradient(135deg, #f3dc83, #c6a344); }
+.bh3-current .rank-badge.a { color: #fff; background: linear-gradient(135deg, #82b9ca, #557c91); }
+.bh3-current .up-name { color: #fff; }
+.bh3-current .note { color: #c4d4d7; }
+.bh3-current .footer { color: #9cb4bb; }
+
 /* #当前卡池 是 official 汇总模式，需要用卡片级 bh3 类覆盖 official 的通用窄版样式 */
 .official .pool-card.bh3 {
   min-height: 205px;

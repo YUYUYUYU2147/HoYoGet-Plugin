@@ -1,0 +1,95 @@
+@font-face { font-family: "xhh"; src: url("../font/NotoSansCJKsc-Regular.ttf"); }
+@font-face { font-family: "yuan"; src: url("../font/yuan.ttf"); }
+
+* { box-sizing: border-box; }
+
+body {
+  width: 720px;
+  margin: 0;
+  color: #e9f2fa;
+  background: #061725;
+  font-family: "xhh", "yuan", sans-serif;
+  font-size: 14px;
+}
+
+#container {
+  position: relative;
+  overflow: hidden;
+  width: 720px;
+  padding: 20px 22px 14px;
+  background:
+    repeating-linear-gradient(135deg, transparent 0 42px, rgba(134, 186, 218, .025) 42px 43px),
+    linear-gradient(145deg, #0d263a, #081a2a 54%, #102b3e);
+}
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding: 15px 18px 12px;
+  background: linear-gradient(110deg, #102d43, #173e58 62%, #102a3b);
+  border: 1px solid #396078;
+  border-bottom: 3px solid #d9b84f;
+  box-shadow: 0 7px 18px rgba(0, 0, 0, .22);
+}
+
+.hero::after {
+  content: "";
+  position: absolute;
+  top: -28px;
+  right: 34px;
+  width: 170px;
+  height: 170px;
+  border: 1px solid rgba(185, 214, 231, .13);
+  transform: rotate(45deg);
+  box-shadow: 0 0 0 16px rgba(185, 214, 231, .025), 0 0 0 34px rgba(185, 214, 231, .02);
+}
+
+.hero-top, .brand-mark, .repo-line, .hero-title, .entry-meta, .entry-author, footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand-mark { justify-content: flex-start; gap: 8px; color: #dceaf5; font-size: 10px; font-weight: 700; }
+.brand-mark img { width: 25px; height: 25px; object-fit: contain; }
+.brand-mark i, footer i { color: #e3c45d; font-style: normal; }
+.game-label { color: #a9c2d2; font-size: 9px; font-weight: 700; }
+
+.hero-title { position: relative; z-index: 1; align-items: flex-end; margin-top: 9px; }
+.hero-title p { margin: 0 0 4px; color: #9fb9cb; font-size: 8px; font-weight: 700; }
+h1 { margin: 0; color: #fff; font-size: 27px; line-height: 1.2; font-weight: 700; }
+.game-logo { width: 112px; height: 52px; object-fit: contain; object-position: right bottom; }
+.repo-line { position: relative; z-index: 1; margin-top: 10px; color: #d5e2eb; font-size: 10px; }
+.repo-line b { color: #a8c2d1; font-size: 8px; }
+.hero-rule { height: 1px; margin-top: 10px; background: rgba(175, 205, 222, .23); }
+.hero-rule span { display: block; width: 46px; height: 2px; background: #e5c654; }
+
+.journal-head { display: flex; align-items: flex-end; justify-content: space-between; padding: 14px 3px 8px; }
+.section-index { color: #d6b94f; font-size: 8px; font-weight: 700; }
+h2 { margin: 2px 0 0; color: #edf4f8; font-size: 15px; }
+.page { color: #a9bfcd; font: 11px/1.2 sans-serif; }
+.page b { color: #e6c552; font-size: 20px; }
+
+.timeline { position: relative; }
+.timeline::before { content: ""; position: absolute; top: 17px; bottom: 17px; left: 18px; width: 1px; background: #315269; }
+.entry { position: relative; display: flex; gap: 10px; padding-bottom: 7px; }
+.entry:last-child { padding-bottom: 0; }
+.entry-marker { position: relative; z-index: 1; display: flex; flex: 0 0 37px; justify-content: center; padding-top: 9px; }
+.entry-marker span { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; color: #d8c063; font: 700 9px sans-serif; background: #17384e; border: 1px solid #567084; clip-path: polygon(14% 0, 86% 0, 100% 14%, 100% 86%, 86% 100%, 14% 100%, 0 86%, 0 14%); }
+.entry-content { flex: 1; min-width: 0; padding: 8px 11px 7px; background: linear-gradient(100deg, #102b40, #11283a); border: 1px solid #28485e; border-left: 3px solid #3883a8; }
+.entry-feat .entry-content { border-left-color: #d7b950; }
+.entry-fix .entry-content { border-left-color: #df715c; }
+.entry-perf .entry-content { border-left-color: #4fa6bb; }
+.entry-meta { justify-content: flex-start; gap: 8px; color: #9bb1bf; font-size: 9px; }
+.tag { min-width: 36px; padding: 2px 5px; color: #e8d27c; text-align: center; background: rgba(213, 183, 78, .12); border: 1px solid rgba(213, 183, 78, .36); font-size: 8px; }
+.entry-fix .tag { color: #f2aa94; background: rgba(204, 97, 76, .12); border-color: rgba(204, 97, 76, .4); }
+.entry-perf .tag { color: #99d5df; background: rgba(63, 157, 177, .12); border-color: rgba(63, 157, 177, .4); }
+code { color: #a4bdcc; font: 9px monospace; }
+time { margin-left: auto; color: #a3b5c1; font-size: 9px; white-space: nowrap; }
+h3 { margin: 5px 0 6px; color: #f2f6f9; font-size: 12px; line-height: 1.45; font-weight: 600; overflow-wrap: anywhere; }
+.entry-author { justify-content: flex-start; gap: 6px; color: #9fb2bf; font-size: 9px; }
+.author-mark { display: flex; align-items: center; justify-content: center; width: 17px; height: 17px; color: #f0d46e; font-size: 9px; background: #244458; border: 1px solid #46677a; }
+.commit-label { margin-left: auto; color: #6f8fa3; font: 8px sans-serif; }
+
+footer { margin-top: 11px; padding: 8px 3px 0; color: #9bb1bf; border-top: 1px solid #315066; font-size: 9px; }
+.empty { padding: 28px; color: #b5c8d4; text-align: center; border: 1px solid #28485e; }

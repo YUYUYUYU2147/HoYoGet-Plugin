@@ -1,13 +1,15 @@
-import common from '../../../../lib/common/common.js';
 import { Restart } from '../../../other/restart.js';
 import { createRequire } from 'module';
 import lodash from 'lodash';
 import fs from 'node:fs';
-import { yaml, config, pluginPriority } from '#HoYoGet';
+import { yaml, config, pluginPriority, scaleStyle } from '#HoYoGet';
 import { runCronTask } from '../../system/task_history.js';
+import { promisify } from 'node:util';
+import puppeteer from '../../../../lib/puppeteer/puppeteer.js';
 
 const require = createRequire(import.meta.url);
 const { exec, execSync } = require('child_process');
+const execFile = promisify(require('child_process').execFile);
 
 let uping = false;
 
@@ -24,7 +26,7 @@ export class update extends plugin {
           fnc: 'update',
         },
         {
-          reg: '^#*米哈游(插件)?更新日志$',
+          reg: '^#*米哈游(插件)?更新日志(?:\\s*(?:第\\s*)?(\\d+)(?:\\s*页)?)?$',
           fnc: 'updateLog',
         },
         {
@@ -262,51 +264,72 @@ export class update extends plugin {
     });
   }
 
-  async getLog(plugin = '') {
-    let cm = `cd "plugins/${plugin}" && git log -20 --pretty=format:"%h||[%cr] %s"`;
-
-    let logAll;
+  async getLogPage(page = 1) {
     try {
-      logAll = await execSync(cm, { encoding: 'utf-8' });
+      const cwd = `${process.cwd()}/plugins/HoYoGet-Plugin`;
+      const { stdout: countText } = await execFile('git', ['rev-list', '--no-merges', '--count', 'HEAD'], {
+        cwd, encoding: 'utf8', timeout: 15000,
+      });
+      const totalCommits = Number(countText.trim()) || 0;
+      const totalPages = Math.max(1, Math.ceil(totalCommits / 12));
+      const currentPage = Math.min(totalPages, Math.max(1, Math.trunc(Number(page)) || 1));
+      const { stdout } = await execFile('git', [
+        'log', '--no-merges', '--max-count=12', `--skip=${(currentPage - 1) * 12}`,
+        '--format=%x1e%h%x1f%cI%x1f%s%x1f%an',
+      ], { cwd, encoding: 'utf8', timeout: 15000, maxBuffer: 4 * 1024 * 1024 });
+      const logs = stdout.split('\x1e').filter(Boolean).map((row, index) => {
+        const [hash, date, subject, author] = row.trim().split('\x1f');
+        const match = /^(feat|fix|perf|refactor|docs|style|test|chore|build|ci|revert)(?:\([^)]*\))?!?:\s*(.+)$/i.exec(subject || '');
+        const typeNames = { feat: '新增', fix: '修复', perf: '性能', refactor: '重构', docs: '文档', style: '样式', test: '测试', chore: '维护', build: '构建', ci: '构建', revert: '回退' };
+        const kinds = { feat: 'feat', fix: 'fix', perf: 'perf', docs: 'docs' };
+        const type = match ? match[1].toLowerCase() : 'update';
+        const displayDate = new Intl.DateTimeFormat('zh-CN', {
+          timeZone: 'Asia/Shanghai', month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit', hour12: false,
+        }).format(new Date(date));
+        return {
+          hash,
+          subject: match ? match[2] : (subject || '更新'),
+          type: typeNames[type] || '更新',
+          kind: kinds[type] || 'update',
+          author: author || 'HoYoGet contributors',
+          date: displayDate,
+          number: String((currentPage - 1) * 12 + index + 1).padStart(2, '0'),
+        };
+      });
+      return { logs, page: currentPage, totalPages, totalCommits };
     } catch (error) {
       logger.error(error.toString());
-      this.reply(error.toString());
+      return null;
     }
-
-    if (!logAll) return false;
-
-    logAll = logAll.split('\n');
-
-    let log = [];
-    for (let str of logAll) {
-      str = str.split('||');
-      if (str[0] == this.oldCommitId) break;
-      if (str[1].includes('Merge branch')) continue;
-      str[1] = str[1]
-        .replace(/ago/g, '前')
-        .replace(/days/g, '天')
-        .replace(/hours/g, '小时')
-        .replace(/minutes/g, '分钟')
-        .replace(/seconds/g, '秒')
-        .replace(/weeks/g, '周')
-        .replace(/months/g, '月')
-        .replace(/ 前/g, '前');
-      log.push(str[1]);
-    }
-    let line = log.length;
-    log = log.join('\n\n');
-
-    if (log.length <= 0) return '';
-
-    let title = `米哈游更新日志，共${line}条`;
-    log = await common.makeForwardMsg(this.e, [title, log]);
-
-    return log;
   }
 
   async updateLog() {
-    let log = await this.getLog('HoYoGet-Plugin');
-    await this.reply(log);
+    const pageMatch = String(this.e.msg || '').match(/(?:第\s*)?(\d+)(?:\s*页)?\s*$/);
+    const requestedPage = Math.max(1, Number(pageMatch?.[1]) || 1);
+    const data = await this.getLogPage(requestedPage);
+    if (!data) return this.reply('读取 HoYoGet 更新日志失败，请确认插件目录是 Git 仓库。');
+    if (!data.logs.length) return this.reply(`第 ${data.page} 页暂无更新记录。`);
+
+    const remote = await execFile('git', ['remote', 'get-url', 'origin'], {
+      cwd: `${process.cwd()}/plugins/HoYoGet-Plugin`, encoding: 'utf8', timeout: 10000,
+    }).then(result => result.stdout.trim().replace(/\.git$/, '')).catch(() => 'HoYoGet-Plugin');
+    const logo = fs.readFileSync(new URL('../../resources/help/games/bh3-logo.png', import.meta.url));
+    const icon = fs.readFileSync(new URL('../../resources/game_icons/bh3.webp', import.meta.url));
+    const buffer = await puppeteer.render('米哈游/update_log/update_log', {
+      ...data,
+      repo: remote.replace(/^https?:\/\/github\.com\//, ''),
+      gameLogo: `data:image/png;base64,${logo.toString('base64')}`,
+      gameIcon: `data:image/webp;base64,${icon.toString('base64')}`,
+      sys: { scale: scaleStyle() },
+      ppath: '../../../../../plugins/HoYoGet-Plugin/resources/',
+      tplFile: `${process.cwd()}/plugins/HoYoGet-Plugin/resources/update_log/update_log.html`,
+      saveId: 'update_log',
+      imgType: 'png',
+    });
+    if (!Buffer.isBuffer(buffer)) return this.reply('更新日志图片渲染失败，请检查截图服务。');
+    const seg = globalThis.segment?.image?.(buffer) || { type: 'image', data: { file: buffer } };
+    return this.reply(seg);
   }
 
   async checkPnpm() {

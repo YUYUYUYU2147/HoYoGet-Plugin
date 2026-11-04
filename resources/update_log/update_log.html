@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="{{ppath}}update_log/update_log.css">
+</head>
+<body {{sys.scale}}>
+  <main id="container">
+    <header class="hero">
+      <div class="hero-top">
+        <div class="brand-mark"><img src="{{gameIcon}}" alt=""><span>HOYOGET <i>·</i> UPDATE RECORD</span></div>
+        <span class="game-label">HONKAI IMPACT 3RD</span>
+      </div>
+      <div class="hero-title">
+        <div><p>MIHOYO COMMUNITY / PLUGIN RELEASE JOURNAL</p><h1>米游社更新日志</h1></div>
+        <img class="game-logo" src="{{gameLogo}}" alt="崩坏3">
+      </div>
+      <div class="repo-line"><span>{{repo}}</span><b>LOCAL COMMIT ARCHIVE</b></div>
+      <div class="hero-rule"><span></span></div>
+    </header>
+
+    <section class="journal-head">
+      <div><span class="section-index">COMMIT LOG</span><h2>版本迭代记录</h2></div>
+      <div class="page"><b>{{page}}</b><span>/ {{totalPages}}</span></div>
+    </section>
+
+    <section class="timeline">
+      {{each logs log index}}
+      <article class="entry entry-{{log.kind}}">
+        <div class="entry-marker"><span>{{log.number}}</span></div>
+        <div class="entry-content">
+          <div class="entry-meta"><span class="tag">{{log.type}}</span><code>{{log.hash}}</code><time>{{log.date}}</time></div>
+          <h3>{{log.subject}}</h3>
+          <div class="entry-author"><span class="author-mark">{{log.author.slice(0, 1)}}</span><span>{{log.author}}</span><span class="commit-label">COMMIT</span></div>
+        </div>
+      </article>
+      {{/each}}
+      {{if !logs.length}}
+      <div class="empty">暂无可展示的提交记录</div>
+      {{/if}}
+    </section>
+
+    <footer>
+      <span>HOYOGET PLUGIN <i>·</i> 持续维护中</span>
+      <span>第 {{page}} / {{totalPages}} 页 · 共 {{totalCommits}} 条记录</span>
+    </footer>
+  </main>
+</body>
+</html>
