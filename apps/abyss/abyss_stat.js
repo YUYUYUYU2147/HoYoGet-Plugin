@@ -13,9 +13,38 @@
 import { render, pluginPriority } from '#HoYoGet'
 import { metaResRel } from '#hoyo.miao.path'
 import path from 'node:path'
+import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
+/** 该 QQ 是否已绑定设备指纹（data/fp/<qq>.yaml 且含 fp） */
+function hasDeviceFp(e) {
+  const qq = String(e?.user_id || '').trim()
+  if (!qq) return false
+  const f = path.join(PLUGIN_ROOT, 'data', 'fp', `${qq}.yaml`)
+  try {
+    if (!fs.existsSync(f)) return false
+    return /(^|\n)\s*fp\s*:\s*\S+/.test(fs.readFileSync(f, 'utf8'))
+  } catch {
+    return false
+  }
+}
+
+/** 10041/10102 时统一给出可执行的排查建议（优先引导绑定设备） */
+function bindHint(e, rc) {
+  if (![10041, 10102].includes(Number(rc))) return ''
+  if (!hasDeviceFp(e)) {
+    return '\n\n米游社返回 10041/10102（数据未公开），常见原因是缺少设备指纹。\n'
+      + '建议先绑定设备：\n'
+      + '· 发送 #米哈游绑定设备 （按提示填入设备信息）\n'
+      + '· 或把已绑定机器的 plugins/HoYoGet-Plugin/data/fp/<QQ>.yaml 拷过来\n'
+      + '绑定后重发本指令。'
+  }
+  return '\n\n米游社返回 10041/10102（数据未公开）：\n'
+    + '1) 确认用的是本人 CK（不是公共 CK），必要时重新 #扫码绑定；\n'
+    + '2) 到米游社「我的 → 战绩」确认未隐藏。'
+}
+
 /** 模板里 <% include(_tpl_path+'/avatar-card.html') %> 用的目录（我们自己的副本） */
 /* 圣遗物词条 key → 中文（面板里用的简称） */
 const ATTR_CN = {
@@ -427,7 +456,11 @@ export class abyss_stat extends plugin {
       return e.reply(`查询${cfg.title}失败：${err?.message || err}`)
     }
     const data = buildSrChallengeData(raw, cfg, type)
-    if (!data) return e.reply(`没有查到本期${cfg.title}记录，可能还没打或未公开。`)
+    if (!data) {
+      const rc = Number(e?._retcode ?? raw?.retcode)
+      const suffix = bindHint(e, rc) || (rc ? `\n接口 retcode=${rc}` : '')
+      return e.reply(`没有查到本期${cfg.title}记录，可能还没打或未公开。${suffix}`)
+    }
     const modeKey = { chaos: 'sr_chaos', story: 'sr_fiction', boss: 'sr_shadow' }[key]
     const [avatars, bossMap, buffList] = await Promise.all([
       this.fetchSrAvatars(e, mys, data),
@@ -709,10 +742,7 @@ export class abyss_stat extends plugin {
         return true
       }
       if (priv === keys.length) {
-        await e.reply('米游社返回「数据未公开」(10041/10102)，通常是这两个原因：\n'
-          + '1) 用的是公共 CK 而不是你自己的：日志里出现「分配查询ck」就属于这种，重新 #扫码绑定 后再试；\n'
-          + '2) 确实在米游社「我的 → 战绩」里隐藏了战绩，关掉即可。\n'
-          + '（10041 表示米游社没有开放该接口，账号本身看不到深渊详情）')
+        await e.reply(`米游社返回「数据未公开」(10041/10102)。${bindHint(e, 10041)}`)
         return true
       }
       logger.mark?.(`[HoYoGet][abyss_stat] *深渊 四类都无数据：${errors.join(' | ') || '接口未返回楼层'}`)
