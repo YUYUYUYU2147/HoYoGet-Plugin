@@ -2,7 +2,7 @@ import { pluginPriority } from '#HoYoGet';
 import { bh3_abyss } from './bh3_abyss.js';
 import { bh3_battlefield } from './bh3_battlefield.js';
 import { bh3_godwar } from './bh3_godwar.js';
-import { mergeByPeriod, mergeSideBySide } from '../../system/bh3_merge.js';
+import { mergeColumns, mergeSideBySide } from '../../system/bh3_merge.js';
 
 function sendImage(e, image) {
   const seg = globalThis.segment?.image?.(image) || { type: 'image', data: { file: image } };
@@ -43,8 +43,12 @@ export class bh3_weekly extends plugin {
     }
 
     try {
-      const merged = (await mergeByPeriod(images))
-        || (await mergeSideBySide(images));
+      const items = [
+        { buf: abyss, mode: 'period' },
+        { buf: battlefield, mode: 'period' },
+        { buf: godwar, mode: 'block' },
+      ].filter(it => Buffer.isBuffer(it.buf));
+      const merged = (await mergeColumns(items)) || (await mergeSideBySide(images));
       return sendImage(e, merged);
     } catch (err) {
       logger.error('[bh3_weekly] merge failed:', err);

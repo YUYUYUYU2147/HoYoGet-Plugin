@@ -85,58 +85,103 @@ export function footerSvg(width, height, centerX, scale, separatorX = null) {
 }
 
 /** 三（多）列按期配对合成：同一期一行，行高取各行最高 */
-export async function mergeByPeriod(images, labels = []) {
-  const metas = await Promise.all(images.map(b => sharp(b).metadata()));
-  const periods = await Promise.all(images.map((b, i) => detectPeriods(b, metas[i])));
-  // 任意一列识别失败就退回整图并排
-  if (periods.some(p => !p || !p.cards.length)) return null;
-
-  const widths = metas.map((m, i) => m.width || periods[i].width);
+/**
+ * 多列合成。
+ * @param {{buf:Buffer, mode?:'period'|'block'}[]} items
+ *   period：按「期」切分，第 N 期与其他 period 列同处一行（用于深渊/战场）
+ *   block ：整块内容放一次，之后用背景把该列补到与前两列同高（用于乐土）
+ * period 列全部按期配对；只要有一列识别失败就返回 null（调用方回退并排）。
+ */
+export async function mergeColumns(items = []) {
+  if (!items.length) return null;
+  const metas = await Promise.all(items.map(it => sharp(it.buf).metadata()));
+  const widths = metas.map((m, i) => m.width || 620);
   const scale = Math.max(...widths.map(w => w / 620));
   const gap = Math.round(18 * scale);
   const rowGap = Math.round(10 * scale);
   const width = widths.reduce((a, b) => a + b, 0) + gap * (widths.length - 1);
   const footerHeight = Math.ceil(24 * scale);
+  const bg = '#0a1b33'; // 与崩三深蓝底一致，补白不突兀
 
-  // 每列 x 偏移
   const xs = [];
   let acc = 0;
   for (const w of widths) { xs.push(acc); acc += w + gap; }
 
-  const rows = [];
-  const headers = periods.map(p => p.header);
-  if (headers.some(Boolean)) {
-    rows.push({
-      height: Math.max(...headers.map(h => h?.height || 0)),
-      cells: headers,
-    });
-  }
-  const n = Math.max(...periods.map(p => p.cards.length));
-  for (let i = 0; i < n; i++) {
-    const cells = periods.map(p => p.cards[i] || null);
-    rows.push({ height: Math.max(...cells.map(c => c?.height || 0)), cells });
+  const periodIdx = items.map((it, i) => (it.mode === 'block' ? -1 : i)).filter(i => i >= 0);
+  const blockIdx = items.map((it, i) => (it.mode === 'block' ? i : -1)).filter(i => i >= 0);
+
+  const periods = {};
+  for (const i of periodIdx) {
+    periods[i] = await detectPeriods(items[i].buf, metas[i]);
+    if (!periods[i] || !periods[i].cards.length) return null;
   }
 
   const composite = [];
   let top = 0;
-  const croppedRows = await Promise.all(rows.map(async row => {
-    const imgs = await Promise.all(row.cells.map((cell, i) => (
-      cell ? crop(images[i], cell, widths[i]) : null
-    )));
-    return { row, imgs };
-  }));
-  for (const { row, imgs } of croppedRows) {
-    imgs.forEach((buf, i) => { if (buf) composite.push({ input: buf, left: xs[i], top }); });
-    top += row.height + rowGap;
+
+  // 1) 顶部标题行：period 列各自 header；block 列整图从顶部开始
+  const headerHeights = periodIdx.map(i => periods[i].header?.height || 0);
+  const headerHeight = headerHeights.length ? Math.max(...headerHeights) : 0;
+  for (const i of periodIdx) {
+    const h = periods[i].header;
+    if (h) composite.push({ input: await crop(items[i].buf, h, widths[i]), left: xs[i], top });
   }
-  const contentHeight = top - rowGap;
+
+  // block 列整块内容：从 0 开始（含它自己的页头）
+  const blockBottoms = {};
+  for (const i of blockIdx) {
+    const h = metas[i].height || 0;
+    composite.push({ input: await sharp(items[i].buf).png().toBuffer(), left: xs[i], top: 0 });
+    blockBottoms[i] = h;
+  }
+  top = headerHeight;
+
+  // 2) 期行：period 列按期配对
+  const periodRows = [];
+  const n = periodIdx.length ? Math.max(...periodIdx.map(i => periods[i].cards.length)) : 0;
+  for (let k = 0; k < n; k++) {
+    const cells = periodIdx.map(i => periods[i].cards[k] || null);
+    periodRows.push({
+      height: Math.max(0, ...cells.map(c => c?.height || 0)),
+      cells,
+      rowTop: top,
+    });
+    top += periodRows[periodRows.length - 1].height + rowGap;
+  }
+  const bodyBottom = n ? (top - rowGap) : headerHeight; // 前两列内容底部
+
+  // 贴入各期
+  for (const row of periodRows) {
+    let y = row.rowTop;
+    for (let ci = 0; ci < periodIdx.length; ci++) {
+      const col = periodIdx[ci];
+      const cell = row.cells[ci];
+      if (cell) composite.push({ input: await crop(items[col].buf, cell, widths[col]), left: xs[col], top: y });
+    }
+  }
+
+  // 3) block 列补齐到 bodyBottom：用背景色块填满剩余高度（不缩放、不重复内容）
+  for (const i of blockIdx) {
+    const bottom = blockBottoms[i] || 0;
+    const need = bodyBottom - bottom;
+    if (need > 1) {
+      const filler = await sharp({
+        create: { width: widths[i], height: need, channels: 3, background: bg },
+      }).png().toBuffer();
+      composite.push({ input: filler, left: xs[i], top: bottom });
+    }
+    // block 比前两列还高时，把整体高度往下扩
+    if (bottom > bodyBottom) bodyBottom = bottom;
+  }
+
+  // 4) 页脚
   composite.push({
     input: footerSvg(width, footerHeight, Math.round(width / 2), scale),
     left: 0,
-    top: contentHeight,
+    top: bodyBottom,
   });
 
-  return sharp({ create: { width, height: contentHeight + footerHeight, channels: 3, background: '#0878cf' } })
+  return sharp({ create: { width, height: bodyBottom + footerHeight, channels: 3, background: '#0878cf' } })
     .composite(composite)
     .jpeg({ quality: 100, mozjpeg: true })
     .toBuffer();
