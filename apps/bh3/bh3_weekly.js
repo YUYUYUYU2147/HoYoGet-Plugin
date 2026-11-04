@@ -2,7 +2,7 @@ import { pluginPriority } from '#HoYoGet';
 import { bh3_abyss } from './bh3_abyss.js';
 import { bh3_battlefield } from './bh3_battlefield.js';
 import { bh3_godwar } from './bh3_godwar.js';
-import { mergeColumns, mergeSideBySide } from '../../system/bh3_merge.js';
+import { mergeColumns, mergeSideBySide, detectPeriods } from '../../system/bh3_merge.js';
 
 function sendImage(e, image) {
   const seg = globalThis.segment?.image?.(image) || { type: 'image', data: { file: image } };
@@ -43,10 +43,41 @@ export class bh3_weekly extends plugin {
     }
 
     try {
+      /* 乐土记录接口只给最近 2 条，内容比 8 期的深渊/战场矮。
+         先量出前两列按期的总高，再让乐土把多余高度均摊到板块间距上，底部对齐。 */
+      let godwarBuf = godwar;
+      if (Buffer.isBuffer(abyss) && Buffer.isBuffer(battlefield) && Buffer.isBuffer(godwar)) {
+        try {
+          const [am, bm, gm] = await Promise.all([
+            sharp(abyss).metadata(), sharp(battlefield).metadata(), sharp(godwar).metadata(),
+          ]);
+          const [pa, pb] = await Promise.all([detectPeriods(abyss, am), detectPeriods(battlefield, bm)]);
+          if (pa?.cards.length && pb?.cards.length) {
+            const scale = Math.max((am.width || 620) / 620, (bm.width || 620) / 620);
+            const rowGap = Math.round(10 * scale);
+            const headerH = Math.max(pa.header?.height || 0, pb.header?.height || 0);
+            const n = Math.max(pa.cards.length, pb.cards.length);
+            let target = headerH;
+            for (let i = 0; i < n; i++) {
+              target += Math.max(pa.cards[i]?.height || 0, pb.cards[i]?.height || 0) + rowGap;
+            }
+            target -= rowGap;
+            const zoom = (gm.width || 640) / 640;
+            const need = (target - (gm.height || 0)) / (zoom || 1);
+            if (need > 8) {
+              godwarBuf = await godwarPlugin.godwar(e, { returnBuffer: true, hideFooter: true, fillExtra: need });
+              godwar = Buffer.isBuffer(godwarBuf) ? godwarBuf : godwar;
+            }
+          }
+        } catch (err) {
+          logger.debug?.(`[bh3_weekly] 乐土高度补齐失败：${err?.message || err}`);
+        }
+      }
+
       const items = [
         { buf: abyss, mode: 'period' },
         { buf: battlefield, mode: 'period' },
-        { buf: godwar, mode: 'block' },
+        { buf: godwarBuf, mode: 'block' },
       ].filter(it => Buffer.isBuffer(it.buf));
       const merged = (await mergeColumns(items)) || (await mergeSideBySide(images));
       return sendImage(e, merged);

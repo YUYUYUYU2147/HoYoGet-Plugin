@@ -48,7 +48,16 @@ body {
 }
 
 .container.hide-footer .footer { display: none; }
-.xhh_box { position: relative; width: 616px; }
+.xhh_box {
+  position: relative;
+  width: 616px;
+  display: flex;
+  flex-direction: column;
+}
+.xhh_box > .page-head { flex: 0 0 auto; }
+.xhh_box > .panel { flex: 0 0 auto; }
+/* 把多出来的高度平均摊到各面板之间，实现与其它列底部对齐（不缩放内容） */
+.xhh_box > .panel { margin-bottom: calc(13px + (var(--fill-extra, 0px) / 3)); }
 
 /* ================= 顶栏 ================= */
 .page-head {

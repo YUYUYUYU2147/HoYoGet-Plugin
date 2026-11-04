@@ -335,6 +335,7 @@ export class bh3_godwar extends plugin {
       avatarTranscript,
       records,
       dataTime: moment().format('MM-DD HH:mm'),
+      fillExtra: Math.max(0, Number(options.fillExtra) || 0),
       recordTotal: allRecords.length,
       recordShown: records.length,
     };
