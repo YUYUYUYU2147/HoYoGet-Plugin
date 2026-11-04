@@ -52,6 +52,7 @@ export class bh3_weekly extends plugin {
             sharp(abyss).metadata(), sharp(battlefield).metadata(), sharp(godwar).metadata(),
           ]);
           const [pa, pb] = await Promise.all([detectPeriods(abyss, am), detectPeriods(battlefield, bm)]);
+          logger.mark(`[bh3_weekly] 识别期数 深渊=${pa?.cards?.length ?? 0} 战场=${pb?.cards?.length ?? 0} 乐土高=${gm.height}`);
           if (pa?.cards.length && pb?.cards.length) {
             const scale = Math.max((am.width || 620) / 620, (bm.width || 620) / 620);
             const rowGap = Math.round(10 * scale);

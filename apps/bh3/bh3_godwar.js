@@ -242,7 +242,8 @@ export class bh3_godwar extends plugin {
     ).join('\n');
 
     // Armor transcript
-    const transLimit = Math.max(1, Math.min(40, Number(options.transLimit) || 12))
+    /* 默认不限制（单人查询显示全部装甲）；周常为了三列等高才会显式传 transLimit */
+    const transLimit = Number(options.transLimit) > 0 ? Math.min(60, Number(options.transLimit)) : avatarTranscript.length
     const transList = avatarTranscript.slice(0, transLimit)
     const transHtml = transList.map(t => {
       const av = t.avatar || {};
