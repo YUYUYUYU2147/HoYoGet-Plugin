@@ -166,7 +166,7 @@ export class bh3_godwar extends plugin {
     return { qq, uid, region, ck };
   }
 
-  async godwar(e) {
+  async godwar(e, options = {}) {
     const auth = await this.getAuth(e);
     if (!auth.uid) return sendMsg(e, '请先扫码绑定崩坏3账号');
     if (!auth.ck) return sendMsg(e, '未找到有效Cookie，请先扫码绑定');
@@ -342,6 +342,7 @@ export class bh3_godwar extends plugin {
         // 层数 = 资源目录段数 + 3：小花火/bh3_godwar/godwar 落在 temp/html/下同深度目录。
         ppath: '../../../../../plugins/HoYoGet-Plugin/resources/',
         ...data,
+        hideFooter: options.hideFooter ? 'hide-footer' : '',
         sys: { scale: scaleStyle() },
         tplFile: process.cwd() + '/plugins/HoYoGet-Plugin/resources/bh3_godwar/godwar.html',
         saveId: 'bh3_godwar',
@@ -350,7 +351,7 @@ export class bh3_godwar extends plugin {
       logger.error('[bh3_godwar] render failed:', err);
     }
 
-    if (buf && Buffer.isBuffer(buf)) return sendMsg(e, buf);
+    if (buf && Buffer.isBuffer(buf)) return options.returnBuffer ? buf : sendMsg(e, buf);
 
     // Text fallback
     const lines = [

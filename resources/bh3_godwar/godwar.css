@@ -47,6 +47,7 @@ body {
   opacity: .9;
 }
 
+.container.hide-footer .footer { display: none; }
 .xhh_box { position: relative; width: 616px; }
 
 /* ================= 顶栏 ================= */
