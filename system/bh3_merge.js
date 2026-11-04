@@ -13,7 +13,7 @@ export async function detectPeriods(buffer, meta) {
   const W = meta.width || 0;
   const H = meta.height || 0;
   if (!W || !H) return null;
-  const candidates = [0.01, 0.02, 0.03, 0.05]
+  const candidates = [0.04, 0.05, 0.06, 0.08, 0.10, 0.12, 0.02]
     .map(f => Math.min(W - 1, Math.max(0, Math.round(W * f))));
   let best = null;
   for (const x of candidates) {
