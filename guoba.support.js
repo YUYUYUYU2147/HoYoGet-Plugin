@@ -61,14 +61,6 @@ const defaultBh3GuideSources = {
   ].join('\n'),
 }
 
-const priorityInput = (field, label, defaultValue) => ({
-  field,
-  label,
-  helpMessage: `默认 ${defaultValue}；Yunzai 数字越小优先级越高，修改后需重启`,
-  component: 'InputNumber',
-  componentProps: { min: -9999999999, max: 9999999999, step: 1 },
-})
-
 export const supportGuoba = () => {
   const cfg = getCfg()
   const bh3Remind = getBh3Remind()
@@ -155,74 +147,13 @@ export const supportGuoba = () => {
     schemas: [
       {
         component: 'SOFT_GROUP_BEGIN',
-        label: '模块开关',
-      },
-      // 模块总开关：关掉后对应指令静默不响应（不提示、不报错），
-      // 与 system/modules.js 的 MODULES 一一对应
-      {
-        field: 'Tl',
-        label: '模块 · 体力查询',
-        component: 'Switch',
-      },
-      {
-        field: 'gs_logs',
-        label: '模块 · 原神历史卡池',
-        component: 'Switch',
-      },
-      {
-        field: 'sr_logs',
-        label: '模块 · 星铁历史卡池',
-        component: 'Switch',
-      },
-      {
-        field: 'zzz_logs',
-        label: '模块 · 绝区零历史卡池',
-        component: 'Switch',
-      },
-      {
-        field: 'gs_gacha_enable',
-        label: '模块 · 原神抽卡记录',
-        component: 'Switch',
-      },
-      {
-        field: 'sr_gacha_enable',
-        label: '模块 · 星铁抽卡记录',
-        component: 'Switch',
-      },
-      {
-        field: 'zzz_gacha_enable',
-        label: '模块 · 绝区零抽卡记录',
-        component: 'Switch',
-      },
-      {
-        field: 'bh3_gacha_enable',
-        label: '模块 · 崩坏三抽卡记录',
-        component: 'Switch',
-      },
-      {
-        field: 'sign',
-        label: '模块 · 米游社签到',
-        component: 'Switch',
-      },
-      {
-        field: 'gacha_pool_enable',
-        label: '模块 · 卡池日程维护',
-        component: 'Switch',
-      },
-      {
-        field: 'meme_enable',
-        label: '模块 · 表情包',
-        component: 'Switch',
-      },
-      {
-        field: 'module_switch_enable',
-        label: '模块 · 模块开关指令',
-        helpMessage: '关掉后连 #米哈游模块 这条开关指令也不响应',
-        component: 'Switch',
-      },
-      {
-        component: 'SOFT_GROUP_BEGIN',
         label: '通用设置',
+      },
+      {
+        field: 'bdsb',
+        label: '使用 HoYoGet 绑定设备',
+        helpMessage: '作用于 genshin / StarRail / ZZZ-Plugin',
+        component: 'Switch',
       },
       {
         field: 'data_mode',
@@ -254,11 +185,6 @@ export const supportGuoba = () => {
         label: '图鉴与显示',
       },
       {
-        field: 'wiki',
-        label: '图鉴启用',
-        component: 'Switch',
-      },
-      {
         field: 'gs_bg',
         label: '角色图鉴随机背景',
         helpMessage: '用随机图接口给原神角色图鉴加一层底纹背景（接口失败自动退回纯色）',
@@ -269,12 +195,6 @@ export const supportGuoba = () => {
         label: '随机背景图接口',
         helpMessage: '返回图片的地址，留空用默认 api.yppp.net/api.php',
         component: 'Input',
-      },
-      {
-        field: 'bdsb',
-        label: '使用HoYoGet绑定设备',
-        helpMessage: '作用于genshin/StarRail/ZZZ-Plugin',
-        component: 'Switch',
       },
       {
         field: 'emoji',
@@ -306,12 +226,6 @@ export const supportGuoba = () => {
             },
           ],
         },
-      },
-      {
-        field: 'sign',
-        label: '签到功能',
-        helpMessage: '自动签到在sign.yaml配置',
-        component: 'Switch',
       },
       {
         field: 'zd_sign',
@@ -612,30 +526,6 @@ export const supportGuoba = () => {
         },
       },
       {
-        component: 'SOFT_GROUP_BEGIN',
-        label: '历史卡池',
-      },
-      {
-        field: 'gs_logs',
-        label: '原神历史卡池',
-        component: 'Switch',
-      },
-      {
-        field: 'sr_logs',
-        label: '星铁历史卡池',
-        component: 'Switch',
-      },
-      {
-        field: 'zzz_logs',
-        label: '绝区零历史卡池',
-        component: 'Switch',
-      },
-      {
-        field: 'bh3_logs',
-        label: '崩坏3历史卡池',
-        component: 'Switch',
-      },
-      {
         field: 'gacha_pool_auto_refresh',
         label: '启用卡池自动刷新',
         helpMessage: '开启后按下方刷新间隔自动同步全游戏卡池；默认关闭，保存后需重启插件生效',
@@ -656,28 +546,6 @@ export const supportGuoba = () => {
         field: 'all_voice',
         label: '角色语音总开关',
         helpMessage: '关闭后四个游戏语音全部停用',
-        component: 'Switch',
-      },
-      {
-        field: 'gs_voice',
-        label: '原神语音',
-        component: 'Switch',
-      },
-      {
-        field: 'sr_voice',
-        label: '星铁语音',
-        component: 'Switch',
-      },
-      {
-        field: 'zzz_voice',
-        label: '绝区零语音',
-        helpMessage: '开关已预留；当前仓库暂无绝区零角色语音数据源',
-        component: 'Switch',
-      },
-      {
-        field: 'bh3_voice',
-        label: '崩坏3语音',
-        helpMessage: '开关已预留；当前仓库暂无崩坏3角色语音数据源',
         component: 'Switch',
       },
       {
@@ -779,13 +647,6 @@ export const supportGuoba = () => {
         label: '绝区零默认图片序号',
         helpMessage: '留空取该帖全部图片；填序号取指定张，如 0(第一张) 或 0,2（英文逗号分隔）',
         component: 'Input',
-      },
-      {
-        field: 'custom_guide_priority',
-        label: '自定义攻略源优先级',
-        helpMessage: '默认 -9999999999（极高优先级，确保优先于其它攻略插件抢到指令）；数字越小越优先，修改后需重启',
-        component: 'InputNumber',
-        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
       },
       {
         component: 'SOFT_GROUP_BEGIN',
@@ -1176,11 +1037,6 @@ export const supportGuoba = () => {
         label: 'B站设置',
       },
       {
-        field: 'bilibili',
-        label: 'B站功能开关',
-        component: 'Switch',
-      },
-      {
         field: 'list_num',
         label: '评论区显示条数',
         helpMessage: '1-20条',
@@ -1229,12 +1085,6 @@ export const supportGuoba = () => {
       {
         component: 'SOFT_GROUP_BEGIN',
         label: 'B站直播解析',
-      },
-      {
-        field: 'bili_live',
-        label: '自动解析直播间',
-        helpMessage: '消息里出现直播间链接/b23短链时自动解析，默认开启；关闭后仍可用「#直播解析 房间号」手动解析',
-        component: 'Switch',
       },
       {
         field: 'bili_live_only_live',
@@ -1318,130 +1168,8 @@ export const supportGuoba = () => {
       },
       {
         component: 'SOFT_GROUP_BEGIN',
-        label: '指令优先级与面板加速',
+        label: '绝区零面板加速',
       },
-      {
-        field: 'priority_unified',
-        label: '统一优先级',
-        helpMessage: '开启后所有指令至少拿到「统一优先级数值」，避免被后装的插件抢走；某条指令自身配置更靠前时仍取更靠前的值',
-        bottomHelpMessage: '改这里就不用逐条调下面的三十多项了；修改后需重启',
-        component: 'Switch',
-      },
-      {
-        field: 'priority_base',
-        label: '统一优先级数值',
-        helpMessage: '默认 -114514；Yunzai 数字越小越优先，修改后需重启',
-        component: 'InputNumber',
-        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
-      },
-      {
-        field: 'tl_priority',
-        label: '体力小组件(TL)',
-        helpMessage: '默认 -99',
-        component: 'InputNumber',
-        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
-      },
-      {
-        field: 'sign_priority',
-        label: '签到(sign)',
-        helpMessage: '默认 -26',
-        component: 'InputNumber',
-        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
-      },
-      {
-        field: 'user_priority',
-        label: '扫码绑定(user)',
-        helpMessage: '默认 -9999999999',
-        component: 'InputNumber',
-        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
-      },
-      {
-        field: 'wiki_priority',
-        label: '图鉴(wiki)',
-        helpMessage: '默认 100',
-        component: 'InputNumber',
-        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
-      },
-      {
-        field: 'bh3_remind_priority',
-        label: '崩三提醒(bh3_remind)',
-        helpMessage: '默认 -1000001（提醒拦截）',
-        component: 'InputNumber',
-        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
-      },
-      {
-        field: 'activity_remind_priority',
-        label: '活动到期提醒(activity_remind)',
-        helpMessage: '默认 -1000002，建议低于genshin以优先抢到活动到期指令',
-        component: 'InputNumber',
-        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
-      },
-      {
-        field: 'bh3_note_priority',
-        label: '崩三体力(bh3_note)',
-        helpMessage: '默认 100',
-        component: 'InputNumber',
-        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
-      },
-      {
-        field: 'bh3_abyss_priority',
-        label: '崩三深渊(bh3_abyss)',
-        helpMessage: '默认 100',
-        component: 'InputNumber',
-        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
-      },
-      {
-        field: 'bh3_battlefield_priority',
-        label: '崩三战场(bh3_battlefield)',
-        helpMessage: '默认 100',
-        component: 'InputNumber',
-        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
-      },
-      {
-        field: 'bh3_godwar_priority',
-        label: '崩三乐土(bh3_godwar)',
-        helpMessage: '默认 100',
-        component: 'InputNumber',
-        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
-      },
-      {
-        field: 'bh3_profile_priority',
-        label: '崩三主页(bh3_profile)',
-        helpMessage: '默认 100',
-        component: 'InputNumber',
-        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
-      },
-      {
-        field: 'bh3_all_note_priority',
-        label: '四体力聚合(bh3_all_note)',
-        helpMessage: '默认 100',
-        component: 'InputNumber',
-        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
-      },
-      {
-        field: 'bh3_gacha_priority',
-        label: '崩三抽卡(bh3_gacha)',
-        helpMessage: '默认 100',
-        component: 'InputNumber',
-        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
-      },
-      {
-        field: 'bh3_ledger_priority',
-        label: '崩三水晶(bh3_ledger)',
-        helpMessage: '默认 100',
-        component: 'InputNumber',
-        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
-      },
-      {
-        field: 'abyss_report_priority',
-        label: '原神/星铁深渊速报(abyss_report)',
-        helpMessage: '默认 100，修改后需重启',
-        component: 'InputNumber',
-        componentProps: { min: -9999999999, max: 9999999999, step: 1 },
-      },
-      priorityInput('bilibili_priority', 'B站解析卡片(bilibili)', -120),
-      priorityInput('bilibili_push_priority', 'B站推送(bilibili_push)', -119),
-      priorityInput('bili_live_priority', 'B站直播解析(bili_live)', -115),
       {
         field: 'zzz_panel_accel_enabled',
         label: '绝区零面板加速开关',
@@ -1465,25 +1193,10 @@ export const supportGuoba = () => {
         component: 'InputNumber',
         componentProps: { min: 100, max: 10000, step: 100 },
       },
-      priorityInput('zzz_panel_accel_priority', '绝区零面板加速(zzz_panel_accel)', -9999999999),
-      priorityInput('gacha_pool_priority', '全游戏当前卡池(gacha_pool)', -1000000000),
-      priorityInput('gs_logs_priority', '原神历史卡池(gs_logs)', -99),
-      priorityInput('sr_logs_priority', '星铁历史卡池(sr_logs)', -88),
-      priorityInput('mhy_estimate_priority', '预估/攻略搜索(mhy_estimate)', -9999999999),
-      priorityInput('video_priority', '米哈游最新视频(video)', 1),
-      priorityInput('voice_priority', '角色语音(voice)', 15),
-      priorityInput('update_priority', '插件更新(update)', 10),
-      priorityInput('config_priority', '插件配置(config)', 15),
-      priorityInput('help_priority', '帮助菜单(help)', 100),
-      priorityInput('picture_priority', '图片处理(picture)', 1234),
-      priorityInput('role_combat_priority', '剧诗可用角色(role_combat)', 100),
-      priorityInput('zzz_md_priority', '绝区零母带(zzz_md)', 100),
-      priorityInput('currency_balance_priority', '货币统计(currency_balance)', 100),
       {
         component: 'SOFT_GROUP_BEGIN',
         label: 'Meme表情包',
       },
-      priorityInput('meme_priority', 'Meme表情(meme)', 50),
       {
         field: 'meme',
         label: 'Meme表情包总开关',
@@ -1531,12 +1244,6 @@ export const supportGuoba = () => {
       {
         component: 'SOFT_GROUP_BEGIN',
         label: '其他',
-      },
-      {
-        field: 'Tl',
-        label: '启用体力组件',
-        helpMessage: '开启后由本插件处理体力指令；#体力/#米哈游体力等为四游戏总览，#原神体力等为单游戏查询',
-        component: 'Switch',
       },
       {
         field: 'hbxx',
@@ -1640,49 +1347,15 @@ export const supportGuoba = () => {
         bili_live_dm_perm: cfg.bili_live_dm_perm || 'admin',
         bili_live_dm_cd: cfg.bili_live_dm_cd ?? 5,
         emoji: !!cfg.emoji,
-        Tl: !!cfg.Tl,
         hbxx: !!cfg.hbxx,
         debug: !!cfg.debug,
         auto_reload: cfg.auto_reload !== false,
         gacha_art_source: cfg.gacha_art_source || 'custom',
         gacha_header_art_source: cfg.gacha_header_art_source || cfg.gacha_art_source || 'custom',
         gacha_up_icon_source: cfg.gacha_up_icon_source || cfg.gacha_art_source || 'custom',
-        tl_priority: cfg.tl_priority ?? -99,
-        sign_priority: cfg.sign_priority ?? -26,
-        user_priority: cfg.user_priority ?? -9999999999,
-        wiki_priority: other.wiki ?? 100,
-        bh3_remind_priority: cfg.bh3_remind_priority ?? -1000001,
-        activity_remind_priority: cfg.activity_remind_priority ?? -1000002,
-        bh3_note_priority: cfg.bh3_note_priority ?? 100,
-        bh3_abyss_priority: cfg.bh3_abyss_priority ?? 100,
-        bh3_battlefield_priority: cfg.bh3_battlefield_priority ?? 100,
-        bh3_godwar_priority: cfg.bh3_godwar_priority ?? 100,
-        bh3_profile_priority: cfg.bh3_profile_priority ?? 100,
-        bh3_all_note_priority: cfg.bh3_all_note_priority ?? 100,
-        bh3_gacha_priority: cfg.bh3_gacha_priority ?? 100,
-        bh3_ledger_priority: cfg.bh3_ledger_priority ?? 100,
-        bilibili_priority: cfg.bilibili_priority ?? -120,
-        bilibili_push_priority: cfg.bilibili_push_priority ?? -119,
-        bili_live_priority: cfg.bili_live_priority ?? -115,
         zzz_panel_accel_enabled: cfg.zzz_panel_accel_enabled ?? true,
         zzz_panel_accel_concurrency: Number.isFinite(Number(cfg.zzz_panel_accel_concurrency)) ? Number(cfg.zzz_panel_accel_concurrency) : 4,
         zzz_panel_accel_interval: Number.isFinite(Number(cfg.zzz_panel_accel_interval)) ? Number(cfg.zzz_panel_accel_interval) : 400,
-        zzz_panel_accel_priority: Number.isFinite(Number(cfg.zzz_panel_accel_priority)) ? Number(cfg.zzz_panel_accel_priority) : -9999999999,
-        gacha_pool_priority: cfg.gacha_pool_priority ?? -1000000000,
-        priority_unified: cfg.priority_unified === true,
-        priority_base: cfg.priority_base ?? -114514,
-        gs_logs_priority: cfg.gs_logs_priority ?? -99,
-        sr_logs_priority: cfg.sr_logs_priority ?? -88,
-        mhy_estimate_priority: Number.isFinite(Number(cfg.mhy_estimate_priority)) ? Number(cfg.mhy_estimate_priority) : -9999999999,
-        video_priority: cfg.video_priority ?? 1,
-        voice_priority: cfg.voice_priority ?? 15,
-        update_priority: cfg.update_priority ?? 10,
-        config_priority: cfg.config_priority ?? 15,
-        help_priority: cfg.help_priority ?? 100,
-        picture_priority: cfg.picture_priority ?? 1234,
-        role_combat_priority: cfg.role_combat_priority ?? 100,
-        zzz_md_priority: cfg.zzz_md_priority ?? 100,
-        currency_balance_priority: cfg.currency_balance_priority ?? 100,
         bh3_remind_enable: !!bh3Remind.enable,
         bh3_all_note_enable: !!cfg.bh3_all_note_enable,
         bh3_all_note_groups: (bh3Remind.all_note_groups || []).map(String),
@@ -1734,7 +1407,6 @@ export const supportGuoba = () => {
         custom_guide_sr_index: cfg.custom_guide_sr_index || '',
         custom_guide_zzz_uid: cfg.custom_guide_zzz_uid || '',
         custom_guide_zzz_index: cfg.custom_guide_zzz_index || '',
-        custom_guide_priority: cfg.custom_guide_priority ?? -9999999999,
         abyss_report_repos: cfg.abyss_report_repos || 'https://cnb.cool/JIUXJIU/Abyss/-/git/raw/main\nhttps://cnb.cool/JIUXJIU/AbyssBeta/-/git/raw/main',
         abyss_report_gs_version: cfg.abyss_report_gs_version || '',
         abyss_report_sr_version: cfg.abyss_report_sr_version || '',
@@ -1745,7 +1417,6 @@ export const supportGuoba = () => {
         abyss_report_sr_invasion: cfg.abyss_report_sr_invasion !== false,
         abyss_report_zzz_shiyu_periods: cfg.abyss_report_zzz_shiyu_periods || 'last',
         abyss_report_zzz_deadly_periods: cfg.abyss_report_zzz_deadly_periods || 'last',
-        abyss_report_priority: cfg.abyss_report_priority ?? 100,
         meme: cfg.meme !== false,
         meme_baseUrl: cfg.meme_baseUrl || 'http://113.31.103.19:50835',
         meme_reply: cfg.meme_reply !== false,
@@ -1753,41 +1424,26 @@ export const supportGuoba = () => {
         meme_CD: cfg.meme_CD ?? 0,
         meme_maxFileSize: cfg.meme_maxFileSize ?? 10,
         meme_masterProtectDo: cfg.meme_masterProtectDo !== false,
-        meme_priority: cfg.meme_priority ?? 50,
       }
     },
     setConfigData(data, { Result }) {
       const boolMap = {
         update: data.update,
-        wiki: data.wiki,
         gs_bg: data.gs_bg,
         bdsb: data.bdsb,
-        gs_logs: data.gs_logs,
-        sr_logs: data.sr_logs,
-        zzz_logs: data.zzz_logs,
-        bh3_logs: data.bh3_logs,
         all_voice: data.all_voice,
-        gs_voice: data.gs_voice,
-        sr_voice: data.sr_voice,
-        zzz_voice: data.zzz_voice,
-        bh3_voice: data.bh3_voice,
-        sign: data.sign,
         sm: data.sm,
-        bilibili: data.bilibili,
         b_lj: data.b_lj,
         b_cd: data.b_cd,
-        bili_live: data.bili_live,
         bili_live_only_live: data.bili_live_only_live,
         bili_live_video: data.bili_live_video,
         bili_live_video_auto: data.bili_live_video_auto,
         bili_live_dm: data.bili_live_dm,
         emoji: data.emoji,
-        Tl: data.Tl,
         hbxx: data.hbxx,
         debug: data.debug,
         auto_reload: data.auto_reload,
         bh3_all_note_enable: data.bh3_all_note_enable,
-        priority_unified: data.priority_unified,
         zzz_remind_enable: data.zzz_remind_enable,
         forwardMsg: data.forwardMsg,
         bh3: data.bh3,
@@ -2027,25 +1683,6 @@ export const supportGuoba = () => {
       if (data.zzz_activity_push_start_lead != null) yaml.set(_path + 'config.yaml', 'zzz_activity_push_start_lead', Math.min(Math.max(Number(data.zzz_activity_push_start_lead) || 1440, 5), 10080))
       if (data.zzz_activity_push_end_lead != null) yaml.set(_path + 'config.yaml', 'zzz_activity_push_end_lead', Math.min(Math.max(Number(data.zzz_activity_push_end_lead) || 2880, 5), 10080))
       if (has(data, 'zzz_activity_push_groups')) yaml.set(_path + 'config.yaml', 'zzz_activity_push_groups', parseMultiList(data.zzz_activity_push_groups))
-
-      const priorityFields = [
-        'tl_priority', 'sign_priority', 'user_priority', 'wiki_priority',
-        'bh3_remind_priority', 'activity_remind_priority', 'bh3_note_priority', 'bh3_abyss_priority',
-        'bh3_battlefield_priority', 'bh3_godwar_priority', 'bh3_profile_priority',
-        'bh3_all_note_priority', 'bh3_gacha_priority', 'bh3_ledger_priority', 'abyss_report_priority',
-        'bilibili_priority', 'bilibili_push_priority', 'bili_live_priority', 'gacha_pool_priority',
-        'gs_logs_priority', 'sr_logs_priority', 'mhy_estimate_priority', 'zzz_panel_accel_priority',
-        'video_priority', 'voice_priority', 'update_priority', 'config_priority',
-        'help_priority', 'picture_priority',
-        'role_combat_priority', 'zzz_md_priority', 'currency_balance_priority', 'priority_base',
-        'custom_guide_priority',
-        'meme_priority',
-      ]
-      for (const f of priorityFields) {
-        if (data[f] != null) yaml.set(_path + 'config.yaml', f, Number(data[f]))
-      }
-      // wiki优先级在other.yaml
-      if (data.wiki_priority != null) yaml.set(_path + 'other.yaml', 'wiki', Number(data.wiki_priority))
 
       return Result.ok({}, '保存成功，部分配置需重启生效')
     },

@@ -12,7 +12,7 @@
  * ⚠️ 新增模块时三件事一起做，缺一个就会出现「关了没用」：
  *   1. MODULES 里加一项
  *   2. config/config.yaml 加同名键（默认 true）
- *   3. guoba.support.js 加 Switch（label 与这里保持一致）
+ *   3. system/default/default_config/config.yaml 加同名键（默认 true）
  *   4. 对应 app 文件末尾调 guardModule(Class, '模块id', ['方法名'])
  */
 
@@ -83,7 +83,7 @@ export const MODULES = {
  * 语义刻意做成「只有明确写 false 才算关」：
  *   · 键缺失 / null / undefined → 视为开。老用户升级后 config.yaml 里还没有新键，
  *     不能因为「没配过」就把功能停掉。
- *   · 兼容字符串：锅巴的输入框清空后可能提交 '' / 'false' / 'off'。
+ *   · 兼容字符串：配置文件里可能手动填入 'false' / 'off'。
  *
  * @param {string} id MODULES 的键
  * @returns {boolean}
