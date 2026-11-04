@@ -109,7 +109,14 @@ export async function fetchEnkaPanel(uid, { timeout = 15000 } = {}) {
     signal: AbortSignal.timeout(timeout),
     headers: { 'User-Agent': UA, Accept: 'application/json' },
   })
-  if (!res.ok) throw new Error(`Enka HTTP ${res.status}`)
+  if (!res.ok) {
+    /* 400 基本都是 UID 不存在/不是绝区零（Enka 只认国服/国际服的有效 UID）；
+       把状态和正文片段带出来，别再只丢一个 "Enka HTTP 400" 让人猜。 */
+    let body = ''
+    try { body = (await res.text()).slice(0, 120) } catch { }
+    const hint = res.status === 400 ? '（UID 不存在或不是绝区零 UID）' : ''
+    throw new Error(`Enka HTTP ${res.status}${hint}${body ? '：' + body : ''}`)
+  }
   const data = await res.json()
   const sd = data?.PlayerInfo?.ShowcaseDetail
   const list = sd?.AvatarList

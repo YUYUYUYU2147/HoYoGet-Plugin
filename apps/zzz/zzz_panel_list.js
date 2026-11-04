@@ -2742,9 +2742,18 @@ export class zzz_panel_list extends plugin {
         // Enka 不可用时自动回退米游社，避免整条更新失败
         logger.mark?.(`[HoYoGet][zzz_panel] Enka 不可用（${err?.message || err}），已自动切换米游社`)
         try {
-          const raw = await this.fetchRaw(e, uid, server, ck)
+          let raw = await this.fetchRaw(e, uid, server, ck)
+          /* -400005「网页异常」通常是 server 传错（把官服 UID 当成渠道服查询）。
+             先用官服 prod_gf_cn 再试一次，仍失败再报。 */
+          if (raw?.__error && /-400005/.test(String(raw.__error)) && server !== 'prod_gf_cn') {
+            const retry = await this.fetchRaw(e, uid, 'prod_gf_cn', ck)
+            if (retry && !retry.__error) raw = retry
+          }
           if (!raw || raw.__error) {
-            return e.reply(`Enka 更新失败：${err?.message || err}\n米游社回退失败：${raw?.__error || "无返回"}`)
+            const tip = /-400005/.test(String(raw?.__error || ''))
+              ? `\n请确认绑定的 UID 是绝区零 UID（不是原神/星铁），且服务器为官服。`
+              : ''
+            return e.reply(`Enka 更新失败：${err?.message || err}\n米游社回退失败：${raw?.__error || "无返回"}${tip}`)
           }
           fs.mkdirSync(OUT_DIR, { recursive: true })
           fs.writeFileSync(basicFile, JSON.stringify({ uid, server, deviceFpApplied: !!raw.__fp, data: raw?.data }, null, 2))
@@ -2759,7 +2768,11 @@ export class zzz_panel_list extends plugin {
         }
       }
     } else {
-      const raw = await this.fetchRaw(e, uid, server, ck)
+      let raw = await this.fetchRaw(e, uid, server, ck)
+      if (raw?.__error && /-400005/.test(String(raw.__error)) && server !== 'prod_gf_cn') {
+        const retry = await this.fetchRaw(e, uid, 'prod_gf_cn', ck)
+        if (retry && !retry.__error) raw = retry
+      }
       if (raw?.__error) return e.reply(raw.__error)
 
       // 落盘原始响应，便于后续排查 / 字段再核对（按需，不影响出图）
