@@ -64,9 +64,15 @@ export class bh3_weekly extends plugin {
             target -= rowGap;
             const zoom = (gm.width || 640) / 640;
             const need = (target - (gm.height || 0)) / (zoom || 1);
-            if (need > 8) {
-              godwarBuf = await godwarPlugin.godwar(e, { returnBuffer: true, hideFooter: true, fillExtra: need });
+            logger.mark(`[bh3_weekly] 两列8期总高=${Math.round(target)} 乐土高=${gm.height} 差=${Math.round(need)}`);
+            /* 乐土装甲多时会比 8 期还高：按比例减少显示台数，剩余高度由合成器补白。
+               乐土偏矮时不动，交给合成器补背景。 */
+            if (need < -12) {
+              const ratio = target / (gm.height || 1);
+              const limit = Math.max(4, Math.min(16, Math.floor(12 * ratio / 2) * 2));
+              godwarBuf = await godwarPlugin.godwar(e, { returnBuffer: true, hideFooter: true, transLimit: limit });
               godwar = Buffer.isBuffer(godwarBuf) ? godwarBuf : godwar;
+              logger.mark(`[bh3_weekly] 乐土装甲改显示 ${limit} 台`);
             }
           }
         } catch (err) {

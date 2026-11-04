@@ -36,7 +36,7 @@
       </section>
 
       <section class="panel">
-        <h2 class="section-title"><span class="bar"></span>装甲成绩单</h2>
+        <h2 class="section-title"><span class="bar"></span>装甲成绩单{{if transTotal}}<span class="section-count">共 {{transTotal}} 台{{if transShown < transTotal}} · 显示 {{transShown}} 台{{/if}}</span>{{/if}}</h2>
         {{if avatarTranscript && avatarTranscript.length > 0}}
         <div class="trans-grid">
           {{# transHtml}}

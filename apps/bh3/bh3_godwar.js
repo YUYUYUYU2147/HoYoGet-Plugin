@@ -242,7 +242,9 @@ export class bh3_godwar extends plugin {
     ).join('\n');
 
     // Armor transcript
-    const transHtml = avatarTranscript.map(t => {
+    const transLimit = Math.max(1, Math.min(40, Number(options.transLimit) || 12))
+    const transList = avatarTranscript.slice(0, transLimit)
+    const transHtml = transList.map(t => {
       const av = t.avatar || {};
       const name = av.name || '未知';
       const badge = rankBadge(av.star);
@@ -333,7 +335,9 @@ export class bh3_godwar extends plugin {
       summaryHtml,
       transHtml,
       recordCards,
-      avatarTranscript,
+      avatarTranscript: transList,
+      transTotal: avatarTranscript.length,
+      transShown: transList.length,
       records,
       dataTime: moment().format('MM-DD HH:mm'),
       fillExtra: Math.max(0, Number(options.fillExtra) || 0),

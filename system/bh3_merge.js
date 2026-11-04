@@ -148,7 +148,7 @@ export async function mergeColumns(items = []) {
     });
     top += periodRows[periodRows.length - 1].height + rowGap;
   }
-  const bodyBottom = n ? (top - rowGap) : headerHeight; // 前两列内容底部
+  let bodyBottom = n ? (top - rowGap) : headerHeight; // 前两列内容底部（可能被 block 列撑大）
 
   // 贴入各期
   for (const row of periodRows) {
