@@ -252,27 +252,15 @@ export class GeetestService extends plugin {
             );
         }
         const s = h.stats || {};
-        // 端口活着、进程却不在本插件的 pm2 表里 —— 旧版本部署留下的（或手工起的）。
-        // 这时点 pm2 restart 只会去动一个不存在的进程，而实际在答的还是那个野生的。
-        const managed = await pm2HasProcess();
-        const orphan = managed === false;
-        const autoStart = managed ? await pm2StartupEnabled() : false;
+        /* 只要端口在应答就认为可用：不同机器上 pm2 的 PM2_HOME/用户可能不一样，
+           机器人进程里的 `pm2 jlist` 未必看得到部署时那条记录，纠结归属只会误报。
+           托管/自启信息只在 #过码部署 时提示。 */
         return e.reply(
             `过码服务地址：${addr()}\n运行中\n` +
             `累计成功 ${s.success ?? '-'}，失败 ${s.failed ?? '-'}，成功率 ${s.successRate ?? '-'}` +
             (s.avgRounds ? `，平均 ${s.avgRounds} 轮 / ${s.avgSeconds} 秒` : '') + '\n' +
             // 熔断中是瞬时状态，得看得见，否则「一直失败」和「被熔断拒了」分不清
             (s.breakerOpen ? `⚡ 熔断中（连续失败 ${s.breakerFail} 次），期间请求会秒回并走兜底，稍后自动恢复\n` : '') +
-            (orphan
-                ? `\nℹ️ 过码服务可用，但它不是由本插件登记的进程（pm2 里没有 ${PM2_NAME}）。\n` +
-                  `不影响使用；如果需要插件统一托管（开机自启、状态显示更完整）：\n` +
-                  `· 执行 pm2 delete ${PM2_NAME} 后重发 #过码部署\n` +
-                  '· 或重启一次机器后重发 #过码部署\n'
-                : '') +
-            (managed && !autoStart
-                ? `\n⚠️ 未设置开机自启：机器重启后过码服务不会自己回来。\n`
-                  + `重发 #过码部署 会自动补上（pm2 startup + save）。\n`
-                : '') +
             `${platform}`,
             true
         );
