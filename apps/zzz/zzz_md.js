@@ -93,9 +93,20 @@ export class zzz extends plugin {
             else if (v.ticket_type == 'GACHA_TICKET_TYPE_BOOPON') bb = v.ticket_cnt
         }
 
-        render('zzz_md/md', {
-            fldp, fl, jmmd, md, bb, uid, qq, name, level
-        }, { e, ret: true })
+        /* 必须 await：之前没 await，函数先返回「完成」，图片还在异步渲染，
+           QQ 侧稍有延迟或失败就表现为「渲染了但没发出来」。 */
+        try {
+            const sent = await render('zzz_md/md', {
+                fldp, fl, jmmd, md, bb, uid, qq, name, level
+            }, { e, ret: true })
+            /* ret:true 时正常返回发送结果；若返回的是图片本身说明内部没发成功，兜底再发一次 */
+            if (sent && typeof sent === 'object' && sent.file) {
+                await e.reply(sent)
+            }
+        } catch (err) {
+            logger.error(`[HoYoGet][zzz_md] 该图发送失败：${err?.message || err}`)
+            await e.reply('母带图片发送失败，请稍后重试', true)
+        }
 
         return true
     }
