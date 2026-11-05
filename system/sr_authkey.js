@@ -749,7 +749,17 @@ export async function getSrAuthkey(opt = {}) {
       'x-rpc-device_model': '2206123SC',
       DS: sdkDs(),
     }
-    const scanBody = { tk, token_types: String(tokenTypes).split(',').map(s => s.trim()).filter(Boolean) }
+    // 实测（2026-11）：scanQRLogin / confirmQRLogin 只认 fetch 拿到的**原始 ticket**；
+    // 传 scan 返回的 tk（APK 的做法）现在会被判 -3001 参数不合法。
+    // tk 仍拿来做"scan 是否成功"的校验，但不进请求体。
+    const scanBody = {
+      ticket,
+      // 服务端要求数字数组；传 ["1"] 会被判 -3001 参数不合法（实测）
+      token_types: String(tokenTypes)
+        .split(',')
+        .map(s => Number(String(s).trim()))
+        .filter(n => Number.isFinite(n)),
+    }
     const loginResp = await postJson('https://passport-api.mihoyo.com/account/ma-cn-passport/app/scanQRLogin', scanBody, passportHeaders, { label: 'scanQRLogin' })
     const appName = String(loginResp.app_name || '')
     if (appName && !appName.includes('星穹铁道')) throw new Error('授权应用与星铁不符，已停止')
