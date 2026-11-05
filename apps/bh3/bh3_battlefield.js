@@ -42,6 +42,17 @@ function absIcon(iconPath) {
   return iconPath;
 }
 
+/**
+ * 崩三 boss 图标偶发大小写错误：接口给 `Boss_150.png`，实际文件是 `BOSS_150.png`，
+ * 直接 img 会 404（如 MHT-3 和平使者）。这里把常见错误形式换成可用的写法。
+ * 只做纯字符串替换，不额外发请求；替换后仍 404 的会退回首字占位。
+ */
+function fixBossIconCase(url) {
+  if (!url) return url;
+  // QuestBossIcon/ 下的 `Boss_xxx` → `BOSS_xxx`（影骑士的 Boss_Fuka_C2 本身是对的，不动）
+  return url.replace(/\/QuestBossIcon\/Boss_(\d[^/]*)$/i, '/QuestBossIcon/BOSS_$1');
+}
+
 const serverMap = {
   cn_gf01: '官服', cn_qd01: 'B服', os_usa: '美服', os_euro: '欧服',
   os_asia: '亚服', os_cht: '港澳台服', android01: '安卓官服', ios01: 'iOS服',
@@ -222,7 +233,7 @@ export class bh3_battlefield extends plugin {
         const bossAvatar = boss.avatar ?? boss.icon ?? boss.icon_path
           ?? (Array.isArray(boss.avatars) ? (boss.avatars[0]?.icon || boss.avatars[0]?.avatar) : '')
           ?? ''
-        const bossIcon = absIcon(typeof bossAvatar === 'string' ? bossAvatar : (bossAvatar?.icon || bossAvatar?.icon_path || ''));
+        const bossIcon = fixBossIconCase(absIcon(typeof bossAvatar === 'string' ? bossAvatar : (bossAvatar?.icon || bossAvatar?.icon_path || '')));
         const bossImg = bossIcon
           ? `<img src="${bossIcon}" alt="">`
           : `<span>${(boss.name || '?')[0]}</span>`;
