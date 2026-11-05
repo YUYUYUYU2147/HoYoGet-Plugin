@@ -114,4 +114,16 @@ assert.equal(conn.messages[0].toString(), 'abcd')
 ok('KCP 分片重组正确')
 
 conn.close()
+
+/* ---------- 5. 登录包重写（设备号随机化） ---------- */
+
+const cfg2 = loadNative()
+cfg2.device = 'a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e'
+cfg2.verifyHeaders = { ...cfg2.verifyHeaders, 'x-rpc-device_fp': '0f1e2d3c4b5a6' }
+const rewritten = __internals.buildLoginBody(cfg2)
+const rFields = parse(rewritten)
+assert.equal(string(rFields, 7), cfg2.device, '包内设备号应被替换为随机值')
+assert.ok(JSON.parse(string(rFields, 15)).serial_number.startsWith(cfg2.device), 'serial_number 应带随机设备号前缀')
+ok('登录包设备号 / 指纹 / serial_number 重写正确')
+
 console.log(`\n全部通过：${pass} 项\n`)

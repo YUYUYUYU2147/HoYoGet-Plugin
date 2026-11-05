@@ -1015,13 +1015,18 @@ export async function getSrAuthkey(opt = {}) {
   }
 }
 
-/** 按 APK randomizeLoginDevice 的规则重写登录包（设备号/指纹/serial_number 随机化） */
+/**
+ * 按 APK randomizeLoginDevice 的规则重写登录包（设备号/指纹/serial_number 随机化）。
+ *
+ * 注意：APK 是先比对"包内设备号 == 配置设备号"再随机化，所以它的 config.device
+ * 在随机化前仍等于包内值；本模块为了每次换机器，先把 config.device 换成了随机值，
+ * 因此这里不能再用它做一致性校验（否则必然不相等），只校验字段存在即可。
+ */
 function buildLoginBody(config) {
   const fields = parse(Buffer.from(config.loginBodyBase64, 'base64'))
   const deviceField = fields.find(f => f.id === 7)
-  if (!deviceField || deviceField.bytes?.toString('utf8') !== config.device) {
-    throw new Error('星铁登录设备配置不一致')
-  }
+  if (!deviceField?.bytes?.length) throw new Error('星铁登录包缺少设备号字段（协议配置需更新）')
+  if (!fields.some(f => f.id === 15 && f.bytes?.length)) throw new Error('星铁登录包缺少设备信息字段（协议配置需更新）')
   const info = JSON.parse(fields.find(f => f.id === 15).bytes.toString('utf8'))
   info.serial_number = `${config.device}_${cryptoRandomUUID()}_${Math.floor(Date.now() / 1000)}`
   const deviceBytes = Buffer.from(config.device, 'utf8')
@@ -1055,4 +1060,4 @@ export function clearSrAuthkeyCache() {
 }
 
 /* 供离线自测/调试使用 */
-export const __internals = { ec2b, pad, Mt64, encode, parse, number, string, bytes, sdkSign, buildLoginBody, SrConnection, loadNative, resolveGatewayFields, versionCandidates }
+export const __internals = { ec2b, pad, Mt64, encode, parse, number, string, bytes, sdkSign, buildLoginBody, SrConnection, loadNative }
