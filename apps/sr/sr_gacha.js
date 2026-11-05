@@ -2127,12 +2127,14 @@ function fillSrIcons(pools) {
     return ''
   }
   let filled = 0
+  let scanned = 0
   for (const pool of Object.values(pools || {})) {
     for (const key of ['records', 'recent', 'fiveLog', 'fourLog']) {
       const arr = pool?.[key]
       if (!Array.isArray(arr)) continue
       for (const item of arr) {
         if (!item || item.icon) continue
+        scanned++
         const icon = iconOf(String(item.name || ''), String(item.item_type || ''))
         if (icon) {
           item.icon = icon
@@ -2141,7 +2143,7 @@ function fillSrIcons(pools) {
       }
     }
   }
-  if (filled) logger.mark('[HoYoGet][sr_gacha] 已补 ' + filled + ' 条记录的物品图')
+  logger.mark('[HoYoGet][sr_gacha] 物品图补全：扫描 ' + scanned + ' 条，命中 ' + filled + ' 条')
   return pools
 }
 
@@ -2678,6 +2680,7 @@ export class sr_gacha extends plugin {
         result.pools = applyCkIsUp(ckPools, result.pools)
         result.pools = inheritIsUp(old.pools, result.pools)
       }
+      fillSrIcons(result.pools)
       saveData(getDataFile(auth.qq, auth.uid), result)
       const text = POOLS.map(pool => {
         const updated = result.addedByPool?.[pool.type] || 0
