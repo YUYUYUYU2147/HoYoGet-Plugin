@@ -744,31 +744,28 @@ export async function getSrAuthkey(opt = {}) {
         .filter(n => Number.isFinite(n))
     const SCAN_LOGIN_URL = 'https://passport-api.mihoyo.com/account/ma-cn-passport/app/scanQRLogin'
 
-    // realtime 实测（2026-11）：先 qrcode/scan 会把票据标记为"已扫"，
-    // 紧接着 scanQRLogin 就报 -3501 二维码已失效。因此顺序改成两段式：
-    //   ① 直连：fetch → scanQRLogin(ticket, [1])  ← 先试这个
-    //   ② 兜底：fetch → qrcode/scan → scanQRLogin(ticket, token_types)
-    let scanBody = { ticket, token_types: [1] }
+    // 实测（2026-11）：scanQRLogin 认的是 qrcode/scan 返回的 **passport 层 tk**；
+    // 直接传 fetch 拿到的 SDK 层 ticket 会被判 -3501「二维码已失效」。
+    // 所以必须先 scan 拿到 tk 再登录；万一服务端又改回认原始 ticket，用原始值兜底重试一次。
+    const scanResp = await postJson(
+      'https://hkrpg-sdk.mihoyo.com/hkrpg_cn/combo/panda/qrcode/scan',
+      { passport_app_id: 'bll8iq97cem8', ticket, app_id: config.appId, device: deviceId, ts: Math.floor(Date.now() / 1000) },
+      {},
+      { label: 'qrcode/scan' }
+    )
+    const scanParams = parseQuery(scanResp.passport_qr_url || '')
+    const tk = scanParams.tk
+    if (!tk) throw new Error('星铁授权票据缺少参数')
+
+    let scanBody = { ticket: tk, token_types: toTokenTypes(scanParams.token_types) }
     let loginResp = null
     try {
-      loginResp = await postJson(SCAN_LOGIN_URL, scanBody, { ...passportHeaders, DS: sdkDs() }, { label: 'scanQRLogin/direct' })
+      loginResp = await postJson(SCAN_LOGIN_URL, scanBody, { ...passportHeaders, DS: sdkDs() }, { label: 'scanQRLogin' })
     } catch (err) {
       if (!/-(3001|3501|502)/.test(String(err?.message))) throw err
-      log('warn', `直连扫码被拒（${err?.message || err}），改用 qrcode/scan 顺序重试`, logger)
-    }
-    if (!loginResp) {
-      const scanResp = await postJson(
-        'https://hkrpg-sdk.mihoyo.com/hkrpg_cn/combo/panda/qrcode/scan',
-        { passport_app_id: 'bll8iq97cem8', ticket, app_id: config.appId, device: deviceId, ts: Math.floor(Date.now() / 1000) },
-        {},
-        { label: 'qrcode/scan' }
-      )
-      const scanParams = parseQuery(scanResp.passport_qr_url || '')
-      if (!scanParams.tk) throw new Error('星铁授权票据缺少参数')
-      // 服务端只认 fetch 拿到的原始 ticket（传 scan 的 tk 会 -3001），
-      // token_types 必须是数字数组（传 ["1"] 也会 -3001）
-      scanBody = { ticket, token_types: toTokenTypes(scanParams.token_types) }
-      loginResp = await postJson(SCAN_LOGIN_URL, scanBody, { ...passportHeaders, DS: sdkDs() }, { label: 'scanQRLogin' })
+      log('warn', `scanQRLogin(tk) 被拒（${err?.message || err}），改用原始 ticket 重试`, logger)
+      scanBody = { ticket, token_types: [1] }
+      loginResp = await postJson(SCAN_LOGIN_URL, scanBody, { ...passportHeaders, DS: sdkDs() }, { label: 'scanQRLogin/raw-ticket' })
     }
     const appName = String(loginResp.app_name || '')
     if (appName && !appName.includes('星穹铁道')) throw new Error('授权应用与星铁不符，已停止')
