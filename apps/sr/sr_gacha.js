@@ -2085,6 +2085,66 @@ function getSrRegion(uid) {
   return /^5/.test(String(uid || '')) ? 'prod_qd_cn' : 'prod_gf_cn'
 }
 
+/**
+ * 按名称给抽卡记录补物品图。
+ *
+ * getGachaLog（authkey）和小程序 five_star_list（ck）都不返回物品图，
+ * 所以 records/fiveLog 里的 icon 全是空，出图时五星卡片就是一块空白。
+ * 这里用本地资源兜底（miao 模型 → resources/meta-sr 立绘/图标），不联网：
+ * 路径是相对 templates 目录的，和 buildSummaryView 里 makeIcon 用的写法保持一致。
+ */
+function fillSrIcons(pools) {
+  const MIAO_RES = '../../../../../plugins/HoYoGet-Plugin/resources'
+  const resRoot = path.join(PLUGIN_ROOT, 'resources')
+  const exists = rel => {
+    try {
+      return fs.existsSync(path.join(resRoot, rel))
+    } catch {
+      return false
+    }
+  }
+  const iconOf = (name, type) => {
+    if (!name) return ''
+    const wantRole = !type || type === '角色'
+    if (wantRole) {
+      try {
+        const char = miaoModelsCache?.Character?.get?.(name, 'sr')
+        const face = char?.imgs?.face || char?.face || ''
+        if (face) return MIAO_RES + String(face)
+      } catch {}
+      for (const file of ['face.webp', 'face-q.webp', 'face0.webp']) {
+        const rel = 'meta-sr/character/' + name + '/imgs/' + file
+        if (exists(rel)) return MIAO_RES + '/' + rel
+      }
+    }
+    // 光锥/材料：meta-sr 的 weapon 桶是空的，按目录逐个探
+    for (const dir of ['weapon/sword', 'weapon/claymore', 'weapon/polearm', 'weapon/bow', 'weapon/catalyst', 'artifact', 'material']) {
+      for (const file of ['icon.webp', 'gacha.webp', 'awaken.webp']) {
+        const rel = 'meta-sr/' + dir + '/' + name + '/' + file
+        if (exists(rel)) return MIAO_RES + '/' + rel
+      }
+    }
+    return ''
+  }
+  let filled = 0
+  for (const pool of Object.values(pools || {})) {
+    for (const key of ['records', 'recent', 'fiveLog', 'fourLog']) {
+      const arr = pool?.[key]
+      if (!Array.isArray(arr)) continue
+      for (const item of arr) {
+        if (!item || item.icon) continue
+        const icon = iconOf(String(item.name || ''), String(item.item_type || ''))
+        if (icon) {
+          item.icon = icon
+          filled++
+        }
+      }
+    }
+  }
+  if (filled) logger.mark('[HoYoGet][sr_gacha] 已补 ' + filled + ' 条记录的物品图')
+  return pools
+}
+
 function md5Hex(str) {
   return createHash('md5').update(str, 'utf8').digest('hex')
 }
@@ -2860,6 +2920,7 @@ export class sr_gacha extends plugin {
       result.update_time = formatNow()
       result.uid = auth.uid
       result.source = 'authkey'
+      fillSrIcons(result.pools)
       saveData(getDataFile(auth.qq, auth.uid), result)
       const stats = Object.values(result.pools).map(p =>
         `【${p.name}】共${p.totalPulls}抽｜五星${p.fiveNum}｜四星${p.fourNum || 0}｜当前距五星${p.pity}抽`
@@ -2935,6 +2996,7 @@ export class sr_gacha extends plugin {
       result.update_time = formatNow()
       result.uid = auth.uid
       result.source = 'authkey'
+      fillSrIcons(result.pools)
       saveData(getDataFile(auth.qq, auth.uid), result)
 
       const total = Object.values(result.pools).reduce((n, pool) => n + Number(pool?.totalPulls || 0), 0)
