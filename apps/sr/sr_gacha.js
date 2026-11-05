@@ -2937,11 +2937,11 @@ export class sr_gacha extends plugin {
       result.source = 'authkey'
       saveData(getDataFile(auth.qq, auth.uid), result)
 
-      const total = Object.values(result.pools).reduce((n, pool) => n + getPoolRecords(pool).length, 0)
+      const total = Object.values(result.pools).reduce((n, pool) => n + Number(pool?.totalPulls || 0), 0)
       const stats = Object.values(result.pools)
         .map(p => `【${p.name}】共${p.totalPulls}抽｜五星${p.fiveNum}｜四星${p.fourNum || 0}｜当前距五星${p.pity}抽`)
         .join('\n')
-      await e.reply(`免链接更新完成（${Math.round((Date.now() - started) / 1000)}s，共 ${total} 条）：\n${stats}`)
+      await e.reply(`免链接更新完成（${Math.round((Date.now() - started) / 1000)}s，共 ${total} 抽）：\n${stats}`)
       try {
         await this.renderSummary(e, [], 'grid')
       } catch (err) {
