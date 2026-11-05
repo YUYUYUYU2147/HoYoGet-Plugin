@@ -913,17 +913,20 @@ export async function getSrAuthkey(opt = {}) {
 
     /* --- 4. 区服发现 + 网关参数 --- */
     step('正在连接星铁网关…')
+    // APK 里 dispatch 与 gateway 复用的是同一个参数 Map：
+    // gateway 请求同样要带 version/t/language_type/platform_type/channel_id/sub_channel_id，
+    // 少了这些会被判 "forbidden version:  channel_id:1 sub_channel_id:0 or invalid bind"。
+    const srBaseParams = () => ({
+      version: config.version,
+      t: String(Math.floor(Date.now() / 1000)),
+      language_type: '1',
+      platform_type: '3',
+      channel_id: '1',
+      sub_channel_id: '1',
+    })
     const dispatchUrl =
       'https://globaldp-prod-cn01.bhsr.com/query_dispatch?' +
-      new URLSearchParams({
-        version: config.version,
-        t: String(Math.floor(Date.now() / 1000)),
-        language_type: '1',
-        platform_type: '3',
-        channel_id: '1',
-        sub_channel_id: '1',
-        is_new_format: '1',
-      }).toString()
+      new URLSearchParams({ ...srBaseParams(), is_new_format: '1' }).toString()
     const dispatch = await getProtoFields(dispatchUrl)
     let gatewayUrl = ''
     for (const f of dispatch) {
@@ -941,6 +944,7 @@ export async function getSrAuthkey(opt = {}) {
     const buildGatewayReq = gameVersion =>
       `${gwBase.protocol}//${gwBase.host}${gwBase.pathname}?` +
       new URLSearchParams({
+        ...srBaseParams(),
         uid,
         dispatch_seed: config.dispatchSeed,
         is_need_url: '1',
@@ -1051,4 +1055,4 @@ export function clearSrAuthkeyCache() {
 }
 
 /* 供离线自测/调试使用 */
-export const __internals = { ec2b, pad, Mt64, encode, parse, number, string, bytes, sdkSign, buildLoginBody, SrConnection, loadNative }
+export const __internals = { ec2b, pad, Mt64, encode, parse, number, string, bytes, sdkSign, buildLoginBody, SrConnection, loadNative, resolveGatewayFields, versionCandidates }
