@@ -2103,6 +2103,14 @@ function fillSrIcons(pools) {
       return false
     }
   }
+  // 光锥按命途分目录：meta-sr/weapon/<命途>/<光锥名>/icon.webp
+  let weaponPaths = []
+  try {
+    weaponPaths = fs
+      .readdirSync(path.join(resRoot, 'meta-sr', 'weapon'), { withFileTypes: true })
+      .filter(d => d.isDirectory())
+      .map(d => d.name)
+  } catch {}
   const iconOf = (name, type) => {
     if (!name) return ''
     const wantRole = !type || type === '角色'
@@ -2117,9 +2125,16 @@ function fillSrIcons(pools) {
         if (exists(rel)) return MIAO_RES + '/' + rel
       }
     }
-    // 光锥/材料：meta-sr 的 weapon 桶是空的，按目录逐个探
-    for (const dir of ['weapon/sword', 'weapon/claymore', 'weapon/polearm', 'weapon/bow', 'weapon/catalyst', 'artifact', 'material']) {
-      for (const file of ['icon.webp', 'gacha.webp', 'awaken.webp']) {
+    // 光锥：按命途目录逐个探
+    for (const pathName of weaponPaths) {
+      for (const file of ['icon.webp', 'icon-s.webp', 'splash.webp']) {
+        const rel = 'meta-sr/weapon/' + pathName + '/' + name + '/' + file
+        if (exists(rel)) return MIAO_RES + '/' + rel
+      }
+    }
+    // 材料/遗器兜底
+    for (const dir of ['artifact', 'material']) {
+      for (const file of ['icon.webp', 'gacha.webp']) {
         const rel = 'meta-sr/' + dir + '/' + name + '/' + file
         if (exists(rel)) return MIAO_RES + '/' + rel
       }
