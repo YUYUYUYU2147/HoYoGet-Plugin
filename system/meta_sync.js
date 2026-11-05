@@ -126,6 +126,34 @@ function countCharDirs(game) {
 }
 
 /**
+ * 本地已落地的图片数量（webp/png/jpg）。
+ *
+ * 只数角色目录会漏掉「有数值数据、但一张图都没有」的半套资源：
+ * 版本标记与目录数都达标时会被判成已是最新而跳过，图片永远补不上。
+ * 把图片数也作为跳过前提，缺失时强制走全量补齐。
+ */
+export function countImageFiles(game) {
+  const exts = /\.(webp|png|jpe?g)$/i
+  let n = 0
+  const walk = dir => {
+    let entries
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const entry of entries) {
+      if (entry.name === '.git') continue
+      const full = path.join(dir, entry.name)
+      if (entry.isDirectory()) walk(full)
+      else if (exts.test(entry.name)) n++
+    }
+  }
+  walk(targetOf(game))
+  return n
+}
+
+/**
  * 本地 miao 资源根（缺文件时用作兜底来源）。
  *
  * 依次尝试环境变量指定目录、同级 miao-plugin、/tmp 下的 miao 源码副本，
@@ -241,11 +269,12 @@ export async function syncMeta(game, opts = {}) {
   const latest = commits[0].sha
   const local = readSha(game)
   const localChars = countCharDirs(game)
-  if (local && local === latest && localChars >= MIN_CHAR_DIRS) {
-    /* 版本与角色目录数都达标才跳过；半套资源仍用 miao 补齐 */
+  const localImgs = countImageFiles(game)
+  if (local && local === latest && localChars >= MIN_CHAR_DIRS && localImgs > 0) {
+    /* 版本、角色目录数、图片三者都达标才跳过；半套资源仍用 miao 补齐 */
     const filled = backfillFromMiao(game)
-    log(`${branch} 已是最新（${latest.slice(0, 8)}）${filled ? `，从 miao 补齐 ${filled} 个文件` : ''}`)
-    return { game, updated: 0, latest, skipped: true, filled }
+    log(`${branch} 已是最新（${latest.slice(0, 8)} / ${localImgs} 张图）${filled ? `，从 miao 补齐 ${filled} 个文件` : ''}`)
+    return { game, updated: 0, latest, skipped: true, filled, imgs: localImgs }
   }
   if (local && local === latest) {
     /* 版本标记最新但角色目录不全，不能跳过，转为全量补齐 */
@@ -295,7 +324,8 @@ export async function syncMeta(game, opts = {}) {
   try { fs.rmSync(workDir, { recursive: true, force: true }) } catch { /* 忽略 */ }
   let filled = backfillFromMiao(game)
   if (filled) log(`${branch} 从 miao 补齐 ${filled} 个文件`)
-  if (countCharDirs(game) < MIN_CHAR_DIRS) {
+  if (countCharDirs(game) < MIN_CHAR_DIRS || countImageFiles(game) === 0) {
+    log(`${branch} 目录 ${countCharDirs(game)} 个 / 图片 ${countImageFiles(game)} 张，走全量补齐`)
     try {
       filled += await pullFull(game)
     } catch (err) {
@@ -303,9 +333,10 @@ export async function syncMeta(game, opts = {}) {
     }
   }
   const chars = countCharDirs(game)
-  if (chars >= MIN_CHAR_DIRS) writeSha(game, latest)
-  else log(branch + ' 资源仍不完整（' + chars + ' 个角色目录），保留旧版本标记以便重试')
-  return { game, updated, latest, skipped: false, filled, chars }
+  const imgs = countImageFiles(game)
+  if (chars >= MIN_CHAR_DIRS && imgs > 0) writeSha(game, latest)
+  else log(branch + ' 资源仍不完整（' + chars + ' 个角色目录 / ' + imgs + ' 张图），保留旧版本标记以便重试')
+  return { game, updated, latest, skipped: false, filled, chars, imgs }
 }
 
 /** 两个游戏一起同步 */
