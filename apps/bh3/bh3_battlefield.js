@@ -217,7 +217,12 @@ export class bh3_battlefield extends plugin {
       const battleInfos = (report.battle_infos || []).slice(0, 3);
       const bossCards = battleInfos.map((bi, bossIndex) => {
         const boss = bi.boss || {};
-        const bossIcon = absIcon(boss.avatar || '');
+        // 崩三战场 boss 图标字段在不同版本里可能是 avatar / icon / icon_path，
+        // 或放在 avatars 数组里，这里逐个兜底，避免某个 boss 图渲染不出来。
+        const bossAvatar = boss.avatar ?? boss.icon ?? boss.icon_path
+          ?? (Array.isArray(boss.avatars) ? (boss.avatars[0]?.icon || boss.avatars[0]?.avatar) : '')
+          ?? ''
+        const bossIcon = absIcon(typeof bossAvatar === 'string' ? bossAvatar : (bossAvatar?.icon || bossAvatar?.icon_path || ''));
         const bossImg = bossIcon
           ? `<img src="${bossIcon}" alt="">`
           : `<span>${(boss.name || '?')[0]}</span>`;
