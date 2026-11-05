@@ -722,17 +722,6 @@ export async function getSrAuthkey(opt = {}) {
     const ticket = qrParams.ticket
     if (!ticket || (qrParams.app_id && qrParams.app_id !== '8')) throw new Error('星铁登录票据无效')
 
-    const scanResp = await postJson(
-      'https://hkrpg-sdk.mihoyo.com/hkrpg_cn/combo/panda/qrcode/scan',
-      { passport_app_id: 'bll8iq97cem8', ticket, app_id: config.appId, device: deviceId, ts: Math.floor(Date.now() / 1000) },
-      {},
-      { label: 'qrcode/scan' }
-    )
-    const scanParams = parseQuery(scanResp.passport_qr_url || '')
-    const tk = scanParams.tk
-    const tokenTypes = scanParams.token_types
-    if (!tk || !tokenTypes) throw new Error('星铁授权票据缺少参数')
-
     /* --- 2. 用 stoken 帮自己"扫码确认"，拿到 game_token --- */
     const passportHeaders = {
       'x-rpc-app_version': '2.86.0',
@@ -747,20 +736,40 @@ export async function getSrAuthkey(opt = {}) {
       'x-rpc-channel': 'xiaomi',
       'x-rpc-device_name': 'Xiaomi 2206123SC',
       'x-rpc-device_model': '2206123SC',
-      DS: sdkDs(),
     }
-    // 实测（2026-11）：scanQRLogin / confirmQRLogin 只认 fetch 拿到的**原始 ticket**；
-    // 传 scan 返回的 tk（APK 的做法）现在会被判 -3001 参数不合法。
-    // tk 仍拿来做"scan 是否成功"的校验，但不进请求体。
-    const scanBody = {
-      ticket,
-      // 服务端要求数字数组；传 ["1"] 会被判 -3001 参数不合法（实测）
-      token_types: String(tokenTypes)
+    const toTokenTypes = raw =>
+      String(raw || '1')
         .split(',')
         .map(s => Number(String(s).trim()))
-        .filter(n => Number.isFinite(n)),
+        .filter(n => Number.isFinite(n))
+    const SCAN_LOGIN_URL = 'https://passport-api.mihoyo.com/account/ma-cn-passport/app/scanQRLogin'
+
+    // realtime 实测（2026-11）：先 qrcode/scan 会把票据标记为"已扫"，
+    // 紧接着 scanQRLogin 就报 -3501 二维码已失效。因此顺序改成两段式：
+    //   ① 直连：fetch → scanQRLogin(ticket, [1])  ← 先试这个
+    //   ② 兜底：fetch → qrcode/scan → scanQRLogin(ticket, token_types)
+    let scanBody = { ticket, token_types: [1] }
+    let loginResp = null
+    try {
+      loginResp = await postJson(SCAN_LOGIN_URL, scanBody, { ...passportHeaders, DS: sdkDs() }, { label: 'scanQRLogin/direct' })
+    } catch (err) {
+      if (!/-(3001|3501|502)/.test(String(err?.message))) throw err
+      log('warn', `直连扫码被拒（${err?.message || err}），改用 qrcode/scan 顺序重试`, logger)
     }
-    const loginResp = await postJson('https://passport-api.mihoyo.com/account/ma-cn-passport/app/scanQRLogin', scanBody, passportHeaders, { label: 'scanQRLogin' })
+    if (!loginResp) {
+      const scanResp = await postJson(
+        'https://hkrpg-sdk.mihoyo.com/hkrpg_cn/combo/panda/qrcode/scan',
+        { passport_app_id: 'bll8iq97cem8', ticket, app_id: config.appId, device: deviceId, ts: Math.floor(Date.now() / 1000) },
+        {},
+        { label: 'qrcode/scan' }
+      )
+      const scanParams = parseQuery(scanResp.passport_qr_url || '')
+      if (!scanParams.tk) throw new Error('星铁授权票据缺少参数')
+      // 服务端只认 fetch 拿到的原始 ticket（传 scan 的 tk 会 -3001），
+      // token_types 必须是数字数组（传 ["1"] 也会 -3001）
+      scanBody = { ticket, token_types: toTokenTypes(scanParams.token_types) }
+      loginResp = await postJson(SCAN_LOGIN_URL, scanBody, { ...passportHeaders, DS: sdkDs() }, { label: 'scanQRLogin' })
+    }
     const appName = String(loginResp.app_name || '')
     if (appName && !appName.includes('星穹铁道')) throw new Error('授权应用与星铁不符，已停止')
 
