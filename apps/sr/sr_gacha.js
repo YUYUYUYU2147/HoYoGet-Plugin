@@ -5,6 +5,7 @@ import { render, mhy, pluginPriority, makeForwardMsg } from '#HoYoGet'
 import { appendTaskRecords } from '../../system/task_history.js'
 import { buildIsUP } from '../../system/join_isup.mjs'
 import { getEventNoteUser } from '../../system/genshin_loader.js'
+import { getSrAuthkey } from '../../system/sr_authkey.js'
 // === 跨插件依赖：genshin 插件 ===
 //
 // 这几个模块（gachaLog / srGachaSummary）是 genshin 较新版本才有的，
@@ -1177,6 +1178,30 @@ async function buildSrStokenCookie(qq, uid) {
   } catch (err) {
     logger.debug?.("[HoYoGet][sr_gacha] stoken 组装 ck 失败：" + (err?.message || err))
     return ""
+  }
+}
+
+/**
+ * 从 data/Stoken/<qq>.yaml 取星铁账号的 stoken/stuid/mid。
+ * 与 buildSrStokenCookie 同源，只是这里要的是原始凭据（免链接登录用），不组装 ck。
+ */
+async function readSrStokenAccount(qq, uid) {
+  try {
+    const file = PLUGIN_ROOT + '/data/Stoken/' + qq + '.yaml'
+    if (!fs.existsSync(file)) return null
+    const YAML = (await import('yaml')).default
+    const parsed = YAML.parse(fs.readFileSync(file, 'utf8'))
+    const entries = (Array.isArray(parsed) ? parsed : Object.values(parsed || {})).filter(
+      entry => entry && typeof entry === 'object' && entry.stoken && /hkrpg/.test(String(entry.game_biz || 'sr'))
+    )
+    const entry = entries.find(item => String(item.uid) === String(uid)) || entries[0]
+    if (!entry) return null
+    const stuid = String(entry.stuid || entry.ltuid || '')
+    if (!stuid) return null
+    return { uid: String(entry.uid || uid), stoken: String(entry.stoken), stuid, mid: String(entry.mid || '') }
+  } catch (err) {
+    logger.debug?.('[HoYoGet][sr_gacha] 读取 stoken 失败：' + (err?.message || err))
+    return null
   }
 }
 
@@ -2479,6 +2504,12 @@ export class sr_gacha extends plugin {
         // 不接管的话会落到 genshin 的 sr_update，它出图依赖已被卸载的 miao。
         { reg: '^[#*%％]?[ \t]*(?:星铁|崩铁|星穹铁道|sr|SR)[ \t]*(刷新|更新)抽卡记录$', fnc: 'refresh' },
         { reg: '^[#*%％][ \t]*(刷新|更新)抽卡记录$', fnc: 'refresh' },
+        // 免链接更新：用本机 stoken 临时登录星铁换 authkey（会顶掉在线游戏），
+        // 必须带「确认」才执行，避免误触把玩家顶下线。
+        { reg: '^#*米哈游(星铁|崩铁)?免链接(刷新|更新)(抽卡|跃迁)?(记录|数据)\s*确认$', fnc: 'refreshNoLink' },
+        { reg: '^#*米哈游(星铁|崩铁)?免链接(刷新|更新)(抽卡|跃迁)?(记录|数据)$', fnc: 'refreshNoLink' },
+        { reg: '^[#*%％]?[ \t]*(?:星铁|崩铁|星穹铁道|sr|SR)[ \t]*免链接(刷新|更新)(抽卡|跃迁)?(记录|数据)\s*确认$', fnc: 'refreshNoLink' },
+        { reg: '^[#*%％]?[ \t]*(?:星铁|崩铁|星穹铁道|sr|SR)[ \t]*免链接(刷新|更新)(抽卡|跃迁)?(记录|数据)$', fnc: 'refreshNoLink' },
         { reg: '^#*米哈游(星铁|崩铁)?(抽卡记录|抽卡统计)$', fnc: 'summary' },
         { reg: '^#*米哈游(星铁|崩铁)?角色记录$', fnc: 'roleRecord' },
         { reg: '^#*米哈游(星铁|崩铁)?武器记录$', fnc: 'weaponRecord' },
@@ -2840,6 +2871,86 @@ export class sr_gacha extends plugin {
     } catch (err) {
       logger.error('[HoYoGet][sr_gacha] gachaLink failed:', err)
       return e.reply(`抽卡链接解析失败：${err?.message || err}`)
+    }
+  }
+
+  /**
+   * 免链接更新：stoken → 临时登录星铁 → authkey → 官方 getGachaLog 全量。
+   *
+   * 与 gachaLink 的区别只是 authkey 来源：这里由服务端自己换，不需要用户粘链接。
+   * 代价是该账号正在运行的游戏客户端会被顶下线，故指令必须带「确认」。
+   */
+  async refreshNoLink(e) {
+    const qq = e.user_id
+    const auth = await getUserAuth(e)
+    if (auth.error) return e.reply(auth.error)
+    const account = await readSrStokenAccount(qq, auth.uid)
+    if (!account) return e.reply('未找到该账号的米游社 stoken，请先发送 #米游社扫码绑定 完成登录')
+    if (!account.mid) return e.reply('本机凭据缺少 mid，无法完成星铁新版登录票据校验，请重新扫码绑定后再试')
+    if (!/确认\s*$/.test(String(e.msg || ''))) {
+      return e.reply(
+        [
+          '【星铁免链接更新】会临时登录一次星铁客户端来换取跃迁授权，',
+          '这会让该账号正在运行的游戏客户端掉线，属于高风险操作。',
+          '',
+          '确认当前不在游戏内后，发送：',
+          '  #米哈游星铁免链接更新抽卡记录 确认',
+          '',
+          '其他不顶号的方案：',
+          '  · #米哈游星铁抽卡链接 <链接>  —— 自己从游戏内复制跃迁记录链接',
+          '  · #米哈游星铁更新抽卡记录    —— 用小程序 ck 拉取（只有五星与统计）',
+        ].join('\n')
+      )
+    }
+
+    await e.reply('正在临时登录星铁换取跃迁授权，请稍候（约 5~15 秒，期间该账号游戏会掉线）……')
+    const started = Date.now()
+    try {
+      const { authkey, cached } = await getSrAuthkey({
+        stoken: account.stoken,
+        stuid: account.stuid,
+        mid: account.mid,
+        uid: auth.uid,
+        region: getSrRegion(auth.uid),
+        logger,
+        onStep: text => logger.mark(`[HoYoGet][sr_gacha] ${text}`),
+      })
+      if (cached) logger.mark('[HoYoGet][sr_gacha] 命中 authkey 缓存，跳过登录')
+
+      const result = await fetchAllByAuthkey({ authkey, game_biz: 'hkrpg_cn' })
+
+      // authkey 接口不返回 is_up：沿用 gachaLink 的做法，用 ck 校准新五星的 UP 标记
+      for (const cookie of auth.cookies) {
+        try {
+          const sr = await fetchSrCkPools(auth.uid, getSrRegion(auth.uid), cookie)
+          if (sr?.pools) {
+            result.pools = mergeIsUp(sr.pools, result.pools)
+            break
+          }
+        } catch (err) {
+          logger.mark(`[HoYoGet][sr_gacha] ck 校准 UP 标记失败：${err?.message || err}`)
+        }
+      }
+
+      result.update_time = formatNow()
+      result.uid = auth.uid
+      result.source = 'authkey'
+      saveData(getDataFile(auth.qq, auth.uid), result)
+
+      const total = Object.values(result.pools).reduce((n, pool) => n + getPoolRecords(pool).length, 0)
+      const stats = Object.values(result.pools)
+        .map(p => `【${p.name}】共${p.totalPulls}抽｜五星${p.fiveNum}｜四星${p.fourNum || 0}｜当前距五星${p.pity}抽`)
+        .join('\n')
+      await e.reply(`免链接更新完成（${Math.round((Date.now() - started) / 1000)}s，共 ${total} 条）：\n${stats}`)
+      try {
+        await this.renderSummary(e, [], 'grid')
+      } catch (err) {
+        logger.mark(`[HoYoGet][sr_gacha] 总览渲染失败：${err?.message || err}`)
+      }
+      return e.reply('建议再发送 #米哈游星铁更新抽卡记录 用官方小程序接口校准五星 UP 标记')
+    } catch (err) {
+      logger.error('[HoYoGet][sr_gacha] refreshNoLink failed:', err)
+      return e.reply(`星铁免链接更新失败：${err?.message || err}`)
     }
   }
 
