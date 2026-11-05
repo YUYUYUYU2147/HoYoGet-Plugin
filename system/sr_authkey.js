@@ -615,6 +615,73 @@ function gatewayAllowed(url) {
   }
 }
 
+/**
+ * 网关响应字段自适应。
+ *
+ * APK 里 host/port/ec2b 的字段号是写死的（14/13/1569，对应 4.6.0），
+ * 服务端换版本就会改号（实测 4.6.0 之后 field 14 已不存在）。
+ * 这里改为按内容特征识别，不再依赖具体编号：
+ *   · ec2b：base64 解出来 2076 字节且以 'Ec2b' 开头
+ *   · host：形如 xxx.bhsr.com / IP 的可打印串
+ *   · port：1~65535 的 varint，优先 >1024
+ */
+function resolveGatewayFields(fields, cfg = {}) {
+  const dump = fields.map(f => (f.wire === 2 ? `${f.id}[${f.bytes.length}B]` : `${f.id}=${f.number}`)).join(' ')
+  const readStr = id => {
+    try {
+      return string(fields, id)
+    } catch {
+      return ''
+    }
+  }
+  const readNum = id => {
+    try {
+      return Number(number(fields, id))
+    } catch {
+      return 0
+    }
+  }
+
+  let ec2bB64 = readStr(cfg.ec2b)
+  if (!ec2bB64 || Buffer.from(ec2bB64, 'base64').length !== 2076) {
+    ec2bB64 = ''
+    for (const f of fields) {
+      if (f.wire !== 2 || !f.bytes?.length) continue
+      const b64 = f.bytes.toString('utf8')
+      if (!/^[A-Za-z0-9+/=]+$/.test(b64)) continue
+      const raw = Buffer.from(b64, 'base64')
+      if (raw.length === 2076 && raw.subarray(0, 4).toString('latin1') === 'Ec2b') {
+        ec2bB64 = b64
+        break
+      }
+    }
+  }
+
+  let host = readStr(cfg.host)
+  if (!/^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])$/.test(host) || !host.includes('.')) {
+    host = ''
+    for (const f of fields) {
+      if (f.wire !== 2 || !f.bytes?.length) continue
+      const s = f.bytes.toString('utf8')
+      if (s.length > 60 || !s.includes('.')) continue
+      if (!/^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])$/.test(s)) continue
+      host = s
+      break
+    }
+  }
+
+  let port = readNum(cfg.port)
+  if (!(port >= 1 && port <= 65535)) {
+    const nums = fields.filter(f => f.wire === 0 && f.number > 0n && f.number <= 65535n).map(f => Number(f.number))
+    port = nums.find(n => n > 1024) || nums[nums.length - 1] || 0
+  }
+
+  if (!host || !port || !ec2bB64) {
+    throw new Error(`星铁网关响应格式变化，未取到 host/port/ec2b（字段：${dump}）`)
+  }
+  return { host, port, ec2bB64, dump }
+}
+
 /* ============================ 对外流程 ============================ */
 
 const CACHE_TTL = 5 * 60 * 1000
@@ -868,10 +935,9 @@ export async function getSrAuthkey(opt = {}) {
       }).toString()
     if (!gatewayAllowed(gatewayReq)) throw new Error('星铁网关地址无效')
     const gw = await getProtoFields(gatewayReq)
-    const host = string(gw, config.gatewayFields.host)
-    const port = Number(number(gw, config.gatewayFields.port))
-    const ec2bKey = Buffer.from(string(gw, config.gatewayFields.ec2b), 'base64')
-    if (!(port >= 1 && port <= 65535)) throw new Error('星铁服务器端口无效')
+    const { host, port, ec2bB64, dump } = resolveGatewayFields(gw, config.gatewayFields)
+    log('info', `网关参数：${host}:${port}（字段 ${dump}）`, logger)
+    const ec2bKey = Buffer.from(ec2bB64, 'base64')
 
     /* --- 5. KCP 登录 + 取 authkey --- */
     step('正在临时登录星铁并获取跃迁授权…')
