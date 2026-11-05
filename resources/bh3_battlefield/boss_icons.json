@@ -1,0 +1,96 @@
+{
+  "updatedAt": "2026-11-06",
+  "note": "崩三记忆战场 Boss 图标。接口 avatar 偶发大小写错误（如 Boss_150 → BOSS_150），此表为修正后的稳定值，供兜底使用。",
+  "bosses": {
+    "170": {
+      "name": "MHT-3和平使者",
+      "avatar": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/BOSS_150.png",
+      "raw": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/Boss_150.png"
+    },
+    "420": {
+      "name": "塔之钳梏",
+      "avatar": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/SP_152_162.png",
+      "raw": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/SP_152_162.png"
+    },
+    "650": {
+      "name": "虚树神骸-多元论",
+      "avatar": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/BOSS_445_SinEX.png",
+      "raw": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/BOSS_445_SinEX.png"
+    },
+    "310": {
+      "name": "奔狼的领主",
+      "avatar": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/GI_BOSS_011.png",
+      "raw": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/GI_BOSS_011.png"
+    },
+    "590": {
+      "name": "摩录多",
+      "avatar": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/PJMS_BOSS_110_3S.png",
+      "raw": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/PJMS_BOSS_110_3S.png"
+    },
+    "60": {
+      "name": "阿湿波",
+      "avatar": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/BOSS_090.png",
+      "raw": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/BOSS_090.png"
+    },
+    "140": {
+      "name": "空之律者",
+      "avatar": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/BOSS_120.png",
+      "raw": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/BOSS_120.png"
+    },
+    "200": {
+      "name": "托纳提乌-噬日之影",
+      "avatar": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/BOSS_181.png",
+      "raw": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/BOSS_181.png"
+    },
+    "600": {
+      "name": "无敌嬉岁瑞鼓·年年糕糕号",
+      "avatar": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/PJMS_BOSS_081_3S.png",
+      "raw": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/PJMS_BOSS_081_3S.png"
+    },
+    "360": {
+      "name": "伪神奥托",
+      "avatar": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/BOSS_350.png",
+      "raw": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/BOSS_350.png"
+    },
+    "490": {
+      "name": "陨星-奈埃尔",
+      "avatar": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/PJMS_SD_041_3S.png",
+      "raw": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/PJMS_SD_041_3S.png"
+    },
+    "90": {
+      "name": "影骑士·月轮",
+      "avatar": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/Boss_Fuka_C2.png",
+      "raw": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/Boss_Fuka_C2.png"
+    },
+    "430": {
+      "name": "异星肃卫-补阙",
+      "avatar": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/BOSS_480.png",
+      "raw": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/BOSS_480.png"
+    },
+    "470": {
+      "name": "殉死之兽",
+      "avatar": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/PJMS_BOSS_010_3S.png",
+      "raw": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/PJMS_BOSS_010_3S.png"
+    },
+    "390": {
+      "name": "虚树神骸-存在主义",
+      "avatar": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/BOSS_443.png",
+      "raw": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/BOSS_443.png"
+    },
+    "640": {
+      "name": "「陨影冰骸」",
+      "avatar": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/BOSS_260_3S_02.png",
+      "raw": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/BOSS_260_3S_02.png"
+    },
+    "30": {
+      "name": "卡莲",
+      "avatar": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/BOSS_080.png",
+      "raw": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/BOSS_080.png"
+    },
+    "480": {
+      "name": "逐火十三英桀 梅比乌斯",
+      "avatar": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/BOSS_320_3S.png",
+      "raw": "https://act-webstatic.mihoyo.com/game_record/honkai3rd/all/SpriteOutput/OpenWorld/QuestBossIcon/BOSS_320_3S.png"
+    }
+  }
+}

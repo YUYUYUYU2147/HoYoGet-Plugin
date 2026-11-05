@@ -34,6 +34,30 @@ function fmtTs(ts) {
 
 const ICON_BASE = 'https://api-takumi-static.mihoyo.com';
 
+/**
+ * 崩三战场 Boss 图标兜底表（resources/bh3_battlefield/boss_icons.json）。
+ * 接口偶尔返回错误大小写或失效链接，命中 id 时优先用这里的稳定地址。
+ */
+let BOSS_ICONS = null;
+function loadBossIcons() {
+  if (BOSS_ICONS !== null) return BOSS_ICONS;
+  try {
+    const file = new URL('../../resources/bh3_battlefield/boss_icons.json', import.meta.url);
+    BOSS_ICONS = JSON.parse(fs.readFileSync(file, 'utf8')).bosses || {};
+  } catch {
+    BOSS_ICONS = {};
+  }
+  return BOSS_ICONS;
+}
+function bossIconOf(boss) {
+  const table = loadBossIcons();
+  const hit = table[String(boss?.id ?? '')];
+  if (hit?.avatar) return hit.avatar;
+  return boss?.avatar ?? boss?.icon ?? boss?.icon_path
+    ?? (Array.isArray(boss?.avatars) ? (boss.avatars[0]?.icon || boss.avatars[0]?.avatar) : '')
+    ?? '';
+}
+
 function absIcon(iconPath) {
   if (!iconPath) return '';
   if (iconPath.startsWith('http://') || iconPath.startsWith('https://')) return iconPath;
@@ -230,9 +254,7 @@ export class bh3_battlefield extends plugin {
         const boss = bi.boss || {};
         // 崩三战场 boss 图标字段在不同版本里可能是 avatar / icon / icon_path，
         // 或放在 avatars 数组里，这里逐个兜底，避免某个 boss 图渲染不出来。
-        const bossAvatar = boss.avatar ?? boss.icon ?? boss.icon_path
-          ?? (Array.isArray(boss.avatars) ? (boss.avatars[0]?.icon || boss.avatars[0]?.avatar) : '')
-          ?? ''
+        const bossAvatar = bossIconOf(boss)
         const bossIcon = fixBossIconCase(absIcon(typeof bossAvatar === 'string' ? bossAvatar : (bossAvatar?.icon || bossAvatar?.icon_path || '')));
         const bossImg = bossIcon
           ? `<img src="${bossIcon}" alt="">`
