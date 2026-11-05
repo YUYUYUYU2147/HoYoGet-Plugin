@@ -34,8 +34,10 @@ resources/meta-gs/**/*.jpg
 resources/meta-sr/**/*.webp
 resources/meta-sr/**/*.png
 resources/meta-sr/**/*.jpg
-# 通用图标（元素/武器/属性），与 meta-* 图片同源：同步或从 miao 兜底补齐，不入库
-resources/common/
+# 通用图标/字体/样式（元素/武器/属性、tttgbnumber 等）：被 CSS 与模板写死引用，
+# 不入库会导致换机后缺图（卡片只剩底色、字体回退）。体积很小，改为入库。
+# 仅排除运行时生成的临时/缓存文件。
+resources/common/**/*.log
 # 同步版本标记（每台机器不一样，不入库）
 resources/meta-gs/.sha
 resources/meta-sr/.sha
