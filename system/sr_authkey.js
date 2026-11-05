@@ -560,10 +560,17 @@ function parseQuery(url) {
   return out
 }
 
-async function postJson(url, body, headers = {}, { timeout = 15000 } = {}) {
+const SDK_UA = 'Mozilla/5.0 (Linux; Android 12) Mobile miHoYoBBS/2.86.0'
+
+async function postJson(url, body, headers = {}, { timeout = 15000, label = '' } = {}) {
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...headers },
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      'User-Agent': SDK_UA,
+      ...headers,
+    },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(timeout),
   })
@@ -573,13 +580,14 @@ async function postJson(url, body, headers = {}, { timeout = 15000 } = {}) {
   try {
     json = JSON.parse(text)
   } catch {
-    throw new Error(`星铁登录请求返回非 JSON（HTTP ${res.status}）`)
+    throw new Error(`星铁登录请求返回非 JSON（${label || url}，HTTP ${res.status}）`)
   }
   if (Number(json.retcode) !== 0) {
     if (aigis) throw new Error('米游社要求安全验证（极验），当前会话无法自动通过，请稍后在米游社 App 内确认')
-    throw new Error(`星铁登录请求失败，请重新登录或稍后重试（${json.retcode}）`)
+    const detail = json.message ? ` ${json.message}` : ''
+    throw new Error(`星铁登录请求失败【${label || url}】${detail}（${json.retcode}）`)
   }
-  if (!json.data) throw new Error('星铁登录数据不完整')
+  if (!json.data) throw new Error(`星铁登录数据不完整【${label || url}】`)
   return json.data
 }
 
@@ -673,16 +681,43 @@ export async function getSrAuthkey(opt = {}) {
   config.verifyHeaders = { ...config.verifyHeaders, 'x-rpc-device_id': device, 'x-rpc-device_fp': deviceFp }
 
   const session = { aid, stoken, mid }
-  const verifyHeaders = { ...config.verifyHeaders }
+  let verifyHeaders = { ...config.verifyHeaders }
 
   try {
     /* --- 1. game_token：SDK 扫码票据 --- */
     step('正在获取星铁登录授权…')
-    const ticketResp = await postJson(
-      'https://hkrpg-sdk.mihoyo.com/hkrpg_cn/combo/panda/qrcode/fetch',
-      { app_id: config.appId, device },
-      verifyHeaders
-    )
+    // fetch 是整条链路里唯一"零副作用"的请求，-3001 多为头部组合不被接受，
+    // 这里按 APK 头部 → 补 app_version/sdk_version → 换 app_id 三档试，
+    // 成功的那套头部沿用到后续步骤，避免让用户反复重试。
+    const variants = [
+      { tag: 'apk', headers: verifyHeaders },
+      {
+        tag: 'appver',
+        headers: { ...verifyHeaders, 'x-rpc-app_version': '2.86.0', 'x-rpc-sdk_version': '2.35.0', Referer: 'https://app.mihoyo.com' },
+      },
+      {
+        tag: 'passport',
+        headers: { ...verifyHeaders, 'x-rpc-app_id': 'bll8iq97cem8', 'x-rpc-app_version': '2.86.0', 'x-rpc-sdk_version': '2.35.0', Referer: 'https://app.mihoyo.com' },
+      },
+    ]
+    let ticketResp = null
+    const tried = []
+    for (const v of variants) {
+      try {
+        ticketResp = await postJson(
+          'https://hkrpg-sdk.mihoyo.com/hkrpg_cn/combo/panda/qrcode/fetch',
+          { app_id: config.appId, device },
+          v.headers,
+          { label: `qrcode/fetch/${v.tag}` }
+        )
+        verifyHeaders = v.headers
+        if (v.tag !== 'apk') log('warn', `qrcode/fetch 头部变体 ${v.tag} 可用，已切换`, logger)
+        break
+      } catch (err) {
+        tried.push(`${v.tag}: ${err?.message || err}`)
+      }
+    }
+    if (!ticketResp) throw new Error(`星铁登录票据获取失败（${tried.join(' | ')}）`)
     const qrParams = parseQuery(ticketResp.url || ticketResp.qr_url || '')
     const ticket = qrParams.ticket
     if (!ticket || (qrParams.app_id && qrParams.app_id !== '8')) throw new Error('星铁登录票据无效')
@@ -690,7 +725,8 @@ export async function getSrAuthkey(opt = {}) {
     const scanResp = await postJson(
       'https://hkrpg-sdk.mihoyo.com/hkrpg_cn/combo/panda/qrcode/scan',
       { passport_app_id: 'bll8iq97cem8', ticket, app_id: config.appId, device: deviceId, ts: Math.floor(Date.now() / 1000) },
-      {}
+      {},
+      { label: 'qrcode/scan' }
     )
     const scanParams = parseQuery(scanResp.passport_qr_url || '')
     const tk = scanParams.tk
@@ -714,12 +750,12 @@ export async function getSrAuthkey(opt = {}) {
       DS: sdkDs(),
     }
     const scanBody = { tk, token_types: String(tokenTypes).split(',').map(s => s.trim()).filter(Boolean) }
-    const loginResp = await postJson('https://passport-api.mihoyo.com/account/ma-cn-passport/app/scanQRLogin', scanBody, passportHeaders)
+    const loginResp = await postJson('https://passport-api.mihoyo.com/account/ma-cn-passport/app/scanQRLogin', scanBody, passportHeaders, { label: 'scanQRLogin' })
     const appName = String(loginResp.app_name || '')
     if (appName && !appName.includes('星穹铁道')) throw new Error('授权应用与星铁不符，已停止')
 
     passportHeaders.DS = sdkDs()
-    await postJson('https://passport-api.mihoyo.com/account/ma-cn-passport/app/confirmQRLogin', scanBody, passportHeaders)
+    await postJson('https://passport-api.mihoyo.com/account/ma-cn-passport/app/confirmQRLogin', scanBody, passportHeaders, { label: 'confirmQRLogin' })
 
     let gameToken = ''
     let gameMid = mid
@@ -727,7 +763,8 @@ export async function getSrAuthkey(opt = {}) {
       const data = await postJson(
         'https://hkrpg-sdk.mihoyo.com/hkrpg_cn/combo/panda/qrcode/query',
         { app_id: config.appId, device, ticket },
-        verifyHeaders
+        verifyHeaders,
+        { label: 'qrcode/query' }
       )
       if (String(data.stat) === 'Confirmed') {
         let raw = data.payload?.raw ?? data.payload
@@ -750,7 +787,8 @@ export async function getSrAuthkey(opt = {}) {
     const verifyResp = await postJson(
       'https://passport-api.mihoyo.com/account/ma-cn-session/app/verify',
       { mid: gameMid, token: { token_type: 1, token: gameToken }, refresh: true },
-      verifyHeaders
+      verifyHeaders,
+      { label: 'session/verify' }
     )
     if (String(verifyResp.user_info?.aid || '') !== aid) throw new Error('游戏登录凭据所属账号不符')
     let token = gameToken
@@ -766,10 +804,12 @@ export async function getSrAuthkey(opt = {}) {
       device,
     }
     granterBody.sign = sdkSign(granterBody, config.sdkPublicAppKey)
-    const granter = await postJson('https://hkrpg-sdk.mihoyo.com/hkrpg_cn/combo/granter/login/v2/login', granterBody, {
-      'x-rpc-client_type': '3',
-      'x-rpc-game_biz': 'hkrpg_cn',
-    })
+    const granter = await postJson(
+      'https://hkrpg-sdk.mihoyo.com/hkrpg_cn/combo/granter/login/v2/login',
+      granterBody,
+      { 'x-rpc-client_type': '3', 'x-rpc-game_biz': 'hkrpg_cn' },
+      { label: 'granter/login' }
+    )
     if (String(granter.open_id || '') !== aid || !granter.combo_token) throw new Error('星铁 SDK 登录账号不匹配')
     const comboToken = String(granter.combo_token)
 
