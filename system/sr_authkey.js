@@ -682,6 +682,21 @@ function resolveGatewayFields(fields, cfg = {}) {
   return { host, port, ec2bB64, dump }
 }
 
+/** 版本候选：从当前配置的主/次版本开始，次版本递增到 9 再进主版本，共 24 个 */
+function* versionCandidates(from) {
+  const m = /(\d+)\.(\d+)/.exec(String(from || '4.6.0'))
+  let major = m ? Number(m[1]) : 4
+  let minor = m ? Number(m[2]) : 6
+  for (let i = 0; i < 24; i++) {
+    yield `${major}.${minor}.0`
+    minor++
+    if (minor > 9) {
+      minor = 0
+      major++
+    }
+  }
+}
+
 /* ============================ 对外流程 ============================ */
 
 const CACHE_TTL = 5 * 60 * 1000
@@ -923,20 +938,56 @@ export async function getSrAuthkey(opt = {}) {
     if (!gatewayAllowed(gatewayUrl)) throw new Error('星铁网关地址无效')
 
     const gwBase = new URL(gatewayUrl)
-    const gatewayReq =
+    const buildGatewayReq = gameVersion =>
       `${gwBase.protocol}//${gwBase.host}${gwBase.pathname}?` +
       new URLSearchParams({
         uid,
         dispatch_seed: config.dispatchSeed,
         is_need_url: '1',
-        game_version: config.gameVersion,
+        game_version: gameVersion,
         account_type: '1',
         account_uid: aid,
       }).toString()
-    if (!gatewayAllowed(gatewayReq)) throw new Error('星铁网关地址无效')
-    const gw = await getProtoFields(gatewayReq)
-    const { host, port, ec2bB64, dump } = resolveGatewayFields(gw, config.gatewayFields)
-    log('info', `网关参数：${host}:${port}（字段 ${dump}）`, logger)
+
+    const gw = await getProtoFields(buildGatewayReq(config.gameVersion))
+    let resolved = null
+    try {
+      resolved = resolveGatewayFields(gw, config.gatewayFields)
+    } catch (err) {
+      log('warn', err.message, logger)
+    }
+    if (!resolved) {
+      // 旧版本会被回 "forbidden version … / 游戏正在维护中"。这里按主次版本递增试探，
+      // 全是 HTTP GET，不会重复顶号，命中即用并写回运行时配置。
+      const reason = (() => {
+        try {
+          return string(gw, 10)
+        } catch {
+          return ''
+        }
+      })()
+      step('正在匹配星铁客户端版本…')
+      for (const ver of versionCandidates(config.gameVersion)) {
+        const req = buildGatewayReq(ver)
+        if (!gatewayAllowed(req)) continue
+        try {
+          const candidate = resolveGatewayFields(await getProtoFields(req), {})
+          if (candidate) {
+            resolved = candidate
+            config.gameVersion = ver
+            log('info', `网关接受 game_version=${ver}（内置 ${NATIVE.gameVersion} 已过期，可写入 data/sr_authkey/native.json 固定）`, logger)
+            break
+          }
+        } catch {
+          /* 换下一个版本 */
+        }
+      }
+      if (!resolved) {
+        throw new Error(`星铁网关拒绝登录（${reason || '版本不匹配'}）：多半是停机维护，或客户端版本已远超内置配置`)
+      }
+    }
+    const { host, port, ec2bB64, dump } = resolved
+    log('info', `网关参数：${host}:${port}（game_version=${config.gameVersion}，字段 ${dump}）`, logger)
     const ec2bKey = Buffer.from(ec2bB64, 'base64')
 
     /* --- 5. KCP 登录 + 取 authkey --- */
