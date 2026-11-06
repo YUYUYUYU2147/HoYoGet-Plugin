@@ -221,15 +221,30 @@ function renderFiles() {
   if (!grouped) {
     for (const item of result.items) list.append(fileEntryNode(item))
   } else {
+    // 大类 → 游戏子组：同一分类下按游戏再分组，层级更清晰
     const groups = new Map()
     for (const item of result.items) {
-      if (!groups.has(item.category)) groups.set(item.category, [])
-      groups.get(item.category).push(item)
+      const key = `${item.category}|${item.game || 'common'}`
+      if (!groups.has(key)) groups.set(key, [])
+      groups.get(key).push(item)
     }
     const order = [...(result.categories || []).map(c => c.id)]
-    const keys = [...groups.keys()].sort((a, b) => order.indexOf(a) - order.indexOf(b))
+    const gameOrder = ['gs', 'sr', 'zzz', 'bh3', 'common']
+    const keys = [...groups.keys()].sort((a, b) => {
+      const [ca, ga] = a.split('|'); const [cb, gb] = b.split('|')
+      const d = order.indexOf(ca) - order.indexOf(cb)
+      return d !== 0 ? d : gameOrder.indexOf(ga) - gameOrder.indexOf(gb)
+    })
     for (const key of keys) {
-      const info = meta.get(key) || { id: key, title: key, description: '', icon: '' }
+      const [categoryId, gameId] = key.split('|')
+      const baseInfo = meta.get(categoryId) || { id: categoryId, title: categoryId, description: '', icon: '' }
+      const gameMeta = (result.games || []).find(g => g.id === gameId)
+      const info = {
+        ...baseInfo,
+        title: `${baseInfo.title} · ${gameMeta?.title || '通用'}`,
+        description: '',
+        icon: baseInfo.icon,
+      }
       const items = groups.get(key)
       const collapsed = collapsedGroups.has(key)
 

@@ -530,6 +530,8 @@ main {
 /* ---------- 分类分组（可折叠） ---------- */
 .file-group { border: 1px solid var(--g-border, #e3e8ef); border-radius: var(--dm-radius); overflow: hidden; }
 .file-group + .file-group { margin-top: 7px; }
+/* 同一大类的子分组之间更紧凑，形成层级感 */
+.file-group + .file-group .group-head { padding-left: 18px; }
 
 .group-head {
   display: flex;
