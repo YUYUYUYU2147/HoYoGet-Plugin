@@ -53,6 +53,22 @@ function titleFor(relative) {
     'panel_bg.json': '面板背景设置',
     'index.json': '索引文件',
     'version.json': '版本标记',
+    'userface.json': '自定义表情索引',
+    'zzz_birthday_avatars.json': '绝区零角色生日头像',
+    'bh3_birthday_avatars.json': '崩三角色生日头像',
+    'zzz_disc_agents.json': '绝区零驱动盘代理人对照',
+    'zzz_tachie.json': '绝区零成就数据',
+    'zzz_portrait_index.json': '绝区零头像索引',
+    'sr_art_thumb.json': '星铁立绘缩略图索引',
+    'sr_art_thumb_w260.json': '星铁立绘缩略图索引（宽260）',
+    'sr_icon_variant.json': '星铁图标变体',
+    'sr_item_list_cache.json': '星铁物品列表缓存',
+    'nanoka_ver.json': 'Nanoka 数据版本',
+    'bh3_gacha_observed.yaml': '崩三卡池观测记录',
+    'bh3_gacha_observed.prev.yaml': '崩三卡池观测记录（上期）',
+    '【重要】数据已迁移.txt': '数据迁移说明',
+    '别名配置项！.txt': '别名配置说明',
+
 
     // system/default：各游戏的别名 / 映射 / 静态配置模板
     'gs_js_names.yaml': '原神角色别名（如「雷电将军」→ 雷神）',
@@ -118,11 +134,23 @@ function titleFor(relative) {
     zzz_panel: '绝区零面板',
     zzz_challenge: '绝区零挑战',
     bh3_abyss: '崩三深渊',
+    user_faces: '自定义表情',
+    akasha: 'Akasha 数据',
+    alias_online: '在线别名',
+    CurrencyLedger: '水晶账本',
+    fortoffans: '幻想真境剧诗',
+    yshelper: '原神助手',
+    bwiki_skill_rate: '技能倍率',
+    nanoka: 'Nanoka 数据',
   };
   const top = dir.split('/')[0];
   const hint = DIR_HINTS[top];
-  const base = name.replace(/\.(json|ya?ml|db|sqlite3?|txt|webp|png|jpg)$/i, '');
-  if (hint) return `${hint} · ${base}`;
+  const base = name.replace(/\.(json|ya?ml|db|sqlite3?|txt|webp|png|jpe?g|gif)$/i, '');
+  if (hint) {
+    // 随机串文件名（如表情图 aro1xote0xs7.gif）没有辨识度，只显示目录说明。
+    const randomLike = /^[a-z0-9]{10,}$/i.test(base);
+    return randomLike ? hint : `${hint} · ${base}`;
+  }
   return base;
 }
 
