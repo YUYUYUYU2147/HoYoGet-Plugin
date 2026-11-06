@@ -21,6 +21,13 @@ const gameAbbr = game => GAME_ABBR[game] || (String(game || '?')[0] || '?')
 // 复用插件自带的游戏图标（由服务端 /hoyoget-data/icons/<game>.webp 提供）
 const GAME_ICONS = new Set(['gs', 'sr', 'zzz', 'bh3'])
 const gameIconUrl = game => (GAME_ICONS.has(game) ? `icons/${game}.webp` : '')
+
+// 没有图片资源的分类用内联矢量图标，避免文字占位
+const INLINE_GAME_ICON = {
+  all: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
+  common: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h10"/></svg>',
+}
+const inlineGameIcon = game => INLINE_GAME_ICON[game] || INLINE_GAME_ICON.common
 const api = location.pathname.replace(/hoyoget-data\/$/, 'api/hoyoget-data')
 const tokenKey = `hoyoget-data-token:${location.pathname}`
 let token = ''
@@ -112,7 +119,8 @@ function renderGamePills() {
       img.loading = 'lazy'
       icon.append(img)
     } else {
-      icon.textContent = gameAbbr(game.id)
+      icon.classList.add('vector')
+      icon.innerHTML = inlineGameIcon(game.id)
     }
     const label = document.createElement('span')
     label.textContent = game.title

@@ -536,3 +536,13 @@ main {
 }
 .editor-hint { font-size: 11.5px; color: var(--g-muted, #8a93a3); }
 .editor-btns { display: flex; gap: 8px; }
+
+/* ---------- 无图片资源的矢量图标（全部/通用） ---------- */
+.game-pill .gicon.vector,
+.file-badge.vector {
+  background: var(--dm-accent);
+  color: #fff;
+  padding: 4px;
+}
+.game-pill .gicon.vector svg,
+.file-badge.vector svg { width: 100%; height: 100%; display: block; }
