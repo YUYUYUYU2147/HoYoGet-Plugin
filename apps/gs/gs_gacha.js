@@ -72,9 +72,12 @@ async function getAuth(e) {
   if (!region) region = "cn_gf01"
   // 不要在当前 UID 缺少凭证时退回第一份 Stoken，否则多账号时会用错账号取数。
   const entry = table[uid] || null
-  const stokenCookie = entry?.ck_stoken || (entry?.stuid && entry?.stoken
+  // genAuthKey 只认 v2 stoken（stoken=v2_...）；ck_stoken 里是老式 ltoken，
+  // 用它换 authkey 会稳定返回 -100「登录状态失效」。所以 v2 优先、ck_stoken 兜底。
+  const v2Cookie = entry?.stuid && entry?.stoken
     ? `stuid=${entry.stuid};stoken=${entry.stoken};${entry.mid ? `mid=${entry.mid};` : ""}`
-    : "")
+    : ""
+  const stokenCookie = v2Cookie || entry?.ck_stoken || ""
   if (!stokenCookie) {
     return { error: "没有找到 stoken，无法自动换取 authkey。请先在面板扫码绑定米游社账号，或改用【#米哈游原神抽卡链接 <链接>】" }
   }
