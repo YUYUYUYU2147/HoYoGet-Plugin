@@ -1,5 +1,6 @@
 import fetch from 'node-fetch';
 import { makeForwardMsg, config, pluginPriority, oldPostWarn } from '#HoYoGet';
+import { pickBiliGuide, sendBiliVideo } from '../../system/bili_guide.js';
 import fs from 'fs';
 import {
   getCurrentZzzDefenseInfoByEvent,
@@ -874,6 +875,29 @@ export class mhy_estimate extends plugin {
       await sendVodVideo(e, segment.video(vodSend.filePath));
       sent = true;
     }
+
+    // ===== B 站攻略视频补充源（默认关闭，锅巴开启后生效）=====
+    // 米游社的周期玩法攻略社区侧较稀疏，这里再补一个 B 站最新视频。
+    // 每次只发 1 个：能下载且小于 dow_size 直发视频，否则发封面+链接。
+    if (guideKeys.includes(key) && config()?.bili_guide_enabled === true) {
+      try {
+        const bv = await pickBiliGuide(key);
+        if (bv?.bvid) {
+          const info = `B站攻略：${bv.title}\nUP：${bv.author}${bv.pubdate ? ' · ' + new Date(bv.pubdate * 1000).toLocaleDateString('zh-CN') : ''}\nhttps://www.bilibili.com/video/${bv.bvid}`;
+          // 先发文字（标题/UP/链接），再交给 bili.Download 直发视频；
+          // 它内部按 dow_size 处理大小，失败时我们退化成封面+链接
+          await e.reply(info);
+          const ok = await sendBiliVideo(e, bv.bvid);
+          if (!ok && bv.cover) {
+            await e.reply(segment.image(bv.cover));
+          }
+          sent = true;
+        }
+      } catch (err) {
+        logger.warn(`[HoYoGet][estimate] B站攻略补充失败: ${err?.message || err}`);
+      }
+    }
+
     if (!sent) return e.reply(`未找到${query ? `「${query}」` : ''}${cfg.none || cfg.name}相关图片，请稍后再试！`, true);
     return true;
   }

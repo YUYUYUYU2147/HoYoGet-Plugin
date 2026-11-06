@@ -740,6 +740,46 @@ export const supportGuoba = () => {
         component: 'InputTextArea',
       },
       {
+        component: 'SOFT_GROUP_BEGIN',
+        label: 'B站攻略视频补充源',
+      },
+      {
+        field: 'bili_guide_enabled',
+        label: '启用B站视频补充',
+        helpMessage: '开启后，战场/乐土/防卫战/危局攻略在米游社图之外再补一个B站最新视频。默认关闭（视频流量较大）。能下载且小于「视频自动下载大小」就直发视频，否则发封面+链接',
+        component: 'Switch',
+      },
+      {
+        field: 'bili_guide_zzz_defense',
+        label: '防卫战B站关键词',
+        helpMessage: 'B站搜索关键词，留空用内置默认「绝区零 式舆防卫战 攻略」',
+        component: 'Input',
+      },
+      {
+        field: 'bili_guide_zzz_deadly',
+        label: '危局B站关键词',
+        helpMessage: '留空用内置默认「绝区零 危局强袭战 攻略」',
+        component: 'Input',
+      },
+      {
+        field: 'bili_guide_bh3_battlefield',
+        label: '战场B站关键词',
+        helpMessage: '留空用内置默认「崩坏3 记忆战场 攻略」',
+        component: 'Input',
+      },
+      {
+        field: 'bili_guide_bh3_godwar',
+        label: '乐土B站关键词',
+        helpMessage: '留空用内置默认「崩坏3 往世乐土 攻略」',
+        component: 'Input',
+      },
+      {
+        field: 'bili_guide_bh3_abyss',
+        label: '深渊B站关键词',
+        helpMessage: '留空用内置默认「崩坏3 深渊 攻略」',
+        component: 'Input',
+      },
+      {
         field: 'custom_guide_walkthrough',
         label: '分区搜索兜底',
         helpMessage: '开启后当作者源搜不到时，自动用米游社分区关键词搜索（按角色名搜攻略，不依赖具体作者；原神优先走观测枢官方精选目录）。默认开',
