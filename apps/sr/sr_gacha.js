@@ -452,6 +452,13 @@ const luckCalculator = {
       GsGachaType_Collection: { base: 0.006, soft: 74, step: 0.06, hard: 90, upRate: 0.5 },
       GsGachaType_WeaponUp: { base: 0.007, soft: 63, step: 0.07, hard: 80, upRate: 0.75 },
       GsGachaType_Permanent: { base: 0.006, soft: 74, step: 0.06, hard: 90 },
+      // 绝区零：代理人 90 保底 50% UP，音擎 80 保底 75% UP，邦布/常驻 90 无 UP
+      GachaType_CharacterUp: { base: 0.006, soft: 74, step: 0.06, hard: 90, upRate: 0.5 },
+      GachaType_RerunCharacter: { base: 0.006, soft: 74, step: 0.06, hard: 90, upRate: 0.5 },
+      GachaType_WeaponUp: { base: 0.007, soft: 63, step: 0.07, hard: 80, upRate: 0.75 },
+      GachaType_RerunWeapon: { base: 0.007, soft: 63, step: 0.07, hard: 80, upRate: 0.75 },
+      GachaType_Permanent: { base: 0.006, soft: 74, step: 0.06, hard: 90 },
+      GachaType_Bangboo: { base: 0.006, soft: 74, step: 0.06, hard: 90 },
     }
     return models[type]
   },
