@@ -736,6 +736,19 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
       if (ai === bi) return String(b.fullDate).localeCompare(String(a.fullDate))
       return ai > bi ? -1 : 1
     })
+    // 连 UP / 连歪（仅可歪池有意义）：按时间正序扫描 isUp 的连续段，取最长值
+    let maxUpStreak = 0
+    let maxMissStreak = 0
+    if (upPool && fiveLog.length) {
+      const asc = [...fiveLog].reverse()
+      let cur = 0
+      let curUp = null
+      for (const item of asc) {
+        if (item.isUp === curUp) { cur += 1 } else { curUp = item.isUp; cur = 1 }
+        if (item.isUp) maxUpStreak = Math.max(maxUpStreak, cur)
+        else maxMissStreak = Math.max(maxMissStreak, cur)
+      }
+    }
     // 按年份分组（年份倒序，组内保持时间倒序）
     const yearGroups = []
     for (const item of fiveLog) {
@@ -792,6 +805,13 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
       fiveLog,
       yearGroups,
       line,
+      maxUpStreak,
+      maxMissStreak,
+      // 保底进度条阈值与硬保底：光锥 80 抽、角色 90 抽；变红点取硬保底的 0.82
+      // （角色 74、光锥 63，与 Starward/Moonward 的视觉阈值一致）
+      pityThreshold: ['GachaType_EquipmentUp', 'GachaType_CollabEquipmentUp'].includes(key) ? 63 : 74,
+      pityGuarantee: ['GachaType_EquipmentUp', 'GachaType_CollabEquipmentUp'].includes(key) ? 80 : 90,
+      pityPct: Math.min(100, Math.round((pity / (['GachaType_EquipmentUp', 'GachaType_CollabEquipmentUp'].includes(key) ? 80 : 90)) * 100)),
       fiveAvg,
       firstTime: fiveLog.length ? fiveLog[fiveLog.length - 1].fullDate : '--',
       lastTime: fiveLog.length ? fiveLog[0].fullDate : '--',

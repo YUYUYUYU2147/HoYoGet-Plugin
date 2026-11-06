@@ -167,10 +167,11 @@ body {
 .pool-meta {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   font-size: 12.5px;
   color: var(--text-weak);
 }
+.pool-meta .pill { margin-right: 2px; }
 .pool-meta .dot {
   width: 3px; height: 3px; border-radius: 50%;
   background: var(--text-faint);
@@ -297,3 +298,48 @@ body {
   font-size: 12px;
   padding: 12px 0 20px;
 }
+
+/* ---------- 连 UP / 连歪 胶囊（参考 Moonward） ---------- */
+.pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9px;
+  color: #fff;
+  line-height: 1.5;
+}
+.pill-up { background: linear-gradient(135deg, #f0b352, #d9902f); }
+.pill-miss { background: linear-gradient(135deg, #e07a7a, #c25656); }
+
+/* ---------- 保底进度条（参考 Starward：绿→红阈值 74/63） ---------- */
+.pity-bar-wrap {
+  margin: 18px 0 2px;
+  padding: 14px 16px 16px;
+  background: linear-gradient(180deg, #fbfcfe 0%, #f4f6fa 100%);
+  border: 1px solid #eef0f6;
+  border-radius: 12px;
+}
+.pity-bar-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: var(--text-weak);
+  margin-bottom: 9px;
+}
+.pity-bar-val { font-weight: 700; font-size: 14px; }
+.pity-bar-val.safe { color: #27a765; }
+.pity-bar-val.hot { color: #d64536; }
+.pity-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: #e6e9f1;
+  overflow: hidden;
+}
+.pity-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width .2s ease;
+}
+.pity-fill.safe { background: linear-gradient(90deg, #52c98a 0%, #00e079 100%); }
+.pity-fill.hot { background: linear-gradient(90deg, #e87a68 0%, #c83c23 100%); }

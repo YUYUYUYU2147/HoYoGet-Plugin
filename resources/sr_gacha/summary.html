@@ -64,10 +64,11 @@
             <span class="pool-pulls">{{pool.allNum || '--'}} <small>抽</small></span>
           </div>
           <div class="pool-meta">
+            {{if pool.maxUpStreak>0}}<span class="pill pill-up">连UP {{pool.maxUpStreak}}</span>{{/if}}
+            {{if pool.maxMissStreak>0}}<span class="pill pill-miss">连歪 {{pool.maxMissStreak}}</span>{{/if}}
             <span>五星 {{pool.fiveNumText}}</span>
             <span class="dot"></span>
             <span>平均 {{pool.fiveAvg}}</span>
-            {{if pool.pityText}}<span class="dot"></span><span>垫 {{pool.pityText}}</span>{{/if}}
           </div>
         </header>
 
@@ -81,6 +82,18 @@
           {{/each}}
           {{/each}}
         </div>
+
+        {{if pool.pity > 0}}
+        <div class="pity-bar-wrap">
+          <div class="pity-bar-head">
+            <span>距离下个五星</span>
+            <span class="pity-bar-val {{pool.pity >= pool.pityThreshold ? 'hot' : 'safe'}}">{{pool.pity}} / {{pool.pityGuarantee}}</span>
+          </div>
+          <div class="pity-bar">
+            <div class="pity-fill {{pool.pity >= pool.pityThreshold ? 'hot' : 'safe'}}" style="width:{{pool.pityPct}}%"></div>
+          </div>
+        </div>
+        {{/if}}
 
         <div class="section-split">
           <span class="split-line"></span>
