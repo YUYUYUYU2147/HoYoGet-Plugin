@@ -343,3 +343,15 @@ body {
 }
 .pity-fill.safe { background: linear-gradient(90deg, #52c98a 0%, #00e079 100%); }
 .pity-fill.hot { background: linear-gradient(90deg, #e87a68 0%, #c83c23 100%); }
+
+/* 五星数量过多时的提示（出图限长） */
+.more-hint {
+  margin: 4px 0 2px;
+  padding: 10px 14px;
+  background: #f7f8fc;
+  border: 1px dashed #e2e5ee;
+  border-radius: 10px;
+  font-size: 12.5px;
+  color: var(--text-weak);
+  text-align: center;
+}

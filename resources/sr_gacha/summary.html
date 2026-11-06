@@ -105,6 +105,9 @@
         <div class="empty_box">暂无五星记录</div>
         {{/if}}
 
+        {{if pool.hiddenFive > 0}}
+        <div class="more-hint">以上为最近的五星，还有 {{pool.hiddenFive}} 个未展示（统计已含全部）</div>
+        {{/if}}
         {{each pool.yearGroups group}}
         <div class="year-block">
           <div class="year-head">

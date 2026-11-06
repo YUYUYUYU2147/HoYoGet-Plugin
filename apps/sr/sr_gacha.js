@@ -751,8 +751,14 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
       }
     }
     // 按年份分组（年份倒序，组内保持时间倒序）
+    // 出图限长：长账号（如原神 1457 条逐抽、上百个五星）若把全部五星铺进图里，
+    // 单图高度能到 14000px+，QQ 里完全没法看。默认每池最多画最近 SHOW_LIMIT 个，
+    // 其余仅在下方提示「还有 N 个」，统计数值仍按全量计算，不受截断影响。
+    const SHOW_LIMIT = 60
+    const shownLog = fiveLog.length > SHOW_LIMIT ? fiveLog.slice(0, SHOW_LIMIT) : fiveLog
+    const hiddenFive = fiveLog.length - shownLog.length
     const yearGroups = []
-    for (const item of fiveLog) {
+    for (const item of shownLog) {
       let group = yearGroups.find(g => g.year === item.year)
       if (!group) {
         group = { year: item.year, list: [] }
@@ -805,6 +811,7 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
       noWai,
       fiveLog,
       yearGroups,
+      hiddenFive,
       line,
       maxUpStreak,
       maxMissStreak,

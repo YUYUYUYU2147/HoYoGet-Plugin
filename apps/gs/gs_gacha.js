@@ -267,10 +267,9 @@ async function renderImage(e, data) {
     fivePools[key] = { ...pool, records: records.filter(r => String(r.rank_type || "5") === "5") }
   }
   const view = buildSummaryView({ pools: fivePools }, data.uid, e, "grid", "gs")
-  /* 逐抽很多时整页高度会到几万 px，Chromium 单张截图会失败（Unable to capture screenshot）。
-     显式按记录数决定是否分页：超过阈值就走多页截图。 */
-  const multiPage = totalPulls > 600
-  const buf = await render("sr_gacha/summary", view, { e, ...(multiPage ? { multiPage: true, multiPageHeight: 4000 } : {}) })
+  /* 视图层已把每池五星截到最近 60 个，出图高度可控，这里不再分页。
+     （此前按逐抽数 >600 走多页，长图仍会被 QQ 拼成一条极窄长图） */
+  const buf = await render("sr_gacha/summary", view, { e })
   return sendRenderResult(e, buf)
 }
 export class gs_gacha extends plugin {
