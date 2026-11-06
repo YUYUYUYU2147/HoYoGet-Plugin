@@ -162,7 +162,9 @@ main {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.02fr);
   gap: 14px;
-  align-items: start;
+  /* 两栏等高：右侧预览随左侧列表一起撑开，并在视口内吸顶，
+     列表内部滚动时预览始终可见。 */
+  align-items: stretch;
 }
 @media (max-width: 980px) { .workspace { grid-template-columns: 1fr; } }
 
@@ -174,6 +176,19 @@ main {
   border: 1px solid var(--g-border, #e3e8ef);
   border-radius: var(--dm-radius-lg);
   overflow: hidden;
+}
+
+/* 左侧列表自身滚动，右侧预览固定在视口内，不随列表滚动跑出屏幕 */
+.file-panel { max-height: calc(100vh - 240px); }
+.preview-panel {
+  position: sticky;
+  top: 12px;
+  max-height: calc(100vh - 240px);
+}
+
+@media (max-width: 980px) {
+  .file-panel, .preview-panel { max-height: none; }
+  .preview-panel { position: static; }
 }
 
 /* 筛选 */
@@ -391,7 +406,15 @@ main {
   font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
 }
 
-#preview { padding: 14px; overflow: auto; flex: 1; }
+#preview {
+  padding: 14px;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+  scrollbar-width: thin;
+}
+#preview::-webkit-scrollbar { width: 8px; }
+#preview::-webkit-scrollbar-thumb { background: rgba(128, 140, 160, .3); border-radius: 8px; }
 
 .notice {
   margin: 0 0 10px;
