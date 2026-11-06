@@ -98,9 +98,59 @@ function parseZzz(txt) {
   return periods;
 }
 
+// ---------- 解析：原神 gslogs.yaml ----------
+// 结构：
+//   date:
+//     【7.2上半】2026/11/04 06:00 ~ 2026/11/24 17:59:
+//       - 角色A,四星,四星,四星        # 角色 UP 池一（首个为 UP 五星）
+//       - 角色B,四星,四星,四星        # 角色 UP 池二
+//       - 武器A,武器B,四星,四星...    # 武器 UP 池（前两个为 UP 五星）
+// 名字是逗号分隔，首个（角色）/前两个（武器）为当期 UP 五星。
+function parseGs(txt) {
+  const periods = []
+  // 按期数块切分：以「【...】时间段:」开头
+  const blocks = txt.split(/\n\s*【[^】]+】/)
+  // 第一段是 "date:" 头，忽略
+  for (let i = 1; i < blocks.length; i++) {
+    const b = blocks[i]
+    // 块首是时间段（split 吃掉了【xx】），形如 "2026/11/04 06:00 ~ 2026/11/24 17:59:"
+    // 注意时间里有冒号，不能用 [^:] 排除，改为「行首到行末的冒号结尾」
+    const tline = (b.match(/^([^\n]+?):\s*\n/) || [])[1]?.trim() || ''
+    const [sa, ea] = tline.split('~').map(x => x.trim())
+    if (!sa || !ea) continue
+    // 收集该块的列表项（每行 "- ..."）
+    const rows = [...b.matchAll(/^\s*-\s*(.+)$/gm)].map(m => m[1].trim())
+    if (!rows.length) continue
+    const role = []
+    const weapon = []
+    // 前两行角色池（每行首个是 UP 五星），第三行武器池（前两个是 UP 五星）
+    rows.forEach((row, idx) => {
+      const names = row.split(',').map(x => x.trim()).filter(Boolean)
+      if (!names.length) return
+      if (idx <= 1) {
+        // 角色池：首个是 5 星 UP
+        role.push(names[0])
+      } else if (idx === 2) {
+        // 武器池：前两个是 5 星 UP
+        if (names[0]) weapon.push(names[0])
+        if (names[1]) weapon.push(names[1])
+      }
+    })
+    periods.push({
+      key: tline,
+      start: parseTime(sa),
+      end: parseTime(ea),
+      role,
+      weapon: weapon.filter(Boolean),
+    })
+  }
+  return periods
+}
+
 const SCHEDULES = {
   sr:  { file: 'sr_logs.yaml', parse: parseSr },
   zzz: { file: 'zzz_gacha_pool_history.yaml', parse: parseZzz },
+  gs:  { file: 'gslogs.yaml', parse: parseGs },
 };
 
 // ---------- 名字归一化：去伴随者、统一间隔符 ----------

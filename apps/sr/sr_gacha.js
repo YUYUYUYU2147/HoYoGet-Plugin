@@ -6,6 +6,7 @@ import { sendRenderResult } from '../../system/render.js'
 import { appendTaskRecords } from '../../system/task_history.js'
 import { buildIsUP } from '../../system/join_isup.mjs'
 import { getEventNoteUser } from '../../system/genshin_loader.js'
+import { getRoleProfile } from '../../system/roleProfile.js'
 // === 跨插件依赖：genshin 插件 ===
 //
 // 这几个模块（gachaLog / srGachaSummary）是 genshin 较新版本才有的，
@@ -260,6 +261,23 @@ function isSrWaiPoolRecord(rec) {
  *
  * 名单依据：小助手光锥页的「常驻专武」分组。
  */
+// ===== 原神常驻名单（用于判定限定池里抽到的是否为「歪」）=====
+// 这些是常驻池五星：在限定池抽到它们即为歪。
+// 依据开服至今官方常驻池配置；后续新增常驻角色需同步补充。
+const GS_COMMON_ROLES = new Set([
+  '迪卢克', '琴', '莫娜', '七七', '刻晴', '提纳里', '迪希雅', '梦见月瑞希',
+])
+const GS_COMMON_WEAPONS = new Set([
+  '天空之刃', '天空之傲', '天空之脊', '天空之翼', '天空之卷',
+  '风鹰剑', '狼的末路', '阿莫斯之弓', '和璞鸢', '四风原典',
+  '无工之剑', '尘世之锁',
+])
+/** 原神：限定池里的这条记录是否是「歪」（常驻角色/武器） */
+function isGsWaiPoolRecord(rec, poolRole) {
+  const name = String(rec?.name || '')
+  return poolRole === 'weapon' ? GS_COMMON_WEAPONS.has(name) : GS_COMMON_ROLES.has(name)
+}
+
 const SR_WAI_POOL_LIGHTCONES = new Set([
   '银河铁道之夜', '无可取代的东西', '但战斗还未结束', '以世界之名',
   '制胜的瞬间', '如泥酣眠', '时节不居',
@@ -352,6 +370,9 @@ const WAI_POOL_KEYS = new Set([
   'GachaType_EquipmentUp', 'GachaType_CollabEquipmentUp',
   'GachaType_CharacterUp', 'GachaType_RerunCharacter',
   'GachaType_WeaponUp', 'GachaType_RerunWeapon',
+  // 原神：角色/武器/集录祈愿存在小保底歪，常驻无 UP
+  'GsGachaType_AvatarUp', 'GsGachaType_AvatarUp2', 'GsGachaType_Collection',
+  'GsGachaType_WeaponUp',
 ])
 
 /**
@@ -425,6 +446,12 @@ const luckCalculator = {
       GachaType_CollabEquipmentUp: { base: 0.008, soft: 66, step: 0.07, hard: 80, upRate: 0.75 },
       GachaType_Newbie: { base: 0.006, soft: 74, step: 0.06, hard: 90 },
       common: { base: 0.006, soft: 74, step: 0.06, hard: 90 },
+      // 原神：角色/集录 90 保底 50% UP，武器 80 保底 75% UP，常驻无 UP
+      GsGachaType_AvatarUp: { base: 0.006, soft: 74, step: 0.06, hard: 90, upRate: 0.5 },
+      GsGachaType_AvatarUp2: { base: 0.006, soft: 74, step: 0.06, hard: 90, upRate: 0.5 },
+      GsGachaType_Collection: { base: 0.006, soft: 74, step: 0.06, hard: 90, upRate: 0.5 },
+      GsGachaType_WeaponUp: { base: 0.007, soft: 63, step: 0.07, hard: 80, upRate: 0.75 },
+      GsGachaType_Permanent: { base: 0.006, soft: 74, step: 0.06, hard: 90 },
     }
     return models[type]
   },
@@ -474,9 +501,32 @@ const luckCalculator = {
 }
 
 /**
+ * UP 累计花费（对齐主流抽卡统计口径）：
+ * 按时间正序扫描，pending 累加每次五星的抽数；遇到 UP 时把 pending 并入 upUsed 并清零，
+ * 即「这个 UP 从上一个 UP 之后一共花了多少抽」（包含中途歪掉的那次）。
+ * 最早五星之前的保底未知，不计入（pending 在建档前为空），避免首金把它当花费。
+ * 返回 { upUsed, upCount }。
+ */
+export function calcUpUsed(fiveLog) {
+  const ordered = [...(fiveLog || [])].reverse()  // fiveLog 是时间倒序，反转为正序
+  let upUsed = 0
+  let upCount = 0
+  let pending = 0
+  for (const row of ordered) {
+    pending += Number(row.num) || 0
+    if (row.isUp === true) {
+      upUsed += pending
+      upCount++
+      pending = 0
+    }
+  }
+  return { upUsed, upCount }
+}
+
+/**
  * 计算单池欧皇度：返回 { luckPercent, luckRating, luckTitle }。
  * upNum 由调用方按可歪池口径给出（常驻/新手为 0，走纯五星花费），
- * used 为已消耗抽数（总抽数 − 当前垫抽）。
+ * used 为已消耗抽数：UP 池传「UP 累计花费」，非 UP 池传「五星累计花费」。
  */
 export function calcLuck({ type, fiveNum, upNum = 0, used = 0 }) {
   const model = luckCalculator.luckModel(type)
@@ -611,9 +661,9 @@ const DEFAULT_POOL_BY_GAME = {
 // 用卡池日程表独立重算 is_up（缓存，避免每次渲染重读 yaml）
 let _isUPSr = null
 let _isUPZzz = null
+let _isUPGs = null
 function getIsUP(g) {
-  // 原神不参与星铁与绝区零的 is_up 重算，直接采用抽卡数据自身字段
-  if (g === "gs") return null
+  if (g === 'gs') return _isUPGs || (_isUPGs = buildIsUP('gs'))
   if (g === 'zzz') return _isUPZzz || (_isUPZzz = buildIsUP('zzz'))
   return _isUPSr || (_isUPSr = buildIsUP('sr'))
 }
@@ -634,7 +684,8 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
     // 一旦过滤会把整次重算跳空，表现为修复"不生效"）
     if (_isup && WAI_POOL_KEYS.has(key)) {
       const poolRole = (key === 'GachaType_EquipmentUp' || key === 'GachaType_CollabEquipmentUp' ||
-        key === 'GachaType_WeaponUp' || key === 'GachaType_RerunWeapon') ? 'weapon' : 'role'
+        key === 'GachaType_WeaponUp' || key === 'GachaType_RerunWeapon' ||
+        key === 'GsGachaType_WeaponUp') ? 'weapon' : 'role'
       for (const v of recent) {
         const name = String(v?.name || '')
         const tv = v.time ? String(v.time).replace(/-/g, '/') : (v.id ? timeFromId(v.id) : '')
@@ -643,9 +694,11 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
         // 可歪判定按游戏取各自名单：星铁用静态名单+转常驻时间判定，绝区零用常驻名单+3.1 转入时间
         const isWai = game === 'zzz'
           ? isZzzWaiPoolRecord(v)
-          : (poolRole === 'weapon'
-            ? SR_WAI_POOL_LIGHTCONES.has(name)
-            : isSrWaiPoolRecord(v))
+          : game === 'gs'
+            ? isGsWaiPoolRecord(v, poolRole)
+            : (poolRole === 'weapon'
+              ? SR_WAI_POOL_LIGHTCONES.has(name)
+              : isSrWaiPoolRecord(v))
         // 日程表缺期（u===null，复刻未收录、联动1.0 的「长期」兜底期）不再跳过沿用
         // 旧存储值——残缺数据会把转常驻角色（如刃，历史上当过期 UP 被 ck/继承
         // 错标 is_up=true）一直错标下去。规则：
@@ -851,31 +904,32 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
     }
     // 数据总览：可歪池两行 x 四列；常驻/新手池没有 50/50 与 UP 概念，UP 三项不展示
     const fourPity = Number(pool.fourPity || 0) || 0
+    // tone 决定统计格语气色：gold = 星级/欧皇，purple = UP 相关，red = 非/歪
     const line = upPool
       ? [
         [
-          { num: fiveNum ? pity : '--', unit: '', lable: '未出五星' },
-          { num: fiveAvg, unit: '', lable: '五星平均' },
-          { num: upRate, unit: upRate === '--' ? '' : '%', lable: '小保底不歪率' },
-          { num: maxPity || '--', unit: '', lable: '最非' },
+          { num: fiveNum ? pity : '--', unit: '', lable: '未出五星', tone: 'gold' },
+          { num: fiveAvg, unit: '', lable: '五星平均', tone: 'gold' },
+          { num: upRate, unit: upRate === '--' ? '' : '%', lable: '小保底不歪率', tone: 'red' },
+          { num: maxPity || '--', unit: '', lable: '最非', tone: 'red' },
         ],
         [
-          { num: fourPity || '--', unit: '', lable: '未出四星' },
-          { num: upAvg, unit: '', lable: 'UP平均' },
-          { num: upYs, unit: '', lable: `UP花费${conf.currency}` },
-          { num: minPity || '--', unit: '', lable: '最欧' },
+          { num: fourPity || '--', unit: '', lable: '未出四星', tone: 'purple' },
+          { num: upAvg, unit: '', lable: 'UP平均', tone: 'purple' },
+          { num: upYs, unit: '', lable: `UP花费${conf.currency}`, tone: 'purple' },
+          { num: minPity || '--', unit: '', lable: '最欧', tone: 'gold' },
         ],
       ]
       : [
         [
-          { num: fiveNum ? pity : '--', unit: '', lable: '未出五星' },
-          { num: fiveAvg, unit: '', lable: '五星平均' },
-          { num: maxPity || '--', unit: '', lable: '最非' },
+          { num: fiveNum ? pity : '--', unit: '', lable: '未出五星', tone: 'gold' },
+          { num: fiveAvg, unit: '', lable: '五星平均', tone: 'gold' },
+          { num: maxPity || '--', unit: '', lable: '最非', tone: 'red' },
         ],
         [
-          { num: fourPity || '--', unit: '', lable: '未出四星' },
-          { num: fiveNum || '--', unit: '', lable: '五星数' },
-          { num: minPity || '--', unit: '', lable: '最欧' },
+          { num: fourPity || '--', unit: '', lable: '未出四星', tone: 'purple' },
+          { num: fiveNum || '--', unit: '', lable: '五星数', tone: 'gold' },
+          { num: minPity || '--', unit: '', lable: '最欧', tone: 'gold' },
         ],
       ]
     return {
@@ -906,10 +960,23 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
       fiveAvg,
       firstTime: fiveLog.length ? fiveLog[fiveLog.length - 1].fullDate : '--',
       lastTime: fiveLog.length ? fiveLog[0].fullDate : '--',
-      /* 欧皇度（概率模型估算）：按本池类型、UP 数与已消耗抽数计算 */
+      /* 历史截断：五星数超过出图上限时，卡片底部提示仍有 N 个未画出 */
+      truncated: hiddenFive > 0,
+      truncatedHint: hiddenFive > 0 ? `历史过长，仅展示最近 ${SHOW_LIMIT} 个五星，另有 ${hiddenFive} 个未展示` : '',
+      /* 欧皇度（概率模型估算）：UP 池按 UP 累计花费，常驻/新手池按五星累计花费 */
       ...(() => {
-        const luck = calcLuck({ type: key, fiveNum, upNum: upPool ? upNum : 0, used: fiveNum ? waiSpent : 0 })
-        return { luckPercent: luck.luckPercent, luckRating: luck.luckRating, luckTitle: luck.luckTitle }
+        const up = upPool ? calcUpUsed(fiveLog) : { upUsed: 0, upCount: 0 }
+        const useUp = upPool && up.upCount > 0
+        const used = useUp ? up.upUsed : (fiveNum ? waiSpent : 0)
+        const luck = calcLuck({ type: key, fiveNum, upNum: useUp ? up.upCount : 0, used })
+        // 样本不足（没有五星或没有可用花费）时统一显示 -/
+        const enough = fiveNum > 0 && Number.isFinite(luck.luckPercent)
+        return {
+          luckPercent: enough ? luck.luckPercent : null,
+          luckRating: enough ? luck.luckRating : '-/',
+          luckTitle: enough ? luck.luckTitle : '样本不足，暂无评级',
+          luckEmpty: !enough,
+        }
       })(),
       /* 总览表用的精简字段：模板不直接索引 line[1][1]，避免数据不全时炸模板 */
       upAvgText: upAvg,
@@ -998,7 +1065,25 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
     totalPulls,
     totalFive,
     totalUp,
+    // 顶部汇总欧皇度：按五星数加权合并各池（口径同统计卡）
+    luck: aggregateLuck(shownPools),
     pools: shownPools,
+  }
+}
+
+/**
+ * 按五星数加权合并各池欧皇度，供总览/记录页顶部展示。
+ * 单池没有样本（luckPercent 为 null）时不参与加权。
+ */
+export function aggregateLuck(pools) {
+  const hit = (pools || []).filter(p => p.fiveNum > 0 && Number.isFinite(p.luckPercent))
+  if (!hit.length) return { luckPercent: null, luckRating: '暂无评级', luckTitle: '暂无五星样本或该卡池暂无概率模型' }
+  const sumW = hit.reduce((s, p) => s + p.fiveNum, 0)
+  const p = Math.round(hit.reduce((s, pool) => s + pool.luckPercent * pool.fiveNum, 0) / sumW)
+  return {
+    luckPercent: p,
+    luckRating: p >= 85 ? '极欧' : p >= 70 ? '很欧' : p >= 55 ? '偏欧' : p >= 40 ? '普通' : '偏非',
+    luckTitle: `模型估算超过 ${p}% 玩家`,
   }
 }
 
@@ -1083,16 +1168,7 @@ export function buildSrStatView(data, uid, e, keys = [], commonType = null) {
   // 池存在但一个五星都没有时 upRate 是 '--%'，统一显示为 '--'
   const rateNum = ratePool && ratePool.fiveNum ? ratePool.upRate : '--'
   // 欧皇度：按统计范围（keys）合并各池概率模型估算，作为指标栏第二栏
-  const luck = (() => {
-    const hit = pools.filter(p => p.fiveNum > 0 && Number.isFinite(p.luckPercent))
-    if (!hit.length) return { luckPercent: null, luckRating: '暂无评级', luckTitle: '暂无五星样本或该卡池暂无概率模型' }
-    const p = Math.round(hit.reduce((s, pool) => s + pool.luckPercent * pool.fiveNum, 0) / hit.reduce((s, pool) => s + pool.fiveNum, 0))
-    return {
-      luckPercent: p,
-      luckRating: p >= 85 ? '极欧' : p >= 70 ? '很欧' : p >= 55 ? '偏欧' : p >= 40 ? '普通' : '偏非',
-      luckTitle: `模型估算超过 ${p}% 玩家`,
-    }
-  })()
+  const luck = aggregateLuck(pools)
   const metrics = [
     { num: rateNum, unit: '', lable: '小保底不歪' },
     { num: luck.luckPercent ?? '--', unit: luck.luckPercent == null ? '' : '%', lable: `欧皇度·${luck.luckRating}` },
@@ -1173,8 +1249,13 @@ export function buildSrStatView(data, uid, e, keys = [], commonType = null) {
   }
   const firstS = pools.map(p => ({ key: p.key, first: (p.fiveLog || [])[0] })).find(x => x.first)
 
+  const nickname = data?.nickname || e?.nickname || e?.user?.nickname || '开拓者'
+  const avatar = data?.avatar || e?.user?.avatar || ''
+
   return {
     uid,
+    nickname,
+    avatar,
     total: {
       uid,
       title,
@@ -1192,6 +1273,338 @@ export function buildSrStatView(data, uid, e, keys = [], commonType = null) {
     sections,
   }
 }
+
+/**
+ * 读玩家资料缓存（data/PlayerData/<game>/<uid>.json）。
+ * miao/面板侧在取面板时会把昵称 name、头像 face 落在本地，抽卡记录直接复用，
+ * 不必再打会被风控的接口。返回 { nickname, face }，读不到时字段为空串。
+ */
+function readPlayerDataCache(game, uid) {
+  const out = { nickname: '', face: '' }
+  const paths = [
+    path.join(process.cwd(), 'data', 'PlayerData', game, `${uid}.json`),
+    // 绝区零的玩家资料落在抽卡插件自己的目录
+    path.join(process.cwd(), 'plugins', 'HoYoGet-Plugin', 'data', 'zzz_gacha', 'zzz_plugin', 'player', `${uid}.json`),
+    path.join(process.cwd(), 'data', 'HoYoGet-Plugin', 'zzz_gacha', 'zzz_plugin', 'player', `${uid}.json`),
+  ]
+  for (const file of paths) {
+    try {
+      if (!fs.existsSync(file)) continue
+      const d = JSON.parse(fs.readFileSync(file, 'utf8'))
+      const nick = String(d?.name || d?.nickname || '').trim()
+      if (nick) {
+        out.nickname = nick
+        out.face = String(d?.face || '').trim()
+        return out
+      }
+    } catch {}
+  }
+  return out
+}
+
+/**
+ * 抽卡记录更新后同步游戏昵称与头像。
+ * 写入两处：数据文件（随抽卡记录落盘）+ redis（跨记录卡快速读取）。
+ * 接口失败时静默跳过，不影响抽卡记录更新本身。
+ */
+async function syncSrUserProfile(auth, result, e) {
+  let nickname = ''
+  let avatar = ''
+  for (const ck of auth.cookies || []) {
+    try {
+      const info = await fetchSrUserInfo(auth.uid, ck)
+      if (info?.role?.nickname) {
+        nickname = info.role.nickname
+        avatar = info.role.AvatarUrl || info?.avatar?.icon || ''
+        break
+      }
+    } catch (err) {
+      logger.debug?.(`[HoYoGet][sr_gacha] 拉取游戏资料失败（index）：${err?.message || err}`)
+    }
+    try {
+      const card = await fetchGameRecordCard(auth.uid, ck)
+      if (card?.nickname) {
+        nickname = card.nickname
+        avatar = card.avatar || avatar
+        break
+      }
+    } catch (err) {
+      logger.debug?.(`[HoYoGet][sr_gacha] 拉取游戏资料失败（名片）：${err?.message || err}`)
+    }
+  }
+  if (nickname) result.nickname = nickname
+  if (avatar) result.avatar = avatar
+  if (!nickname && !avatar) return
+  try {
+    if (avatar) await redis.set(`Yz:genshin:uidFaceUrl:sr:${auth.uid}`, avatar, 'EX', SR_USER_INFO_TTL)
+    if (nickname) await redis.set(`Yz:genshin:uidNickname:sr:${auth.uid}`, nickname, 'EX', SR_USER_INFO_TTL)
+  } catch (err) {
+    logger.mark(`[HoYoGet][sr_gacha] 写入绑定资料缓存失败：${err?.message || err}`)
+  }
+}
+
+/**
+ * 把远程头像下载成 data URI，避免渲染时外链加载失败（CORS / 超时 / 防盗链）。
+ * 失败时原样返回，让模板继续用外链作为兜底。
+ */
+async function toInlineImage(url) {
+  const u = String(url || '')
+  if (!u || u.startsWith('data:')) return u
+  try {
+    const res = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0' } })
+    if (!res.ok) return u
+    const type = res.headers.get('content-type') || 'image/jpeg'
+    const buf = Buffer.from(await res.arrayBuffer())
+    if (buf.length > 2 * 1024 * 1024) return u
+    return `data:${type.split(';')[0]};base64,${buf.toString('base64')}`
+  } catch (err) {
+    logger.mark(`[HoYoGet][sr_gacha] 头像内联失败，改回外链：${err?.message || err}`)
+    return u
+  }
+}
+
+/**
+ * 填充星铁玩家昵称与头像（记录卡与统计卡共用）。
+ * 头像与昵称各自独立缓存，任一项命中就用缓存值，命中后不再请求接口；
+ * 两项都命中时直接返回，完全不产生网络请求。TTL 内的失败结果不缓存。
+ */
+const SR_USER_INFO_TTL = 12 * 60 * 60
+
+export async function fillSrUserInfo(view, auth, game = 'sr', e = null) {
+  const keyOf = g => (g === 'gs' ? 'gs' : g === 'zzz' ? 'zzz' : 'sr')
+  const g = keyOf(game)
+  const cacheFace = `Yz:genshin:uidFaceUrl:${g}:${auth.uid}`
+  const cacheNick = `Yz:genshin:uidNickname:${g}:${auth.uid}`
+
+  let avatar = ''
+  let nickname = ''
+
+  // ① 玩家资料缓存 data/PlayerData/<game>/<uid>.json（面板侧落盘的昵称，最可靠）
+  const cachedProfile = readPlayerDataCache(g, auth.uid)
+  if (cachedProfile.nickname) nickname = cachedProfile.nickname
+
+  // ② 数据文件内随抽卡记录落盘的资料（更新记录时写入）
+  try {
+    const stored = readData(getDataFile(auth.uid, auth.qq))
+    if (!nickname && stored?.nickname) nickname = stored.nickname
+    if (stored?.avatar) avatar = stored.avatar
+  } catch (err) {
+    logger.debug?.(`[HoYoGet][sr_gacha] 读取记录内资料失败：${err?.message || err}`)
+  }
+
+  // ③ redis 缓存（#uid / 记录更新时都会写这里）
+  if (!avatar || !nickname) {
+    try {
+      const [ra, rn] = await Promise.all([
+        avatar ? null : redis.get(cacheFace),
+        nickname ? null : redis.get(cacheNick),
+      ])
+      if (!avatar && ra) avatar = ra
+      if (!nickname && rn) nickname = rn
+    } catch (err) {
+      logger.mark(`[HoYoGet][sr_gacha] 读取绑定资料缓存失败：${err?.message || err}`)
+    }
+  }
+
+  if (avatar) view.avatar = await toInlineImage(avatar)
+  if (nickname) view.nickname = nickname
+  // 两项齐了：零网络请求直接返回
+  if (avatar && nickname) return
+
+  // ④ 走本插件统一的角色资料接口（#uid 用的同一套，支持三款游戏）
+  let info = null
+  if (e) {
+    try {
+      info = await getRoleProfile(e, auth.uid, g)
+    } catch (err) {
+      logger.debug?.(`[HoYoGet][sr_gacha] getRoleProfile 失败（${g}）：${err?.message || err}`)
+    }
+  }
+  if (!nickname && info?.nickname) {
+    nickname = info.nickname
+    view.nickname = nickname
+  }
+  if (!avatar && info?.avatar) {
+    avatar = info.avatar
+    view.avatar = await toInlineImage(avatar)
+  }
+
+  // ⑤ 老接口兜底（仅星铁有专属路径）
+  if (!avatar || !nickname) {
+    if (g === 'sr') {
+      if (!nickname) {
+        try {
+          const srInfo = await fetchSrUserInfo(auth.uid, auth.cookies?.[0])
+          if (srInfo?.role?.nickname) {
+            nickname = srInfo.role.nickname
+            view.nickname = nickname
+          }
+          if (!avatar) {
+            const av = srInfo?.role?.AvatarUrl || srInfo?.avatar?.icon || ''
+            if (av) { avatar = av; view.avatar = await toInlineImage(av) }
+          }
+        } catch (err) {
+          logger.debug?.(`[HoYoGet][sr_gacha] fetchSrUserInfo 失败：${err?.message || err}`)
+        }
+      }
+      if (!nickname) {
+        try {
+          const card = await fetchGameRecordCard(auth.uid, auth.cookies?.[0])
+          if (card?.nickname) { nickname = card.nickname; view.nickname = nickname }
+          if (!avatar && card?.avatar) { avatar = card.avatar; view.avatar = await toInlineImage(avatar) }
+        } catch (err) {
+          logger.debug?.(`[HoYoGet][sr_gacha] 名片接口失败：${err?.message || err}`)
+        }
+      }
+    }
+  }
+
+  // 只缓存成功值；缓存存原始 URL，内联只在渲染时做
+  const avatarForCache = String(avatar || '').startsWith('data:') ? '' : avatar
+  try {
+    if (avatarForCache) await redis.set(cacheFace, avatarForCache, 'EX', SR_USER_INFO_TTL)
+    if (nickname) await redis.set(cacheNick, nickname, 'EX', SR_USER_INFO_TTL)
+  } catch (err) {
+    logger.mark(`[HoYoGet][sr_gacha] 写入绑定资料缓存失败：${err?.message || err}`)
+  }
+}
+
+/**
+ * 原神统计视图（与星铁工坊风格同构）：顶部汇总大卡 + 五星头像网格 + 各池进度条。
+ * 原神只有角色/武器/常驻三类；武器池 80 保底 75% UP、角色池 90 保底 50% UP。
+ * 与「记录」（summary）模板区分，供 sr_gacha/stat 复用（同一套 HTML/CSS）。
+ */
+const GS_POOL_KEYS = new Set([
+  'GsGachaType_AvatarUp', 'GsGachaType_WeaponUp',
+  'GsGachaType_AvatarUp2', 'GsGachaType_Collection',
+  'GsGachaType_Permanent',
+])
+
+function cleanGsPools(pools) {
+  const out = {}
+  for (const [key, pool] of Object.entries(pools || {})) {
+    if (GS_POOL_KEYS.has(key)) out[key] = pool
+  }
+  return out
+}
+
+export function buildGsStatView(data, uid, e, keys = []) {
+  const cleanPools = cleanGsPools(data?.pools)
+  const wantedKeys = keys.length ? keys.filter(k => cleanPools[k]) : Object.keys(cleanPools)
+  const base = buildSummaryView(filterPools({ ...data, pools: cleanPools }, wantedKeys), uid, e, 'grid', 'gs')
+  const pools = base.pools || []
+  const sumOf = (list, field) => list.reduce((s, p) => s + (Number(p[field]) || 0), 0)
+  const find = key => pools.find(p => p.key === key)
+
+  const allNum = sumOf(pools, 'allNum')
+  const sNum = sumOf(pools, 'fiveNum')
+  const avgGold = sNum ? (allNum / sNum).toFixed(1) : '--'
+  const title = avgGold === '--' ? '暂无记录'
+    : avgGold <= 55 ? '欧气满满大欧皇'
+      : avgGold <= 65 ? '天选打工人'
+        : avgGold <= 78 ? '平平无奇小保底' : '水逆缠身大非酋'
+
+  // 全账号口径：角色/武器 UP 平均与不歪率
+  const allBase = buildSummaryView(filterPools({ ...data, pools: cleanPools }, Object.keys(cleanPools)), uid, e, 'grid', 'gs')
+  const allFind = key => allBase.pools.find(p => p.key === key)
+  const allChar = allFind('GsGachaType_AvatarUp')
+  const allWeapon = allFind('GsGachaType_WeaponUp')
+  const ratePool = allChar
+  const rateNum = ratePool && ratePool.fiveNum ? ratePool.upRate : '--'
+  const luck = aggregateLuck(pools)
+  const metrics = [
+    { num: rateNum, unit: '', lable: '小保底不歪' },
+    { num: luck.luckPercent ?? '--', unit: luck.luckPercent == null ? '' : '%', lable: `欧皇度·${luck.luckRating}` },
+    { num: sNum, unit: '金', lable: '五星数' },
+    { num: allChar?.line?.[1]?.[1]?.num ?? '--', unit: '抽', lable: '角色UP平均' },
+    { num: allWeapon?.line?.[1]?.[1]?.num ?? '--', unit: '抽', lable: '武器UP平均' },
+  ]
+
+  // 连击标签
+  const chips = []
+  for (const [pool, label] of [[allChar, '角色'], [allWeapon, '武器']]) {
+    const log = pool?.fiveLog || []
+    let upStreak = 0
+    for (const it of log) { if (it.isUp) upStreak++; else break }
+    let worstStreak = 0
+    let curStreak = 0
+    for (const it of log) {
+      if (it.isUp === false) { curStreak++; worstStreak = Math.max(worstStreak, curStreak) } else curStreak = 0
+    }
+    if (upStreak > 1) chips.push(`${label}${upStreak}连UP`)
+    if (worstStreak > 1) chips.push(`${label}${worstStreak}连歪`)
+  }
+
+  // 五星头像网格
+  const gridMap = new Map()
+  for (const pool of pools) {
+    for (const it of pool.fiveLog || []) {
+      const g = gridMap.get(it.name) || { name: it.name, icon: it.icon, count: 0 }
+      g.count++
+      if (!g.icon) g.icon = it.icon
+      gridMap.set(it.name, g)
+    }
+  }
+
+  const limitedNum = sumOf(pools.filter(p => p.key !== 'GsGachaType_Permanent'), 'fiveNum')
+  const commonNum = find('GsGachaType_Permanent')?.fiveNum || 0
+  const gridTitle = !commonNum
+    ? `共获得五星 ${sNum} 个，具体如下：`
+    : `共获得限定五星 ${limitedNum} 个，常驻五星 ${commonNum} 个，具体如下：`
+
+  const UP_POOLS = new Set(['GsGachaType_AvatarUp', 'GsGachaType_WeaponUp', 'GsGachaType_AvatarUp2', 'GsGachaType_Collection'])
+  const pityBaseOf = p => (p.key === 'GsGachaType_WeaponUp' ? 80 : 90)
+  const pctOf = (n, b) => Math.min(100, Math.max(8, Math.round((Number(n) / b) * 100)))
+  const clsOf = (n, b) => (n < b * 0.5 ? 'good' : n < b * 0.78 ? 'mid' : 'bad')
+  const sections = pools.map(p => {
+    const b = pityBaseOf(p)
+    return {
+      name: p.name,
+      pity: p.pity || 0,
+      pityPct: p.pity ? pctOf(p.pity, b) : 0,
+      list: (p.fiveLog || []).map(it => ({
+        icon: it.icon || '',
+        num: it.num,
+        pct: pctOf(it.num, b),
+        wai: it.isUp === false && UP_POOLS.has(p.key),
+        cls: clsOf(it.num, b),
+      })),
+    }
+  }).filter(sec => sec.pity > 0 || sec.list.length)
+
+  const NOTE_BY_KEY = {
+    GsGachaType_AvatarUp: '角色池',
+    GsGachaType_WeaponUp: '武器池',
+    GsGachaType_AvatarUp2: '集录祈愿',
+    GsGachaType_Collection: '集录祈愿',
+    GsGachaType_Permanent: '常驻池',
+  }
+  const firstS = pools.map(p => ({ key: p.key, first: (p.fiveLog || [])[0] })).find(x => x.first)
+  const nickname = data?.nickname || e?.nickname || e?.user?.nickname || '旅行者'
+  const avatar = data?.avatar || e?.user?.avatar || ''
+
+  return {
+    uid,
+    nickname,
+    avatar,
+    total: {
+      uid,
+      title,
+      allNum,
+      avgGold,
+      sNum,
+      chips,
+      luck,
+      metrics,
+      grid: [...gridMap.values()],
+      gridTitle,
+      avatar: firstS?.first?.icon || '',
+      avatarNote: firstS ? `${NOTE_BY_KEY[firstS.key] || '卡池'}${firstS.first.num}出` : '暂无五星',
+    },
+    sections,
+  }
+}
+
 
 export async function requestJson(url, options = {}, retry = 3) {
   let last
@@ -2737,6 +3150,9 @@ export class sr_gacha extends plugin {
         result.pools = applyCkIsUp(ckPools, result.pools)
         result.pools = inheritIsUp(old.pools, result.pools)
       }
+      // 抽卡记录更新成功后，同步抓一次游戏昵称与头像并落盘 + 写缓存。
+      // 渲染时直接读这里，无需每次再打接口（接口频繁会触发风控 10041/503）。
+      await syncSrUserProfile(auth, result, e)
       saveData(getDataFile(auth.qq, auth.uid), result)
       const text = POOLS.map(pool => {
         const updated = result.addedByPool?.[pool.type] || 0
@@ -2805,43 +3221,9 @@ export class sr_gacha extends plugin {
     // 可歪池角色在限定池必然是歪：渲染前统一补齐，避免缺标记时统计偏差
     applyWaiPoolIsUp(data.pools)
     const view = buildSummaryView(filterPools(data, keys), auth.uid, e, layout, 'sr', miaoModelsCache)
-    if (layout === 'progress') {
-      let avatar = ''
-      try {
-        // 头像优先读取 genshin 插件 [*uid][用户绑定(showUid)] 缓存的头像，与 *uid 卡片保持一致
-        try {
-          avatar = await redis.get(`Yz:genshin:uidFaceUrl:sr:${auth.uid}`)
-        } catch (err) {
-          logger.mark(`[HoYoGet][sr_gacha] 读取绑定头像缓存失败：${err?.message || err}`)
-        }
-        const info = await fetchSrUserInfo(auth.uid, auth.cookies[0])
-        // 昵称在 role 字段中
-        if (info?.role?.nickname) view.nickname = info.role.nickname
-        if (!avatar) {
-          // 缓存为空：从 index API 取头像 URL（role.AvatarUrl 为游戏内头像），并写入绑定缓存
-          avatar = info?.role?.AvatarUrl || info?.avatar?.icon || ''
-          if (avatar) {
-            try {
-              await redis.set(`Yz:genshin:uidFaceUrl:sr:${auth.uid}`, avatar, 'EX', 12 * 60 * 60)
-            } catch (err) {
-              logger.mark(`[HoYoGet][sr_gacha] 写入绑定头像缓存失败：${err?.message || err}`)
-            }
-          }
-        }
-        if (avatar) view.avatar = avatar
-      } catch (error) {
-        logger.mark(`[HoYoGet][sr_gacha] 获取星铁角色信息失败：${error?.message || error}`)
-        // 兜底：先试免 DS 的米游社名片接口；仍失败则头像用小花火、昵称保持 QQ 昵称
-        try {
-          const card = await fetchGameRecordCard(auth.uid, auth.cookies[0])
-          if (card?.nickname) view.nickname = card.nickname
-          if (!view.avatar && card?.avatar) view.avatar = card.avatar
-        } catch (err) {
-          logger.mark(`[HoYoGet][sr_gacha] 名片接口兜底获取用户信息失败：${err?.message || err}`)
-          logger.mark(`[HoYoGet][sr_gacha] 头像改用立绘，昵称使用 QQ 昵称`)
-        }
-      }
-    }
+    // 记录卡（grid）与进度卡（progress）都需要玩家昵称与头像；原先只在 progress 分支填充，
+    // 导致「抽卡记录」页永远拿不到缓存头像与游戏昵称。
+    await fillSrUserInfo(view, auth, 'sr', e)
     const template = layout === 'progress' ? 'sr_gacha/progress' : 'sr_gacha/summary'
     const buf = await render(template, view, { e })
     return sendRenderResult(e, buf)
@@ -2871,8 +3253,8 @@ export class sr_gacha extends plugin {
     if (!data?.pools) return e.reply('暂无星铁抽卡记录，请先发送【#米哈游星铁更新抽卡记录】')
     applyWaiPoolIsUp(data.pools)
     const view = buildSrStatView(data, auth.uid, e, keys, commonType)
-    // pct 压低 sys.scale 的 zoom：统计卡内容行数多，避免渲染后端截图高度上限截断
-    const buf = await render('sr_gacha/stat', view, { e, pct: 1.5 })
+    await fillSrUserInfo(view, auth, 'sr', e)
+    const buf = await render('sr_gacha/stat', view, { e })
     return sendRenderResult(e, buf)
   }
 

@@ -3,7 +3,7 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { makeForwardMsg, mhy, pluginPriority, render, yaml } from "#HoYoGet"
 import { sendRenderResult } from "../../system/render.js"
-import { buildSummaryView, extractUrlsFromMsg, requestJson, sleep } from "../sr/sr_gacha.js"
+import { buildSummaryView, buildGsStatView, fillSrUserInfo, extractUrlsFromMsg, requestJson, sleep } from "../sr/sr_gacha.js"
 import { makeGenshinLoader } from "../../system/genshin_loader.js"
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PLUGIN_ROOT = path.resolve(__dirname, "../..")
@@ -291,6 +291,8 @@ async function renderImage(e, data) {
     fivePools[key] = { ...pool, records: records.filter(r => String(r.rank_type || "5") === "5") }
   }
   const view = buildSummaryView({ pools: fivePools }, data.uid, e, "grid", "gs")
+  // 填充游戏昵称与头像（三游戏共用同一套：#uid 的角色资料 → redis → 数据文件）
+  await fillSrUserInfo(view, { uid: String(data.uid), qq: String(e.user_id || ''), cookies: [] }, 'gs', e)
   /* 视图层已把每池五星截到最近 60 个，出图高度可控，这里不再分页。
      （此前按逐抽数 >600 走多页，长图仍会被 QQ 拼成一条极窄长图） */
   const buf = await render("sr_gacha/summary", view, { e })
@@ -308,6 +310,8 @@ export class gs_gacha extends plugin {
         { reg: "^#(抽卡记录|抽卡统计)$", fnc: "summary" },
         { reg: "^#*米哈游原神(刷新|更新)抽卡记录$", fnc: "updateByCookie" },
         { reg: "^#*米哈游原神(抽卡记录|抽卡统计)$", fnc: "summary" },
+        { reg: "^#*米哈游原神角色统计$", fnc: "roleStat" },
+        { reg: "^#*米哈游原神武器统计$", fnc: "weaponStat" },
         { reg: "^#*米哈游原神抽卡链接", fnc: "updateByLink" },
         { reg: "^#*米哈游原神超越抽卡", fnc: "updateByLink" },
         { reg: "^#*米哈游原神抽卡帮助$", fnc: "help" },
@@ -326,6 +330,9 @@ export class gs_gacha extends plugin {
   }
   /** #抽卡帮助：四个游戏的抽卡指令总览，渲染成一张图 */
   async gachaHelpAll(e) {
+    // 记录 = 列表/进度条（summary / progress 模板，五星卡片逐条列出）
+    // 统计 = 汇总统计卡（stat 模板，五星网格 + 分池进度 + 欧皇度）
+    // 两者是不同指令、不同模板，务必分开列。
     const sections = [
       {
         key: 'gs', index: '01', title: '原神', desc: 'Genshin Impact',
@@ -339,11 +346,18 @@ export class gs_gacha extends plugin {
             ],
           },
           {
-            title: '查询与导出',
+            title: '抽卡记录（列表）',
             items: [
-              { cmd: '#米哈游原神抽卡记录', note: '抽卡总览统计' },
+              { cmd: '#米哈游原神抽卡记录', note: '五星卡片逐条列出 + 各池进度' },
               { cmd: '#米哈游原神当前卡池', note: '本期卡池与剩余时间' },
               { cmd: '#导出抽卡记录', note: '导出 UIGF 标准 JSON' },
+            ],
+          },
+          {
+            title: '角色 / 武器统计（统计卡）',
+            items: [
+              { cmd: '#米哈游原神角色统计', note: '角色池汇总卡：欧皇度 / 五星网格 / 分池进度' },
+              { cmd: '#米哈游原神武器统计', note: '武器池汇总卡' },
             ],
           },
           {
@@ -351,7 +365,7 @@ export class gs_gacha extends plugin {
             items: [
               { cmd: '#米哈游原神更新小助手记录', note: '拉小助手全量逐抽（含三星四星）' },
               { cmd: '#米哈游原神回传小助手', note: '把本地记录上传到小助手' },
-              { cmd: '#米哈游原神导入小助手记录 <文件>', note: '导入导出的 UIGF/SRGF JSON' },
+              { cmd: '#米哈游原神导入小助手记录 <文件>', note: '导入 UIGF/SRGF JSON' },
             ],
           },
         ],
@@ -367,15 +381,24 @@ export class gs_gacha extends plugin {
               { cmd: '#米哈游更新小助手抽卡记录', note: '从小助手云端拉全量（需 mysql2）' },
               { cmd: '#米哈游星铁更新星穹工坊记录', note: '星穹工坊云端补历史五星' },
             ],
-            note: '免链接方式会让同账号在线游戏客户端掉线，仅支持国服官服本人账号。',
+            note: '免链接方式会让同账号在线客户端掉线，仅支持国服官服本人账号。',
           },
           {
-            title: '查询',
+            title: '抽卡记录（列表，progress 进度条）',
             items: [
-              { cmd: '#米哈游星铁抽卡记录', note: '抽卡总览统计' },
-              { cmd: '#米哈游星铁角色记录', note: '角色池进度' },
-              { cmd: '#米哈游星铁武器记录', note: '光锥池进度' },
-              { cmd: '#米哈游星铁常驻记录', note: '常驻池统计' },
+              { cmd: '#米哈游星铁抽卡记录', note: '全部池五星卡片列表' },
+              { cmd: '#米哈游星铁角色记录', note: '角色池五星逐条进度' },
+              { cmd: '#米哈游星铁武器记录', note: '光锥池五星逐条进度' },
+              { cmd: '#米哈游星铁联动角色记录', note: '联动角色池' },
+              { cmd: '#米哈游星铁联动武器记录', note: '联动光锥池' },
+              { cmd: '#米哈游星铁常驻记录', note: '常驻跃迁' },
+            ],
+          },
+          {
+            title: '角色 / 武器统计（统计卡，含欧皇度）',
+            items: [
+              { cmd: '#米哈游星铁角色统计', note: '角色汇总卡：欧皇度 / 五星网格 / 分池进度条' },
+              { cmd: '#米哈游星铁武器统计', note: '光锥汇总卡' },
             ],
           },
         ],
@@ -388,15 +411,31 @@ export class gs_gacha extends plugin {
             items: [
               { cmd: '#米哈游绝区零更新抽卡记录', note: '通过绑定信息更新调频记录' },
               { cmd: '#米哈游绝区零抽卡链接 <链接>', note: '粘贴调频历史链接' },
-              { cmd: '#米哈游云绝区零更新抽卡记录', note: '读 Windows 客户端或浏览器扫码' },
+              { cmd: '#米哈游云绝区零更新抽卡记录', note: '读客户端或浏览器扫码' },
             ],
             note: '云绝区零在 Linux 走 SDK 二维码登录，无需浏览器。',
           },
           {
-            title: '查询与导出',
+            title: '抽卡记录（列表，池多自动三列）',
             items: [
-              { cmd: '#米哈游绝区零抽卡记录', note: '调频总览统计' },
-              { cmd: '#米哈游绝区零全部记录', note: '各频段汇总' },
+              { cmd: '#米哈游绝区零抽卡记录', note: '调频总览，池多时自动三列排版' },
+              { cmd: '#米哈游绝区零角色记录', note: '代理人池五星进度' },
+              { cmd: '#米哈游绝区零武器记录', note: '音擎池五星进度' },
+              { cmd: '#米哈游绝区零邦布记录', note: '邦布池五星进度' },
+            ],
+          },
+          {
+            title: '角色 / 武器 / 邦布统计（统计卡）',
+            items: [
+              { cmd: '#米哈游绝区零角色统计', note: '代理人汇总卡：欧皇度 / 五星网格 / 分池进度' },
+              { cmd: '#米哈游绝区零武器统计', note: '音擎汇总卡' },
+              { cmd: '#米哈游绝区零邦布统计', note: '邦布汇总卡' },
+              { cmd: '#米哈游绝区零全部统计', note: '全频段汇总' },
+            ],
+          },
+          {
+            title: '导出',
+            items: [
               { cmd: '#导出抽卡记录', note: '导出 UIGF 标准 JSON' },
             ],
           },
@@ -848,6 +887,46 @@ export class gs_gacha extends plugin {
     } catch (error) {
       return e.reply(`${summarize(data.pools, data.uid)}\n（出图失败：${error?.message || error}）`)
     }
+  }
+
+  /** 角色统计：工坊风格统计卡（与星铁/绝区零同构） */
+  async roleStat(e) {
+    return this.renderStat(e, ["GsGachaType_AvatarUp", "GsGachaType_AvatarUp2", "GsGachaType_Collection", "GsGachaType_Permanent"])
+  }
+
+  /** 武器统计 */
+  async weaponStat(e) {
+    return this.renderStat(e, ["GsGachaType_WeaponUp", "GsGachaType_Permanent"])
+  }
+
+  async renderStat(e, keys = []) {
+    ensureDir()
+    const files = fs.readdirSync(DATA_DIR).filter(name => name.endsWith(".json"))
+    if (!files.length) return e.reply("暂无原神抽卡记录，请先发送【#更新抽卡记录】")
+    let uid = ""
+    try {
+      const NoteUser = await getNoteUser()
+      const user = NoteUser ? await NoteUser.create(String(e.user_id || e.sender?.user_id || "")) : null
+      uid = user?.getUid?.("gs") || ""
+    } catch {}
+    let file = uid ? path.join(DATA_DIR, `${uid}.json`) : ""
+    if (!file || !fs.existsSync(file)) {
+      files.sort((a, b) => fs.statSync(path.join(DATA_DIR, b)).mtimeMs - fs.statSync(path.join(DATA_DIR, a)).mtimeMs)
+      file = path.join(DATA_DIR, files[0])
+    }
+    const raw = readData(file)
+    if (!raw?.pools) return e.reply("本地记录读取失败，请重新执行【#更新抽卡记录】")
+    // 统计只要五星记录：模板按 fiveLog 计算，直接塞全量会算错
+    const fivePools = {}
+    for (const [key, pool] of Object.entries(raw.pools || {})) {
+      const records = Array.isArray(pool?.records) ? pool.records : []
+      fivePools[key] = { ...pool, records: records.filter(r => String(r.rank_type || "5") === "5") }
+    }
+    const data = { ...raw, pools: fivePools }
+    const view = buildGsStatView(data, uid || raw.uid || "", e, keys)
+    await fillSrUserInfo(view, { uid: String(uid || raw.uid || ""), qq: String(e.user_id || ""), cookies: [] }, 'gs', e)
+    const buf = await render("sr_gacha/stat", view, { e })
+    return sendRenderResult(e, buf)
   }
 }
 

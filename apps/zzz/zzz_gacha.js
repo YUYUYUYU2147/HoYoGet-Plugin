@@ -1,5 +1,7 @@
 import {
   buildSummaryView,
+  aggregateLuck,
+  fillSrUserInfo,
   extractUrlsFromMsg,
   filterPools,
   formatNow,
@@ -673,7 +675,7 @@ function findZzzAuthkeyUrl(e) {
  * S级头像网格（同名去重计数），以及各池的进度条列表。
  * 网格与分池区块只含所选池；五项汇总指标固定按全账号口径。
  */
-function buildZzzStatView(data, uid, e, keys = [], itemFilter = null) {
+export function buildZzzStatView(data, uid, e, keys = [], itemFilter = null) {
   // 常驻频段（GachaType_Permanent）是混合池：角色/音擎/邦布混在一起。
   // 统计指令按「类型」拆分：itemFilter 为 角色/音擎/邦布 时，常驻池只保留对应类型的五星，
   // 其余池（独家频段=角色、音擎频段=音擎、邦布频段=邦布）天然同质，整池取即可。
@@ -801,8 +803,13 @@ function buildZzzStatView(data, uid, e, keys = [], itemFilter = null) {
   }
   const firstS = pools.map(p => ({ key: p.key, first: (p.fiveLog || [])[0] })).find(x => x.first)
 
+  const nickname = data?.nickname || e?.nickname || e?.user?.nickname || '绳匠'
+  const avatar = data?.avatar || e?.user?.avatar || ''
+
   return {
     uid,
+    nickname,
+    avatar,
     total: {
       uid,
       title,
@@ -810,6 +817,7 @@ function buildZzzStatView(data, uid, e, keys = [], itemFilter = null) {
       avgGold,
       sNum,
       chips,
+      luck: aggregateLuck(pools),
       metrics,
       grid: [...gridMap.values()],
       gridTitle,
@@ -1335,6 +1343,8 @@ export class zzz_gacha extends plugin {
     // 且绝区零 makeIcon 分支只用记录自带 icon、不查 miao 模型；此前直接传
     // miaoModelsCache 会因本文件未定义该变量抛 ReferenceError 导致渲染失败
     const view = buildSummaryView(filterPools(src, keys), auth.uid, e, layout, 'zzz')
+    // 填充游戏昵称与头像（与星铁/原神共用同一套资料来源）
+    await fillSrUserInfo(view, auth, 'zzz', e)
     const template = layout === 'progress' ? 'sr_gacha/progress' : 'sr_gacha/summary'
     const buf = await render(template, view, { e })
     return sendRenderResult(e, buf)
@@ -1377,9 +1387,8 @@ export class zzz_gacha extends plugin {
     const data = readData(getDataFile(auth.uid, auth.qq))
     if (!data?.pools) return e.reply('暂无绝区零抽卡记录，请先发送【#米哈游绝区零更新工坊记录】')
     const view = buildZzzStatView(data, auth.uid, e, keys, itemFilter)
-    // pct 压低 sys.scale 的 zoom：本卡内容行数多（30+ 条进度），
-    // 全局 zoom 放大后总高会超出渲染后端截图上限被拦腰截断
-    const buf = await render('zzz_gacha/stat', view, { e, pct: 1.5 })
+    await fillSrUserInfo(view, auth, 'zzz', e)
+    const buf = await render('zzz_gacha/stat', view, { e })
     return sendRenderResult(e, buf)
   }
 
