@@ -764,6 +764,16 @@ export function init(ctx) {
   })
 
   ctx.registerPage({
+    id: 'hoyoget-data-management',
+    title: 'HoYoGet 数据管理',
+    icon: '🗃️',
+    priority: 65,
+    src: 'data-management.html',
+    style: 'data-management.css',
+    script: 'data-management.js',
+  })
+
+  ctx.registerPage({
     id: 'hoyo-panel-art',
     title: '角色面板图管理',
     icon: '🖼',

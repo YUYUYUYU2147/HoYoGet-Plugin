@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import NodeModule from 'node:module';
+import { migrateHoYoGetData } from './system/data_migration.js';
 
 /* 全模块热重载：框架热重载只给插件入口加 cache bust，插件内部的 import 都是
    裸相对路径，会命中 ESM 缓存 —— system/ 与 apps 子目录改完仍跑旧代码。
@@ -120,6 +121,12 @@ const { default: yaml } = await import('./system/yaml.js');
 logger.info('\x1B[31m---------៷>ᴗ<៷---------\x1B[0m');
 logger.info('\x1B[31m米哈游插件正在载入...\x1B[0m');
 logger.info('\x1B[31m-------------------------\x1B[0m');
+
+try {
+  migrateHoYoGetData(process.cwd(), message => logger.mark(message));
+} catch (err) {
+  logger.error(`[HoYoGet] 数据目录迁移失败，插件仍按旧路径启动：${err?.stack || err}`);
+}
 
 var paths = ['config/', 'temp/', 'data/', 'data/fp/', 'data/Stoken/'];
 

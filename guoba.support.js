@@ -1,7 +1,49 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import yaml from './system/yaml.js'
 import { refreshGroupNames, cacheGroupList } from './system/group_name.js'
+import { registerHoYoGetDataPage } from './system/guoba_data_page.js'
 
 const _path = './plugins/HoYoGet-Plugin/config/'
+const dataRoot = path.resolve(process.cwd(), 'data/HoYoGet-Plugin')
+const boxConfigPath = path.join(dataRoot, 'box/config.json')
+const autoGroupSignPath = path.join(dataRoot, 'autoGroupSign.json')
+const boxOptions = [
+  'QQ号', '昵称', '备注', '群昵称', '群头衔', '性别', '生日', '星座', '生肖', '年龄', '血型', '电话', '邮箱',
+  '家乡', '现居', '职业', '个性标签', '风险账号', '机器人账号', 'QQVIP', '年VIP', 'VIP等级', '群等级',
+  '加群时间', 'QQ等级', '注册时间', '签名',
+]
+const defaultBoxConfig = {
+  only_admin: false,
+  protect_ids: [],
+  display_options: boxOptions,
+  recall_time: 0,
+  autobox: { white_groups: [], enter: false, exit: false },
+}
+
+function readJsonConfig(file, fallback) {
+  try { return { ...fallback, ...JSON.parse(fs.readFileSync(file, 'utf8')) } }
+  catch { return { ...fallback } }
+}
+
+function saveJsonConfig(file, value) {
+  fs.mkdirSync(path.dirname(file), { recursive: true })
+  fs.writeFileSync(file, JSON.stringify(value, null, 2), 'utf8')
+}
+
+function getBoxConfig() {
+  const cfg = readJsonConfig(boxConfigPath, defaultBoxConfig)
+  return {
+    ...cfg,
+    protect_ids: Array.isArray(cfg.protect_ids) ? cfg.protect_ids : [],
+    display_options: Array.isArray(cfg.display_options) ? cfg.display_options : boxOptions,
+    autobox: { ...defaultBoxConfig.autobox, ...(cfg.autobox || {}) },
+  }
+}
+
+function getAutoGroupSignConfig() {
+  return readJsonConfig(autoGroupSignPath, { hour: 0, minute: 0 })
+}
 
 function getCfg() {
   return yaml.get(_path + 'config.yaml') || {}
@@ -62,6 +104,7 @@ const defaultBh3GuideSources = {
 }
 
 export const supportGuoba = () => {
+  registerHoYoGetDataPage()
   const cfg = getCfg()
   const bh3Remind = getBh3Remind()
   const sign = getSign()
@@ -145,6 +188,68 @@ export const supportGuoba = () => {
   },
   configInfo: {
     schemas: [
+      {
+        component: 'SOFT_GROUP_BEGIN',
+        label: 'QQ资料卡片与自动开盒',
+      },
+      {
+        field: 'box_only_admin',
+        label: '仅管理员可开盒他人',
+        component: 'Switch',
+      },
+      {
+        field: 'box_protect_ids',
+        label: '开盒保护名单',
+        helpMessage: '名单中的用户不会被他人开盒',
+        component: 'GTags',
+        componentProps: { allowAdd: true, allowDel: true },
+      },
+      {
+        field: 'box_display_options',
+        label: '资料卡显示字段',
+        helpMessage: '可添加或删除需要显示的资料字段',
+        component: 'GTags',
+        componentProps: { allowAdd: true, allowDel: true },
+      },
+      {
+        field: 'box_recall_time',
+        label: '资料卡撤回时间（秒）',
+        component: 'InputNumber',
+        componentProps: { min: 0, max: 120, step: 1 },
+      },
+      {
+        field: 'box_autobox_enter',
+        label: '进群自动发送资料卡',
+        component: 'Switch',
+      },
+      {
+        field: 'box_autobox_exit',
+        label: '退群自动发送资料卡',
+        component: 'Switch',
+      },
+      {
+        field: 'box_autobox_white_groups',
+        label: '自动资料卡白名单群',
+        helpMessage: '留空时所有群都启用',
+        component: 'GTags',
+        componentProps: { allowAdd: true, allowDel: true },
+      },
+      {
+        component: 'SOFT_GROUP_BEGIN',
+        label: '自动群打卡',
+      },
+      {
+        field: 'auto_group_sign_hour',
+        label: '每日打卡时',
+        component: 'InputNumber',
+        componentProps: { min: 0, max: 23, step: 1 },
+      },
+      {
+        field: 'auto_group_sign_minute',
+        label: '每日打卡分',
+        component: 'InputNumber',
+        componentProps: { min: 0, max: 59, step: 1 },
+      },
       {
         component: 'SOFT_GROUP_BEGIN',
         label: '通用设置',
@@ -1271,7 +1376,18 @@ export const supportGuoba = () => {
       const bh3Remind = getBh3Remind()
       const activityRemind = getActivityRemind()
       const activityGroups = activityRemind.groups || {}
+      const box = getBoxConfig()
+      const autoGroupSign = getAutoGroupSignConfig()
       return {
+        box_only_admin: !!box.only_admin,
+        box_protect_ids: box.protect_ids,
+        box_display_options: box.display_options,
+        box_recall_time: box.recall_time ?? 0,
+        box_autobox_enter: !!box.autobox.enter,
+        box_autobox_exit: !!box.autobox.exit,
+        box_autobox_white_groups: box.autobox.white_groups || [],
+        auto_group_sign_hour: autoGroupSign.hour ?? 0,
+        auto_group_sign_minute: autoGroupSign.minute ?? 0,
         // 数据模式：面板上要能读到当前值，否则单选框显示不出选中的那一项
         data_mode: getDataMode(),
         panel_style: getPanelStyle(),
@@ -1427,6 +1543,25 @@ export const supportGuoba = () => {
       }
     },
     setConfigData(data, { Result }) {
+      const box = getBoxConfig()
+      box.only_admin = !!data.box_only_admin
+      box.protect_ids = Array.isArray(data.box_protect_ids) ? data.box_protect_ids.map(String) : []
+      box.display_options = Array.isArray(data.box_display_options)
+        ? [...new Set(data.box_display_options.filter(value => boxOptions.includes(value)))]
+        : boxOptions
+      box.recall_time = Math.min(120, Math.max(0, Number(data.box_recall_time) || 0))
+      box.autobox = {
+        enter: !!data.box_autobox_enter,
+        exit: !!data.box_autobox_exit,
+        white_groups: Array.isArray(data.box_autobox_white_groups) ? data.box_autobox_white_groups.map(String) : [],
+      }
+      saveJsonConfig(boxConfigPath, box)
+      const autoGroupSign = {
+        hour: Math.min(23, Math.max(0, Number(data.auto_group_sign_hour) || 0)),
+        minute: Math.min(59, Math.max(0, Number(data.auto_group_sign_minute) || 0)),
+      }
+      saveJsonConfig(autoGroupSignPath, autoGroupSign)
+
       const boolMap = {
         update: data.update,
         gs_bg: data.gs_bg,
