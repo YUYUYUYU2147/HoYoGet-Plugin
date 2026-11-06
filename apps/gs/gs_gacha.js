@@ -198,6 +198,30 @@ async function fetchPool(ctx, pool) {
   }
   return rows.reverse()
 }
+/**
+ * 重算整池的保底计数（gacha_count）与垫抽。
+ * 小助手/工坊导出的逐抽记录里 count 字段恒为 1，直接拿来当 gacha_count
+ * 会让每个五星都显示「1 抽」，统计与卡片全错。这里按 id 正序遍历，
+ * 自增累计到每颗五星，尾段残留记为 pity。
+ * 会原地修改 pool.records 的 gacha_count，并写回 pool.pity。
+ */
+function recalcPity(pool) {
+  const records = Array.isArray(pool?.records) ? pool.records : []
+  records.sort((a, b) => String(a.id).localeCompare(String(b.id), "en", { numeric: true }))
+  let counter = 0
+  for (const record of records) {
+    counter += 1
+    if (String(record.rank_type) === "5") {
+      record.gacha_count = counter
+      counter = 0
+    } else {
+      delete record.gacha_count
+    }
+  }
+  pool.pity = counter
+  return pool
+}
+
 /** 原始记录转成视图层要的池结构：五星带「距上一个五星的抽数」，末位剩余抽数记为垫抽 */
 function buildPool(pool, rows) {
   /* 保留全部逐抽（含三星四星），仅给五星补 gacha_count（距上一金抽数）。
@@ -611,7 +635,7 @@ export class gs_gacha extends plugin {
     }
     if (!stats.added) return { stats, keep: false }
     for (const pool of Object.values(data.pools)) {
-      pool.records.sort((a, b) => String(a.id).localeCompare(String(b.id), 'en', { numeric: true }))
+      recalcPity(pool)
       pool.totalPulls = pool.records.length
       pool.fiveNum = pool.records.filter(r => String(r.rank_type || '5') === '5').length
       pool.fourNum = pool.records.filter(r => String(r.rank_type) === '4').length
@@ -725,7 +749,7 @@ export class gs_gacha extends plugin {
     }
     if (!added) return e.reply(`UID:${uid} 没有新增记录（可能已全部存在）`)
     for (const pool of Object.values(existing.pools)) {
-      pool.records.sort((a, b) => String(a.id).localeCompare(String(b.id), 'en', { numeric: true }))
+      recalcPity(pool)
       pool.totalPulls = pool.records.length
       pool.fiveNum = pool.records.filter(r => String(r.rank_type || '5') === '5').length
       pool.fourNum = pool.records.filter(r => String(r.rank_type) === '4').length
