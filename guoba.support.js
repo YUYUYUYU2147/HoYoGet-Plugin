@@ -740,6 +740,12 @@ export const supportGuoba = () => {
         component: 'InputTextArea',
       },
       {
+        field: 'custom_guide_walkthrough',
+        label: '分区搜索兜底',
+        helpMessage: '开启后当作者源搜不到时，自动用米游社分区关键词搜索（按角色名搜攻略，不依赖具体作者；原神优先走观测枢官方精选目录）。默认开',
+        component: 'Switch',
+      },
+      {
         field: 'custom_guide_enable',
         label: '自定义攻略源开关',
         helpMessage: '开启后可用 #角色名攻略 触发（也支持米哈游前缀 前缀）；角色名即关键词，自动用别名表归一成正式名，无需手填角色列表',

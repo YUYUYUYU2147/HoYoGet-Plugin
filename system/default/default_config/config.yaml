@@ -296,6 +296,7 @@ zzz_guide_deadly_sources: |-
 #发指令：#角色名攻略 / #角色名一图流 / #角色名配对 / #角色名配队（前缀 HoYoGet/ 或 小花火 也可，可省略）
 #只需填各游戏作者UID，角色名即关键词（自动用别名表归一成正式名，无需列角色）
 #合并转发模式：on=合并转发(带标题)，off=逐条拼接(不带标题)
+custom_guide_walkthrough: true
 custom_guide_enable: true
 custom_guide_forward: on
 #默认源(兜底作者UID)：某游戏未单独填、或角色不在别名表时使用；内置默认 74019947

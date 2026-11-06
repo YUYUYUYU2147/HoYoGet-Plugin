@@ -7,14 +7,55 @@ import { makeForwardMsg, config, pluginPriority, oldPostWarn } from '#HoYoGet';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // 插件根目录（apps 的上一级），别名表读取不依赖进程 cwd、也不依赖任何外部插件
 const PLUGIN_ROOT = path.resolve(__dirname, '../..');
+// 攻略图片缓存：按「游戏/角色名」存已解析的图片 URL 列表，
+// 二次查询直接读缓存秒开，避免每次重复打米游社接口（也降低风控概率）
+const GUIDE_CACHE_DIR = path.join(PLUGIN_ROOT, 'data', 'guide-cache');
+const GUIDE_CACHE_TTL = 3 * 24 * 60 * 60 * 1000; // 3 天
+
+function guideCacheFile(game, name) {
+  const safe = String(name).replace(/[^\p{L}\p{N}_-]+/gu, '_').slice(0, 40);
+  return path.join(GUIDE_CACHE_DIR, `${game}__${safe}.json`);
+}
+function readGuideCache(game, name) {
+  try {
+    const f = guideCacheFile(game, name);
+    if (!fs.existsSync(f)) return null;
+    const d = JSON.parse(fs.readFileSync(f, 'utf8'));
+    if (!d || Date.now() - Number(d.ts || 0) > GUIDE_CACHE_TTL) return null;
+    return Array.isArray(d.images) && d.images.length ? d : null;
+  } catch { return null; }
+}
+function writeGuideCache(game, name, images, meta = {}) {
+  try {
+    fs.mkdirSync(GUIDE_CACHE_DIR, { recursive: true });
+    fs.writeFileSync(guideCacheFile(game, name), JSON.stringify({ ts: Date.now(), images, ...meta }, null, 0));
+  } catch (err) {
+    logger.debug?.(`[HoYoGet][custom_guide] 写缓存失败：${err?.message || err}`);
+  }
+}
 
 const SEARCH_API = 'https://bbs-api.miyoushe.com/painter/api/user_instant/search/list';
+// 米游社分区攻略搜索：按角色名在对应游戏分区里搜，不依赖具体作者，覆盖面更广
+const WALKTHROUGH_API = 'https://bbs-api.miyoushe.com/painter/wapi/searchWalkthrough';
+// 原神观测枢官方攻略目录（精选角色攻略）
+const YS_STRATEGY_MAP = 'https://act-api-takumi-static.mihoyo.com/common/blackboard/ys_strategy/v1/home/map?app_sn=ys_strategy';
+// 米游社帖子详情（取完整图集）
+const POST_FULL_API = 'https://bbs-api.miyoushe.com/post/wapi/getPostFull';
 const DEFAULT_SIZE = 20;
 const SORT_TYPE = '2';
 const MAX_IMAGES = 10;
 const FETCH_TIMEOUT = 15000;
+// 单次查询的请求预算：搜索/目录/详情合计不超过此数，防止米游社风控
+const REQUEST_BUDGET = 30;
+// 游戏 → 米游社分区 gids
+const GIDS_BY_GAME = { gs: 2, sr: 6, zzz: 8 };
 // 默认作者UID：当各游戏未单独填UID、或角色不在别名表时兜底使用（无需在锅巴额外保存即生效）
 const FALLBACK_UID = '74019947';
+// 标题黑名单：这些不是角色攻略本身（晒卡/求助/大盘点）
+const EXCLUDE_TITLE_RE = /毕业面板|面板一图流|晒卡|晒面板|晒练度|不知道晒|求助|求教|疑惑|疑问|卡池|合集|阵容推荐|差分|混沌回忆|异相仲裁|星琼统计/;
+const GUIDE_TITLE_RE = /攻略|一图流|图鉴|养成|图解/;
+// 标题归一：去掉所有非文字/数字
+const normText = s => String(s || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 
 /**
  * [米哈游]自定义攻略源（极简模式）
@@ -159,6 +200,110 @@ async function searchPosts(keyword, uid, size = DEFAULT_SIZE) {
     .filter(p => norm(p.subject).includes(kw));
 }
 
+// ============ 米游社分区攻略搜索（移植自成熟做法）============
+/**
+ * 判断一篇帖子是否是某角色的有效攻略：
+ *   · game_id 必须匹配目标分区
+ *   · 标题包含角色名 + 攻略类关键词（攻略/一图流/图鉴/养成/图解）
+ *   · 排除晒卡/求助/合集等非攻略帖
+ *   · 基础角色名不能误匹配「角色·XX」这种新形态
+ */
+function isGuidePost(postInner, name, gids) {
+  const inner = postInner?.post || postInner || {};
+  const subject = String(inner.subject || '');
+  if (Number(inner.game_id) !== Number(gids)) return false;
+  if (!normText(subject).includes(normText(name))) return false;
+  if (!GUIDE_TITLE_RE.test(subject)) return false;
+  if (EXCLUDE_TITLE_RE.test(subject)) return false;
+  const base = String(name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (!/[·•]/.test(name) && new RegExp(base + '[·•・‧](?!\\s*(?:角色|攻略|一图|养成|培养|图鉴|图解|全面|详细|简要))').test(subject)) return false;
+  return /^\d+$/.test(String(inner.post_id));
+}
+
+/**
+ * 分区关键词搜索：返回帖子摘要列表。
+ * 依次用「角色名 一图流 / 角色名 攻略 / 角色名 养成」三组关键词 × 两种排序搜，
+ * 每页 20 条、最多 3 页，受 budget 限制防封。
+ * @returns {Promise<Array<{subject, post_id, created_at, game_id, user}>>}
+ */
+async function searchWalkthrough(name, game, budget) {
+  const gids = GIDS_BY_GAME[game];
+  if (!gids) return [];
+  const out = [];
+  const seen = new Set();
+  const keywords = [`${name} 一图流`, `${name} 攻略`, `${name} 养成`];
+  for (const keyword of keywords) {
+    for (const sort of [0, 2]) {
+      let cursor = '';
+      for (let page = 0; page < 3; page++) {
+        if (budget.left <= 0) return out;
+        budget.left--;
+        const q = new URLSearchParams({ gids: String(gids), size: '20', keyword, sort_type: String(sort), last_id: cursor });
+        const res = await fetchJSON(`${WALKTHROUGH_API}?${q}`);
+        if (!res || res.retcode !== 0 || !Array.isArray(res.data?.list)) break;
+        const posts = res.data.list;
+        for (const item of posts) {
+          const inner = item?.post || {};
+          const id = String(inner.post_id || '');
+          if (!id || seen.has(id)) continue;
+          if (!isGuidePost(item, name, gids)) continue;
+          seen.add(id);
+          // 前瞻/创作体验服帖排后，最新更新的排前
+          const preview = /前瞻|创作体验服/.test(String(inner.subject || '')) ? 1 : 0;
+          out.push({
+            subject: inner.subject,
+            post_id: id,
+            game_id: inner.game_id,
+            created_at: inner.created_at,
+            updated_at: inner.updated_at,
+            user: inner.user,
+            _preview: preview,
+          });
+        }
+        const next = String(res.data.last_id || '');
+        if (res.data.is_last || !posts.length || !next || next === cursor) break;
+        cursor = next;
+      }
+    }
+  }
+  out.sort((a, b) => a._preview - b._preview || Number(b.updated_at || b.created_at) - Number(a.updated_at || a.created_at));
+  return out;
+}
+
+/**
+ * 原神观测枢官方角色攻略目录：返回该角色的精选攻略 post_id 列表。
+ * 只对原神有意义，其它游戏返回空。
+ */
+async function searchObservatory(name, budget) {
+  if (budget.left <= 0) return [];
+  budget.left--;
+  const res = await fetchJSON(YS_STRATEGY_MAP);
+  if (!res || !Array.isArray(res.data?.list)) return [];
+  const flatten = list => list.flatMap(it => [it, ...flatten(it.children || [])]);
+  const category = flatten(res.data.list).find(it => it.name === '角色攻略' && it.children?.length);
+  const channelName = /^[风岩雷草水火冰]主$/.test(name) ? '旅行者' : name;
+  const channel = category?.children?.find(it => normText(it.name) === normText(channelName));
+  if (!channel || !Array.isArray(channel.list)) return [];
+  const ids = [];
+  for (const item of channel.list) {
+    const m = /^https:\/\/(?:www\.miyoushe\.com|bbs\.mihoyo\.com)\/(?:ys|sr|zzz|bh3)\/article\/(\d+)(?:[?#].*)?$/.exec(item.bbs_url || '');
+    if (m && !ids.includes(m[1])) ids.push(m[1]);
+  }
+  return ids;
+}
+
+/**
+ * 拉取帖子详情并提取完整图集。
+ * @returns {Promise<Array<string>>} 图片 URL 列表
+ */
+async function fetchPostImages(postId, gids, budget) {
+  if (budget.left <= 0) return [];
+  budget.left--;
+  const res = await fetchJSON(`${POST_FULL_API}?gids=${gids}&post_id=${postId}&read=1`);
+  if (!res || res.retcode !== 0 || !res.data?.post) return [];
+  return extractImages(res.data);
+}
+
 // 米游社图床（阿里OSS）支持链接参数实时压缩：攻略长图原图常达十几MB，QQ协议端发不动
 // （表现为只发出第一张封面、其余全部失败）。统一转 jpg 并压画质（分辨率不变，gif 跳过保持动图）
 function compressImg(url = '') {
@@ -249,6 +394,25 @@ export class custom_guide extends plugin {
     // 一个可用UID都没有：静默放行，交给 mora 等其它插件处理
     if (!candidates.length) return false;
 
+    // 缓存命中：直接发已保存的图片，秒开且不打接口
+    const cacheGame = matchedGames[0]?.key || forced || 'gs';
+    const cached = readGuideCache(cacheGame, keyword);
+    if (cached && cached.images.length) {
+      const msg2 = [];
+      const lines = [`「${keyword}」攻略（缓存）`];
+      if (cached.author) lines.push(`作者：${cached.author}`);
+      if (cached.link) lines.push(`原帖：${cached.link}`);
+      msg2.push([lines.join('\n'), segment.image(cached.images[0])]);
+      for (const u of cached.images.slice(1)) msg2.push([segment.image(u)]);
+      logger.mark(`[HoYoGet][custom_guide] 命中缓存 ${cacheGame}/${keyword}，${cached.images.length} 张`);
+      if (cfg.custom_guide_forward !== 'off') {
+        await e.reply(await makeForwardMsg(e, msg2, `「${keyword}」攻略来啦~`));
+      } else {
+        for (const item of msg2) await e.reply(item);
+      }
+      return true;
+    }
+
     await e.reply(`正在获取「${keyword}」攻略，请稍后...`, true, { recallMsg: 60 });
 
     const msg = [];
@@ -277,20 +441,72 @@ export class custom_guide extends plugin {
         }
         if (pushed) break; // 该候选有结果就不再试下一个
       } catch (err) {
-        logger.warn(`[HoYoGet][custom_guide] ${kw}/${uid} 获取失败: ${err?.message || err}`);
+        logger.warn(`[HoYoGet][custom_guide] ${kw}/${uid} 获取失败：${err?.message || err}`);
       }
     }
+
+    // ===== 兜底：作者源没结果时，走米游社分区关键词搜索 =====
+    // 这样即便没在锅巴配作者 UID，或作者没发过该角色，也能按角色名搜到社区攻略
+    if (!msg.length && cfg.custom_guide_walkthrough !== false) {
+      const game = matchedGames[0]?.key || forced || 'gs';
+      const gids = GIDS_BY_GAME[game];
+      if (gids) {
+        const budget = { left: REQUEST_BUDGET };
+        try {
+          // 原神优先走观测枢官方精选目录
+          if (game === 'gs') {
+            const obsIds = await searchObservatory(keyword, budget);
+            for (const pid of obsIds) {
+              if (msg.length >= 12 || budget.left <= 0) break;
+              const images = await fetchPostImages(pid, gids, budget);
+              const picked = pickImages({ images }, indexes).filter(u => !seenImages.has(u));
+              if (!picked.length) continue;
+              picked.forEach(u => seenImages.add(u));
+              const lines = ['来源：观测枢', `原帖：${mysPostUrl(pid, gids, game)}`];
+              msg.push([lines.join('\n'), segment.image(picked[0])]);
+              for (const u of picked.slice(1)) msg.push([segment.image(u)]);
+            }
+          }
+          // 分区关键词搜索
+          if (msg.length < 12 && budget.left > 0) {
+            const posts = await searchWalkthrough(keyword, game, budget);
+            logger.mark(`[HoYoGet][custom_guide] 分区搜索「${keyword}」(${game}) 命中 ${posts.length} 帖`);
+            for (const post of posts) {
+              if (msg.length >= 12 || budget.left <= 0) break;
+              const images = await fetchPostImages(post.post_id, gids, budget);
+              const picked = pickImages({ images }, indexes).filter(u => !seenImages.has(u));
+              if (!picked.length) continue;
+              picked.forEach(u => seenImages.add(u));
+              const lines = [`作者：${post.user?.nickname || '未知'}`, post.subject || keyword];
+              const time = Number(post.created_at || 0);
+              if (time) lines.push(`发布：${new Date(time * 1000).toLocaleString('zh-CN', { hour12: false })}${oldPostWarn(time)}`);
+              lines.push(`原帖：${mysPostUrl(post.post_id, post.game_id, game)}`);
+              msg.push([lines.join('\n'), segment.image(picked[0])]);
+              for (const u of picked.slice(1)) msg.push([segment.image(u)]);
+            }
+          }
+        } catch (err) {
+          logger.warn(`[HoYoGet][custom_guide] 分区搜索兜底失败：${err?.message || err}`);
+        }
+      }
+    }
+
     if (!msg.length) {
-      msg.push(`未找到「${keyword}」的攻略帖子（已尝试：${candidates.map(c => `${c.keyword}@UID${c.uid}`).join('、')}）。\n请在锅巴「自定义攻略源」填写该游戏的默认源UID，并确认该作者发过此角色攻略`);
+      msg.push(`未找到「${keyword}」的攻略帖子。\n已尝试作者源：${candidates.map(c => `${c.keyword}@UID${c.uid}`).join('、') || '无'}${cfg.custom_guide_walkthrough !== false ? '，及米游社分区搜索' : ''}。\n可在锅巴「自定义攻略源」填写默认源UID，或确认角色名是否正确`);
     }
 
     if (!msg.length) return e.reply(`未找到「${keyword}」相关攻略图`, true);
     logger.mark(`[HoYoGet][custom_guide] 准备发送转发节点数: ${msg.length}`);
     // 合并转发开关：关闭时逐条拼接发送，且不带「xx攻略来啦~」这类标题文字
+    let sentOk = false;
     if (cfg.custom_guide_forward !== 'off') {
-      await e.reply(await makeForwardMsg(e, msg, `「${keyword}」攻略来啦~`));
+      sentOk = await e.reply(await makeForwardMsg(e, msg, `「${keyword}」攻略来啦~`));
     } else {
-      for (const item of msg) await e.reply(item);
+      for (const item of msg) sentOk = await e.reply(item);
+    }
+    // 发送成功才写缓存，失败不缓存避免下次拿到坏数据
+    if (sentOk && seenImages.size) {
+      writeGuideCache(cacheGame, keyword, [...seenImages])
     }
     return true;
   }
