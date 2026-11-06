@@ -8,7 +8,13 @@
     <div class="container">
       <div class="hero_card">
         <div class="hero_main">
-          <div class="uid_tag">UID: {{total.uid}}</div>
+          <div class="hero_players">
+            <span class="hero_players_avatar">{{if avatar}}<img class="hero_players_img" src="{{avatar}}" alt="" onerror="this.style.display='none'">{{else}}<span class="hero_players_fallback">开</span>{{/if}}</span>
+            <div class="hero_players_text">
+              <div class="hero_players_name">{{nickname}}</div>
+              <div class="uid_tag">UID: {{total.uid}}</div>
+            </div>
+          </div>
           <div class="hero_title">{{total.title}}</div>
           <div class="hero_row">总抽卡数: <b>{{total.allNum}}</b> 抽</div>
           <div class="hero_row">平均出金: <b>{{total.avgGold}}</b> 抽</div>
@@ -28,7 +34,7 @@
           </div>
         </div>
         <div class="hero_side">
-          <span class="hero_avatar" style="background-image:url('{{total.avatar}}')"></span>
+          <span class="hero_avatar">{{if total.avatar}}<img class="hero_avatar_img" src="{{total.avatar}}" alt="" onerror="this.style.display='none'">{{/if}}</span>
           <div class="hero_note">{{total.avatarNote}}</div>
         </div>
       </div>
@@ -38,7 +44,7 @@
         <div class="grid">
           {{each total.grid cell}}
           <div class="cell">
-            <span class="cell_img" style="background-image:url('{{cell.icon}}')"></span>
+            <span class="cell_img">{{if cell.icon}}<img class="cell_img_i" src="{{cell.icon}}" alt="" onerror="this.style.display='none'">{{/if}}</span>
             {{if cell.count > 1}}
             <span class="cell_num">{{cell.count}}</span>
             {{/if}}
@@ -61,7 +67,7 @@
           {{/if}}
           {{each sec.list item}}
           <div class="bar_row">
-            <span class="bar_img" style="background-image:url('{{item.icon}}')"></span>
+            <span class="bar_img">{{if item.icon}}<img class="bar_img_i" src="{{item.icon}}" alt="" onerror="this.style.display='none'">{{/if}}</span>
             <div class="bar_wrap">
               <div class="bar_track {{item.cls}}" style="width:{{item.pct}}%"><span class="bar_text">{{item.num}} 抽</span></div>
             </div>

@@ -1,7 +1,8 @@
-/* 绝区零统计卡（工坊风格）：黑底金字，顶部汇总大卡 + S级头像网格 + 分池进度条
-   尺寸体系与 sr_gacha 其余模板一致：1200px 宽 + transform scale(1.2)，
-   最终清晰度由渲染时的 sys.scale(zoom) 控制。行高做了压缩，
-   避免长卡在渲染后端超出截图高度上限被截断。 */
+/* 角色统计卡：高级质感版
+   - 顶部主卡改为深色高级玻璃（暗金渐变），内容卡为浅色玻璃，形成层次对比
+   - 加入细纹理、金色描边光晕、悬浮阴影、渐变数字
+   供 sr_gacha/stat 与 zzz_gacha/stat 共用，与抽卡记录（summary）模板区分。
+   布局 1200px 基准，像素密度由渲染时 sys.scale(zoom) 控制。 */
 
 @import url("../font/fonts.css");
 
@@ -12,109 +13,270 @@
   user-select: none;
 }
 
+:root {
+  --ink: #161a26;
+  --ink-2: #232a3c;
+  --text: #1f2431;
+  --text-weak: #586174;
+  --text-faint: #949cb0;
+  --gold: #d19a3c;
+  --gold-soft: #f4ce8a;
+  --gold-deep: #a3701c;
+  --purple: #7c5cc4;
+  --red: #c8544b;
+  --green: #3ea06a;
+  --card-line: rgba(255, 255, 255, .95);
+  --shadow-card: 0 2px 6px rgba(24, 32, 54, .05), 0 18px 40px -20px rgba(24, 32, 54, .34);
+}
+
 body {
   position: relative;
   font-size: 18px;
-  color: #f2f2f2;
+  color: var(--text);
   transform: scale(1.2);
   transform-origin: 0 0;
   width: 1200px;
-  background: #16171b;
   font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background:
+    radial-gradient(1200px 600px at 6% -12%, #e8eefc 0%, transparent 58%),
+    radial-gradient(1000px 520px at 102% -4%, #f7eddc 0%, transparent 54%),
+    radial-gradient(900px 700px at 50% 108%, #eef1fa 0%, transparent 60%),
+    linear-gradient(158deg, #f0f4fb 0%, #e5eaf4 48%, #e9edf7 100%);
+}
+
+/* 全局极细网格纹理，增加纸面质感 */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(120, 140, 180, .028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(120, 140, 180, .028) 1px, transparent 1px);
+  background-size: 26px 26px;
+  z-index: 0;
 }
 
 .container {
   width: 1200px;
-  padding: 20px;
+  padding: 26px 26px 12px;
   position: relative;
   z-index: 1;
 }
 
-/* ===== 顶部汇总大卡 ===== */
+/* ================= 顶部主卡（深色高级玻璃） ================= */
 .hero_card {
+  position: relative;
   display: flex;
   justify-content: space-between;
-  background: linear-gradient(135deg, #23252c 0%, #1b1d23 100%);
-  border: 1px solid #3a3d47;
-  border-radius: 14px;
-  padding: 18px 20px;
-  color: #f2f2f2;
+  gap: 24px;
+  padding: 26px 30px;
+  border-radius: 24px;
+  overflow: hidden;
+  color: #eef1f8;
+  background:
+    radial-gradient(720px 300px at 12% -30%, rgba(244, 206, 138, .22) 0%, transparent 62%),
+    radial-gradient(560px 320px at 96% 120%, rgba(120, 92, 196, .26) 0%, transparent 60%),
+    linear-gradient(150deg, #262c3d 0%, #1a1f2c 52%, #141822 100%);
+  border: 1px solid rgba(244, 206, 138, .28);
+  box-shadow:
+    0 3px 8px rgba(12, 16, 28, .22),
+    0 26px 54px -26px rgba(12, 16, 28, .7),
+    inset 0 1px 0 rgba(255, 255, 255, .1);
+}
+
+/* 顶部金色流光 */
+.hero_card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(244, 206, 138, .2) 14%, rgba(244, 206, 138, .95) 50%, rgba(244, 206, 138, .2) 86%, transparent);
+}
+
+/* 右下角柔光 */
+.hero_card::after {
+  content: "";
+  position: absolute;
+  bottom: -120px;
+  right: -90px;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(244, 206, 138, .18), transparent 64%);
+  pointer-events: none;
+}
+
+.hero_main {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.hero_players {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.hero_players_avatar {
+  display: block;
+  flex: 0 0 66px;
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  border: 3px solid rgba(244, 206, 138, .9);
+  background: #2a3040;
+  overflow: hidden;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .45), 0 0 0 4px rgba(244, 206, 138, .16);
+}
+
+.hero_players_img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hero_players_fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--gold-soft);
+}
+
+.hero_players_name {
+  font-size: 29px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: .5px;
+  line-height: 1.2;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, .3);
 }
 
 .uid_tag {
   display: inline-block;
-  background: #2f323b;
-  border-radius: 8px;
-  padding: 2px 14px;
-  font-size: 20px;
-  color: #ffd98a;
+  margin-top: 7px;
+  background: rgba(244, 206, 138, .12);
+  border: 1px solid rgba(244, 206, 138, .3);
+  border-radius: 9px;
+  padding: 3px 13px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--gold-soft);
+  letter-spacing: .4px;
 }
 
 .hero_title {
-  font-size: 34px;
-  font-weight: 700;
-  color: #ffcf70;
-  margin: 10px 0 8px;
-  text-shadow: 0 2px 8px rgba(255, 207, 112, 0.25);
+  font-size: 36px;
+  font-weight: 800;
+  margin: 18px 0 8px;
+  letter-spacing: .6px;
+  background: linear-gradient(180deg, #ffffff 0%, #f4ce8a 60%, #d19a3c 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 24px rgba(244, 206, 138, .18);
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .3));
 }
 
 .hero_row {
-  font-size: 20px;
-  margin: 4px 0;
-  color: #d8d8d8;
+  font-size: 17px;
+  color: rgba(232, 237, 248, .72);
+  margin: 6px 0;
+  font-weight: 500;
 }
 
 .hero_row b {
-  color: #ffd98a;
-  font-size: 24px;
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, .35);
+}
+
+.luck_num {
+  background: linear-gradient(120deg, #ffe8b8, #f4ce8a 55%, #d19a3c);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+}
+
+.luck_rate {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gold-soft);
+  margin-left: 5px;
 }
 
 .chips {
-  margin: 10px 0 6px;
+  margin: 15px 0 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .chip {
   display: inline-block;
-  background: #2f323b;
-  border: 1px solid #4a4e5a;
-  color: #cfd3dc;
-  border-radius: 8px;
-  padding: 2px 12px;
-  font-size: 16px;
-  margin-right: 10px;
+  background: linear-gradient(180deg, rgba(244, 206, 138, .2), rgba(209, 154, 60, .12));
+  border: 1px solid rgba(244, 206, 138, .34);
+  color: var(--gold-soft);
+  border-radius: 9px;
+  padding: 3px 14px;
+  font-size: 13.5px;
+  font-weight: 700;
 }
 
+/* 指标行：深色底上的玻璃小卡 */
 .metrics {
   display: flex;
   gap: 12px;
-  margin-top: 10px;
+  margin-top: 18px;
 }
 
-/* 数值与单位、标签同排一行：原先标签另起一行，四项并排时标签被压成多行 */
 .metric {
   flex: 1;
   display: flex;
-  align-items: baseline;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  white-space: nowrap;
+  gap: 5px;
+  padding: 13px 8px;
+  border-radius: 15px;
+  background: linear-gradient(165deg, rgba(255, 255, 255, .1) 0%, rgba(255, 255, 255, .035) 100%);
+  border: 1px solid rgba(255, 255, 255, .12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1);
 }
 
 .m_num {
-  font-size: 22px;
-  font-weight: 700;
-  color: #ffd98a;
+  font-size: 26px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+  background: linear-gradient(180deg, #ffffff 0%, #d7ddec 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .m_unit {
-  font-size: 14px;
-  color: #9aa0ac;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(224, 230, 244, .6);
   margin-left: 2px;
+  -webkit-text-fill-color: rgba(224, 230, 244, .6);
 }
 
 .m_lable {
-  font-size: 14px;
-  color: #9aa0ac;
-  margin-left: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: rgba(224, 230, 244, .64);
+  white-space: nowrap;
 }
 
 .hero_side {
@@ -122,167 +284,215 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  margin-left: 16px;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+  min-width: 124px;
 }
 
 .hero_avatar {
   display: block;
-  width: 96px;
-  height: 96px;
+  width: 104px;
+  height: 104px;
   border-radius: 50%;
-  border: 3px solid #ffcf70;
-  background: #2f323b center / cover no-repeat;
+  border: 3px solid rgba(244, 206, 138, .92);
+  background: #2a3040 center / cover no-repeat;
+  overflow: hidden;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .5), 0 0 0 4px rgba(244, 206, 138, .16);
 }
 
 .hero_note {
-  font-size: 14px;
-  color: #9aa0ac;
-  margin-top: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: rgba(224, 230, 244, .66);
   white-space: nowrap;
 }
 
-/* ===== S级头像网格 ===== */
-.grid_card {
-  background: #202227;
-  border: 1px solid #3a3d47;
-  border-radius: 14px;
-  padding: 14px 16px;
-  margin-top: 14px;
+/* ================= 浅色内容卡 ================= */
+.grid_card,
+.pool_card {
+  position: relative;
+  margin-top: 20px;
+  padding: 22px 26px;
+  border-radius: 22px;
+  background: linear-gradient(160deg, #ffffff 0%, #f7f9fe 52%, #eef3fb 100%);
+  border: 1px solid var(--card-line);
+  box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255, 255, 255, .96);
+}
+
+/* 内容卡左上金色细线 */
+.grid_card::before,
+.pool_card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 26px;
+  width: 92px;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: linear-gradient(90deg, var(--gold), rgba(209, 154, 60, 0));
 }
 
 .grid_title {
-  font-size: 15px;
-  color: #d8d8d8;
-  margin-bottom: 10px;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 16px;
+  padding-left: 13px;
+  border-left: 4px solid var(--gold);
+  line-height: 1.35;
 }
 
 .grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 13px;
 }
 
 .cell {
   position: relative;
-  width: 88px;
-  height: 88px;
-  border-radius: 12px;
-  border: 2px solid #b98a2f;
-  background: linear-gradient(160deg, #3a3320 0%, #241f14 100%);
+  width: 76px;
+  height: 76px;
+  border-radius: 17px;
+  overflow: hidden;
+  background: linear-gradient(160deg, #eef2f9, #dbe2ef);
+  border: 2px solid #fff;
+  box-shadow: 0 4px 12px rgba(24, 32, 54, .14), inset 0 1px 0 rgba(255, 255, 255, .9);
+  transition: transform .18s ease, box-shadow .18s ease;
 }
 
 .cell_img {
   display: block;
   width: 100%;
   height: 100%;
-  border-radius: 10px;
-  background: #2f323b center / cover no-repeat;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center top;
 }
 
 .cell_num {
   position: absolute;
-  top: -8px;
-  right: -8px;
-  min-width: 28px;
+  right: 3px;
+  bottom: 3px;
+  min-width: 23px;
+  height: 23px;
+  line-height: 23px;
+  padding: 0 5px;
   text-align: center;
-  background: #e05656;
-  color: #fff;
-  font-size: 16px;
-  line-height: 28px;
-  border-radius: 14px;
-  padding: 0 6px;
-}
-
-/* ===== 分池进度 ===== */
-.pool_card {
-  background: #202227;
-  border: 2px solid #3a3d47;
-  border-radius: 16px;
-  padding: 16px 20px;
-  margin-top: 16px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #241a06;
+  background: linear-gradient(135deg, #ffe8b8, #f4ce8a 55%, #d19a3c);
+  box-shadow: 0 2px 7px rgba(163, 112, 28, .45), inset 0 1px 0 rgba(255, 255, 255, .6);
 }
 
 .pool_title {
-  font-size: 24px;
-  font-weight: 700;
-  color: #ffcf70;
-  margin-bottom: 12px;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--ink);
+  margin-bottom: 18px;
+  padding-left: 13px;
+  border-left: 4px solid var(--gold);
+  line-height: 1.35;
 }
 
 .pool_list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 12px;
 }
 
 .bar_row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 13px;
 }
 
 .bar_img {
-  flex-shrink: 0;
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  background: #2f323b center / cover no-repeat;
-  border: 1px solid #4a4e5a;
+  flex: 0 0 50px;
+  width: 50px;
+  height: 50px;
+  border-radius: 13px;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center top;
+  background-color: #e5eaf3;
+  border: 2px solid #fff;
+  box-shadow: 0 3px 9px rgba(24, 32, 54, .14);
 }
 
-.q_mark {
+.bar_img.q_mark {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 26px;
-  font-weight: 700;
-  color: #ffd98a;
+  font-size: 21px;
+  font-weight: 800;
+  color: var(--text-faint);
+  background: linear-gradient(160deg, #eef2f9, #e0e7f2);
 }
 
 .bar_wrap {
   flex: 1;
-  height: 34px;
+  height: 36px;
+  border-radius: 18px;
+  background: #e7ecf5;
+  overflow: hidden;
+  box-shadow: inset 0 2px 6px rgba(24, 32, 54, .1);
 }
 
 .bar_track {
-  height: 34px;
-  border-radius: 17px;
+  height: 100%;
+  border-radius: 18px;
   display: flex;
   align-items: center;
-  padding: 0 16px;
-  background: #3a3f4b;
-  min-width: 84px;
-  box-sizing: border-box;
-  white-space: nowrap;
+  justify-content: flex-end;
+  padding-right: 15px;
+  min-width: 78px;
+  background: linear-gradient(90deg, #a6b6d6, #7589b9);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), 0 2px 6px rgba(117, 137, 185, .3);
+  transition: width .2s ease;
 }
 
-.bar_track.good { background: linear-gradient(90deg, #3f9e56, #2f7d43); }
-.bar_track.mid { background: linear-gradient(90deg, #d9a13c, #b9822a); }
-.bar_track.bad { background: linear-gradient(90deg, #d95a5a, #b93f3f); }
+.bar_track.good {
+  background: linear-gradient(90deg, #86d9a2, #3ea06a);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), 0 2px 6px rgba(62, 160, 106, .32);
+}
+
+.bar_track.mid {
+  background: linear-gradient(90deg, #f6d191, #d19a3c);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), 0 2px 6px rgba(209, 154, 60, .32);
+}
+
+.bar_track.bad {
+  background: linear-gradient(90deg, #e79b95, #c8544b);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), 0 2px 6px rgba(200, 84, 75, .32);
+}
 
 .bar_text {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 14.5px;
+  font-weight: 800;
   color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .28);
+  font-variant-numeric: tabular-nums;
 }
 
 .wai_tag {
-  flex-shrink: 0;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  border: 2px solid #e05656;
-  color: #e05656;
-  font-size: 15px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #e79b95, #c8544b);
+  border-radius: 9px;
+  padding: 3px 10px;
+  box-shadow: 0 3px 8px rgba(200, 84, 75, .38);
 }
 
 .logo {
+  margin-top: 20px;
   text-align: center;
-  color: #6b7078;
   font-size: 12px;
-  padding: 12px 0 4px;
+  color: var(--text-faint);
+  letter-spacing: .3px;
 }
