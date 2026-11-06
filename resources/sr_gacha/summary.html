@@ -13,47 +13,42 @@
       {{/if}}
 
       {{if pools && pools.length}}
-      <header class="page-head">
-        <div class="page-head-main">
-          <div class="eyebrow">GACHA RECORD</div>
-          <h1>抽卡记录</h1>
-          <p class="uid-line">UID {{uid}} · 共 {{totalPulls}} 抽</p>
+      <header class="hero">
+        <div class="hero-left">
+          <div class="hero-avatar" {{if avatar}}style="background-image:url('{{avatar}}')"{{/if}}>{{if !avatar}}<span class="hero-avatar-fallback">抽</span>{{/if}}</div>
+          <div class="hero-user">
+            <div class="hero-name">{{nickname}}</div>
+            <div class="hero-uid">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 3a7 7 0 110 14 7 7 0 010-14zm0 3a4 4 0 100 8 4 4 0 000-8z"/></svg>
+              UID {{uid}}
+            </div>
+          </div>
         </div>
-        <div class="head-badge">
-          <span class="hb-num">{{totalFive}}</span>
-          <span class="hb-label">五星</span>
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <span class="hs-num">{{totalPulls}}</span>
+            <span class="hs-label">总抽数</span>
+          </div>
+          <div class="hero-stat">
+            <span class="hs-num gold">{{totalFive}}</span>
+            <span class="hs-label">五星</span>
+          </div>
+          <div class="hero-stat">
+            <span class="hs-num">{{totalUp}}</span>
+            <span class="hs-label">UP</span>
+          </div>
         </div>
       </header>
 
-      <section class="ov-box">
-        <div class="ov-head">
-          <span class="ov-title">卡池总览</span>
-          <span class="ov-hint">点击统计卡片可查看下方明细</span>
-        </div>
-        <div class="ov-table">
-          <div class="ov-row ov-th">
-            <span class="ov_c1">卡池</span>
-            <span class="ov_c2">抽数</span>
-            <span class="ov_c3">五星</span>
-            <span class="ov_c4">五星平均</span>
-            <span class="ov_c5">不歪率</span>
-            <span class="ov_c6">UP平均</span>
-            <span class="ov_c7">垫抽</span>
-          </div>
-          {{each pools pool}}
-          <div class="ov-row ov-body">
-            <span class="ov_c1"><i class="ov_dot label_{{pool.labelClass}}"></i>{{pool.name}}</span>
-            <span class="ov_c2">{{pool.allNumText}}</span>
-            <span class="ov_c3">{{pool.fiveNumText}}</span>
-            <span class="ov_c4">{{pool.fiveAvg}}</span>
-            <span class="ov_c5">{{pool.upRate}}</span>
-            <span class="ov_c6">{{pool.upAvgText}}</span>
-            <span class="ov_c7">{{pool.pityText}}</span>
-          </div>
-          {{/each}}
-        </div>
-      </section>
-      {{/if}}
+      <nav class="pool-tabs">
+        {{each pools pool}}
+        <span class="pool-tab">
+          <i class="pool-dot label_{{pool.labelClass}}"></i>
+          <span class="pt-name">{{pool.name}}</span>
+          <b>{{pool.allNum || 0}}</b>
+        </span>
+        {{/each}}
+      </nav>
 
       <div class="pool-columns">
         <div class="pool-column" id="pool-col-0">
@@ -135,6 +130,7 @@
           })
         })()
       </script>
+      {{/if}}
       <div class="logo">{{@copy()}}</div>
     </div>
   </body>
