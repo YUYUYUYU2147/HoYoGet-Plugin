@@ -199,25 +199,35 @@ async function fetchPool(ctx, pool) {
 }
 /** 原始记录转成视图层要的池结构：五星带「距上一个五星的抽数」，末位剩余抽数记为垫抽 */
 function buildPool(pool, rows) {
+  /* 保留全部逐抽（含三星四星），仅给五星补 gacha_count（距上一金抽数）。
+     之前只存五星，导致和小助手全量数据合并后又被「只有几个金」覆盖，
+     看起来像没写入本地。 */
   const records = []
   let counter = 0
   for (const row of rows) {
     counter += 1
-    if (String(row?.rank_type) !== "5") continue
-    records.push({
+    const rank = String(row?.rank_type || "")
+    const record = {
       id: String(row?.id || ""),
       name: row?.name || "未知",
       item_type: row?.item_type || "",
       is_up: row?.is_up === true,
-      gacha_count: counter,
       time: String(row?.time || ""),
+      rank_type: rank,
       icon: "",
-    })
-    counter = 0
+    }
+    if (rank === "5") {
+      record.gacha_count = counter
+      counter = 0
+    }
+    records.push(record)
   }
-  const fiveNum = records.length
+  records.sort((a, b) => String(a.id).localeCompare(String(b.id), "en", { numeric: true }))
+  const five = records.filter(r => String(r.rank_type) === "5")
+  const four = records.filter(r => String(r.rank_type) === "4")
+  const fiveNum = five.length
   const totalPulls = rows.length
-  const avg = fiveNum ? (records.reduce((sum2, r) => sum2 + Number(r.gacha_count || 0), 0) / fiveNum).toFixed(1) : "0.0"
+  const avg = fiveNum ? (five.reduce((sum2, r) => sum2 + Number(r.gacha_count || 0), 0) / fiveNum).toFixed(1) : "0.0"
   return {
     ...pool,
     name: pool.name,
@@ -226,7 +236,7 @@ function buildPool(pool, rows) {
     upNum: 0,
     pity: counter,
     avgPity: avg,
-    fourNum: 0,
+    fourNum: four.length,
     fourLog: [],
     records,
   }
@@ -245,8 +255,21 @@ function summarize(pools, uid) {
 ﻿
 /** 出图：与星铁、绝区零共用同一套视图与模板，保证三游戏渲染逻辑完全一致 */
 async function renderImage(e, data) {
-  const view = buildSummaryView({ pools: data.pools }, data.uid, e, "grid", "gs")
-  const buf = await render("sr_gacha/summary", view, { e })
+  /* 本地现在保存全部逐抽（含三星四星），但总览只需要五星记录：
+     模板按「records = 五星」计算保底/平均，直接塞全量会算错。
+     这里给渲染层一份只含五星的副本，同时按真实逐抽总数决定是否分页。 */
+  const sourcePools = Array.isArray(data.pools) ? data.pools : Object.values(data.pools || {})
+  const totalPulls = sourcePools.reduce((n, pool) => n + (pool?.records?.length || 0), 0)
+  const fivePools = {}
+  for (const [key, pool] of Object.entries(data.pools || {})) {
+    const records = Array.isArray(pool?.records) ? pool.records : []
+    fivePools[key] = { ...pool, records: records.filter(r => String(r.rank_type || "5") === "5") }
+  }
+  const view = buildSummaryView({ pools: fivePools }, data.uid, e, "grid", "gs")
+  /* 逐抽很多时整页高度会到几万 px，Chromium 单张截图会失败（Unable to capture screenshot）。
+     显式按记录数决定是否分页：超过阈值就走多页截图。 */
+  const multiPage = totalPulls > 600
+  const buf = await render("sr_gacha/summary", view, { e, ...(multiPage ? { multiPage: true, multiPageHeight: 6000 } : {}) })
   if (Buffer.isBuffer(buf)) return e.reply(segment.image(buf))
   return e.reply(buf)
 }
@@ -352,6 +375,28 @@ export class gs_gacha extends plugin {
               { cmd: '#米哈游绝区零抽卡记录', note: '调频总览统计' },
               { cmd: '#米哈游绝区零全部记录', note: '各频段汇总' },
               { cmd: '#导出抽卡记录', note: '导出 UIGF 标准 JSON' },
+            ],
+          },
+        ],
+      },
+      {
+        key: 'bh3', index: '04', title: '崩坏3', desc: 'Honkai Impact 3rd',
+        groups: [
+          {
+            title: '更新记录',
+            items: [
+              { cmd: '！更新抽卡记录', note: '刷新崩三抽卡记录（叹号前缀）' },
+              { cmd: '#崩坏3更新抽卡记录', note: '同上，用井号写法' },
+              { cmd: '#全量更新抽卡记录', note: '全量重拉，补回更早历史' },
+            ],
+            note: '崩三使用叹号 ！ 作前缀，也可用 #崩坏3 / #崩三。',
+          },
+          {
+            title: '查询',
+            items: [
+              { cmd: '！抽卡记录', note: '崩三抽卡总览统计' },
+              { cmd: '#崩坏3抽卡记录', note: '同上' },
+              { cmd: '#崩坏3核对', note: '校验本地记录与接口是否一致' },
             ],
           },
         ],
@@ -703,7 +748,27 @@ export class gs_gacha extends plugin {
       return e.reply(failed.length ? `更新失败：${failed[0]}` : "接口没有返回记录，可能链接已过期，或该账号近期没有抽卡")
     }
     const data = { uid: uid || uidHint || "未知", update_time: new Date().toLocaleString("zh-CN"), pools }
-    if (data.uid !== "未知") saveData(dataFile(data.uid), data)
+    /* 不要直接覆盖：接口只保留约半年记录，覆盖会把小助手拉来的更早历史冲掉。
+       改成按 id 合并，接口数据更新同 id 条目、保留本地更早的记录。 */
+    if (data.uid !== "未知") {
+      const target = dataFile(data.uid)
+      const existing = readData(target)
+      if (existing?.pools) {
+        for (const [key, pool] of Object.entries(pools)) {
+          const oldPool = existing.pools[key]
+          if (!oldPool?.records?.length) continue
+          const seen = new Set((pool.records || []).map(r => String(r.id)))
+          const extra = oldPool.records.filter(r => r?.id && !seen.has(String(r.id)))
+          if (!extra.length) continue
+          pool.records = [...pool.records, ...extra]
+            .sort((a, b) => String(a.id).localeCompare(String(b.id), "en", { numeric: true }))
+          pool.totalPulls = pool.records.length
+          pool.fiveNum = pool.records.filter(r => String(r.rank_type || "5") === "5").length
+          pool.fourNum = pool.records.filter(r => String(r.rank_type) === "4").length
+        }
+      }
+      saveData(target, data)
+    }
     try {
       await renderImage(e, data)
     } catch (error) {

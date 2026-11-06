@@ -135,6 +135,7 @@ body::after {
 .pf-gs { color: #d0a94e; }
 .pf-sr { color: #6f8fd8; }
 .pf-zzz { color: #d9a83c; }
+.pf-bh3 { color: #6fb3d8; }
 
 /* ---------- 提示条 ---------- */
 .notice {
@@ -183,6 +184,7 @@ body::after {
 .section-sr .card-index { background: linear-gradient(135deg, #9ab2ea, #6f8fd8); }
 .section-zzz .card-index { background: linear-gradient(135deg, #f0cd7a, #d9a83c); }
 .section-helper .card-index { background: linear-gradient(135deg, #cbb8e8, #9b7ec8); }
+.section-bh3 .card-index { background: linear-gradient(135deg, #a8d8ee, #6fb3d8); }
 
 .card-head h2 {
   font-size: 19px;
