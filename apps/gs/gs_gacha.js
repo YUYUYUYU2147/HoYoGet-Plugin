@@ -294,14 +294,14 @@ export class gs_gacha extends plugin {
         // 省略游戏名前缀：#更新小助手抽卡记录 / #更新提瓦特小助手记录（原神为默认游戏）
         { reg: "^#?[ \\t]*(更新|刷新|同步|获取|导入|补全|补回)(提瓦特)?小助手(抽卡|祈愿)?(记录|数据)$", fnc: "helperHelp" },
         { reg: "^#*米哈游原神导入小助手(抽卡|祈愿)?(记录|数据)(\\s+\\S+)?$", fnc: "importLelaer" },
-        // 不带游戏名的通用写法 #抽卡帮助 → 三个游戏的总帮助图
+        // 不带游戏名的通用写法 #抽卡帮助 → 四个游戏的总帮助图
         { reg: "^#?[ \\t]*抽卡(记录)?帮助$", fnc: "gachaHelpAll" },
         // 带游戏名但不带米哈游前缀：#原神抽卡帮助 / 原神抽卡帮助
         { reg: "^[#*%％]?[ \\t]*(?:原神|genshin|gs|GS)[ \\t]*抽卡(记录)?帮助$", fnc: "help" },
       ],
     })
   }
-  /** #抽卡帮助：三个游戏的抽卡指令总览，渲染成一张图 */
+  /** #抽卡帮助：四个游戏的抽卡指令总览，渲染成一张图 */
   async gachaHelpAll(e) {
     const sections = [
       {
@@ -639,7 +639,18 @@ export class gs_gacha extends plugin {
     const detail = Object.entries(stats.byType)
       .map(([type, count]) => `${names[type] || type}：新增 ${count}`)
       .join('，')
-    return e.reply(`✅ UID:${auth.uid} 已从提瓦特小助手拉取 ${rows.length} 条，${detail || '无新增'}（自动去重）`)
+    const summary = `✅ UID:${auth.uid} 已从提瓦特小助手拉取 ${rows.length} 条，${detail || '无新增'}（自动去重）`
+    // 更新完按常规流程出一张总览图，和 #更新抽卡记录 保持一致
+    const merged = readData(dataFile(auth.uid))
+    if (merged?.pools) {
+      try {
+        await renderImage(e, merged)
+        return e.reply(summary)
+      } catch (error) {
+        logger.warn(`[HoYoGet][gs_gacha] 小助手更新后出图失败：${error?.message || error}`)
+      }
+    }
+    return e.reply(summary)
   }
   /** 导入小助手导出的 UIGF/SRGF 文件（补回历史） */
   async importLelaer(e) {
