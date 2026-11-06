@@ -158,9 +158,17 @@ async function render(path, data_, cfg) {
   if (path.includes('bilibili')) {
     data_.emoji = config().emoji;
   }
+  /* 逐抽记录很多时（如原神小助手全量 1400+ 条），整页高度会到几万 px，
+     Chromium 单张截图会直接失败（Unable to capture screenshot）。
+     这里让超过阈值的页面自动走多页截图，避免渲染失败。 */
+  const recordCount = (data_?.pools && Object.values(data_.pools).reduce((n, pool) => n + (pool?.records?.length || 0), 0)) || 0
+  const autoMultiPage = cfg.multiPage !== undefined
+    ? cfg.multiPage
+    : (data_?.multiPage ?? recordCount > 600)
   const img = await e.runtime.render('米哈游', path, data_, {
     retType: 'base64',
     fullPage: cfg.fullPage !== false,
+    ...(autoMultiPage ? { multiPage: true, multiPageHeight: cfg.multiPageHeight || 6000 } : {}),
     beforeRender({ data }) {
       // 本地图标（wiki/imgs/*.png）的相对路径必须按实际落盘深度算，不能写死：
       // 框架把 HTML 存在 ./temp/html/小花火/{path}/{saveId}.html，
