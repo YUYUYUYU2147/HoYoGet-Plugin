@@ -898,11 +898,18 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
   // 全部卡池都是 0 抽时不再补一张空卡（模板渲染「暂无抽卡记录」提示）
   const totalPulls = shownPools.reduce((n, p) => n + (Number(p.allNum) || 0), 0)
   const totalFive = shownPools.reduce((n, p) => n + (Number(p.fiveNum) || 0), 0)
+  const totalUp = shownPools.reduce((n, p) => n + (Number(p.upNum) || 0), 0)
+  // 顶部玩家信息卡：头像/昵称优先用调用方塞进 data 的（原神/星铁各自取过），兜底 QQ 资料
+  const nickname = data?.nickname || e?.nickname || e?.user?.nickname || (game === 'zzz' ? '绳匠' : '开拓者')
+  const avatar = data?.avatar || e?.user?.avatar || ''
   return {
     uid,
+    nickname,
+    avatar,
     update_time: data?.update_time || '未知',
     totalPulls,
     totalFive,
+    totalUp,
     pools: shownPools,
   }
 }

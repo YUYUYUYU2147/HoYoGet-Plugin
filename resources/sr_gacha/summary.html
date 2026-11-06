@@ -13,22 +13,43 @@
       {{/if}}
 
       {{if pools && pools.length}}
-      <header class="page-head">
-        <div class="page-head-main">
-          <div class="eyebrow">GACHA RECORD</div>
-          <h1>抽卡记录</h1>
-          <p class="uid-line">UID {{uid}} · 共 {{totalPulls}} 抽</p>
+      <header class="hero">
+        <div class="hero-user">
+          <div class="hero-avatar" {{if avatar}}style="background-image:url('{{avatar}}')"{{/if}}></div>
+          <div class="hero-info">
+            <div class="hero-name">{{nickname}}</div>
+            <div class="hero-uid">UID {{uid}}</div>
+          </div>
         </div>
-        <div class="head-badge">
-          <span class="hb-num">{{totalFive}}</span>
-          <span class="hb-label">五星</span>
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <span class="hs-num">{{totalPulls}}</span>
+            <span class="hs-label">总抽数</span>
+          </div>
+          <div class="hero-stat">
+            <span class="hs-num gold">{{totalFive}}</span>
+            <span class="hs-label">五星</span>
+          </div>
+          <div class="hero-stat">
+            <span class="hs-num">{{totalUp}}</span>
+            <span class="hs-label">UP</span>
+          </div>
         </div>
       </header>
+
+      <nav class="pool-tabs">
+        {{each pools pool}}
+        <span class="pool-tab">
+          <i class="pool-dot label_{{pool.labelClass}}"></i>{{pool.name}}
+          <b>{{pool.allNum || 0}}</b>
+        </span>
+        {{/each}}
+      </nav>
 
       <section class="ov-box">
         <div class="ov-head">
           <span class="ov-title">卡池总览</span>
-          <span class="ov-hint">点击统计卡片可查看下方明细</span>
+          <span class="ov-hint">下方为各卡池明细</span>
         </div>
         <div class="ov-table">
           <div class="ov-row ov-th">
@@ -41,6 +62,21 @@
             <span class="ov_c7">垫抽</span>
           </div>
           {{each pools pool}}
+          <div class="ov-row ov-body">
+            <span class="ov_c1"><i class="ov_dot label_{{pool.labelClass}}"></i>{{pool.name}}</span>
+            <span class="ov_c2">{{pool.allNumText}}</span>
+            <span class="ov_c3">{{pool.fiveNumText}}</span>
+            <span class="ov_c4">{{pool.fiveAvg}}</span>
+            <span class="ov_c5">{{pool.upRate}}</span>
+            <span class="ov_c6">{{pool.upAvgText}}</span>
+            <span class="ov_c7">{{pool.pityText}}</span>
+          </div>
+          {{/each}}
+        </div>
+      </section>
+      {{/if}}
+
+      {{each pools pool}}
       <section class="pool-card">
         <header class="pool-head">
           <div class="pool-title">

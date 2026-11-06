@@ -34,48 +34,81 @@ body {
   font-size: 15px;
 }
 
-/* ---------- 页头 ---------- */
-.page-head {
+/* ---------- 顶部玩家信息卡 ---------- */
+.hero {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 4px 24px;
+  gap: 20px;
+  background: linear-gradient(135deg, #ffffff 0%, #f4f6fb 100%);
+  border-radius: 18px;
+  padding: 22px 26px;
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
 }
 
-.eyebrow {
-  font-size: 11px;
-  letter-spacing: 3px;
-  color: var(--text-faint);
-  font-weight: 600;
+.hero-user { display: flex; align-items: center; gap: 16px; min-width: 0; }
+
+.hero-avatar {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  background-color: #e6e9f1;
+  border: 3px solid #fff;
+  box-shadow: 0 3px 10px rgba(38,44,60,.15);
+  flex-shrink: 0;
 }
 
-.page-head h1 {
-  font-size: 30px;
+.hero-name {
+  font-size: 22px;
   font-weight: 700;
-  letter-spacing: 1px;
-  margin: 6px 0 8px;
+  color: var(--text);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.uid-line {
-  font-size: 13px;
-  color: var(--text-weak);
-}
+.hero-uid { font-size: 12.5px; color: var(--text-weak); margin-top: 4px; }
 
-.head-badge {
+.hero-stats { display: flex; align-items: center; gap: 10px; }
+
+.hero-stat {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  width: 92px;
-  height: 92px;
-  border-radius: 22px;
-  background: linear-gradient(150deg, #f7d488 0%, #e0a63f 60%, #c98a2c 100%);
-  color: #fff;
-  box-shadow: var(--shadow);
+  min-width: 76px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #eef0f6;
+}
+.hs-num { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1.1; }
+.hs-num.gold { color: var(--gold); }
+.hs-label { font-size: 11.5px; color: var(--text-weak); margin-top: 4px; }
+
+/* ---------- 卡池标签栏 ---------- */
+.pool-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
 }
 
-.hb-num { font-size: 32px; font-weight: 700; line-height: 1; }
-.hb-label { font-size: 12px; opacity: .9; margin-top: 4px; }
+.pool-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--text);
+  box-shadow: 0 1px 4px rgba(38,44,60,.04);
+}
+.pool-tab b { color: var(--text-weak); font-weight: 600; font-size: 12px; }
 
 /* ---------- 总览表 ---------- */
 .ov-box {
@@ -380,3 +413,11 @@ body {
   color: var(--text-weak);
   text-align: center;
 }
+
+/* ---------- 卡池类别色点（模板用 label_<class> 标记圆点颜色） ---------- */
+.label_char { background: linear-gradient(135deg, #f0b352, #d9902f); }
+.label_weapon { background: linear-gradient(135deg, #a98be0, #7a5cc4); }
+.label_common { background: linear-gradient(135deg, #8ec5e8, #5a8fc4); }
+.label_newbie { background: linear-gradient(135deg, #8fd6a5, #4f9f6b); }
+.label_collabChar { background: linear-gradient(135deg, #f08fb0, #c45a86); }
+.label_collabWeapon { background: linear-gradient(135deg, #f0a37a, #c46f4a); }
