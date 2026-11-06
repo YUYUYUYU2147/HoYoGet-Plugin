@@ -177,23 +177,48 @@ body {
   background: var(--text-faint);
 }
 
-/* ---------- 统计格 ---------- */
+/* ---------- 卡池两栏：左统计 / 右五星网格 ---------- */
+.pool-body {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+  padding-top: 18px;
+}
+
+.pool-side {
+  position: sticky;
+  top: 0;
+  min-width: 0;
+}
+
+.pool-main { min-width: 0; }
+
+.side-range {
+  margin-top: 12px;
+  font-size: 11.5px;
+  color: var(--text-faint);
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* ---------- 统计格（侧栏 2 列） ---------- */
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 10px;
-  margin: 20px 0 4px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .stat-cell {
   background: linear-gradient(180deg, #fafbfe 0%, #f3f5fa 100%);
   border: 1px solid #eef0f6;
   border-radius: 12px;
-  padding: 14px 12px;
+  padding: 12px 10px;
   text-align: center;
+  min-width: 0;
 }
 
-.stat-num { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1.1; }
+.stat-num { font-size: 19px; font-weight: 700; color: var(--text); line-height: 1.15; }
 .stat-unit { font-size: 12px; font-weight: 400; color: var(--text-weak); margin-left: 2px; }
 .stat-label { font-size: 12px; color: var(--text-weak); margin-top: 6px; }
 
@@ -208,22 +233,22 @@ body {
 .split-text { font-size: 12.5px; color: var(--text-faint); white-space: nowrap; }
 
 /* ---------- 年份 ---------- */
-.year-block { margin-bottom: 18px; }
+.year-block { margin-bottom: 14px; }
 .year-block:last-child { margin-bottom: 0; }
 
 .year-head {
   display: flex;
   align-items: baseline;
   gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 .year-title { font-size: 15px; font-weight: 700; color: var(--text); }
 .year-count { font-size: 12px; color: var(--text-faint); }
 
 .card-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
 }
 
 /* ---------- 五星卡片（gga 风格：稀有度渐变 + 底部抽数） ---------- */
@@ -313,7 +338,7 @@ body {
 
 /* ---------- 保底进度条（参考 Starward：绿→红阈值 74/63） ---------- */
 .pity-bar-wrap {
-  margin: 18px 0 2px;
+  margin: 12px 0 0;
   padding: 14px 16px 16px;
   background: linear-gradient(180deg, #fbfcfe 0%, #f4f6fa 100%);
   border: 1px solid #eef0f6;
