@@ -11,6 +11,12 @@ const STOKEN_DIR = path.join(PLUGIN_ROOT, "data", "Stoken")
 const HOST_CN = "https://public-operation-hk4e.mihoyo.com/gacha_info/api"
 const HOST_OS = "https://public-operation-hk4e-sg.hoyoverse.com/gacha_info/api"
 const GEN_AUTHKEY_URL = "https://api-takumi.mihoyo.com/binding/api/genAuthKey"
+/* 提瓦特小助手（lelaer）
+   - 回传：POST https://www.lelaer.com/uigf.php（UIGF v2.3 multipart + 祈愿链接），Mys 用的是同一接口
+   - 拉取：官方未开放单 UID 逐抽 HTTP 接口（getWishHistory/getWishDetail 只给卡池图鉴），
+     所以「补回」只能读用户自己在小助手导出的 UIGF/SRGF 文件（导入），或粘贴链接拉官方接口。
+   小助手只收原神记录。 */
+const LELAER_UPLOAD_URL = "https://www.lelaer.com/uigf.php"
 const getNoteUser = makeGenshinLoader("model/mys/NoteUser.js", ["model/mys/NoteUser.js"])
 const GS_POOLS = [
   { key: "GsGachaType_AvatarUp", type: "301", name: "角色活动祈愿" },
@@ -259,6 +265,10 @@ export class gs_gacha extends plugin {
         { reg: "^#*米哈游原神抽卡链接", fnc: "updateByLink" },
         { reg: "^#*米哈游原神超越抽卡", fnc: "updateByLink" },
         { reg: "^#*米哈游原神抽卡帮助$", fnc: "help" },
+        // 回传提瓦特小助手（带米哈游前缀，避免抢 genshin/Mys 的同类指令）
+        { reg: "^#*米哈游原神(抽卡|祈愿)?(记录|数据)?回传(提瓦特)?小助手$", fnc: "uploadLelaer" },
+        { reg: "^#*米哈游原神(更新|同步|补全|补回)小助手(抽卡|祈愿)?(记录|数据)$", fnc: "helperHelp" },
+        { reg: "^#*米哈游原神导入小助手(抽卡|祈愿)?(记录|数据)(\\s+\\S+)?$", fnc: "importLelaer" },
         // 不带游戏名的通用写法：#抽卡帮助 / 抽卡帮助（原神为默认游戏）
         { reg: "^#?[ \\t]*抽卡(记录)?帮助$", fnc: "help" },
         // 带游戏名但不带米哈游前缀：#原神抽卡帮助 / 原神抽卡帮助
@@ -285,6 +295,12 @@ export class gs_gacha extends plugin {
         '#米哈游原神卡池时间 —— 卡池剩余时间',
       ].join('\n'),
       [
+        '提瓦特小助手',
+        '#米哈游原神回传小助手 —— 把本地记录上传到提瓦特小助手（UIGF v2.3）',
+        '#米哈游原神导入小助手记录 <文件> —— 导入小助手导出的 UIGF/SRGF JSON 补回历史',
+        '#米哈游原神更新小助手记录 —— 查看说明（小助手未开放按 UID 拉取接口）',
+      ].join('\n'),
+      [
         '导出 / 其他',
         '#导出抽卡记录 —— 导出 UIGF 标准 JSON（可指名 UID）',
         '#米哈游原神角色列表 —— 已绑定角色一览',
@@ -299,6 +315,178 @@ export class gs_gacha extends plugin {
     ]
     return e.reply(await makeForwardMsg(e, nodes, '原神抽卡帮助'))
   }
+
+  /** 本地 gs_gacha 数据 → UIGF v2.3 list（小助手只认 v2.3） */
+  buildUigfList(uid) {
+    const data = readData(dataFile(uid))
+    if (!data?.pools) return []
+    const typeByKey = Object.fromEntries(GS_POOLS.map(pool => [pool.key, pool.type]))
+    const list = []
+    for (const [key, pool] of Object.entries(data.pools)) {
+      const gachaType = typeByKey[key] || pool.type || '200'
+      for (const row of pool.records || []) {
+        if (!row?.id) continue
+        list.push({
+          uid: String(uid),
+          gacha_type: String(gachaType),
+          uigf_gacha_type: String(gachaType),
+          item_id: String(row.item_id || ''),
+          count: String(Number(row.gacha_count) || 1),
+          time: String(row.time || ''),
+          name: String(row.name || '未知'),
+          lang: 'zh-cn',
+          item_type: String(row.item_type || ''),
+          rank_type: String(row.rank_type || '5'),
+          id: String(row.id),
+        })
+      }
+    }
+    list.sort((a, b) => String(a.id).localeCompare(String(b.id), 'en', { numeric: true }))
+    return list
+  }
+
+  /** 回传提瓦特小助手：UIGF v2.3 multipart + 官方祈愿链接（与 Mys 同一接口） */
+  async uploadLelaer(e) {
+    if (e.at || !e.user_id) return e.reply('只能回传自己的抽卡记录')
+    const auth = await getAuth(e)
+    if (auth.error) return e.reply(auth.error)
+    const list = this.buildUigfList(auth.uid)
+    if (!list.length) return e.reply(`UID:${auth.uid} 暂无可回传的本地原神抽卡记录，请先【#米哈游原神更新抽卡记录】`)
+    let authkey = ''
+    try {
+      authkey = await getAuthKey(auth.uid, auth.region, auth.stokenCookie)
+    } catch (error) {
+      return e.reply(`回传失败：${error?.message || error}`)
+    }
+    const domestic = ['cn_gf01', 'cn_qd01'].includes(auth.region)
+    const host = domestic ? 'https://public-operation-hk4e.mihoyo.com' : 'https://public-operation-hk4e-sg.hoyoverse.com'
+    const query = new URLSearchParams({
+      authkey_ver: '1',
+      sign_type: '2',
+      auth_appid: 'webview_gacha',
+      lang: 'zh-cn',
+      game_biz: domestic ? 'hk4e_cn' : 'hk4e_global',
+      region: auth.region,
+      authkey,
+      gacha_type: '301',
+      page: '1',
+      size: '5',
+      end_id: '0',
+    })
+    const gachaurl = `${host}/gacha_info/api/getGachaLog?${query}`
+    const payload = {
+      info: {
+        uid: String(auth.uid),
+        lang: 'zh-cn',
+        uigf_version: 'v2.3',
+        export_time: new Date().toISOString(),
+        export_app: 'HoYoGet',
+        export_app_version: 'HoYoGet',
+      },
+      list,
+    }
+    await e.reply(`正在把 UID:${auth.uid} 的 ${list.length} 条记录回传提瓦特小助手…`)
+    try {
+      const form = new FormData()
+      form.set('upload', new File([JSON.stringify(payload)], 'data.json', { type: 'application/json' }))
+      form.set('importType', 'uigf')
+      form.set('gachaurl', gachaurl)
+      const response = await fetch(LELAER_UPLOAD_URL, { method: 'POST', body: form, signal: AbortSignal.timeout(30000) })
+      const text = await response.text()
+      if (!response.ok || !text.includes('导入成功')) throw new Error('小助手未确认导入成功，请检查祈愿链接是否有效后重试')
+      return e.reply(`✅ UID:${auth.uid} 已回传提瓦特小助手，请前往小程序查看`)
+    } catch (error) {
+      logger.warn(`[HoYoGet][gs_gacha] UID:${auth.uid} 小助手回传失败：${error?.message || error}`)
+      return e.reply(`UID:${auth.uid} 回传失败：${error?.message || error}\n本地记录已保留，可稍后重试。`)
+    }
+  }
+
+  /** 「更新小助手记录」：小助手无单 UID 逐抽 HTTP 接口，只能导入用户导出的文件 */
+  async helperHelp(e) {
+    return e.reply([
+      '提瓦特小助手（lelaer）没有对外开放「按 UID 拉取逐抽记录」的接口，',
+      '官方只提供上传，所以本插件能做的两种方式：',
+      '',
+      '① 回传（把本地记录推到小助手）',
+      '#米哈游原神回传小助手',
+      '',
+      '② 补回（把小助手导出的记录导入本插件）',
+      '  在小助手小程序里「导出记录」得到 UIGF/SRGF 的 JSON 文件，',
+      '  然后在锅巴「数据管理 → 其他数据」上传，或用：',
+      '#米哈游原神导入小助手记录 <文件路径或直接发文件>',
+      '',
+      '若只想更新本地记录，直接用 #米哈游原神更新抽卡记录（走 stoken 换 authkey）。',
+    ].join('\n'))
+  }
+
+  /** 导入小助手导出的 UIGF/SRGF 文件（补回历史） */
+  async importLelaer(e) {
+    if (e.at || !e.user_id) return e.reply('只能导入自己的抽卡记录')
+    // 取文件：优先消息里的文件，其次路径参数
+    const fileInfo = e.file || (Array.isArray(e.message) ? e.message.find(m => m?.type === 'file')?.data : null)
+    let raw = ''
+    if (fileInfo?.url) {
+      try {
+        const res = await fetch(fileInfo.url, { signal: AbortSignal.timeout(30000) })
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        raw = await res.text()
+      } catch (error) {
+        return e.reply(`下载文件失败：${error?.message || error}`)
+      }
+    } else {
+      const arg = String(e.msg || '').replace(/^#\*米哈游原神导入小助手(抽卡|祈愿)?(记录|数据)/, '').trim()
+      if (!arg) {
+        return e.reply('请直接发送小助手导出的 JSON 文件，或在指令后附上机器人上的文件路径，例如：\n#米哈游原神导入小助手记录 data/HoYoGet-Plugin/import/uigf.json')
+      }
+      const target = path.isAbsolute(arg) ? arg : path.resolve(process.cwd(), arg)
+      if (!fs.existsSync(target)) return e.reply(`找不到文件：${arg}`)
+      raw = fs.readFileSync(target, 'utf8')
+    }
+
+    let json
+    try { json = JSON.parse(raw) } catch { return e.reply('文件不是合法 JSON') }
+    // 兼容 UIGF v2/v4、SRGF 三种结构
+    const list = Array.isArray(json?.list) ? json.list
+      : Array.isArray(json?.hk4e?.[0]?.list) ? json.hk4e[0].list
+      : null
+    if (!list?.length) return e.reply('文件里没有识别到抽卡记录（需要 UIGF 或 SRGF 格式）')
+
+    const uid = String(json?.info?.uid || json?.hk4e?.[0]?.uid || list[0]?.uid || '')
+    if (!/^\d{6,12}$/.test(uid)) return e.reply('文件里缺少有效的 UID')
+    const target = dataFile(uid)
+    const existing = readData(target) || { uid, pools: {} }
+    const typeByKey = Object.fromEntries(GS_POOLS.map(pool => [pool.type, pool.key]))
+    let added = 0
+    for (const row of list) {
+      const gachaType = String(row.gacha_type || row.uigf_gacha_type || '200')
+      const key = typeByKey[gachaType]
+      if (!key) continue
+      const pool = existing.pools[key] ||= { key, type: gachaType, name: (GS_POOLS.find(p => p.key === key) || {}).name, records: [] }
+      pool.records ||= []
+      const id = String(row.id || '')
+      if (!id || pool.records.some(r => String(r.id) === id)) continue
+      pool.records.push({
+        id,
+        name: String(row.name || '未知'),
+        item_type: String(row.item_type || (gachaType === '302' ? '武器' : '角色')),
+        is_up: !!row.is_up,
+        gacha_count: Number(row.count) || 1,
+        time: String(row.time || ''),
+        icon: '',
+      })
+      added++
+    }
+    if (!added) return e.reply(`UID:${uid} 没有新增记录（可能已全部存在）`)
+    for (const pool of Object.values(existing.pools)) {
+      pool.records.sort((a, b) => String(a.id).localeCompare(String(b.id), 'en', { numeric: true }))
+      pool.totalPulls = pool.records.length
+      pool.fiveNum = pool.records.filter(r => String(r.rank_type || '5') === '5').length
+    }
+    existing.update_time = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })
+    saveData(target, existing)
+    return e.reply(`✅ 已导入 UID:${uid} 共 ${added} 条记录（来自小助手导出文件）`)
+  }
+
   async updateByCookie(e) {
     const auth = await getAuth(e)
     if (auth.error) return e.reply(auth.error)
