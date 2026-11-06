@@ -6,12 +6,12 @@ export const DATA_PREVIEW_BYTES = 256 * 1024;
 export class DataBrowserError extends Error {}
 
 export const DATA_CATEGORIES = [
-  { id: 'accounts', title: '账号与凭据', description: 'CK / SK、设备令牌和签到状态等敏感数据。预览会脱敏。' },
-  { id: 'gacha', title: '抽卡与账本', description: '各游戏抽卡记录、账本与导入数据。' },
-  { id: 'panels', title: '面板与挑战', description: '角色面板、深渊挑战、战绩与排行榜缓存。' },
-  { id: 'settings', title: '插件设置', description: '自定义开盒、群打卡等功能配置。' },
-  { id: 'cache', title: '缓存与索引', description: '角色索引、别名、图库及查询缓存。' },
-  { id: 'other', title: '其他数据', description: '其余未归入特定用途的数据文件。' },
+  { id: 'accounts', title: '账号与凭据', icon: '🔑', description: 'CK / SK、设备令牌和签到状态等敏感数据。预览会脱敏。' },
+  { id: 'gacha', title: '抽卡与账本', icon: '🎴', description: '各游戏抽卡记录、账本与导入数据。' },
+  { id: 'panels', title: '面板与挑战', icon: '📊', description: '角色面板、深渊挑战、战绩与排行榜缓存。' },
+  { id: 'settings', title: '插件设置', icon: '⚙️', description: '自定义开盒、群打卡等功能配置。' },
+  { id: 'cache', title: '缓存与索引', icon: '🗂', description: '角色索引、别名、图库及查询缓存。' },
+  { id: 'other', title: '其他数据', icon: '📦', description: '其余未归入特定用途的数据文件。' },
 ];
 
 const GAME_NAMES = { gs: '原神', sr: '崩铁', zzz: '绝区零', bh3: '崩坏3' };
@@ -47,8 +47,36 @@ function titleFor(relative) {
     'GroupName.yaml': '群名称缓存',
     'task_history.json': '任务记录',
     'config.json': '功能配置',
+    'alias_online.json': '在线角色别名',
+    'bwiki_skill_rate.json': '技能倍率表',
+    'manual_gt_url.json': '手动验证码地址',
+    'panel_bg.json': '面板背景设置',
+    'index.json': '索引文件',
+    'version.json': '版本标记',
   };
-  return known[name] || name.replace(/\.(json|ya?ml|db|sqlite3?|txt)$/i, '');
+  if (known[name]) return known[name];
+  // 目录内文件：用「目录说明 · 文件名」让用途更直观
+  const dir = relative.includes('/') ? relative.slice(0, relative.lastIndexOf('/')) : '';
+  const DIR_HINTS = {
+    Stoken: '登录凭据',
+    fp: '设备指纹',
+    memes: '表情包',
+    icons: '图标缓存',
+    cache: '缓存',
+    box: '盒子数据',
+    gs_gacha: '原神抽卡记录',
+    sr_gacha: '崩铁抽卡记录',
+    zzz_gacha: '绝区零抽卡记录',
+    bh3_gacha: '崩三抽卡记录',
+    zzz_panel: '绝区零面板',
+    zzz_challenge: '绝区零挑战',
+    bh3_abyss: '崩三深渊',
+  };
+  const top = dir.split('/')[0];
+  const hint = DIR_HINTS[top];
+  const base = name.replace(/\.(json|ya?ml|db|sqlite3?|txt|webp|png|jpg)$/i, '');
+  if (hint) return `${hint} · ${base}`;
+  return base;
 }
 
 function isSensitive(relative) {

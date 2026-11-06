@@ -137,58 +137,121 @@ function renderCategories() {
   }
 }
 
+// 折叠状态：默认展开全部分组，用户收起后记住
+const collapsedGroups = new Set()
+
+function fileEntryNode(item) {
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.className = 'file-entry'
+  button.dataset.path = item.path
+  button.setAttribute('aria-pressed', String(selected?.path === item.path))
+  button.addEventListener('click', () => run(() => loadPreview(item)))
+
+  const icon = document.createElement('span')
+  icon.className = `file-badge ${item.game || 'common'}`
+  const badgeUrl = gameIconUrl(item.game)
+  if (badgeUrl) {
+    const img = document.createElement('img')
+    img.src = badgeUrl
+    img.alt = item.gameTitle || ''
+    img.loading = 'lazy'
+    icon.append(img)
+  } else {
+    icon.textContent = gameAbbr(item.game)
+  }
+
+  const body = document.createElement('span')
+  body.className = 'file-body'
+  const title = document.createElement('span')
+  title.className = 'file-title'
+  const strong = document.createElement('strong')
+  strong.textContent = item.title
+  title.append(strong)
+  const badge = document.createElement('span')
+  badge.className = `badge game-${item.game}`
+  badge.textContent = item.gameTitle
+  title.append(badge)
+  if (item.sensitive) {
+    const sensitive = document.createElement('span')
+    sensitive.className = 'badge sensitive'
+    sensitive.textContent = '敏感'
+    title.append(sensitive)
+  }
+  const pathText = document.createElement('span')
+  pathText.className = 'file-path'
+  pathText.textContent = `data/HoYoGet-Plugin/${item.path}`
+  body.append(title, pathText)
+
+  const fileSize = document.createElement('span')
+  fileSize.className = 'file-size'
+  fileSize.textContent = size(item.size)
+  button.append(icon, body, fileSize)
+  return button
+}
+
 function renderFiles() {
   const list = $('files')
   list.replaceChildren()
-  for (const item of result.items) {
-    const button = document.createElement('button')
-    button.type = 'button'
-    button.className = 'file-entry'
-    button.dataset.path = item.path
-    button.setAttribute('aria-pressed', String(selected?.path === item.path))
-    button.addEventListener('click', () => run(() => loadPreview(item)))
 
-    const icon = document.createElement('span')
-    icon.className = `file-badge ${item.game || 'common'}`
-    const badgeUrl = gameIconUrl(item.game)
-    if (badgeUrl) {
-      const img = document.createElement('img')
-      img.src = badgeUrl
-      img.alt = item.gameTitle || ''
-      img.loading = 'lazy'
-      icon.append(img)
-    } else {
-      icon.textContent = gameAbbr(item.game)
+  // 单分类视图直接平铺；全部分类时按分类分组折叠
+  const grouped = filters.category === 'all'
+  const meta = new Map((result.categories || []).map(item => [item.id, item]))
+
+  if (!grouped) {
+    for (const item of result.items) list.append(fileEntryNode(item))
+  } else {
+    const groups = new Map()
+    for (const item of result.items) {
+      if (!groups.has(item.category)) groups.set(item.category, [])
+      groups.get(item.category).push(item)
     }
+    const order = [...(result.categories || []).map(c => c.id)]
+    const keys = [...groups.keys()].sort((a, b) => order.indexOf(a) - order.indexOf(b))
+    for (const key of keys) {
+      const info = meta.get(key) || { id: key, title: key, description: '', icon: '' }
+      const items = groups.get(key)
+      const collapsed = collapsedGroups.has(key)
 
-    const body = document.createElement('span')
-    body.className = 'file-body'
-    const title = document.createElement('span')
-    title.className = 'file-title'
-    const strong = document.createElement('strong')
-    strong.textContent = item.title
-    title.append(strong)
-    const badge = document.createElement('span')
-    badge.className = `badge game-${item.game}`
-    badge.textContent = item.gameTitle
-    title.append(badge)
-    if (item.sensitive) {
-      const sensitive = document.createElement('span')
-      sensitive.className = 'badge sensitive'
-      sensitive.textContent = '敏感'
-      title.append(sensitive)
+      const group = document.createElement('section')
+      group.className = `file-group${collapsed ? ' collapsed' : ''}`
+
+      const head = document.createElement('button')
+      head.type = 'button'
+      head.className = 'group-head'
+      head.setAttribute('aria-expanded', String(!collapsed))
+      const caret = document.createElement('span')
+      caret.className = 'group-caret'
+      caret.textContent = '▾'
+      const gIcon = document.createElement('span')
+      gIcon.className = 'group-icon'
+      gIcon.textContent = info.icon || '•'
+      const gTitle = document.createElement('span')
+      gTitle.className = 'group-title'
+      gTitle.textContent = info.title
+      const gCount = document.createElement('span')
+      gCount.className = 'group-count'
+      gCount.textContent = `${items.length} 项`
+      head.append(caret, gIcon, gTitle, gCount)
+      head.addEventListener('click', () => {
+        if (collapsedGroups.has(key)) collapsedGroups.delete(key)
+        else collapsedGroups.add(key)
+        renderFiles()
+      })
+
+      const desc = document.createElement('p')
+      desc.className = 'group-desc'
+      desc.textContent = info.description || ''
+
+      const bodyEl = document.createElement('div')
+      bodyEl.className = 'group-body'
+      for (const item of items) bodyEl.append(fileEntryNode(item))
+
+      group.append(head, desc, bodyEl)
+      list.append(group)
     }
-    const pathText = document.createElement('span')
-    pathText.className = 'file-path'
-    pathText.textContent = `data/HoYoGet-Plugin/${item.path}`
-    body.append(title, pathText)
-
-    const fileSize = document.createElement('span')
-    fileSize.className = 'file-size'
-    fileSize.textContent = size(item.size)
-    button.append(icon, body, fileSize)
-    list.append(button)
   }
+
   if (!result.items.length) {
     const empty = document.createElement('div')
     empty.className = 'empty'
