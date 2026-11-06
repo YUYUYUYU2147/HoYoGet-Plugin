@@ -13,7 +13,7 @@ try { fs.appendFileSync('./plugins/HoYoGet-Plugin/temp/hot_reload.log', `${new D
    逼近这个上限，因此把像素密度封顶在 2.0 倍（约 2800px 宽），并压制
    sharp 的常驻缓存与并发，避免单张图把进程推到重启。
    QQ 服务端对图片消息会缩到 1600px 宽，2800px 冗余量已经够用。 */
-const MAX_DSF = 3
+const MAX_DSF = 2
 const SHRINK_MAX_BYTES = 4 * 1024 * 1024
 const SHRINK_QUALITY_STEPS = [92, 88, 84, 78, 70]
 const SHRINK_MIN_WIDTH = 1200
@@ -158,9 +158,11 @@ async function sendWithRetry(e, img) {
 export function qualityScale() {
   const q = Number(config().img_quality)
   const scale = (Number.isFinite(q) ? q : 80) / 100 * 2.4
-  /* 仅作内存上限保护：200% 精度对应 2.4 倍像素密度，一张 960x3000 的图
-     解码后约 260MB，再高容易撞 pm2 768MB 上限被 kill。 */
-  return Math.min(3, Math.max(1, scale))
+  /* 封顶 1.5：锅巴精度填到 200% 时公式会算出 4.8 倍 zoom，
+     CSS zoom 直接把整图逻辑尺寸放大 4.8 倍，一张两千多 px 的记录页
+     会变成一万多 px 的巨图（QQ 里横向被裁、纵向长到看不清）。
+     1.5 倍像素密度在手机上看已经足够清晰，再高只是徒增高度和内存。 */
+  return Math.min(1.5, Math.max(1, scale))
 }
 
 /** 给 <body {{sys.scale}}> 用的缩放样式串（zoom 在元素截图下更稳定） */
@@ -251,20 +253,16 @@ async function render(path, data_, cfg) {
       const depth = path.split('/').filter(Boolean).length + 3;
       const ppath = '../'.repeat(depth) + 'plugins/HoYoGet-Plugin/resources/';
       const scale = cfg.pct || qualityScale()
-      /* 统一走 deviceScaleFactor 提高像素密度，绝不再用 CSS zoom。
-         CSS zoom 会缩小布局视口（zoom:4.8 时 960px 视口只剩 200px），
-         grid 的 repeat(auto-fill, minmax()) 在这种宽度下被内容撑爆，
-         截图就被横向裁掉一半、纵向巨幅拉长 —— 之前那些「截一半」的图全是这个原因。
-         dsf 只放大像素，CSS 布局尺寸完全不变。 */
-      const dsf = Math.min(
-        cfg.dsf ? Number(cfg.dsf) | 0 : scale,
-        Math.min(Number(cfg.maxDsf) || MAX_DSF, MAX_DSF),
-      )
+      /* 允许单页按需放宽像素密度（cfg.maxDsf），大长图仍用全局 MAX_DSF 兜内存 */
+      const dsf = cfg.dsf ? Math.min(Number(cfg.dsf) || 0, Number(cfg.maxDsf) || MAX_DSF) : 0
       return {
         sys: {
-          scale: 'style=zoom:1',
+          // dsf 模式不走 CSS zoom：Chromium 在 `zoom` 下元素截图会按未缩放盒裁剪，
+          // 内容比量到的高度高一截时底部就被切掉（实测绝区零面板尾部的排名/版权行消失）。
+          // 改成 zoom:1 + deviceScaleFactor 截图，布局尺寸不变、像素密度一样。
+          scale: dsf ? 'style=zoom:1' : `style=zoom:${scale}`,
         },
-        deviceScaleFactor: dsf,
+        ...(dsf ? { deviceScaleFactor: dsf } : {}),
         /* 框架默认 jpeg q90；这里拉满，避免二次有损压缩 */
         quality: 100,
         ...data_,
