@@ -81,15 +81,21 @@ body {
 .hero-left { display: flex; align-items: center; gap: 18px; position: relative; z-index: 1; min-width: 0; }
 
 .hero-avatar {
+  position: relative;
   width: 74px; height: 74px;
   border-radius: 50%;
-  background-size: cover;
-  background-position: center;
+  overflow: hidden;
   background-color: rgba(255, 255, 255, .1);
   border: 2px solid rgba(255, 255, 255, .35);
   box-shadow: 0 6px 20px rgba(0, 0, 0, .35), inset 0 0 0 3px rgba(255,255,255,.06);
   flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
+}
+.hero-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 .hero-avatar-fallback {
   font-size: 30px; font-weight: 700;
@@ -99,7 +105,7 @@ body {
 
 .hero-user { min-width: 0; }
 .hero-name {
-  font-size: 25px;
+  font-size: 28px;
   font-weight: 700;
   color: #fff;
   letter-spacing: .5px;
@@ -112,9 +118,9 @@ body {
 .hero-uid {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  margin-top: 8px;
-  font-size: 12.5px;
+  gap: 6px;
+  margin-top: 9px;
+  font-size: 14px;
   color: rgba(255, 255, 255, .62);
   letter-spacing: .4px;
 }
@@ -135,7 +141,7 @@ body {
   backdrop-filter: blur(6px);
 }
 .hs-num {
-  font-size: 26px;
+  font-size: 30px;
   font-weight: 700;
   color: #fff;
   line-height: 1.05;
@@ -147,7 +153,7 @@ body {
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
-.hs-label { font-size: 11.5px; color: rgba(255, 255, 255, .55); margin-top: 6px; letter-spacing: .5px; }
+.hs-label { font-size: 13.5px; font-weight: 500; color: rgba(255, 255, 255, .72); margin-top: 7px; letter-spacing: .5px; }
 
 /* ============ 卡池标签栏 ============ */
 .pool-tabs {
@@ -183,9 +189,11 @@ body {
 /* 两列布局：列内卡片 flex:1 自动拉伸，让左右两列底部齐平 */
 .pool-columns {
   display: flex;
+  /* stretch：让每一列都被拉成最高列的高度，底部自然齐平 */
   align-items: stretch;
-  gap: 22px;
+  gap: 20px;
 }
+.pool-columns .pool-column { flex: 1 1 0; }
 .pool-column {
   flex: 1;
   min-width: 0;
@@ -200,10 +208,20 @@ body {
   box-shadow: var(--shadow);
   margin-bottom: 22px;
   border: 1px solid rgba(233, 236, 243, .9);
-  /* 列内自由拉伸填满，使两列底部对齐 */
+  /* 列内按内容比例分配高度：内容少的卡会被拉高，使整列底部与最高的列齐平 */
   flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
 }
 .pool-card:last-child { margin-bottom: 0; }
+/* 两列布局（原神/星铁）：列与列等高，右列短时自动拉伸补齐 */
+.pool-columns.is-two { align-items: stretch; }
+
+/* 卡片被 flex 拉伸补齐列高时，内部内容保持顶部排列，避免行距被均匀撑开 */
+.pool-card > * { flex: 0 0 auto; }
+/* 五星网格区吸收多余空白，让卡片底部的空白看起来自然 */
+.pool-card .card-list { flex: 1 0 auto; }
+
 
 .pool-head {
   display: flex;
@@ -216,24 +234,38 @@ body {
 }
 .pool-title { display: flex; align-items: center; gap: 10px; }
 .pool-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-.pool-head h2 { font-size: 18px; font-weight: 700; letter-spacing: .3px; }
+.pool-head h2 { font-size: 21px; font-weight: 800; letter-spacing: .3px; }
 .pool-pulls {
-  font-size: 21px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--text);
   margin-left: 4px;
   font-variant-numeric: tabular-nums;
 }
-.pool-pulls small { font-size: 12px; font-weight: 400; color: var(--text-weak); margin-left: 2px; }
+.pool-pulls small { font-size: 13.5px; font-weight: 400; color: var(--text-weak); margin-left: 2px; }
 
 .pool-meta {
   display: flex;
   align-items: center;
-  gap: 9px;
-  font-size: 12.5px;
-  color: var(--text-weak);
+  gap: 11px;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: #5a6478;
 }
 .pool-meta .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--text-faint); }
+.pool-luck { font-weight: 700; color: var(--gold-deep); font-size: 15px; }
+.pool-luck b { font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* 顶部欧皇度方块：金色渐变数字 + 百分号缩小 */
+.hero-stat.luck-stat { background: rgba(211, 144, 44, .14); border: 1px solid rgba(240, 179, 82, .32); }
+.hs-num.luck {
+  background: linear-gradient(120deg, #ffe0a3, #f0b352 60%, #d3902c);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.hs-pct { font-size: 15px; font-style: normal; margin-left: 1px; }
+.hs-num.luck.empty { opacity: .55; }
 
 /* 连UP / 连歪 胶囊 */
 .pill {
@@ -250,21 +282,80 @@ body {
 /* ============ 统计格 ============ */
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
-  gap: 9px;
+  grid-template-columns: repeat(auto-fit, minmax(126px, 1fr));
+  gap: 11px;
   margin: 16px 0 4px;
 }
 .stat-cell {
-  background: linear-gradient(180deg, #fbfcfe 0%, #f4f6fa 100%);
-  border: 1px solid #eef1f6;
+  position: relative;
+  background: linear-gradient(160deg, #ffffff 0%, #f7f9fd 55%, #eef2f9 100%);
+  border: 1px solid rgba(255, 255, 255, .9);
   border-radius: var(--radius-sm);
-  padding: 12px 10px;
+  padding: 16px 12px 14px;
   text-align: center;
   min-width: 0;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(30, 38, 58, .06), 0 8px 20px -12px rgba(30, 38, 58, .18), inset 0 1px 0 rgba(255, 255, 255, .95);
+  transition: transform .18s ease, box-shadow .18s ease;
 }
-.stat-num { font-size: 20px; font-weight: 700; color: var(--text); line-height: 1.1; font-variant-numeric: tabular-nums; }
-.stat-unit { font-size: 11.5px; font-weight: 400; color: var(--text-weak); margin-left: 2px; }
-.stat-label { font-size: 11.5px; color: var(--text-weak); margin-top: 6px; }
+/* 顶部高光条：沿卡片上沿的一条渐隐亮线，模拟玻璃质感 */
+.stat-cell::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(147, 176, 224, .55) 22%, rgba(211, 144, 44, .55) 50%, rgba(147, 176, 224, .55) 78%, transparent);
+  opacity: .85;
+}
+/* 右上角柔光，让纯色块不呆板 */
+.stat-cell::after {
+  content: "";
+  position: absolute;
+  top: -28px;
+  right: -28px;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(147, 176, 224, .18), transparent 68%);
+  pointer-events: none;
+}
+/* 指标语气色：五星与欧非用金色，UP 相关用紫色，警示类用红 */
+.stat-cell.tone-gold::before { background: linear-gradient(90deg, transparent, rgba(211, 144, 44, .75), transparent); }
+.stat-cell.tone-gold .stat-num { background: linear-gradient(180deg, #e0a63f 0%, var(--gold-deep) 100%); -webkit-background-clip: text; background-clip: text; }
+.stat-cell.tone-gold::after { background: radial-gradient(circle, rgba(211, 144, 44, .22), transparent 68%); }
+.stat-cell.tone-purple::before { background: linear-gradient(90deg, transparent, rgba(141, 95, 196, .7), transparent); }
+.stat-cell.tone-purple .stat-num { background: linear-gradient(180deg, #9d6fd4 0%, var(--purple) 100%); -webkit-background-clip: text; background-clip: text; }
+.stat-cell.tone-purple::after { background: radial-gradient(circle, rgba(141, 95, 196, .2), transparent 68%); }
+.stat-cell.tone-red::before { background: linear-gradient(90deg, transparent, rgba(207, 79, 69, .65), transparent); }
+.stat-cell.tone-red .stat-num { background: linear-gradient(180deg, #dd6a5f 0%, var(--red) 100%); -webkit-background-clip: text; background-clip: text; }
+.stat-cell.tone-red::after { background: radial-gradient(circle, rgba(207, 79, 69, .18), transparent 68%); }
+.stat-num {
+  position: relative;
+  font-size: 27px;
+  font-weight: 800;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .3px;
+  background: linear-gradient(180deg, var(--ink) 0%, var(--ink-2) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.stat-unit {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-weak);
+  margin-left: 3px;
+  -webkit-text-fill-color: var(--text-weak);
+}
+.stat-label {
+  position: relative;
+  font-size: 14px;
+  font-weight: 600;
+  color: #5a6478;
+  margin-top: 9px;
+  letter-spacing: .2px;
+}
 
 /* ============ 保底进度条 ============ */
 .pity-bar-wrap {
@@ -300,45 +391,65 @@ body {
 .year-block { margin-bottom: 16px; }
 .year-block:last-child { margin-bottom: 0; }
 .year-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
-.year-title { font-size: 14px; font-weight: 700; color: var(--text); }
-.year-count { font-size: 11.5px; color: var(--text-faint); }
+.year-title { font-size: 16px; font-weight: 800; color: var(--text); }
+.year-count { font-size: 13px; color: var(--text-weak); }
 
 /* ============ 五星卡片 ============ */
 .card-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
 }
 .pull-card {
   position: relative;
-  width: 78px;
-  border-radius: 10px;
+  width: 88px;
+  border-radius: 12px;
   overflow: hidden;
-  padding-bottom: 26px;
+  padding-bottom: 30px;
   background: linear-gradient(0deg, #de9552 0%, #9a6d43 100%);
-  box-shadow: 0 2px 7px rgba(154, 109, 67, .28);
+  box-shadow: 0 3px 10px rgba(154, 109, 67, .3), inset 0 1px 0 rgba(255, 255, 255, .28);
+  transition: transform .18s ease, box-shadow .18s ease;
 }
-.pull-card.good { background: linear-gradient(0deg, #8bd17c 0%, #4b9a5a 100%); box-shadow: 0 2px 7px rgba(75,154,90,.25); }
-.pull-card.normal { background: linear-gradient(0deg, #90b8e6 0%, #5a7fb5 100%); box-shadow: 0 2px 7px rgba(90,127,181,.25); }
-.pull-card.bad { background: linear-gradient(0deg, #d98a8a 0%, #a55a5a 100%); box-shadow: 0 2px 7px rgba(165,90,90,.25); }
+/* 顶部高光：让每张五星卡有金属/玻璃质感 */
+.pull-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 42%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .26), rgba(255, 255, 255, 0));
+  pointer-events: none;
+  z-index: 1;
+}
+.pull-card.good { background: linear-gradient(0deg, #8bd17c 0%, #4b9a5a 100%); box-shadow: 0 3px 10px rgba(75,154,90,.3), inset 0 1px 0 rgba(255,255,255,.3); }
+.pull-card.normal { background: linear-gradient(0deg, #90b8e6 0%, #5a7fb5 100%); box-shadow: 0 3px 10px rgba(90,127,181,.3), inset 0 1px 0 rgba(255,255,255,.3); }
+.pull-card.bad { background: linear-gradient(0deg, #d98a8a 0%, #a55a5a 100%); box-shadow: 0 3px 10px rgba(165,90,90,.3), inset 0 1px 0 rgba(255,255,255,.3); }
 
 .pull-avatar {
   display: block;
+  position: relative;
+  z-index: 2;
   width: 100%;
-  height: 88px;
-  background-size: auto 100%;
-  background-repeat: no-repeat;
-  background-position: center top;
+  height: 100px;
   background-color: rgba(255, 255, 255, .12);
+  overflow: hidden;
+}
+.pull-avatar-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
 }
 .pull-pity {
   position: absolute;
   left: 0; right: 0; bottom: 0;
-  height: 26px;
-  line-height: 26px;
+  height: 30px;
+  line-height: 30px;
   text-align: center;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: .3px;
+  z-index: 3;
   color: #fff;
   background: rgba(0, 0, 0, .3);
   font-variant-numeric: tabular-nums;
@@ -350,8 +461,10 @@ body {
 
 .pull-date {
   position: absolute;
-  left: 0; right: 0; bottom: 26px;
-  font-size: 9.5px;
+  left: 0; right: 0; bottom: 30px;
+  font-size: 11px;
+  font-weight: 600;
+  z-index: 3;
   text-align: center;
   color: #fff;
   background: linear-gradient(0deg, rgba(0,0,0,.5), rgba(0,0,0,0));
@@ -361,16 +474,32 @@ body {
 
 .tag {
   position: absolute;
-  top: 5px;
-  font-size: 9.5px;
-  font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 5px;
+  top: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 6px;
   color: #fff;
-  z-index: 2;
+  /* 必须高于立绘层(pull-avatar z-index:2)，否则 UP 角标被立绘挡住 */
+  z-index: 5;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .32);
 }
 .tag-up { left: 5px; background: rgba(217, 144, 47, .95); }
 .tag-over { right: 5px; background: rgba(220, 70, 70, .92); }
+
+/* 历史截断提示 */
+.truncate-hint {
+  margin: 12px 0 4px;
+  padding: 12px 16px;
+  background: linear-gradient(180deg, #fff8ec, #fdf1de);
+  border: 1px solid #f3dfbe;
+  border-left: 4px solid var(--gold);
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--gold-deep);
+  text-align: center;
+}
 
 /* 五星过多提示 */
 .more-hint {

@@ -15,7 +15,7 @@
       {{if pools && pools.length}}
       <header class="hero">
         <div class="hero-left">
-          <div class="hero-avatar" {{if avatar}}style="background-image:url('{{avatar}}')"{{/if}}>{{if !avatar}}<span class="hero-avatar-fallback">抽</span>{{/if}}</div>
+          <div class="hero-avatar">{{if avatar}}<img class="hero-avatar-img" src="{{avatar}}" alt="" onerror="this.style.display='none'" />{{else}}<span class="hero-avatar-fallback">抽</span>{{/if}}</div>
           <div class="hero-user">
             <div class="hero-name">{{nickname}}</div>
             <div class="hero-uid">
@@ -36,6 +36,15 @@
           <div class="hero-stat">
             <span class="hs-num">{{totalUp}}</span>
             <span class="hs-label">UP</span>
+          </div>
+          <div class="hero-stat luck-stat" title="{{luck ? luck.luckTitle : '样本不足，暂无评级'}}">
+            {{if luck && luck.luckPercent != null}}
+            <span class="hs-num luck">{{luck.luckPercent}}<i class="hs-pct">%</i></span>
+            <span class="hs-label">欧皇度 · {{luck.luckRating}}</span>
+            {{else}}
+            <span class="hs-num luck empty">-/</span>
+            <span class="hs-label">欧皇度 · 样本不足</span>
+            {{/if}}
           </div>
         </div>
       </header>
@@ -61,6 +70,7 @@
             <span class="pool-pulls">{{pool.allNum || '--'}} <small>抽</small></span>
           </div>
           <div class="pool-meta">
+            {{if pool.luckPercent != null}}<span class="pool-luck">欧皇度 <b>{{pool.luckPercent}}%</b> {{pool.luckRating}}</span><span class="dot"></span>{{/if}}
             <span>五星 {{pool.fiveNumText}}</span>
             <span class="dot"></span>
             <span>平均 {{pool.fiveAvg}}</span>
@@ -71,7 +81,7 @@
         <div class="stat-grid">
           {{each pool.line line}}
           {{each line item}}
-          <div class="stat-cell">
+          <div class="stat-cell{{if item.tone}} tone-{{item.tone}}{{/if}}">
             <div class="stat-num">{{item.num}}<span class="stat-unit">{{item.unit}}</span></div>
             <div class="stat-label">{{item.lable}}</div>
           </div>
@@ -89,6 +99,10 @@
         <div class="empty_box">暂无五星记录</div>
         {{/if}}
 
+        {{if pool.truncated}}
+        <div class="truncate-hint">{{pool.truncatedHint}}</div>
+        {{/if}}
+
         {{each pool.yearGroups group}}
         <div class="year-block">
           <div class="year-head">
@@ -100,7 +114,7 @@
             <div class="pull-card {{val.num<=10?'gold': (val.num<pool.maxPity*0.5 ? 'good' : (val.num<pool.maxPity*0.83 ? 'normal' : 'bad'))}}{{val.isUp?' is-up':''}}">
               {{if val.isUp}}<span class="tag tag-up">UP</span>{{/if}}
               {{if val.overPity}}<span class="tag tag-over">≧</span>{{/if}}
-              <span class="pull-avatar" {{if val.icon}}style="background-image:url('{{val.icon}}')"{{/if}}></span>
+              <span class="pull-avatar">{{if val.icon}}<img class="pull-avatar-img" src="{{val.icon}}" alt="" onerror="this.style.display='none'">{{/if}}</span>
               <div class="pull-pity {{val.num<=10?'gold': (val.num<pool.maxPity*0.5 ? 'good' : (val.num<pool.maxPity*0.83 ? 'normal' : 'bad'))}}">{{val.num}}</div>
               <div class="pull-date">{{val.fullDate}}</div>
             </div>
@@ -112,19 +126,46 @@
       {{/each}}
         </div>
         <div class="pool-column" id="pool-col-1"></div>
+        <div class="pool-column" id="pool-col-2"></div>
       </div>
 
       {{/if}}
       <script>
-        // 第一个卡池放左列，其余全部进右列；两列 flex:1 拉伸，短卡自动补高，
-        // 使左右两列底部齐平（短的自适应长的，不是长的压缩短的）。
+        // 卡池按内容高度贪心分到 2~3 列：列数越多单图越矮，避免超长被截断。
+        // 绝区零池多（常 5~6 个），切成三列能显著压低总高；原神/星铁池少仍用两列。
         (function () {
-          var c0 = document.getElementById('pool-col-0')
-          var c1 = document.getElementById('pool-col-1')
-          if (!c0 || !c1) return
-          var cards = [].slice.call(c0.querySelectorAll('.pool-card'))
-          if (cards.length <= 1) return
-          cards.slice(1).forEach(function (card) { c1.appendChild(card) })
+          var wrap = document.querySelector('.pool-columns')
+          if (!wrap) return
+          var cols = [].slice.call(wrap.querySelectorAll('.pool-column'))
+          var cards = [].slice.call(wrap.querySelectorAll('.pool-card'))
+          if (!cards.length) return
+          // 池数 >= 5 用三列，否则两列
+          if (cards.length < 5) {
+            // 池少（<=4，星铁/原神）：两列布局 —— 第一个池（角色）独占左列，
+            // 其余池（武器、常驻）按顺序堆在右列，保持「限定在前、常驻在后」。
+            var left = cols[0]
+            var right = cols[1]
+            left.appendChild(cards[0])
+            cards.slice(1).forEach(function (card) { right.appendChild(card) })
+            // 两列等高：短列（通常是右列）自动拉伸补齐到长列高度
+            wrap.classList.add('is-two')
+            cols.forEach(function (c, i) { c.style.display = i < 2 ? '' : 'none' })
+            return
+          }
+          // 池多（>=5，绝区零）：三列，先在单列状态下量高度，再按 LPT 均衡分配。
+          // 注意这里牺牲严格顺序，换取三列等高、总高更矮。
+          var useCols = 3
+          var measured = cards.map(function (card) { return { el: card, h: card.offsetHeight || 400 } })
+          cols.forEach(function (c) { c.innerHTML = '' })
+          measured.sort(function (a, b) { return b.h - a.h })
+          var heights = [0, 0, 0]
+          measured.forEach(function (item) {
+            var min = 0
+            for (var i = 1; i < useCols; i++) if (heights[i] < heights[min]) min = i
+            cols[min].appendChild(item.el)
+            heights[min] += item.h + 20
+          })
+          cols.forEach(function (c, i) { c.style.display = i < useCols ? '' : 'none' })
         })()
       </script>
       <div class="logo">{{@copy()}}</div>
