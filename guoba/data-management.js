@@ -10,7 +10,8 @@ const base = String(rawBase || pathBase || '').replace(/\/$/, '')
 const ckLink = document.getElementById('ck-link')
 if (base) {
   ckLink.href = `${base}/custom/hoyo-ck-manage`
-  const target = `${base}/custom/hoyo-ck-manage`
+  // 锅巴前端是 hash 路由：路径段用于服务端取 index.html，hash 才是前端真实路由。
+  const target = `${base}/custom/hoyo-ck-manage#/custom/hoyo-ck-manage`
   ckLink.addEventListener('click', ev => {
     ev.preventDefault()
     // 数据页运行在锅巴的 iframe 内：让父窗口（锅巴 SPA）切到该路由，
