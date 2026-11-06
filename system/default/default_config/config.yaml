@@ -12,6 +12,12 @@ debug: false
 # （指令表是在 constructor 里交给基类注册的，换不掉）。
 auto_reload: true
 
+# 游戏命令前缀（用 | 分隔，可在锅巴面板修改；原生符号始终固定支持）。
+gs_command_prefixes: '#|＃|米哈游原神|原神|genshin|gs'
+sr_command_prefixes: '*|＊|米哈游星铁|米哈游崩铁|米哈游星穹铁道|星铁|星穹铁道|崩铁|starrail|sr'
+zzz_command_prefixes: '%|％|米哈游绝区零|绝区零|绝区|zzz'
+bh3_command_prefixes: '!|！|米哈游崩坏三|崩坏三|崩坏3|崩三|bh3'
+
 #绝区零面板更新加速：把 ZZZ-Plugin「%更新面板」的串行等待改为并发。
 # ZZZ-Plugin 原本每个角色之间固定 sleep 3 秒，44 个角色就是 132 秒纯等待；
 # 这里改成并发窗口 + 小间隔，实测 44 个角色约 1.6~5.7 秒。

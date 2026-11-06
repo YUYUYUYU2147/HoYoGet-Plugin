@@ -1,7 +1,7 @@
 # 小花火手动过码隧道 —— systemd 服务模板（可选方案）
 #
 # 安装（把路径换成你自己的仓库目录）：
-#   REPO=/root/TRSS_AllBot/TRSS-Yunzai   # 即 <云崽根目录>/plugins/HoYoGet-Plugin 的上一级
+#   REPO=/path/to/bot                       # 即 <云崽根目录>/plugins/HoYoGet-Plugin 的上一级
 #   sudo cp $REPO/plugins/HoYoGet-Plugin/tools/manual_gt_tunnel.sh /usr/local/bin/
 #   sudo chmod +x /usr/local/bin/manual_gt_tunnel.sh
 #   sudo cp $REPO/plugins/HoYoGet-Plugin/tools/HoYoGet-gt-tunnel.service /etc/systemd/system/

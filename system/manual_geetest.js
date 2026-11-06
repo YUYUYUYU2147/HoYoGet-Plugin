@@ -23,11 +23,10 @@ const MANUAL_GT_PATH = '/HoYoGet-gt';
 const MANUAL_GT_TIMEOUT = 120;
 
 // 后台隧道脚本（tools/manual_gt_tunnel.sh）会把实际地址写到文件里，插件读取它。
-// 路径可移植：环境变量 > 插件数据目录（默认，随仓库走）> /root/.xhh（兼容旧写法）。
+// 路径可移植：环境变量 > 插件数据目录（默认，随仓库走）。
 const TUNNEL_URL_FILES = [
   process.env.HOYOGET_MANUAL_GT_URL_FILE || process.env.XHH_MANUAL_GT_URL_FILE,
   './plugins/HoYoGet-Plugin/data/manual_gt_url',
-  '/root/.xhh/manual_gt_url',
 ].filter(Boolean);
 
 function readTunnelUrlFile() {

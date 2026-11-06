@@ -1,6 +1,6 @@
 // 从线上同步 meta 资源（角色/武器/圣遗物图片与数据）
 //
-// 与 miao-plugin 的 installMeta 同一份数据源（作者自建服务，公开可访问）：
+// 元数据同步数据源（公开可访问）：
 //   1. GET https://miao.072420.xyz/api/meta-{gs,sr}/commits   取提交列表
 //   2. 每个提交带 assets.path（增量包 zip）与 files（变更清单）
 //   3. 下载增量包 → unzip → 覆盖到 resources/meta-{gs,sr}

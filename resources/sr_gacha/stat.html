@@ -12,6 +12,7 @@
           <div class="hero_title">{{total.title}}</div>
           <div class="hero_row">总抽卡数: <b>{{total.allNum}}</b> 抽</div>
           <div class="hero_row">平均出金: <b>{{total.avgGold}}</b> 抽</div>
+          <div class="hero_row">欧皇度: <b class="luck_num">{{total.luck.luckPercent == null ? '--' : total.luck.luckPercent + '%'}}</b> <span class="luck_rate">{{total.luck.luckRating}}</span></div>
           <div class="chips">
             {{each total.chips chip}}
             <span class="chip">{{chip}}</span>

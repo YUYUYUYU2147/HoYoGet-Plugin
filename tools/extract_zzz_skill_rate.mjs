@@ -26,7 +26,6 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const ZZZ = [
   path.join(process.cwd(), 'plugins', 'ZZZ-Plugin'),
   path.join(ROOT, '..', 'ZZZ-Plugin'),
-  '/root/TRSS_AllBot/TRSS-Yunzai/plugins/ZZZ-Plugin'
 ].find(p => fs.existsSync(path.join(p, 'dist', 'model', 'damage', 'character'))) || ''
 const MAP_FILE = path.join(ZZZ, 'resources', 'map', 'PartnerId2Data.json')
 const CHAR_DIR = path.join(ZZZ, 'dist', 'model', 'damage', 'character')

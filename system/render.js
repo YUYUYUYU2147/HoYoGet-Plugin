@@ -158,11 +158,7 @@ async function sendWithRetry(e, img) {
 export function qualityScale() {
   const q = Number(config().img_quality)
   const scale = (Number.isFinite(q) ? q : 80) / 100 * 2.4
-  /* 封顶 1.5：锅巴精度填到 200% 时公式会算出 4.8 倍 zoom，
-     CSS zoom 直接把整图逻辑尺寸放大 4.8 倍，一张两千多 px 的记录页
-     会变成一万多 px 的巨图（QQ 里横向被裁、纵向长到看不清）。
-     1.5 倍像素密度在手机上看已经足够清晰，再高只是徒增高度和内存。 */
-  return Math.min(1.5, Math.max(1, scale))
+  return Math.max(1, scale)
 }
 
 /** 给 <body {{sys.scale}}> 用的缩放样式串（zoom 在元素截图下更稳定） */

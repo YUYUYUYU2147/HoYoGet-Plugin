@@ -1,7 +1,7 @@
 /**
  * 生成原神圣遗物中英对照表 → system/default/gs_artifact_cn.json
  *
- * 来源：miao-plugin 的 resources/meta-gs/artifact/data.json（只有中文名）。
+ * 来源：resources/meta-gs/artifact/data.json（只有中文名）。
  * akasha 返回的是英文名，两者没有公共 id，无法自动对齐。
  * 这张表是为了把 akasha 的英文名翻成中文显示用，**人工维护**：
  *   · sets / pieces 里是「英文 → 中文」的直接映射

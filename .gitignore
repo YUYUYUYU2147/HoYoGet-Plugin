@@ -1,6 +1,10 @@
 /config/
 data/
+# data 常被做成指向框架数据目录的软链接（ln -s），目录规则匹配不到软链接本身
+data
 node_modules/
+# 运行时日志（含排查上下文，绝不入库）
+logs/
 temp/
 resources/srstrategy/
 # 卡池库写盘备份（由 safeWritePoolYaml 自动生成）

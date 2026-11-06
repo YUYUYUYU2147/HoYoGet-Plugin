@@ -412,6 +412,89 @@ function calcNoWaiRate(records) {
   }
 }
 
+// 欧皇度：基于抽卡概率分布模型（二项卷积 + 正态近似），
+// 按「模型估算超过 X% 玩家」给出运气百分比与评级，作为工坊风格统计卡的第二栏指标。
+// 星铁池类型 → 概率模型：角色/联动角色 90 保底 55% UP，光锥/联动光锥 80 保底 75% UP，
+// 常驻/新手无 UP 概念，按纯五星花费计算。
+const luckCalculator = {
+  luckModel(type) {
+    const models = {
+      GachaType_AvatarUp: { base: 0.006, soft: 74, step: 0.06, hard: 90, upRate: 0.55 },
+      GachaType_CollabAvatarUp: { base: 0.006, soft: 74, step: 0.06, hard: 90, upRate: 0.55 },
+      GachaType_EquipmentUp: { base: 0.008, soft: 66, step: 0.07, hard: 80, upRate: 0.75 },
+      GachaType_CollabEquipmentUp: { base: 0.008, soft: 66, step: 0.07, hard: 80, upRate: 0.75 },
+      GachaType_Newbie: { base: 0.006, soft: 74, step: 0.06, hard: 90 },
+      common: { base: 0.006, soft: 74, step: 0.06, hard: 90 },
+    }
+    return models[type]
+  },
+
+  luckConv(a, b, limit) {
+    const ret = new Array(Math.min(a.length + b.length - 1, limit + 1)).fill(0)
+    for (let i = 0; i < a.length && i <= limit; i++) {
+      if (!a[i]) continue
+      for (let j = 0; j < b.length && i + j <= limit; j++) {
+        ret[i + j] += a[i] * b[j]
+      }
+    }
+    return ret
+  },
+
+  luckDist(model, up) {
+    const five = [0]
+    let survive = 1
+    for (let i = 1; i <= model.hard; i++) {
+      const p = i >= model.hard ? 1 : Math.min(1, model.base + Math.max(0, i - model.soft + 1) * model.step)
+      five[i] = survive * p
+      survive *= 1 - p
+    }
+    if (!up || !model.upRate) return five
+    const twice = this.luckConv(five, five, model.hard * 2)
+    return twice.map((v, i) => (five[i] || 0) * model.upRate + v * (1 - model.upRate))
+  },
+
+  luckPercentOf(dist, num, used) {
+    if (!Number.isSafeInteger(num) || num <= 0 || !Number.isSafeInteger(used) || used <= 0) return false
+    const mean = dist.reduce((sum, p, i) => sum + p * i, 0)
+    const variance = dist.reduce((sum, p, i) => sum + p * (i - mean) * (i - mean), 0)
+    if (num > 50) {
+      const z = (used - num * mean) / Math.sqrt(num * variance)
+      const t = 1 / (1 + 0.2316419 * Math.abs(z))
+      const d = 0.3989422804014327 * Math.exp(-z * z / 2)
+      const tail = d * t * (0.31938153 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))))
+      const cdf = z > 0 ? 1 - tail : tail
+      return Math.min(100, Math.max(0, (1 - cdf) * 100))
+    }
+    let total = [1]
+    for (let i = 0; i < num; i++) total = this.luckConv(total, dist, used)
+    let below = 0
+    for (let i = 0; i < used && i < total.length; i++) below += total[i]
+    return Math.min(100, Math.max(0, (1 - below - (total[used] || 0) / 2) * 100))
+  },
+}
+
+/**
+ * 计算单池欧皇度：返回 { luckPercent, luckRating, luckTitle }。
+ * upNum 由调用方按可歪池口径给出（常驻/新手为 0，走纯五星花费），
+ * used 为已消耗抽数（总抽数 − 当前垫抽）。
+ */
+export function calcLuck({ type, fiveNum, upNum = 0, used = 0 }) {
+  const model = luckCalculator.luckModel(type)
+  const count = model?.upRate > 0 && upNum > 0 ? upNum : fiveNum
+  const raw = model && fiveNum > 0 && Number.isFinite(used) && used > 0
+    ? luckCalculator.luckPercentOf(luckCalculator.luckDist(model, model.upRate > 0 && upNum > 0), count, used)
+    : false
+  if (raw === false || raw === undefined) {
+    return { luckPercent: null, luckRating: '暂无评级', luckTitle: '暂无五星样本或该卡池暂无概率模型' }
+  }
+  const p = Math.round(raw)
+  return {
+    luckPercent: p,
+    luckRating: p >= 85 ? '极欧' : p >= 70 ? '很欧' : p >= 55 ? '偏欧' : p >= 40 ? '普通' : '偏非',
+    luckTitle: `模型估算超过 ${p}% 玩家 · 按${model.upRate > 0 && upNum > 0 ? 'UP' : '五星'}花费计算`,
+  }
+}
+
 export function pct(a, b) {
   if (!b) return '0.0'
   return ((a / b) * 100).toFixed(1)
@@ -816,13 +899,18 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
       maxUpStreak,
       maxMissStreak,
       // 保底进度条阈值与硬保底：光锥 80 抽、角色 90 抽；变红点取硬保底的 0.82
-      // （角色 74、光锥 63，与 Starward/Moonward 的视觉阈值一致）
+      // （角色 74、光锥 63，为经验视觉阈值）
       pityThreshold: ['GachaType_EquipmentUp', 'GachaType_CollabEquipmentUp'].includes(key) ? 63 : 74,
       pityGuarantee: ['GachaType_EquipmentUp', 'GachaType_CollabEquipmentUp'].includes(key) ? 80 : 90,
       pityPct: Math.min(100, Math.round((pity / (['GachaType_EquipmentUp', 'GachaType_CollabEquipmentUp'].includes(key) ? 80 : 90)) * 100)),
       fiveAvg,
       firstTime: fiveLog.length ? fiveLog[fiveLog.length - 1].fullDate : '--',
       lastTime: fiveLog.length ? fiveLog[0].fullDate : '--',
+      /* 欧皇度（概率模型估算）：按本池类型、UP 数与已消耗抽数计算 */
+      ...(() => {
+        const luck = calcLuck({ type: key, fiveNum, upNum: upPool ? upNum : 0, used: fiveNum ? waiSpent : 0 })
+        return { luckPercent: luck.luckPercent, luckRating: luck.luckRating, luckTitle: luck.luckTitle }
+      })(),
       /* 总览表用的精简字段：模板不直接索引 line[1][1]，避免数据不全时炸模板 */
       upAvgText: upAvg,
       upYsText: upYs,
@@ -994,8 +1082,20 @@ export function buildSrStatView(data, uid, e, keys = [], commonType = null) {
   const ratePool = commonType === '光锥' ? allWeapon : allChar
   // 池存在但一个五星都没有时 upRate 是 '--%'，统一显示为 '--'
   const rateNum = ratePool && ratePool.fiveNum ? ratePool.upRate : '--'
+  // 欧皇度：按统计范围（keys）合并各池概率模型估算，作为指标栏第二栏
+  const luck = (() => {
+    const hit = pools.filter(p => p.fiveNum > 0 && Number.isFinite(p.luckPercent))
+    if (!hit.length) return { luckPercent: null, luckRating: '暂无评级', luckTitle: '暂无五星样本或该卡池暂无概率模型' }
+    const p = Math.round(hit.reduce((s, pool) => s + pool.luckPercent * pool.fiveNum, 0) / hit.reduce((s, pool) => s + pool.fiveNum, 0))
+    return {
+      luckPercent: p,
+      luckRating: p >= 85 ? '极欧' : p >= 70 ? '很欧' : p >= 55 ? '偏欧' : p >= 40 ? '普通' : '偏非',
+      luckTitle: `模型估算超过 ${p}% 玩家`,
+    }
+  })()
   const metrics = [
     { num: rateNum, unit: '', lable: '小保底不歪' },
+    { num: luck.luckPercent ?? '--', unit: luck.luckPercent == null ? '' : '%', lable: `欧皇度·${luck.luckRating}` },
     { num: sNum, unit: '金', lable: '五星数' },
     // 文案取「角色UP平均 / 武器UP平均」：原「每UP角色需 / 每UP光锥需」在指标栏宽度下
     // 会折成三行，把 85.2 这类数值与标签错开
@@ -1082,6 +1182,7 @@ export function buildSrStatView(data, uid, e, keys = [], commonType = null) {
       avgGold,
       sNum,
       chips,
+      luck,
       metrics,
       grid: [...gridMap.values()],
       gridTitle,

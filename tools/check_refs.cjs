@@ -6,8 +6,8 @@
  */
 const fs = require('fs')
 const path = require('path')
-const ACORN = require('/root/TRSS_AllBot/TRSS-Yunzai/node_modules/.pnpm/acorn@8.16.0/node_modules/acorn')
-const WALK = require('/root/TRSS_AllBot/TRSS-Yunzai/node_modules/.pnpm/acorn-walk@8.3.5/node_modules/acorn-walk')
+const ACORN = require('acorn')
+const WALK = require('acorn-walk')
 
 const ROOT = path.resolve(__dirname, '..')
 const GLOBALS = new Set([

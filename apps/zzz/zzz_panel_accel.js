@@ -239,8 +239,7 @@ export class zzz_panel_accel extends plugin {
 
       // 渲染面板图：模板 panel/refresh.html 及 beforeRender 注入的
       // pluResPath / sys.resourcesPath / 玩家信息全在 ZZZ-Plugin 内，
-      // HoYoGet 既没有这张模板、也没有 this.renderImg 这个入口（该名字只存在于
-      // 上游实现的基类与 apps/meme.js 的模块内局部函数里），
+      // HoYoGet 既没有这张模板、也没有 this.renderImg 这个入口，
       // 直接调用必然抛错并被下面的 catch 吞掉，表现为「只有文字、没有图」。
       // 因此借 ZZZ-Plugin 面板类自身的 render()，与上游 refreshPanel() 同一入口。
       let img = null

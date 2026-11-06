@@ -233,7 +233,7 @@ body::before {
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* ===== 进度条列表（miao-plugin 官方 gacha-detail 时间轴风格） ===== */
+/* ===== 进度条列表（gacha-detail 时间轴风格） ===== */
 .progress_box {
   background: rgba(30, 35, 50, 0.72);
   border-radius: 16px;

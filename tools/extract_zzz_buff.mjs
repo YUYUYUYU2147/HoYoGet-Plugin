@@ -18,7 +18,6 @@ const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 const ZZZ_ROOTS = [
   path.join(process.cwd(), 'plugins', 'ZZZ-Plugin'),
   path.join(PLUGIN_ROOT, '..', 'ZZZ-Plugin'),
-  '/root/TRSS_AllBot/TRSS-Yunzai/plugins/ZZZ-Plugin',
 ]
 const ZZZ_ROOT = ZZZ_ROOTS.find(r => fs.existsSync(path.join(r, 'dist/model/damage')))
 if (!ZZZ_ROOT) {

@@ -146,7 +146,6 @@ try {
   const ZZZ = [
     path.join(ROOT, '..', 'ZZZ-Plugin'),
     path.join(process.cwd(), 'plugins', 'ZZZ-Plugin'),
-    '/root/TRSS_AllBot/TRSS-Yunzai/plugins/ZZZ-Plugin',
   ].find(p => fs.existsSync(path.join(p, 'resources/map/PartnerId2Data.json')))
   if (ZZZ) {
     const partners = JSON.parse(fs.readFileSync(path.join(ZZZ, 'resources/map/PartnerId2Data.json'), 'utf8'))

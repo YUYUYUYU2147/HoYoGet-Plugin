@@ -32,7 +32,6 @@ const OUT = path.join(ROOT, 'system', 'default', 'zzz_char_stat.json')
 const ZZZ = [
   path.join(process.cwd(), 'plugins', 'ZZZ-Plugin'),
   path.join(ROOT, '..', 'ZZZ-Plugin'),
-  '/root/TRSS_AllBot/TRSS-Yunzai/plugins/ZZZ-Plugin',
 ].find(p => fs.existsSync(path.join(p, 'resources', 'map', 'PartnerId2Data.json')))
 if (!ZZZ) {
   console.error('找不到 ZZZ-Plugin 的 resources/map/PartnerId2Data.json')

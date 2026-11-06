@@ -1,9 +1,12 @@
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 // 原神 Bwiki 角色页：渲染 HTML → 16 张表 → 结构化 JSON（第 1 步定稿版）
 // 材料单元格结构：<img alt="霜盏花"> + 文本 "3"  → 名称取 alt，数量取相邻文本
 import { writeFileSync, mkdirSync } from 'node:fs';
 
 const API = 'https://wiki.biligame.com/ys/api.php';
-mkdirSync('/tmp/opencode/out', { recursive: true });
+const OUT_DIR = path.join(tmpdir(), 'hoyoget-bwiki');
+mkdirSync(OUT_DIR, { recursive: true });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function renderHtml(page, tries = 5) {
@@ -329,7 +332,7 @@ function parseLevelMats(rows) {
 // ── 主流程 ──
 const page = process.argv[2] || '菲林斯';
 const html = await renderHtml(page);
-writeFileSync(`/tmp/opencode/out/${page}.html`, html);   // 存下来给渲染步骤复用，避免二次抓取
+writeFileSync(`${OUT_DIR}/${page}.html`, html);   // 存下来给渲染步骤复用，避免二次抓取
 const T = tables(html);
 const res = { page, tableCount: T.length };
 console.log(`════ ${page}：${html.length} 字符 / ${T.length} 张表 ════\n`);
@@ -392,5 +395,5 @@ P('\n【技能块】\n', (res.skillBlocks || []).map(x => `  【${x.name}】${x.
 P('\n【技能详细属性】\n', (res.skillTables || []).map(s => `  表${s.table}: ${s.attrs.length} 组，${s.attrs[0]?.name} ${s.attrs[0]?.levels?.LV1}…${Object.keys(s.attrs[0]?.levels || {}).slice(-1)[0]}`).join('\n'));
 P('\n【技能升级材料】\n', (res.skillMats || []).map(s => `  ${s.level}: ${s.mats.map(m => m.name + '×' + m.count).join(', ')}`).join('\n'));
 
-writeFileSync('/tmp/opencode/out/gs-html.json', JSON.stringify(res, null, 2));
-console.log('\n已写入 /tmp/opencode/out/gs-html.json');
+writeFileSync(`${OUT_DIR}/gs-html.json`, JSON.stringify(res, null, 2));
+console.log(`\n已写入 ${OUT_DIR}/gs-html.json`);

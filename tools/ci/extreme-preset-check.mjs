@@ -25,7 +25,6 @@ const ZZZ = [
   path.join(ROOT, 'resources', 'zzz', 'map'),
   path.join(process.cwd(), 'plugins', 'ZZZ-Plugin'),
   path.join(ROOT, '..', 'ZZZ-Plugin'),
-  '/root/TRSS_AllBot/TRSS-Yunzai/plugins/ZZZ-Plugin',
 ].find(p => fs.existsSync(path.join(p, 'PartnerId2Data.json')))
 
 if (!ZZZ) {

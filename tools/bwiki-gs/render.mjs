@@ -1,23 +1,27 @@
 // Bwiki HTML 解析结果 → 真实 gsRoleView → 真实模板 → 出图（第 3 步）
 // 图标全部走 Bwiki 自己的 patchwiki.biligame.com，不依赖 nanoka
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
-const require = createRequire('/root/TRSS_AllBot/TRSS-Yunzai/');
 import puppeteer from 'puppeteer';
-import { gsRoleView } from '/root/TRSS_AllBot/TRSS-Yunzai/plugins/xhh/system/role_detail.js';
 
-const ROOT = '/root/TRSS_AllBot/TRSS-Yunzai';
+// 机器人根目录：优先环境变量，其次当前工作目录
+const ROOT = process.env.BOT_ROOT || process.cwd();
+const require = createRequire(`${ROOT}/`);
 const XHH = `${ROOT}/plugins/xhh`;
-mkdirSync('/tmp/opencode/out', { recursive: true });
+const { gsRoleView } = await import(`${XHH}/system/role_detail.js`);
+const OUT_DIR = path.join(tmpdir(), 'hoyoget-bwiki');
+mkdirSync(OUT_DIR, { recursive: true });
 const who = process.argv[2] || '菲林斯';
 
-const d = JSON.parse(readFileSync('/tmp/opencode/out/gs-html.json', 'utf8'));
+const d = JSON.parse(readFileSync(`${OUT_DIR}/gs-html.json`, 'utf8'));
 if (d.page !== who) throw new Error(`JSON 里是 ${d.page}，要渲染 ${who}？先跑 parse_html.mjs ${who}`);
 // parse.mjs 会把渲染 HTML 落到 out/<角色名>.html。按角色名读，不要写死文件名，
 // 也不要用「文件里含不含角色名」去猜——之前就因为读了别的角色的残留文件，
 // 渲染出甘雨的技能名和材料却顶着菲林斯的标题，这类错很难一眼看出来。
 let html = '';
-try { html = readFileSync(`/tmp/opencode/out/${who}.html`, 'utf8'); }
+try { html = readFileSync(`${OUT_DIR}/${who}.html`, 'utf8'); }
 catch { console.log(`⚠️ 找不到 out/${who}.html，先跑 parse.mjs ${who}`); }
 
 const g = k => { const v = d.basic?.[k]; return Array.isArray(v) ? (v[0] ?? '') : (v ?? ''); };
@@ -202,7 +206,7 @@ const browser = await puppeteer.launch({ executablePath: '/snap/bin/chromium', h
 const page = await browser.newPage();
 await page.setViewport({ width: 900, height: 1600, deviceScaleFactor: 2 });
 await page.setContent(out, { waitUntil: 'networkidle0' });
-const p = `/tmp/opencode/out/${who}-full.png`;
+const p = `${OUT_DIR}/${who}-full.png`;
 await (await page.$('body')).screenshot({ path: p });
 console.log('  已出图:', p);
 await browser.close();

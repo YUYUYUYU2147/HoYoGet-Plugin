@@ -6,7 +6,7 @@
 ## 用法
 
 ```bash
-cd /root/TRSS_AllBot/TRSS-Yunzai
+cd <机器人根目录>   # 例：~/bot，BOT_ROOT 未设置时取当前目录
 
 # 1) 抓数据：拉渲染 HTML → 16 张表 → 结构化 JSON + HTML 落盘
 node plugins/HoYoGet-Plugin/tools/bwiki-gs/parse.mjs 菲林斯
@@ -15,7 +15,7 @@ node plugins/HoYoGet-Plugin/tools/bwiki-gs/parse.mjs 菲林斯
 node plugins/HoYoGet-Plugin/tools/bwiki-gs/render.mjs 菲林斯
 ```
 
-产物在 `plugins/HoYoGet-Plugin/temp/` 与 `/tmp/opencode/out/`。
+产物在 `plugins/HoYoGet-Plugin/temp/` 与系统临时目录。
 
 ## 接口
 
@@ -67,4 +67,4 @@ REST API 不可用（`501 无法抓取 Parsoid HTML`）。
 
 `resources/wiki/gs_role_nk.css` 追加对应样式。
 
-原模板备份在 `/tmp/opencode/tpl-backup.html`。
+原模板备份在本机临时目录。

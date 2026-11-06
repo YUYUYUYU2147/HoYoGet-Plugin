@@ -506,7 +506,7 @@ body.elem-physical { --elem-line: rgba(207, 216, 227, .9); --elem-glow: rgba(180
   color: #ffd27a;
 }
 .ov-unit { font-size: 11px; color: #7fa2bd; }
-/* 圣遗物评级：纯文字字母，配色与 miao-plugin 的 .mark-XXX 一致 */
+/* 圣遗物评级：纯文字字母，ACE/MAX 红、SSS/SS 金、S/A 紫、B~D 灰蓝 */
 .badge-mark {
   display: inline-flex;
   align-items: baseline;

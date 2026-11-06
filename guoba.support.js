@@ -49,6 +49,20 @@ function getCfg() {
   return yaml.get(_path + 'config.yaml') || {}
 }
 
+const commandPrefixDefaults = {
+  gs_command_prefixes: '#|＃|米哈游原神|原神|genshin|gs',
+  sr_command_prefixes: '*|＊|米哈游星铁|米哈游崩铁|米哈游星穹铁道|星铁|星穹铁道|崩铁|starrail|sr',
+  zzz_command_prefixes: '%|％|米哈游绝区零|绝区零|绝区|zzz',
+  bh3_command_prefixes: '!|！|米哈游崩坏三|崩坏三|崩坏3|崩三|bh3',
+}
+
+function getCommandPrefixes(key) {
+  const cfg = getCfg()
+  const configured = String(cfg[key] ?? commandPrefixDefaults[key])
+  const fixed = { gs_command_prefixes: '#|＃', sr_command_prefixes: '*|＊', zzz_command_prefixes: '%|％', bh3_command_prefixes: '!|！' }[key]
+  return [...new Set([...fixed.split('|'), ...configured.split(/[|，,\n]/).map(value => value.trim()).filter(Boolean)])].join('|')
+}
+
 /** 图鉴数据模式：official=正式服 / test=测试服（与 config.yaml 的 data_mode 一致） */
 function getDataMode() {
   const v = String(getCfg().data_mode || 'official').trim()
@@ -249,6 +263,38 @@ export const supportGuoba = () => {
         label: '每日打卡分',
         component: 'InputNumber',
         componentProps: { min: 0, max: 59, step: 1 },
+      },
+      {
+        component: 'SOFT_GROUP_BEGIN',
+        label: '命令前缀设置',
+      },
+      {
+        field: 'gs_command_prefixes',
+        label: '原神命令前缀',
+        helpMessage: '多个前缀用 | 分隔；原生 # 固定支持。修改后立即生效。',
+        component: 'Input',
+        componentProps: { placeholder: '例如：#|原神|genshin|gs' },
+      },
+      {
+        field: 'sr_command_prefixes',
+        label: '星铁命令前缀',
+        helpMessage: '多个前缀用 | 分隔；原生 * 固定支持。修改后立即生效，请勿修改符号。',
+        component: 'Input',
+        componentProps: { placeholder: '例如：*|星铁|星穹铁道|崩铁|sr' },
+      },
+      {
+        field: 'zzz_command_prefixes',
+        label: '绝区零命令前缀',
+        helpMessage: '多个前缀用 | 分隔；原生 % 固定支持。修改后立即生效，请勿修改符号。',
+        component: 'Input',
+        componentProps: { placeholder: '例如：%|％|绝区零|绝区|zzz' },
+      },
+      {
+        field: 'bh3_command_prefixes',
+        label: '崩坏三命令前缀',
+        helpMessage: '多个前缀用 | 分隔；原生 ! 固定支持，文字前缀规范为 #崩三。修改后立即生效。',
+        component: 'Input',
+        componentProps: { placeholder: '例如：!|！|崩坏三|崩坏3|崩三|bh3' },
       },
       {
         component: 'SOFT_GROUP_BEGIN',
@@ -1390,6 +1436,10 @@ export const supportGuoba = () => {
         auto_group_sign_minute: autoGroupSign.minute ?? 0,
         // 数据模式：面板上要能读到当前值，否则单选框显示不出选中的那一项
         data_mode: getDataMode(),
+        gs_command_prefixes: getCommandPrefixes('gs_command_prefixes'),
+        sr_command_prefixes: getCommandPrefixes('sr_command_prefixes'),
+        zzz_command_prefixes: getCommandPrefixes('zzz_command_prefixes'),
+        bh3_command_prefixes: getCommandPrefixes('bh3_command_prefixes'),
         panel_style: getPanelStyle(),
         panel_service_gs: cfg.panel_service_gs || 'auto',
         panel_service_sr: cfg.panel_service_sr || 'auto',
@@ -1596,6 +1646,9 @@ export const supportGuoba = () => {
          schema 有字段、getter 也能读，唯独保存时没写回去。 */
       if (data.data_mode != null) {
         yaml.set(_path + 'config.yaml', 'data_mode', String(data.data_mode).trim() === 'test' ? 'test' : 'official')
+      }
+      for (const key of ['gs_command_prefixes', 'sr_command_prefixes', 'zzz_command_prefixes', 'bh3_command_prefixes']) {
+        if (data[key] != null) yaml.set(_path + 'config.yaml', key, String(data[key]).trim())
       }
       /* 面板风格同样只认 dark / apple，其它值一律回落到 dark */
       if (data.panel_style != null) {

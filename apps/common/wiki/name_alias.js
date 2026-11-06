@@ -12,7 +12,7 @@
  *
  * 数据源（全部只读本地文件，不发请求；被限流/缺文件都不影响）：
  *   system/default/*_names.yaml、wqname.yaml、syw.yaml、yiqi.yaml   官方/本地别名表
- *   miao-plugin resources/meta{,-sr}/{character,weapon,lightcone,artifact}/data.json
+ *   本插件 resources/meta{,-sr}/{character,weapon,lightcone,artifact}/data.json
  *   ZZZ-Plugin config/alias.yaml、defSet/alias.yaml                   绝区零代理人别名
  */
 import fs from 'node:fs';
@@ -30,7 +30,7 @@ const p = rel => {
   if (v.startsWith('./plugins/HoYoGet-Plugin/')) return path.join(PLUGIN_ROOT, v.slice('./plugins/HoYoGet-Plugin/'.length));
   // ⚠ 只剥掉 './'：REPO_ROOT 已经是 TRSS-Yunzai 根，
   //   再 slice('./plugins/'.length) 会把 plugins/ 目录名也吃掉，
-  //   路径就落到 /root/TRSS_AllBot/TRSS-Yunzai/miao-plugin/…（不存在，静默 0 条）
+  //   路径就落到 /root/bot/plugins/miao-plugin/…（不存在，静默 0 条）
   if (v.startsWith('./plugins/')) return path.join(REPO_ROOT, v.slice(2));
   return v;
 };
