@@ -20,6 +20,8 @@ const CONTROL_CHARS = /[\x00-\x1f\x7f]/;
 function classify(relative) {
   const parts = relative.split('/');
   const top = parts[0].toLowerCase();
+  // 附加的插件配置根目录
+  if (top === 'config') return 'settings';
   if (['stoken', 'fp'].includes(top) || ['ck_state.json', 'invalid_stuid.json'].includes(relative)) return 'accounts';
   if (/^(gs|sr|zzz|bh3)_gacha(?:\/|$)/i.test(relative) || /gacha|ledger|authkey/i.test(relative)) return 'gacha';
   if (/^(zzz_panel|zzz_challenge|sr_gacha|bh3_abyss|yshelper|fortoffans)(\/|$)/i.test(relative)) return 'panels';
@@ -68,6 +70,14 @@ function titleFor(relative) {
     'bh3_gacha_observed.prev.yaml': '崩三卡池观测记录（上期）',
     '【重要】数据已迁移.txt': '数据迁移说明',
     '别名配置项！.txt': '别名配置说明',
+    'config.yaml': '插件主配置',
+    'activity_remind.yaml': '活动提醒配置',
+    'bh3_remind.yaml': '崩三提醒配置',
+    'bili_group.yaml': 'B站推送群配置',
+    'global_help.yaml': '全局帮助配置',
+    'other.yaml': '其他配置',
+    'sign.yaml': '签到配置',
+    'nanoka_manifest_cache.json': 'Nanoka 清单缓存',
 
 
     // system/default：各游戏的别名 / 映射 / 静态配置模板
@@ -172,8 +182,24 @@ function inside(root, file) {
 }
 
 export class HoYoGetDataBrowser {
-  constructor(root = path.resolve(process.cwd(), 'data/HoYoGet-Plugin')) {
+  constructor(root = path.resolve(process.cwd(), 'data/HoYoGet-Plugin'), extraRoots = null) {
     this.root = path.resolve(root);
+    // 附加根目录：插件配置不在 data/ 下，而是 plugins/HoYoGet-Plugin/config，
+    // 用 `config/` 前缀挂在虚拟路径上一起浏览。
+    this.extraRoots = extraRoots || [
+      { prefix: 'config', dir: path.resolve(process.cwd(), 'plugins/HoYoGet-Plugin/config') },
+    ];
+  }
+
+  /** 把虚拟路径拆成 {base, relative}；config/ 前缀走附加根目录 */
+  locate(value = '') {
+    const normalized = this.normalize(value);
+    for (const extra of this.extraRoots) {
+      if (normalized === extra.prefix || normalized.startsWith(`${extra.prefix}/`)) {
+        return { root: extra.dir, relative: normalized.slice(extra.prefix.length).replace(/^\//, '') };
+      }
+    }
+    return { root: this.root, relative: normalized };
   }
 
   normalize(value = '') {
@@ -186,8 +212,8 @@ export class HoYoGetDataBrowser {
   }
 
   async resolve(value = '') {
-    const relative = this.normalize(value);
-    const root = await fs.realpath(this.root);
+    const { root: rawRoot, relative } = this.locate(value);
+    const root = await fs.realpath(rawRoot);
     const file = path.join(root, ...relative.split('/').filter(Boolean));
     let current = root;
     for (const part of relative.split('/').filter(Boolean)) {
@@ -197,7 +223,7 @@ export class HoYoGetDataBrowser {
     }
     const real = await fs.realpath(file);
     if (!inside(root, real)) throw new DataBrowserError('路径必须位于 HoYoGet 数据目录内');
-    return { file: real, relative, stat: await fs.stat(real) };
+    return { file: real, relative: this.normalize(value), stat: await fs.stat(real) };
   }
 
   async list({ category = 'all', game = 'all', search = '', page = 1 } = {}) {
@@ -210,18 +236,19 @@ export class HoYoGetDataBrowser {
     const files = [];
     const categoryCounts = Object.fromEntries(DATA_CATEGORIES.map(item => [item.id, 0]));
     let scanned = 0;
-    const walk = async (relative = '') => {
+    const walk = async (relative = '', baseRoot = this.root, virtualPrefix = '') => {
       if (scanned >= 50000) return;
       let entries;
-      try { entries = await fs.readdir(path.join(this.root, ...relative.split('/').filter(Boolean)), { withFileTypes: true }); }
+      try { entries = await fs.readdir(path.join(baseRoot, ...relative.split('/').filter(Boolean)), { withFileTypes: true }); }
       catch { return; }
       // 目录遍历是并发写入时最容易抖动的环节：读不到就跳过整层，但不影响其他目录。
       entries.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN', { numeric: true }));
       for (const entry of entries) {
         if (++scanned > 50000) return;
-        const name = [relative, entry.name].filter(Boolean).join('/');
+        const physical = [relative, entry.name].filter(Boolean).join('/');
+        const name = virtualPrefix ? `${virtualPrefix}/${physical}` : physical;
         if (entry.isSymbolicLink()) continue;
-        if (entry.isDirectory()) { await walk(name); continue; }
+        if (entry.isDirectory()) { await walk(physical, baseRoot, virtualPrefix); continue; }
         if (!entry.isFile()) continue;
         const owner = gameFor(name);
         const title = titleFor(name);
@@ -231,7 +258,7 @@ export class HoYoGetDataBrowser {
         categoryCounts[itemCategory]++;
         // 文件可能正在被写入/替换：stat 失败时用目录项兜底，避免整个文件从列表消失。
         let stat = null;
-        try { stat = await fs.stat(path.join(this.root, ...name.split('/'))); } catch { stat = null; }
+        try { stat = await fs.stat(path.join(baseRoot, ...physical.split('/'))); } catch { stat = null; }
         if (category === 'all' || itemCategory === category) {
           files.push({
             path: name,
@@ -249,6 +276,10 @@ export class HoYoGetDataBrowser {
       }
     };
     try { await walk(); } catch (err) { if (err.code !== 'ENOENT') throw err; }
+    // 附加根目录（配置文件等）以 config/ 前缀并入同一列表
+    for (const extra of this.extraRoots) {
+      try { await walk('', extra.dir, extra.prefix); } catch (err) { if (err.code !== 'ENOENT') throw err; }
+    }
     files.sort((a, b) => a.path.localeCompare(b.path, 'zh-CN', { numeric: true }));
     const offset = (page - 1) * DATA_PAGE_SIZE;
     return {
