@@ -25,7 +25,7 @@ const gameIconUrl = game => (GAME_ICONS.has(game) ? `icons/${game}.webp` : '')
 // 没有图片资源的分类用内联矢量图标，避免文字占位
 const INLINE_GAME_ICON = {
   all: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
-  common: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h10"/></svg>',
+  common: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5"/><path d="M12 12v9"/><path d="M12 12L4 7.5"/></svg>',
 }
 const inlineGameIcon = game => INLINE_GAME_ICON[game] || INLINE_GAME_ICON.common
 const api = location.pathname.replace(/hoyoget-data\/$/, 'api/hoyoget-data')
@@ -173,7 +173,8 @@ function fileEntryNode(item) {
     img.loading = 'lazy'
     icon.append(img)
   } else {
-    icon.textContent = gameAbbr(item.game)
+    icon.classList.add('vector')
+    icon.innerHTML = inlineGameIcon(item.game)
   }
 
   const body = document.createElement('span')
