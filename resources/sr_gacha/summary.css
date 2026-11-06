@@ -22,14 +22,9 @@ body {
 }
 
 .container {
-  /* 不能写死 960px：出图走 CSS zoom 提高精度时（锅巴精度 200% → zoom 4.8），
-     固定宽会被放大成 960×4.8=4608px 的视觉盒，超出 body 视口被横向裁掉。
-     用 100% 让宽度跟随 body 的逻辑宽度，zoom 后视觉宽仍是 960。 */
-  width: 100%;
-  max-width: 960px;
+  width: 960px;
   margin: 0 auto;
   padding: 32px 28px 8px;
-  box-sizing: border-box;
 }
 
 .empty_box {
@@ -39,48 +34,81 @@ body {
   font-size: 15px;
 }
 
-/* ---------- 页头 ---------- */
-.page-head {
+/* ---------- 顶部玩家信息卡 ---------- */
+.hero {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 4px 24px;
+  gap: 20px;
+  background: linear-gradient(135deg, #ffffff 0%, #f4f6fb 100%);
+  border-radius: 18px;
+  padding: 22px 26px;
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
 }
 
-.eyebrow {
-  font-size: 11px;
-  letter-spacing: 3px;
-  color: var(--text-faint);
-  font-weight: 600;
+.hero-user { display: flex; align-items: center; gap: 16px; min-width: 0; }
+
+.hero-avatar {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  background-color: #e6e9f1;
+  border: 3px solid #fff;
+  box-shadow: 0 3px 10px rgba(38,44,60,.15);
+  flex-shrink: 0;
 }
 
-.page-head h1 {
-  font-size: 30px;
+.hero-name {
+  font-size: 22px;
   font-weight: 700;
-  letter-spacing: 1px;
-  margin: 6px 0 8px;
+  color: var(--text);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.uid-line {
-  font-size: 13px;
-  color: var(--text-weak);
-}
+.hero-uid { font-size: 12.5px; color: var(--text-weak); margin-top: 4px; }
 
-.head-badge {
+.hero-stats { display: flex; align-items: center; gap: 10px; }
+
+.hero-stat {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  width: 92px;
-  height: 92px;
-  border-radius: 22px;
-  background: linear-gradient(150deg, #f7d488 0%, #e0a63f 60%, #c98a2c 100%);
-  color: #fff;
-  box-shadow: var(--shadow);
+  min-width: 76px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #eef0f6;
+}
+.hs-num { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1.1; }
+.hs-num.gold { color: var(--gold); }
+.hs-label { font-size: 11.5px; color: var(--text-weak); margin-top: 4px; }
+
+/* ---------- 卡池标签栏 ---------- */
+.pool-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
 }
 
-.hb-num { font-size: 32px; font-weight: 700; line-height: 1; }
-.hb-label { font-size: 12px; opacity: .9; margin-top: 4px; }
+.pool-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--text);
+  box-shadow: 0 1px 4px rgba(38,44,60,.04);
+}
+.pool-tab b { color: var(--text-weak); font-weight: 600; font-size: 12px; }
 
 /* ---------- 总览表 ---------- */
 .ov-box {
@@ -172,32 +200,58 @@ body {
 .pool-meta {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   font-size: 12.5px;
   color: var(--text-weak);
 }
+.pool-meta .pill { margin-right: 2px; }
 .pool-meta .dot {
   width: 3px; height: 3px; border-radius: 50%;
   background: var(--text-faint);
 }
 
-/* ---------- 统计格 ---------- */
+/* ---------- 卡池两栏：左统计 / 右五星网格 ---------- */
+.pool-body {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+  padding-top: 18px;
+}
+
+.pool-side {
+  position: sticky;
+  top: 0;
+  min-width: 0;
+}
+
+.pool-main { min-width: 0; }
+
+.side-range {
+  margin-top: 12px;
+  font-size: 11.5px;
+  color: var(--text-faint);
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* ---------- 统计格（侧栏 2 列） ---------- */
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 10px;
-  margin: 20px 0 4px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .stat-cell {
   background: linear-gradient(180deg, #fafbfe 0%, #f3f5fa 100%);
   border: 1px solid #eef0f6;
   border-radius: 12px;
-  padding: 14px 12px;
+  padding: 12px 10px;
   text-align: center;
+  min-width: 0;
 }
 
-.stat-num { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1.1; }
+.stat-num { font-size: 19px; font-weight: 700; color: var(--text); line-height: 1.15; }
 .stat-unit { font-size: 12px; font-weight: 400; color: var(--text-weak); margin-left: 2px; }
 .stat-label { font-size: 12px; color: var(--text-weak); margin-top: 6px; }
 
@@ -212,22 +266,22 @@ body {
 .split-text { font-size: 12.5px; color: var(--text-faint); white-space: nowrap; }
 
 /* ---------- 年份 ---------- */
-.year-block { margin-bottom: 18px; }
+.year-block { margin-bottom: 14px; }
 .year-block:last-child { margin-bottom: 0; }
 
 .year-head {
   display: flex;
   align-items: baseline;
   gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 .year-title { font-size: 15px; font-weight: 700; color: var(--text); }
 .year-count { font-size: 12px; color: var(--text-faint); }
 
 .card-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
 }
 
 /* ---------- 五星卡片（gga 风格：稀有度渐变 + 底部抽数） ---------- */
@@ -302,3 +356,68 @@ body {
   font-size: 12px;
   padding: 12px 0 20px;
 }
+
+/* ---------- 连 UP / 连歪 胶囊（参考 Moonward） ---------- */
+.pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9px;
+  color: #fff;
+  line-height: 1.5;
+}
+.pill-up { background: linear-gradient(135deg, #f0b352, #d9902f); }
+.pill-miss { background: linear-gradient(135deg, #e07a7a, #c25656); }
+
+/* ---------- 保底进度条（参考 Starward：绿→红阈值 74/63） ---------- */
+.pity-bar-wrap {
+  margin: 12px 0 0;
+  padding: 14px 16px 16px;
+  background: linear-gradient(180deg, #fbfcfe 0%, #f4f6fa 100%);
+  border: 1px solid #eef0f6;
+  border-radius: 12px;
+}
+.pity-bar-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: var(--text-weak);
+  margin-bottom: 9px;
+}
+.pity-bar-val { font-weight: 700; font-size: 14px; }
+.pity-bar-val.safe { color: #27a765; }
+.pity-bar-val.hot { color: #d64536; }
+.pity-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: #e6e9f1;
+  overflow: hidden;
+}
+.pity-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width .2s ease;
+}
+.pity-fill.safe { background: linear-gradient(90deg, #52c98a 0%, #00e079 100%); }
+.pity-fill.hot { background: linear-gradient(90deg, #e87a68 0%, #c83c23 100%); }
+
+/* 五星数量过多时的提示（出图限长） */
+.more-hint {
+  margin: 4px 0 2px;
+  padding: 10px 14px;
+  background: #f7f8fc;
+  border: 1px dashed #e2e5ee;
+  border-radius: 10px;
+  font-size: 12.5px;
+  color: var(--text-weak);
+  text-align: center;
+}
+
+/* ---------- 卡池类别色点（模板用 label_<class> 标记圆点颜色） ---------- */
+.label_char { background: linear-gradient(135deg, #f0b352, #d9902f); }
+.label_weapon { background: linear-gradient(135deg, #a98be0, #7a5cc4); }
+.label_common { background: linear-gradient(135deg, #8ec5e8, #5a8fc4); }
+.label_newbie { background: linear-gradient(135deg, #8fd6a5, #4f9f6b); }
+.label_collabChar { background: linear-gradient(135deg, #f08fb0, #c45a86); }
+.label_collabWeapon { background: linear-gradient(135deg, #f0a37a, #c46f4a); }
