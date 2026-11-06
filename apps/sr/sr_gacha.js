@@ -976,14 +976,26 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
       /* 历史截断：五星数超过出图上限时，卡片底部提示仍有 N 个未画出 */
       truncated: hiddenFive > 0,
       truncatedHint: hiddenFive > 0 ? `历史过长，仅展示最近 ${SHOW_LIMIT} 个五星，另有 ${hiddenFive} 个未展示` : '',
-      /* 数据源不完整：工坊源只给五星摘要，缺三星四星逐抽。
-         导出给 ZZZ-Plugin / Mys 等第三方会因缺三星四星而计数/保底错乱，
-         需要在卡片上提示改用 authkey 链接补全。判据：总抽数明显大于
-         实际记录条数（含四星）时，说明逐抽明细缺失。 */
+      /* 数据源不完整：只有「五星摘要 + 四星摘要」而没有逐抽明细时，
+         导出给 ZZZ-Plugin / Mys 等第三方会因缺三星导致计数/保底错乱。
+         判据要区分三种数据形态，不能只看记录条数：
+           1. 全量逐抽（原神）：records 含全部星级，records.length ≈ totalPulls → 完整
+           2. 五星+四星摘要（星铁 ck）：records=五星、fourLog=四星，四星有真实明细
+              → 四星对得上 fourNum 就算完整（三星不影响五星/UP 统计，第三方也能补）
+           3. 仅五星摘要（绝区零工坊）：fourLog 只有零星几条、fourNum 却很大
+              → 缺四星明细，判为不完整 */
       incomplete: (() => {
-        const recCount = getPoolRecords(pool).length + (Array.isArray(pool?.fourLog) ? pool.fourLog.length : 0)
-        // totalPulls 是真实抽取数；若记录条数远小于它，说明缺逐抽
-        return totalPulls > 0 && recCount < totalPulls * 0.5
+        if (!totalPulls) return false
+        const allRecs = getPoolRecords(pool)
+        const fourLogLen = Array.isArray(pool?.fourLog) ? pool.fourLog.length : 0
+        // 全量逐抽：记录条数已覆盖总抽数，完整（原神即此类）
+        if (allRecs.length + fourLogLen >= totalPulls * 0.9) return false
+        // 有真实三星记录说明是全量逐抽，完整
+        const hasThreeStar = allRecs.some(r => String(r?.rank_type) === '3')
+          || (Array.isArray(pool?.fourLog) && pool.fourLog.some(r => String(r?.rank_type) === '3'))
+        if (hasThreeStar) return false
+        // 其余（星铁 ck 五星+四星摘要、绝区零工坊五星摘要）都缺三星逐抽，判为不完整
+        return true
       })(),
       /* 欧皇度（概率模型估算）：UP 池按 UP 累计花费，常驻/新手池按五星累计花费 */
       ...(() => {
@@ -1089,8 +1101,21 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
     totalUp,
     // 顶部汇总欧皇度：按五星数加权合并各池（口径同统计卡）
     luck: aggregateLuck(shownPools),
-    // 数据不完整提示：任一会歪池缺逐抽（工坊源）时，提示改用 authkey 补全
+    // 数据不完整提示：任一会歪池缺三星逐抽时，提示改用 authkey 补全
     incompletePools: shownPools.filter(p => p.incomplete).map(p => p.name),
+    // 提示文案按游戏给出对应的补全方式
+    incompleteHint: (() => {
+      const pools = shownPools.filter(p => p.incomplete)
+      if (!pools.length) return ''
+      const names = pools.map(p => p.name).join('、')
+      if (game === 'zzz') {
+        return `${names} 仅有五星摘要（工坊源），缺三星四星逐抽，导出给 ZZZ-Plugin / 第三方会因计数与保底错乱。请发送【#米哈游绝区零抽卡链接 + 调频记录链接】补全完整历史。`
+      }
+      if (game === 'sr') {
+        return `${names} 缺三星逐抽（当前为五星+四星摘要），导出给第三方会因缺三星导致保底计数偏差。请更新完整记录或粘贴跃迁记录链接补全。`
+      }
+      return `${names} 缺逐抽明细，导出给第三方可能不完整。请更新完整记录补全。`
+    })(),
     pools: shownPools,
   }
 }
