@@ -571,3 +571,17 @@ body {
 .ih-body { flex: 1; min-width: 0; }
 .ih-title { font-size: 15.5px; font-weight: 800; color: #b33227; margin-bottom: 4px; }
 .ih-desc { font-size: 13.5px; line-height: 1.55; color: #8a4a43; }
+
+/* 抽数异常小：上一个五星记录缺失（前面历史断层），橙色 ≤ 角标 */
+.tag-gap {
+  right: 5px;
+  background: linear-gradient(135deg, #ffb347, #e8862a);
+  border: 1px solid rgba(255, 255, 255, .55);
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
+  padding: 2px 7px;
+  letter-spacing: -0.5px;
+  box-shadow: 0 2px 8px rgba(232, 134, 42, .5), inset 0 1px 0 rgba(255, 255, 255, .4);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .28);
+}

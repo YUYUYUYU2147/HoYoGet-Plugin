@@ -875,6 +875,10 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
         isUp: up,
         // 超过硬保底即标（含歪的），提示历史断层
         overPity: pulls > itemBase,
+        // 抽数异常小：正常出金最少也要 1~2 抽才可能，出现 1~5 抽的五星
+        // 说明「上一个五星」的记录丢失，这个 gacha_count 被从 0 重算，
+        // 即这张卡的上一条历史断层（前端历史缺失）。用 ≤5 作阈值，避开正常欧皇。
+        gapBelow: pulls > 0 && pulls <= 5,
         isNull: false,
         year: full.slice(0, 4) || '----',
         fullDate: full || '--',
