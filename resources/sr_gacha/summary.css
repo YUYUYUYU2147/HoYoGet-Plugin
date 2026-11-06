@@ -180,15 +180,18 @@ body {
 }
 
 /* ============ 卡池两列 ============ */
-/* 两列网格：同一行的两张卡自动等高（grid 行内默认 stretch），
-   不会出现一列长、另一列短的空档。 */
+/* 两列布局：列内卡片 flex:1 自动拉伸，让左右两列底部齐平 */
 .pool-columns {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 22px;
+  display: flex;
   align-items: stretch;
+  gap: 22px;
 }
-.pool-column { display: contents; }
+.pool-column {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
 
 .pool-card {
   background: var(--card);
@@ -197,7 +200,10 @@ body {
   box-shadow: var(--shadow);
   margin-bottom: 22px;
   border: 1px solid rgba(233, 236, 243, .9);
+  /* 列内自由拉伸填满，使两列底部对齐 */
+  flex: 1 1 auto;
 }
+.pool-card:last-child { margin-bottom: 0; }
 
 .pool-head {
   display: flex;

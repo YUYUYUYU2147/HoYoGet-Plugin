@@ -51,6 +51,7 @@
       </nav>
 
       <div class="pool-columns">
+        <div class="pool-column" id="pool-col-0">
       {{each pools pool}}
       <section class="pool-card">
         <header class="pool-head">
@@ -109,9 +110,23 @@
         {{/each}}
       </section>
       {{/each}}
+        </div>
+        <div class="pool-column" id="pool-col-1"></div>
       </div>
 
       {{/if}}
+      <script>
+        // 第一个卡池放左列，其余全部进右列；两列 flex:1 拉伸，短卡自动补高，
+        // 使左右两列底部齐平（短的自适应长的，不是长的压缩短的）。
+        (function () {
+          var c0 = document.getElementById('pool-col-0')
+          var c1 = document.getElementById('pool-col-1')
+          if (!c0 || !c1) return
+          var cards = [].slice.call(c0.querySelectorAll('.pool-card'))
+          if (cards.length <= 1) return
+          cards.slice(1).forEach(function (card) { c1.appendChild(card) })
+        })()
+      </script>
       <div class="logo">{{@copy()}}</div>
     </div>
   </body>
