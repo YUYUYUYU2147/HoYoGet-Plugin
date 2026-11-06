@@ -14,9 +14,12 @@ for (const node of document.querySelectorAll('i[data-icon]')) {
   node.innerHTML = ICONS[node.dataset.icon] || ''
 }
 
-// 游戏短标识（胶囊与文件徽标共用）
+// 游戏短标识（无图标时兜底）
 const GAME_ABBR = { gs: '原', sr: '穹', zzz: '绝', bh3: '崩', common: '常', all: '全' }
 const gameAbbr = game => GAME_ABBR[game] || (String(game || '?')[0] || '?')
+// 复用插件自带的游戏图标（由服务端 /hoyoget-data/icons/<game>.webp 提供）
+const GAME_ICONS = new Set(['gs', 'sr', 'zzz', 'bh3'])
+const gameIconUrl = game => (GAME_ICONS.has(game) ? `icons/${game}.webp` : '')
 const api = location.pathname.replace(/hoyoget-data\/$/, 'api/hoyoget-data')
 const tokenKey = `hoyoget-data-token:${location.pathname}`
 let token = ''
@@ -94,7 +97,16 @@ function renderGamePills() {
     button.setAttribute('aria-pressed', String(filters.game === game.id))
     const icon = document.createElement('span')
     icon.className = 'gicon'
-    icon.textContent = gameAbbr(game.id)
+    const iconUrl = gameIconUrl(game.id)
+    if (iconUrl) {
+      const img = document.createElement('img')
+      img.src = iconUrl
+      img.alt = ''
+      img.loading = 'lazy'
+      icon.append(img)
+    } else {
+      icon.textContent = gameAbbr(game.id)
+    }
     const label = document.createElement('span')
     label.textContent = game.title
     button.append(icon, label)
@@ -138,7 +150,16 @@ function renderFiles() {
 
     const icon = document.createElement('span')
     icon.className = `file-badge ${item.game || 'common'}`
-    icon.textContent = gameAbbr(item.game)
+    const badgeUrl = gameIconUrl(item.game)
+    if (badgeUrl) {
+      const img = document.createElement('img')
+      img.src = badgeUrl
+      img.alt = item.gameTitle || ''
+      img.loading = 'lazy'
+      icon.append(img)
+    } else {
+      icon.textContent = gameAbbr(item.game)
+    }
 
     const body = document.createElement('span')
     body.className = 'file-body'

@@ -38,6 +38,15 @@ export function mountHoYoGetDataPage(application, store, fallbackRouter) {
   }
   app.get(`${page}favicon.ico`, (req, res) => res.set(headers).status(204).end());
 
+  // 复用插件自带的游戏图标，数据页的胶囊与文件徽标直接引用
+  const ICON_FILES = { gs: 'gs.webp', sr: 'sr.webp', zzz: 'zzz.webp', bh3: 'bh3.webp' };
+  for (const [game, file] of Object.entries(ICON_FILES)) {
+    app.get(`${page}icons/${game}.webp`, (req, res) => {
+      res.set({ ...headers, 'Content-Type': 'image/webp', 'Cache-Control': 'public, max-age=86400' });
+      res.sendFile(path.join(pluginRoot, 'resources/game_icons', file));
+    });
+  }
+
   const handler = fn => async (req, res) => {
     res.set(headers);
     try { await fn(req, res); }

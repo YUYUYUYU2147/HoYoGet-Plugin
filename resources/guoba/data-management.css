@@ -240,15 +240,13 @@ main {
   width: 20px;
   height: 20px;
   border-radius: 50%;
+  overflow: hidden;
   font-size: 10.5px;
   font-weight: 800;
   color: #fff;
   background: var(--g-muted, #8a93a3);
 }
-.game-pill[data-game="gs"] .gicon { background: var(--dm-gs); }
-.game-pill[data-game="sr"] .gicon { background: var(--dm-sr); }
-.game-pill[data-game="zzz"] .gicon { background: var(--dm-zzz); }
-.game-pill[data-game="bh3"] .gicon { background: var(--dm-bh3); }
+.game-pill .gicon img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .game-pill[data-game="all"] .gicon,
 .game-pill[data-game="common"] .gicon { background: var(--dm-accent); }
 
@@ -305,15 +303,13 @@ main {
   width: 30px;
   height: 30px;
   border-radius: 9px;
+  overflow: hidden;
   font-size: 11.5px;
   font-weight: 800;
   color: #fff;
   background: var(--g-muted, #8a93a3);
 }
-.file-badge.gs { background: var(--dm-gs); }
-.file-badge.sr { background: var(--dm-sr); }
-.file-badge.zzz { background: var(--dm-zzz); }
-.file-badge.bh3 { background: var(--dm-bh3); }
+.file-badge img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .file-badge.common { background: var(--dm-accent); }
 
 .file-body { flex: 1; min-width: 0; }
