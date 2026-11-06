@@ -271,13 +271,112 @@ export class gs_gacha extends plugin {
         // 省略游戏名前缀：#更新小助手抽卡记录 / #更新提瓦特小助手记录（原神为默认游戏）
         { reg: "^#?[ \\t]*(更新|刷新|同步|获取|导入|补全|补回)(提瓦特)?小助手(抽卡|祈愿)?(记录|数据)$", fnc: "helperHelp" },
         { reg: "^#*米哈游原神导入小助手(抽卡|祈愿)?(记录|数据)(\\s+\\S+)?$", fnc: "importLelaer" },
-        // 不带游戏名的通用写法：#抽卡帮助 / 抽卡帮助（原神为默认游戏）
-        { reg: "^#?[ \\t]*抽卡(记录)?帮助$", fnc: "help" },
+        // 不带游戏名的通用写法 #抽卡帮助 → 三个游戏的总帮助图
+        { reg: "^#?[ \\t]*抽卡(记录)?帮助$", fnc: "gachaHelpAll" },
         // 带游戏名但不带米哈游前缀：#原神抽卡帮助 / 原神抽卡帮助
         { reg: "^[#*%％]?[ \\t]*(?:原神|genshin|gs|GS)[ \\t]*抽卡(记录)?帮助$", fnc: "help" },
       ],
     })
   }
+  /** #抽卡帮助：三个游戏的抽卡指令总览，渲染成一张图 */
+  async gachaHelpAll(e) {
+    const sections = [
+      {
+        key: 'gs', index: '01', title: '原神', desc: 'Genshin Impact',
+        groups: [
+          {
+            title: '更新记录',
+            items: [
+              { cmd: '#米哈游原神更新抽卡记录', note: '用已绑定的 stoken/CK 自动换 authkey' },
+              { cmd: '#米哈游原神抽卡链接 <链接>', note: '自动更新失败时贴小程序链接' },
+              { cmd: '#米哈游原神超越抽卡 <链接>', note: '千星奇域记录' },
+            ],
+          },
+          {
+            title: '查询与导出',
+            items: [
+              { cmd: '#米哈游原神抽卡记录', note: '抽卡总览统计' },
+              { cmd: '#米哈游原神当前卡池', note: '本期卡池与剩余时间' },
+              { cmd: '#导出抽卡记录', note: '导出 UIGF 标准 JSON' },
+            ],
+          },
+          {
+            title: '提瓦特小助手',
+            items: [
+              { cmd: '#米哈游原神更新小助手记录', note: '拉小助手全量逐抽（含三星四星）' },
+              { cmd: '#米哈游原神回传小助手', note: '把本地记录上传到小助手' },
+              { cmd: '#米哈游原神导入小助手记录 <文件>', note: '导入导出的 UIGF/SRGF JSON' },
+            ],
+          },
+        ],
+      },
+      {
+        key: 'sr', index: '02', title: '星铁', desc: 'Honkai: Star Rail',
+        groups: [
+          {
+            title: '更新记录',
+            items: [
+              { cmd: '#米哈游星铁更新抽卡记录', note: '免链接：临时登录一次游戏客户端换 authkey' },
+              { cmd: '#米哈游星铁抽卡链接 <链接>', note: '粘贴游戏内跃迁记录链接' },
+              { cmd: '#米哈游更新小助手抽卡记录', note: '从小助手云端拉全量（需 mysql2）' },
+              { cmd: '#米哈游星铁更新星穹工坊记录', note: '星穹工坊云端补历史五星' },
+            ],
+            note: '免链接方式会让同账号在线游戏客户端掉线，仅支持国服官服本人账号。',
+          },
+          {
+            title: '查询',
+            items: [
+              { cmd: '#米哈游星铁抽卡记录', note: '抽卡总览统计' },
+              { cmd: '#米哈游星铁角色记录', note: '角色池进度' },
+              { cmd: '#米哈游星铁武器记录', note: '光锥池进度' },
+              { cmd: '#米哈游星铁常驻记录', note: '常驻池统计' },
+            ],
+          },
+        ],
+      },
+      {
+        key: 'zzz', index: '03', title: '绝区零', desc: 'Zenless Zone Zero',
+        groups: [
+          {
+            title: '更新记录',
+            items: [
+              { cmd: '#米哈游绝区零更新抽卡记录', note: '通过绑定信息更新调频记录' },
+              { cmd: '#米哈游绝区零抽卡链接 <链接>', note: '粘贴调频历史链接' },
+              { cmd: '#米哈游云绝区零更新抽卡记录', note: '读 Windows 客户端或浏览器扫码' },
+            ],
+            note: '云绝区零在 Linux 走 SDK 二维码登录，无需浏览器。',
+          },
+          {
+            title: '查询与导出',
+            items: [
+              { cmd: '#米哈游绝区零抽卡记录', note: '调频总览统计' },
+              { cmd: '#米哈游绝区零全部记录', note: '各频段汇总' },
+              { cmd: '#导出抽卡记录', note: '导出 UIGF 标准 JSON' },
+            ],
+          },
+        ],
+      },
+    ]
+
+    let sent = false
+    try {
+      // ret: true 由 render 统一发送图片，避免和调用方重复发送
+      sent = await render('sr_gacha/gacha-help', { sections }, { e, ret: true })
+    } catch (error) {
+      logger.error(`[HoYoGet][抽卡帮助] 渲染失败：${error?.message || error}`)
+    }
+    if (sent) return true
+    // 渲染失败退化成文本，保证一定能看到内容
+    const lines = ['【抽卡帮助】']
+    for (const section of sections) {
+      lines.push('', `— ${section.title} —`)
+      for (const group of section.groups) {
+        for (const item of group.items) lines.push(`${item.cmd}  ${item.note || ''}`)
+      }
+    }
+    return e.reply(lines.join('\n'))
+  }
+
   async help(e) {
     /* 行数较多，改成合并转发；连接器不支持时 makeForwardMsg 会退回纯文本。 */
     const nodes = [

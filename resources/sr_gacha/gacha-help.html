@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}sr_gacha/gacha-help.css" />
+  </head>
+  <body {{sys.scale}}>
+    <div class="container">
+      <header class="hero">
+        <div class="hero-main">
+          <div class="hero-eyebrow">HOYOGET · GACHA GUIDE</div>
+          <h1>抽卡记录帮助</h1>
+          <p class="hero-sub">一条指令掌握三个游戏的抽卡记录玩法</p>
+        </div>
+        <div class="hero-prefix">
+          <div class="prefix-item"><b class="pf-gs">#</b><span>原神</span></div>
+          <div class="prefix-item"><b class="pf-sr">*</b><span>星铁</span></div>
+          <div class="prefix-item"><b class="pf-zzz">%</b><span>绝区零</span></div>
+        </div>
+      </header>
+
+      <div class="notice">
+        命令里的「米哈游」前缀可以省略，不写前缀时默认按原神处理。
+      </div>
+
+      {{each sections section}}
+      <section class="card section-{{section.key}}">
+        <div class="card-head">
+          <span class="card-index">{{section.index}}</span>
+          <h2>{{section.title}}</h2>
+          <span class="card-desc">{{section.desc}}</span>
+        </div>
+        <div class="card-body">
+          {{each section.groups group}}
+          <div class="group">
+            <div class="group-title">{{group.title}}</div>
+            {{each group.items item}}
+            <div class="cmd-row">
+              <code class="cmd">{{item.cmd}}</code>
+              {{if item.note}}<span class="cmd-note">{{item.note}}</span>{{/if}}
+            </div>
+            {{/each}}
+            {{if group.note}}<p class="group-note">{{group.note}}</p>{{/if}}
+          </div>
+          {{/each}}
+        </div>
+      </section>
+      {{/each}}
+
+      <footer class="foot">
+        <span>数据来源：米游社官方接口 / 提瓦特小助手</span>
+        <span class="foot-dot"></span>
+        <span>{{layoutcopyright}}</span>
+      </footer>
+    </div>
+  </body>
+</html>
