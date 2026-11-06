@@ -13,43 +13,22 @@
       {{/if}}
 
       {{if pools && pools.length}}
-      <header class="hero">
-        <div class="hero-user">
-          <div class="hero-avatar" {{if avatar}}style="background-image:url('{{avatar}}')"{{/if}}></div>
-          <div class="hero-info">
-            <div class="hero-name">{{nickname}}</div>
-            <div class="hero-uid">UID {{uid}}</div>
-          </div>
+      <header class="page-head">
+        <div class="page-head-main">
+          <div class="eyebrow">GACHA RECORD</div>
+          <h1>抽卡记录</h1>
+          <p class="uid-line">UID {{uid}} · 共 {{totalPulls}} 抽</p>
         </div>
-        <div class="hero-stats">
-          <div class="hero-stat">
-            <span class="hs-num">{{totalPulls}}</span>
-            <span class="hs-label">总抽数</span>
-          </div>
-          <div class="hero-stat">
-            <span class="hs-num gold">{{totalFive}}</span>
-            <span class="hs-label">五星</span>
-          </div>
-          <div class="hero-stat">
-            <span class="hs-num">{{totalUp}}</span>
-            <span class="hs-label">UP</span>
-          </div>
+        <div class="head-badge">
+          <span class="hb-num">{{totalFive}}</span>
+          <span class="hb-label">五星</span>
         </div>
       </header>
-
-      <nav class="pool-tabs">
-        {{each pools pool}}
-        <span class="pool-tab">
-          <i class="pool-dot label_{{pool.labelClass}}"></i>{{pool.name}}
-          <b>{{pool.allNum || 0}}</b>
-        </span>
-        {{/each}}
-      </nav>
 
       <section class="ov-box">
         <div class="ov-head">
           <span class="ov-title">卡池总览</span>
-          <span class="ov-hint">下方为各卡池明细</span>
+          <span class="ov-hint">点击统计卡片可查看下方明细</span>
         </div>
         <div class="ov-table">
           <div class="ov-row ov-th">
@@ -85,70 +64,53 @@
             <span class="pool-pulls">{{pool.allNum || '--'}} <small>抽</small></span>
           </div>
           <div class="pool-meta">
-            {{if pool.maxUpStreak>0}}<span class="pill pill-up">连UP {{pool.maxUpStreak}}</span>{{/if}}
-            {{if pool.maxMissStreak>0}}<span class="pill pill-miss">连歪 {{pool.maxMissStreak}}</span>{{/if}}
             <span>五星 {{pool.fiveNumText}}</span>
             <span class="dot"></span>
             <span>平均 {{pool.fiveAvg}}</span>
+            {{if pool.pityText}}<span class="dot"></span><span>垫 {{pool.pityText}}</span>{{/if}}
           </div>
         </header>
 
-        <div class="pool-body">
-          <aside class="pool-side">
-            <div class="stat-grid">
-              {{each pool.line line}}
-              {{each line item}}
-              <div class="stat-cell">
-                <div class="stat-num">{{item.num}}<span class="stat-unit">{{item.unit}}</span></div>
-                <div class="stat-label">{{item.lable}}</div>
-              </div>
-              {{/each}}
-              {{/each}}
-            </div>
+        <div class="stat-grid">
+          {{each pool.line line}}
+          {{each line item}}
+          <div class="stat-cell">
+            <div class="stat-num">{{item.num}}<span class="stat-unit">{{item.unit}}</span></div>
+            <div class="stat-label">{{item.lable}}</div>
+          </div>
+          {{/each}}
+          {{/each}}
+        </div>
 
-            {{if pool.pity > 0}}
-            <div class="pity-bar-wrap">
-              <div class="pity-bar-head">
-                <span>距离下个五星</span>
-                <span class="pity-bar-val {{pool.pity >= pool.pityThreshold ? 'hot' : 'safe'}}">{{pool.pity}} / {{pool.pityGuarantee}}</span>
-              </div>
-              <div class="pity-bar">
-                <div class="pity-fill {{pool.pity >= pool.pityThreshold ? 'hot' : 'safe'}}" style="width:{{pool.pityPct}}%"></div>
-              </div>
-            </div>
-            {{/if}}
+        <div class="section-split">
+          <span class="split-line"></span>
+          <span class="split-text">五星历史 {{pool.firstTime}} ~ {{pool.lastTime}}</span>
+          <span class="split-line"></span>
+        </div>
 
-            <div class="side-range">五星记录 {{pool.firstTime}} ~ {{pool.lastTime}}</div>
-          </aside>
+        {{if !pool.yearGroups.length}}
+        <div class="empty_box">暂无五星记录</div>
+        {{/if}}
 
-          <div class="pool-main">
-            {{if !pool.yearGroups.length}}
-            <div class="empty_box">暂无五星记录</div>
-            {{/if}}
-            {{each pool.yearGroups group}}
-            <div class="year-block">
-              <div class="year-head">
-                <span class="year-title">{{group.year}}</span>
-                <span class="year-count">{{group.list.length}} 个五星</span>
-              </div>
-              <div class="card-list">
-                {{each group.list val}}
-                <div class="pull-card {{val.num<=10?'gold': (val.num<pool.maxPity*0.5 ? 'good' : (val.num<pool.maxPity*0.83 ? 'normal' : 'bad'))}}{{val.isUp?' is-up':''}}">
-                  {{if val.isUp}}<span class="tag tag-up">UP</span>{{/if}}
-                  {{if val.overPity}}<span class="tag tag-over">≧</span>{{/if}}
-                  <span class="pull-avatar" {{if val.icon}}style="background-image:url('{{val.icon}}')"{{/if}}></span>
-                  <div class="pull-pity {{val.num<=10?'gold': (val.num<pool.maxPity*0.5 ? 'good' : (val.num<pool.maxPity*0.83 ? 'normal' : 'bad'))}}">{{val.num}}</div>
-                  <div class="pull-date">{{val.fullDate}}</div>
-                </div>
-                {{/each}}
-              </div>
+        {{each pool.yearGroups group}}
+        <div class="year-block">
+          <div class="year-head">
+            <span class="year-title">{{group.year}}</span>
+            <span class="year-count">{{group.list.length}} 个五星</span>
+          </div>
+          <div class="card-list">
+            {{each group.list val}}
+            <div class="pull-card {{val.num<=10?'gold': (val.num<pool.maxPity*0.5 ? 'good' : (val.num<pool.maxPity*0.83 ? 'normal' : 'bad'))}}{{val.isUp?' is-up':''}}">
+              {{if val.isUp}}<span class="tag tag-up">UP</span>{{/if}}
+              {{if val.overPity}}<span class="tag tag-over">≧</span>{{/if}}
+              <span class="pull-avatar" {{if val.icon}}style="background-image:url('{{val.icon}}')"{{/if}}></span>
+              <div class="pull-pity {{val.num<=10?'gold': (val.num<pool.maxPity*0.5 ? 'good' : (val.num<pool.maxPity*0.83 ? 'normal' : 'bad'))}}">{{val.num}}</div>
+              <div class="pull-date">{{val.fullDate}}</div>
             </div>
             {{/each}}
-            {{if pool.hiddenFive > 0}}
-            <div class="more-hint">以上为最近的五星，还有 {{pool.hiddenFive}} 个未展示（统计已含全部）</div>
-            {{/if}}
           </div>
         </div>
+        {{/each}}
       </section>
       {{/each}}
 
