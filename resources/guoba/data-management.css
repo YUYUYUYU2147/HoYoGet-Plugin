@@ -179,11 +179,17 @@ main {
 }
 
 /* 左侧列表自身滚动，右侧预览固定在视口内，不随列表滚动跑出屏幕 */
-.file-panel { max-height: calc(100vh - 240px); }
+.file-panel {
+  /* 面板总体随内容增长，但限制在视口内；列表区留出最小高度，
+     避免分页栏把最后一行压住。 */
+  max-height: calc(100vh - 180px);
+  min-height: 420px;
+}
 .preview-panel {
   position: sticky;
   top: 12px;
-  max-height: calc(100vh - 240px);
+  max-height: calc(100vh - 180px);
+  min-height: 420px;
 }
 
 @media (max-width: 980px) {
@@ -280,12 +286,14 @@ main {
 /* 文件列表 */
 .files {
   flex: 1;
+  min-height: 0;
   overflow: auto;
-  padding: 7px;
+  padding: 7px 7px 14px;
   display: flex;
   flex-direction: column;
   gap: 5px;
   scrollbar-width: thin;
+  scroll-padding-bottom: 14px;
 }
 .files::-webkit-scrollbar { width: 8px; }
 .files::-webkit-scrollbar-thumb { background: rgba(128, 140, 160, .3); border-radius: 8px; }
@@ -375,7 +383,9 @@ main {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex: 0 0 auto;
   padding: 10px 14px;
+  background: var(--g-card, #fff);
   border-top: 1px solid var(--g-border, #e3e8ef);
 }
 .count-pill {
