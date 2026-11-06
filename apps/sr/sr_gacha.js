@@ -859,30 +859,15 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
     const noUpPool = ['common', 'GachaType_Standard', 'GachaType_Normal', 'GachaType_Newbie'].includes(key)
     const WEAPON_POOL_RE = /EquipmentUp|WeaponUp|RerunWeapon/
     const overLimit = WEAPON_POOL_RE.test(key) ? 80 : 90
-    // ===== 历史断层判定：基于全量逐抽的三星分布 =====
-    // 判据：某张五星卡前后各 10 抽内若一条三星都没有，说明那段逐抽数据缺失
-    // （数据源只存了五星/四星摘要），即这张卡的上/下方历史断层。
-    // 注意：双金（1~2 抽出五星）是正常的，不能用「抽数小」判断；
-    // 只有「明明有大量抽数却一颗三星都没有」才说明逐抽缺漏。
-    // 仅在数据源含真实三星逐抽（如原神全量）时生效；星铁/绝区零无逐抽，
-    // 走整体「记录不完整」提示，不逐卡标注。
-    const hasThreeStarData = fullRecords.some(r => String(r?.rank_type) === '3')
-    // 逐抽按 id 正序排列（id 内含毫秒时间戳），用于取每张五星前后的 10 条
-    const allAsc = [...fullRecords].sort((a, b) => cmpRecordId(a, b))
-    const GAP_WINDOW = 10
-    /** 这张五星在逐抽序列中的下标附近 10 条内是否没有三星 */
-    function isGapAround(fiveRec) {
-      if (!hasThreeStarData) return false
-      const idx = allAsc.findIndex(r => String(r?.id || '') === String(fiveRec?.id || ''))
-      if (idx < 0) return false
-      const from = Math.max(0, idx - GAP_WINDOW)
-      const to = Math.min(allAsc.length, idx + GAP_WINDOW + 1)
-      for (let i = from; i < to; i++) {
-        if (String(allAsc[i]?.rank_type) === '3') return false
-      }
-      // 前后 10 抽内一条三星都没有 → 这段逐抽缺失
-      return true
-    }
+    // ===== 历史断层判定（对齐主流做法）=====
+    // 不依赖三星逐抽，而是判断五星记录的「抽数是否可信」：
+    //   · 时间上最早的五星（前面没有更早的五星记录）→ 抽数不完整（前史未知）
+    //   · 抽数为 0 或缺失 → 数据缺失
+    // 这两类标 partial，对应卡片右上角 ≤，表示这张卡的历史不足。
+    // 该判据对「五星摘要」数据同样成立（摘要源缺三星时，最早那张必然前史不全）。
+    // 逐抽按 id 正序，找出最早一个五星的 id。
+    const fiveAsc = [...recent].sort((a, b) => cmpRecordId(a, b))
+    const earliestFiveId = fiveAsc.length ? String(fiveAsc[0]?.id || '') : ''
 
     // 五星历史：按时间倒序，供卡片网格使用
     const fiveLog = recent.map(item => {
@@ -903,8 +888,8 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
         isUp: up,
         // 超过硬保底即标（含歪的），提示历史断层
         overPity: pulls > itemBase,
-        // 前后 10 抽内无三星（逐抽缺失）→ 该卡历史断层
-        gapAround: isGapAround(item),
+        // 历史不足：最早五星（前史未知）或抽数缺失
+        gapAround: String(item?.id || '') === earliestFiveId || !(pulls > 0),
         isNull: false,
         year: full.slice(0, 4) || '----',
         fullDate: full || '--',
