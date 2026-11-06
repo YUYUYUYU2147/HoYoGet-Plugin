@@ -868,9 +868,13 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
     }
   }
   // 全部卡池都是 0 抽时不再补一张空卡（模板渲染「暂无抽卡记录」提示）
+  const totalPulls = shownPools.reduce((n, p) => n + (Number(p.allNum) || 0), 0)
+  const totalFive = shownPools.reduce((n, p) => n + (Number(p.fiveNum) || 0), 0)
   return {
     uid,
     update_time: data?.update_time || '未知',
+    totalPulls,
+    totalFive,
     pools: shownPools,
   }
 }
@@ -2488,6 +2492,8 @@ export class sr_gacha extends plugin {
         { reg: '^[#*%％]?[ \t]*(?:星铁|崩铁|星穹铁道|sr|SR)[ \t]*(刷新|更新)抽卡记录$', fnc: 'refresh' },
         { reg: '^[#*%％][ \t]*(刷新|更新)抽卡记录$', fnc: 'refresh' },
         { reg: '^#*米哈游(星铁|崩铁)?(抽卡记录|抽卡统计)$', fnc: 'summary' },
+        // 与 *更新抽卡记录 对称：星号裸命令默认查星铁，不交给喵喵的通用抽卡指令。
+        { reg: '^[*][ \t]*(?:星铁|崩铁)?(抽卡记录|抽卡统计)$', fnc: 'summary' },
         { reg: '^#*米哈游(星铁|崩铁)?角色记录$', fnc: 'roleRecord' },
         { reg: '^#*米哈游(星铁|崩铁)?武器记录$', fnc: 'weaponRecord' },
         { reg: '^#*米哈游(星铁|崩铁)?角色统计$', fnc: 'roleStat' },
