@@ -345,7 +345,13 @@ async function loadPreview(item) {
   if (data.kind === 'image') {
     const blob = await request('download', { path: item.path }, true)
     imageUrl = URL.createObjectURL(blob)
-    $('image').src = imageUrl
+    const img = $('image')
+    img.src = imageUrl
+    img.classList.remove('zoomed')
+    // 原图分辨率写进提示，避免误以为是压缩后的尺寸
+    img.onload = () => {
+      $('content-type').textContent = `图片文件 · ${img.naturalWidth}×${img.naturalHeight}（点击图片切换原始大小）`
+    }
   } else {
     $('content').textContent = data.content || (data.kind === 'sqlite' ? '此数据库以只读方式提供下载。' : '')
     if (data.truncated) $('content-type').textContent += ` · 仅预览前 ${size(256 * 1024)}`
@@ -414,6 +420,10 @@ async function saveEditor() {
     $('editor-save').disabled = false
   }
 }
+
+$('image')?.addEventListener('click', () => {
+  $('image').classList.toggle('zoomed')
+})
 
 $('edit')?.addEventListener('click', openEditor)
 $('editor-cancel')?.addEventListener('click', closeEditor)
