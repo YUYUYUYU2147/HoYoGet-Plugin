@@ -113,7 +113,7 @@
             {{each group.list val}}
             <div class="pull-card {{val.num<=10?'gold': (val.num<pool.maxPity*0.5 ? 'good' : (val.num<pool.maxPity*0.83 ? 'normal' : 'bad'))}}{{val.isUp?' is-up':''}}">
               {{if val.isUp}}<span class="tag tag-up">UP</span>{{/if}}
-              {{if val.overPity}}<span class="tag tag-over">≧</span>{{/if}}
+              {{if val.overPity}}<span class="tag tag-over">≥</span>{{/if}}
               <span class="pull-avatar">{{if val.icon}}<img class="pull-avatar-img" src="{{val.icon}}" alt="" onerror="this.style.display='none'">{{/if}}</span>
               <div class="pull-pity {{val.num<=10?'gold': (val.num<pool.maxPity*0.5 ? 'good' : (val.num<pool.maxPity*0.83 ? 'normal' : 'bad'))}}">{{val.num}}</div>
               <div class="pull-date">{{val.fullDate}}</div>

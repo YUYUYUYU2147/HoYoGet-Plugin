@@ -842,17 +842,23 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
       }
       return remoteIcon
     }
-    // 出金抽数超过硬保底的标 ≧（数据异常/跨池累计的视觉提醒，不影响统计数值）：
-    //   限定角色 90、限定光锥 80，且必须是 UP；
-    //   常驻/新手没有 UP 概念，角色、光锥一律 >90 即标。
+    // 出金抽数超过硬保底 → 标红色 ≥：表示这次出金跨越了保底上限，
+    // 说明前后历史有断层（早期记录缺失 / 跨池累计 / 数据源拼接）。
+    //   · 无论是否 UP 都要标：抽数本身就是异常信号，与歪不歪无关
+    //   · 阈值按池类型：武器/音擎 80，角色/光锥/邦布 90
     const noUpPool = ['common', 'GachaType_Standard', 'GachaType_Normal', 'GachaType_Newbie'].includes(key)
-    const overLimit = ['GachaType_EquipmentUp', 'GachaType_CollabEquipmentUp'].includes(key) ? 80 : 90
+    const WEAPON_POOL_RE = /EquipmentUp|WeaponUp|RerunWeapon/
+    const overLimit = WEAPON_POOL_RE.test(key) ? 80 : 90
     // 五星历史：按时间倒序，供卡片网格使用
     const fiveLog = recent.map(item => {
       const pulls = Number(item.gacha_count || 0)
       const time = item.time || timeFromId(item.id)
       const full = String(time || '').slice(0, 10)
       const up = isUpRec(item)
+      // 混合池（常驻/新手）按角色 90、光锥/音擎/武器 80 分别判；其余池统一用 overLimit
+      const itemBase = noUpPool
+        ? (/光锥|武器|音擎/.test(String(item.item_type || '')) ? 80 : 90)
+        : overLimit
       return {
         name: item.name || '未知',
         id: String(item.id || ''),
@@ -860,8 +866,8 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
         icon: makeIcon(item),
         num: pulls,
         isUp: up,
-        // 常驻/新手：角色与光锥 >90 都标；限定池：仅 UP 且超对应硬保底才标
-        overPity: noUpPool ? pulls > 90 : (up && pulls > overLimit),
+        // 超过硬保底即标（含歪的），提示历史断层
+        overPity: pulls > itemBase,
         isNull: false,
         year: full.slice(0, 4) || '----',
         fullDate: full || '--',
