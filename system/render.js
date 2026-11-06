@@ -145,12 +145,60 @@ export function scaleStyle() {
   return `style=zoom:${qualityScale()}`
 }
 
+
+/* 统一的版权兜底：模板缺少版权时补一段页脚。
+   只改 Renderer 的内存缓存，不动磁盘上的模板文件 —— 避免首次渲染把源文件改掉。
+   样式内联，不依赖各模板自己的 CSS。 */
+const COPYRIGHT_FOOTER_HTML = [
+  '<div style="text-align:center;padding:10px 0 6px;font-size:12px;letter-spacing:.04em;opacity:.75">',
+  '<span style="color:#ff4d4f;font-weight:600">from 米哈游</span>',
+  '</div>',
+].join('')
+
+let RendererRef = null
+async function getRenderer() {
+  if (RendererRef !== null) return RendererRef
+  try {
+    const mod = await import('../../../lib/renderer/Renderer.js')
+    RendererRef = mod.default || mod
+  } catch {
+    RendererRef = undefined
+  }
+  return RendererRef
+}
+
+async function ensureCopyright(tplFile) {
+  try {
+    const Renderer = await getRenderer()
+    if (!Renderer?.html) return
+    // 先确保缓存已按磁盘内容刷新，再判断/注入
+    bustTplCache(tplFile)
+    let html = Renderer.html[tplFile]
+    if (html === undefined) {
+      html = fs.readFileSync(tplFile, 'utf8')
+      Renderer.html[tplFile] = html
+    }
+    if (!html) return
+    // 模板自己已经写了版权就不再重复注入
+    if (/copy\(\)|copyright-from|class="copyright"|class='copyright'/i.test(html)) return
+    if (!/<\/body>/i.test(html)) return
+    Renderer.html[tplFile] = html.replace(/<\/body>/i, `${COPYRIGHT_FOOTER_HTML}\n</body>`)
+    globalThis.logger?.debug?.(`[HoYoGet][render] 已为 ${String(tplFile).split('/resources/')[1] || tplFile} 补上版权注释`)
+  } catch (err) {
+    globalThis.logger?.debug?.(`[HoYoGet][render] 版权注入失败：${err?.message || err}`)
+  }
+}
+
 async function render(path, data_, cfg) {
   let tplFile =
     data_.tplFile || process.cwd() + '/plugins/HoYoGet-Plugin/resources/' + path + '.html';
   /* 框架缓存了模板内容，chokidar 监听在部分环境失效 —— 改完 html 出图还是旧样子。
      按 mtime/size 主动失效，改模板即时生效。 */
   bustTplCache(tplFile);
+  /* 版权注释统一兜底：模板里没有 {{@copy()}} / copyright 的，渲染前自动补一段，
+     避免个别页面忘了写、出图底部没有「from 米哈游」。
+     补在 </body> 之前，用内联样式保证不依赖各模板自己的 CSS。 */
+  await ensureCopyright(tplFile);
   let { e } = cfg;
   if (!e.runtime) {
     logger.error('未找到e.runtime');
