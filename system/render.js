@@ -115,6 +115,27 @@ async function shrinkImage(img) {
   }
 }
 
+/* 多页长图逐页发送。
+   puppeteer 的 multiPage 模式返回的是 Buffer[]（每页一段），
+   如果直接 e.reply(数组)，协议端会把多张图纵向拼成一条极窄长图
+   （实测 800x14814，内容被压得看不清）。这里逐页发：
+   第一页用普通 image 消息，后续页依次发送；返回最后一次 reply 结果供
+   %原图 之类缓存 message_id。单张 Buffer 仍走原来的单次发送。 */
+export async function sendRenderResult(e, payload) {
+  const segment = globalThis.segment
+  if (Array.isArray(payload)) {
+    const list = payload.filter(Boolean)
+    if (!list.length) return false
+    let last = null
+    for (const buf of list) {
+      last = await e.reply(segment.image(buf))
+    }
+    return last
+  }
+  if (Buffer.isBuffer(payload)) return e.reply(segment.image(payload))
+  return e.reply(payload)
+}
+
 /* 对端连接短暂抖动时发送会抛错，隔几秒重试一次，避免整张图丢掉。 */
 async function sendWithRetry(e, img) {
   try {
@@ -216,7 +237,7 @@ async function render(path, data_, cfg) {
   const img = await e.runtime.render('米哈游', path, data_, {
     retType: 'base64',
     fullPage: cfg.fullPage !== false,
-    ...(autoMultiPage ? { multiPage: true, multiPageHeight: cfg.multiPageHeight || 6000 } : {}),
+    ...(autoMultiPage ? { multiPage: true, multiPageHeight: cfg.multiPageHeight || 4000 } : {}),
     beforeRender({ data }) {
       // 本地图标（wiki/imgs/*.png）的相对路径必须按实际落盘深度算，不能写死：
       // 框架把 HTML 存在 ./temp/html/小花火/{path}/{saveId}.html，

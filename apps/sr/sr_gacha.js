@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { createHash } from 'node:crypto'
 import { render, mhy, pluginPriority, makeForwardMsg } from '#HoYoGet'
+import { sendRenderResult } from '../../system/render.js'
 import { appendTaskRecords } from '../../system/task_history.js'
 import { buildIsUP } from '../../system/join_isup.mjs'
 import { getEventNoteUser } from '../../system/genshin_loader.js'
@@ -2728,8 +2729,7 @@ export class sr_gacha extends plugin {
     }
     const template = layout === 'progress' ? 'sr_gacha/progress' : 'sr_gacha/summary'
     const buf = await render(template, view, { e })
-    if (Buffer.isBuffer(buf)) return e.reply(segment.image(buf))
-    return e.reply(buf)
+    return sendRenderResult(e, buf)
   }
 
   async summary(e) {
@@ -2758,8 +2758,7 @@ export class sr_gacha extends plugin {
     const view = buildSrStatView(data, auth.uid, e, keys, commonType)
     // pct 压低 sys.scale 的 zoom：统计卡内容行数多，避免渲染后端截图高度上限截断
     const buf = await render('sr_gacha/stat', view, { e, pct: 1.5 })
-    if (Buffer.isBuffer(buf)) return e.reply(segment.image(buf))
-    return e.reply(buf)
+    return sendRenderResult(e, buf)
   }
 
   async roleStat(e) {

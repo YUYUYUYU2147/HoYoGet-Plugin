@@ -16,6 +16,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { mhy, render, pluginPriority, makeForwardMsg } from '#HoYoGet'
+import { sendRenderResult } from '../../system/render.js'
 import { appendTaskRecords } from '../../system/task_history.js'
 import { guardModuleByFile } from '../../system/modules.js'
 import { getEventNoteUser } from '../../system/genshin_loader.js'
@@ -1336,8 +1337,7 @@ export class zzz_gacha extends plugin {
     const view = buildSummaryView(filterPools(src, keys), auth.uid, e, layout, 'zzz')
     const template = layout === 'progress' ? 'sr_gacha/progress' : 'sr_gacha/summary'
     const buf = await render(template, view, { e })
-    if (Buffer.isBuffer(buf)) return e.reply(segment.image(buf))
-    return e.reply(buf)
+    return sendRenderResult(e, buf)
   }
 
   async summary(e) {
@@ -1380,8 +1380,7 @@ export class zzz_gacha extends plugin {
     // pct 压低 sys.scale 的 zoom：本卡内容行数多（30+ 条进度），
     // 全局 zoom 放大后总高会超出渲染后端截图上限被拦腰截断
     const buf = await render('zzz_gacha/stat', view, { e, pct: 1.5 })
-    if (Buffer.isBuffer(buf)) return e.reply(segment.image(buf))
-    return e.reply(buf)
+    return sendRenderResult(e, buf)
   }
 
   async roleStat(e) {

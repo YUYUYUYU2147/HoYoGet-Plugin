@@ -2,6 +2,7 @@ import fs from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { makeForwardMsg, mhy, pluginPriority, render, yaml } from "#HoYoGet"
+import { sendRenderResult } from "../../system/render.js"
 import { buildSummaryView, extractUrlsFromMsg, requestJson, sleep } from "../sr/sr_gacha.js"
 import { makeGenshinLoader } from "../../system/genshin_loader.js"
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -269,9 +270,8 @@ async function renderImage(e, data) {
   /* 逐抽很多时整页高度会到几万 px，Chromium 单张截图会失败（Unable to capture screenshot）。
      显式按记录数决定是否分页：超过阈值就走多页截图。 */
   const multiPage = totalPulls > 600
-  const buf = await render("sr_gacha/summary", view, { e, ...(multiPage ? { multiPage: true, multiPageHeight: 6000 } : {}) })
-  if (Buffer.isBuffer(buf)) return e.reply(segment.image(buf))
-  return e.reply(buf)
+  const buf = await render("sr_gacha/summary", view, { e, ...(multiPage ? { multiPage: true, multiPageHeight: 4000 } : {}) })
+  return sendRenderResult(e, buf)
 }
 export class gs_gacha extends plugin {
   constructor() {

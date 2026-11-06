@@ -2,6 +2,7 @@ import fs from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { pluginPriority, render } from "#HoYoGet"
+import { sendRenderResult } from "../../system/render.js"
 import { buildSummaryView, extractUrlsFromMsg, requestJson, sleep } from "../sr/sr_gacha.js"
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PLUGIN_ROOT = path.resolve(__dirname, "../..")
@@ -127,8 +128,7 @@ async function renderWuwa(e, ctx, pools) {
   if (!Object.keys(view).length) throw new Error("没有可渲染的鸣潮记录")
   const summary = buildSummaryView({ pools: view }, ctx.playerId || "", e, "grid", "ww")
   const buf = await render("sr_gacha/summary", summary, { e })
-  if (Buffer.isBuffer(buf)) return e.reply(segment.image(buf))
-  return e.reply(buf)
+  return sendRenderResult(e, buf)
 }
 
 export class cross_record extends plugin {
