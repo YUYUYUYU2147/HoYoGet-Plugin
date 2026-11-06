@@ -1,4 +1,22 @@
 const $ = id => document.getElementById(id)
+
+const ICONS = {
+  lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',
+  refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>',
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>',
+  download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 21h14"/></svg>',
+  file: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>',
+  info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r=".6" fill="currentColor"/></svg>',
+  'chevron-left': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 6-6 6 6 6"/></svg>',
+  'chevron-right': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>',
+}
+for (const node of document.querySelectorAll('i[data-icon]')) {
+  node.innerHTML = ICONS[node.dataset.icon] || ''
+}
+
+// 游戏短标识（胶囊与文件徽标共用）
+const GAME_ABBR = { gs: '原', sr: '穹', zzz: '绝', bh3: '崩', common: '常', all: '全' }
+const gameAbbr = game => GAME_ABBR[game] || (String(game || '?')[0] || '?')
 const api = location.pathname.replace(/hoyoget-data\/$/, 'api/hoyoget-data')
 const tokenKey = `hoyoget-data-token:${location.pathname}`
 let token = ''
@@ -65,6 +83,26 @@ async function run(operation) {
   finally { setBusy(false) }
 }
 
+function renderGamePills() {
+  const box = $('game-pills')
+  if (!box) return
+  box.replaceChildren(...(result.games || []).map(game => {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'game-pill'
+    button.dataset.game = game.id
+    button.setAttribute('aria-pressed', String(filters.game === game.id))
+    const icon = document.createElement('span')
+    icon.className = 'gicon'
+    icon.textContent = gameAbbr(game.id)
+    const label = document.createElement('span')
+    label.textContent = game.title
+    button.append(icon, label)
+    button.addEventListener('click', () => run(() => loadFiles({ ...filters, game: game.id, page: 1 })))
+    return button
+  }))
+}
+
 function renderCategories() {
   const nav = $('categories')
   nav.replaceChildren()
@@ -73,12 +111,13 @@ function renderCategories() {
   for (const category of options) {
     const button = document.createElement('button')
     button.type = 'button'
+    button.className = 'chip'
     button.role = 'tab'
     button.setAttribute('aria-selected', String(filters.category === category.id))
     const title = document.createElement('span')
     title.textContent = category.title
     const count = document.createElement('span')
-    count.className = 'tab-count'
+    count.className = 'chip-count'
     count.textContent = String(category.count ?? 0)
     button.append(title, count)
     button.addEventListener('click', () => run(() => loadFiles({ ...filters, category: category.id, page: 1 })))
@@ -93,13 +132,18 @@ function renderFiles() {
     const button = document.createElement('button')
     button.type = 'button'
     button.className = 'file-entry'
+    button.dataset.path = item.path
     button.setAttribute('aria-pressed', String(selected?.path === item.path))
     button.addEventListener('click', () => run(() => loadPreview(item)))
 
-    const label = document.createElement('span')
-    label.className = 'file-name'
+    const icon = document.createElement('span')
+    icon.className = `file-badge ${item.game || 'common'}`
+    icon.textContent = gameAbbr(item.game)
+
+    const body = document.createElement('span')
+    body.className = 'file-body'
     const title = document.createElement('span')
-    title.className = 'file-labels'
+    title.className = 'file-title'
     const strong = document.createElement('strong')
     strong.textContent = item.title
     title.append(strong)
@@ -110,17 +154,18 @@ function renderFiles() {
     if (item.sensitive) {
       const sensitive = document.createElement('span')
       sensitive.className = 'badge sensitive'
-      sensitive.textContent = '敏感数据'
+      sensitive.textContent = '敏感'
       title.append(sensitive)
     }
-    const pathText = document.createElement('code')
+    const pathText = document.createElement('span')
+    pathText.className = 'file-path'
     pathText.textContent = `data/HoYoGet-Plugin/${item.path}`
-    label.append(title, pathText)
+    body.append(title, pathText)
 
     const fileSize = document.createElement('span')
-    fileSize.className = 'size'
+    fileSize.className = 'file-size'
     fileSize.textContent = size(item.size)
-    button.append(label, fileSize)
+    button.append(icon, body, fileSize)
     list.append(button)
   }
   if (!result.items.length) {
@@ -130,6 +175,19 @@ function renderFiles() {
     list.append(empty)
   }
   $('count').textContent = `${result.total} 项`
+  const statCount = $('stat-count')
+  if (statCount) statCount.textContent = String(result.total)
+  const statCategory = $('stat-category')
+  if (statCategory) {
+    const current = (result.categories || []).find(item => item.id === filters.category)
+    statCategory.textContent = filters.category === 'all' ? '全部' : (current?.title || '—')
+  }
+  const statGame = $('stat-game')
+  if (statGame) {
+    const games = result.games || []
+    const currentGame = games.find(item => item.id === filters.game)
+    statGame.textContent = filters.game === 'all' ? '全部' : (currentGame?.title || '—')
+  }
   $('page').textContent = `${result.page} / ${Math.max(1, Math.ceil(result.total / result.pageSize))}`
   updatePager()
 }
@@ -143,7 +201,12 @@ async function loadFiles(nextFilters = filters) {
   renderFiles()
   const extra = result.truncated ? ' · 文件较多，仅扫描前 50000 项' : ''
   status(`已加载 ${result.total} 项数据${extra}`)
-  if (result.items.length) await loadPreview(result.items[0])
+  if (result.items.length) {
+    await loadPreview(result.items[0])
+    for (const entry of document.querySelectorAll('.file-entry')) {
+      entry.setAttribute('aria-pressed', String(entry.dataset.path === result.items[0].path))
+    }
+  }
 }
 
 function clearPreview() {
@@ -185,7 +248,9 @@ async function loadPreview(item) {
     $('content').textContent = data.content || (data.kind === 'sqlite' ? '此数据库以只读方式提供下载。' : '')
     if (data.truncated) $('content-type').textContent += ` · 仅预览前 ${size(256 * 1024)}`
   }
-  for (const entry of document.querySelectorAll('.file-entry')) entry.setAttribute('aria-pressed', String(entry === document.activeElement || entry.querySelector('code')?.textContent.endsWith(item.path)))
+  for (const entry of document.querySelectorAll('.file-entry')) {
+    entry.setAttribute('aria-pressed', String(entry.dataset.path === item.path))
+  }
 }
 
 async function downloadSelected() {
@@ -206,13 +271,8 @@ async function initialize() {
     request('files', filters),
   ])
   result = { ...fileResult, categories: categoryResult }
-  const games = fileResult.games || []
-  $('game').replaceChildren(...games.map(game => {
-    const option = document.createElement('option')
-    option.value = game.id
-    option.textContent = game.title
-    return option
-  }))
+  result.games = fileResult.games || []
+  renderGamePills()
   renderCategories()
   renderFiles()
   status(`已加载 ${result.total} 项数据`)
@@ -220,7 +280,7 @@ async function initialize() {
 }
 
 $('refresh').addEventListener('click', () => run(() => loadFiles({ ...filters })))
-$('game').addEventListener('change', () => run(() => loadFiles({ ...filters, game: $('game').value, page: 1 })))
+
 $('search').addEventListener('input', () => {
   clearTimeout(searchTimer)
   searchTimer = setTimeout(() => run(() => loadFiles({ ...filters, search: $('search').value.trim(), page: 1 })), 250)

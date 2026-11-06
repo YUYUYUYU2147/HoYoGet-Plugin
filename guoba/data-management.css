@@ -1,13 +1,100 @@
 * { box-sizing: border-box; }
-:root { --ink: #263548; --muted: #718096; --line: #dce4ee; --canvas: #f2f5fa; --paper: #fff; --blue: #4778d4; --blue-soft: #edf3ff; --teal: #178675; --gold: #bb7c22; }
-html, body { margin: 0; min-height: 100%; color: var(--ink); background: var(--canvas); font: 14px/1.5 system-ui, sans-serif; }
+
+:root {
+  --bg: #0b1020;
+  --panel: rgba(255, 255, 255, .045);
+  --border: rgba(255, 255, 255, .09);
+  --border-strong: rgba(255, 255, 255, .18);
+  --text: #e8ecf7;
+  --text-dim: #9aa4bd;
+  --accent: #7c9cff;
+  --accent-2: #b18cff;
+  --accent-glow: rgba(124, 156, 255, .35);
+}
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  color: var(--text);
+  background:
+    radial-gradient(900px 460px at 10% -10%, rgba(124, 156, 255, .14), transparent 60%),
+    linear-gradient(180deg, #0b1020, #0a0e1b);
+  font: 14px/1.5 "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
 main { min-height: 100vh; display: grid; grid-template-rows: auto minmax(600px, 1fr); }
-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 22px; border-bottom: 1px solid var(--line); background: var(--paper); box-shadow: 0 2px 10px rgba(37, 54, 78, .035); }
-header p { margin: 0 0 2px; color: var(--teal); font-size: 10px; font-weight: 800; letter-spacing: 1px; }
-h1 { margin: 0; font-size: 19px; font-weight: 700; }
-.ck-link { display: inline-flex; min-height: 34px; align-items: center; gap: 7px; padding: 0 14px; border: 1px solid #c7d6f1; border-radius: 999px; background: var(--blue-soft); color: #315eaa; font-size: 12px; font-weight: 650; text-decoration: none; transition: background .15s, border-color .15s, transform .15s; }
-.ck-link:hover { border-color: var(--blue); background: #e3edff; transform: translateY(-1px); }
-.ck-link span { font-size: 16px; }
-.login-note { margin: 20px; padding: 12px 16px; border: 1px solid #f0d8ad; border-radius: 12px; background: #fff8ec; color: #80571f; }
-iframe { width: 100%; min-height: 600px; height: calc(100vh - 68px); border: 0; background: var(--canvas); }
-@media (max-width: 640px) { header { padding: 11px 12px; } main { grid-template-rows: auto minmax(560px, 1fr); } h1 { font-size: 17px; } .ck-link { min-height: 32px; padding: 0 11px; } iframe { min-height: 560px; height: calc(100vh - 60px); } }
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 22px;
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(14px);
+}
+
+header p {
+  margin: 0 0 3px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .2em;
+  color: var(--accent);
+}
+
+h1 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  background: linear-gradient(120deg, #fff, #b9c6ee);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.ck-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 15px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #0b1020;
+  text-decoration: none;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border: 1px solid transparent;
+  border-radius: 999px;
+  box-shadow: 0 10px 24px -14px var(--accent-glow);
+  transition: filter .16s ease, transform .16s ease;
+}
+.ck-link:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.ck-link span { font-size: 15px; }
+
+.login-note {
+  margin: 20px;
+  padding: 13px 16px;
+  font-size: 13px;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, .1);
+  border: 1px solid rgba(251, 191, 36, .3);
+  border-radius: 12px;
+}
+
+iframe {
+  width: 100%;
+  min-height: 600px;
+  height: calc(100vh - 70px);
+  border: 0;
+  background: transparent;
+}
+
+@media (max-width: 640px) {
+  header { padding: 11px 12px; }
+  h1 { font-size: 17px; }
+  .ck-link { min-height: 32px; padding: 0 12px; }
+  iframe { min-height: 560px; height: calc(100vh - 62px); }
+}
