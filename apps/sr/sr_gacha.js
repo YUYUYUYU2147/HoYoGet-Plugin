@@ -686,6 +686,9 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
   const _isup = getIsUP(game)
   const pools = Object.entries(viewPools || {}).map(([key, pool]) => {
     const recent = Array.isArray(pool.records) ? pool.records : (Array.isArray(pool.recent) ? pool.recent : [])
+    // 断层分析用的全量逐抽（可能含三星四星）。调用方若只传了五星 records，
+    // 又通过 allRecords 提供了原始全量，就以 allRecords 为准；否则退回 recent。
+    const fullRecords = Array.isArray(pool.allRecords) && pool.allRecords.length ? pool.allRecords : recent
     // 重算 is_up：只覆盖会歪池（角色/光锥/联动/复刻）；标准/新手池 is_up 保持原值。
     // recent 本身就是五星记录，不按 rank_type 过滤（部分数据源不带该字段，
     // 一旦过滤会把整次重算跳空，表现为修复"不生效"）
@@ -856,6 +859,31 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
     const noUpPool = ['common', 'GachaType_Standard', 'GachaType_Normal', 'GachaType_Newbie'].includes(key)
     const WEAPON_POOL_RE = /EquipmentUp|WeaponUp|RerunWeapon/
     const overLimit = WEAPON_POOL_RE.test(key) ? 80 : 90
+    // ===== 历史断层判定：基于全量逐抽的三星分布 =====
+    // 判据：某张五星卡前后各 10 抽内若一条三星都没有，说明那段逐抽数据缺失
+    // （数据源只存了五星/四星摘要），即这张卡的上/下方历史断层。
+    // 注意：双金（1~2 抽出五星）是正常的，不能用「抽数小」判断；
+    // 只有「明明有大量抽数却一颗三星都没有」才说明逐抽缺漏。
+    // 仅在数据源含真实三星逐抽（如原神全量）时生效；星铁/绝区零无逐抽，
+    // 走整体「记录不完整」提示，不逐卡标注。
+    const hasThreeStarData = fullRecords.some(r => String(r?.rank_type) === '3')
+    // 逐抽按 id 正序排列（id 内含毫秒时间戳），用于取每张五星前后的 10 条
+    const allAsc = [...fullRecords].sort((a, b) => cmpRecordId(a, b))
+    const GAP_WINDOW = 10
+    /** 这张五星在逐抽序列中的下标附近 10 条内是否没有三星 */
+    function isGapAround(fiveRec) {
+      if (!hasThreeStarData) return false
+      const idx = allAsc.findIndex(r => String(r?.id || '') === String(fiveRec?.id || ''))
+      if (idx < 0) return false
+      const from = Math.max(0, idx - GAP_WINDOW)
+      const to = Math.min(allAsc.length, idx + GAP_WINDOW + 1)
+      for (let i = from; i < to; i++) {
+        if (String(allAsc[i]?.rank_type) === '3') return false
+      }
+      // 前后 10 抽内一条三星都没有 → 这段逐抽缺失
+      return true
+    }
+
     // 五星历史：按时间倒序，供卡片网格使用
     const fiveLog = recent.map(item => {
       const pulls = Number(item.gacha_count || 0)
@@ -875,10 +903,8 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
         isUp: up,
         // 超过硬保底即标（含歪的），提示历史断层
         overPity: pulls > itemBase,
-        // 抽数异常小：正常出金最少也要 1~2 抽才可能，出现 1~5 抽的五星
-        // 说明「上一个五星」的记录丢失，这个 gacha_count 被从 0 重算，
-        // 即这张卡的上一条历史断层（前端历史缺失）。用 ≤5 作阈值，避开正常欧皇。
-        gapBelow: pulls > 0 && pulls <= 5,
+        // 前后 10 抽内无三星（逐抽缺失）→ 该卡历史断层
+        gapAround: isGapAround(item),
         isNull: false,
         year: full.slice(0, 4) || '----',
         fullDate: full || '--',

@@ -288,7 +288,12 @@ async function renderImage(e, data) {
   const fivePools = {}
   for (const [key, pool] of Object.entries(data.pools || {})) {
     const records = Array.isArray(pool?.records) ? pool.records : []
-    fivePools[key] = { ...pool, records: records.filter(r => String(r.rank_type || "5") === "5") }
+    // records 只留五星供渲染；allRecords 保留全量逐抽，供「前后 10 抽无三星=历史断层」判定
+    fivePools[key] = {
+      ...pool,
+      records: records.filter(r => String(r.rank_type || "5") === "5"),
+      allRecords: records,
+    }
   }
   const view = buildSummaryView({ pools: fivePools }, data.uid, e, "grid", "gs")
   // 填充游戏昵称与头像（三游戏共用同一套：#uid 的角色资料 → redis → 数据文件）
