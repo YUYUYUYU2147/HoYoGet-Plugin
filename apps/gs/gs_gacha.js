@@ -492,17 +492,15 @@ export class gs_gacha extends plugin {
   }
 
   /** 回传提瓦特小助手：UIGF v2.3 multipart + 官方祈愿链接（与 Mys 同一接口） */
-  async uploadLelaer(e) {
-    if (e.at || !e.user_id) return e.reply('只能回传自己的抽卡记录')
-    const auth = await getAuth(e)
-    if (auth.error) return e.reply(auth.error)
+  /** 回传核心：把本地记录推给提瓦特小助手，返回 { ok, message }，不直接回复 */
+  async doUploadLelaer(auth) {
     const list = this.buildUigfList(auth.uid)
-    if (!list.length) return e.reply(`UID:${auth.uid} 暂无可回传的本地原神抽卡记录，请先【#米哈游原神更新抽卡记录】`)
+    if (!list.length) return { ok: false, message: `UID:${auth.uid} 暂无可回传的本地原神抽卡记录` }
     let authkey = ''
     try {
       authkey = await getAuthKey(auth.uid, auth.region, auth.stokenCookie)
     } catch (error) {
-      return e.reply(`回传失败：${error?.message || error}`)
+      return { ok: false, message: `回传失败：${error?.message || error}` }
     }
     const domestic = ['cn_gf01', 'cn_qd01'].includes(auth.region)
     const host = domestic ? 'https://public-operation-hk4e.mihoyo.com' : 'https://public-operation-hk4e-sg.hoyoverse.com'
@@ -531,7 +529,6 @@ export class gs_gacha extends plugin {
       },
       list,
     }
-    await e.reply(`正在把 UID:${auth.uid} 的 ${list.length} 条记录回传提瓦特小助手…`)
     try {
       const form = new FormData()
       form.set('upload', new File([JSON.stringify(payload)], 'data.json', { type: 'application/json' }))
@@ -540,11 +537,21 @@ export class gs_gacha extends plugin {
       const response = await fetch(LELAER_UPLOAD_URL, { method: 'POST', body: form, signal: AbortSignal.timeout(30000) })
       const text = await response.text()
       if (!response.ok || !text.includes('导入成功')) throw new Error('小助手未确认导入成功，请检查祈愿链接是否有效后重试')
-      return e.reply(`✅ UID:${auth.uid} 已回传提瓦特小助手，请前往小程序查看`)
+      return { ok: true, message: `✅ UID:${auth.uid} 已回传提瓦特小助手（${list.length} 条），请前往小程序查看` }
     } catch (error) {
       logger.warn(`[HoYoGet][gs_gacha] UID:${auth.uid} 小助手回传失败：${error?.message || error}`)
-      return e.reply(`UID:${auth.uid} 回传失败：${error?.message || error}\n本地记录已保留，可稍后重试。`)
+      return { ok: false, message: `UID:${auth.uid} 回传失败：${error?.message || error}` }
     }
+  }
+
+  /** 手动回传指令 */
+  async uploadLelaer(e) {
+    if (e.at || !e.user_id) return e.reply('只能回传自己的抽卡记录')
+    const auth = await getAuth(e)
+    if (auth.error) return e.reply(auth.error)
+    await e.reply(`正在把 UID:${auth.uid} 的本地记录回传提瓦特小助手…`)
+    const result = await this.doUploadLelaer(auth)
+    return e.reply(result.message + (result.ok ? '' : '\n本地记录已保留，可稍后重试。'))
   }
 
   /**
@@ -645,12 +652,19 @@ export class gs_gacha extends plugin {
     if (merged?.pools) {
       try {
         await renderImage(e, merged)
-        return e.reply(summary)
       } catch (error) {
         logger.warn(`[HoYoGet][gs_gacha] 小助手更新后出图失败：${error?.message || error}`)
       }
     }
-    return e.reply(summary)
+    await e.reply(summary)
+    // 本地数据回填后自动回传小助手云端，保持两边一致（无需再手动 #回传小助手）
+    try {
+      const uploaded = await this.doUploadLelaer(auth)
+      if (!uploaded.ok) logger.warn(`[HoYoGet][gs_gacha] 小助手自动回传未成功：${uploaded.message}`)
+    } catch (error) {
+      logger.warn(`[HoYoGet][gs_gacha] 小助手自动回传异常：${error?.message || error}`)
+    }
+    return true
   }
   /** 导入小助手导出的 UIGF/SRGF 文件（补回历史） */
   async importLelaer(e) {
