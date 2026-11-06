@@ -55,6 +55,8 @@
       </section>
       {{/if}}
 
+      <div class="pool-columns">
+        <div class="pool-column" id="pool-col-0">
       {{each pools pool}}
       <section class="pool-card">
         <header class="pool-head">
@@ -113,7 +115,26 @@
         {{/each}}
       </section>
       {{/each}}
+        </div>
+        <div class="pool-column" id="pool-col-1"></div>
+      </div>
 
+      <script>
+        // 卡池按内容高度瀑布式分配到两列，避免右列空出一大截（参考 Mys 插件）
+        (function () {
+          var wrap = document.querySelector('.pool-columns')
+          if (!wrap) return
+          var cols = [document.getElementById('pool-col-0'), document.getElementById('pool-col-1')]
+          if (!cols[1]) return
+          var cards = [].slice.call(cols[0].querySelectorAll('.pool-card'))
+          if (cards.length < 2) return
+          cards.forEach(function (c) { c.remove() })
+          cards.forEach(function (c) {
+            var target = cols[0].offsetHeight <= cols[1].offsetHeight ? cols[0] : cols[1]
+            target.appendChild(c)
+          })
+        })()
+      </script>
       <div class="logo">{{@copy()}}</div>
     </div>
   </body>

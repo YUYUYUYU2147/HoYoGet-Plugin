@@ -14,10 +14,6 @@
   --shadow-lg: 0 10px 30px rgba(38, 44, 60, .12);
 }
 
-/* 关键：布局宽度固定、用 transform 缩放、overflow 收口。
-   出图精度靠 body 上的 CSS zoom（{{sys.scale}}）叠加，
-   如果把 width 写小或省掉 overflow，zoom 放大后布局视口变窄，
-   容器会溢出到视口外，截图只剩左半边（之前几轮「截一半」的根因）。 */
 body {
   position: relative;
   background: var(--bg);
@@ -32,7 +28,7 @@ body {
 
 .container {
   width: 1200px;
-  padding: 32px 28px 8px;
+  padding: 28px 24px 8px;
 }
 
 .empty_box {
@@ -137,12 +133,24 @@ body {
 }
 
 /* ---------- 卡池卡片 ---------- */
+/* 卡池之间左右两列并排（参考 Mys 插件的 pool_columns）。
+   每个卡池卡片内部仍是上下结构：标题 → 统计 → 五星网格。 */
+.pool-columns {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+.pool-column {
+  flex: 1;
+  min-width: 0;
+}
+
 .pool-card {
   background: var(--card);
-  border-radius: 18px;
-  padding: 22px 24px 26px;
+  border-radius: 16px;
+  padding: 18px 18px 20px;
   box-shadow: var(--shadow);
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .pool-head {
@@ -227,23 +235,23 @@ body {
 .year-title { font-size: 15px; font-weight: 700; color: var(--text); }
 .year-count { font-size: 12px; color: var(--text-faint); }
 
+/* 五星卡片：参考 Mys 插件的紧凑方块（约 78px 宽），横向自动铺满。 */
 .card-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
-  gap: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 /* ---------- 五星卡片（gga 风格：稀有度渐变 + 底部抽数） ---------- */
 .pull-card {
   position: relative;
-  border-radius: 12px;
+  width: 78px;
+  border-radius: 8px;
   overflow: hidden;
-  padding-bottom: 34px;
+  padding-bottom: 26px;
   background: linear-gradient(0deg, #de9552 0%, #9a6d43 100%);
-  box-shadow: 0 3px 10px rgba(154, 109, 67, .25);
-  transition: transform .15s ease;
+  box-shadow: 0 2px 6px rgba(154, 109, 67, .25);
 }
-.pull-card:hover { transform: translateY(-3px); }
 
 .pull-card.good { background: linear-gradient(0deg, #8bd17c 0%, #4b9a5a 100%); box-shadow: 0 3px 10px rgba(75,154,90,.22); }
 .pull-card.normal { background: linear-gradient(0deg, #90b8e6 0%, #5a7fb5 100%); box-shadow: 0 3px 10px rgba(90,127,181,.22); }
@@ -252,8 +260,9 @@ body {
 .pull-avatar {
   display: block;
   width: 100%;
-  aspect-ratio: 1 / 1;
-  background-size: cover;
+  height: 88px;
+  background-size: auto 100%;
+  background-repeat: no-repeat;
   background-position: center top;
   background-color: rgba(255, 255, 255, .12);
 }
@@ -261,10 +270,10 @@ body {
 .pull-pity {
   position: absolute;
   left: 0; right: 0; bottom: 0;
-  height: 34px;
-  line-height: 34px;
+  height: 26px;
+  line-height: 26px;
   text-align: center;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
   color: #fff;
   background: rgba(0, 0, 0, .28);
