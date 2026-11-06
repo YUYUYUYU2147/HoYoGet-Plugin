@@ -134,19 +134,23 @@ function renderCategories() {
   const nav = $('categories')
   nav.replaceChildren()
   const total = result.categories.reduce((sum, item) => sum + (Number(item.count) || 0), 0)
-  const options = [{ id: 'all', title: '全部数据', count: total }, ...result.categories]
+  const options = [{ id: 'all', title: '全部数据', icon: '📚', count: total }, ...result.categories]
   for (const category of options) {
     const button = document.createElement('button')
     button.type = 'button'
     button.className = 'chip'
     button.role = 'tab'
     button.setAttribute('aria-selected', String(filters.category === category.id))
+    const iconEl = document.createElement('span')
+    iconEl.className = 'chip-icon'
+    iconEl.textContent = category.icon || '•'
     const title = document.createElement('span')
+    title.className = 'chip-label'
     title.textContent = category.title
     const count = document.createElement('span')
     count.className = 'chip-count'
     count.textContent = String(Number(category.count) || 0)
-    button.append(title, count)
+    button.append(iconEl, title, count)
     button.addEventListener('click', () => run(() => loadFiles({ ...filters, category: category.id, page: 1 })))
     nav.append(button)
   }
