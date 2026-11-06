@@ -499,8 +499,13 @@ export class uidPanel extends plugin {
     if (!game) return false;
     if (!idx) return false;
     if (game === 'bh3') return this.switchBh3Index(idx);
-    /* 装了 genshin 时三个游戏的切换归它，本插件不抢 */
-    if (hasGenshinPlugin()) return false;
+    /* 装了 genshin 时切换仍由它响应，但本插件要把当前 UID 同步到自己的键，
+       否则 #uidN 之后 HoYoGet 的抽卡更新仍读最初绑定的账号（多账号时取错 stoken）。
+       只写 redis、不回复消息，交给 genshin 出面板。 */
+    if (hasGenshinPlugin()) {
+      await this.syncGameUid(game, idx);
+      return false;
+    }
     return this.switchGameUid(game, idx);
   }
 
@@ -517,6 +522,22 @@ export class uidPanel extends plugin {
     await redis.set('HoYoGet:bh3_manual:' + qq, '1');
     bh3Cache.delete(qq);
     return this.replyPanel({ list: bh3.list, current: row.uid });
+  }
+
+  /** 装了 genshin 时静默同步当前 UID（只写 redis，不回复），避免抢它的面板 */
+  async syncGameUid(game, idx) {
+    const qq = String(this.e.at || this.e.user_id || '');
+    if (typeof redis === 'undefined' || !qq) return;
+    try {
+      const NoteUser = await getNoteUser();
+      if (!NoteUser) return;
+      const user = await NoteUser.create(qq);
+      const list = normalizeUidList(user?.getUidList(game));
+      const row = list[idx - 1];
+      if (row?.uid) await redis.set('HoYoGet:cur_uid:' + game + ':' + qq, String(row.uid));
+    } catch (err) {
+      logger.debug?.(`[uid_panel] 同步当前 uid 失败：${err?.message || err}`);
+    }
   }
 
   /** #uidN / *uidN / %uidN：未装 genshin 时切换该游戏的当前 uid */

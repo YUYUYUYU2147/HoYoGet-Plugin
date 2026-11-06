@@ -3,6 +3,7 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { mhy, pluginPriority, render, yaml } from "#HoYoGet"
 import { buildSummaryView, extractUrlsFromMsg, requestJson, sleep } from "../sr/sr_gacha.js"
+import { makeGenshinLoader } from "../../system/genshin_loader.js"
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PLUGIN_ROOT = path.resolve(__dirname, "../..")
 const DATA_DIR = path.join(PLUGIN_ROOT, "data", "gs_gacha")
@@ -10,6 +11,7 @@ const STOKEN_DIR = path.join(PLUGIN_ROOT, "data", "Stoken")
 const HOST_CN = "https://public-operation-hk4e.mihoyo.com/gacha_info/api"
 const HOST_OS = "https://public-operation-hk4e-sg.hoyoverse.com/gacha_info/api"
 const GEN_AUTHKEY_URL = "https://api-takumi.mihoyo.com/binding/api/genAuthKey"
+const getNoteUser = makeGenshinLoader("model/mys/NoteUser.js", ["model/mys/NoteUser.js"])
 const GS_POOLS = [
   { key: "GsGachaType_AvatarUp", type: "301", name: "角色活动祈愿" },
   { key: "GsGachaType_WeaponUp", type: "302", name: "武器活动祈愿" },
@@ -47,31 +49,29 @@ function stokenTable(qq) {
 ﻿
 /** 取本次更新要用的账号信息：uid、区服、stoken Cookie。缺失时返回 error 字段而不是抛异常 */
 async function getAuth(e) {
-  const qq = e.user_id
+  const qq = String(e.user_id || e.sender?.user_id || "")
   const table = stokenTable(qq)
   let uid = ""
   try {
-    uid = e.user?.getUid?.("gs") || ""
+    const NoteUser = await getNoteUser()
+    const user = NoteUser ? await NoteUser.create(qq) : null
+    uid = user?.getUid?.("gs") || ""
   } catch {}
+  // NoteUser 不可用或未读取到切换值时，回退读 HoYoGet 自己的当前 UID 键，
+  // 避免多账号时用错账号去换 authkey。
+  if (!uid && typeof redis !== "undefined") {
+    try { uid = String((await redis.get(`HoYoGet:cur_uid:gs:${qq}`)) || "") } catch {}
+  }
   let region = ""
   if (uid) {
     try {
       region = mhy.getServer(uid, "gs") || ""
     } catch {}
   }
-  if (!uid) {
-    for (const key of Object.keys(table)) {
-      const entry = table[key]
-      if (entry?.region && /^cn_/.test(String(entry.region))) {
-        uid = String(key)
-        region = String(entry.region)
-        break
-      }
-    }
-  }
   if (!uid) return { error: "还没有绑定原神账号。请先在面板绑定，或改用【#米哈游原神抽卡链接 <链接>】" }
   if (!region) region = "cn_gf01"
-  const entry = table[uid] || table[Object.keys(table)[0]] || null
+  // 不要在当前 UID 缺少凭证时退回第一份 Stoken，否则多账号时会用错账号取数。
+  const entry = table[uid] || null
   const stokenCookie = entry?.ck_stoken || (entry?.stuid && entry?.stoken
     ? `stuid=${entry.stuid};stoken=${entry.stoken};${entry.mid ? `mid=${entry.mid};` : ""}`
     : "")
@@ -321,7 +321,9 @@ export class gs_gacha extends plugin {
     if (!files.length) return e.reply("暂无原神抽卡记录，请先发送【#更新抽卡记录】")
     let uid = ""
     try {
-      uid = e.user?.getUid?.("gs") || ""
+      const NoteUser = await getNoteUser()
+      const user = NoteUser ? await NoteUser.create(String(e.user_id || e.sender?.user_id || "")) : null
+      uid = user?.getUid?.("gs") || ""
     } catch {}
     let file = uid ? path.join(DATA_DIR, `${uid}.json`) : ""
     if (!file || !fs.existsSync(file)) {
