@@ -60,6 +60,13 @@ export function mountHoYoGetDataPage(application, store, fallbackRouter) {
   app.get(`${api}/categories`, handler(async (req, res) => res.json({ code: 0, result: DATA_CATEGORIES })));
   app.get(`${api}/files`, handler(async (req, res) => res.json({ code: 0, result: await store.list(req.query) })));
   app.get(`${api}/preview`, handler(async (req, res) => res.json({ code: 0, result: await store.preview(req.query.path) })));
+  app.post(`${api}/save`, handler(async (req, res) => {
+    const { path: filePath, content } = req.body || {};
+    const saved = await store.save(filePath, content);
+    globalThis.logger?.mark?.(`[HoYoGet] 数据管理保存：${saved.path}`);
+    res.json({ code: 0, result: saved });
+  }));
+
   app.get(`${api}/download`, handler(async (req, res) => {
     const { file } = await store.file(req.query.path);
     res.attachment(path.basename(file)).type('application/octet-stream');

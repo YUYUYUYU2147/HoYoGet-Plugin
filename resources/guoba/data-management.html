@@ -71,9 +71,14 @@
             <h2 id="preview-title">数据内容</h2>
             <p id="file-meta"></p>
           </div>
-          <button id="download" class="btn btn-primary" type="button" hidden>
-            <i data-icon="download"></i>下载原文件
-          </button>
+          <div class="preview-actions">
+            <button id="edit" class="btn" type="button" hidden>
+              <i data-icon="edit"></i>编辑
+            </button>
+            <button id="download" class="btn btn-primary" type="button" hidden>
+              <i data-icon="download"></i>下载原文件
+            </button>
+          </div>
         </header>
         <div id="empty" class="empty">
           <div class="empty-icon"><i data-icon="file"></i></div>
@@ -85,6 +90,17 @@
           <div id="content-type" class="content-type"></div>
           <pre id="content"></pre>
           <img id="image" alt="HoYoGet 数据图片预览" hidden>
+
+          <div id="editor" class="editor" hidden>
+            <textarea id="editor-area" spellcheck="false"></textarea>
+            <div class="editor-bar">
+              <span id="editor-hint" class="editor-hint">保存前会校验格式，并自动生成 .bak 备份</span>
+              <div class="editor-btns">
+                <button id="editor-cancel" class="btn" type="button">取消</button>
+                <button id="editor-save" class="btn btn-primary" type="button">保存</button>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </section>

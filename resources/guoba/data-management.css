@@ -503,3 +503,36 @@ main {
 }
 .file-group.collapsed .group-desc,
 .file-group.collapsed .group-body { display: none; }
+
+/* ---------- 预览操作区 ---------- */
+.preview-actions { display: flex; align-items: center; gap: 8px; }
+
+/* ---------- 在线编辑 ---------- */
+.editor { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+
+#editor-area {
+  width: 100%;
+  min-height: 380px;
+  max-height: 520px;
+  padding: 12px;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--g-text, #333);
+  background: var(--g-bg, #f7f9fc);
+  border: 1px solid var(--g-border, #d8dde6);
+  border-radius: var(--dm-radius);
+  resize: vertical;
+  outline: none;
+}
+#editor-area:focus { border-color: var(--dm-accent); }
+
+.editor-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.editor-hint { font-size: 11.5px; color: var(--g-muted, #8a93a3); }
+.editor-btns { display: flex; gap: 8px; }

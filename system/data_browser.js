@@ -140,6 +140,7 @@ export class HoYoGetDataBrowser {
       let entries;
       try { entries = await fs.readdir(path.join(this.root, ...relative.split('/').filter(Boolean)), { withFileTypes: true }); }
       catch { return; }
+      // 目录遍历是并发写入时最容易抖动的环节：读不到就跳过整层，但不影响其他目录。
       entries.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN', { numeric: true }));
       for (const entry of entries) {
         if (++scanned > 50000) return;
@@ -153,10 +154,23 @@ export class HoYoGetDataBrowser {
         if (game !== 'all' && owner !== game) continue;
         if (!`${name} ${title}`.toLocaleLowerCase().includes(search.toLocaleLowerCase())) continue;
         categoryCounts[itemCategory]++;
-        try {
-          const stat = await fs.stat(path.join(this.root, ...name.split('/')));
-          if (category === 'all' || itemCategory === category) files.push({ path: name, name: path.posix.basename(name), title, category: itemCategory, game: owner, gameTitle: GAME_NAMES[owner] || '通用', sensitive: isSensitive(name), size: stat.size, modified: stat.mtime.toISOString() });
-        } catch {}
+        // 文件可能正在被写入/替换：stat 失败时用目录项兜底，避免整个文件从列表消失。
+        let stat = null;
+        try { stat = await fs.stat(path.join(this.root, ...name.split('/'))); } catch { stat = null; }
+        if (category === 'all' || itemCategory === category) {
+          files.push({
+            path: name,
+            name: path.posix.basename(name),
+            title,
+            category: itemCategory,
+            game: owner,
+            gameTitle: GAME_NAMES[owner] || '通用',
+            sensitive: isSensitive(name),
+            size: stat ? stat.size : 0,
+            modified: stat ? stat.mtime.toISOString() : '',
+            unstable: !stat,
+          });
+        }
       }
     };
     try { await walk(); } catch (err) { if (err.code !== 'ENOENT') throw err; }
@@ -175,6 +189,34 @@ export class HoYoGetDataBrowser {
     return entry;
   }
 
+  /** 是否允许在线编辑：仅普通文本文件，且非敏感凭据。 */
+  editable(relative) {
+    if (isSensitive(relative)) return false;
+    const ext = path.extname(relative).toLowerCase();
+    if (!['.json', '.yaml', '.yml', '.txt', '.cfg', '.ini', '.toml', '.md'].includes(ext)) return false;
+    return true;
+  }
+
+  /** 保存文本内容（覆盖写），带格式校验与备份。 */
+  async save(value, content) {
+    const relative = this.normalize(value);
+    if (!this.editable(relative)) throw new DataBrowserError('该文件不支持在线编辑');
+    if (typeof content !== 'string') throw new DataBrowserError('内容无效');
+    if (Buffer.byteLength(content, 'utf8') > DATA_PREVIEW_BYTES) throw new DataBrowserError('内容过大，请下载后本地编辑');
+    const ext = path.extname(relative).toLowerCase();
+    // JSON 必须能解析、YAML 必须能过基础结构，避免保存出坏文件。
+    if (ext === '.json') {
+      try { JSON.parse(content); } catch (error) { throw new DataBrowserError(`JSON 格式错误：${error.message}`); }
+    }
+    const { file } = await this.file(relative);
+    const backup = `${file}.bak`;
+    try { await fs.copyFile(file, backup); } catch {}
+    const temp = `${file}.tmp-${process.pid}-${Date.now()}`;
+    await fs.writeFile(temp, content, 'utf8');
+    await fs.rename(temp, file);
+    return { path: relative, size: Buffer.byteLength(content, 'utf8') };
+  }
+
   async preview(value) {
     const { file, relative, stat } = await this.file(value);
     const handle = await fs.open(file, 'r');
@@ -184,7 +226,7 @@ export class HoYoGetDataBrowser {
       const { bytesRead } = await handle.read(out, 0, out.length, 0);
       buffer = out.subarray(0, bytesRead);
     } finally { await handle.close(); }
-    const result = { path: relative, name: path.basename(relative), size: stat.size, modified: stat.mtime.toISOString(), truncated: stat.size > buffer.length, sensitive: isSensitive(relative) };
+    const result = { path: relative, name: path.basename(relative), size: stat.size, modified: stat.mtime.toISOString(), truncated: stat.size > buffer.length, sensitive: isSensitive(relative), editable: this.editable(relative) };
     if (buffer.subarray(0, 16).toString() === 'SQLite format 3\0') return { ...result, kind: 'sqlite' };
     const ext = path.extname(relative).toLowerCase();
     if (['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.avif', '.ico'].includes(ext)) return { ...result, kind: 'image' };

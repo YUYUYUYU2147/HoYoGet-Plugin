@@ -9,6 +9,7 @@ const ICONS = {
   info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r=".6" fill="currentColor"/></svg>',
   'chevron-left': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 6-6 6 6 6"/></svg>',
   'chevron-right': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>',
+  edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
 }
 for (const node of document.querySelectorAll('i[data-icon]')) {
   node.innerHTML = ICONS[node.dataset.icon] || ''
@@ -47,12 +48,18 @@ const date = value => {
   return Number.isNaN(parsed.getTime()) ? '' : parsed.toLocaleString()
 }
 
-async function request(endpoint, query = {}, raw = false) {
+async function request(endpoint, query = {}, raw = false, options = {}) {
   if (!token) throw new Error('请从锅巴侧栏重新打开「HoYoGet 数据」以获取登录信息')
-  const response = await fetch(`${api}/${endpoint}?${new URLSearchParams(query)}`, {
+  const init = {
     cache: 'no-store',
     headers: { 'guoba-access-token': token },
-  })
+    method: options.method || 'GET',
+  }
+  if (options.body !== undefined) {
+    init.headers['Content-Type'] = 'application/json'
+    init.body = JSON.stringify(options.body)
+  }
+  const response = await fetch(`${api}/${endpoint}?${new URLSearchParams(query)}`, init)
   if ([401, 403].includes(response.status)) throw new Error('锅巴登录已过期，请重新登录后打开数据管理页')
   if (raw && response.ok) return response.blob()
   const body = await response.json()
@@ -323,6 +330,8 @@ async function loadPreview(item) {
   $('notice').textContent = data.redacted ? '该文件包含账号凭据，预览已脱敏。下载原文件会包含完整敏感数据。' : ''
   $('content').hidden = data.kind === 'image' || data.kind === 'sqlite'
   $('image').hidden = data.kind !== 'image'
+  const editBtn = $('edit')
+  if (editBtn) editBtn.hidden = !(data.editable && data.kind === 'text')
   $('content-type').textContent = data.kind === 'sqlite' ? 'SQLite 数据库 · 下载原文件后使用本地工具查看' : data.kind === 'binary' ? '二进制数据 · 十六进制摘要' : data.kind === 'image' ? '图片文件' : '文本文件'
   if (data.kind === 'image') {
     const blob = await request('download', { path: item.path }, true)
@@ -362,6 +371,44 @@ async function initialize() {
   status(`已加载 ${result.total} 项数据`)
   if (result.items.length) await loadPreview(result.items[0])
 }
+
+// ---------- 在线编辑 ----------
+let editing = null
+
+function openEditor() {
+  if (!selected || !$('preview')) return
+  editing = selected
+  $('editor-area').value = $('content').textContent || ''
+  $('editor').hidden = false
+  $('content').hidden = true
+  $('editor-area').focus()
+}
+
+function closeEditor() {
+  editing = null
+  $('editor').hidden = true
+  $('content').hidden = false
+}
+
+async function saveEditor() {
+  if (!editing) return
+  const content = $('editor-area').value
+  $('editor-save').disabled = true
+  try {
+    await request('save', {}, false, { method: 'POST', body: { path: editing.path, content } })
+    closeEditor()
+    await loadPreview(editing)
+    status('已保存')
+  } catch (error) {
+    status(error.message || '保存失败', true)
+  } finally {
+    $('editor-save').disabled = false
+  }
+}
+
+$('edit')?.addEventListener('click', openEditor)
+$('editor-cancel')?.addEventListener('click', closeEditor)
+$('editor-save')?.addEventListener('click', saveEditor)
 
 $('refresh').addEventListener('click', () => run(() => loadFiles({ ...filters })))
 
