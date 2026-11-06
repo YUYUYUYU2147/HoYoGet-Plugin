@@ -267,7 +267,7 @@ export class gs_gacha extends plugin {
         { reg: "^#*米哈游原神抽卡帮助$", fnc: "help" },
         // 回传提瓦特小助手（带米哈游前缀，避免抢 genshin/Mys 的同类指令）
         { reg: "^#*米哈游原神(抽卡|祈愿)?(记录|数据)?回传(提瓦特)?小助手$", fnc: "uploadLelaer" },
-        { reg: "^#*米哈游原神(更新|同步|补全|补回)小助手(抽卡|祈愿)?(记录|数据)$", fnc: "helperHelp" },
+        { reg: "^#*米哈游原神(更新|刷新|同步|获取|导入|补全|补回)小助手(抽卡|祈愿)?(记录|数据)$", fnc: "helperHelp" },
         { reg: "^#*米哈游原神导入小助手(抽卡|祈愿)?(记录|数据)(\\s+\\S+)?$", fnc: "importLelaer" },
         // 不带游戏名的通用写法：#抽卡帮助 / 抽卡帮助（原神为默认游戏）
         { reg: "^#?[ \\t]*抽卡(记录)?帮助$", fnc: "help" },
@@ -296,9 +296,9 @@ export class gs_gacha extends plugin {
       ].join('\n'),
       [
         '提瓦特小助手',
+        '#米哈游原神更新小助手记录 —— 从提瓦特小助手拉全量逐抽（含三星四星），自动去重合并',
         '#米哈游原神回传小助手 —— 把本地记录上传到提瓦特小助手（UIGF v2.3）',
         '#米哈游原神导入小助手记录 <文件> —— 导入小助手导出的 UIGF/SRGF JSON 补回历史',
-        '#米哈游原神更新小助手记录 —— 查看说明（小助手未开放按 UID 拉取接口）',
       ].join('\n'),
       [
         '导出 / 其他',
@@ -401,24 +401,100 @@ export class gs_gacha extends plugin {
     }
   }
 
-  /** 「更新小助手记录」：小助手无单 UID 逐抽 HTTP 接口，只能导入用户导出的文件 */
-  async helperHelp(e) {
-    return e.reply([
-      '提瓦特小助手（lelaer）没有对外开放「按 UID 拉取逐抽记录」的接口，',
-      '官方只提供上传，所以本插件能做的两种方式：',
-      '',
-      '① 回传（把本地记录推到小助手）',
-      '#米哈游原神回传小助手',
-      '',
-      '② 补回（把小助手导出的记录导入本插件）',
-      '  在小助手小程序里「导出记录」得到 UIGF/SRGF 的 JSON 文件，',
-      '  然后在锅巴「数据管理 → 其他数据」上传，或用：',
-      '#米哈游原神导入小助手记录 <文件路径或直接发文件>',
-      '',
-      '若只想更新本地记录，直接用 #米哈游原神更新抽卡记录（走 stoken 换 authkey）。',
-    ].join('\n'))
+  /**
+   * 更新小助手记录：调用提瓦特小助手 outputGacha.php 拉全量逐抽。
+   * 入参是小助手认的「官方祈愿链接」，所以先用 stoken 换 authkey 自己拼一条。
+   * 返回 { list } 或抛错。
+   */
+  async fetchLelaerGacha(uid, region, authkey) {
+    const domestic = ['cn_gf01', 'cn_qd01'].includes(region)
+    const host = domestic ? 'https://public-operation-hk4e.mihoyo.com' : 'https://public-operation-hk4e-sg.hoyoverse.com'
+    const gachaURL = encodeURIComponent(
+      `${host}/gacha_info/api/getGachaLog?authkey_ver=1&sign_type=2&auth_appid=webview_gacha`
+      + `&init_type=301&gacha_id=fecafa7b6560db5f3182222395d88aaa6aaac1bc&timestamp=${Math.floor(Date.now() / 1000)}`
+      + `&lang=zh-cn&device_type=mobile&plat_type=ios&region=${region}`
+      + `&authkey=${encodeURIComponent(authkey)}&game_biz=${domestic ? 'hk4e_cn' : 'hk4e_global'}`
+      + `&gacha_type=301&page=1&size=5&end_id=0`
+    )
+    const res = await fetch('https://www.lelaer.com/outputGacha.php', {
+      method: 'POST',
+      headers: { Host: 'www.lelaer.com', 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `uid=${uid}&gachaurl=${gachaURL}&lang=zh-Hans`,
+      signal: AbortSignal.timeout(20000),
+    })
+    if (!res.ok) throw new Error(`小助手接口 HTTP ${res.status}`)
+    const json = await res.json().catch(() => null)
+    if (!json) throw new Error('小助手返回内容无法解析')
+    if (!Array.isArray(json.list)) throw new Error(json.result || '小助手未返回记录列表')
+    return json.list
   }
 
+  /** 把拉到的逐抽按池写入本地 gs_gacha（合并去重） */
+  mergeLelaerRows(uid, rows) {
+    const target = dataFile(uid)
+    const data = readData(target) || { uid, pools: {} }
+    const typeByKey = Object.fromEntries(GS_POOLS.map(pool => [pool.type, pool.key]))
+    const stats = { added: 0, byType: {} }
+    for (const row of rows) {
+      const gachaType = String(row.uigf_gacha_type || row.gacha_type || '200')
+      const key = typeByKey[gachaType]
+      if (!key) continue
+      const meta = GS_POOLS.find(pool => pool.key === key) || {}
+      const pool = data.pools[key] ||= { key, type: gachaType, name: meta.name, records: [] }
+      pool.records ||= []
+      const id = String(row.id || '')
+      if (!id || pool.records.some(r => String(r.id) === id)) continue
+      const rank = String(row.rank_type || '')
+      pool.records.push({
+        id,
+        name: String(row.name || '未知'),
+        item_type: String(row.item_type || ''),
+        is_up: !!row.is_up,
+        gacha_count: Number(row.count) || 1,
+        time: String(row.time || ''),
+        rank_type: rank,
+      })
+      stats.added++
+      stats.byType[gachaType] = (stats.byType[gachaType] || 0) + 1
+    }
+    if (!stats.added) return { stats, keep: false }
+    for (const pool of Object.values(data.pools)) {
+      pool.records.sort((a, b) => String(a.id).localeCompare(String(b.id), 'en', { numeric: true }))
+      pool.totalPulls = pool.records.length
+      pool.fiveNum = pool.records.filter(r => String(r.rank_type || '5') === '5').length
+      pool.fourNum = pool.records.filter(r => String(r.rank_type) === '4').length
+    }
+    data.update_time = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })
+    saveData(target, data)
+    return { stats, keep: true }
+  }
+
+  /** 更新小助手记录：从提瓦特小助手拉全量逐抽并合并到本地 */
+  async helperHelp(e) {
+    if (e.at || !e.user_id) return e.reply('只能更新自己的抽卡记录')
+    const auth = await getAuth(e)
+    if (auth.error) return e.reply(auth.error)
+    await e.reply(`正在从提瓦特小助手拉取 UID:${auth.uid} 的逐抽记录，请稍候……`)
+    let authkey = ''
+    try {
+      authkey = await getAuthKey(auth.uid, auth.region, auth.stokenCookie)
+    } catch (error) {
+      return e.reply(`拉取失败：${error?.message || error}`)
+    }
+    let rows = []
+    try {
+      rows = await this.fetchLelaerGacha(auth.uid, auth.region, authkey)
+    } catch (error) {
+      return e.reply(`拉取失败：${error?.message || error}`)
+    }
+    if (!rows.length) return e.reply(`UID:${auth.uid} 小助手没有返回抽卡记录（说明该 UID 没在小助手同步过）`)
+    const { stats } = this.mergeLelaerRows(auth.uid, rows)
+    const names = { 301: '角色', 302: '武器', 500: '集录', 400: '集录', 200: '常驻' }
+    const detail = Object.entries(stats.byType)
+      .map(([type, count]) => `${names[type] || type}：新增 ${count}`)
+      .join('，')
+    return e.reply(`✅ UID:${auth.uid} 已从提瓦特小助手拉取 ${rows.length} 条，${detail || '无新增'}（自动去重）`)
+  }
   /** 导入小助手导出的 UIGF/SRGF 文件（补回历史） */
   async importLelaer(e) {
     if (e.at || !e.user_id) return e.reply('只能导入自己的抽卡记录')
@@ -472,6 +548,7 @@ export class gs_gacha extends plugin {
         is_up: !!row.is_up,
         gacha_count: Number(row.count) || 1,
         time: String(row.time || ''),
+        rank_type: String(row.rank_type || '5'),
         icon: '',
       })
       added++
@@ -481,6 +558,7 @@ export class gs_gacha extends plugin {
       pool.records.sort((a, b) => String(a.id).localeCompare(String(b.id), 'en', { numeric: true }))
       pool.totalPulls = pool.records.length
       pool.fiveNum = pool.records.filter(r => String(r.rank_type || '5') === '5').length
+      pool.fourNum = pool.records.filter(r => String(r.rank_type) === '4').length
     }
     existing.update_time = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })
     saveData(target, existing)
