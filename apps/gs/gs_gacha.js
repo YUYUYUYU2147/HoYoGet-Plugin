@@ -1,7 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { mhy, pluginPriority, render, yaml } from "#HoYoGet"
+import { makeForwardMsg, mhy, pluginPriority, render, yaml } from "#HoYoGet"
 import { buildSummaryView, extractUrlsFromMsg, requestJson, sleep } from "../sr/sr_gacha.js"
 import { makeGenshinLoader } from "../../system/genshin_loader.js"
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -259,17 +259,45 @@ export class gs_gacha extends plugin {
         { reg: "^#*米哈游原神抽卡链接", fnc: "updateByLink" },
         { reg: "^#*米哈游原神超越抽卡", fnc: "updateByLink" },
         { reg: "^#*米哈游原神抽卡帮助$", fnc: "help" },
+        // 不带游戏名的通用写法：#抽卡帮助 / 抽卡帮助（原神为默认游戏）
+        { reg: "^#?[ \\t]*抽卡(记录)?帮助$", fnc: "help" },
+        // 带游戏名但不带米哈游前缀：#原神抽卡帮助 / 原神抽卡帮助
+        { reg: "^[#*%％]?[ \\t]*(?:原神|genshin|gs|GS)[ \\t]*抽卡(记录)?帮助$", fnc: "help" },
       ],
     })
   }
   async help(e) {
-    return e.reply([
-      "原神抽卡记录",
-      "#更新抽卡记录 —— 用已绑定的 CK 自动换 authkey 并更新（无需链接）",
-      "#抽卡记录 —— 查看最近一次结果的渲染图",
-      "#米哈游原神抽卡链接 <链接> —— CK 换不到 authkey 时用链接更新",
-      "#米哈游原神超越抽卡 <链接> —— 走新版 getBeyondGachaLog 接口",
-    ].join("\n"))
+    /* 行数较多，改成合并转发；连接器不支持时 makeForwardMsg 会退回纯文本。 */
+    const nodes = [
+      [
+        '【#米哈游原神抽卡帮助】',
+        '',
+        '更新数据',
+        '#米哈游原神更新抽卡记录 —— 用已绑定的 stoken/CK 自动换 authkey 更新（无需链接）',
+        '#米哈游原神抽卡链接 <链接> —— 自动更新失败时，粘贴游戏内复制的小程序链接更新',
+        '#米哈游原神超越抽卡 <链接> —— 千星奇域记录，走新版 getBeyondGachaLog 接口',
+      ].join('\n'),
+      [
+        '查询',
+        '#米哈游原神抽卡记录 —— 抽卡总览统计（角色/武器分池）',
+        '#米哈游原神抽卡统计 —— 同上，输出统计图',
+        '#米哈游原神当前卡池 —— 本期卡池与剩余时间',
+        '#米哈游原神卡池时间 —— 卡池剩余时间',
+      ].join('\n'),
+      [
+        '导出 / 其他',
+        '#导出抽卡记录 —— 导出 UIGF 标准 JSON（可指名 UID）',
+        '#米哈游原神角色列表 —— 已绑定角色一览',
+        '#米哈游原神练度统计 —— 角色练度概览',
+      ].join('\n'),
+      [
+        '提示',
+        '米哈游前缀可省略：#更新抽卡记录、#抽卡记录、#抽卡帮助 默认按原神处理。',
+        '若提示 authkey 获取失败，多为账号侧 CK 失效，重新扫码绑定或改用链接更新即可。',
+        '千星奇域与常规卡池接口不同，需要使用「超越抽卡」指令。',
+      ].join('\n'),
+    ]
+    return e.reply(await makeForwardMsg(e, nodes, '原神抽卡帮助'))
   }
   async updateByCookie(e) {
     const auth = await getAuth(e)
