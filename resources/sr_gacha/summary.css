@@ -540,3 +540,34 @@ body {
   padding: 14px 0 22px;
   letter-spacing: .5px;
 }
+
+/* 数据不完整提示（工坊源缺三星四星逐抽） */
+.incomplete-hint {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin: 16px 0 0;
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fff4f1, #ffe8e2);
+  border: 1px solid #f5c9bf;
+  border-left: 4px solid #d63c30;
+  box-shadow: 0 2px 10px rgba(214, 60, 48, .12);
+}
+.ih-icon {
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff6b5e, #d63c30);
+  color: #fff;
+  font-size: 19px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(214, 60, 48, .4);
+}
+.ih-body { flex: 1; min-width: 0; }
+.ih-title { font-size: 15.5px; font-weight: 800; color: #b33227; margin-bottom: 4px; }
+.ih-desc { font-size: 13.5px; line-height: 1.55; color: #8a4a43; }
