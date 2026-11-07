@@ -679,10 +679,12 @@ export class mhy_estimate extends plugin {
     const bossRows = data.bosses.slice(0, 10).map(b => {
       const s0 = b.samples[0];
       const iconName = ICON_NAME_ALIAS[b.name] || b.name;
+      // 优先用 Boss 图鉴图标；没有则用该 Boss 样例视频的封面兜底，避免一片问号
+      const avatar = iconMap[iconName] || iconMap[b.name] || (s0?.cover || '');
       return {
         name: b.name,
         count: b.count,
-        avatar: iconMap[iconName] || iconMap[b.name] || '',
+        avatar,
         sample: s0 ? { title: s0.title.slice(0, 40), bvid: s0.bvid } : null,
       };
     });

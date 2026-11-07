@@ -27,7 +27,7 @@ const DEFAULT_KEYWORD = '崩坏3 测试服';
 // 只映射能确认对应的；对不上就留空显示占位，避免张冠李戴。
 const ICON_NAME_ALIAS = {
   '北风狼': '奔狼的领主',
-  '月魂': '影骑士·月轮',
+  '月魂': '苍骑士·月魂',
   '殉死': '殉死之兽',
   '殉死之兽': '殉死之兽',
   '梅比乌斯': '逐火十三英桀 梅比乌斯',
@@ -37,6 +37,10 @@ const ICON_NAME_ALIAS = {
   '摩录多': '摩录多',
   '陨冰之律者': '「陨影冰骸」',
   '虚树神骸-虚无主义': '虚树神骸-存在主义',
+  '赫菲斯托斯': '赫菲斯托斯',
+  '姬麟': '姬麟·黑',
+  '凯文': '逐火十三英桀 科斯魔',
+  '爱莉希雅': '薇塔-「海的深渊」',
 };
 
 export { ICON_NAME_ALIAS };
@@ -84,6 +88,7 @@ async function searchBili(keyword, size = 50) {
     title: cleanTitle(v.title),
     author: v.author,
     pubdate: Number(v.pubdate) || 0,
+    cover: String(v.pic || '').replace(/^\/\//, 'https://'),
   }));
 }
 
@@ -118,7 +123,7 @@ function extractBosses(videos) {
           hit.add(standard);
           const cur = result.get(standard) || { count: 0, samples: [] };
           cur.count++;
-          if (cur.samples.length < 3) cur.samples.push({ title, bvid: v.bvid, author: v.author, pubdate: v.pubdate });
+          if (cur.samples.length < 3) cur.samples.push({ title, bvid: v.bvid, author: v.author, pubdate: v.pubdate, cover: v.cover || '' });
           result.set(standard, cur);
           break;
         }
