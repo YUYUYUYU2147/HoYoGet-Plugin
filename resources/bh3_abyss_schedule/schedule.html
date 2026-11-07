@@ -6,23 +6,13 @@
   </head>
   <body {{sys.scale}}>
     <div class="container">
-            <div class="role-banner"><img src="{{ppath}}bh3_abyss_schedule/img/abyss_bar.png" /></div>
-<header class="hero" style="--hero-bg:url('{{ppath}}bh3_abyss_schedule/img/abyss_bg.jpg')">
-        <div class="hero-top">
-          <div class="hero-badge">ABYSS</div>
-          <div class="hero-title">
-            <h1>{{data.title}}</h1>
-            <p class="hero-sub">{{data.subtitle}}{{if data.period}} · {{data.period}}{{/if}}</p>
-          </div>
-          <div class="hero-stats">
-            <div class="stat"><span class="sv">{{data.stats.periods}}</span><span class="sk">期数</span></div>
-            <div class="stat"><span class="sv">{{data.stats.envCount}}</span><span class="sk">环境</span></div>
-            <div class="stat"><span class="sv">{{data.stats.bossCount}}</span><span class="sk">BOSS</span></div>
-          </div>
+<header class="hero hero-fused">
+        <div class="hero-stats-fused">
+          <div class="stat"><span class="sv">{{data.stats.periods}}</span><span class="sk">期数</span></div>
+          <div class="stat"><span class="sv">{{data.stats.envCount}}</span><span class="sk">环境</span></div>
+          <div class="stat"><span class="sv">{{data.stats.bossCount}}</span><span class="sk">BOSS</span></div>
         </div>
-        {{if data.cycle}}
-        <div class="hero-cycle">周期：{{data.cycle}}</div>
-        {{/if}}
+        <div class="hero-info-fused">{{data.title}}{{if data.period}} · {{data.period}}{{/if}}{{if data.cycle}} · 周期{{data.cycle}}{{/if}}</div>
       </header>
 
       <div class="table">
