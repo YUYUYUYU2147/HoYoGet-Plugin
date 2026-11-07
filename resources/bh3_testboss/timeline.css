@@ -137,3 +137,21 @@ body {
   border: 1px solid rgba(255, 255, 255, .8);
 }
 .logo { margin-top: 10px; text-align: center; font-size: 12px; color: var(--faint); }
+
+/* ===== 版本分组 ===== */
+.ver-block { margin-top: 20px; }
+.ver-block:first-of-type { margin-top: 18px; }
+.ver-head {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 10px; padding: 0 4px;
+}
+.ver-tag {
+  font-size: 20px; font-weight: 800; color: #241a06;
+  padding: 3px 14px; border-radius: 10px;
+  background: linear-gradient(135deg, #ffe8b8, #f4ce8a 55%, #d19a3c);
+  box-shadow: 0 3px 10px rgba(209, 154, 60, .35);
+  font-variant-numeric: tabular-nums;
+}
+.ver-title { font-size: 15px; font-weight: 700; color: var(--ink); }
+.ver-meta { font-size: 13px; color: var(--weak); margin-left: auto; }
+.ver-block .list { margin-top: 0; }

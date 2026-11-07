@@ -11,39 +11,48 @@
           <div class="hero-badge">CSF</div>
           <div class="hero-text">
             <h1>测试服 Boss 时间线</h1>
-            <p class="hero-sub">按 B站测试服视频归纳 · 最近出现的 Boss 排在前</p>
+            <p class="hero-sub">按测试服版本分组 · B站视频标题归纳 · 非官方排期</p>
           </div>
         </div>
         <div class="hero-meta">
           <div class="meta-item"><span class="meta-k">样本视频</span><span class="meta-v">{{videoCount}}</span></div>
-          <div class="meta-item"><span class="meta-k">识别 Boss</span><span class="meta-v">{{bossCount}}</span></div>
+          <div class="meta-item"><span class="meta-k">测试服版本</span><span class="meta-v">{{versionCount}}</span></div>
         </div>
       </header>
 
-      <section class="list">
-        {{each bosses boss idx}}
-        <div class="row {{boss.isNew ? 'is-new' : ''}}">
-          <div class="rank">{{idx + 1}}</div>
-          <div class="icon" {{if boss.avatar}}style="background-image:url('{{boss.avatar}}')"{{/if}}>
-            {{if !boss.avatar}}<span class="icon-ph">?</span>{{/if}}
-          </div>
-          <div class="info">
-            <div class="name-row">
-              <span class="name">{{boss.name}}</span>
-              {{if boss.isNew}}<span class="new-tag">新登场</span>{{else}}<span class="old-tag">回榜</span>{{/if}}
-              <span class="count">{{boss.count}} 视频</span>
-            </div>
-            <div class="dates">
-              <span class="d-item">首见 {{boss.firstSeen}}</span>
-              <span class="d-sep">→</span>
-              <span class="d-item last">最近 {{boss.lastSeen}}</span>
-            </div>
-          </div>
+      {{each versions ver idx}}
+      <section class="ver-block">
+        <div class="ver-head">
+          <span class="ver-tag">{{ver.ver}}</span>
+          <span class="ver-title">{{ver.ver === currentVer ? '当前测试版本' : '版本'}}</span>
+          <span class="ver-meta">{{ver.videoCount}} 视频{{if ver.disturbMax}} · 扰动 {{ver.disturbMin}}-{{ver.disturbMax}}{{/if}}</span>
         </div>
-        {{/each}}
+        <div class="list">
+          {{each ver.bosses boss bidx}}
+          <div class="row {{boss.isNew ? 'is-new' : ''}}">
+            <div class="rank">{{bidx + 1}}</div>
+            <div class="icon" {{if boss.avatar}}style="background-image:url('{{boss.avatar}}')"{{/if}}>
+              {{if !boss.avatar}}<span class="icon-ph">?</span>{{/if}}
+            </div>
+            <div class="info">
+              <div class="name-row">
+                <span class="name">{{boss.name}}</span>
+                {{if boss.isNew}}<span class="new-tag">新登场</span>{{else}}<span class="old-tag">回榜</span>{{/if}}
+                <span class="count">{{boss.count}} 视频</span>
+              </div>
+              <div class="dates">
+                <span class="d-item">首见 {{boss.firstSeen}}</span>
+                <span class="d-sep">→</span>
+                <span class="d-item last">最近 {{boss.lastSeen}}</span>
+              </div>
+            </div>
+          </div>
+          {{/each}}
+        </div>
       </section>
+      {{/each}}
 
-      <footer class="foot">从玩家测试服视频标题归纳的近似时间线，非官方排期，仅供了解近期在测什么</footer>
+      <footer class="foot">从玩家测试服视频标题归纳的近似时间线，非官方排期，仅供了解各测试服版本在测哪些 Boss</footer>
       <div class="logo">{{@copy()}}</div>
     </div>
   </body>

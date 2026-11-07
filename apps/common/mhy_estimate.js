@@ -654,7 +654,7 @@ export class mhy_estimate extends plugin {
     return this.mysEstimate(e, 'battlefield');
   }
 
-  /** 崩三测试服 Boss 时间线：按最近出现排序，看近期依次在测哪些 Boss */
+  /** 崩三测试服 Boss 时间线：按测试服版本分组，列出各版本在测的 Boss */
   async bh3TestserverBossTimeline(e) {
     await e.reply('正在归纳测试服 Boss 时间线，请稍后...', true, { recallMsg: 60 });
     let data;
@@ -664,9 +664,10 @@ export class mhy_estimate extends plugin {
       logger.warn(`[HoYoGet][testserver_boss] 时间线获取失败: ${err?.message || err}`);
       return e.reply('测试服 Boss 时间线获取失败，请稍后再试');
     }
-    if (!data.items.length) {
+    if (!data.versions.length) {
       return e.reply('近期测试服视频标题里没识别到已知 Boss。');
     }
+    // 图标库
     let iconMap = {};
     try {
       const enemyFile = path.join(PLUGIN_ROOT, 'system', 'default', 'bh3_enemy_icons.json');
@@ -675,29 +676,44 @@ export class mhy_estimate extends plugin {
         for (const [name, icon] of Object.entries(raw?.bosses || {})) if (name && icon) iconMap[name] = icon;
       }
     } catch {}
-    // 首见在最近 10 天内视为「新登场」，否则「回榜」
     const nowSec = Date.now() / 1000;
     const NEW_DAYS = 10;
-    const bosses = data.items.slice(0, 14).map(it => {
-      const iconName = ICON_NAME_ALIAS[it.name] || it.name;
-      const s0 = it.sample;
-      return {
-        name: it.name,
-        count: it.count,
-        avatar: iconMap[iconName] || iconMap[it.name] || (s0?.cover || ''),
-        firstSeen: new Date(it.firstSeen * 1000).toISOString().slice(5, 10),
-        lastSeen: new Date(it.lastSeen * 1000).toISOString().slice(5, 10),
-        isNew: (nowSec - it.firstSeen) <= NEW_DAYS * 86400,
-      };
-    });
-    const view = { videoCount: data.videos.length, bossCount: data.items.length, bosses };
+    const versions = data.versions.map(v => ({
+      ver: v.ver,
+      videoCount: v.videoCount,
+      disturbMin: v.disturbMin,
+      disturbMax: v.disturbMax,
+      bosses: v.bosses.slice(0, 12).map(it => {
+        const iconName = ICON_NAME_ALIAS[it.name] || it.name;
+        const s0 = it.sample;
+        return {
+          name: it.name,
+          count: it.count,
+          avatar: iconMap[iconName] || iconMap[it.name] || (s0?.cover || ''),
+          firstSeen: new Date(it.firstSeen * 1000).toISOString().slice(5, 10),
+          lastSeen: new Date(it.lastSeen * 1000).toISOString().slice(5, 10),
+          isNew: (nowSec - it.firstSeen) <= NEW_DAYS * 86400,
+        };
+      }),
+    }));
+    const currentVer = versions.find(v => v.ver !== '未标版本')?.ver || '';
+    const view = {
+      videoCount: data.videos.length,
+      versionCount: versions.length,
+      currentVer,
+      versions,
+    };
     try {
       const buf = await render('bh3_testboss/timeline', view, { e });
       return sendRenderResult(e, buf);
     } catch (err) {
       logger.warn(`[HoYoGet][testserver_boss] 时间线渲染失败: ${err?.message || err}`);
       const lines = ['【崩三测试服 Boss 时间线】'];
-      bosses.slice(0, 10).forEach((b, i) => lines.push(`${i + 1}. ${b.name}  首见${b.firstSeen} 最近${b.lastSeen}`));
+      for (const v of versions) {
+        lines.push(`
+— 测试服 ${v.ver} —`);
+        v.bosses.slice(0, 6).forEach((b, i) => lines.push(`${i + 1}. ${b.name} 首见${b.firstSeen} 最近${b.lastSeen}`));
+      }
       return e.reply(lines.join('\n'));
     }
   }
