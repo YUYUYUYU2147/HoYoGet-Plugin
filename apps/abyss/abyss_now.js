@@ -2,6 +2,7 @@ import fetch from 'node-fetch';
 import moment from 'moment';
 import { render, pluginPriority } from '#HoYoGet';
 import { enrichNanokaForAlioth, pickStageEnrich } from '../../system/sr_enrich.js';
+import { buildZzzSchedule } from '../../system/zzz_abyss_schedule.js';
 
 // 数据来源：Alioth.wiki（开源站点，静态 JSON 直出，无需鉴权）
 // 数据：https://json.alioth.wiki/data/{gi|hsr}/ch/{file}.json 与 {file}/{期id}.json
@@ -968,6 +969,11 @@ export class AbyssNow extends plugin {
           reg: '^#*米哈游(原神|星铁|星穹|崩铁)?(深境螺旋|深境|深渊|混沌回忆|混沌|回忆|虚构叙事|虚构|末日幻影|末日|幻影|异相仲裁|异相|仲裁)(排期|排期表|时间线)$',
           fnc: 'schedule',
         },
+        {
+          // 绝区零深渊排期：式舆防卫战 / 危局强袭战
+          reg: '^[#%％]?(绝区零|绝区|zzz|ZZZ|米哈游)?\s*(式舆防卫战|式舆|防卫战|危局强袭战|危局|强袭战|强袭)\s*(排期|排期表|时间线)$',
+          fnc: 'zzzSchedule',
+        },
       ],
     });
   }
@@ -992,6 +998,22 @@ export class AbyssNow extends plugin {
     } catch (err) {
       logger.warn(`[HoYoGet][abyss_now] ${mode.title} 速览失败: ${err?.message || err}`);
       return e.reply(`${mode.title}数据获取失败，请稍后再试。`, true, { recallMsg: 60 });
+    }
+  }
+
+  async zzzSchedule(e) {
+    const msg = String(e.msg || '');
+    const kind = /危局|强袭/.test(msg) ? 'deadly' : 'shiyu';
+    try {
+      const view = await buildZzzSchedule(kind, 8);
+      if (!view || !view.rows?.length) {
+        return e.reply('未获取到绝区零排期数据，请稍后再试。', true, { recallMsg: 60 });
+      }
+      const img = await render('abyss_now/schedule', view, { e, pct: 1.5 });
+      return e.reply(img);
+    } catch (err) {
+      logger.warn(`[HoYoGet][abyss_now] 绝区零排期失败: ${err?.message || err}`);
+      return e.reply('绝区零排期数据获取失败，请稍后再试。', true, { recallMsg: 60 });
     }
   }
 
