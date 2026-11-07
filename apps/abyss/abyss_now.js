@@ -11,7 +11,7 @@ const DATA_BASE = 'https://json.alioth.wiki/data';
 const IMG_BASE = 'https://transform.alioth.wiki/i';
 const LANG = 'ch';
 
-const MODES = {
+export const MODES = {
   gs_abyss: {
     game: 'gs', data: 'gi', img: 'gi', file: 'abyss',
     title: '深境螺旋', gameName: '原神', gameShort: 'GENSHIN IMPACT', build: buildAbyss,
@@ -838,6 +838,80 @@ export async function getAbyssBossesByFloor(opts = {}) {
   }
 }
 
+/**
+ * 多期排期总览：取最近 count 期，每期列出最高层的 Boss 名单。
+ * 数据源与速览相同（Alioth 静态 JSON）。用于「深渊排期表」展示历史各期 Boss。
+ */
+export async function buildSchedule(mode, opts = {}) {
+  if (mode.game !== 'sr' && mode.file !== 'abyss') return null;
+  // 原神只支持深境螺旋 abyss；星铁支持全部玩法
+  const index = await getJson(`${DATA_BASE}/${mode.data}/${LANG}/${mode.file}.json`);
+  const phases = (index.Phases || []).slice(0, opts.count || 8);
+  const now = Date.now();
+  const rows = [];
+  for (const ph of phases) {
+    let bosses = [];
+    let floorNo = '';
+    try {
+      const detail = await getJson(`${DATA_BASE}/${mode.data}/${LANG}/${mode.file}/${ph._id}.json`, 6 * 3600 * 1000);
+      if (mode.game === 'sr') {
+        const floors = detail.Floors || [];
+        if (floors.length) {
+          const nums = floors.map(f => Number(f.Floor)).filter(Number.isFinite);
+          const top = floors.find(f => Number(f.Floor) === Math.max(...nums)) || floors[0];
+          floorNo = `第${top.Floor}层`;
+          const seen = new Set();
+          for (const st of (top.Stages || [])) {
+            const half = srStageHalf(detail, st, '', {});
+            for (const w of half.waves) {
+              for (const mon of w.monsters) {
+                if (mon.name && !seen.has(mon.name)) { seen.add(mon.name); bosses.push({ name: mon.name, icon: mon.icon || '' }); }
+              }
+            }
+          }
+        }
+      } else {
+        // 原神深境螺旋：取最高层的 rooms/halves 怪物
+        const view = await buildAbyss(mode, { ...opts, periodId: ph._id });
+        if (view?.sections?.length) {
+          floorNo = view.sections[0].title || '';
+          const seen = new Set();
+          for (const sec of view.sections) {
+            for (const room of sec.rooms || []) {
+              for (const half of room.halves || []) {
+                for (const w of half.waves || []) {
+                  for (const mon of w.monsters || []) {
+                    if (mon.name && !seen.has(mon.name)) { seen.add(mon.name); bosses.push({ name: mon.name, icon: mon.icon || '' }); }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      logger.debug?.(`[HoYoGet][abyss_now] 排期期数 ${ph._id} 解析失败: ${err?.message || err}`);
+    }
+    // 判断是否当期
+    const range = periodRange(ph.Time);
+    const isCurrent = !!(range && now >= range.start && now <= range.end);
+    rows.push({
+      ver: ph.Ver || '',
+      time: ph.Time || '',
+      floorNo,
+      bosses: bosses.slice(0, 8),
+      isCurrent,
+    });
+  }
+  return {
+    title: mode.title,
+    gameName: mode.gameName,
+    gameShort: mode.gameShort,
+    rows,
+    generatedAt: moment().format('MM-DD HH:mm'),
+  };
+}
+
 export class AbyssNow extends plugin {
   constructor(e) {
     super({
@@ -849,6 +923,11 @@ export class AbyssNow extends plugin {
         {
           reg: '^#*米哈游(原神|星铁|星穹|崩铁)?(?:([0-9]{1,2}\\.[0-9]{1,2}))?(?:第?([0-9]{2,4})期)?(?:上一期|上期|上一|下一期|下期|下一)?(?:([0-9]{1,2})层)?(深境螺旋|深境|深渊|幻想真境剧诗|幻想剧诗|幻想|真境|剧诗|幽境危战|幽境|危战|混沌回忆|混沌|回忆|虚构叙事|虚构|末日幻影|末日|幻影|异相仲裁|异相|仲裁|王棋)(?:([0-9]{1,2})层)?(?:上一期|上期|上一|下一期|下期|下一)?(速览|一览|详情|情报|阵容)$',
           fnc: 'overview',
+        },
+        {
+          // 深渊排期表：列出最近多期的 Boss
+          reg: '^#*米哈游(原神|星铁|星穹|崩铁)?(深境螺旋|深境|深渊|混沌回忆|混沌|回忆|虚构叙事|虚构|末日幻影|末日|幻影|异相仲裁|异相|仲裁)(排期|排期表|时间线)$',
+          fnc: 'schedule',
         },
       ],
     });
@@ -874,6 +953,24 @@ export class AbyssNow extends plugin {
     } catch (err) {
       logger.warn(`[HoYoGet][abyss_now] ${mode.title} 速览失败: ${err?.message || err}`);
       return e.reply(`${mode.title}数据获取失败，请稍后再试。`, true, { recallMsg: 60 });
+    }
+  }
+
+  async schedule(e) {
+    const msg = String(e.msg || '');
+    const sel = parseMsg(msg.replace(/(排期表|排期|时间线)$/, '速览'));
+    const mode = MODES[sel.modeKey];
+    if (!mode) return e.reply('未识别的深渊玩法', true);
+    try {
+      const view = await buildSchedule(mode, { count: 8 });
+      if (!view || !view.rows?.length) {
+        return e.reply(`未获取到${mode.title}排期数据，请稍后再试。`, true, { recallMsg: 60 });
+      }
+      const img = await render('abyss_now/schedule', view, { e, pct: 1.5 });
+      return e.reply(img);
+    } catch (err) {
+      logger.warn(`[HoYoGet][abyss_now] ${mode.title} 排期失败: ${err?.message || err}`);
+      return e.reply(`${mode.title}排期数据获取失败，请稍后再试。`, true, { recallMsg: 60 });
     }
   }
 }

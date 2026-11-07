@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="{{ppath}}abyss_now/schedule.css" />
+</head>
+<body {{sys.scale}}>
+<div class="page">
+  <header class="hero">
+    <div class="game">{{gameName}} · {{gameShort}}</div>
+    <h1>{{title}} · 排期</h1>
+    <div class="period">最近 {{rows.length}} 期 · 数据源 Alioth.wiki</div>
+  </header>
+
+  <div class="list">
+    {{each rows r idx}}
+    <section class="row {{if r.isCurrent}}is-current{{/if}}">
+      <div class="row-head">
+        <span class="ver">{{r.ver || '—'}}</span>
+        {{if r.isCurrent}}<span class="now-badge">进行中</span>{{/if}}
+        <span class="time">{{r.time}}</span>
+        {{if r.floorNo}}<span class="floor">{{r.floorNo}}</span>{{/if}}
+      </div>
+      <div class="bosses">
+        {{if !r.bosses.length}}
+        <span class="empty">暂无 BOSS 数据</span>
+        {{/if}}
+        {{each r.bosses b}}
+        <div class="boss" title="{{b.name}}">
+          <span class="boss-icon" {{if b.icon}}style="background-image:url('{{b.icon}}')"{{/if}}></span>
+          <span class="boss-name">{{b.name}}</span>
+        </div>
+        {{/each}}
+      </div>
+    </section>
+    {{/each}}
+  </div>
+
+  <div class="foot">生成于 {{generatedAt}}</div>
+</div>
+</body>
+</html>
