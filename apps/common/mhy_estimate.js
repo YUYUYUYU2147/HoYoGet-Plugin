@@ -703,6 +703,7 @@ export class mhy_estimate extends plugin {
     await e.reply(query ? `正在搜索「${query}」${guideName}攻略，请稍后...` : cfg.tip, true, { recallMsg: 60 });
 
     const msg = [];
+    let newestMysTs = 0; // 记录本次米游社攻略里最新的发布时间，用于判断内容是否过旧
     const seenPosts = new Set();
     const seenImages = new Set();
     let downloadedVod = false; // 一次攻略搜索最多直发 1 个视频，避免拖慢整个流程
@@ -796,6 +797,7 @@ export class mhy_estimate extends plugin {
           }
           if (!imageSegments.length && !vodCoverSeg && !hasText && !vodLine) continue;
           seenPosts.add(postKey);
+          newestMysTs = Math.max(newestMysTs, Number(post.created_at || post.publish_at || 0));
           msg.push([postInfo, vodLine, ...imageSegments, vodCoverSeg].filter(Boolean));
           if (query && msg.length >= 6) break;
         }
@@ -854,6 +856,7 @@ export class mhy_estimate extends plugin {
             }
             if (!imageSegments.length && !vodCoverSeg && !hasText && !vodLine) continue;
             seenPosts.add(postKey);
+            newestMysTs = Math.max(newestMysTs, Number(post.created_at || post.publish_at || 0));
             msg.push([postInfo, vodLine, ...imageSegments, vodCoverSeg].filter(Boolean));
             if (msg.length >= 6) break;
           }
@@ -868,10 +871,19 @@ export class mhy_estimate extends plugin {
     const staleNote = (staleSkipped.length && keptArgs.length)
       ? `\n（已跳过停更源：${staleSkipped.map(m => m.arg[3]).join('、')}）`
       : '';
+    // 米游社攻略过旧判断：最新一篇超过 MYS_STALE_DAYS 天，视为没有新内容
+    const MYS_STALE_DAYS = 20;
+    const mysStale = newestMysTs > 0 && (Date.now() / 1000 - newestMysTs) > MYS_STALE_DAYS * 86400;
+    const mysDate = newestMysTs ? new Date(newestMysTs * 1000).toISOString().slice(0, 10) : '';
     const title = query ? `${cfg.name}「${query}」攻略来啦~` : `${cfg.name}来啦~`;
     let sent = false;
+    // 过旧时先提示：米游社没有新内容，下面优先给 B 站最新
+    if (msg.length && mysStale) {
+      await e.reply(`米游社最新攻略停在 ${mysDate}（社区近期无新内容），${config()?.bili_guide_enabled === true ? '下面给你找 B 站最新攻略视频：' : '可开启 B 站视频补充获取最新内容。'}`, true);
+    }
     if (msg.length) {
-      await e.reply(await makeForwardMsg(e, msg, `${title}${staleNote}\n如果出现图片错误，请忽略`));
+      const titleSuffix = mysStale ? `\n（米游社攻略为 ${mysDate}，仅供参考）` : '';
+      await e.reply(await makeForwardMsg(e, msg, `${title}${staleNote}${titleSuffix}\n如果出现图片错误，请忽略`));
       sent = true;
     }
     if (vodSend) {
@@ -883,11 +895,14 @@ export class mhy_estimate extends plugin {
     // ===== B 站攻略视频补充源（默认关闭，锅巴开启后生效）=====
     // 米游社的周期玩法攻略社区侧较稀疏，这里再补一个 B 站最新视频。
     // 每次只发 1 个：能下载且小于 dow_size 直发视频，否则发封面+链接。
+    logger.mark(`[HoYoGet][estimate] B站补充检查: key=${key} enabled=${config()?.bili_guide_enabled} 米游社最新=${mysDate || '无'} 过旧=${mysStale}`);
     if (guideKeys.includes(key) && config()?.bili_guide_enabled === true) {
       try {
+        logger.mark(`[HoYoGet][estimate] 开始搜索B站攻略: ${key}`);
         const bv = await pickBiliGuide(key);
+        logger.mark(`[HoYoGet][estimate] B站选片: ${bv ? bv.bvid + ' ' + (bv.title || '').slice(0,20) : '无'}`);
         if (bv?.bvid) {
-          const info = `B站攻略：${bv.title}\nUP：${bv.author}${bv.pubdate ? ' · ' + new Date(bv.pubdate * 1000).toLocaleDateString('zh-CN') : ''}\nhttps://www.bilibili.com/video/${bv.bvid}`;
+          const info = `B站最新攻略：${bv.title}\nUP：${bv.author}${bv.pubdate ? ' · ' + new Date(bv.pubdate * 1000).toLocaleDateString('zh-CN') : ''}\nhttps://www.bilibili.com/video/${bv.bvid}`;
           // 先发文字（标题/UP/链接），再交给 bili.Download 直发视频；
           // 它内部按 dow_size 处理大小，失败时我们退化成封面+链接
           await e.reply(info);
