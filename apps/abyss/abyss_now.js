@@ -2,7 +2,7 @@ import fetch from 'node-fetch';
 import moment from 'moment';
 import { render, pluginPriority } from '#HoYoGet';
 import { enrichNanokaForAlioth, pickStageEnrich } from '../../system/sr_enrich.js';
-import { buildZzzSchedule } from '../../system/zzz_abyss_schedule.js';
+import { buildZzzSchedule, refreshZzzAbyssSnapshot } from '../../system/zzz_abyss_schedule.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -1194,6 +1194,18 @@ export class AbyssNow extends plugin {
         },
       ],
     });
+    // 绝区零深渊数据定时写入本地快照（每 6 小时），排期生成时网络失败可回退读取
+    this.task = {
+      cron: '0 0 */6 * * *',
+      name: '[米哈游]绝区零深渊数据快照',
+      fnc: () => refreshZzzAbyssSnapshot(8).then(r => logger.info(`[HoYoGet][abyss_now] 绝区零深渊快照 ${r.ok ? '已更新' : '未更新'}（${r.files} 个文件）`)).catch(err => logger.warn(`[HoYoGet][abyss_now] 绝区零深渊快照失败: ${err?.message || err}`)),
+      log: false,
+    }
+    // 首次加载后延迟 30 秒补一次快照（只做一次）
+    if (!globalThis.__hoyoGetZzzSnapshotBoot) {
+      globalThis.__hoyoGetZzzSnapshotBoot = true
+      setTimeout(() => refreshZzzAbyssSnapshot(8).catch(() => {}), 30 * 1000)
+    }
   }
 
   async overview(e) {

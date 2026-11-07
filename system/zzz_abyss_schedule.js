@@ -43,23 +43,61 @@ function elemItem(key) {
   return { key, cn: ELEM_CN[key] || key, icon: elemIcon(key) };
 }
 
-let _nvCache = null;
-async function nanokaZzzVersion() {
-  if (_nvCache) return _nvCache;
+// 本地快照：定时刷新写入，网络失败时回退读取（data/abyss_cache/nanoka_zzz.json）
+const CACHE_FILE = path.join(PLUGIN_ROOT, 'data', 'abyss_cache', 'nanoka_zzz.json')
+const MANIFEST_URL = `${NANOKA}/manifest.json`
+let _snapshot = null
+let _recording = null // 刷新时记录本轮成功拉取的 URL -> JSON
+
+function readSnapshot() {
+  if (_snapshot !== null) return _snapshot
   try {
-    const r = await fetch(`${NANOKA}/manifest.json`, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-    const j = await r.json();
-    _nvCache = j?.zzz?.latest || '';
-  } catch { _nvCache = ''; }
-  return _nvCache;
+    _snapshot = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8'))?.files || {}
+  } catch {
+    _snapshot = {}
+  }
+  return _snapshot
 }
 
 async function getJson(url) {
+  let data = null
   try {
-    const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(12000) });
-    if (!r.ok) return null;
-    return await r.json();
-  } catch { return null; }
+    const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(15000) })
+    if (r.ok) data = await r.json()
+  } catch {}
+  if (data) {
+    if (_recording) _recording[url] = data
+    return data
+  }
+  // 网络失败：用本地快照兜底
+  return readSnapshot()[url] ?? null
+}
+
+async function nanokaZzzVersion() {
+  const j = await getJson(MANIFEST_URL)
+  return j?.zzz?.latest || ''
+}
+
+/**
+ * 定时刷新：把排期要用的 manifest / 列表 / 详情全部拉一遍写入本地快照。
+ * 失败不覆盖旧快照（只有拿到的数据才写入）。
+ */
+export async function refreshZzzAbyssSnapshot(count = 8) {
+  const recording = {}
+  _recording = recording
+  try {
+    await buildZzzSchedule('shiyu', count)
+    await buildZzzSchedule('deadly', count)
+  } finally {
+    _recording = null
+  }
+  if (!Object.keys(recording).length) return { ok: false, files: 0 }
+  // 合并旧快照：本轮没拿到的 URL 保留旧数据，避免部分失败时丢失
+  const merged = { ...readSnapshot(), ...recording }
+  fs.mkdirSync(path.dirname(CACHE_FILE), { recursive: true })
+  fs.writeFileSync(CACHE_FILE, JSON.stringify({ updatedAt: new Date().toISOString(), files: merged }))
+  _snapshot = merged
+  return { ok: true, files: Object.keys(recording).length }
 }
 
 // 怪物图标：nanoka 的 image 是 UI/Sprite/... 路径，转成 assets 地址
