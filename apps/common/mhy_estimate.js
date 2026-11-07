@@ -612,6 +612,10 @@ function buildGlobalGuideWords(type, queryList, baseArgs) {
   return uniqueList(baseArgs.map(([word]) => word), 8);
 }
 
+// 统一前缀后：! / ！= 崩三符号；文字前缀「崩三…」会归一成 #崩三…。
+// 所以 # 只有在紧跟「崩三」时才属于崩三，避免把原神的 #深渊排期 抢走。
+const BH3_PREFIX = '(?:[#＃](?:崩三|崩坏3|崩坏三|BH3)|[!！](?:崩三|崩坏3|崩坏三|BH3)?|(?:崩三|崩坏3|崩坏三|BH3))?';
+
 export class mhy_estimate extends plugin {
   constructor() {
     super({
@@ -621,16 +625,16 @@ export class mhy_estimate extends plugin {
       priority: pluginPriority('mhy_estimate', -Infinity),
       rule: [
         // 崩三深渊排期表：！崩三深渊排期 / ！深渊排期表（读 abyss_schedule.json 渲染）
-        { reg: '^[#%％!！]?(崩三|崩坏3|崩坏三|BH3)?\s*(深渊|超弦)?\s*(排期|排期表|时间表)$', fnc: 'bh3AbyssSchedule' },
+        { reg: `^${BH3_PREFIX}\\s*(深渊|超弦)?\\s*(排期|排期表|时间表)$`, fnc: 'bh3AbyssSchedule' },
         // 崩三记忆战场排期表：！崩三战场排期 / ！战场排期表
-        { reg: '^[#%％!！]?(崩三|崩坏3|崩坏三|BH3)?\s*(战场|记忆战场)\s*(排期|排期表|时间表)$', fnc: 'bh3BattlefieldSchedule' },
+        { reg: `^${BH3_PREFIX}\\s*(战场|记忆战场)\\s*(排期|排期表|时间表)$`, fnc: 'bh3BattlefieldSchedule' },
         // 崩三测试服 Boss 时间线：！测试服Boss时间线 / ！崩三测试服时间线
-        { reg: '^[#%％!！]?(崩三|崩坏3|崩坏三|BH3)?\s*(测试服|测试|csf|CSF)?\s*(boss|BOSS|Boss)?\s*时间线$', fnc: 'bh3TestserverBossTimeline' },
+        { reg: `^${BH3_PREFIX}\\s*(测试服|测试|csf|CSF)?\\s*(boss|BOSS|Boss)?\\s*时间线$`, fnc: 'bh3TestserverBossTimeline' },
         // 崩三测试服 Boss（从 B站测试服视频标题归纳）
         // 注意：统一前缀会把 «！测试服boss» 归一成 «！测试服boss»（保留叹号，kind=symbol），
-        // 所以这里必须同时认 ! / ！ 前缀，否则崩三的叹号指令匹配不到。
-        { reg: '^[#%％!！]?(崩三|崩坏3|崩坏三|BH3)?\s*(测试服|测试|csf|CSF)?\s*[Bb][Oo][Ss][Ss]$', fnc: 'bh3TestserverBoss' },
-        { reg: '^[#%％!！]?(崩三|崩坏3|崩坏三|BH3)\s*(测试服)(boss|BOSS|Boss)?$', fnc: 'bh3TestserverBoss' },
+        // 而 «！崩三测试服boss» 会归一成 «#崩三测试服boss»，所以这里 # 只允许紧跟崩三。
+        { reg: `^${BH3_PREFIX}\\s*(测试服|测试|csf|CSF)?\\s*[Bb][Oo][Ss][Ss]$`, fnc: 'bh3TestserverBoss' },
+        { reg: `^${BH3_PREFIX}\\s*(测试服)(boss|BOSS|Boss)?$`, fnc: 'bh3TestserverBoss' },
         { reg: '^[#%％]?(崩三|崩坏3|崩坏三|BH3).*(深渊|超弦|超弦空间|超炫|超炫空间).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|boss|BOSS)$', fnc: 'bh3AbyssGuide' },
         { reg: '^[#%％]?(?!.*(原神|星铁|星穹|绝区零|绝区|ZZZ|zzz)).*(深渊|超弦|超弦空间|超炫|超炫空间).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|boss|BOSS)$', fnc: 'bh3AbyssGuide' },
         { reg: '^[#%％]?(崩三|崩坏3|崩坏三|BH3).*(战场|记忆战场).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|boss|BOSS)$', fnc: 'bh3BattlefieldGuide' },
