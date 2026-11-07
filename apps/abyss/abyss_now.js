@@ -856,7 +856,26 @@ export async function buildSchedule(mode, opts = {}) {
     let buffs = [];
     try {
       const detail = await getJson(`${DATA_BASE}/${mode.data}/${LANG}/${mode.file}/${ph._id}.json`, 6 * 3600 * 1000);
-      if (mode.game === 'sr') {
+      if (mode.game === 'sr' && mode.file === 'arbitration') {
+        // 异相仲裁：Knight(骑士小关) + King(王棋Boss) 各带 StageID
+        floorNo = '王棋';
+        const seen = new Set();
+        const weakMap = new Map();
+        const stages = [...(detail.King || []), ...(detail.Knight || [])];
+        for (const st of stages) {
+          for (const e of elemView('sr', st.Elem || [])) if (e.cn && !weakMap.has(e.key)) weakMap.set(e.key, e);
+          const half = srStageHalf(detail, { StageID: st.StageID, Elem: st.Elem, Half: st.Index }, '', {});
+          for (const w of half.waves) {
+            for (const mon of w.monsters) {
+              if (mon.name && !seen.has(mon.name)) { seen.add(mon.name); bosses.push({ name: mon.name, icon: mon.icon || '' }); }
+            }
+          }
+        }
+        weaks = [...weakMap.values()];
+        // 仲裁增益：Buffs + Knight/KingTags
+        buffs.push(...buffList(valuesOf(detail.Buffs)));
+        for (const t of [...(detail.KingTags || []), ...(detail.KnightTags || [])]) buffs.push(...buffList(t.Tags || []));
+      } else if (mode.game === 'sr') {
         const floors = detail.Floors || [];
         if (floors.length) {
           const nums = floors.map(f => Number(f.Floor)).filter(Number.isFinite);
