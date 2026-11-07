@@ -10,10 +10,38 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PLUGIN_ROOT = path.resolve(__dirname, '..');
 const NANOKA = 'https://static.nanoka.cc';
 const ICON_BASE = 'https://static.nanoka.cc';
 
 const ELEM_CN = { physical: '物理', fire: '火', ice: '冰', electric: '电', ether: '以太', wind: '风' };
+
+// 本地元素图标（在线无稳定地址）：转 data URI 并缓存
+const ELEM_ICON_FILE = {
+  physical: 'zzz_challenge/element/Physical.png',
+  fire: 'zzz_challenge/element/Fire.png',
+  ice: 'zzz_challenge/element/Ice.png',
+  electric: 'zzz_challenge/element/Electric.png',
+  ether: 'zzz_challenge/element/Ether.png',
+  wind: 'zzz_challenge/element/Wind.png',
+};
+const _elemIconCache = new Map();
+function elemIcon(key) {
+  if (_elemIconCache.has(key)) return _elemIconCache.get(key);
+  let uri = '';
+  const rel = ELEM_ICON_FILE[key];
+  try {
+    if (rel) {
+      const abs = path.join(PLUGIN_ROOT, 'resources', rel);
+      if (fs.existsSync(abs)) uri = `data:image/png;base64,${fs.readFileSync(abs).toString('base64')}`;
+    }
+  } catch {}
+  _elemIconCache.set(key, uri);
+  return uri;
+}
+function elemItem(key) {
+  return { key, cn: ELEM_CN[key] || key, icon: elemIcon(key) };
+}
 
 let _nvCache = null;
 async function nanokaZzzVersion() {
@@ -45,36 +73,39 @@ function monsterIcon(image = '') {
 function elemsOf(element = {}, sign) {
   return Object.entries(element || {})
     .filter(([, v]) => Number(v) === sign)
-    .map(([k]) => ELEM_CN[k] || k);
+    .map(([k]) => elemItem(k));
 }
 
 // 从某期详情提取主要 Boss（取最高 stage_num 的 zone 的所有怪物，去重）
+// 每个 Boss 带上自己的弱点/抗性，而不是整期汇总。
 function pickBosses(detail) {
   const zones = [];
   if (detail?.zone) zones.push(...Object.values(detail.zone));
   for (const m of (detail?.modes || [])) {
     if (m?.zone) zones.push(...Object.values(m.zone));
   }
-  if (!zones.length) return { bosses: [], weaks: [] };
+  if (!zones.length) return { bosses: [] };
   // 取最防线（stage_num 最大）
   const maxStage = Math.max(...zones.map(z => Number(z?.stage_num) || 0));
   const topZones = zones.filter(z => (Number(z?.stage_num) || 0) === maxStage);
   const seen = new Set();
-  const weakSet = new Map();
   const bosses = [];
   for (const z of topZones) {
     for (const room of Object.values(z?.layer_room || {})) {
       for (const mon of Object.values(room?.monster_list || {})) {
         const name = String(mon?.name || '').trim();
-        if (!name) continue;
-        for (const w of elemsOf(mon?.element, 1)) if (!weakSet.has(w)) weakSet.set(w, w);
-        if (seen.has(name)) continue;
+        if (!name || seen.has(name)) continue;
         seen.add(name);
-        bosses.push({ name, icon: monsterIcon(mon?.image) });
+        bosses.push({
+          name,
+          icon: monsterIcon(mon?.image),
+          weak: elemsOf(mon?.element, 1),
+          res: elemsOf(mon?.element, -1),
+        });
       }
     }
   }
-  return { bosses, weaks: [...weakSet.values()] };
+  return { bosses };
 }
 
 function fmtTime(s = '') {
@@ -122,7 +153,7 @@ export async function buildZzzSchedule(kind = 'shiyu', count = 8) {
   const rows = [];
   for (const ph of phases) {
     const detail = await getJson(`${NANOKA}/zzz/${nv}/zh/${detailDir}/${ph.id}.json`);
-    const { bosses, weaks } = pickBosses(detail);
+    const { bosses } = pickBosses(detail);
     const begin = new Date(ph.begin).getTime();
     const end = new Date(ph.end).getTime();
     rows.push({
@@ -130,7 +161,7 @@ export async function buildZzzSchedule(kind = 'shiyu', count = 8) {
       time: `${fmtTime(ph.begin)} - ${fmtTime(ph.end)}`,
       floorNo: '',
       bosses: bosses.slice(0, 8),
-      weaks: weaks.map(w => ({ cn: w, icon: '' })),
+      weaks: [],
       buffs: [],
       isCurrent: now >= begin && now <= end,
     });

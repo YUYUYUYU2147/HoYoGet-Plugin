@@ -3,6 +3,10 @@ import moment from 'moment';
 import { render, pluginPriority } from '#HoYoGet';
 import { enrichNanokaForAlioth, pickStageEnrich } from '../../system/sr_enrich.js';
 import { buildZzzSchedule } from '../../system/zzz_abyss_schedule.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 // 数据来源：Alioth.wiki（开源站点，静态 JSON 直出，无需鉴权）
 // 数据：https://json.alioth.wiki/data/{gi|hsr}/ch/{file}.json 与 {file}/{期id}.json
@@ -45,6 +49,7 @@ export const MODES = {
 
 const GI_ELEM = { Fire: '火', Water: '水', Grass: '草', Elec: '雷', Ice: '冰', Wind: '风', Rock: '岩', All: '全' };
 const SR_ELEM = { Phys: '物理', Fire: '火', Ice: '冰', Wind: '风', Elec: '雷', Quantum: '量子', Imaginary: '虚数' };
+const ZZZ_ELEM = { physical: '物理', fire: '火', ice: '冰', electric: '电', ether: '以太', wind: '风' };
 
 // 期数索引 10 分钟、当期详情 6 小时缓存（当期数据在版本内基本不变，避免每次请求都打对方 CDN）
 const CACHE = new Map();
@@ -177,14 +182,76 @@ function plainText(text = '') {
     .trim();
 }
 
+// 本地元素图标：在线 transform 接口已 404，改用插件内置资源转 data URI（缓存）。
+// 每个元素给多个候选路径，按顺序取第一个存在的文件（历史资源命名有 typo/多套）。
+const LOCAL_ELEM = {
+  // 星铁：meta-sr/public/icons/（注意 elem-ice 实际存成了 elm-ice）
+  sr: {
+    Fire: ['meta-sr/public/icons/elem-fire.webp', 'meta-sr/public/icons/attr-fire.webp'],
+    Ice: ['meta-sr/public/icons/elm-ice.webp', 'meta-sr/public/icons/attr-ice.webp', 'meta-sr/public/icons/elem-ice.webp'],
+    Elec: ['meta-sr/public/icons/elem-elec.webp', 'meta-sr/public/icons/attr-elec.webp'],
+    Wind: ['meta-sr/public/icons/elem-wind.webp'],
+    Phys: ['meta-sr/public/icons/elem-phy.webp', 'meta-sr/public/icons/attr-phy.webp'],
+    Quantum: ['meta-sr/public/icons/elem-auantum.webp', 'meta-sr/public/icons/tree-auantum.webp'],
+    Imaginary: ['meta-sr/public/icons/elem-imaginary.webp', 'meta-sr/public/icons/attr-imaginary.webp'],
+  },
+  // 原神：gs_role/imgs/elem/*.png（英文键对应）
+  gi: {
+    Fire: ['gs_role/imgs/elem/pyro.png'],
+    Water: ['gs_role/imgs/elem/hydro.png'],
+    Grass: ['gs_role/imgs/elem/dendro.png'],
+    Elec: ['gs_role/imgs/elem/electro.png'],
+    Ice: ['gs_role/imgs/elem/cryo.png'],
+    Wind: ['gs_role/imgs/elem/anemo.png'],
+    Rock: ['gs_role/imgs/elem/geo.png'],
+  },
+  // 绝区零：zzz_challenge/element/*.png
+  zzz: {
+    physical: ['zzz_challenge/element/Physical.png'],
+    fire: ['zzz_challenge/element/Fire.png'],
+    ice: ['zzz_challenge/element/Ice.png'],
+    electric: ['zzz_challenge/element/Electric.png'],
+    ether: ['zzz_challenge/element/Ether.png'],
+    wind: ['zzz_challenge/element/Wind.png'],
+  },
+};
+const _elemIconCache = new Map();
+function localElemIcon(game, key) {
+  const cands = LOCAL_ELEM[game]?.[key];
+  if (!cands) return '';
+  const cacheKey = `${game}:${key}`;
+  if (_elemIconCache.has(cacheKey)) return _elemIconCache.get(cacheKey);
+  let uri = '';
+  for (const rel of cands) {
+    try {
+      const abs = path.join(PLUGIN_ROOT, 'resources', rel);
+      if (!fs.existsSync(abs)) continue;
+      const ext = path.extname(abs).slice(1).toLowerCase();
+      uri = `data:image/${ext === 'png' ? 'png' : ext === 'jpg' || ext === 'jpeg' ? 'jpeg' : 'webp'};base64,${fs.readFileSync(abs).toString('base64')}`;
+      break;
+    } catch {}
+  }
+  _elemIconCache.set(cacheKey, uri);
+  return uri;
+}
+
 function elemView(game, keys = []) {
-  const map = game === 'gi' ? GI_ELEM : SR_ELEM;
+  const map = game === 'gi' ? GI_ELEM : game === 'zzz' ? ZZZ_ELEM : SR_ELEM;
   return (Array.isArray(keys) ? keys : [keys]).filter(Boolean).map(k => ({
     key: k,
-    cn: map[k] || k,
-    // All 表示「全属性」，模板用四色圆点补图标；其余用站点图标
-    icon: k === 'All' ? '' : `${IMG_BASE}/ui/${game}/element/${k}.png?w=64&f=auto`,
+    cn: map[k] || map[String(k).toLowerCase()] || k,
+    // All 表示「全属性」无图标；其余用本地内置图标
+    icon: k === 'All' ? '' : localElemIcon(game, k),
   })).filter(v => v.cn);
+}
+
+// 抗性条目统一摊平：{ elems:[{cn,icon,key}], value } → [{key,cn,icon,value}]
+function flattenRes(list = []) {
+  const out = [];
+  for (const r of (Array.isArray(list) ? list : [])) {
+    for (const e of (r?.elems || [])) out.push({ key: e.key, cn: e.cn, icon: e.icon || '', value: r.value || '' });
+  }
+  return out;
 }
 
 function monsterIcon(game, icon = '') {
@@ -856,22 +923,24 @@ export async function buildSchedule(mode, opts = {}) {
     let buffs = [];
     try {
       const detail = await getJson(`${DATA_BASE}/${mode.data}/${LANG}/${mode.file}/${ph._id}.json`, 6 * 3600 * 1000);
+      // 把关卡里的怪物补成「带自身弱点/抗性」的 Boss 条目（按名字去重）
+      const seen = new Set();
+      const addMon = (mon, fallbackWeak = []) => {
+        const name = mon?.name;
+        if (!name || seen.has(name)) return;
+        seen.add(name);
+        const weak = (mon.weak?.length ? mon.weak : fallbackWeak)
+          .map(e => ({ key: e.key, cn: e.cn, icon: e.icon || '' }));
+        bosses.push({ name, icon: mon.icon || '', weak, res: flattenRes(mon.res) });
+      };
       if (mode.game === 'sr' && mode.file === 'arbitration') {
         // 异相仲裁：Knight(骑士小关) + King(王棋Boss) 各带 StageID
         floorNo = '王棋';
-        const seen = new Set();
-        const weakMap = new Map();
         const stages = [...(detail.King || []), ...(detail.Knight || [])];
         for (const st of stages) {
-          for (const e of elemView('sr', st.Elem || [])) if (e.cn && !weakMap.has(e.key)) weakMap.set(e.key, e);
           const half = srStageHalf(detail, { StageID: st.StageID, Elem: st.Elem, Half: st.Index }, '', {});
-          for (const w of half.waves) {
-            for (const mon of w.monsters) {
-              if (mon.name && !seen.has(mon.name)) { seen.add(mon.name); bosses.push({ name: mon.name, icon: mon.icon || '' }); }
-            }
-          }
+          for (const w of half.waves) for (const mon of w.monsters) addMon(mon, half.elems);
         }
-        weaks = [...weakMap.values()];
         // 仲裁增益：Buffs + Knight/KingTags
         buffs.push(...buffList(valuesOf(detail.Buffs)));
         for (const t of [...(detail.KingTags || []), ...(detail.KnightTags || [])]) buffs.push(...buffList(t.Tags || []));
@@ -881,19 +950,10 @@ export async function buildSchedule(mode, opts = {}) {
           const nums = floors.map(f => Number(f.Floor)).filter(Number.isFinite);
           const top = floors.find(f => Number(f.Floor) === Math.max(...nums)) || floors[0];
           floorNo = `第${top.Floor}层`;
-          const seen = new Set();
-          const weakMap = new Map();
           for (const st of (top.Stages || [])) {
             const half = srStageHalf(detail, st, '', {});
-            // 弱点汇总（去重）
-            for (const e of (half.elems || [])) if (e.cn && !weakMap.has(e.key)) weakMap.set(e.key, e);
-            for (const w of half.waves) {
-              for (const mon of w.monsters) {
-                if (mon.name && !seen.has(mon.name)) { seen.add(mon.name); bosses.push({ name: mon.name, icon: mon.icon || '' }); }
-              }
-            }
+            for (const w of half.waves) for (const mon of w.monsters) addMon(mon, half.elems);
           }
-          weaks = [...weakMap.values()];
         }
         // 关卡增益：Buff + NewBuffs + Skills + Tags（末日首领机制）
         if (detail.Buff?.Name || detail.Buff?.Desc) buffs.push(...buffList([detail.Buff]));
@@ -907,57 +967,48 @@ export async function buildSchedule(mode, opts = {}) {
         const view = await buildAbyss(mode, { ...opts, periodId: ph._id });
         if (view?.sections?.length) {
           floorNo = view.sections[0].title || '';
-          const seen = new Set();
-          const weakMap = new Map();
           for (const sec of view.sections) {
             for (const room of sec.rooms || []) {
               for (const half of room.halves || []) {
-                for (const e of (half.elems || [])) if (e.cn && !weakMap.has(e.key)) weakMap.set(e.key, e);
                 for (const w of half.waves || []) {
-                  for (const mon of w.monsters || []) {
-                    if (mon.name && !seen.has(mon.name)) { seen.add(mon.name); bosses.push({ name: mon.name, icon: mon.icon || '' }); }
-                  }
+                  for (const mon of w.monsters || []) addMon(mon);
                 }
               }
             }
           }
-          weaks = [...weakMap.values()];
+          // 原神没有「弱点」概念，只有抗性；首领抗性已挂在各 Boss 上
           buffs = view.buffs || [];
         }
       } else if (mode.file === 'theater') {
-        // 幻想真境剧诗：Elem 弱点 + Boss[].Monsters 首领（站点数据无中文名，只能给图标）
+        // 幻想真境剧诗：Elem 是整期弱点（无法细分到单个首领），Boss[].Monsters 只给图标
         weaks = elemView('gi', detail.Elem || []);
-        const seen = new Set();
         for (const b of (detail.Boss || [])) {
           for (const m of (b.Monsters || [])) {
-            const icon = monsterIcon('gi', m.Icon || '');
             const key = String(m.ID);
             if (seen.has(key)) continue;
             seen.add(key);
-            bosses.push({ name: '', icon });
+            bosses.push({ name: '', icon: monsterIcon('gi', m.Icon || ''), weak: [], res: [] });
           }
         }
       } else if (mode.file === 'stygian') {
-        // 幽境危战：Levels 最高档 Boss
+        // 幽境危战：Levels 最高档 Boss（每个 Boss 带自己的抗性）
         const lv = (detail.Levels || []).slice(-1)[0] || (detail.Levels || [])[0];
-        const seen = new Set();
-        for (const id of (lv?.Monsters || [])) {
-          const info = detail.Monsters?.[String(id)] || detail.Monsters?.[id] || {};
-          const name = plainText(info.Name) || '';
-          if (name && !seen.has(name)) { seen.add(name); bosses.push({ name, icon: monsterIcon('gi', info.Icon || '') }); }
-        }
+        const diffIdx = Math.max(0, (detail.Levels || []).length - 1);
+        for (const id of (lv?.Monsters || [])) addMon(styMonster(detail, id, diffIdx));
       }
     } catch (err) {
       logger.debug?.(`[HoYoGet][abyss_now] 排期期数 ${ph._id} 解析失败: ${err?.message || err}`);
     }
     const range = periodRange(ph.Time);
     const isCurrent = !!(range && now >= range.start && now <= range.end);
+    const cut = bosses.slice(0, 8);
     rows.push({
       ver: ph.Ver || '',
       time: ph.Time || '',
       floorNo,
-      bosses: bosses.slice(0, 8),
-      weaks,
+      bosses: cut,
+      // 整期弱点只在 Boss 没有各自弱点时展示（如幻想真境剧诗）
+      weaks: weaks.length && !cut.some(b => b.weak?.length) ? weaks : [],
       buffs: buffs.filter(b => b.name || b.desc).slice(0, 4),
       isCurrent,
     });

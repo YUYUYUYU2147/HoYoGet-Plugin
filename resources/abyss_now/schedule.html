@@ -35,7 +35,15 @@
         {{each r.bosses b}}
         <div class="boss {{if !b.name}}boss-icon-only{{/if}}" title="{{b.name}}">
           <span class="boss-icon" {{if b.icon}}style="background-image:url('{{b.icon}}')"{{/if}}></span>
-          {{if b.name}}<span class="boss-name">{{b.name}}</span>{{/if}}
+          <div class="boss-info">
+            {{if b.name}}<span class="boss-name">{{b.name}}</span>{{/if}}
+            {{if b.weak && b.weak.length}}
+            <span class="bt weak"><b>弱</b>{{each b.weak e}}<i title="{{e.cn}}">{{if e.icon}}<img src="{{e.icon}}" alt="{{e.cn}}" />{{else}}{{e.cn}}{{/if}}</i>{{/each}}</span>
+            {{/if}}
+            {{if b.res && b.res.length}}
+            <span class="bt res"><b>抗</b>{{each b.res e}}<i title="{{e.cn}}{{if e.value}} {{e.value}}{{/if}}">{{if e.icon}}<img src="{{e.icon}}" alt="{{e.cn}}" />{{else}}{{e.cn}}{{/if}}{{if e.value}}<em>{{e.value}}</em>{{/if}}</i>{{/each}}</span>
+            {{/if}}
+          </div>
         </div>
         {{/each}}
       </div>
