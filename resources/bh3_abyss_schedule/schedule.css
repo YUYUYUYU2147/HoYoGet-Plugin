@@ -143,3 +143,12 @@ body {
 }
 .trow.is-current .c-date { color: var(--gold-deep); font-weight: 700; }
 .trow.is-current .boss-name { color: var(--gold-deep); }
+
+/* 顶部角色横幅：完整显示超弦空间/记忆战场原图（790x140） */
+.role-banner {
+  margin-bottom: 12px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 6px 20px -10px rgba(24,32,54,.4);
+}
+.role-banner img { width: 100%; height: auto; display: block; }
