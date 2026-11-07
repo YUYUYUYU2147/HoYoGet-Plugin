@@ -114,6 +114,20 @@ function elemsOf(element = {}, sign) {
     .map(([k]) => elemItem(k));
 }
 
+// 中文属性名 -> 元素键（房间级弱点/抗性用中文标签，如「火属性」）
+const ZH_ELEM_KEY = { 物理: 'physical', 火: 'fire', 冰: 'ice', 电: 'electric', 雷: 'electric', 以太: 'ether', 风: 'wind' }
+// 单位元素：优先读怪物 element（1=弱点 -1=抗性）；全为 0 时（困难模式）回退到房间的 monster_weakness / monster_resistance
+function monElems(mon, room) {
+  const weak = elemsOf(mon?.element, 1)
+  const res = elemsOf(mon?.element, -1)
+  if (weak.length || res.length) return { weak, res }
+  const toItems = obj => Object.values(obj || {})
+    .map(label => ZH_ELEM_KEY[String(label).replace(/属性$/, '')])
+    .filter(Boolean)
+    .map(key => elemItem(key))
+  return { weak: toItems(room?.monster_weakness), res: toItems(room?.monster_resistance) }
+}
+
 // 从某期详情提取主要 Boss（取最高 stage_num 的 zone 的所有怪物，去重）
 // 每个 Boss 带上自己的弱点/抗性，而不是整期汇总。
 function zzzHp(v) {
@@ -142,7 +156,8 @@ function pickBossesShiyu(detail) {
       for (const mon of Object.values(room?.monster_list || {})) {
         const name = String(mon?.name || '').trim();
         if (!name) continue;
-        const item = { name, icon: monsterIcon(mon?.image), hp: zzzHp(mon?.stats?.hp), weak: elemsOf(mon?.element, 1), res: elemsOf(mon?.element, -1) };
+        const { weak, res } = monElems(mon, room);
+        const item = { name, icon: monsterIcon(mon?.image), hp: zzzHp(mon?.stats?.hp), weak, res };
         monsters.push(item);
         if (!seen.has(name)) { seen.add(name); bosses.push(item); }
       }
@@ -172,12 +187,13 @@ function pickBosses(detail, kind = 'shiyu') {
         for (const mon of Object.values(room?.monster_list || {})) {
           const name = String(mon?.name || '').trim();
           if (!name) continue;
+          const { weak, res } = monElems(mon, room);
           const item = {
             name,
             icon: monsterIcon(mon?.image),
             hp: zzzHp(mon?.stats?.hp),
-            weak: elemsOf(mon?.element, 1),
-            res: elemsOf(mon?.element, -1),
+            weak,
+            res,
           };
           monsters.push(item);
           if (!seen.has(name)) { seen.add(name); bosses.push(item); }
