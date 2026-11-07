@@ -278,21 +278,39 @@ function monsterIcon(game, icon = '') {
 
 // 远程头像转 base64 内嵌，避免截图时 CSS 背景图还没加载完而显示空白
 const _inlineIconCache = new Map();
+// 并发上限：同时发起过多图片请求会超时，导致回退成远程链接，渲染时直接空白
+const ICON_CONCURRENCY = 4;
+async function mapLimit(items, limit, fn) {
+  const out = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i], i);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return out;
+}
+
 async function inlineIcon(url = '') {
   if (!url || !/^https?:/i.test(url)) return url;
   if (_inlineIconCache.has(url)) return _inlineIconCache.get(url);
-  let uri = url;
-  try {
-    const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), 10000);
-    const res = await fetch(url, { signal: ctl.signal });
-    clearTimeout(timer);
-    if (res.ok) {
-      const type = (res.headers.get('content-type') || 'image/png').split(';')[0];
-      uri = `data:${type};base64,${Buffer.from(await res.arrayBuffer()).toString('base64')}`;
-    }
-  } catch {}
-  _inlineIconCache.set(url, uri);
+  let uri = '';
+  // 失败重试 3 次；全部失败则不回退远程链接（远程链接在渲染时一定空白），留空并不缓存，下次再试
+  for (let attempt = 0; attempt < 3 && !uri; attempt++) {
+    try {
+      const ctl = new AbortController();
+      const timer = setTimeout(() => ctl.abort(), 20000);
+      const res = await fetch(url, { signal: ctl.signal });
+      clearTimeout(timer);
+      if (res.ok) {
+        const type = (res.headers.get('content-type') || 'image/png').split(';')[0];
+        uri = `data:${type};base64,${Buffer.from(await res.arrayBuffer()).toString('base64')}`;
+      }
+    } catch {}
+  }
+  if (uri) _inlineIconCache.set(url, uri);
   return uri;
 }
 
@@ -300,7 +318,13 @@ async function inlineIcon(url = '') {
 export async function inlineViewIcons(view) {
   if (!view?.rows?.length) return view;
   for (const r of view.rows) {
-    r.bosses = await Promise.all((r.bosses || []).map(async b => ({ ...b, icon: await inlineIcon(b.icon) })));
+    r.bosses = await mapLimit(r.bosses || [], ICON_CONCURRENCY, async b => ({ ...b, icon: await inlineIcon(b.icon) }));
+    // 分组里的 BOSS 也要内嵌（渲染用的是 groups；只处理 bosses 会留下远程链接，渲染时空白）
+    for (const g of r.groups || []) {
+      g.bosses = await mapLimit(g.bosses || [], ICON_CONCURRENCY, async b => ({ ...b, icon: await inlineIcon(b.icon) }));
+      g.big = g.bosses.filter(b => !b.mini).length;
+      g.hasMini = g.bosses.some(b => b.mini);
+    }
   }
   return view;
 }
@@ -1006,7 +1030,7 @@ async function groupsFromView(view) {
           half.label || '',
         ].filter(Boolean).join(' · ');
         if (bosses.length) {
-          const items = await Promise.all(bosses.map(async b => ({ ...b, icon: await inlineIcon(b.icon) })));
+          const items = await mapLimit(bosses, ICON_CONCURRENCY, async b => ({ ...b, icon: await inlineIcon(b.icon) }));
           groups.push({
             label,
             bosses: items,
@@ -1116,7 +1140,7 @@ export async function buildSchedule(mode, opts = {}) {
     const range = periodRange(ph.Time);
     const isCurrent = !!(range && now >= range.start && now <= range.end);
     const cut = bosses.slice(0, 8);
-    const cutInline = await Promise.all(cut.map(async b => ({ ...b, icon: await inlineIcon(b.icon) })));
+    const cutInline = await mapLimit(cut, ICON_CONCURRENCY, async b => ({ ...b, icon: await inlineIcon(b.icon) }));
     // 逐间分组：每层/每间/每半的 BOSS 名单，排期图按这个展示
     let groups = [];
     try {
