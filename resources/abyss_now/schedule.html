@@ -5,11 +5,12 @@
   <link rel="stylesheet" href="{{ppath}}abyss_now/schedule.css" />
 </head>
 <body {{sys.scale}}>
-<div class="page">
+<div class="page deco-{{theme.deco}} {{if theme.light}}light{{/if}}" style="--accent:{{theme.accent}};--accent2:{{theme.accent2}};--bg-img:url('{{ppath}}{{theme.bg}}')">
+  <div class="bg-art"></div>
   <header class="hero">
-    <div class="game">{{gameName}} · {{gameShort}}</div>
-    <h1>{{title}} · 排期</h1>
-    <div class="period">最近 {{rows.length}} 期 · 数据源 Alioth.wiki</div>
+    <div class="game">{{gameName}} · {{theme.tag || gameShort}}</div>
+    <h1>{{theme.name || title}} · 排期</h1>
+    <div class="period">最近 {{rows.length}} 期 · 数据源 {{source || 'Alioth.wiki'}}</div>
   </header>
 
   <div class="list">
@@ -28,6 +29,39 @@
       </div>
       {{/if}}
 
+      {{if r.groups && r.groups.length}}
+      <div class="groups">
+        {{each r.groups g}}
+        <div class="group {{if g.big == 1}}single{{/if}}">
+          <div class="group-label">{{g.label}}</div>
+          <div class="bosses">
+            {{each g.bosses b}}
+            {{if !b.mini}}
+            <div class="boss" title="{{b.name}}">
+              <span class="boss-icon" {{if b.icon}}style="background-image:url('{{b.icon}}')"{{/if}}></span>
+              <div class="boss-info">
+                <span class="boss-name">{{b.name}}</span>
+                {{if b.hp}}<span class="boss-hp">{{b.hp}}</span>{{/if}}
+                {{if b.weak && b.weak.length}}
+                <span class="bt weak"><b>弱</b>{{each b.weak e}}<i title="{{e.cn}}">{{if e.icon}}<img src="{{e.icon}}" alt="{{e.cn}}" />{{else}}{{e.cn}}{{/if}}</i>{{/each}}</span>
+                {{/if}}
+                {{if b.res && b.res.length}}
+                <span class="bt res"><b>抗</b>{{each b.res e}}<i title="{{e.cn}}{{if e.value}} {{e.value}}{{/if}}">{{if e.icon}}<img src="{{e.icon}}" alt="{{e.cn}}" />{{else}}{{e.cn}}{{/if}}{{if e.value}}<em>{{e.value}}</em>{{/if}}</i>{{/each}}</span>
+                {{/if}}
+              </div>
+            </div>
+            {{/if}}
+            {{/each}}
+          </div>
+          {{if g.hasMini}}
+          <div class="chips">
+            {{each g.bosses b}}{{if b.mini}}<span class="chip">{{b.name}}{{if b.hp}} <em>{{b.hp}}</em>{{/if}}</span>{{/if}}{{/each}}
+          </div>
+          {{/if}}
+        </div>
+        {{/each}}
+      </div>
+      {{else}}
       <div class="bosses">
         {{if !r.bosses.length}}
         <span class="empty">暂无 BOSS 数据</span>
@@ -48,6 +82,8 @@
         {{/each}}
       </div>
 
+      {{/if}}
+
       {{if r.buffs && r.buffs.length}}
       <div class="buffs">
         <span class="buffs-label">环境增益</span>
@@ -63,7 +99,7 @@
     {{/each}}
   </div>
 
-  <div class="foot">生成于 {{generatedAt}}</div>
+  <div class="foot"><span>生成于 {{generatedAt}}</span>{{@copy()}}</div>
 </div>
 </body>
 </html>

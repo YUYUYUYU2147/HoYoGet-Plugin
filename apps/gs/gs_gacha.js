@@ -316,6 +316,7 @@ export class gs_gacha extends plugin {
         { reg: "^#*米哈游原神(刷新|更新)抽卡记录$", fnc: "updateByCookie" },
         { reg: "^#*米哈游原神(抽卡记录|抽卡统计)$", fnc: "summary" },
         { reg: "^#*米哈游原神角色统计$", fnc: "roleStat" },
+        { reg: "^#[ \\t]*角色统计$", fnc: "roleStat" },
         { reg: "^#*米哈游原神武器统计$", fnc: "weaponStat" },
         { reg: "^#*米哈游原神抽卡链接", fnc: "updateByLink" },
         { reg: "^#*米哈游原神超越抽卡", fnc: "updateByLink" },

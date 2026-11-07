@@ -854,6 +854,7 @@ export class zzz_gacha extends plugin {
         { reg: '^#*米哈游(绝区零|zzz)?(抽卡|调频)(记录|统计|分析)$', fnc: 'summary' },
         { reg: '^#*米哈游(绝区零|zzz)?角色记录$', fnc: 'roleRecord' },
         { reg: '^#*米哈游(绝区零|zzz)?角色统计$', fnc: 'roleStat' },
+        { reg: '^[%％][ \\t]*角色统计$', fnc: 'roleStat' },
         { reg: '^#*米哈游(绝区零|zzz)?(音擎|武器)记录$', fnc: 'weaponRecord' },
         { reg: '^#*米哈游(绝区零|zzz)?(音擎|武器)统计$', fnc: 'weaponStat' },
         { reg: '^#*米哈游(绝区零|zzz)?邦布记录$', fnc: 'bangbooRecord' },

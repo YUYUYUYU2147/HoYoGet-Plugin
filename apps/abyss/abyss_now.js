@@ -16,6 +16,19 @@ const DATA_BASE = 'https://json.alioth.wiki/data';
 const IMG_BASE = 'https://transform.alioth.wiki/i';
 const LANG = 'ch';
 
+/* 排期图主题：每种深渊玩法一套配色 + 背景图（取自各游戏已有素材），风格尽量贴近游戏 UI */
+export const SCHEDULE_THEMES = {
+  gs_abyss:   { game: 'gs', light: true, name: '深境螺旋',     accent: '#f5d37a', accent2: '#8fb8ff', bg: 'abyss_stat/bg/bg-hydro.webp',   deco: 'gs',  tag: 'SPIRAL ABYSS' },
+  gs_theater: { game: 'gs', light: true, name: '幻想真境剧诗', accent: '#e7b8ff', accent2: '#ffd98a', bg: 'abyss_stat/bg/bg-electro.webp', deco: 'gs',  tag: 'IMAGINARIUM THEATER' },
+  gs_stygian: { game: 'gs', light: true, name: '幽境危战',     accent: '#7ff2e0', accent2: '#b5ffdc', bg: 'abyss_stat/bg/bg-dendro.webp',  deco: 'gs',  tag: 'STYGIAN ONSLAUGHT' },
+  sr_chaos:   { game: 'sr', light: true, name: '混沌回忆',     accent: '#8fe3ff', accent2: '#c7b6ff', bg: 'abyss_stat/bg/bg-sr.webp',      deco: 'sr',  tag: 'CHAOS MEMORY' },
+  sr_fiction: { game: 'sr', light: true, name: '虚构叙事',     accent: '#c9b2ff', accent2: '#ff9ad5', bg: 'abyss_stat/bg/bg-quantum.webp', deco: 'sr',  tag: 'PURE FICTION' },
+  sr_shadow:  { game: 'sr', light: true, name: '末日幻影',     accent: '#ff6b7a', accent2: '#ffb36b', bg: 'abyss_stat/bg/bg-pyro.webp',    deco: 'sr',  tag: 'APOCALYPTIC SHADOW' },
+  sr_arb:     { game: 'sr', light: true, name: '异相仲裁',     accent: '#c9961a', accent2: '#e8c15a', bg: 'abyss_stat/bg/bg-geo.webp',     deco: 'sr',  tag: 'FORGOTTEN HALL · ARBITRATION' },
+  zzz_shiyu:  { game: 'zzz', light: false, name: '式舆防卫战',  accent: '#ffd400', accent2: '#ffffff', bg: 'zzz_challenge/img/bg1.png',     deco: 'zzz', tag: 'SHIYU DEFENSE' },
+  zzz_deadly: { game: 'zzz', light: false, name: '危局强袭战',  accent: '#ff3d4a', accent2: '#ffd400', bg: 'zzz_challenge/img/bg.png',      deco: 'zzz', tag: 'DEADLY ASSAULT' },
+};
+
 export const MODES = {
   gs_abyss: {
     game: 'gs', data: 'gi', img: 'gi', file: 'abyss',
@@ -263,6 +276,35 @@ function monsterIcon(game, icon = '') {
   return `${IMG_BASE}/gi/${dir}/${icon}.png?w=128&f=auto`;
 }
 
+// 远程头像转 base64 内嵌，避免截图时 CSS 背景图还没加载完而显示空白
+const _inlineIconCache = new Map();
+async function inlineIcon(url = '') {
+  if (!url || !/^https?:/i.test(url)) return url;
+  if (_inlineIconCache.has(url)) return _inlineIconCache.get(url);
+  let uri = url;
+  try {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 10000);
+    const res = await fetch(url, { signal: ctl.signal });
+    clearTimeout(timer);
+    if (res.ok) {
+      const type = (res.headers.get('content-type') || 'image/png').split(';')[0];
+      uri = `data:${type};base64,${Buffer.from(await res.arrayBuffer()).toString('base64')}`;
+    }
+  } catch {}
+  _inlineIconCache.set(url, uri);
+  return uri;
+}
+
+/** 把排期视图里所有 BOSS 远程头像内嵌为 base64（原神/星铁/绝区零共用） */
+export async function inlineViewIcons(view) {
+  if (!view?.rows?.length) return view;
+  for (const r of view.rows) {
+    r.bosses = await Promise.all((r.bosses || []).map(async b => ({ ...b, icon: await inlineIcon(b.icon) })));
+  }
+  return view;
+}
+
 function avatarIcon(icon = '') {
   if (!icon) return '';
   return `${IMG_BASE}/gi/AvatarIcon/${String(icon).replace(/\.png$/i, '')}.png?w=128&f=auto`;
@@ -371,15 +413,30 @@ async function buildAbyss(mode, opts = {}) {
 
 /* ---------------- 原神：幻想真境剧诗 ---------------- */
 
-function theaterMonsters(detail, list = []) {
-  return list.map(id => ({
-    name: '',
-    icon: monsterIcon('gi', typeof detail.Monsters?.[id] === 'string' ? detail.Monsters[id] : detail.Monsters?.[id]?.Icon),
-    hp: '',
-    count: '',
-    res: [],
-    mech: '',
-  }));
+// 怪物名称：alioth 的 monster/<id>.json -> Main.Name（幻想真境剧诗的 Boss 只给 ID，名字要单独取）
+async function monsterNameById(id) {
+  if (!id) return '';
+  const d = await getJson(`${DATA_BASE}/gi/${LANG}/monster/${id}.json`, 24 * 3600 * 1000);
+  return plainText(d?.Main?.Name || '');
+}
+
+async function theaterMonsters(detail, list = [], mini = false) {
+  const out = [];
+  for (const it of list) {
+    const isObj = it && typeof it === 'object';
+    const id = isObj ? it.ID : it;
+    const iconKey = detail.Monsters?.[id];
+    out.push({
+      name: await monsterNameById(id),
+      icon: monsterIcon('gi', typeof iconKey === 'string' ? iconKey : iconKey?.Icon),
+      hp: isObj && it.HP ? `HP ${fmt(it.HP)}` : '',
+      count: '',
+      res: [],
+      mech: '',
+      mini,
+    });
+  }
+  return out;
 }
 
 async function buildTheater(mode, opts = {}) {
@@ -387,23 +444,23 @@ async function buildTheater(mode, opts = {}) {
   if (!loaded) return null;
   if (loaded.error) return { error: loaded.error };
   const { phase, detail, tag } = loaded;
-  const halvesOf = (arr, prefix, timeFirst = false) => (arr || []).map((v, i) => ({
+  const halvesOf = async (arr, prefix) => Promise.all((arr || []).map(async (v, i) => ({
     label: `${prefix}${arr.length > 1 ? ` ${i + 1}` : ''}`,
     time: v.Time || '',
-    waves: [{ name: '', monsters: theaterMonsters(detail, (v.Monsters || []).map(m => m.ID)) }],
-  }));
+    waves: [{ name: '', monsters: await theaterMonsters(detail, v.Monsters || []) }],
+  })));
 
   const rooms = [];
-  if (detail.Boss?.length) rooms.push({ idx: rooms.length + 1, halves: halvesOf(detail.Boss, '首领关卡') });
-  if (detail.Arcana?.length) rooms.push({ idx: rooms.length + 1, halves: halvesOf(detail.Arcana, '秘域关卡') });
+  if (detail.Boss?.length) rooms.push({ idx: rooms.length + 1, halves: await halvesOf(detail.Boss, '首领关卡') });
+  if (detail.Arcana?.length) rooms.push({ idx: rooms.length + 1, halves: await halvesOf(detail.Arcana, '秘域关卡') });
 
-  const chamberHalves = (detail.Chambers || []).map(c => {
-    const waves = (c.Configs || []).map(cfg => ({
+  const chamberHalves = await Promise.all((detail.Chambers || []).map(async c => {
+    const waves = await Promise.all((c.Configs || []).map(async cfg => ({
       name: '',
-      monsters: theaterMonsters(detail, detail.MP?.[cfg] || []),
-    }));
+      monsters: await theaterMonsters(detail, detail.MP?.[cfg] || [], true),
+    })));
     return { label: `第${c._id}幕`, level: c.Level, waves };
-  });
+  }));
   if (chamberHalves.length) rooms.push({ idx: rooms.length + 1, halves: chamberHalves });
 
   const sections = [];
@@ -910,6 +967,60 @@ export async function getAbyssBossesByFloor(opts = {}) {
 }
 
 /**
+ * 把模式视图（sections→rooms→halves→waves→monsters）展开成「层/间/半」分组，
+ * 每组带上该间的 BOSS 名单（含头像、弱点、抗性），用于排期图逐间标注。
+ */
+// 统一血量文本：原神/星铁/深渊 HP 字段格式不一，这里统一成「HP 数值」
+function hpText(v) {
+  if (v === undefined || v === null || v === '') return '';
+  const t = String(v).trim();
+  if (!t) return '';
+  return /^HP/i.test(t) ? t : `HP ${t}`;
+}
+
+async function groupsFromView(view) {
+  const groups = [];
+  for (const sec of view?.sections || []) {
+    const multiRoom = (sec.rooms || []).length > 1;
+    for (const room of sec.rooms || []) {
+      for (const half of room.halves || []) {
+        const seen = new Set();
+        const bosses = [];
+        for (const w of half.waves || []) {
+          for (const mon of w.monsters || []) {
+            if (!mon?.name || seen.has(mon.name)) continue;
+            seen.add(mon.name);
+            bosses.push({
+              name: mon.name,
+              icon: mon.icon || '',
+              hp: hpText(mon.hp),
+              mini: !!mon.mini,
+              weak: (mon.weak || []).map(e => ({ key: e.key, cn: e.cn, icon: e.icon || '' })),
+              res: flattenRes(mon.res),
+            });
+          }
+        }
+        const label = [
+          sec.title,
+          multiRoom && room.idx ? `第${room.idx}间` : '',
+          half.label || '',
+        ].filter(Boolean).join(' · ');
+        if (bosses.length) {
+          const items = await Promise.all(bosses.map(async b => ({ ...b, icon: await inlineIcon(b.icon) })));
+          groups.push({
+            label,
+            bosses: items,
+            big: items.filter(b => !b.mini).length,
+            hasMini: items.some(b => b.mini),
+          });
+        }
+      }
+    }
+  }
+  return groups;
+}
+
+/**
  * 多期排期总览：取最近 count 期，每期列出最高层的 Boss 名单。
  * 数据源与速览相同（Alioth 静态 JSON）。用于「深渊排期表」展示历史各期 Boss。
  */
@@ -934,7 +1045,7 @@ export async function buildSchedule(mode, opts = {}) {
         seen.add(name);
         const weak = (mon.weak?.length ? mon.weak : fallbackWeak)
           .map(e => ({ key: e.key, cn: e.cn, icon: e.icon || '' }));
-        bosses.push({ name, icon: mon.icon || '', weak, res: flattenRes(mon.res) });
+        bosses.push({ name, icon: mon.icon || '', hp: hpText(mon.hp), weak, res: flattenRes(mon.res) });
       };
       if (mode.game === 'sr' && mode.file === 'arbitration') {
         // 异相仲裁：Knight(骑士小关) + King(王棋Boss) 各带 StageID
@@ -1005,11 +1116,20 @@ export async function buildSchedule(mode, opts = {}) {
     const range = periodRange(ph.Time);
     const isCurrent = !!(range && now >= range.start && now <= range.end);
     const cut = bosses.slice(0, 8);
+    const cutInline = await Promise.all(cut.map(async b => ({ ...b, icon: await inlineIcon(b.icon) })));
+    // 逐间分组：每层/每间/每半的 BOSS 名单，排期图按这个展示
+    let groups = [];
+    try {
+      if (mode.build) groups = await groupsFromView(await mode.build(mode, { periodId: ph._id }));
+    } catch (err) {
+      logger.debug?.(`[HoYoGet][abyss_now] 排期期数 ${ph._id} 分组失败: ${err?.message || err}`);
+    }
     rows.push({
       ver: ph.Ver || '',
       time: ph.Time || '',
       floorNo,
-      bosses: cut,
+      groups,
+      bosses: cutInline,
       // 整期弱点只在 Boss 没有各自弱点时展示（如幻想真境剧诗）
       weaks: weaks.length && !cut.some(b => b.weak?.length) ? weaks : [],
       buffs: buffs.filter(b => b.name || b.desc).slice(0, 4),
@@ -1020,6 +1140,7 @@ export async function buildSchedule(mode, opts = {}) {
     title: mode.title,
     gameName: mode.gameName,
     gameShort: mode.gameShort,
+    theme: SCHEDULE_THEMES[Object.keys(MODES).find(k => MODES[k] === mode)] || {},
     rows,
     generatedAt: moment().format('MM-DD HH:mm'),
   };
@@ -1039,12 +1160,12 @@ export class AbyssNow extends plugin {
         },
         {
           // 深渊排期表：列出最近多期的 Boss（#=原神、*=星铁，文字前缀已被统一归一）
-          reg: '^(?:[#＃*＊]|米哈游|(?=原神|星铁|星穹|崩铁))(?:米哈游)?(?:原神|星铁|星穹|崩铁)?(深境螺旋|深境|深渊|混沌回忆|混沌|回忆|虚构叙事|虚构|末日幻影|末日|幻影|异相仲裁|异相|仲裁)(排期|排期表|时间线)$',
+          reg: '^(?:[#＃*＊]|米哈游|(?=原神|星铁|星穹|崩铁))(?:米哈游)?(?:原神|星铁|星穹|崩铁)?(深境螺旋|深境|深渊|幻想真境剧诗|幻想剧诗|幻想|真境|剧诗|幽境危战|幽境|危战|混沌回忆|混沌|回忆|虚构叙事|虚构|末日幻影|末日|幻影|异相仲裁|异相|仲裁)(排期|排期表|时间线)$',
           fnc: 'schedule',
         },
         {
           // 绝区零深渊排期：式舆防卫战 / 危局强袭战
-          reg: '^[#%％]?(绝区零|绝区|zzz|ZZZ|米哈游)?\s*(式舆防卫战|式舆|防卫战|危局强袭战|危局|强袭战|强袭)\s*(排期|排期表|时间线)$',
+          reg: '^[#%％]?(绝区零|绝区|zzz|ZZZ|米哈游)?\\s*(式舆防卫战|式舆|防卫战|危局强袭战|危局|强袭战|强袭)\\s*(排期|排期表|时间线)$',
           fnc: 'zzzSchedule',
         },
       ],
@@ -1062,10 +1183,8 @@ export class AbyssNow extends plugin {
       if (!view || !view.sections?.length) {
         return e.reply('未获取到 Alioth 当期数据，请稍后再试。', true, { recallMsg: 60 });
       }
-      // 原来传 pct:1，等于完全不缩放，输出只有 1200px 宽，
-      // 是全插件最小的（速报 1.5 / 日历 1.65 / 角色战力 1.6），字小又糊。
-      // 1.5 与速报对齐，输出 1800px，字体按 1.5 倍重新栅格化而不是拉伸。
-      const img = await render('abyss_now/overview', view, { e, pct: 1.5 });
+      // 不传 pct，跟随锅巴「图片渲染精度」img_quality（render.js qualityScale）。
+      const img = await render('abyss_now/overview', view, { e });
       if (view.tip) await e.reply(view.tip, true, { recallMsg: 60 });
       return e.reply(img);
     } catch (err) {
@@ -1078,11 +1197,12 @@ export class AbyssNow extends plugin {
     const msg = String(e.msg || '');
     const kind = /危局|强袭/.test(msg) ? 'deadly' : 'shiyu';
     try {
-      const view = await buildZzzSchedule(kind, 8);
+      const view = await inlineViewIcons(await buildZzzSchedule(kind, 8));
       if (!view || !view.rows?.length) {
         return e.reply('未获取到绝区零排期数据，请稍后再试。', true, { recallMsg: 60 });
       }
-      const img = await render('abyss_now/schedule', view, { e, pct: 1.5 });
+      view.theme = SCHEDULE_THEMES[kind === 'deadly' ? 'zzz_deadly' : 'zzz_shiyu'];
+      const img = await render('abyss_now/schedule', view, { e });
       return e.reply(img);
     } catch (err) {
       logger.warn(`[HoYoGet][abyss_now] 绝区零排期失败: ${err?.message || err}`);
@@ -1100,7 +1220,7 @@ export class AbyssNow extends plugin {
       if (!view || !view.rows?.length) {
         return e.reply(`未获取到${mode.title}排期数据，请稍后再试。`, true, { recallMsg: 60 });
       }
-      const img = await render('abyss_now/schedule', view, { e, pct: 1.5 });
+      const img = await render('abyss_now/schedule', view, { e });
       return e.reply(img);
     } catch (err) {
       logger.warn(`[HoYoGet][abyss_now] ${mode.title} 排期失败: ${err?.message || err}`);

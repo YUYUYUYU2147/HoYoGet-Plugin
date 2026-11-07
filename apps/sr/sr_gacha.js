@@ -6,6 +6,39 @@ import { sendRenderResult } from '../../system/render.js'
 import { appendTaskRecords } from '../../system/task_history.js'
 import { buildIsUP } from '../../system/join_isup.mjs'
 import { getEventNoteUser } from '../../system/genshin_loader.js'
+
+// 渲染前把视图里所有远程 icon 转成 base64 内嵌：截图时远程图未加载完会留下空白头像
+async function inlineViewIcons(view) {
+  const cache = new Map()
+  const fetchUri = async (url) => {
+    if (cache.has(url)) return cache.get(url)
+    let uri = url
+    try {
+      const ctl = new AbortController()
+      const timer = setTimeout(() => ctl.abort(), 10000)
+      const res = await fetch(url, { signal: ctl.signal })
+      clearTimeout(timer)
+      if (res.ok) {
+        const type = (res.headers.get('content-type') || 'image/png').split(';')[0]
+        uri = `data:${type};base64,${Buffer.from(await res.arrayBuffer()).toString('base64')}`
+      }
+    } catch {}
+    cache.set(url, uri)
+    return uri
+  }
+  const walk = async (node) => {
+    if (Array.isArray(node)) { for (const v of node) await walk(v); return }
+    if (!node || typeof node !== 'object') return
+    for (const k of Object.keys(node)) {
+      const v = node[k]
+      if (k === 'icon' && typeof v === 'string' && /^https?:/i.test(v)) node[k] = await fetchUri(v)
+      else await walk(v)
+    }
+  }
+  await walk(view)
+  return view
+}
+
 import { getRoleProfile } from '../../system/roleProfile.js'
 // === 跨插件依赖：genshin 插件 ===
 //
@@ -788,8 +821,9 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
        逐个探测比遍历整棵树便宜。 */
     const WEAPON_BUCKETS = { gs: ['sword', 'claymore', 'polearm', 'bow', 'catalyst'], sr: [], zzz: [] }
     const resAbs = rel => path.join(process.cwd(), 'plugins/HoYoGet-Plugin/resources', rel)
+    // 只认文件：目录也会 existsSync 为真，渲染成空白头像
     const existsRes = rel => {
-      try { return fs.existsSync(resAbs(rel)) } catch { return false }
+      try { return fs.statSync(resAbs(rel)).isFile() } catch { return false }
     }
     /** 去掉资源路径开头的斜杠，便于拼成 MIAO_RES 下的相对地址 */
     const trimLead = v => {
@@ -833,12 +867,13 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
         if (wantRole && Character && name) {
           const char = Character.get(name, miaoGame)
           const face = char?.imgs?.face || char?.face || ''
-          if (face) return MIAO_RES + String(face)
+          // 只认真实存在的文件：目录或缺失路径会渲染成空白头像，此时退回网络图标
+          if (face && existsRes(trimLead(face))) return MIAO_RES + String(face)
         }
         if (wantWeapon && Weapon && name) {
           const weapon = Weapon.get(name, miaoGame)
           const img = weapon?.getData?.('img')?.img || weapon?.img || ''
-          if (img) return MIAO_RES + '/' + trimLead(img)
+          if (img && existsRes(trimLead(img))) return MIAO_RES + '/' + trimLead(img)
         }
       } catch {}
       // miao 索引缺项（新角色、别名写法）时按约定路径兜底
@@ -3315,9 +3350,12 @@ export class sr_gacha extends plugin {
     const data = readData(getDataFile(auth.qq, auth.uid))
       || (readSummary ? readSummary(`./data/srGachaSummary/${auth.uid}.json`) : null)
     if (!data?.pools) return e.reply('暂无星铁抽卡记录，请先发送【#米哈游星铁更新抽卡记录】')
+    // 旧存档的记录常缺 icon：渲染前按名称从官方物品配置补全（与更新时的 fillMissingIcons 同源）
+    fillMissingIcons(data.pools, await loadSrItemIndex())
     applyWaiPoolIsUp(data.pools)
     const view = buildSrStatView(data, auth.uid, e, keys, commonType)
     await fillSrUserInfo(view, auth, 'sr', e)
+    await inlineViewIcons(view)
     const buf = await render('sr_gacha/stat', view, { e })
     return sendRenderResult(e, buf)
   }

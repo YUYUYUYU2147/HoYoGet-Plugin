@@ -1,60 +1,159 @@
 *{box-sizing:border-box}
-/* 深渊排期表：与速览同款浅色白卡 + 橙色点缀 */
-body{margin:0;min-width:1200px;font-family:"Noto Sans CJK SC","Microsoft YaHei",sans-serif;color:#3b4252;background:#f5f7fb;transform-origin:top left}
-.page{width:1200px;padding:32px;background:radial-gradient(circle at 16% 0%,#ffe9d6aa,transparent 26%),radial-gradient(circle at 90% 2%,#dbe7ffaa,transparent 24%),linear-gradient(180deg,#fbfcfe,#f3f6fb);overflow:hidden}
+body{margin:0;min-width:1200px;font-family:"Noto Sans CJK SC","Microsoft YaHei",sans-serif;color:#e8ecf4;background:#0b0f1a;transform-origin:top left}
 
-.hero{display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:24px}
-.game{font-size:14px;letter-spacing:2px;color:#f97316;text-transform:uppercase}
-.hero h1{font-size:38px;font-weight:900;margin:6px 0 0;letter-spacing:1px;color:#1f2937}
-.period{margin-top:8px;font-size:15px;color:#8a94a6}
+/* ===== 主题底板：背景图 + 暗色遮罩（颜色由 --accent / --accent2 控制） ===== */
+.page{position:relative;width:1200px;padding:34px 34px 26px;overflow:hidden;background:#0b0f1a}
+.bg-art{position:absolute;inset:0;background:var(--bg-img) center/cover no-repeat;opacity:.38;filter:saturate(1.15)}
+.page::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,10,20,.55),rgba(7,10,20,.92) 46%,rgba(7,10,20,.97))}
+.page>*:not(.bg-art){position:relative}
 
+/* 头部 */
+.hero{display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:22px}
+.game{font-size:13px;letter-spacing:4px;color:var(--accent);text-transform:uppercase;font-weight:700}
+.hero h1{font-size:42px;font-weight:900;margin:8px 0 0;letter-spacing:2px;color:#fff;text-shadow:0 0 22px color-mix(in srgb,var(--accent) 55%,transparent)}
+.period{margin-top:8px;font-size:14px;color:#9aa6bd;letter-spacing:1px}
+
+/* 每期卡片 */
 .list{display:flex;flex-direction:column;gap:16px}
-.row{padding:18px 22px;border-radius:20px;background:#fff;border:1px solid #e9edf3;box-shadow:0 6px 24px rgba(31,41,55,.05);position:relative;overflow:hidden}
-.row.is-current{border-color:#ffb066;box-shadow:0 8px 26px rgba(249,115,22,.14),inset 0 0 0 2px rgba(249,115,22,.18);background:linear-gradient(180deg,#fffaf4,#fff)}
-.row.is-current::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(180deg,#ff8a3d,#f97316)}
+.row{position:relative;overflow:hidden;padding:18px 20px;background:linear-gradient(180deg,rgba(18,24,40,.86),rgba(12,16,28,.92));border:1px solid color-mix(in srgb,var(--accent) 38%,transparent);box-shadow:0 10px 30px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.05)}
+.row.is-current{border-color:var(--accent);box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 60%,transparent),0 0 28px color-mix(in srgb,var(--accent) 30%,transparent)}
+.row::after{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;background:radial-gradient(circle,color-mix(in srgb,var(--accent) 28%,transparent),transparent 65%);pointer-events:none}
 
 .row-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-.ver{font-size:20px;font-weight:900;color:#1f2937;background:#f1f5f9;padding:3px 14px;border-radius:10px;letter-spacing:.5px}
-.row.is-current .ver{background:linear-gradient(135deg,#ff8a3d,#f97316);color:#fff}
-.time{font-size:14px;color:#8a94a6;font-variant-numeric:tabular-nums}
-.floor{font-size:13px;color:#f97316;font-weight:700;margin-left:auto}
-.now-badge{font-size:12px;font-weight:800;color:#fff;background:linear-gradient(135deg,#ff8a3d,#f97316);padding:2px 10px;border-radius:8px;box-shadow:0 2px 8px rgba(249,115,22,.35)}
+.ver{font-size:20px;font-weight:900;color:#0b0f1a;background:var(--accent);padding:3px 14px;letter-spacing:.5px}
+.time{font-size:13px;color:#9aa6bd;font-variant-numeric:tabular-nums}
+.floor{font-size:13px;color:var(--accent2);font-weight:800;margin-left:auto}
+.now-badge{font-size:12px;font-weight:900;color:#0b0f1a;background:var(--accent2);padding:2px 10px;letter-spacing:1px}
 
-.bosses{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
-.boss{display:flex;align-items:flex-start;gap:10px;padding:8px 12px 8px 8px;border-radius:12px;background:#f8fafc;border:1px solid #eef1f6}
-.boss-icon{width:44px;height:44px;border-radius:10px;background:#e9edf3 center/cover no-repeat;flex:0 0 44px;border:1px solid #e9edf3}
+/* 分组：每层/每间/每半 */
+.groups{display:flex;flex-direction:column;gap:10px}
+.group{padding:10px 12px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
+.group-label{font-size:14px;font-weight:900;color:var(--accent);margin-bottom:8px;padding-left:10px;border-left:3px solid var(--accent);letter-spacing:.5px}
+.bosses{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:10px}
+.boss{display:flex;align-items:center;gap:14px;padding:10px 14px 10px 10px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08)}
+.boss-icon{width:96px;height:96px;flex:0 0 96px;background:#1b2236 center/cover no-repeat;border:1px solid color-mix(in srgb,var(--accent) 60%,transparent);border-radius:50%}
 .boss-info{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}
-.boss-name{font-size:14px;font-weight:700;color:#374151;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.empty{font-size:14px;color:#a8b0be;padding:8px 0}
+.boss-name{font-size:17px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.empty{font-size:14px;color:#6b7690;padding:8px 0}
 
-/* 每个 Boss 自己的弱点 / 抗性 */
+/* 弱点 / 抗性 */
 .bt{display:inline-flex;align-items:center;flex-wrap:wrap;gap:4px;font-size:12px;line-height:1}
-.bt>b{font-weight:800;padding:2px 5px;border-radius:5px;font-size:11px}
-.bt.weak>b{color:#c2410c;background:#ffedd5}
-.bt.res>b{color:#1d4ed8;background:#e0ecff}
-.bt i{display:inline-flex;align-items:center;gap:2px;font-style:normal;color:#4b5563}
+.bt>b{font-weight:900;padding:2px 5px;font-size:11px}
+.bt.weak>b{color:#2a1400;background:#ffb36b}
+.bt.res>b{color:#06202e;background:#8fe3ff}
+.bt i{display:inline-flex;align-items:center;gap:2px;font-style:normal;color:#d7deea}
 .bt i img{width:16px;height:16px;object-fit:contain}
-.bt i em{font-size:10px;color:#6b7280;font-style:normal}
+.bt i em{font-size:10px;color:#9aa6bd;font-style:normal}
 
-.foot{margin-top:22px;text-align:center;font-size:13px;color:#a8b0be}
-
-/* 弱点行 */
+/* 弱点行 / 增益 */
 .weaks{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px}
-.weaks-label{font-size:13px;font-weight:800;color:#f97316;flex:0 0 auto}
-.weak-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:9px;background:#fff4ea;border:1px solid #ffe0c7;font-size:13.5px;font-weight:800;color:#9a4b12}
+.weaks-label{font-size:13px;font-weight:900;color:var(--accent2)}
+.weak-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:rgba(255,255,255,.06);border:1px solid var(--accent2);font-size:13px;font-weight:800;color:#fff}
 .weak-pill img{width:18px;height:18px;object-fit:contain}
-
-/* 环境增益行 */
-.buffs{margin-top:12px;display:flex;flex-direction:column;gap:6px;padding-top:12px;border-top:1px dashed #eef1f6}
-.buffs-label{font-size:13px;font-weight:800;color:#f97316}
-.buff{font-size:13px;line-height:1.55;color:#4b5563}
-.buff b{color:#ea580c;font-weight:800;margin-right:6px}
-.buff span{color:#5b6472}
-
-/* Buff 描述里的行内高亮（cleanRich 保留的 <span class="hl">/<b class="hl">） */
-.buff-desc .hl{color:#ea580c;font-weight:800}
-.buff-desc b{color:#ea580c;font-weight:800}
+.buffs{margin-top:12px;display:flex;flex-direction:column;gap:6px;padding-top:12px;border-top:1px dashed color-mix(in srgb,var(--accent) 35%,transparent)}
+.buffs-label{font-size:13px;font-weight:900;color:var(--accent)}
+.buff{font-size:13px;line-height:1.55;color:#c9d2e3}
+.buff b{color:var(--accent2);font-weight:900;margin-right:6px}
+.buff-desc .hl{color:var(--accent2);font-weight:800}
+.buff-desc b{color:var(--accent2);font-weight:800}
 .buff-desc br{display:block;content:"";margin-top:2px}
 
-/* 无名称的Boss（剧诗只有图标）：收紧内边距 */
-.boss.boss-icon-only{padding:6px}
+.foot{margin-top:22px;text-align:center;font-size:12px;color:#6b7690;letter-spacing:1px}
+
+/* ===== 原神风格（深境/剧诗/幽境）：金边 + 圆角 + 星芒 ===== */
+.deco-gs .row{border-radius:14px}
+.deco-gs .ver,.deco-gs .now-badge{border-radius:8px}
+.deco-gs .group,.deco-gs .boss{border-radius:10px}
+.deco-gs .hero h1::after{content:"✦";display:block;font-size:16px;color:var(--accent);margin-top:6px;letter-spacing:6px}
+.deco-gs .boss-icon{border-radius:12px}
+
+/* ===== 星铁风格：切角 + 霓虹细线 + 等宽数字 ===== */
+.deco-sr .row{clip-path:polygon(18px 0,100% 0,100% calc(100% - 18px),calc(100% - 18px) 100%,0 100%,0 18px)}
+.deco-sr .ver{clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%)}
+.deco-sr .group{border-left:2px solid var(--accent2)}
+.deco-sr .group-label{border-left:none;padding-left:0;text-transform:uppercase;letter-spacing:1.5px}
+.deco-sr .group-label::before{content:"// ";color:var(--accent2)}
+.deco-sr .boss{clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px))}
+.deco-sr .hero h1{font-family:"Segoe UI","Noto Sans CJK SC",sans-serif;letter-spacing:4px}
+.deco-sr .time{font-family:"Consolas","DejaVu Sans Mono",monospace}
+
+/* ===== 绝区零风格：黑底 + 斜切黄黑条纹 + 粗体大字 ===== */
+.deco-zzz .hero h1{font-size:48px;font-style:italic;text-transform:uppercase;letter-spacing:1px;transform:skewX(-8deg);color:var(--accent);text-shadow:4px 4px 0 #000}
+.deco-zzz .game{color:#000;background:var(--accent);padding:3px 12px;transform:skewX(-8deg);letter-spacing:2px}
+.deco-zzz .row{border:none;background:repeating-linear-gradient(135deg,rgba(255,212,0,.06) 0 12px,transparent 12px 24px),linear-gradient(180deg,rgba(14,14,14,.94),rgba(6,6,6,.96))}
+.deco-zzz .row::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--accent)}
+.deco-zzz .row.is-current{box-shadow:inset 0 0 0 2px var(--accent)}
+.deco-zzz .ver{transform:skewX(-8deg);color:#000;background:var(--accent)}
+.deco-zzz .now-badge{transform:skewX(-8deg);background:var(--accent2);color:#000}
+.deco-zzz .group{background:rgba(255,212,0,.04);border:none;border-bottom:1px solid rgba(255,212,0,.25)}
+.deco-zzz .group-label{border-left:none;padding-left:0;color:var(--accent);text-transform:uppercase;letter-spacing:1px}
+.deco-zzz .boss{border:none;background:rgba(255,255,255,.03);clip-path:polygon(0 0,100% 0,calc(100% - 8px) 100%,0 100%)}
+.deco-zzz .boss-icon{border-radius:0;border:2px solid var(--accent)}
+
+/* ===== 浅色主题（原神 / 星铁）：浅底 + 白卡 + 主题色做点缀，文字用深色保证可读 ===== */
+.page.light{background:#eef2f8;color:#2b3445}
+.page.light::before{background:linear-gradient(180deg,rgba(248,250,255,.80),rgba(238,242,248,.95) 50%,rgba(232,237,246,.98))}
+.page.light .bg-art{opacity:.22;filter:saturate(.9) brightness(1.15)}
+.page.light .game{color:color-mix(in srgb,var(--accent) 55%,#7a4a00)}
+.page.light .hero h1{color:#1f2937;text-shadow:none}
+.page.light .period{color:#7a8496}
+.page.light .row{background:#fff;border-color:color-mix(in srgb,var(--accent) 45%,#dfe5ee);box-shadow:0 8px 24px rgba(31,41,55,.07)}
+.page.light .row::after{opacity:.5}
+.page.light .ver{color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2))}
+.page.light .time{color:#7a8496}
+.page.light .floor{color:color-mix(in srgb,var(--accent) 60%,#5a3a00)}
+.page.light .now-badge{color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2))}
+.page.light .group{background:#f8fafc;border-color:#e6ebf2}
+.page.light .group-label{color:color-mix(in srgb,var(--accent) 45%,#3a2a00);border-left-color:var(--accent)}
+.page.light .boss{background:#fff;border-color:#e6ebf2}
+.page.light .boss-name{color:#1f2937}
+.page.light .boss-icon{background:#eef2f8;border-color:color-mix(in srgb,var(--accent) 55%,#dfe5ee)}
+.page.light .bt i{color:#374151}
+.page.light .bt.weak>b{color:#7c2d12;background:#ffedd5}
+.page.light .bt.res>b{color:#0b3a52;background:#dbf4ff}
+.page.light .weak-pill{background:#fff;color:#374151}
+.page.light .weaks-label{color:color-mix(in srgb,var(--accent) 55%,#3a2a00)}
+.page.light .buffs{border-top-color:#e6ebf2}
+.page.light .buffs-label{color:color-mix(in srgb,var(--accent) 55%,#3a2a00)}
+.page.light .buff{color:#374151}
+.page.light .buff b{color:color-mix(in srgb,var(--accent) 55%,#3a2a00)}
+.page.light .buff-desc .hl,.page.light .buff-desc b{color:color-mix(in srgb,var(--accent) 55%,#3a2a00)}
+.page.light .empty{color:#9aa3b5}
+.page.light .foot{color:#9aa3b5}
+
+/* ===== 进行中的期：整卡高亮 + 醒目角标（所有模式通用） ===== */
+.row.is-current{border:3px solid var(--accent)!important;background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 16%,#121828),#121828 70%)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 35%,transparent),0 0 36px color-mix(in srgb,var(--accent) 45%,transparent)!important}
+.row.is-current .now-badge{font-size:15px;font-weight:900;padding:5px 16px;letter-spacing:2px;color:#0b0f1a!important;background:var(--accent)!important;box-shadow:0 0 14px var(--accent)}
+.row.is-current .ver{box-shadow:0 0 12px color-mix(in srgb,var(--accent) 60%,transparent)}
+.page.light .row.is-current{background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 22%,#ffffff),#ffffff 70%)!important}
+.page.light .row.is-current .now-badge{color:#fff!important;background:linear-gradient(135deg,var(--accent),var(--accent2))!important}
+.deco-zzz .row.is-current{box-shadow:inset 0 0 0 3px var(--accent),0 0 30px color-mix(in srgb,var(--accent) 40%,transparent)!important}
+.deco-zzz .row.is-current .now-badge{transform:skewX(-8deg);color:#000!important;background:var(--accent)!important}
+
+/* 只有一个 BOSS 的上半/下半：标签与 BOSS 同一行，省高度 */
+.group.single{display:flex;align-items:center;gap:14px}
+.group.single .group-label{margin-bottom:0;flex:0 0 190px;white-space:nowrap}
+.group.single .bosses{flex:1;grid-template-columns:minmax(0,1fr)}
+
+/* 血量：每个 BOSS 名称下方一行，醒目但不抢名字 */
+.boss-hp{font-size:13px;font-weight:800;color:#ffb36b;font-variant-numeric:tabular-nums;letter-spacing:.5px}
+.page.light .boss-hp{color:#b45309}
+
+.groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(460px,1fr));gap:10px}
+
+/* 分组改为两列网格：BOSS 多的（如幻想真境剧诗）不再把整张图拉得过长 */
+.groups .group{min-width:0}
+.groups .group .bosses{grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.group.single .bosses{grid-template-columns:minmax(0,1fr)}
+
+/* 小怪（幕内普通怪）：紧凑名字标签，不占大卡片 */
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;font-size:13px;font-weight:700;color:#d7deea;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}
+.chip em{font-style:normal;font-size:12px;color:#ffb36b;font-variant-numeric:tabular-nums}
+.page.light .chip{color:#374151;background:#f3f6fb;border-color:#e2e8f0}
+.page.light .chip em{color:#b45309}
+
+/* 浅色主题下角标用深色字，避免浅色底色上白字看不清 */
+.page.light .ver{color:#1f2937;background:linear-gradient(135deg,var(--accent),var(--accent2))}
+.page.light .row.is-current .now-badge{color:#1f2937!important;background:linear-gradient(135deg,var(--accent),var(--accent2))!important}
+.page.light .now-badge{color:#1f2937}

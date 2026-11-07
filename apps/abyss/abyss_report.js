@@ -1494,6 +1494,8 @@ export class abyss_report extends plugin {
         { reg: `^#*米哈游(原神|星铁|星穹|崩铁|绝区零|ZZZ)?(${allAliasReg()})(上一期|上期|上一|下一期|下期|下一)$`, fnc: 'report' },
         { reg: `^#*米哈游(原神|星铁|星穹|崩铁|绝区零|ZZZ)?(${allAliasReg()})(速报|攻略|查询|信息|图)$`, fnc: 'report' },
         { reg: `^#*米哈游(原神|星铁|星穹|崩铁|绝区零|ZZZ)?(${allAliasReg()})$`, fnc: 'report' },
+        // %强袭战速报 等绝区零速报不写「米哈游」也能查（原来 ^#*米哈游 强制要求米哈游）
+        { reg: `^[%％][ \\t]*(${allAliasReg()})(速报|攻略|查询|信息|图)?$`, fnc: 'report' },
       ],
     });
   }

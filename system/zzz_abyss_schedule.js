@@ -78,34 +78,82 @@ function elemsOf(element = {}, sign) {
 
 // 从某期详情提取主要 Boss（取最高 stage_num 的 zone 的所有怪物，去重）
 // 每个 Boss 带上自己的弱点/抗性，而不是整期汇总。
-function pickBosses(detail) {
+function zzzHp(v) {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? `HP ${Math.round(n).toLocaleString('en-US')}` : '';
+}
+
+// 试炼（危局强袭战）每期有多个难度：modes[].zone_type 1001 为普通（3 间，stage 1-3），1002 为困难（1 间）
+const ZZZ_MODE_NAME = { 1001: '普通', 1002: '困难' };
+
+// 式舆防卫战：只取最防线（stage_num 最大）的区域，按区域/层分组（与此前一致）
+function pickBossesShiyu(detail) {
   const zones = [];
   if (detail?.zone) zones.push(...Object.values(detail.zone));
-  for (const m of (detail?.modes || [])) {
-    if (m?.zone) zones.push(...Object.values(m.zone));
-  }
-  if (!zones.length) return { bosses: [] };
-  // 取最防线（stage_num 最大）
+  for (const m of (detail?.modes || [])) if (m?.zone) zones.push(...Object.values(m.zone));
+  if (!zones.length) return { bosses: [], groups: [] };
   const maxStage = Math.max(...zones.map(z => Number(z?.stage_num) || 0));
   const topZones = zones.filter(z => (Number(z?.stage_num) || 0) === maxStage);
   const seen = new Set();
   const bosses = [];
-  for (const z of topZones) {
-    for (const room of Object.values(z?.layer_room || {})) {
+  const groups = [];
+  topZones.forEach((z, zi) => {
+    const zoneLabel = topZones.length > 1 ? `区域${zi + 1}` : '';
+    Object.values(z?.layer_room || {}).forEach((room, li) => {
+      const monsters = [];
       for (const mon of Object.values(room?.monster_list || {})) {
         const name = String(mon?.name || '').trim();
-        if (!name || seen.has(name)) continue;
-        seen.add(name);
-        bosses.push({
-          name,
-          icon: monsterIcon(mon?.image),
-          weak: elemsOf(mon?.element, 1),
-          res: elemsOf(mon?.element, -1),
-        });
+        if (!name) continue;
+        const item = { name, icon: monsterIcon(mon?.image), hp: zzzHp(mon?.stats?.hp), weak: elemsOf(mon?.element, 1), res: elemsOf(mon?.element, -1) };
+        monsters.push(item);
+        if (!seen.has(name)) { seen.add(name); bosses.push(item); }
       }
-    }
+      if (monsters.length) groups.push({ label: [zoneLabel, `第${li + 1}间`].filter(Boolean).join(' · '), bosses: monsters });
+    });
+  });
+  return { bosses, groups };
+}
+
+function pickBosses(detail, kind = 'shiyu') {
+  if (kind !== 'deadly') return pickBossesShiyu(detail);
+  const seen = new Set();
+  const bosses = [];
+  // 每个难度、每个间（stage）各自一组，标注难度 + 第几间
+  const groups = [];
+  const modeList = [];
+  if (detail?.zone) modeList.push({ zoneType: 0, zone: detail.zone });
+  for (const m of (detail?.modes || [])) if (m?.zone) modeList.push({ zoneType: Number(m.zone_type) || 0, zone: m.zone });
+  modeList.sort((a, b) => a.zoneType - b.zoneType); // 普通(1001) 先于 困难(1002)
+  for (const { zoneType, zone } of modeList) {
+    const modeName = ZZZ_MODE_NAME[zoneType] || '';
+    const zones = Object.values(zone || {}).sort((a, b) => (Number(a?.stage_num) || 0) - (Number(b?.stage_num) || 0));
+    zones.forEach((z) => {
+      const stageNo = Number(z?.stage_num) || 0;
+      Object.values(z?.layer_room || {}).forEach((room) => {
+        const monsters = [];
+        for (const mon of Object.values(room?.monster_list || {})) {
+          const name = String(mon?.name || '').trim();
+          if (!name) continue;
+          const item = {
+            name,
+            icon: monsterIcon(mon?.image),
+            hp: zzzHp(mon?.stats?.hp),
+            weak: elemsOf(mon?.element, 1),
+            res: elemsOf(mon?.element, -1),
+          };
+          monsters.push(item);
+          if (!seen.has(name)) { seen.add(name); bosses.push(item); }
+        }
+        if (monsters.length) {
+          groups.push({
+            label: [modeName, stageNo ? `第${stageNo}间` : ''].filter(Boolean).join(' · '),
+            bosses: monsters,
+          });
+        }
+      });
+    });
   }
-  return { bosses };
+  return { bosses, groups };
 }
 
 function fmtTime(s = '') {
@@ -153,7 +201,7 @@ export async function buildZzzSchedule(kind = 'shiyu', count = 8) {
   const rows = [];
   for (const ph of phases) {
     const detail = await getJson(`${NANOKA}/zzz/${nv}/zh/${detailDir}/${ph.id}.json`);
-    const { bosses } = pickBosses(detail);
+    const { bosses, groups } = pickBosses(detail, kind);
     const begin = new Date(ph.begin).getTime();
     const end = new Date(ph.end).getTime();
     rows.push({
@@ -161,6 +209,7 @@ export async function buildZzzSchedule(kind = 'shiyu', count = 8) {
       time: `${fmtTime(ph.begin)} - ${fmtTime(ph.end)}`,
       floorNo: '',
       bosses: bosses.slice(0, 8),
+      groups: groups || [],
       weaks: [],
       buffs: [],
       isCurrent: now >= begin && now <= end,
@@ -169,6 +218,7 @@ export async function buildZzzSchedule(kind = 'shiyu', count = 8) {
 
   return {
     title: kind === 'deadly' ? '危局强袭战' : '式舆防卫战',
+    source: 'nanoka.cc',
     gameName: '绝区零',
     gameShort: 'ZENLESS ZONE ZERO',
     rows,
