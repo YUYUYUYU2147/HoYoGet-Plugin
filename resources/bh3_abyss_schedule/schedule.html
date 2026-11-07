@@ -33,8 +33,8 @@
           <span class="c-buff">效果</span>
         </div>
         {{each data.rows r idx}}
-        <div class="trow {{r.envClass}}">
-          <span class="c-date">{{r.date}}</span>
+        <div class="trow {{r.envClass}}{{if r.isCurrent}} is-current{{/if}}">
+          <span class="c-date">{{if r.isCurrent}}<i class="now-badge">进行中</i>{{/if}}{{r.date}}</span>
           <span class="c-boss">
             <span class="boss-icon" {{if r.icon}}style="background-image:url('{{r.icon}}')"{{/if}}>
               {{if !r.icon}}<i class="icon-ph">{{r.boss[0]}}</i>{{/if}}

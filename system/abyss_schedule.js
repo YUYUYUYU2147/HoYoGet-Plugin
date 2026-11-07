@@ -61,6 +61,24 @@ const ICON_ALIAS = {
   '黑之熊死': '黑之熊死',
 };
 
+// 判断日期区间是否包含今天。
+// 支持格式：2026.09.25–09.27（跨年可写全）、2026.09.29 - 10.04
+export function isCurrentRange(dateStr, now = new Date()) {
+  const txt = String(dateStr || '').replace(/[–—~至]/g, '-').trim();
+  const m = txt.match(/(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})\s*-\s*(?:\d{4}[.\-/])?(\d{1,2})[.\-/](\d{1,2})/);
+  if (!m) return false;
+  const y = Number(m[1]);
+  const start = new Date(y, Number(m[2]) - 1, Number(m[3]), 0, 0, 0);
+  // 结束月日：若小于开始月，视为跨年
+  let endY = y;
+  let endM = Number(m[4]);
+  const endD = Number(m[5]);
+  if (endM < Number(m[2])) endY = y + 1;
+  const end = new Date(endY, endM - 1, endD, 23, 59, 59);
+  const t = now.getTime();
+  return t >= start.getTime() && t <= end.getTime();
+}
+
 let _icons = null;
 function loadIcons() {
   if (_icons) return _icons;
@@ -105,6 +123,7 @@ export function readSchedule(file = '') {
     const buff = String(r.buff || '');
     return {
       date: r.date || '',
+      isCurrent: isCurrentRange(r.date),
       boss: r.boss || '未知',
       no: r.no || '',
       env: r.env || '',
@@ -153,7 +172,7 @@ export function readBattlefieldSchedule(file = '') {
   const order = [];
   const map = new Map();
   for (const r of all) {
-    if (!map.has(r.period)) { map.set(r.period, { period: r.period, date: r.date, bosses: [] }); order.push(r.period); }
+    if (!map.has(r.period)) { map.set(r.period, { period: r.period, date: r.date, isCurrent: isCurrentRange(r.date), bosses: [] }); order.push(r.period); }
     map.get(r.period).bosses.push(r);
   }
   const periods = order.map(p => map.get(p));

@@ -22,10 +22,10 @@
       </header>
 
       {{each data.periods p idx}}
-      <section class="period">
+      <section class="period{{if p.isCurrent}} is-current{{/if}}">
         <div class="p-head">
           <span class="p-tag">{{p.period}}</span>
-          <span class="p-date">{{p.date}}</span>
+          <span class="p-date">{{if p.isCurrent}}<i class="now-badge">进行中</i>{{/if}}{{p.date}}</span>
         </div>
         <div class="p-bosses">
           {{each p.bosses b}}
