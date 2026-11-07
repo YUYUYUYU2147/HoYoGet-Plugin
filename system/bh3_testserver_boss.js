@@ -173,3 +173,51 @@ export async function getTestserverBosses(keywordOverride = '') {
 
   return { keyword, videos: pool, bosses, version };
 }
+
+/**
+ * 测试服 Boss 时间线：把视频按日期从新到旧排列，提取每个 Boss「首次被提到」的时间，
+ * 据此排出「最近测试服依次在测哪些 Boss」。
+ * 说明：这是从玩家视频标题归纳的近似时间线，不是官方排期。
+ * @returns {Promise<{items: Array<{name, firstSeen, lastSeen, count, sample}>, videos}>
+ */
+export async function getTestserverBossTimeline(keywordOverride = '') {
+  const keyword = String(keywordOverride || config()?.bh3_testserver_boss_keyword || DEFAULT_KEYWORD).trim();
+  const keywords = [keyword, `${keyword} 深渊`, `${keyword} 战场`].filter(Boolean);
+  const all = [];
+  const seen = new Set();
+  for (const kw of keywords) {
+    const list = await searchBili(kw, 50).catch(() => []);
+    for (const v of list) {
+      if (seen.has(v.bvid)) continue;
+      seen.add(v.bvid);
+      all.push(v);
+    }
+  }
+  const now = Date.now() / 1000;
+  const recent = all.filter(v => {
+    if (!v.pubdate) return false;
+    if (now - v.pubdate > 60 * 86400) return false; // 60 天窗口
+    return /测试服|csf|CSF|测试|v\d|V\d/.test(v.title);
+  });
+  const pool = recent.length ? recent : all.filter(v => v.pubdate);
+
+  // 每个 Boss 的首次/最近出现时间 + 计数 + 代表视频
+  const acc = new Map();
+  for (const v of pool) {
+    const hits = extractBosses([v]); // 单条标题提取
+    for (const [name] of hits) {
+      const cur = acc.get(name) || { name, firstSeen: v.pubdate, lastSeen: v.pubdate, count: 0, sample: null };
+      cur.count++;
+      if (v.pubdate > cur.lastSeen) cur.lastSeen = v.pubdate;
+      if (v.pubdate < cur.firstSeen) cur.firstSeen = v.pubdate;
+      // 用最新一条视频当代表
+      if (!cur.sample || v.pubdate > cur.sample.pubdate) {
+        cur.sample = { title: v.title, bvid: v.bvid, author: v.author, pubdate: v.pubdate };
+      }
+      acc.set(name, cur);
+    }
+  }
+  // 按「最近出现时间」倒序 = 最近的排在前面，就是出场顺序
+  const items = [...acc.values()].sort((a, b) => b.lastSeen - a.lastSeen || b.count - a.count);
+  return { items, videos: pool };
+}

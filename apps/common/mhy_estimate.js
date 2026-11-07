@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PLUGIN_ROOT = path.resolve(__dirname, '../..');
 import { pickBiliGuide, sendBiliVideo } from '../../system/bili_guide.js';
-import { getTestserverBosses, ICON_NAME_ALIAS } from '../../system/bh3_testserver_boss.js';
+import { getTestserverBosses, getTestserverBossTimeline, ICON_NAME_ALIAS } from '../../system/bh3_testserver_boss.js';
 import fs from 'fs';
 import {
   getCurrentZzzDefenseInfoByEvent,
@@ -619,6 +619,8 @@ export class mhy_estimate extends plugin {
       event: 'message',
       priority: pluginPriority('mhy_estimate', -Infinity),
       rule: [
+        // 崩三测试服 Boss 时间线：！测试服Boss时间线 / ！崩三测试服时间线
+        { reg: '^[#%％!！]?(崩三|崩坏3|崩坏三|BH3)?\s*(测试服|测试|csf|CSF)?\s*(boss|BOSS|Boss)?\s*时间线$', fnc: 'bh3TestserverBossTimeline' },
         // 崩三测试服 Boss（从 B站测试服视频标题归纳）
         // 注意：统一前缀会把 «！测试服boss» 归一成 «！测试服boss»（保留叹号，kind=symbol），
         // 所以这里必须同时认 ! / ！ 前缀，否则崩三的叹号指令匹配不到。
@@ -650,6 +652,54 @@ export class mhy_estimate extends plugin {
 
   async bh3BattlefieldGuide(e) {
     return this.mysEstimate(e, 'battlefield');
+  }
+
+  /** 崩三测试服 Boss 时间线：按最近出现排序，看近期依次在测哪些 Boss */
+  async bh3TestserverBossTimeline(e) {
+    await e.reply('正在归纳测试服 Boss 时间线，请稍后...', true, { recallMsg: 60 });
+    let data;
+    try {
+      data = await getTestserverBossTimeline();
+    } catch (err) {
+      logger.warn(`[HoYoGet][testserver_boss] 时间线获取失败: ${err?.message || err}`);
+      return e.reply('测试服 Boss 时间线获取失败，请稍后再试');
+    }
+    if (!data.items.length) {
+      return e.reply('近期测试服视频标题里没识别到已知 Boss。');
+    }
+    let iconMap = {};
+    try {
+      const enemyFile = path.join(PLUGIN_ROOT, 'system', 'default', 'bh3_enemy_icons.json');
+      if (fs.existsSync(enemyFile)) {
+        const raw = JSON.parse(fs.readFileSync(enemyFile, 'utf8'));
+        for (const [name, icon] of Object.entries(raw?.bosses || {})) if (name && icon) iconMap[name] = icon;
+      }
+    } catch {}
+    // 首见在最近 10 天内视为「新登场」，否则「回榜」
+    const nowSec = Date.now() / 1000;
+    const NEW_DAYS = 10;
+    const bosses = data.items.slice(0, 14).map(it => {
+      const iconName = ICON_NAME_ALIAS[it.name] || it.name;
+      const s0 = it.sample;
+      return {
+        name: it.name,
+        count: it.count,
+        avatar: iconMap[iconName] || iconMap[it.name] || (s0?.cover || ''),
+        firstSeen: new Date(it.firstSeen * 1000).toISOString().slice(5, 10),
+        lastSeen: new Date(it.lastSeen * 1000).toISOString().slice(5, 10),
+        isNew: (nowSec - it.firstSeen) <= NEW_DAYS * 86400,
+      };
+    });
+    const view = { videoCount: data.videos.length, bossCount: data.items.length, bosses };
+    try {
+      const buf = await render('bh3_testboss/timeline', view, { e });
+      return sendRenderResult(e, buf);
+    } catch (err) {
+      logger.warn(`[HoYoGet][testserver_boss] 时间线渲染失败: ${err?.message || err}`);
+      const lines = ['【崩三测试服 Boss 时间线】'];
+      bosses.slice(0, 10).forEach((b, i) => lines.push(`${i + 1}. ${b.name}  首见${b.firstSeen} 最近${b.lastSeen}`));
+      return e.reply(lines.join('\n'));
+    }
   }
 
   /** 崩三测试服 Boss：从 B站测试服视频标题归纳当前在测的 Boss */
