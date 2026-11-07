@@ -1,0 +1,131 @@
+/* 崩三测试服 Boss 总览卡：深色科技感 + 金色高亮 */
+@import url("../font/fonts.css");
+
+* { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+
+:root {
+  --bg1: #14161d;
+  --bg2: #1c2029;
+  --card: #22262f;
+  --gold: #e8b64c;
+  --gold-soft: #f6d488;
+  --text: #eef1f6;
+  --weak: #9aa2b2;
+  --faint: #6a7284;
+  --line: #333844;
+  --blue: #5b8dd9;
+}
+
+body {
+  width: 1000px;
+  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  transform: scale(1.15);
+  transform-origin: 0 0;
+  background:
+    radial-gradient(800px 400px at 10% -10%, rgba(232, 182, 76, .08), transparent 60%),
+    radial-gradient(700px 400px at 100% 0%, rgba(91, 141, 217, .08), transparent 55%),
+    linear-gradient(160deg, var(--bg1), var(--bg2));
+  color: var(--text);
+}
+
+.container { width: 1000px; padding: 22px; }
+
+/* 顶部 */
+.hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #262b36, #1b1f28);
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .05);
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--gold) 50%, transparent);
+}
+.hero-left { display: flex; align-items: center; gap: 16px; }
+.hero-badge {
+  width: 58px; height: 58px;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 800; font-style: italic;
+  color: #1a1500;
+  background: linear-gradient(135deg, #ffe08a, var(--gold) 60%, #c9942c);
+  box-shadow: 0 4px 16px rgba(232, 182, 76, .35);
+  letter-spacing: -1px;
+}
+.hero-text h1 {
+  font-size: 30px; font-weight: 800; letter-spacing: 1px;
+  background: linear-gradient(180deg, #fff, var(--gold-soft));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.hero-sub { font-size: 13px; color: var(--weak); margin-top: 4px; }
+
+.hero-meta { display: flex; gap: 22px; }
+.meta-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.meta-k { font-size: 12px; color: var(--faint); }
+.meta-v { font-size: 24px; font-weight: 800; color: var(--gold-soft); font-variant-numeric: tabular-nums; }
+
+/* 列表 */
+.list { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
+.row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #232830, #1d212a);
+  border: 1px solid var(--line);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, .25);
+}
+.row.top {
+  border-color: rgba(232, 182, 76, .45);
+  background: linear-gradient(135deg, #2c2a24, #23262e);
+  box-shadow: 0 4px 16px rgba(232, 182, 76, .12);
+}
+.rank {
+  flex: 0 0 34px; width: 34px; height: 34px;
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; font-weight: 800;
+  color: var(--weak);
+  background: #1a1e26;
+  border: 1px solid var(--line);
+}
+.row.top .rank {
+  color: #1a1500;
+  background: linear-gradient(135deg, #ffe08a, var(--gold));
+  border-color: transparent;
+}
+.icon {
+  flex: 0 0 52px; width: 52px; height: 52px;
+  border-radius: 12px;
+  background: #2a2f3a center / cover no-repeat;
+  border: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.icon-ph { font-size: 22px; color: var(--faint); }
+.info { flex: 1; min-width: 0; }
+.name-row { display: flex; align-items: baseline; gap: 10px; }
+.name { font-size: 20px; font-weight: 800; color: var(--text); }
+.count { font-size: 13px; color: var(--gold-soft); font-weight: 600; }
+.sample {
+  font-size: 12.5px; color: var(--weak); margin-top: 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.link {
+  flex: 0 0 auto;
+  font-size: 12px; font-weight: 700; color: var(--blue);
+  padding: 4px 10px; border-radius: 8px;
+  background: rgba(91, 141, 217, .12);
+  border: 1px solid rgba(91, 141, 217, .3);
+}
+
+.foot { margin-top: 16px; text-align: center; font-size: 12px; color: var(--faint); }
+.logo { margin-top: 8px; text-align: center; font-size: 12px; color: var(--faint); }

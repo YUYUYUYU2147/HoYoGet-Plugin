@@ -780,6 +780,12 @@ export const supportGuoba = () => {
         component: 'Input',
       },
       {
+        field: 'bh3_testserver_boss_keyword',
+        label: '测试服Boss关键词',
+        helpMessage: '#崩三测试服Boss 用：B站搜该关键词，从视频标题归纳当前在测的 Boss。留空用「崩坏3 测试服」',
+        component: 'Input',
+      },
+      {
         field: 'custom_guide_walkthrough',
         label: '分区搜索兜底',
         helpMessage: '开启后当作者源搜不到时，自动用米游社分区关键词搜索（按角色名搜攻略，不依赖具体作者；原神优先走观测枢官方精选目录）。默认开',

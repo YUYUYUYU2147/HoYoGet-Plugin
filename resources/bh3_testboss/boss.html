@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}bh3_testboss/boss.css" />
+  </head>
+  <body {{sys.scale}}>
+    <div class="container">
+      <header class="hero">
+        <div class="hero-left">
+          <div class="hero-badge">csf</div>
+          <div class="hero-text">
+            <h1>崩坏3 测试服 Boss</h1>
+            <p class="hero-sub">据 B站测试服视频标题归纳 · 非官方数据</p>
+          </div>
+        </div>
+        <div class="hero-meta">
+          {{if version}}<div class="meta-item"><span class="meta-k">疑似版本</span><span class="meta-v">{{version}}</span></div>{{/if}}
+          <div class="meta-item"><span class="meta-k">样本视频</span><span class="meta-v">{{videoCount}}</span></div>
+          <div class="meta-item"><span class="meta-k">识别 Boss</span><span class="meta-v">{{bossCount}}</span></div>
+        </div>
+      </header>
+
+      <section class="list">
+        {{each bosses boss idx}}
+        <div class="row {{idx < 3 ? 'top' : ''}}">
+          <div class="rank">{{idx + 1}}</div>
+          <div class="icon" {{if boss.avatar}}style="background-image:url('{{boss.avatar}}')"{{/if}}>
+            {{if !boss.avatar}}<span class="icon-ph">?</span>{{/if}}
+          </div>
+          <div class="info">
+            <div class="name-row">
+              <span class="name">{{boss.name}}</span>
+              <span class="count">{{boss.count}} 个视频提到</span>
+            </div>
+            {{if boss.sample}}
+            <div class="sample">{{boss.sample.title}}</div>
+            {{/if}}
+          </div>
+          {{if boss.sample}}
+          <div class="link">BV</div>
+          {{/if}}
+        </div>
+        {{/each}}
+      </section>
+
+      <footer class="foot">
+        <span>从玩家视频标题归纳，仅作参考 · 数据源：B站</span>
+      </footer>
+      <div class="logo">{{@copy()}}</div>
+    </div>
+  </body>
+</html>

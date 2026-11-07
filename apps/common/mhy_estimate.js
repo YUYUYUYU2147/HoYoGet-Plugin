@@ -1,6 +1,12 @@
 import fetch from 'node-fetch';
-import { makeForwardMsg, config, pluginPriority, oldPostWarn } from '#HoYoGet';
+import { makeForwardMsg, config, pluginPriority, oldPostWarn, render } from '#HoYoGet';
+import { sendRenderResult } from '../../system/render.js';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PLUGIN_ROOT = path.resolve(__dirname, '../..');
 import { pickBiliGuide, sendBiliVideo } from '../../system/bili_guide.js';
+import { getTestserverBosses, ICON_NAME_ALIAS } from '../../system/bh3_testserver_boss.js';
 import fs from 'fs';
 import {
   getCurrentZzzDefenseInfoByEvent,
@@ -613,6 +619,9 @@ export class mhy_estimate extends plugin {
       event: 'message',
       priority: pluginPriority('mhy_estimate', -Infinity),
       rule: [
+        // 崩三测试服 Boss（从 B站测试服视频标题归纳）：#崩三测试服Boss / #测试服Boss / #崩三测试服boss
+        { reg: '^[#%％]?(崩三|崩坏3|崩坏三|BH3)?\s*(测试服|测试|csf|CSF)?\s*[Bb][Oo][Ss][Ss]$', fnc: 'bh3TestserverBoss' },
+        { reg: '^[#%％]?(崩三|崩坏3|崩坏三|BH3)\s*(测试服)(boss|BOSS|Boss)?$', fnc: 'bh3TestserverBoss' },
         { reg: '^[#%％]?(崩三|崩坏3|崩坏三|BH3).*(深渊|超弦|超弦空间|超炫|超炫空间).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|boss|BOSS)$', fnc: 'bh3AbyssGuide' },
         { reg: '^[#%％]?(?!.*(原神|星铁|星穹|绝区零|绝区|ZZZ|zzz)).*(深渊|超弦|超弦空间|超炫|超炫空间).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|boss|BOSS)$', fnc: 'bh3AbyssGuide' },
         { reg: '^[#%％]?(崩三|崩坏3|崩坏三|BH3).*(战场|记忆战场).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|boss|BOSS)$', fnc: 'bh3BattlefieldGuide' },
@@ -639,6 +648,63 @@ export class mhy_estimate extends plugin {
 
   async bh3BattlefieldGuide(e) {
     return this.mysEstimate(e, 'battlefield');
+  }
+
+  /** 崩三测试服 Boss：从 B站测试服视频标题归纳当前在测的 Boss */
+  async bh3TestserverBoss(e) {
+    await e.reply('正在从 B站测试服视频归纳当前在测的 Boss，请稍后...', true, { recallMsg: 60 });
+    let data;
+    try {
+      data = await getTestserverBosses();
+    } catch (err) {
+      logger.warn(`[HoYoGet][testserver_boss] 获取失败: ${err?.message || err}`);
+      return e.reply('测试服 Boss 获取失败，请稍后再试');
+    }
+    if (!data.bosses.length) {
+      return e.reply(`近 ${data.videos.length} 个测试服视频标题里没识别到已知 Boss。\n可去 B站搜「${data.keyword}」手动查看。`);
+    }
+    // 关联 Boss 图标（bh3_battlefield/boss_icons.json 的 bosses 里按名称精确匹配）
+    let iconMap = {};
+    try {
+      const iconFile = path.join(PLUGIN_ROOT, 'resources', 'bh3_battlefield', 'boss_icons.json');
+      if (fs.existsSync(iconFile)) {
+        const raw = JSON.parse(fs.readFileSync(iconFile, 'utf8'));
+        for (const b of Object.values(raw?.bosses || {})) if (b?.name) iconMap[b.name] = b.avatar || b.raw || '';
+      }
+    } catch (err) {
+      logger.debug?.(`[HoYoGet][testserver_boss] 读取Boss图标失败: ${err?.message || err}`);
+    }
+    const bossRows = data.bosses.slice(0, 10).map(b => {
+      const s0 = b.samples[0];
+      const iconName = ICON_NAME_ALIAS[b.name] || b.name;
+      return {
+        name: b.name,
+        count: b.count,
+        avatar: iconMap[iconName] || iconMap[b.name] || '',
+        sample: s0 ? { title: s0.title.slice(0, 40), bvid: s0.bvid } : null,
+      };
+    });
+    const view = {
+      version: data.version || '',
+      videoCount: data.videos.length,
+      bossCount: data.bosses.length,
+      bosses: bossRows,
+    };
+    try {
+      const buf = await render('bh3_testboss/boss', view, { e });
+      return sendRenderResult(e, buf);
+    } catch (err) {
+      logger.warn(`[HoYoGet][testserver_boss] 渲染失败，回退文字: ${err?.message || err}`);
+      const lines = ['【崩坏3 测试服 Boss（据B站测试服视频标题归纳）】'];
+      if (data.version) lines.push(`疑似测试服版本：${data.version}`);
+      lines.push(`统计样本：${data.videos.length} 个近期测试服视频`, '');
+      data.bosses.slice(0, 8).forEach((b, i) => {
+        const s0 = b.samples[0];
+        lines.push(`${i + 1}. ${b.name}  （${b.count} 个视频提到）`);
+        if (s0) lines.push(`   ${s0.title.slice(0, 34)}  https://www.bilibili.com/video/${s0.bvid}`);
+      });
+      return e.reply(lines.join('\n'));
+    }
   }
 
   async bh3GodwarGuide(e) {
