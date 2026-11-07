@@ -238,9 +238,11 @@ function expandAbyssBossWords(words = []) {
 }
 
 function extractBh3GuideKeyword(msg = '', type = 'godwar') {
-  const raw = String(msg || '').replace(/^#/, '').trim();
+  // 剥掉指令前缀（#/%/％）与游戏名（含绝区零，供防卫战/危局用），
+  // 否则「%绝区零危局攻略」会把「%绝区零」当成 Boss/角色关键词
+  const raw = String(msg || '').replace(/^[#%％]+/, '').trim();
   let keyword = raw
-    .replace(/崩坏三|崩坏3|崩三|BH3/ig, '')
+    .replace(/崩坏三|崩坏3|崩三|BH3|绝区零|绝区|ZZZ|zzz/ig, '')
     .replace(BH3_GUIDE_TYPE_WORDS[type] || BH3_GUIDE_TYPE_WORDS.godwar, '')
     .replace(BH3_GUIDE_ACTION_WORDS, '')
     .replace(/[：:，,。.!！?？\s]/g, '')
@@ -609,18 +611,18 @@ export class mhy_estimate extends plugin {
       event: 'message',
       priority: pluginPriority('mhy_estimate', -Infinity),
       rule: [
-        { reg: '^#?(崩三|崩坏3|崩坏三|BH3).*(深渊|超弦|超弦空间|超炫|超炫空间).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|boss|BOSS)$', fnc: 'bh3AbyssGuide' },
-        { reg: '^#?(?!.*(原神|星铁|星穹|绝区零|绝区|ZZZ|zzz)).*(深渊|超弦|超弦空间|超炫|超炫空间).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|boss|BOSS)$', fnc: 'bh3AbyssGuide' },
-        { reg: '^#?(崩三|崩坏3|崩坏三|BH3).*(战场|记忆战场).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|boss|BOSS)$', fnc: 'bh3BattlefieldGuide' },
-        { reg: '^#?(?!.*(原神|星铁|星穹|绝区零|绝区|ZZZ|zzz)).*(战场|记忆战场).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|boss|BOSS)$', fnc: 'bh3BattlefieldGuide' },
-        { reg: '^#?(崩三|崩坏3|崩坏三|BH3).*(乐土|往世乐土).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|刻印|因子)$', fnc: 'bh3GodwarGuide' },
-        { reg: '^#?(?!.*(原神|星铁|星穹|绝区零|绝区|ZZZ|zzz)).*(乐土|往世乐土).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|刻印|因子)$', fnc: 'bh3GodwarGuide' },
-        { reg: '^#?(绝区零|绝区|ZZZ|zzz).*(式舆防卫战|式舆|防卫战|防卫|深渊).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|boss|BOSS)$', fnc: 'zzzDefenseGuide' },
-        { reg: '^#?(式舆防卫战|式舆|防卫战|防卫).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|boss|BOSS)$', fnc: 'zzzDefenseGuide' },
-        { reg: '^#?(绝区零|绝区|ZZZ|zzz).*(危局强袭战|危局|强袭战|强袭).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|boss|BOSS)$', fnc: 'zzzDeadlyGuide' },
-        { reg: '^#?(危局强袭战|危局).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|boss|BOSS)$', fnc: 'zzzDeadlyGuide' },
+        { reg: '^[#%％]?(崩三|崩坏3|崩坏三|BH3).*(深渊|超弦|超弦空间|超炫|超炫空间).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|boss|BOSS)$', fnc: 'bh3AbyssGuide' },
+        { reg: '^[#%％]?(?!.*(原神|星铁|星穹|绝区零|绝区|ZZZ|zzz)).*(深渊|超弦|超弦空间|超炫|超炫空间).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|boss|BOSS)$', fnc: 'bh3AbyssGuide' },
+        { reg: '^[#%％]?(崩三|崩坏3|崩坏三|BH3).*(战场|记忆战场).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|boss|BOSS)$', fnc: 'bh3BattlefieldGuide' },
+        { reg: '^[#%％]?(?!.*(原神|星铁|星穹|绝区零|绝区|ZZZ|zzz)).*(战场|记忆战场).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|boss|BOSS)$', fnc: 'bh3BattlefieldGuide' },
+        { reg: '^[#%％]?(崩三|崩坏3|崩坏三|BH3).*(乐土|往世乐土).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|刻印|因子)$', fnc: 'bh3GodwarGuide' },
+        { reg: '^[#%％]?(?!.*(原神|星铁|星穹|绝区零|绝区|ZZZ|zzz)).*(乐土|往世乐土).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|刻印|因子)$', fnc: 'bh3GodwarGuide' },
+        { reg: '^[#%％]?(绝区零|绝区|ZZZ|zzz).*(式舆防卫战|式舆|防卫战|防卫|深渊).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|boss|BOSS)$', fnc: 'zzzDefenseGuide' },
+        { reg: '^[#%％]?(式舆防卫战|式舆|防卫战|防卫).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|boss|BOSS)$', fnc: 'zzzDefenseGuide' },
+        { reg: '^[#%％]?(绝区零|绝区|ZZZ|zzz).*(危局强袭战|危局|强袭战|强袭).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|boss|BOSS)$', fnc: 'zzzDeadlyGuide' },
+        { reg: '^[#%％]?(危局强袭战|危局).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|boss|BOSS)$', fnc: 'zzzDeadlyGuide' },
         { reg: '^#?((原神|原石|gs)|(星铁|星琼|sr)|(崩坏三|崩三|水晶|bbb|bh3|！)|(绝区零|绝区|菲林|邦布券|邦布|zzz)|(超弦空间|超炫空间|深渊)|(战场|记忆战场)|(乐土|往世乐土)|(强袭|强袭战))?(前瞻信息|速报|预估|盘点|攻略)$', fnc: 'mysEstimate' },
-        { reg: '^#?(崩三|崩坏3|崩坏三|BH3)(深渊|超弦|超弦空间|战场|记忆战场|乐土|往世乐土)(攻略|速报|作业)$', fnc: 'bh3Guide' },
+        { reg: '^[#%％]?(崩三|崩坏3|崩坏三|BH3)(深渊|超弦|超弦空间|战场|记忆战场|乐土|往世乐土)(攻略|速报|作业)$', fnc: 'bh3Guide' },
       ],
     });
   }

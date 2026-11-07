@@ -344,6 +344,9 @@ export class custom_guide extends plugin {
     // 崩三/崩坏3 的攻略（深渊/战场/乐土）由专用插件 mhy_estimate 处理；本插件只支持
     // 原神/星铁/绝区零 角色攻略，直接放行，避免用错误数据源拼出误导性的「未找到」报错
     if (/^(崩三|崩坏3|崩坏三|bh3)/i.test(roleQuery)) return false;
+    // 玩法类攻略（战场/乐土/深渊/防卫战/危局）同样是 mhy_estimate 的职责，这里放行，
+    // 否则本插件优先级更高会把它当成「角色名」去搜，导致搜不到还误导用户
+    if (/(战场|乐土|深渊|防卫战|式舆|危局|强袭)/.test(roleQuery)) return false;
 
     const cfg = config() || {};
     const maps = loadAliasMaps();
