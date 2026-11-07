@@ -555,9 +555,11 @@ function isGuidePostUsable(post = {}, type, queryList = []) {
   }
   // 没有当期 Boss 时只放最近攻略，避免全站搜索返回很久以前的历史深渊。
   if (type === 'battlefield') return isCurrentBattlefieldPost(post);
-  if (['abyss', 'battlefield', 'zzz_defense', 'zzz_deadly'].includes(type)) {
-    return type === 'abyss' ? isCurrentAbyssPost(post) : isRecentPost(post, 5);
-  }
+  if (type === 'abyss') return isCurrentAbyssPost(post);
+  // 绝区零防卫战/危局是「按版本期」刷新的周期玩法（一期约2周），作者更新间隔常达数周，
+  // 用 5 天窗口会把当期唯一一篇也过滤掉（表现为「未找到」）。放宽到 45 天，
+  // 覆盖一个版本周期 + 缓冲，再由上面的版本对齐挑最新的。
+  if (type === 'zzz_defense' || type === 'zzz_deadly') return isRecentPost(post, 45);
   return true;
 }
 
