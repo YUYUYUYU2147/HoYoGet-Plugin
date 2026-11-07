@@ -619,9 +619,11 @@ export class mhy_estimate extends plugin {
       event: 'message',
       priority: pluginPriority('mhy_estimate', -Infinity),
       rule: [
-        // 崩三测试服 Boss（从 B站测试服视频标题归纳）：#崩三测试服Boss / #测试服Boss / #崩三测试服boss
-        { reg: '^[#%％]?(崩三|崩坏3|崩坏三|BH3)?\s*(测试服|测试|csf|CSF)?\s*[Bb][Oo][Ss][Ss]$', fnc: 'bh3TestserverBoss' },
-        { reg: '^[#%％]?(崩三|崩坏3|崩坏三|BH3)\s*(测试服)(boss|BOSS|Boss)?$', fnc: 'bh3TestserverBoss' },
+        // 崩三测试服 Boss（从 B站测试服视频标题归纳）
+        // 注意：统一前缀会把 «！测试服boss» 归一成 «！测试服boss»（保留叹号，kind=symbol），
+        // 所以这里必须同时认 ! / ！ 前缀，否则崩三的叹号指令匹配不到。
+        { reg: '^[#%％!！]?(崩三|崩坏3|崩坏三|BH3)?\s*(测试服|测试|csf|CSF)?\s*[Bb][Oo][Ss][Ss]$', fnc: 'bh3TestserverBoss' },
+        { reg: '^[#%％!！]?(崩三|崩坏3|崩坏三|BH3)\s*(测试服)(boss|BOSS|Boss)?$', fnc: 'bh3TestserverBoss' },
         { reg: '^[#%％]?(崩三|崩坏3|崩坏三|BH3).*(深渊|超弦|超弦空间|超炫|超炫空间).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|boss|BOSS)$', fnc: 'bh3AbyssGuide' },
         { reg: '^[#%％]?(?!.*(原神|星铁|星穹|绝区零|绝区|ZZZ|zzz)).*(深渊|超弦|超弦空间|超炫|超炫空间).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|boss|BOSS)$', fnc: 'bh3AbyssGuide' },
         { reg: '^[#%％]?(崩三|崩坏3|崩坏三|BH3).*(战场|记忆战场).*(攻略|攻略图|速报|作业|阵容|配队|推荐配队|队伍|boss|BOSS)$', fnc: 'bh3BattlefieldGuide' },
