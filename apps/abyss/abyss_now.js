@@ -843,7 +843,7 @@ export async function getAbyssBossesByFloor(opts = {}) {
  * 数据源与速览相同（Alioth 静态 JSON）。用于「深渊排期表」展示历史各期 Boss。
  */
 export async function buildSchedule(mode, opts = {}) {
-  if (mode.game !== 'sr' && mode.file !== 'abyss') return null;
+  if (mode.game !== 'sr' && !['abyss','theater','stygian'].includes(mode.file)) return null;
   const index = await getJson(`${DATA_BASE}/${mode.data}/${LANG}/${mode.file}.json`);
   const phases = (index.Phases || []).slice(0, opts.count || 8);
   const now = Date.now();
@@ -883,7 +883,7 @@ export async function buildSchedule(mode, opts = {}) {
           if (v.Name || desc) buffs.push({ name: cleanRich(v.Name), desc });
         }
         for (const v of valuesOf(detail.Tags)) buffs.push(...buffList(valuesOf(v.Tags).length ? valuesOf(v.Tags) : [v]));
-      } else {
+      } else if (mode.file === 'abyss') {
         const view = await buildAbyss(mode, { ...opts, periodId: ph._id });
         if (view?.sections?.length) {
           floorNo = view.sections[0].title || '';
@@ -903,6 +903,28 @@ export async function buildSchedule(mode, opts = {}) {
           }
           weaks = [...weakMap.values()];
           buffs = view.buffs || [];
+        }
+      } else if (mode.file === 'theater') {
+        // 幻想真境剧诗：Elem 弱点 + Boss[].Monsters 首领（站点数据无中文名，只能给图标）
+        weaks = elemView('gi', detail.Elem || []);
+        const seen = new Set();
+        for (const b of (detail.Boss || [])) {
+          for (const m of (b.Monsters || [])) {
+            const icon = monsterIcon('gi', m.Icon || '');
+            const key = String(m.ID);
+            if (seen.has(key)) continue;
+            seen.add(key);
+            bosses.push({ name: '', icon });
+          }
+        }
+      } else if (mode.file === 'stygian') {
+        // 幽境危战：Levels 最高档 Boss
+        const lv = (detail.Levels || []).slice(-1)[0] || (detail.Levels || [])[0];
+        const seen = new Set();
+        for (const id of (lv?.Monsters || [])) {
+          const info = detail.Monsters?.[String(id)] || detail.Monsters?.[id] || {};
+          const name = plainText(info.Name) || '';
+          if (name && !seen.has(name)) { seen.add(name); bosses.push({ name, icon: monsterIcon('gi', info.Icon || '') }); }
         }
       }
     } catch (err) {

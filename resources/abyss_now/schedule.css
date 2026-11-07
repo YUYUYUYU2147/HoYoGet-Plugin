@@ -40,3 +40,11 @@ body{margin:0;min-width:1200px;font-family:"Noto Sans CJK SC","Microsoft YaHei",
 .buff{font-size:13px;line-height:1.55;color:#4b5563}
 .buff b{color:#ea580c;font-weight:800;margin-right:6px}
 .buff span{color:#5b6472}
+
+/* Buff 描述里的行内高亮（cleanRich 保留的 <span class="hl">/<b class="hl">） */
+.buff-desc .hl{color:#ea580c;font-weight:800}
+.buff-desc b{color:#ea580c;font-weight:800}
+.buff-desc br{display:block;content:"";margin-top:2px}
+
+/* 无名称的Boss（剧诗只有图标）：收紧内边距 */
+.boss.boss-icon-only{padding:6px}

@@ -33,9 +33,9 @@
         <span class="empty">暂无 BOSS 数据</span>
         {{/if}}
         {{each r.bosses b}}
-        <div class="boss" title="{{b.name}}">
+        <div class="boss {{if !b.name}}boss-icon-only{{/if}}" title="{{b.name}}">
           <span class="boss-icon" {{if b.icon}}style="background-image:url('{{b.icon}}')"{{/if}}></span>
-          <span class="boss-name">{{b.name}}</span>
+          {{if b.name}}<span class="boss-name">{{b.name}}</span>{{/if}}
         </div>
         {{/each}}
       </div>
@@ -46,7 +46,7 @@
         {{each r.buffs bf}}
         <div class="buff">
           {{if bf.name}}<b>{{bf.name}}</b>{{/if}}
-          {{if bf.desc}}<span>{{bf.desc}}</span>{{/if}}
+          {{if bf.desc}}<span class="buff-desc">{{@bf.desc}}</span>{{/if}}
         </div>
         {{/each}}
       </div>
