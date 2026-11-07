@@ -665,13 +665,24 @@ export class mhy_estimate extends plugin {
     if (!data.bosses.length) {
       return e.reply(`近 ${data.videos.length} 个测试服视频标题里没识别到已知 Boss。\n可去 B站搜「${data.keyword}」手动查看。`);
     }
-    // 关联 Boss 图标（bh3_battlefield/boss_icons.json 的 bosses 里按名称精确匹配）
+    // 关联 Boss 图标：优先用圣芙蕾雅档案馆官方敌人图鉴（38个强敌，含愿之芽等新Boss），
+    // 再用战场 Boss 图标表兜底
     let iconMap = {};
+    try {
+      const enemyFile = path.join(PLUGIN_ROOT, 'system', 'default', 'bh3_enemy_icons.json');
+      if (fs.existsSync(enemyFile)) {
+        const raw = JSON.parse(fs.readFileSync(enemyFile, 'utf8'));
+        for (const [name, icon] of Object.entries(raw?.bosses || {})) if (name && icon) iconMap[name] = icon;
+      }
+    } catch (err) {
+      logger.debug?.(`[HoYoGet][testserver_boss] 读取敌人图鉴图标失败: ${err?.message || err}`);
+    }
     try {
       const iconFile = path.join(PLUGIN_ROOT, 'resources', 'bh3_battlefield', 'boss_icons.json');
       if (fs.existsSync(iconFile)) {
         const raw = JSON.parse(fs.readFileSync(iconFile, 'utf8'));
-        for (const b of Object.values(raw?.bosses || {})) if (b?.name) iconMap[b.name] = b.avatar || b.raw || '';
+        // 官方敌人图鉴里没有的，才用战场图标补
+        for (const b of Object.values(raw?.bosses || {})) if (b?.name && !iconMap[b.name]) iconMap[b.name] = b.avatar || b.raw || '';
       }
     } catch (err) {
       logger.debug?.(`[HoYoGet][testserver_boss] 读取Boss图标失败: ${err?.message || err}`);
