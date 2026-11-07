@@ -1,0 +1,127 @@
+/* 崩三记忆战场排期：浅色玻璃 + 每期卡片，UP 金色高亮 */
+@import url("../font/fonts.css");
+
+* { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+
+:root {
+  --ink: #1c2130; --text: #232735; --weak: #5f6879; --faint: #98a0b2;
+  --gold: #c98a2c; --gold-soft: #f0c274; --gold-deep: #a56f1c;
+  --card-line: rgba(255,255,255,.92);
+  --shadow: 0 2px 6px rgba(24,32,54,.05), 0 16px 36px -20px rgba(24,32,54,.32);
+}
+
+body {
+  width: 1120px;
+  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  transform: scale(1.12);
+  transform-origin: 0 0;
+  color: var(--text);
+  background:
+    radial-gradient(1000px 520px at 6% -12%, #e8eefc 0%, transparent 58%),
+    radial-gradient(900px 480px at 102% -4%, #f7eddc 0%, transparent 54%),
+    radial-gradient(800px 620px at 50% 108%, #eef1fa 0%, transparent 60%),
+    linear-gradient(158deg, #f0f4fb 0%, #e5eaf4 48%, #e9edf7 100%);
+}
+.container { width: 1120px; padding: 22px; position: relative; z-index: 1; }
+
+.hero {
+  padding: 20px 26px; border-radius: 20px;
+  color: #eef1f8;
+  background:
+    radial-gradient(720px 300px at 12% -30%, rgba(244,206,138,.22) 0%, transparent 62%),
+    radial-gradient(560px 320px at 96% 120%, rgba(91,141,217,.2) 0%, transparent 60%),
+    linear-gradient(150deg, #2a3041 0%, #1c2130 52%, #171b26 100%);
+  border: 1px solid rgba(244,206,138,.28);
+  box-shadow: 0 3px 8px rgba(12,16,28,.2), 0 26px 54px -26px rgba(12,16,28,.6), inset 0 1px 0 rgba(255,255,255,.1);
+  position: relative; overflow: hidden;
+}
+.hero::before {
+  content: ""; position: absolute; inset: 0 0 auto 0; height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(244,206,138,.2) 14%, rgba(244,206,138,.95) 50%, rgba(244,206,138,.2) 86%, transparent);
+}
+.hero-top { display: flex; align-items: center; gap: 20px; position: relative; z-index: 1; }
+.hero-badge {
+  flex: 0 0 auto; padding: 10px 18px; border-radius: 12px;
+  font-size: 22px; font-weight: 900; font-style: italic; letter-spacing: 1px; color: #241a06;
+  background: linear-gradient(135deg, #ffe8b8, #f4ce8a 55%, #d19a3c);
+  box-shadow: 0 6px 18px rgba(209,154,60,.4), inset 0 1px 0 rgba(255,255,255,.6);
+}
+.hero-title { flex: 1; }
+.hero-title h1 {
+  font-size: 27px; font-weight: 800; letter-spacing: .5px;
+  background: linear-gradient(180deg, #fff, #f4ce8a 65%, #d19a3c);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.3));
+}
+.hero-sub { font-size: 14px; color: rgba(232,237,248,.68); margin-top: 5px; }
+.hero-stats { display: flex; gap: 8px; }
+.stat {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  min-width: 70px; padding: 8px 12px; border-radius: 12px;
+  background: linear-gradient(165deg, rgba(255,255,255,.1), rgba(255,255,255,.035));
+  border: 1px solid rgba(255,255,255,.12);
+}
+.sv { font-size: 24px; font-weight: 800; color: #f4ce8a; font-variant-numeric: tabular-nums; }
+.sk { font-size: 12px; color: rgba(224,230,244,.6); }
+.hero-cycle {
+  margin-top: 12px; padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,.12);
+  font-size: 13px; color: rgba(232,237,248,.65); position: relative; z-index: 1;
+}
+
+/* 每期卡片 */
+.period {
+  margin-top: 14px; padding: 16px 20px; border-radius: 18px;
+  background: linear-gradient(160deg, #ffffff 0%, #f7f9fe 100%);
+  border: 1px solid var(--card-line);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,.96);
+}
+.p-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.p-tag {
+  font-size: 17px; font-weight: 800; color: #241a06;
+  padding: 3px 14px; border-radius: 9px;
+  background: linear-gradient(135deg, #ffe8b8, #f4ce8a 55%, #d19a3c);
+  box-shadow: 0 3px 9px rgba(209,154,60,.32);
+}
+.p-date { font-size: 14px; color: var(--weak); font-variant-numeric: tabular-nums; }
+
+.p-bosses { display: flex; gap: 10px; }
+.boss-card {
+  flex: 1; display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: 14px;
+  background: linear-gradient(160deg, #fafbfe, #f2f5fb);
+  border: 1px solid #eef1f6;
+  min-width: 0;
+}
+.boss-card.is-up {
+  background: linear-gradient(160deg, #fffdf6, #fdf4e0);
+  border-color: rgba(201,138,44,.3);
+  box-shadow: 0 3px 12px rgba(201,138,44,.12);
+}
+.b-icon {
+  flex: 0 0 50px; width: 50px; height: 50px; border-radius: 12px;
+  background: linear-gradient(160deg, #eef2f9, #dde4f1) center / cover no-repeat;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(24,32,54,.12);
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.icon-ph { font-size: 20px; color: var(--gold-deep); font-style: normal; font-weight: 800; }
+.b-info { flex: 1; min-width: 0; }
+.b-name-row { display: flex; align-items: center; gap: 7px; }
+.up-tag {
+  font-size: 11px; font-weight: 800; color: #241a06;
+  padding: 1px 7px; border-radius: 6px;
+  background: linear-gradient(135deg, #ffe8b8, #f4ce8a 55%, #d19a3c);
+  box-shadow: 0 1px 4px rgba(209,154,60,.35);
+}
+.pos-tag {
+  font-size: 11px; font-weight: 800; color: #fff;
+  padding: 1px 7px; border-radius: 6px;
+  background: linear-gradient(135deg, #8ab6ff, #5b8dd9);
+}
+.b-name { font-size: 16px; font-weight: 800; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.b-meta { display: flex; gap: 10px; margin-top: 4px; font-size: 12.5px; color: var(--weak); font-variant-numeric: tabular-nums; }
+.b-no { color: var(--faint); }
+.b-hp { color: var(--gold-deep); font-weight: 700; }
+
+.foot { margin-top: 16px; text-align: center; font-size: 12px; color: var(--faint); }

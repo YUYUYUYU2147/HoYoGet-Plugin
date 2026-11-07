@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}bh3_abyss_schedule/battlefield.css" />
+  </head>
+  <body {{sys.scale}}>
+    <div class="container">
+      <header class="hero">
+        <div class="hero-top">
+          <div class="hero-badge">ARENA</div>
+          <div class="hero-title">
+            <h1>{{data.title}}</h1>
+            <p class="hero-sub">{{data.subtitle}}{{if data.period}} · {{data.period}}{{/if}}</p>
+          </div>
+          <div class="hero-stats">
+            <div class="stat"><span class="sv">{{data.stats.periods}}</span><span class="sk">期数</span></div>
+            <div class="stat"><span class="sv">{{data.stats.bossCount}}</span><span class="sk">BOSS</span></div>
+          </div>
+        </div>
+        {{if data.cycle}}<div class="hero-cycle">周期：{{data.cycle}}</div>{{/if}}
+      </header>
+
+      {{each data.periods p idx}}
+      <section class="period">
+        <div class="p-head">
+          <span class="p-tag">{{p.period}}</span>
+          <span class="p-date">{{p.date}}</span>
+        </div>
+        <div class="p-bosses">
+          {{each p.bosses b}}
+          <div class="boss-card {{if b.isUp}}is-up{{/if}}">
+            <div class="b-icon" {{if b.icon}}style="background-image:url('{{b.icon}}')"{{/if}}>
+              {{if !b.icon}}<i class="icon-ph">{{b.boss[0]}}</i>{{/if}}
+            </div>
+            <div class="b-info">
+              <div class="b-name-row">
+                {{if b.isUp}}<span class="up-tag">UP</span>{{else}}<span class="pos-tag">{{b.pos}}</span>{{/if}}
+                <span class="b-name">{{b.boss}}</span>
+              </div>
+              <div class="b-meta">
+                <span class="b-no">{{b.no}}</span>
+                <span class="b-hp">HP {{b.hpText}}</span>
+              </div>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+      </section>
+      {{/each}}
+
+      <footer class="foot">{{@copy()}}</footer>
+    </div>
+  </body>
+</html>

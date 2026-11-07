@@ -50,6 +50,14 @@ const ICON_ALIAS = {
   '陨冰之律者': '「陨影冰骸」',
   '支配之律者·乌合之众': '支配之律者 乌合之众',
   '迷之忍者': '谜之忍者 八重霞',
+  '八重霞': '谜之忍者 八重霞',
+  // 战场数据里的写法与图鉴略有差异
+  '异星肃卫·补阙': '异星肃卫-补阙',
+  '陨星·奈埃拉': '陨星-奈埃尔',
+  '无敌瑞岁瑶鼓·年年麒麟号': '无敌嬉岁瑞鼓·年年糕糕号',
+  '鏖魔多': '摩录多',
+  '至阳之兽-祸斗': '至阳之兽-祸斗',
+  '黑之熊死': '黑之熊死',
 };
 
 let _icons = null;
@@ -115,6 +123,48 @@ export function readSchedule(file = '') {
       periods: rows.length,
       envCount: envSet.size,
       bossCount: new Set(rows.map(r => r.boss)).size,
+    },
+  };
+}
+
+/**
+ * 读取记忆战场排期。数据在 battlefield_schedule.json：
+ *   rows[]: { period, date, pos, boss, no, hp }
+ * 按 period 分组，每期 3 个 Boss（UP1/2/3），渲染成「期数卡片」布局。
+ */
+const DEFAULT_BATTLEFIELD = path.join(__dirname, 'default', 'battlefield_schedule.json');
+
+export function readBattlefieldSchedule(file = '') {
+  const target = file && fs.existsSync(file) ? file : DEFAULT_BATTLEFIELD;
+  const raw = JSON.parse(fs.readFileSync(target, 'utf8'));
+  const all = (raw.rows || []).map(r => ({
+    period: r.period || '',
+    date: r.date || '',
+    pos: r.pos || '',
+    boss: r.boss || '未知',
+    no: r.no || '',
+    hp: Number(r.hp) || 0,
+    icon: iconOf(r.boss || ''),
+    isUp: String(r.pos).toUpperCase().startsWith('UP'),
+    hpText: (Number(r.hp) || 0).toLocaleString('en-US'),
+  }));
+  // 按 period 分组（保持原顺序）
+  const order = [];
+  const map = new Map();
+  for (const r of all) {
+    if (!map.has(r.period)) { map.set(r.period, { period: r.period, date: r.date, bosses: [] }); order.push(r.period); }
+    map.get(r.period).bosses.push(r);
+  }
+  const periods = order.map(p => map.get(p));
+  return {
+    title: raw.title || '崩三记忆战场排期表',
+    subtitle: raw.subtitle || '',
+    period: raw.period || '',
+    cycle: raw.cycle || '',
+    periods,
+    stats: {
+      periods: periods.length,
+      bossCount: new Set(all.map(r => r.boss)).size,
     },
   };
 }

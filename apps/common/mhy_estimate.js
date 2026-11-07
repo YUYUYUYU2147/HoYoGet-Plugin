@@ -7,7 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PLUGIN_ROOT = path.resolve(__dirname, '../..');
 import { pickBiliGuide, sendBiliVideo } from '../../system/bili_guide.js';
 import { getTestserverBosses, getTestserverBossTimeline, ICON_NAME_ALIAS } from '../../system/bh3_testserver_boss.js';
-import { readSchedule } from '../../system/abyss_schedule.js';
+import { readSchedule, readBattlefieldSchedule } from '../../system/abyss_schedule.js';
 import fs from 'fs';
 import {
   getCurrentZzzDefenseInfoByEvent,
@@ -622,6 +622,8 @@ export class mhy_estimate extends plugin {
       rule: [
         // 崩三深渊排期表：！崩三深渊排期 / ！深渊排期表（读 abyss_schedule.json 渲染）
         { reg: '^[#%％!！]?(崩三|崩坏3|崩坏三|BH3)?\s*(深渊|超弦)?\s*(排期|排期表|时间表)$', fnc: 'bh3AbyssSchedule' },
+        // 崩三记忆战场排期表：！崩三战场排期 / ！战场排期表
+        { reg: '^[#%％!！]?(崩三|崩坏3|崩坏三|BH3)?\s*(战场|记忆战场)\s*(排期|排期表|时间表)$', fnc: 'bh3BattlefieldSchedule' },
         // 崩三测试服 Boss 时间线：！测试服Boss时间线 / ！崩三测试服时间线
         { reg: '^[#%％!！]?(崩三|崩坏3|崩坏三|BH3)?\s*(测试服|测试|csf|CSF)?\s*(boss|BOSS|Boss)?\s*时间线$', fnc: 'bh3TestserverBossTimeline' },
         // 崩三测试服 Boss（从 B站测试服视频标题归纳）
@@ -675,6 +677,28 @@ export class mhy_estimate extends plugin {
       logger.warn(`[HoYoGet][abyss_schedule] 渲染失败: ${err?.message || err}`);
       const lines = [`【${data.title}】${data.period || ''}`];
       data.rows.slice(0, 20).forEach(r => lines.push(`${r.date} ${r.boss} ${r.no} ${r.env}`));
+      return e.reply(lines.join('\n'));
+    }
+  }
+
+  /** 崩三记忆战场排期表：读 battlefield_schedule.json 渲染成图 */
+  async bh3BattlefieldSchedule(e) {
+    let data;
+    try {
+      const cfgFile = config()?.bh3_battlefield_schedule_file || '';
+      data = readBattlefieldSchedule(cfgFile);
+    } catch (err) {
+      logger.warn(`[HoYoGet][battlefield_schedule] 读取失败: ${err?.message || err}`);
+      return e.reply('战场排期数据读取失败，请检查 battlefield_schedule.json');
+    }
+    if (!data.periods.length) return e.reply('战场排期数据为空');
+    try {
+      const buf = await render('bh3_abyss_schedule/battlefield', { data }, { e });
+      return sendRenderResult(e, buf);
+    } catch (err) {
+      logger.warn(`[HoYoGet][battlefield_schedule] 渲染失败: ${err?.message || err}`);
+      const lines = [`【${data.title}】${data.period || ''}`];
+      for (const p of data.periods) lines.push(`${p.period} ${p.date}：${p.bosses.map(b => b.boss).join(' / ')}`);
       return e.reply(lines.join('\n'));
     }
   }
