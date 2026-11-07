@@ -72,7 +72,7 @@ function srFullToList (data) {
 
 /** 星铁 summary.json（只有五星/四星）→ UIGF list */
 /** summary 的池 key（GachaType_xxx / common）→ 数字 gacha_type */
-/** summary 没存 gacha_id；Mys 导入要求记录带正整数 gacha_id，这里按池给一个占位值 */
+/** summary 没存 gacha_id；导入目标工具要求记录带正整数 gacha_id，这里按池给一个占位值 */
 const SR_POOL_GACHA_ID = { '11': '2001', '12': '3001', '21': '2001', '22': '3001', '1': '1001', '2': '1001' }
 
 const SR_POOL_TYPE = {
@@ -384,10 +384,10 @@ export class gacha_export extends plugin {
     fs.writeFileSync(file, JSON.stringify(payload, null, '\t'), 'utf8')
 
     const five = list.filter(x => x.rank_type === '5').length
-    // summary 只有五星/四星，缺 3 星逐抽；导入 Mys 后会被当成「每金一抽」。给个明确警告。
+    // summary 只有五星/四星，缺 3 星逐抽；导入目标工具后会被当成「每金一抽」。给个明确警告。
     const partial = /统计/.test(hit.source)
     const warn = partial
-      ? `${'\n'}⚠️ 本次是「五星/四星统计」版，缺少三星逐抽，导入 Mys 会显示异常（像每金一抽）。建议先更新全量记录再导出。`
+      ? `${'\n'}⚠️ 本次是「五星/四星统计」版，缺少三星逐抽，导入目标工具会显示异常（像每金一抽）。建议先更新全量记录再导出。`
       : ''
     const head = `${game.name} UID:${uid} 抽卡记录导出${'\n'}来源：HoYoGet（${hit.source}）${'\n'}共 ${list.length} 条（五星 ${five} 条）${warn}`
     // 先发文件，成功了再说「成功」；文件发不出去就把保存路径给出来，别让人以为发出去了。

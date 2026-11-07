@@ -13,7 +13,7 @@ const HOST_CN = "https://public-operation-hk4e.mihoyo.com/gacha_info/api"
 const HOST_OS = "https://public-operation-hk4e-sg.hoyoverse.com/gacha_info/api"
 const GEN_AUTHKEY_URL = "https://api-takumi.mihoyo.com/binding/api/genAuthKey"
 /* 提瓦特小助手（lelaer）
-   - 回传：POST https://www.lelaer.com/uigf.php（UIGF v2.3 multipart + 祈愿链接），Mys 用的是同一接口
+   - 回传：POST https://www.lelaer.com/uigf.php（UIGF v2.3 multipart + 祈愿链接）
    - 拉取：官方未开放单 UID 逐抽 HTTP 接口（getWishHistory/getWishDetail 只给卡池图鉴），
      所以「补回」只能读用户自己在小助手导出的 UIGF/SRGF 文件（导入），或粘贴链接拉官方接口。
    小助手只收原神记录。 */
@@ -321,7 +321,7 @@ export class gs_gacha extends plugin {
         { reg: "^#*(?:米哈游)?原神抽卡链接", fnc: "updateByLink" },
         { reg: "^#*(?:米哈游)?原神超越抽卡", fnc: "updateByLink" },
         { reg: "^#*(?:米哈游)?原神抽卡帮助$", fnc: "help" },
-        // 回传提瓦特小助手（带米哈游前缀，避免抢 genshin/Mys 的同类指令）
+        // 回传提瓦特小助手（带米哈游前缀，避免抢 genshin 的同类指令）
         { reg: "^#*(?:米哈游)?原神(抽卡|祈愿)?(记录|数据)?回传(提瓦特)?小助手$", fnc: "uploadLelaer" },
         { reg: "^#*(?:米哈游)?原神(更新|刷新|同步|获取|导入|补全|补回)小助手(抽卡|祈愿)?(记录|数据)$", fnc: "helperHelp" },
         // 省略游戏名前缀：#更新小助手抽卡记录 / #更新提瓦特小助手记录（原神为默认游戏）
@@ -559,7 +559,7 @@ export class gs_gacha extends plugin {
     return list
   }
 
-  /** 回传提瓦特小助手：UIGF v2.3 multipart + 官方祈愿链接（与 Mys 同一接口） */
+  /** 回传提瓦特小助手：UIGF v2.3 multipart + 官方祈愿链接 */
   /** 回传核心：把本地记录推给提瓦特小助手，返回 { ok, message }，不直接回复 */
   async doUploadLelaer(auth) {
     const list = this.buildUigfList(auth.uid)
