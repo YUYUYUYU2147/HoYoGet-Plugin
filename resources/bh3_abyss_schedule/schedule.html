@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{ppath}}bh3_abyss_schedule/schedule.css" />
+  </head>
+  <body {{sys.scale}}>
+    <div class="container">
+      <header class="hero">
+        <div class="hero-top">
+          <div class="hero-badge">ABYSS</div>
+          <div class="hero-title">
+            <h1>{{data.title}}</h1>
+            <p class="hero-sub">{{data.subtitle}}{{if data.period}} · {{data.period}}{{/if}}</p>
+          </div>
+          <div class="hero-stats">
+            <div class="stat"><span class="sv">{{data.stats.periods}}</span><span class="sk">期数</span></div>
+            <div class="stat"><span class="sv">{{data.stats.envCount}}</span><span class="sk">环境</span></div>
+            <div class="stat"><span class="sv">{{data.stats.bossCount}}</span><span class="sk">BOSS</span></div>
+          </div>
+        </div>
+        {{if data.cycle || data.source}}
+        <div class="hero-cycle">{{if data.cycle}}周期：{{data.cycle}}{{/if}}{{if data.source}} · 数据来源 {{data.source}}{{/if}}</div>
+        {{/if}}
+      </header>
+
+      <div class="table">
+        <div class="thead">
+          <span class="c-date">日期</span>
+          <span class="c-boss">BOSS</span>
+          <span class="c-no">编号</span>
+          <span class="c-env">环境</span>
+          <span class="c-buff">效果</span>
+        </div>
+        {{each data.rows r idx}}
+        <div class="trow {{r.envClass}}">
+          <span class="c-date">{{r.date}}</span>
+          <span class="c-boss">
+            <span class="boss-icon" {{if r.icon}}style="background-image:url('{{r.icon}}')"{{/if}}>
+              {{if !r.icon}}<i class="icon-ph">{{r.boss[0]}}</i>{{/if}}
+            </span>
+            <span class="boss-name">{{r.boss}}</span>
+          </span>
+          <span class="c-no">{{r.no}}</span>
+          <span class="c-env"><i class="env-dot {{r.envClass}}"></i>{{r.env}}</span>
+          <span class="c-buff">{{r.buff}}</span>
+        </div>
+        {{/each}}
+      </div>
+
+      <footer class="foot">{{@copy()}}</footer>
+    </div>
+  </body>
+</html>

@@ -780,6 +780,12 @@ export const supportGuoba = () => {
         component: 'Input',
       },
       {
+        field: 'bh3_abyss_schedule_file',
+        label: '深渊排期数据文件',
+        helpMessage: '！崩三深渊排期 用的 JSON 路径；留空用内置 system/default/abyss_schedule.json。自己换数据就填新文件路径',
+        component: 'Input',
+      },
+      {
         field: 'bh3_testserver_boss_keyword',
         label: '测试服Boss关键词',
         helpMessage: '#崩三测试服Boss 用：B站搜该关键词，从视频标题归纳当前在测的 Boss。留空用「崩坏3 测试服」',

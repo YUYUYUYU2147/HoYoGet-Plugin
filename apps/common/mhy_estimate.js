@@ -7,6 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PLUGIN_ROOT = path.resolve(__dirname, '../..');
 import { pickBiliGuide, sendBiliVideo } from '../../system/bili_guide.js';
 import { getTestserverBosses, getTestserverBossTimeline, ICON_NAME_ALIAS } from '../../system/bh3_testserver_boss.js';
+import { readSchedule } from '../../system/abyss_schedule.js';
 import fs from 'fs';
 import {
   getCurrentZzzDefenseInfoByEvent,
@@ -619,6 +620,8 @@ export class mhy_estimate extends plugin {
       event: 'message',
       priority: pluginPriority('mhy_estimate', -Infinity),
       rule: [
+        // 崩三深渊排期表：！崩三深渊排期 / ！深渊排期表（读 abyss_schedule.json 渲染）
+        { reg: '^[#%％!！]?(崩三|崩坏3|崩坏三|BH3)?\s*(深渊|超弦)?\s*(排期|排期表|时间表)$', fnc: 'bh3AbyssSchedule' },
         // 崩三测试服 Boss 时间线：！测试服Boss时间线 / ！崩三测试服时间线
         { reg: '^[#%％!！]?(崩三|崩坏3|崩坏三|BH3)?\s*(测试服|测试|csf|CSF)?\s*(boss|BOSS|Boss)?\s*时间线$', fnc: 'bh3TestserverBossTimeline' },
         // 崩三测试服 Boss（从 B站测试服视频标题归纳）
@@ -652,6 +655,28 @@ export class mhy_estimate extends plugin {
 
   async bh3BattlefieldGuide(e) {
     return this.mysEstimate(e, 'battlefield');
+  }
+
+  /** 崩三深渊排期表：读 abyss_schedule.json 渲染成图 */
+  async bh3AbyssSchedule(e) {
+    let data;
+    try {
+      const cfgFile = config()?.bh3_abyss_schedule_file || '';
+      data = readSchedule(cfgFile);
+    } catch (err) {
+      logger.warn(`[HoYoGet][abyss_schedule] 读取失败: ${err?.message || err}`);
+      return e.reply('深渊排期数据读取失败，请检查 abyss_schedule.json');
+    }
+    if (!data.rows.length) return e.reply('深渊排期数据为空');
+    try {
+      const buf = await render('bh3_abyss_schedule/schedule', { data }, { e });
+      return sendRenderResult(e, buf);
+    } catch (err) {
+      logger.warn(`[HoYoGet][abyss_schedule] 渲染失败: ${err?.message || err}`);
+      const lines = [`【${data.title}】${data.period || ''}`];
+      data.rows.slice(0, 20).forEach(r => lines.push(`${r.date} ${r.boss} ${r.no} ${r.env}`));
+      return e.reply(lines.join('\n'));
+    }
   }
 
   /** 崩三测试服 Boss 时间线：按测试服版本分组，列出各版本在测的 Boss */

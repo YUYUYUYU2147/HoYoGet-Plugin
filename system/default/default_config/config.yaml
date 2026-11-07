@@ -304,6 +304,8 @@ bili_guide_bh3_godwar: 崩坏3 往世乐土 攻略
 bili_guide_bh3_abyss: 崩坏3 深渊 攻略
 #崩三测试服Boss搜索关键词（#崩三测试服Boss 指令用，从B站测试服视频标题归纳Boss）
 bh3_testserver_boss_keyword: 崩坏3 测试服
+#崩三深渊排期表数据文件（！崩三深渊排期 用；留空用内置 system/default/abyss_schedule.json）
+bh3_abyss_schedule_file: ''
 
 #自定义攻略源（锅巴可视化修改）
 #===== 自定义攻略源（极简模式）=====
