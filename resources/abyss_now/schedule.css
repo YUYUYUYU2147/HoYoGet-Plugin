@@ -27,3 +27,16 @@ body{margin:0;min-width:1200px;font-family:"Noto Sans CJK SC","Microsoft YaHei",
 .empty{font-size:14px;color:#a8b0be;padding:8px 0}
 
 .foot{margin-top:22px;text-align:center;font-size:13px;color:#a8b0be}
+
+/* 弱点行 */
+.weaks{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.weaks-label{font-size:13px;font-weight:800;color:#f97316;flex:0 0 auto}
+.weak-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:9px;background:#fff4ea;border:1px solid #ffe0c7;font-size:13.5px;font-weight:800;color:#9a4b12}
+.weak-pill img{width:18px;height:18px;object-fit:contain}
+
+/* 环境增益行 */
+.buffs{margin-top:12px;display:flex;flex-direction:column;gap:6px;padding-top:12px;border-top:1px dashed #eef1f6}
+.buffs-label{font-size:13px;font-weight:800;color:#f97316}
+.buff{font-size:13px;line-height:1.55;color:#4b5563}
+.buff b{color:#ea580c;font-weight:800;margin-right:6px}
+.buff span{color:#5b6472}

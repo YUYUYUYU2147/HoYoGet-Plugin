@@ -844,7 +844,6 @@ export async function getAbyssBossesByFloor(opts = {}) {
  */
 export async function buildSchedule(mode, opts = {}) {
   if (mode.game !== 'sr' && mode.file !== 'abyss') return null;
-  // 原神只支持深境螺旋 abyss；星铁支持全部玩法
   const index = await getJson(`${DATA_BASE}/${mode.data}/${LANG}/${mode.file}.json`);
   const phases = (index.Phases || []).slice(0, opts.count || 8);
   const now = Date.now();
@@ -852,6 +851,8 @@ export async function buildSchedule(mode, opts = {}) {
   for (const ph of phases) {
     let bosses = [];
     let floorNo = '';
+    let weaks = [];
+    let buffs = [];
     try {
       const detail = await getJson(`${DATA_BASE}/${mode.data}/${LANG}/${mode.file}/${ph._id}.json`, 6 * 3600 * 1000);
       if (mode.game === 'sr') {
@@ -861,24 +862,37 @@ export async function buildSchedule(mode, opts = {}) {
           const top = floors.find(f => Number(f.Floor) === Math.max(...nums)) || floors[0];
           floorNo = `第${top.Floor}层`;
           const seen = new Set();
+          const weakMap = new Map();
           for (const st of (top.Stages || [])) {
             const half = srStageHalf(detail, st, '', {});
+            // 弱点汇总（去重）
+            for (const e of (half.elems || [])) if (e.cn && !weakMap.has(e.key)) weakMap.set(e.key, e);
             for (const w of half.waves) {
               for (const mon of w.monsters) {
                 if (mon.name && !seen.has(mon.name)) { seen.add(mon.name); bosses.push({ name: mon.name, icon: mon.icon || '' }); }
               }
             }
           }
+          weaks = [...weakMap.values()];
         }
+        // 关卡增益：Buff + NewBuffs + Skills + Tags（末日首领机制）
+        if (detail.Buff?.Name || detail.Buff?.Desc) buffs.push(...buffList([detail.Buff]));
+        buffs.push(...buffList(valuesOf(detail.NewBuffs)));
+        for (const v of valuesOf(detail.Skills)) {
+          const desc = [v.Desc, v.Desc2].filter(Boolean).map(cleanRich).filter(Boolean).join('；');
+          if (v.Name || desc) buffs.push({ name: cleanRich(v.Name), desc });
+        }
+        for (const v of valuesOf(detail.Tags)) buffs.push(...buffList(valuesOf(v.Tags).length ? valuesOf(v.Tags) : [v]));
       } else {
-        // 原神深境螺旋：取最高层的 rooms/halves 怪物
         const view = await buildAbyss(mode, { ...opts, periodId: ph._id });
         if (view?.sections?.length) {
           floorNo = view.sections[0].title || '';
           const seen = new Set();
+          const weakMap = new Map();
           for (const sec of view.sections) {
             for (const room of sec.rooms || []) {
               for (const half of room.halves || []) {
+                for (const e of (half.elems || [])) if (e.cn && !weakMap.has(e.key)) weakMap.set(e.key, e);
                 for (const w of half.waves || []) {
                   for (const mon of w.monsters || []) {
                     if (mon.name && !seen.has(mon.name)) { seen.add(mon.name); bosses.push({ name: mon.name, icon: mon.icon || '' }); }
@@ -887,12 +901,13 @@ export async function buildSchedule(mode, opts = {}) {
               }
             }
           }
+          weaks = [...weakMap.values()];
+          buffs = view.buffs || [];
         }
       }
     } catch (err) {
       logger.debug?.(`[HoYoGet][abyss_now] 排期期数 ${ph._id} 解析失败: ${err?.message || err}`);
     }
-    // 判断是否当期
     const range = periodRange(ph.Time);
     const isCurrent = !!(range && now >= range.start && now <= range.end);
     rows.push({
@@ -900,6 +915,8 @@ export async function buildSchedule(mode, opts = {}) {
       time: ph.Time || '',
       floorNo,
       bosses: bosses.slice(0, 8),
+      weaks,
+      buffs: buffs.filter(b => b.name || b.desc).slice(0, 4),
       isCurrent,
     });
   }

@@ -21,6 +21,13 @@
         <span class="time">{{r.time}}</span>
         {{if r.floorNo}}<span class="floor">{{r.floorNo}}</span>{{/if}}
       </div>
+      {{if r.weaks && r.weaks.length}}
+      <div class="weaks">
+        <span class="weaks-label">弱点</span>
+        {{each r.weaks e}}<i class="weak-pill">{{if e.icon}}<img src="{{e.icon}}" alt="" />{{/if}}{{e.cn}}</i>{{/each}}
+      </div>
+      {{/if}}
+
       <div class="bosses">
         {{if !r.bosses.length}}
         <span class="empty">暂无 BOSS 数据</span>
@@ -32,6 +39,18 @@
         </div>
         {{/each}}
       </div>
+
+      {{if r.buffs && r.buffs.length}}
+      <div class="buffs">
+        <span class="buffs-label">环境增益</span>
+        {{each r.buffs bf}}
+        <div class="buff">
+          {{if bf.name}}<b>{{bf.name}}</b>{{/if}}
+          {{if bf.desc}}<span>{{bf.desc}}</span>{{/if}}
+        </div>
+        {{/each}}
+      </div>
+      {{/if}}
     </section>
     {{/each}}
   </div>
