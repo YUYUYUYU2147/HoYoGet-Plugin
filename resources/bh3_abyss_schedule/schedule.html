@@ -19,8 +19,8 @@
             <div class="stat"><span class="sv">{{data.stats.bossCount}}</span><span class="sk">BOSS</span></div>
           </div>
         </div>
-        {{if data.cycle || data.source}}
-        <div class="hero-cycle">{{if data.cycle}}周期：{{data.cycle}}{{/if}}{{if data.source}} · 数据来源 {{data.source}}{{/if}}</div>
+        {{if data.cycle}}
+        <div class="hero-cycle">周期：{{data.cycle}}</div>
         {{/if}}
       </header>
 

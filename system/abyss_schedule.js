@@ -110,7 +110,6 @@ export function readSchedule(file = '') {
     subtitle: raw.subtitle || '',
     period: raw.period || '',
     cycle: raw.cycle || '',
-    source: raw.source || '',
     rows,
     stats: {
       periods: rows.length,
