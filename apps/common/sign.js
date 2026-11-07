@@ -112,7 +112,7 @@ export class Sign extends plugin {
             event: 'message',
             priority: pluginPriority('sign', -26),
             rule: [{
-                    reg: '^#*米哈游*(原神|星铁|绝区零|崩三|崩坏3|崩坏三|BH3)*签到$',
+                    reg: '^(?:#?米哈游\\s*)?(?:[#*%％!！]\\s*)?(?:原神|星铁|绝区零|崩三|崩坏3|崩坏三|BH3)签到$|^#?米哈游签到$',
                     fnc: 'sign',
                 },
                 {

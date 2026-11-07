@@ -2,7 +2,7 @@ const GAMES = [
   { key: 'gs', symbol: '#', canonical: '原神', defaultPrefix: '#|＃|米哈游原神|原神|genshin|gs' },
   { key: 'sr', symbol: '*', canonical: '星铁', defaultPrefix: '*|＊|米哈游星铁|米哈游崩铁|米哈游星穹铁道|星铁|星穹铁道|崩铁|starrail|sr' },
   { key: 'zzz', symbol: '%', canonical: '绝区零', defaultPrefix: '%|％|米哈游绝区零|绝区零|绝区|zzz' },
-  { key: 'bh3', symbol: '#', canonical: '崩三', defaultPrefix: '!|！|米哈游崩坏三|崩坏三|崩坏3|崩三|bh3' },
+  { key: 'bh3', symbol: '!', canonical: '崩三', defaultPrefix: '!|！|米哈游崩坏三|崩坏三|崩坏3|崩三|bh3' },
 ]
 
 const SYMBOLS = { '#': 'gs', '＃': 'gs', '*': 'sr', '＊': 'sr', '%': 'zzz', '％': 'zzz', '!': 'bh3', '！': 'bh3' }

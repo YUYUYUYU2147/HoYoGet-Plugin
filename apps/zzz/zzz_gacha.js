@@ -847,19 +847,19 @@ export class zzz_gacha extends plugin {
         // 不带「米哈游」前缀的写法：#绝区零抽卡帮助 / 绝区零调频帮助 / %绝区零抽卡帮助
         // 必须带游戏名，否则会与总帮助、原神/星铁抽卡帮助撞车。
         { reg: '^[#*%％]?[ \t]*(?:绝区零|绝区|zzz|ZZZ)[ \t]*(抽卡|调频)帮助$', fnc: 'help' },
-        { reg: '^#*米哈游(绝区零|zzz)?抽卡链接(\\s+.*)?$', fnc: 'gachaLink' },
-        { reg: '^#*米哈游(绝区零|zzz)?(刷新|更新)抽卡记录$', fnc: 'refresh' },
+        { reg: '^(?:[%％]|#?米哈游)\\s*(?:绝区零|zzz|ZZZ)?抽卡链接(\\s+.*)?$', fnc: 'gachaLink' },
+        { reg: '^(?:[%％]|#?米哈游)\\s*(?:绝区零|zzz|ZZZ)?(刷新|更新)抽卡记录$', fnc: 'refresh' },
         // 不带「米哈游」前缀的写法，同样由本插件接管
         { reg: '^[#*%％]?[ \t]*(?:绝区零|绝区|zzz|ZZZ)[ \t]*(刷新|更新)抽卡记录$', fnc: 'refresh' },
-        { reg: '^#*米哈游(绝区零|zzz)?(抽卡|调频)(记录|统计|分析)$', fnc: 'summary' },
-        { reg: '^#*米哈游(绝区零|zzz)?角色记录$', fnc: 'roleRecord' },
-        { reg: '^#*米哈游(绝区零|zzz)?角色统计$', fnc: 'roleStat' },
+        { reg: '^(?:[%％]|#?米哈游)\\s*(?:绝区零|zzz|ZZZ)?(抽卡|调频)(记录|统计|分析)$', fnc: 'summary' },
+        { reg: '^(?:[%％]|#?米哈游)\\s*(?:绝区零|zzz|ZZZ)?角色记录$', fnc: 'roleRecord' },
+        { reg: '^(?:[%％]|#?米哈游)\\s*(?:绝区零|zzz|ZZZ)?角色统计$', fnc: 'roleStat' },
         { reg: '^[%％][ \\t]*角色统计$', fnc: 'roleStat' },
-        { reg: '^#*米哈游(绝区零|zzz)?(音擎|武器)记录$', fnc: 'weaponRecord' },
-        { reg: '^#*米哈游(绝区零|zzz)?(音擎|武器)统计$', fnc: 'weaponStat' },
-        { reg: '^#*米哈游(绝区零|zzz)?邦布记录$', fnc: 'bangbooRecord' },
-        { reg: '^#*米哈游(绝区零|zzz)?邦布统计$', fnc: 'bangbooStat' },
-        { reg: '^#*米哈游(绝区零|zzz)?全部统计$', fnc: 'allStat' },
+        { reg: '^(?:[%％]|#?米哈游)\\s*(?:绝区零|zzz|ZZZ)?(音擎|武器)记录$', fnc: 'weaponRecord' },
+        { reg: '^(?:[%％]|#?米哈游)\\s*(?:绝区零|zzz|ZZZ)?(音擎|武器)统计$', fnc: 'weaponStat' },
+        { reg: '^(?:[%％]|#?米哈游)\\s*(?:绝区零|zzz|ZZZ)?邦布记录$', fnc: 'bangbooRecord' },
+        { reg: '^(?:[%％]|#?米哈游)\\s*(?:绝区零|zzz|ZZZ)?邦布统计$', fnc: 'bangbooStat' },
+        { reg: '^(?:[%％]|#?米哈游)\\s*(?:绝区零|zzz|ZZZ)?全部统计$', fnc: 'allStat' },
         // 无 HoYoGet/小花火 前缀的裸指令。`%角色记录` 会被框架 zzzReg 改写成
         // `#绝区零角色记录`，故这里也要认「绝区零」前缀，否则会被喵喵抢走。
         // 绝区零裸指令。三种前缀都直接认，不依赖框架的规范化结果：
@@ -878,14 +878,14 @@ export class zzz_gacha extends plugin {
         // 末尾允许追加 UID（%代理人记录 12915316），与其他裸指令保持一致
         { reg: '^[ \\t]*(?:#?[ \\t]*绝区零|[%％]|[ \\t]*(?:绝区|zzz|ZZZ))[ \\t]*(代理人|角色|音擎|武器|邦布|常驻|全部)(记录|统计)(?:\\s*\\d{5,})?$', fnc: 'bareStat' },
         { reg: '^[*][ \\t]*(?:绝区零|绝区|zzz|ZZZ)[ \\t]*(代理人|角色|音擎|武器|邦布|常驻|全部)(记录|统计)(?:\\s*\\d{5,})?$', fnc: 'bareStat' },
-        { reg: '^#*米哈游(绝区零|zzz)?(更新|刷新|同步)?工坊(抽卡|调频)?(记录|数据)$', fnc: 'updateWorkshop' },
-        { reg: '^#*米哈游(绝区零|zzz)?绑定工坊(\\s+\\S+)?$', fnc: 'bindWorkshop' },
-        { reg: '^#*米哈游(绝区零|zzz)?(导入|合并)四星(\\s+\\S+)?$', fnc: 'importFourStar' },
-        { reg: '^#*米哈游(绝区零|zzz)?导出(抽卡)?(记录|json)$', fnc: 'exportLog' },
+        { reg: '^(?:[%％]|#?米哈游)\\s*(?:绝区零|zzz|ZZZ)?(更新|刷新|同步)?工坊(抽卡|调频)?(记录|数据)$', fnc: 'updateWorkshop' },
+        { reg: '^(?:[%％]|#?米哈游)\\s*(?:绝区零|zzz|ZZZ)?绑定工坊(\\s+\\S+)?$', fnc: 'bindWorkshop' },
+        { reg: '^(?:[%％]|#?米哈游)\\s*(?:绝区零|zzz|ZZZ)?(导入|合并)四星(\\s+\\S+)?$', fnc: 'importFourStar' },
+        { reg: '^(?:[%％]|#?米哈游)\\s*(?:绝区零|zzz|ZZZ)?导出(抽卡)?(记录|json)$', fnc: 'exportLog' },
         { reg: "^%[ \\t]*(刷新|更新)抽卡记录$", fnc: "refresh" },
         { reg: "^%[ \\t]*(抽卡|调频)(记录|统计|分析)$", fnc: "summary" },
-        { reg: '^#*米哈游(绝区零|zzz)?(导入)(抽卡)?(记录|json)$', fnc: 'importLog' },
-        { reg: '^#*米哈游(绝区零|zzz)?重建图标(索引)?$', fnc: 'rebuildIconIndex' },
+        { reg: '^(?:[%％]|#?米哈游)\\s*(?:绝区零|zzz|ZZZ)?(导入)(抽卡)?(记录|json)$', fnc: 'importLog' },
+        { reg: '^(?:[%％]|#?米哈游)\\s*(?:绝区零|zzz|ZZZ)?重建图标(索引)?$', fnc: 'rebuildIconIndex' },
       ],
     })
   }

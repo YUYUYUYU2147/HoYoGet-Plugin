@@ -313,20 +313,20 @@ export class gs_gacha extends plugin {
       rule: [
         { reg: "^#[ \\t]*(刷新|更新)抽卡记录$", fnc: "updateByCookie" },
         { reg: "^#(抽卡记录|抽卡统计)$", fnc: "summary" },
-        { reg: "^#*米哈游原神(刷新|更新)抽卡记录$", fnc: "updateByCookie" },
-        { reg: "^#*米哈游原神(抽卡记录|抽卡统计)$", fnc: "summary" },
-        { reg: "^#*米哈游原神角色统计$", fnc: "roleStat" },
+        { reg: "^#*(?:米哈游)?原神(刷新|更新)抽卡记录$", fnc: "updateByCookie" },
+        { reg: "^#*(?:米哈游)?原神(抽卡记录|抽卡统计)$", fnc: "summary" },
+        { reg: "^#*(?:米哈游)?原神角色统计$", fnc: "roleStat" },
         { reg: "^#[ \\t]*角色统计$", fnc: "roleStat" },
-        { reg: "^#*米哈游原神武器统计$", fnc: "weaponStat" },
-        { reg: "^#*米哈游原神抽卡链接", fnc: "updateByLink" },
-        { reg: "^#*米哈游原神超越抽卡", fnc: "updateByLink" },
-        { reg: "^#*米哈游原神抽卡帮助$", fnc: "help" },
+        { reg: "^#*(?:米哈游)?原神武器统计$", fnc: "weaponStat" },
+        { reg: "^#*(?:米哈游)?原神抽卡链接", fnc: "updateByLink" },
+        { reg: "^#*(?:米哈游)?原神超越抽卡", fnc: "updateByLink" },
+        { reg: "^#*(?:米哈游)?原神抽卡帮助$", fnc: "help" },
         // 回传提瓦特小助手（带米哈游前缀，避免抢 genshin/Mys 的同类指令）
-        { reg: "^#*米哈游原神(抽卡|祈愿)?(记录|数据)?回传(提瓦特)?小助手$", fnc: "uploadLelaer" },
-        { reg: "^#*米哈游原神(更新|刷新|同步|获取|导入|补全|补回)小助手(抽卡|祈愿)?(记录|数据)$", fnc: "helperHelp" },
+        { reg: "^#*(?:米哈游)?原神(抽卡|祈愿)?(记录|数据)?回传(提瓦特)?小助手$", fnc: "uploadLelaer" },
+        { reg: "^#*(?:米哈游)?原神(更新|刷新|同步|获取|导入|补全|补回)小助手(抽卡|祈愿)?(记录|数据)$", fnc: "helperHelp" },
         // 省略游戏名前缀：#更新小助手抽卡记录 / #更新提瓦特小助手记录（原神为默认游戏）
         { reg: "^#?[ \\t]*(更新|刷新|同步|获取|导入|补全|补回)(提瓦特)?小助手(抽卡|祈愿)?(记录|数据)$", fnc: "helperHelp" },
-        { reg: "^#*米哈游原神导入小助手(抽卡|祈愿)?(记录|数据)(\\s+\\S+)?$", fnc: "importLelaer" },
+        { reg: "^#*(?:米哈游)?原神导入小助手(抽卡|祈愿)?(记录|数据)(\\s+\\S+)?$", fnc: "importLelaer" },
         // 不带游戏名的通用写法 #抽卡帮助 → 四个游戏的总帮助图
         { reg: "^#?[ \\t]*抽卡(记录)?帮助$", fnc: "gachaHelpAll" },
         // 带游戏名但不带米哈游前缀：#原神抽卡帮助 / 原神抽卡帮助
