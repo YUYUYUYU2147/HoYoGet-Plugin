@@ -38,7 +38,7 @@
             {{each g.bosses b}}
             {{if !b.mini}}
             <div class="boss" title="{{b.name}}">
-              <span class="boss-icon" {{if b.icon}}style="background-image:url('{{b.icon}}')"{{/if}}></span>
+              <span class="boss-icon">{{if b.icon}}<img src="{{b.icon}}" alt="" />{{/if}}</span>
               <div class="boss-info">
                 <span class="boss-name">{{b.name}}</span>
                 {{if b.hp}}<span class="boss-hp">{{b.hp}}</span>{{/if}}
@@ -68,7 +68,7 @@
         {{/if}}
         {{each r.bosses b}}
         <div class="boss {{if !b.name}}boss-icon-only{{/if}}" title="{{b.name}}">
-          <span class="boss-icon" {{if b.icon}}style="background-image:url('{{b.icon}}')"{{/if}}></span>
+          <span class="boss-icon">{{if b.icon}}<img src="{{b.icon}}" alt="" />{{/if}}</span>
           <div class="boss-info">
             {{if b.name}}<span class="boss-name">{{b.name}}</span>{{/if}}
             {{if b.weak && b.weak.length}}
