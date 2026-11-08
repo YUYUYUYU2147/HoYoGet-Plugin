@@ -31,6 +31,7 @@
               {{if !r.icon}}<i class="icon-ph">{{r.boss[0]}}</i>{{/if}}
             </span>
             <span class="boss-name">{{r.boss}}</span>
+            {{if r.attr}}<span class="attr attr-{{r.attrClass}}">{{r.attr}}</span>{{/if}}{{if r.dmg}}<span class="attr dmg">{{r.dmg}}</span>{{/if}}{{if r.threat}}<span class="attr threat">{{r.threat}}</span>{{/if}}
           </span>
           <span class="c-no">{{r.no}}</span>
           <span class="c-env"><i class="env-dot {{r.envClass}}"></i>{{r.env}}</span>

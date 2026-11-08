@@ -616,6 +616,16 @@ function buildGlobalGuideWords(type, queryList, baseArgs) {
 // 所以 # 只有在紧跟「崩三」时才属于崩三，避免把原神的 #深渊排期 抢走。
 const BH3_PREFIX = '(?:[#＃](?:崩三|崩坏3|崩坏三|BH3)|[!！](?:崩三|崩坏3|崩坏三|BH3)?|(?:崩三|崩坏3|崩坏三|BH3))?';
 
+/** 崩三 Boss 属性补全：查不到或出错时保持原样，不影响排期出图 */
+async function enrichBh3Attrs(items) {
+  try {
+    const { enrichBh3BossAttrs } = await import('../../system/bh3_boss_attr.js')
+    await enrichBh3BossAttrs(items)
+  } catch (err) {
+    logger.warn(`[HoYoGet][bh3_boss_attr] 属性补全失败: ${err?.message || err}`)
+  }
+}
+
 export class mhy_estimate extends plugin {
   constructor() {
     super({
@@ -674,6 +684,7 @@ export class mhy_estimate extends plugin {
       return e.reply('深渊排期数据读取失败，请检查 abyss_schedule.json');
     }
     if (!data.rows.length) return e.reply('深渊排期数据为空');
+    await enrichBh3Attrs(data.rows);
     try {
       const buf = await render('bh3_abyss_schedule/schedule', { data }, { e });
       return sendRenderResult(e, buf);
@@ -696,6 +707,7 @@ export class mhy_estimate extends plugin {
       return e.reply('战场排期数据读取失败，请检查 battlefield_schedule.json');
     }
     if (!data.periods.length) return e.reply('战场排期数据为空');
+    await enrichBh3Attrs(data.periods.flatMap(p => p.bosses));
     try {
       const buf = await render('bh3_abyss_schedule/battlefield', { data }, { e });
       return sendRenderResult(e, buf);

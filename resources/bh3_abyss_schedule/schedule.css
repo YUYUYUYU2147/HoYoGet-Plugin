@@ -185,3 +185,21 @@ body {
   padding: 2px 10px; border-radius: 7px;
 }
 .hero.hero-fused { position: relative; }
+
+/* Boss 属性标签（属性 / 伤害类型 / 威胁等级） */
+.attr{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:6px;font-size:12px;font-weight:700;color:#fff;background:#64748b;vertical-align:middle}
+.attr.attr-fire{background:#ef4444}
+.attr.attr-ice{background:#38bdf8}
+.attr.attr-thunder{background:#a855f7}
+.attr.attr-phys{background:#94a3b8}
+.attr.attr-imaginary{background:#facc15;color:#1f2937}
+.attr.attr-wind{background:#22c55e}
+.attr.attr-quantum{background:#6366f1}
+.attr.attr-other{background:#64748b}
+.attr.dmg{background:#0f766e}
+.attr.threat{background:#b45309}
+.attr.attr-ability{background:#475569}
+.attr.attr-bio{background:#16a34a}
+.attr.attr-mech{background:#64748b}
+.attr.attr-star{background:#7c3aed}
+.attr{white-space:nowrap}

@@ -34,6 +34,7 @@
               <div class="b-meta">
                 <span class="b-no">{{b.no}}</span>
                 <span class="b-hp">HP {{b.hpText}}</span>
+                {{if b.attr}}<span class="attr attr-{{b.attrClass}}">{{b.attr}}</span>{{/if}}{{if b.dmg}}<span class="attr dmg">{{b.dmg}}</span>{{/if}}{{if b.threat}}<span class="attr threat">{{b.threat}}</span>{{/if}}
               </div>
             </div>
           </div>
