@@ -453,7 +453,8 @@ async function theaterMonsters(detail, list = [], mini = false) {
     out.push({
       name: await monsterNameById(id),
       icon: monsterIcon('gi', typeof iconKey === 'string' ? iconKey : iconKey?.Icon),
-      hp: isObj && it.HP ? `HP ${fmt(it.HP)}` : '',
+      // 幕内普通怪的数据源没有血量，明确标注「未公布」而不是留空
+      hp: isObj && it.HP ? `HP ${fmt(it.HP)}` : (mini ? 'HP 未公布' : ''),
       count: '',
       res: [],
       mech: '',

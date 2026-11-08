@@ -20,6 +20,7 @@
  * 查不到就返回空，调用方按原样渲染即可。
  */
 
+import { config } from '#HoYoGet'
 const ALIOTH_DATA = 'https://json.alioth.wiki/data';
 const NANOKA = 'https://static.nanoka.cc/hsr';
 
