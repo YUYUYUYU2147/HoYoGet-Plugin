@@ -446,11 +446,34 @@ async function monsterNameById(id) {
   return plainText(d?.Main?.Name || '');
 }
 
+// 幕内数据同时包含普通小怪和精英怪，但不同期数的字段名并不完全一致。
+// 优先识别明确的精英/首领标记；旧数据没有标记时，带 HP 的条目通常就是精英。
+function isTheaterElite(detail, it, id) {
+  const info = detail.Monsters?.[id];
+  const sources = [it, info].filter(v => v && typeof v === 'object');
+  const boolKeys = ['isElite', 'IsElite', 'elite', 'Elite', 'isBoss', 'IsBoss', 'boss', 'Boss'];
+  const typeKeys = ['type', 'Type', 'rank', 'Rank', 'category', 'Category', 'kind', 'Kind', 'MonsterType', 'MonsterRank'];
+  for (const src of sources) {
+    for (const key of boolKeys) {
+      const value = src[key];
+      if (value === true || value === 1 || value === '1') return true;
+    }
+    for (const key of typeKeys) {
+      const value = src[key];
+      if (typeof value === 'string' && /(elite|boss|champion|精英|首领)/i.test(value)) return true;
+      if (Number.isFinite(Number(value)) && Number(value) >= 2) return true;
+    }
+  }
+  const hp = Number(String(it?.HP ?? '').replace(/,/g, ''));
+  return Number.isFinite(hp) && hp > 0;
+}
+
 async function theaterMonsters(detail, list = [], mini = false) {
   return mapLimit(list, ICON_CONCURRENCY, async it => {
     const isObj = it && typeof it === 'object';
     const id = isObj ? it.ID : it;
     const iconKey = detail.Monsters?.[id];
+    const elite = !mini || isTheaterElite(detail, it, id);
     return {
       name: await monsterNameById(id),
       icon: monsterIcon('gi', typeof iconKey === 'string' ? iconKey : iconKey?.Icon),
@@ -459,7 +482,8 @@ async function theaterMonsters(detail, list = [], mini = false) {
       count: '',
       res: [],
       mech: '',
-      mini,
+      // mini 只代表需要压缩成标签的普通小怪；精英怪仍按完整 Boss 卡片展示。
+      mini: mini && !elite,
     };
   });
 }
@@ -1187,6 +1211,12 @@ export async function buildSchedule(mode, opts = {}) {
           .map(g => ({ ...g, bosses: (g.bosses || []).filter(keepSrScheduleMonster) }))
           .filter(g => g.bosses.length)
           .map(g => ({ ...g, big: g.bosses.filter(b => !b.mini).length, hasMini: false }));
+      } else if (mode.file === 'theater') {
+        // 幻想真境剧诗幕内普通小怪数量很多，排期只保留首领和精英怪。
+        groups = groups
+          .map(g => ({ ...g, bosses: (g.bosses || []).filter(b => !b.mini), hasMini: false }))
+          .filter(g => g.bosses.length)
+          .map(g => ({ ...g, big: g.bosses.length }));
       }
     } catch (err) {
       logger.debug?.(`[HoYoGet][abyss_now] 排期期数 ${ph._id} 分组失败: ${err?.message || err}`);
