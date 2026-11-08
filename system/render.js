@@ -14,7 +14,12 @@ try { fs.appendFileSync('./plugins/HoYoGet-Plugin/temp/hot_reload.log', `${new D
    sharp 的常驻缓存与并发，避免单张图把进程推到重启。
    QQ 服务端对图片消息会缩到 1600px 宽，2800px 冗余量已经够用。 */
 const MAX_DSF = 2
-const SHRINK_MAX_BYTES = 4 * 1024 * 1024
+// QQ NT 对 rich media 的实际可传体积低于 4 MB；排期长图常落在 3.6~3.8 MB，
+// 仍会被服务端拒绝，因此在发送前把图片收口到 3 MB 以内。
+const SHRINK_MAX_BYTES = 3 * 1024 * 1024
+// QQ NT 对单张图片的高度限制比文件体积更容易触发；超过约 32K 像素
+// 即使只有 1MB 也会被 rich media transfer 拒绝，留 30K 作为安全上限。
+const SHRINK_MAX_HEIGHT = 30000
 const SHRINK_QUALITY_STEPS = [92, 88, 84, 78, 70]
 const SHRINK_MIN_WIDTH = 1200
 const SHRINK_SCALE_STEP = 0.85
@@ -70,12 +75,14 @@ async function shrinkImage(img) {
     const h = meta.height || 0
     if (!w || !h) return img
     if ((meta.pages || 1) > 1) return img
-    if (src.length <= SHRINK_MAX_BYTES) return img
+    if (src.length <= SHRINK_MAX_BYTES && h <= SHRINK_MAX_HEIGHT) return img
     /* 超阈值时优先「保持分辨率、转 JPEG 降质量」，不要先缩宽度：
        缩放会让所有列变窄、文字发糊（*深渊 曾因此整图被缩到 2288 宽）。 */
     const encode = (pipe, q) => pipe.jpeg({ quality: q, mozjpeg: true })
     const steps = SHRINK_QUALITY_STEPS
-    let width = w
+    // 先把极端长图按比例压到安全高度，再继续按体积收口；这样不改变
+    // 内容比例，也避免 QQ 因尺寸而拒绝一张体积已经很小的图片。
+    let width = h > SHRINK_MAX_HEIGHT ? Math.max(1, Math.floor((w * SHRINK_MAX_HEIGHT) / h)) : w
     let best = null
     let bestQ = 0
     let picked = null
@@ -123,12 +130,36 @@ async function shrinkImage(img) {
    %原图 之类缓存 message_id。单张 Buffer 仍走原来的单次发送。 */
 export async function sendRenderResult(e, payload) {
   const segment = globalThis.segment
-  if (Array.isArray(payload)) {
-    const list = payload.filter(Boolean)
-    if (!list.length) return false
+  // Chromium 在位图超过尺寸上限、页面崩溃等情况下可能返回空 Buffer。
+  // 空图交给 OneBot 只会得到 rich media transfer failed，还会掩盖真正原因。
+  const isEmptyImage = value => Buffer.isBuffer(value) && value.length === 0
+  if (!payload || isEmptyImage(payload)) {
+    logger.error?.('[HoYoGet][render] 渲染结果为空，跳过图片发送')
+    return e.reply('图片渲染失败（截图结果为空），请稍后重试。', true, { recallMsg: 60 })
+  }
+  const fileList = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.file)
+      ? payload.file
+      : Array.isArray(payload?.data?.file)
+        ? payload.data.file
+        : null
+  if (fileList) {
+    const list = fileList.filter(value => value && !isEmptyImage(value))
+    if (!list.length) {
+      logger.error?.('[HoYoGet][render] 渲染结果为空，跳过图片发送')
+      return e.reply('图片渲染失败（截图结果为空），请稍后重试。', true, { recallMsg: 60 })
+    }
     let last = null
-    for (const buf of list) {
-      last = await e.reply(segment.image(buf))
+    for (let i = 0; i < list.length; i++) {
+      const img = await shrinkImage(list[i])
+      const message = payload?.type === 'image'
+        ? (Array.isArray(payload.file)
+          ? { ...payload, file: img }
+          : { ...payload, data: { ...payload.data, file: img } })
+        : segment.image(img)
+      logger.info(`[HoYoGet][render] 逐页发送第 ${i + 1}/${list.length} 页`)
+      last = await e.reply(message)
     }
     return last
   }
@@ -262,6 +293,10 @@ async function render(path, data_, cfg) {
         /* 框架默认 jpeg q90；这里拉满，避免二次有损压缩 */
         quality: 100,
         ...data_,
+        ...(autoMultiPage ? {
+          multiPage: true,
+          multiPageHeight: cfg.multiPageHeight || data_.multiPageHeight || 4000,
+        } : {}),
         // 自定义模板目录（模板里 <% include(_tpl_path+'/x.html') %> 用），默认仍是框架给的 miao 目录
         ...(data_.tplPath ? { _tpl_path: data_.tplPath } : {}),
         ppath: data_.ppath || ppath,
@@ -270,9 +305,8 @@ async function render(path, data_, cfg) {
       };
     },
   });
-  /* 按用户要求：渲染图不再做任何压缩/缩放，原图直发（内存足够）。
-     保留 shrinkImage 函数但不再调用；如需恢复旧行为把这里改回 shrinkImage(img)。 */
-  const payload = img;
+  // 超大长图会被 QQ NT 拒绝传输；正常尺寸保持原样，只压缩超阈值图片。
+  const payload = await shrinkImage(img);
   // ret:true 时由 render 统一用图片消息自发送；调用方不要再 e.reply，否则会重复发送。
   // 发送成功则返回 e.reply 的结果（含 message_id，供 %原图 等缓存用），失败/未发送才返回图片本身。
   if (cfg.ret && e) {

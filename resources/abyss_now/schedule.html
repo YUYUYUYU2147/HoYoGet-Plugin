@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <link rel="stylesheet" href="{{ppath}}abyss_now/schedule.css" />
+  <link rel="stylesheet" href="{{ppath}}abyss_now/schedule.css?v=3col-row-auto" />
 </head>
 <body {{sys.scale}}>
 <div class="page deco-{{theme.deco}} {{if theme.light}}light{{/if}}" style="--accent:{{theme.accent}};--accent2:{{theme.accent2}};--bg-img:url('{{ppath}}{{theme.bg}}')">
@@ -55,7 +55,7 @@
           </div>
           {{if g.hasMini}}
           <div class="chips">
-            {{each g.bosses b}}{{if b.mini}}<span class="chip">{{b.name}}{{if b.hp}} <em>{{b.hp}}</em>{{/if}}</span>{{/if}}{{/each}}
+            {{each g.bosses b}}{{if b.mini}}<span class="chip" title="{{b.name}}">{{if b.icon}}<img class="chip-icon" src="{{b.icon}}" alt="" />{{/if}}<span class="chip-name">{{b.name}}</span>{{if b.hp}}<em>{{b.hp}}</em>{{/if}}</span>{{/if}}{{/each}}
           </div>
           {{/if}}
         </div>

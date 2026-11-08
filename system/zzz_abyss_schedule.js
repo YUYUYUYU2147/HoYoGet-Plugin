@@ -82,7 +82,7 @@ async function nanokaZzzVersion() {
  * 定时刷新：把排期要用的 manifest / 列表 / 详情全部拉一遍写入本地快照。
  * 失败不覆盖旧快照（只有拿到的数据才写入）。
  */
-export async function refreshZzzAbyssSnapshot(count = 8) {
+export async function refreshZzzAbyssSnapshot(count = 9) {
   const recording = {}
   _recording = recording
   try {
@@ -218,7 +218,7 @@ function fmtTime(s = '') {
  * 取最近 count 期。kind='shiyu' 式舆 / 'deadly' 危局。
  * @returns {Promise<{title, gameName, gameShort, rows[], generatedAt}>}
  */
-export async function buildZzzSchedule(kind = 'shiyu', count = 8) {
+export async function buildZzzSchedule(kind = 'shiyu', count = 9) {
   const nv = await nanokaZzzVersion();
   if (!nv) return null;
   const listFile = kind === 'deadly' ? 'boss.json' : 'shiyu.json';

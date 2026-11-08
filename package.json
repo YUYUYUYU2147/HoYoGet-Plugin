@@ -14,6 +14,7 @@
     "#miao.path": "./system/vendor/miao/path.js"
   },
   "scripts": {
+    "bh3:source": "node tools/bh3_cn_schedule_source.mjs",
     "ci": "node tools/ci/syntax-check.mjs && node tools/ci/config-check.mjs && node tools/ci/ppath-check.mjs && node tools/ci/assets-check.mjs && node tools/ci/extreme-preset-check.mjs && node tools/ci/privacy-scan.mjs",
     "prepare": "node tools/ci/install-hook.mjs"
   },

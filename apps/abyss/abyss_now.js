@@ -1,6 +1,8 @@
 import fetch from 'node-fetch';
 import moment from 'moment';
 import { render, pluginPriority } from '#HoYoGet';
+import { sendRenderResult } from '../../system/render.js';
+import { qualityScale } from '../../system/render.js';
 import { enrichNanokaForAlioth, pickStageEnrich } from '../../system/sr_enrich.js';
 import { buildZzzSchedule, refreshZzzAbyssSnapshot } from '../../system/zzz_abyss_schedule.js';
 import fs from 'node:fs';
@@ -445,12 +447,11 @@ async function monsterNameById(id) {
 }
 
 async function theaterMonsters(detail, list = [], mini = false) {
-  const out = [];
-  for (const it of list) {
+  return mapLimit(list, ICON_CONCURRENCY, async it => {
     const isObj = it && typeof it === 'object';
     const id = isObj ? it.ID : it;
     const iconKey = detail.Monsters?.[id];
-    out.push({
+    return {
       name: await monsterNameById(id),
       icon: monsterIcon('gi', typeof iconKey === 'string' ? iconKey : iconKey?.Icon),
       // 幕内普通怪的数据源没有血量，明确标注「未公布」而不是留空
@@ -459,9 +460,8 @@ async function theaterMonsters(detail, list = [], mini = false) {
       res: [],
       mech: '',
       mini,
-    });
-  }
-  return out;
+    };
+  });
 }
 
 async function buildTheater(mode, opts = {}) {
@@ -584,6 +584,7 @@ function srMonster(detail, m = {}, healPct = 0) {
     value: pct(v),
   })).filter(v => v.elems.length);
   const mon = {
+    id: m.ID || '',
     name: plainText(info.Name) || `怪物 ${m.ID}`,
     icon: monsterIcon('sr', info.Icon),
     hp: fmt(m.HP),
@@ -597,6 +598,9 @@ function srMonster(detail, m = {}, healPct = 0) {
       greedHp: '',
       spd: m.SPD ? fmt(m.SPD) : '',
       stance: m.Stance ? (Math.round(Number(m.Stance) * 10) / 10).toFixed(1) : '',
+    ratio: Number(m.Ratio) || 0,
+    // IAR 是 Alioth 怪物索引中的特殊强度标记；用于排期过滤普通小怪。
+    iar: Number(info.IAR) || 0,
     count: '',
     weak: elemView('sr', info.Weak),
     res,
@@ -1013,12 +1017,19 @@ async function groupsFromView(view) {
         const bosses = [];
         for (const w of half.waves || []) {
           for (const mon of w.monsters || []) {
-            if (!mon?.name || seen.has(mon.name)) continue;
-            seen.add(mon.name);
+            const key = mon?.id || mon?.ID || mon?.name;
+            if (!mon?.name || seen.has(key)) continue;
+            seen.add(key);
             bosses.push({
               name: mon.name,
+              id: mon.id || mon.ID || '',
               icon: mon.icon || '',
               hp: hpText(mon.hp),
+              hpMult: Number(mon.hpMult) || 0,
+              ratio: Number(mon.ratio) || 0,
+              iar: Number(mon.iar) || 0,
+              stance: Number(mon.stance) || 0,
+              isSummon: !!mon.isSummon,
               mini: !!mon.mini,
               weak: (mon.weak || []).map(e => ({ key: e.key, cn: e.cn, icon: e.icon || '' })),
               res: flattenRes(mon.res),
@@ -1045,6 +1056,17 @@ async function groupsFromView(view) {
   return groups;
 }
 
+// Alioth 没有 Nanoka 的 Rank 字段。星铁排期仅按 Alioth 关卡中的强度字段
+// 保留精英/BOSS：普通小怪通常 Stance=100、没有 Ratio/IAR，也没有多条血。
+function keepSrScheduleMonster(mon = {}) {
+  if (mon.mini || mon.isSummon) return false;
+  const stance = Number(mon.stance) || 0;
+  const ratio = Number(mon.ratio) || 0;
+  const iar = Number(mon.iar) || 0;
+  const hpMult = Number(mon.hpMult) || 0;
+  return stance >= 120 || ratio >= 1.2 || iar > 0 || hpMult > 1;
+}
+
 /**
  * 多期排期总览：取最近 count 期，每期列出最高层的 Boss 名单。
  * 数据源与速览相同（Alioth 静态 JSON）。用于「深渊排期表」展示历史各期 Boss。
@@ -1052,7 +1074,7 @@ async function groupsFromView(view) {
 export async function buildSchedule(mode, opts = {}) {
   if (mode.game !== 'sr' && !['abyss','theater','stygian'].includes(mode.file)) return null;
   const index = await getJson(`${DATA_BASE}/${mode.data}/${LANG}/${mode.file}.json`);
-  const phases = (index.Phases || []).slice(0, opts.count || 8);
+  const phases = (index.Phases || []).slice(0, opts.count || 9);
   const now = Date.now();
   const rows = [];
   for (const ph of phases) {
@@ -1066,11 +1088,25 @@ export async function buildSchedule(mode, opts = {}) {
       const seen = new Set();
       const addMon = (mon, fallbackWeak = []) => {
         const name = mon?.name;
-        if (!name || seen.has(name)) return;
-        seen.add(name);
+        const key = mon?.id || mon?.ID || name;
+        if (!name || seen.has(key)) return;
+        if (mode.game === 'sr' && !keepSrScheduleMonster(mon)) return;
+        seen.add(key);
         const weak = (mon.weak?.length ? mon.weak : fallbackWeak)
           .map(e => ({ key: e.key, cn: e.cn, icon: e.icon || '' }));
-        bosses.push({ name, icon: mon.icon || '', hp: hpText(mon.hp), weak, res: flattenRes(mon.res) });
+        bosses.push({
+          name,
+          id: mon.id || mon.ID || '',
+          icon: mon.icon || '',
+          hp: hpText(mon.hp),
+          hpMult: Number(mon.hpMult) || 0,
+          ratio: Number(mon.ratio) || 0,
+          iar: Number(mon.iar) || 0,
+          stance: Number(mon.stance) || 0,
+          isSummon: !!mon.isSummon,
+          weak,
+          res: flattenRes(mon.res),
+        });
       };
       if (mode.game === 'sr' && mode.file === 'arbitration') {
         // 异相仲裁：Knight(骑士小关) + King(王棋Boss) 各带 StageID
@@ -1146,9 +1182,30 @@ export async function buildSchedule(mode, opts = {}) {
     let groups = [];
     try {
       if (mode.build) groups = await groupsFromView(await mode.build(mode, { periodId: ph._id }));
+      if (mode.game === 'sr') {
+        groups = groups
+          .map(g => ({ ...g, bosses: (g.bosses || []).filter(keepSrScheduleMonster) }))
+          .filter(g => g.bosses.length)
+          .map(g => ({ ...g, big: g.bosses.filter(b => !b.mini).length, hasMini: false }));
+      }
     } catch (err) {
       logger.debug?.(`[HoYoGet][abyss_now] 排期期数 ${ph._id} 分组失败: ${err?.message || err}`);
     }
+    // 排期是九期三列的总览，不适合把速览页里的整段机制说明原样塞进每张卡。
+    // 过长的增益描述会把单图高度推到数万像素，QQ NT 即使压缩体积后仍会拒绝。
+    // 保留名称和前 180 个纯文本字符，保证信息可读且不破坏 HTML 标签。
+    const compactBuffs = buffs
+      .filter(b => b && (b.name || b.desc))
+      .slice(0, 2)
+      .map(b => {
+        const name = plainText(b.name || '');
+        const desc = plainText(b.desc || '');
+        return {
+          name: name.length > 80 ? `${name.slice(0, 80)}…` : name,
+          desc: desc.length > 180 ? `${desc.slice(0, 180)}…` : desc,
+        };
+      })
+      .filter(b => b.name || b.desc);
     rows.push({
       ver: ph.Ver || '',
       time: ph.Time || '',
@@ -1157,7 +1214,7 @@ export async function buildSchedule(mode, opts = {}) {
       bosses: cutInline,
       // 整期弱点只在 Boss 没有各自弱点时展示（如幻想真境剧诗）
       weaks: weaks.length && !cut.some(b => b.weak?.length) ? weaks : [],
-      buffs: buffs.filter(b => b.name || b.desc).slice(0, 4),
+      buffs: compactBuffs,
       isCurrent,
     });
   }
@@ -1185,7 +1242,7 @@ export class AbyssNow extends plugin {
         },
         {
           // 深渊排期表：列出最近多期的 Boss（#=原神、*=星铁，文字前缀已被统一归一）
-          reg: '^(?:[#＃*＊]|米哈游|(?=原神|星铁|星穹|崩铁))(?:米哈游)?(?:原神|星铁|星穹|崩铁)?(深境螺旋|深境|深渊|幻想真境剧诗|幻想剧诗|幻想|真境|剧诗|幽境危战|幽境|危战|混沌回忆|混沌|回忆|虚构叙事|虚构|末日幻影|末日|幻影|异相仲裁|异相|仲裁)(排期|排期表|时间线)$',
+          reg: '^(?:[#＃*＊]|米哈游|(?=原神|星铁|星穹|崩铁))(?:米哈游)?(?:原神|星铁|星穹|崩铁)?(深境螺旋|深境|深渊|幻想真境剧诗|幻想剧诗|幻想|真境|剧诗|幽境危战|幽境|危战|混沌回忆|混沌|回忆|虚构叙事|虚构|末日幻影|末日|幻影|异相仲裁|异相|仲裁|王棋)(排期|排期表|时间线)$',
           fnc: 'schedule',
         },
         {
@@ -1199,13 +1256,13 @@ export class AbyssNow extends plugin {
     this.task = {
       cron: '0 0 */6 * * *',
       name: '[米哈游]绝区零深渊数据快照',
-      fnc: () => refreshZzzAbyssSnapshot(8).then(r => logger.info(`[HoYoGet][abyss_now] 绝区零深渊快照 ${r.ok ? '已更新' : '未更新'}（${r.files} 个文件）`)).catch(err => logger.warn(`[HoYoGet][abyss_now] 绝区零深渊快照失败: ${err?.message || err}`)),
+      fnc: () => refreshZzzAbyssSnapshot(9).then(r => logger.info(`[HoYoGet][abyss_now] 绝区零深渊快照 ${r.ok ? '已更新' : '未更新'}（${r.files} 个文件）`)).catch(err => logger.warn(`[HoYoGet][abyss_now] 绝区零深渊快照失败: ${err?.message || err}`)),
       log: false,
     }
     // 首次加载后延迟 30 秒补一次快照（只做一次）
     if (!globalThis.__hoyoGetZzzSnapshotBoot) {
       globalThis.__hoyoGetZzzSnapshotBoot = true
-      setTimeout(() => refreshZzzAbyssSnapshot(8).catch(() => {}), 30 * 1000)
+      setTimeout(() => refreshZzzAbyssSnapshot(9).catch(() => {}), 30 * 1000)
     }
   }
 
@@ -1234,13 +1291,16 @@ export class AbyssNow extends plugin {
     const msg = String(e.msg || '');
     const kind = /危局|强袭/.test(msg) ? 'deadly' : 'shiyu';
     try {
-      const view = await inlineViewIcons(await buildZzzSchedule(kind, 8));
+      const view = await inlineViewIcons(await buildZzzSchedule(kind, 9));
       if (!view || !view.rows?.length) {
         return e.reply('未获取到绝区零排期数据，请稍后再试。', true, { recallMsg: 60 });
       }
       view.theme = SCHEDULE_THEMES[kind === 'deadly' ? 'zzz_deadly' : 'zzz_shiyu'];
-      const img = await render('abyss_now/schedule', view, { e });
-      return e.reply(img);
+      const img = await render('abyss_now/schedule', view, {
+        e,
+        multiPage: false,
+      });
+      return sendRenderResult(e, img);
     } catch (err) {
       logger.warn(`[HoYoGet][abyss_now] 绝区零排期失败: ${err?.message || err}`);
       return e.reply('绝区零排期数据获取失败，请稍后再试。', true, { recallMsg: 60 });
@@ -1253,12 +1313,18 @@ export class AbyssNow extends plugin {
     const mode = MODES[sel.modeKey];
     if (!mode) return e.reply('未识别的深渊玩法', true);
     try {
-      const view = await buildSchedule(mode, { count: 8 });
+      const view = await buildSchedule(mode, { count: 9 });
       if (!view || !view.rows?.length) {
         return e.reply(`未获取到${mode.title}排期数据，请稍后再试。`, true, { recallMsg: 60 });
       }
-      const img = await render('abyss_now/schedule', view, { e });
-      return e.reply(img);
+      const img = await render('abyss_now/schedule', view, {
+        e,
+        multiPage: false,
+        // 排期仍是单张三列图，但渲染倍率跟随锅巴里的 img_quality 设置。
+        // 发送前的尺寸收口会处理高精度造成的超高图片，避免 QQ 拒收。
+        pct: qualityScale(),
+      });
+      return sendRenderResult(e, img);
     } catch (err) {
       logger.warn(`[HoYoGet][abyss_now] ${mode.title} 排期失败: ${err?.message || err}`);
       return e.reply(`${mode.title}排期数据获取失败，请稍后再试。`, true, { recallMsg: 60 });

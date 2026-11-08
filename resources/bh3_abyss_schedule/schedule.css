@@ -203,3 +203,9 @@ body {
 .attr.attr-mech{background:#64748b}
 .attr.attr-star{background:#7c3aed}
 .attr{white-space:nowrap}
+
+/* Boss 图标与属性标签共用固定列时会挤掉名称，允许标签换行并给名称保底宽度。 */
+.c-boss{flex:0 0 340px;min-width:0;flex-wrap:wrap;gap:6px 8px}
+.boss-name{flex:1 1 80px;min-width:80px;overflow-wrap:anywhere}
+.attr{display:inline-flex;align-items:center;gap:3px}
+.attr-icon{width:16px;height:16px;object-fit:contain;flex:0 0 16px}

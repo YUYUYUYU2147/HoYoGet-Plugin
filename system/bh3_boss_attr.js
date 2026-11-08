@@ -13,6 +13,22 @@ export const BH3_ATTR_CLASS = {
   异能: 'ability', 生物: 'bio', 机械: 'mech', 星辰: 'star', 星尘: 'star',
 }
 
+const BH3_ATTR_ICONS = {
+  火: 'bh3_火.svg', 冰: 'bh3_冰.svg', 雷: 'bh3_雷.svg', 物理: 'bh3_物理.svg',
+  虚数: 'bh3_虚数.png', 量子: 'bh3_量子.png',
+  异能: 'bh3_异能.png', 生物: 'bh3_生物.png', 机械: 'bh3_机械.png', 星辰: 'bh3_星尘.png', 星尘: 'bh3_星尘.png',
+}
+
+const BH3_DMG_ICONS = {
+  物理: 'bh3_流血.png', 火: 'bh3_点燃.png', 火伤: 'bh3_点燃.png', 火焰: 'bh3_点燃.png', 火焰元素: 'bh3_点燃.png',
+  冰: 'bh3_冻结.png', 冰伤: 'bh3_冻结.png', 冰冻: 'bh3_冻结.png', 冰冻元素: 'bh3_冻结.png',
+  雷: 'bh3_麻痹.png', 雷伤: 'bh3_麻痹.png', 雷电: 'bh3_麻痹.png', 雷电元素: 'bh3_麻痹.png',
+}
+
+function iconList(value, icons) {
+  return String(value || '').split(/[、，,/]/).map(part => icons[part.trim()]).filter(Boolean)
+}
+
 function pick(text, label) {
   const m = String(text || '').match(new RegExp(`${label}：([^\\n]+)`))
   return m ? m[1].trim() : ''
@@ -34,7 +50,8 @@ export async function getBh3BossAttrs(name) {
       if (attr || dmg || threat) {
         attrs = {
           attr, attrClass: BH3_ATTR_CLASS[attr] || 'other',
-          dmg, type, threat,
+          attrIcons: iconList(attr, BH3_ATTR_ICONS),
+          dmg, dmgIcons: iconList(dmg, BH3_DMG_ICONS), type, threat,
         }
       }
     }
@@ -53,7 +70,10 @@ export async function enrichBh3BossAttrs(items = [], nameKey = 'boss') {
   for (const name of names) found.set(name, await getBh3BossAttrs(name))
   for (const it of items) {
     const a = found.get(it?.[nameKey])
-    if (a) Object.assign(it, { attr: a.attr, attrClass: a.attrClass, dmg: a.dmg, threat: a.threat, bossType: a.type })
+    if (a) Object.assign(it, {
+      attr: a.attr, attrClass: a.attrClass, attrIcons: a.attrIcons,
+      dmg: a.dmg, dmgIcons: a.dmgIcons, threat: a.threat, bossType: a.type,
+    })
   }
   return items
 }
