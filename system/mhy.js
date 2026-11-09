@@ -367,22 +367,28 @@ class mhy {
     }
     if (config().debug) logger.mark('[refresh_cookies] got Cookie:', !!Cookie, 'ltoken:', !!ltoken);
     if (!e.no_reply) e.no_reply = e.reply;
+    /* 这里会把 e.reply 换成收集器；返回前必须还原，否则调用方后续出图时
+       e.reply 仍然只把图片塞进这个临时数组，表现为“图渲染了但没发出去”。 */
+    const oldReply = e.reply;
     let sendMsg = [];
-    e.reply = msg => {
+    const collectReply = msg => {
       // genshin 会把「绑定Cookie成功\n」「角色列表」「\n使用命令说明」这样
       // 一次性传过来，换行符就写在元素里，等的就是被原样拼成一条。
       // 直接摊平会让 TRSS 按数组发成三条独立消息。
       if (Array.isArray(msg)) sendMsg.push(msg.join(''));
       else sendMsg.push(msg);
     };
+    const restoreReply = () => { if (e.reply === collectReply) e.reply = oldReply; };
     if (!Cookie || !ltoken) {
       sendMsg.push(`米游社UID:${id}刷新cookie失败,请重新[扫码绑定]`);
       if (config().debug) logger.mark('[refresh_cookies] failed for id:', id);
+      restoreReply();
       return { sendMsg };
     }
     e.msg = `ltoken=${ltoken};ltuid=${ltuid ? ltuid : id};cookie_token=${Cookie}`;
     if (!opts.bindGenshinCookie) {
       if (config().debug) logger.mark('[refresh_cookies] 已跳过 genshin CK 绑定, id:', id);
+      restoreReply();
       return { sendMsg, ltoken, ck: e.msg };
     }
     let bound = { ok: false, msgs: [] };
@@ -398,6 +404,7 @@ class mhy {
     else if (config().debug)
       logger.mark('[refresh_cookies] genshin CK 未绑定成功，不影响 xhh 自身数据, id:', id);
     if (config().hbxx) sendMsg = sendMsg.filter(m => typeof m === 'string' && m);
+    restoreReply();
     return { sendMsg, ltoken, ck: e.msg };
   }
 

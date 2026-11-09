@@ -113,7 +113,7 @@ function saveProfile(game, uid, url) {
   if (profileCache.size > 1000) profileCache.clear();
 }
 
-/** Stoken 存档缓存：一次 GameRoles 补齐四个游戏的昵称与等级（绝区零也有） */
+/** Stoken 角色缓存：合并各 CK 的 GameRoles，供 UID 面板与体力卡片复用 */
 const stokenCache = new Map();
 const STOKEN_TTL = 60 * 1000;
 
@@ -138,9 +138,11 @@ async function loadStoken(e) {
   const hit = stokenCache.get(qq);
   if (hit && Date.now() - hit.ts < STOKEN_TTL) return hit.data;
   const data = readStokenFile(qq);
-  try {
-    const ck = Object.values(data.entries).map(v => v?.ck_stoken).find(Boolean) || '';
-    if (ck) {
+  const seenCks = new Set();
+  for (const ck of Object.values(data.entries).map(v => v?.ck_stoken).filter(Boolean)) {
+    if (seenCks.has(ck)) continue;
+    seenCks.add(ck);
+    try {
       const res = await api(e, { type: 'GameRoles', headers: mhy.getHeaders(e, ck), silent: true });
       for (const row of res?.data?.list || []) {
         if (!row?.game_uid) continue;
@@ -149,13 +151,31 @@ async function loadStoken(e) {
           level: Number(row.level || 0) || 0,
         });
       }
+    } catch (err) {
+      logger.debug?.('[HoYoGet][uid] 角色列表取昵称失败：' + (err?.message || err));
     }
-  } catch (err) {
-    logger.debug?.('[HoYoGet][uid] 角色列表取昵称失败：' + (err?.message || err));
   }
   stokenCache.set(qq, { ts: Date.now(), data });
   if (stokenCache.size > 500) stokenCache.clear();
   return data;
+}
+
+export function getCachedStokenRole(qq, uid) {
+  const hit = stokenCache.get(String(qq || ''));
+  if (!hit || Date.now() - hit.ts >= STOKEN_TTL) return null;
+  return hit.data?.roles?.get(String(uid)) || null;
+}
+
+export function saveCachedStokenRole(qq, uid, role) {
+  if (!qq || !uid || !role) return;
+  const key = String(qq);
+  const hit = stokenCache.get(key);
+  const data = hit && Date.now() - hit.ts < STOKEN_TTL ? hit.data : readStokenFile(key);
+  data.roles.set(String(uid), {
+    nickname: role.nickname || '',
+    level: Number(role.level || 0) || 0,
+  });
+  stokenCache.set(key, { ts: Date.now(), data });
 }
 
 /**
@@ -218,35 +238,6 @@ async function fillProfiles(games, e, stoken, noteUser) {
     } catch (err) {
       continue;
     }
-  }
-
-  /* ② 角色列表：昵称与等级的唯一可靠来源。
-     record index 不返回这两项（绝区零连昵称都没有），只靠本地存档会显示「暂无uid信息」；
-     GameRoles 一次就能返回该账号下全部游戏的 uid / 昵称 / 等级。 */
-  const roleInfo = new Map();
-  const seenCk = new Set();
-  for (const mu of Object.values(noteUser?.mysUsers || {})) {
-    const ck = mu?.ck;
-    if (!ck || seenCk.has(ck)) continue;
-    seenCk.add(ck);
-    try {
-      const res = await api(e, { type: 'GameRoles', headers: mhy.getHeaders(e, ck), silent: true });
-      for (const row of res?.data?.list || []) {
-        if (!row?.game_uid) continue;
-        roleInfo.set(String(row.game_uid), {
-          nickname: row.nickname || '',
-          level: Number(row.level || 0) || 0,
-        });
-      }
-    } catch (err) {
-      logger.debug?.('[HoYoGet][uid] 取角色列表失败：' + (err?.message || err));
-    }
-  }
-  for (const row of tasks) {
-    const info = roleInfo.get(String(row.item.uid || ''));
-    if (!info) continue;
-    if (info.nickname) row.item.name = info.nickname;
-    if (info.level) row.item.level = info.level;
   }
 
   /* ③ 崩三头像：并发；headers 必须用真 ck，stoken 拼出来的 ck 会被判登录失效 */

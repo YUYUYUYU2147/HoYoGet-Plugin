@@ -1,8 +1,9 @@
 import fetch from 'node-fetch';
 import moment from 'moment';
 import fs from 'fs';
-import { mhy, render, api, config, yaml, pluginPriority, makeForwardMsg } from '#HoYoGet';
+import { mhy, render, api, config, yaml, pluginPriority, makeForwardMsg, mhyFetch } from '#HoYoGet';
 import { guardModuleByFile } from '../../system/modules.js'
+import { getCachedStokenRole, saveCachedStokenRole } from './uid_panel.js';
 
 // genshin 的 NoteUser 必须动态加载：静态 import 在 genshin 缺失或版本变动时会让**整个插件**
 // 加载失败（ESM 解析阶段抛 ERR_MODULE_NOT_FOUND，没有 try/catch 兜底）。
@@ -29,8 +30,13 @@ function getEventText(e = {}) {
   return [...new Set(parts)].join(' ').trim();
 }
 
-export async function ensureCookieToken(e, ck, entry = null) {
-  if (!ck || /(?:^|;\s*)cookie_token=/.test(ck)) return ck;
+export async function ensureCookieToken(e, ck, entry = null, options = {}) {
+  /* record 接口要求 Cookie 同时带 stoken 与 cookie_token；很多 ck_stoken 里只有
+     早先换出来的 cookie_token（stoken 已被清掉），这种“看起来完整”的旧 ck
+     就是 10001/-100 的来源。缺 stoken 时不能直接返回，得用 entry.stoken 重换。 */
+  const hasCookieToken = /(?:^|;\s*)cookie_token=/.test(ck || '');
+  const hasStoken = /(?:^|;\s*)stoken=/.test(ck || '');
+  if (!ck || (!options.forceRefresh && hasCookieToken && hasStoken)) return ck;
   const stuid = entry?.stuid || cookiePart(ck, 'stuid') || cookiePart(ck, 'ltuid');
   const stoken = entry?.stoken || cookiePart(ck, 'stoken');
   if (!stuid || !stoken) return ck;
@@ -44,8 +50,29 @@ export async function ensureCookieToken(e, ck, entry = null) {
     const cookieToken = cookieRes?.data?.cookie_token;
     const ltoken = ltokenRes?.data?.ltoken || entry?.ltoken;
     logger.mark(`[HoYoGet][ck] stuid=${stuid} ct=${cookieRes?.retcode} lt=${ltokenRes?.retcode} ck=${cookieToken?1:0} lk=${ltoken?1:0}`);
-    if (cookieToken && ltoken) return `ltoken=${ltoken};ltuid=${stuid};cookie_token=${cookieToken};account_id=${stuid};`;
-    if (cookieToken) return `stuid=${stuid};stoken=${stoken};cookie_token=${cookieToken};account_id=${stuid};`;
+    if (!cookieToken) return ck;
+    /* 米游社的 record 接口（体力组件/面板）除了 ltoken+cookie_token 之外，
+       还要求 Cookie 里保留 stoken 与 mid；只回 ltuid/account_id 会被判成
+       未登录（原神/星铁回 10001 Please login，绝区零回 -100）。所以把新
+       token 合并进原 Cookie，而不是用新 token 重建一份精简 Cookie。 */
+    const parts = new Map();
+    for (const pair of String(ck).split(';')) {
+      const idx = pair.indexOf('=');
+      if (idx <= 0) continue;
+      const key = pair.slice(0, idx).trim();
+      const value = pair.slice(idx + 1).trim();
+      if (key) parts.set(key, value);
+    }
+    parts.set('stuid', stuid);
+    parts.set('stoken', stoken);
+    if (mid) parts.set('mid', mid);
+    if (ltoken) {
+      parts.set('ltoken', ltoken);
+      parts.set('ltuid', stuid);
+    }
+    parts.set('cookie_token', cookieToken);
+    if (!parts.get('account_id')) parts.set('account_id', stuid);
+    return [...parts].map(([key, value]) => `${key}=${value}`).join(';') + ';';
   } catch (err) {
     if (config().debug) logger.mark(`[HoYoGet][TL][bh3] refresh cookie_token failed: ${err.message}`);
   }
@@ -61,7 +88,7 @@ export class TL extends plugin {
       priority: pluginPriority('tl', -99),
       rule: [
         {
-          reg: '^(#|\\*|%)*(?:米哈游)?(?:原神|星铁|绝区零|崩三|崩坏3|崩坏三|BH3)体力$|^(#|\\*|%)*(?:米哈游体力|全体力|四游戏体力|米游社体力|体力总览|体力)$',
+          reg: '^(#|\\*|%|!|！)*(?:米哈游)?(?:原神|星铁|绝区零|崩三|崩坏3|崩坏三|BH3)全部体力$|^(#|\\*|%|!|！)*(?:米哈游)?(?:原神|星铁|绝区零|崩三|崩坏3|崩坏三|BH3)体力$|^(#|\\*|%|!|！)*(?:米哈游体力|全体力|全部体力|四游戏体力|米游社体力|体力总览|体力)$',
           fnc: 'note_',
         },
       ],
@@ -92,19 +119,28 @@ export class TL extends plugin {
   async note_(e) {
     if (!config().Tl) return false;
     let hasAllData = false;
-    const rawMsg = (e.msg || '').replace(/^(#|\*|%)*/, '').trim();
-    const fullMsg = getEventText(e).replace(/^(#|\*|%)*/, '').trim();
+    const rawMsg = (e.msg || '').replace(/^(#|\*|%|!|！)*/, '').trim();
+    const fullMsg = getEventText(e).replace(/^(#|\*|%|!|！)*/, '').trim();
     const detectMsg = `${fullMsg} ${rawMsg}`;
     const isStarRail = detectMsg.includes('星铁');
     const isZZZ = detectMsg.includes('绝区零');
     const isBH3 = /崩三|崩坏3|崩坏三|BH3/i.test(detectMsg);
     const isGenshinOnly = /原神/.test(detectMsg);
-    const singleGameKey = isGenshinOnly ? 'gs' : isStarRail ? 'sr' : isZZZ ? 'zzz' : isBH3 ? 'bh3' : '';
-    const isQueryAll = !singleGameKey && ['体力', '米哈游体力', '全体力', '四游戏体力', '米游社体力', '体力总览'].includes(rawMsg);
+    /* 纯符号前缀会被 game_prefix 归一化成默认游戏：例如用 # 开头的
+       「全部体力」会带上 hoyoGetGame=gs。但「体力」「全部体力」这类没有
+       游戏名的全局指令不能被这个默认值截成原神，否则只查原神。 */
+    const queryAllCommands = ['体力', '米哈游体力', '全体力', '四游戏体力', '米游社体力', '体力总览'];
+    const isAllGamesAll = rawMsg === '全部体力';
+    const isGlobalCommand = isAllGamesAll || queryAllCommands.includes(rawMsg);
+    const singleGameKey = !isGlobalCommand && ['gs', 'sr', 'zzz', 'bh3'].includes(e.hoyoGetGame)
+      ? e.hoyoGetGame
+      : isGenshinOnly ? 'gs' : isStarRail ? 'sr' : isZZZ ? 'zzz' : isBH3 ? 'bh3' : '';
+    const isGameAll = !!singleGameKey && /全部体力/.test(detectMsg);
+    const isQueryAll = isGlobalCommand && queryAllCommands.includes(rawMsg);
     // 崩坏3扩展里的“四游戏体力聚合”开关也要控制主力 TL 入口。
     // 历史配置没有该字段时按开启处理，避免升级后突然失效。
     if (isQueryAll && config().bh3_all_note_enable === false) return false;
-    const tipName = isQueryAll ? '四游戏' : singleGameKey ? this.getGameMeta(singleGameKey).name : '原神';
+    const tipName = isAllGamesAll ? '全部游戏' : isQueryAll ? '四游戏' : singleGameKey ? this.getGameMeta(singleGameKey).name : '原神';
     await e.reply(`正在获取${tipName}体力数据，请稍后...`, true, { recallMsg: 60 });
     const getZZZData = async () => {
       const data = await this.note(e, 'zzz', isQueryAll);
@@ -123,7 +159,9 @@ export class TL extends plugin {
 
     let resultData = {};
 
-    if (isQueryAll) {
+    if (isAllGamesAll) {
+      return this.allGamesAllNotes(e);
+    } else if (isQueryAll) {
       hasAllData = true;
       const [gsData, srData, zzzData, bh3Data] = await Promise.all([
         this.note(e, 'gs'),
@@ -137,7 +175,7 @@ export class TL extends plugin {
         zzz_data: zzzData,
         bh3_data: bh3Data,
       };
-    } else if (singleGameKey) {
+    } else if (singleGameKey && isGameAll) {
       return this.gameAllNotes(e, singleGameKey);
     } else if (isStarRail) {
       resultData = {
@@ -248,6 +286,10 @@ export class TL extends plugin {
       try {
         const stokenData = yaml.get(stokenPath) || {};
         for (const [uid, entry] of Object.entries(stokenData)) {
+          /* 旧版本会在文件里留一条 uid=0 的占位记录；它不是角色，发出去只会
+             拿到 -100/405，还会在“全部体力”里多一条失败提示。 */
+          if (!entry || String(uid) === '0' || String(entry.uid ?? uid) === '0') continue;
+          if (!entry.ck_stoken && !entry.stoken) continue;
           if (this.isGameEntry(entry, game)) uidSet.add(String(uid));
         }
       } catch (_) {}
@@ -255,19 +297,30 @@ export class TL extends plugin {
     return [...uidSet];
   }
 
-  async gameAllNotes(e, game = 'gs') {
+  countGameRoles(e, game, stuid) {
+    if (!stuid) return 1;
+    const stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${e.user_id}.yaml`;
+    if (!fs.existsSync(stokenPath)) return 1;
+    try {
+      const stokenData = yaml.get(stokenPath) || {};
+      return Object.values(stokenData).filter(entry =>
+        entry && String(entry.uid) !== '0' && (entry.ck_stoken || entry.stoken)
+        && String(entry.stuid) === String(stuid) && this.isGameEntry(entry, game)
+      ).length || 1;
+    } catch (_) {
+      return 1;
+    }
+  }
+
+  async collectGameCards(e, game = 'gs') {
     const meta = this.getGameMeta(game);
     const uids = await this.getAllGameUids(e, game);
-    if (!uids.length) {
-      await e.reply(`未发现绑定的${meta.name}UID，请先扫码绑定米游社~`, true);
-      return true;
-    }
-
     const list = [];
     const fails = [];
     const done = new Set();
     for (const uid of uids) {
       if (done.has(String(uid))) continue;
+      done.add(String(uid));
       const data = game === 'bh3'
         ? await this.bh3Note(e, true, uid)
         : await this.noteWithTempUid(e, game, uid);
@@ -279,24 +332,56 @@ export class TL extends plugin {
         fails.push(`UID ${uid}：${data === '过期' ? '登录验证过期' : '获取失败'}`);
         continue;
       }
-      if (game === 'zzz' && data && !data.s2_bounty_commission) {
+      if (game === 'zzz' && !data.s2_bounty_commission) {
         data.s2_bounty_commission = { num: 0, total: 0 };
       }
       list.push(this.toMultiCard(game, data));
     }
+    return { meta, uids, list, fails };
+  }
 
+  async renderGameCards(e, game, list = []) {
+    const meta = this.getGameMeta(game);
+    const nodes = [];
+    for (let i = 0; i < list.length; i += 4) {
+      const chunk = list.slice(i, i + 4);
+      const img = await this.renderTlImage(e, { multi_list: chunk, multi_game_name: meta.name });
+      if (img) nodes.push([`${meta.name}体力 ${i + 1}-${i + chunk.length}/${list.length}`, img]);
+    }
+    return nodes;
+  }
+
+  async allGamesAllNotes(e) {
+    const nodes = [];
+    const failGroups = [];
+    let total = 0;
+    for (const game of ['gs', 'sr', 'zzz', 'bh3']) {
+      if (game === 'bh3' && config().bh3_all_note_enable === false) continue;
+      const { meta, list, fails } = await this.collectGameCards(e, game);
+      if (fails.length) failGroups.push(`${meta.name}：\n${fails.join('\n')}`);
+      if (!list.length) continue;
+      total += list.length;
+      nodes.push(...await this.renderGameCards(e, game, list));
+    }
+    if (!nodes.length) {
+      await e.reply(failGroups.length ? `以下UID获取失败：\n${failGroups.join('\n')}` : '未获取到任何体力数据', true);
+      return true;
+    }
+    if (failGroups.length) nodes.push(`以下UID获取失败：\n${failGroups.join('\n')}`);
+    const forward = await makeForwardMsg(e, nodes, `全部游戏体力（${total}个角色）`);
+    await e.reply(forward);
+    return true;
+  }
+
+  async gameAllNotes(e, game = 'gs') {
+    const { meta, list, fails } = await this.collectGameCards(e, game);
     if (!list.length) {
       await e.reply(fails.length ? fails.join('\n') : `未获取到任何${meta.name}体力数据`, true);
       return true;
     }
 
     if (list.length > 4) {
-      const nodes = [];
-      for (let i = 0; i < list.length; i += 4) {
-        const chunk = list.slice(i, i + 4);
-        const img = await this.renderTlImage(e, { multi_list: chunk, multi_game_name: meta.name });
-        if (img) nodes.push([`${meta.name}体力 ${i + 1}-${i + chunk.length}/${list.length}`, img]);
-      }
+      const nodes = await this.renderGameCards(e, game, list);
       if (fails.length) nodes.push(`以下UID获取失败：\n${fails.join('\n')}`);
       const forward = await makeForwardMsg(e, nodes, `${meta.name}全部UID体力（${list.length}个）`);
       await e.reply(forward);
@@ -310,28 +395,7 @@ export class TL extends plugin {
   }
 
   async noteWithTempUid(e, game = 'gs', uid = '') {
-    const user = e.user;
-    const oldUid = user?.getUid?.(game) || '';
-    const gameKey = game;
-    try {
-      if (user?.setMainUid) {
-        user.setMainUid(uid, gameKey, false);
-      }
-      if (String(user?.getUid?.(gameKey) || '') !== String(uid) && user?.getGameDs) {
-        user.getGameDs(gameKey).uid = String(uid);
-      } else if (!user?.setMainUid && user?._games?.[gameKey]) {
-        user._games[gameKey].uid = String(uid);
-      }
-      return await this.note(e, game, true);
-    } finally {
-      try {
-        if (user?.setMainUid) {
-          user.setMainUid(oldUid, gameKey, false);
-        } else if (user?._games?.[gameKey]) {
-          user._games[gameKey].uid = oldUid;
-        }
-      } catch (_) {}
-    }
+    return this.note(e, game, true, uid);
   }
 
   getStokenEntry(e, uid) {
@@ -434,7 +498,9 @@ export class TL extends plugin {
   async getBh3Auth(e, uidOverride = '') {
     let qq = e.user_id;
     for (const msg of e.message || []) {
-      if (msg.type === 'at') { qq = msg.qq; break; }
+      /* @机器人 只是触发指令，不能把查询对象换成机器人自己；群里 @ 其他
+         成员时仍按原来的“看被 @ 的人”逻辑处理。 */
+      if (msg.type === 'at' && String(msg.qq) !== String(e.self_id)) { qq = msg.qq; break; }
     }
 
     let uid = uidOverride || await redis.get(`HoYoGet:bh3_uid:${qq}`);
@@ -486,7 +552,8 @@ export class TL extends plugin {
         }
       } catch (_) {}
     }
-    return { uid, region, ck, signEntry };
+    if (!ck && signEntry?.ck_stoken) ck = signEntry.ck_stoken;
+    return { qq, uid, region, ck, signEntry };
   }
 
   async bh3Note(e, san = true, uidOverride = '') {
@@ -499,15 +566,28 @@ export class TL extends plugin {
       if (!san) e.reply('未找到有效Cookie，请先扫码绑定');
       return '没有';
     }
-    const headers = mhy.getHeaders(e, auth.ck);
-    const signCk = await ensureCookieToken(e, auth.signEntry?.ck_stoken || auth.ck, auth.signEntry);
-    const signHeaders = mhy.getHeaders(e, signCk);
+    const baseCk = auth.signEntry?.ck_stoken || auth.ck;
+    const freshCk = await ensureCookieToken(e, baseCk, auth.signEntry, { forceRefresh: !!auth.signEntry?.stoken });
+    if (freshCk && auth.signEntry?.stoken && freshCk !== baseCk) {
+      const stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${auth.qq}.yaml`;
+      try {
+        yaml.set(stokenPath, `${auth.uid}.ck_stoken`, freshCk);
+        yaml.set(stokenPath, `${auth.uid}.cookie_token`, cookiePart(freshCk, 'cookie_token'));
+        const ltoken = cookiePart(freshCk, 'ltoken');
+        if (ltoken) yaml.set(stokenPath, `${auth.uid}.ltoken`, ltoken);
+      } catch (err) {
+        logger.debug?.(`[HoYoGet][TL][bh3] 保存刷新后的 CK 失败：${err?.message || err}`);
+      }
+    }
+    // Rebuild all headers from the refreshed cookie. Updating only Cookie leaves
+    // the DS signature and other cookie-derived headers tied to the stale value.
+    const headers = mhy.getHeaders(e, freshCk || baseCk);
     let indexRes, noteRes, signRes;
     try {
       [indexRes, noteRes, signRes] = await Promise.all([
         api(e, { type: 'bh3_index', uid: auth.uid, headers, game: 'bh3', server: auth.region, silent: san }),
         api(e, { type: 'bh3_note', uid: auth.uid, headers, game: 'bh3', server: auth.region, silent: san }),
-        api(e, { type: 'sign_info', uid: auth.uid, headers: signHeaders, game: 'bh3', server: auth.region, silent: true }).catch(() => null),
+        api(e, { type: 'sign_info', uid: auth.uid, headers, game: 'bh3', server: auth.region, silent: true }).catch(() => null),
       ]);
     } catch (err) {
       logger.error('[HoYoGet][TL][bh3] API error:', err);
@@ -573,7 +653,7 @@ export class TL extends plugin {
       return '没有';
     }
 
-    logger.error(`[TL-note] enter ${game} uid=${uid} override=${uidOverride}`);
+    if (config().debug) logger.mark(`[HoYoGet][TL] enter ${game} uid=${uid} override=${uidOverride}`);
     let sk = await mhy.getstoken(e, uid);
     if (!sk) { const _b = { gs: 'hk4e_cn', sr: 'hkrpg_cn', zzz: 'nap_cn', bh3: 'bh3_cn' }[game]; try { const _p = `./plugins/HoYoGet-Plugin/data/Stoken/${e.user_id}.yaml`; const _d = yaml.get(_p) || {}; const _k = Object.keys(_d).find((x) => _d[x] && _d[x].ck_stoken && _d[x].game_biz === _b && String(_d[x].uid) !== '0'); if (_k) { uid = _k; sk = _d[_k].ck_stoken; } } catch (_) {} }
     if (!sk) {
@@ -583,9 +663,13 @@ export class TL extends plugin {
     }
     const entry = uidOverride ? this.getStokenEntry(e, uid) : null;
     const defaultUid = e.user?.getUid?.(game);
-    const useRoleEndpoint = !!uidOverride && String(uid) !== String(defaultUid || '');
+    /* widget 接口按账号（stuid）返回当前角色，同一通行证下只有一个该游戏角色时
+       它和 role 接口等价，而且不会触发 1034 验证码。只有同一 stuid 下确实绑了
+       多个同游戏角色时，才用 dailyNote/note 的 role 接口区分。 */
+    const roleCount = entry?.stuid ? this.countGameRoles(e, game, entry.stuid) : 1;
+    const useRoleEndpoint = !!uidOverride && String(uid) !== String(defaultUid || '') && roleCount > 1;
     const reqCk = await ensureCookieToken(e, sk, entry || this.getStokenEntry(e, uid));
-    logger.error(`[TL-note] ck ${game} uid=${uid} len=${String(reqCk).length}`);
+    if (config().debug) logger.mark(`[HoYoGet][TL] ck ${game} uid=${uid} len=${String(reqCk).length}`);
     let headers = mhy.getHeaders(e, reqCk, useRoleEndpoint ? true : false);
     let url = game == 'gs' && useRoleEndpoint
       ? `${this.gsDailyNoteUrl}?server=${encodeURIComponent(entry?.region || mhy.getServer(uid, 'gs') || 'cn_gf01')}&role_id=${encodeURIComponent(uid)}`
@@ -595,11 +679,11 @@ export class TL extends plugin {
           ? `${this.zzzNoteUrl}?server=${encodeURIComponent(entry?.region || mhy.getServer(uid, 'zzz') || 'prod_gf_cn')}&role_id=${encodeURIComponent(uid)}`
           : game == 'gs' ? this.gsUrl : game == 'sr' ? this.srUrl : this.zzzUrl;
     if (config().debug && uidOverride) logger.mark(`[HoYoGet][TL] ${game} uid=${uid} roleEndpoint=${useRoleEndpoint} url=${url}`);
-    let res = await fetch(url, {
+    let res = await mhyFetch(url, {
       method: 'get',
       headers,
     }).then(res => res.json());
-    logger.error(`[TL-note] res ${game} uid=${uid} retcode=${res?.retcode} msg=${res?.message}`);
+    if (config().debug) logger.mark(`[HoYoGet][TL] res ${game} uid=${uid} retcode=${res?.retcode} msg=${res?.message}`);
     if ([-10001, 10001, -100].includes(res?.retcode)) {
       if (!san) {
         e.reply('登录验证过期。请重新：扫码绑定 ');
@@ -617,8 +701,8 @@ export class TL extends plugin {
       res.data.stamina_recover_time ||
       res.data.energy?.restore;
     if (!time) time = 0;
-    const roleHeaders = uidOverride ? mhy.getHeaders(e, sk, false) : headers;
-    let game_ = await this.getGameDate(e, roleHeaders, uid);
+    const roleHeaders = uidOverride ? mhy.getHeaders(e, reqCk, false) : headers;
+    let game_ = await this.getGameDate(e, roleHeaders, uid, game, reqCk);
     //派遣，委托 是否全部完成
     if (res.data.expeditions?.length) {
       res.data.expeditions_ = res.data.expeditions.every(
@@ -634,24 +718,47 @@ export class TL extends plugin {
     return data;
   }
 
-  async getGameDate(e, headers, uid) {
+  async getGameDate(e, headers, uid, game = 'gs', ck = '') {
+    const cached = getCachedStokenRole(e.user_id, uid);
+    if (cached?.nickname && cached?.level) return { level: cached.level, name: cached.nickname };
     headers.DS = mhy.getDs();
     let res = await api(e, {
       type: 'GameRoles',
       headers: headers,
       silent: true,
     });
-    let data;
-    if (!Array.isArray(res?.data?.list)) return data;
-    res.data.list.forEach(v => {
-      if (v.game_uid == uid) {
-        data = {
-          level: v.level,
-          name: v.nickname,
+    const role = res?.data?.list?.find(v => String(v.game_uid) === String(uid));
+    if (role?.level && role?.nickname) {
+      saveCachedStokenRole(e.user_id, uid, role);
+      return { level: role.level, name: role.nickname };
+    }
+
+    const entry = this.getStokenEntry(e, uid);
+    const gameBiz = entry?.game_biz || { gs: 'hk4e_cn', sr: 'hkrpg_cn', zzz: 'nap_cn' }[game];
+    if (!gameBiz || !ck) return role ? { level: role.level || 0, name: role.nickname || '未知' } : undefined;
+    try {
+      const query = new URLSearchParams({
+        game_biz: gameBiz,
+        region: entry?.region || mhy.getServer(uid, game),
+        game_uid: String(uid),
+      });
+      const profile = await mhyFetch(`https://api-takumi.mihoyo.com/binding/api/getUserGameRolesByCookie?${query}`, {
+        method: 'GET',
+        headers: mhy.getHeaders(e, ck, false),
+      }).then(response => response.json());
+      const matched = profile?.data?.list?.find(v => String(v.game_uid) === String(uid));
+      if (matched) {
+        const result = {
+          level: matched.level || role?.level || 0,
+          nickname: matched.nickname || role?.nickname || '',
         };
+        saveCachedStokenRole(e.user_id, uid, result);
+        return { level: result.level, name: result.nickname || '未知' };
       }
-    });
-    return data;
+    } catch (err) {
+      logger.debug?.(`[HoYoGet][TL] ${game} UID ${uid} 昵称等级补取失败：${err?.message || err}`);
+    }
+    return role ? { level: role.level || 0, name: role.nickname || '未知' } : undefined;
   }
 }
 

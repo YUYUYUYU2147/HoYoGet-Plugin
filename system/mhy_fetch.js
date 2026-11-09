@@ -146,6 +146,11 @@ async function viaProxy(url, obj) {
             if (Number(j?.retcode) === -1 && /暂不(支持|不支持)|暂不不支持/.test(String(j?.message || ''))) {
                 return null;
             }
+            /* 代理对不支持的接口会回 HTTP 200 + retcode 405「method not allowed」。
+               这不是米游社的响应，必须丢掉，否则会把直连的 -100 覆盖成 405。 */
+            if (Number(j?.retcode) === 405 || /method not allowed/i.test(String(j?.message || ''))) {
+                return null;
+            }
         } catch (_) {
             // 代理自己出问题时也会吐非 JSON，那就当没代理到
             return null;

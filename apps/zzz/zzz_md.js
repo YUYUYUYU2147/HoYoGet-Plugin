@@ -100,7 +100,9 @@ export class zzz extends plugin {
                 fldp, fl, jmmd, md, bb, uid, qq, name, level
             }, { e, ret: true })
             /* ret:true 时正常返回发送结果；若返回的是图片本身说明内部没发成功，兜底再发一次 */
-            if (sent && typeof sent === 'object' && sent.file) {
+            if (Buffer.isBuffer(sent)) {
+                await e.reply(segment.image(sent))
+            } else if (sent && typeof sent === 'object' && sent.file) {
                 await e.reply(sent)
             }
         } catch (err) {
