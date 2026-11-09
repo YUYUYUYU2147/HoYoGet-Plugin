@@ -31,6 +31,49 @@ const GAMES = {
   '*': { key: 'sr', name: '星铁', prefix: 'hsr' },
   '%': { key: 'zzz', name: '绝区零', prefix: 'zzz' },
 }
+const ZZZ_GACHA_ID = '2c1f5692fdfbb733a08733f9eb69d32aed1d37'
+const ZZZ_PLUGIN_POOL_TYPES = {
+  独家频段: '2', 独家重映: '102', 音擎频段: '3', 音擎回响: '103', 常驻频段: '1', 邦布频段: '5',
+  独家频段导入: '2', 独家重映导入: '102', 音擎频段导入: '3', 音擎回响导入: '103', 常驻频段导入: '1', 邦布频段导入: '5',
+}
+let zzzItemIdMaps
+
+function getZzzItemIdMaps() {
+  if (zzzItemIdMaps) return zzzItemIdMaps
+  const readMap = (file, fields) => {
+    const data = readJson(path.join(ROOT, 'resources/zzz/map', file)) || {}
+    const map = new Map()
+    for (const [id, item] of Object.entries(data)) {
+      for (const field of fields) if (item?.[field]) map.set(String(item[field]).trim(), String(id))
+    }
+    return map
+  }
+  zzzItemIdMaps = {
+    role: readMap('PartnerId2Data.json', ['name', 'full_name']),
+    weapon: readMap('WeaponId2Data.json', ['Name']),
+    bangboo: readMap('BangbooId2Data.json', ['CHS']),
+  }
+  return zzzItemIdMaps
+}
+
+function zzzItemId(row = {}, fallback = {}) {
+  const current = String(row.item_id || fallback.item_id || '')
+  if (/^[1-9]\d*$/.test(current)) return current
+  const name = String(row.name || fallback.name || '').trim()
+  const type = String(row.item_type || fallback.item_type || '')
+  const maps = getZzzItemIdMaps()
+  const map = /邦布/.test(type) ? maps.bangboo : /音擎|武器/.test(type) ? maps.weapon : maps.role
+  return map.get(name) || ''
+}
+
+function zzzUigfType(type) {
+  const value = String(type || '')
+  return ({
+    1: '2', 2: '102', 3: '3', 4: '103', 5: '1', 6: '5',
+    1001: '1', 2001: '2', 12001: '102', 12002: '102',
+    3001: '3', 13001: '103', 13002: '103', 5001: '5',
+  })[value] || value
+}
 
 const readJson = file => {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')) } catch { return null }
@@ -118,7 +161,7 @@ function srSummaryToList (data, uid) {
 /** 绝区零 zzz_plugin 逐抽 → UIGF list（item 已带 gacha_type） */
 function zzzFullToList (data, uid) {
   const out = []
-  for (const rows of Object.values(data || {})) {
+  for (const [poolName, rows] of Object.entries(data || {})) {
     for (const row of Array.isArray(rows) ? rows : []) {
       if (!row?.id) continue
       // ZZZ-Plugin 落盘的 rank_type 比官方 UIGF 少 1（它的 4=五星 S、3=四星 A、2=三星 B），
@@ -127,9 +170,9 @@ function zzzFullToList (data, uid) {
       const rank = Number.isFinite(rawRank) && rawRank >= 2 && rawRank <= 4 ? rawRank + 1 : (rawRank || 3)
       out.push({
         uid: String(row.uid || uid),
-        gacha_id: String(row.gacha_id || ''),
-        gacha_type: String(row.gacha_type || ''),
-        item_id: String(row.item_id || ''),
+        gacha_id: ZZZ_GACHA_ID,
+        gacha_type: ZZZ_PLUGIN_POOL_TYPES[poolName] || zzzUigfType(row.gacha_type),
+        item_id: zzzItemId(row),
         count: String(row.count || '1'),
         time: String(row.time || ''),
         name: String(row.name || '未知'),
@@ -217,19 +260,23 @@ function collect (game) {
         const list = []
         for (const pool of Object.values(sum.pools || {})) {
           const fiveIds = new Set((pool.records || []).map(r => String(r?.id || '')))
-          for (const row of [...(pool.records || []), ...(pool.fourLog || [])]) {
+          const fourIds = new Set((pool.fourLog || []).map(r => String(r?.id || '')))
+          for (const row of [...(pool.records || []), ...(pool.fourLog || []), ...(pool.threeLog || [])]) {
             const id = String(row?.id || '')
             if (!id) continue
             const isFive = fiveIds.has(id)
+            const isFour = fourIds.has(id)
             list.push({
               uid: String(uidDir),
-              gacha_type: String(pool.type || ''),
+              gacha_id: ZZZ_GACHA_ID,
+              gacha_type: zzzUigfType(pool.type),
+              item_id: zzzItemId(row),
               count: isFive ? String(Number(row.gacha_count) || 1) : '1',
               time: String(row.time || ''),
               name: String(row.name || '未知'),
               lang: 'zh-cn',
               item_type: String(row.item_type || ''),
-              rank_type: isFive ? '5' : '4',
+              rank_type: isFive ? '5' : (isFour ? '4' : '3'),
               is_up: isFive ? !!row.is_up : false,
               id,
             })
@@ -365,7 +412,16 @@ export class gacha_export extends plugin {
       if (others.length) e.reply(`（该账号有多个${game.name} UID，已导出记录最多的 ${uid}；其它：${others.join(' / ')}，可加 UID 单独导出）`)
     }
 
-    const list = [...hit.list].sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0))
+    const seenIds = new Set()
+    const uniqueRows = game.key === 'zzz'
+      ? hit.list.filter(row => {
+          const id = String(row.id || '')
+          if (!id || seenIds.has(id)) return false
+          seenIds.add(id)
+          return true
+        })
+      : hit.list
+    const list = [...uniqueRows].sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0))
     const payload = {
       info: {
         uid: String(uid),
@@ -374,6 +430,7 @@ export class gacha_export extends plugin {
         export_time: now(),
         export_app: 'HoYoGet',
         export_app_version: 'HoYoGet',
+        ...(game.key === 'zzz' ? { zzz_gacha_type_map: 'uigf-v4' } : {}),
       },
       list,
     }
@@ -385,7 +442,7 @@ export class gacha_export extends plugin {
 
     const five = list.filter(x => x.rank_type === '5').length
     // summary 只有五星/四星，缺 3 星逐抽；导入目标工具后会被当成「每金一抽」。给个明确警告。
-    const partial = /统计/.test(hit.source)
+    const partial = /统计/.test(hit.source) && !list.some(x => String(x.rank_type) === '3')
     const warn = partial
       ? `${'\n'}⚠️ 本次是「五星/四星统计」版，缺少三星逐抽，导入目标工具会显示异常（像每金一抽）。建议先更新全量记录再导出。`
       : ''

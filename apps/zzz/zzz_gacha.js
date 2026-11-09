@@ -50,6 +50,38 @@ const ZZZ_POOLS = [
   { type: '5', key: 'GachaType_Permanent', name: '常驻频段', hint: '代理人', initLogType: '1001', baseType: '2' },
   { type: '6', key: 'GachaType_Bangboo', name: '邦布频段', hint: '邦布', initLogType: '5001', baseType: '2' },
 ]
+const ZZZ_UIGF_POOL_TYPE = { '1': '2', '2': '102', '3': '3', '4': '103', '5': '1', '6': '5' }
+let zzzGachaItemIdMaps
+
+function getZzzGachaItemIdMaps() {
+  if (zzzGachaItemIdMaps) return zzzGachaItemIdMaps
+  const read = (file, fields) => {
+    try {
+      const data = JSON.parse(fs.readFileSync(path.join(PLUGIN_ROOT, 'resources/zzz/map', file), 'utf8'))
+      const map = new Map()
+      for (const [id, item] of Object.entries(data || {})) {
+        for (const field of fields) if (item?.[field]) map.set(String(item[field]).trim(), String(id))
+      }
+      return map
+    } catch { return new Map() }
+  }
+  zzzGachaItemIdMaps = {
+    role: read('PartnerId2Data.json', ['name', 'full_name']),
+    weapon: read('WeaponId2Data.json', ['Name']),
+    bangboo: read('BangbooId2Data.json', ['CHS']),
+  }
+  return zzzGachaItemIdMaps
+}
+
+function zzzGachaItemId(row = {}, fallback = {}) {
+  const id = String(row.item_id || fallback.item_id || '')
+  if (/^[1-9]\d*$/.test(id)) return id
+  const name = String(row.name || fallback.name || '').trim()
+  const type = String(row.item_type || fallback.item_type || '')
+  const maps = getZzzGachaItemIdMaps()
+  const map = /邦布/.test(type) ? maps.bangboo : /音擎|武器/.test(type) ? maps.weapon : maps.role
+  return map.get(name) || ''
+}
 
 // 工坊云端池字段 -> 本插件卡池 key
 const WORKSHOP_POOL_MAP = {
@@ -215,6 +247,8 @@ function buildZzzPool(type, pool, rows) {
     name: pool?.name || type,
     records: [],
     fourLog: [],
+    // 三星不参与卡片统计，但必须保留逐抽明细，UIGF 导出和第三方保底计算需要它。
+    threeLog: [],
     pity: 0,
     fourPity: 0,
     totalPulls: 0,
@@ -235,6 +269,7 @@ function buildZzzPool(type, pool, rows) {
   let fourNum = 0
   const fiveRecs = []
   const fourRecs = []
+  const threeRecs = []
   for (const row of rows) {
     pulls++
     fourPulls++
@@ -243,6 +278,7 @@ function buildZzzPool(type, pool, rows) {
     if (rank === '5') {
       fiveRecs.push({
         id: String(row.id || ''),
+        item_id: String(row.item_id || ''),
         name: row.name || '未知',
         item_type: itemType,
         is_up: false,
@@ -256,6 +292,7 @@ function buildZzzPool(type, pool, rows) {
       if (fourRecs.length < 10) {
         fourRecs.push({
           id: String(row.id || ''),
+          item_id: String(row.item_id || ''),
           name: row.name || '未知',
           item_type: itemType,
           is_up: false,
@@ -265,6 +302,17 @@ function buildZzzPool(type, pool, rows) {
         })
       }
       fourPulls = 0
+    } else if (rank === '3') {
+      threeRecs.push({
+        id: String(row.id || ''),
+        item_id: String(row.item_id || ''),
+        name: row.name || '未知',
+        item_type: itemType,
+        is_up: false,
+        gacha_count: 0,
+        time: row.time || '',
+        icon: row.icon || '',
+      })
     }
   }
   fourRecs.sort((a, b) => String(b.time).localeCompare(String(a.time)))
@@ -273,6 +321,8 @@ function buildZzzPool(type, pool, rows) {
     ...base,
     records: fiveRecs.slice().reverse(),
     fourLog: fourRecs,
+    threeLog: threeRecs,
+    threeNum: threeRecs.length,
     fourNum,
     pity: pulls,
     fourPity: fourPulls,
@@ -512,7 +562,7 @@ function readZzzPluginRows(uid) {
  * 抽数统计：沿用工坊的总抽数，不被逐抽条数覆盖（工坊覆盖三年，逐抽只有半年）。
  */
 function mergeZzzPluginPools(pools, pluginData) {
-  const result = { fourAdded: 0, fiveAdded: 0, seen: 0 }
+  const result = { fourAdded: 0, threeAdded: 0, fiveAdded: 0, seen: 0 }
   for (const [ poolName, key ] of Object.entries(ZZZ_PLUGIN_POOL_MAP)) {
     const rows = Array.isArray(pluginData?.[poolName]) ? pluginData[poolName] : []
     const pool = pools?.[key]
@@ -526,6 +576,7 @@ function mergeZzzPluginPools(pools, pluginData) {
     let pulls = 0
     let fourPulls = 0
     const fourRecs = []
+    const threeRecs = []
     const fiveRecs = []
     for (const row of sorted) {
       pulls++
@@ -534,6 +585,7 @@ function mergeZzzPluginPools(pools, pluginData) {
       const rank = ZZZ_PLUGIN_RANK_MAP[String(row?.rank_type)]
       const base = {
         id: String(row?.id || ''),
+        item_id: String(row?.item_id || ''),
         name: row?.name || '未知',
         item_type: zzzItemType(row),
         is_up: false,
@@ -547,8 +599,9 @@ function mergeZzzPluginPools(pools, pluginData) {
       } else if (rank === '4') {
         fourRecs.push({ ...base, gacha_count: fourPulls })
         fourPulls = 0
+      } else if (rank === '3') {
+        threeRecs.push(base)
       }
-      // 三星不入库：卡片统计只认四星与五星
     }
     const existIds = new Set((pool.fourLog || []).map(r => String(r.id)))
     const addFour = fourRecs.filter(r => r.id && !existIds.has(r.id))
@@ -557,6 +610,14 @@ function mergeZzzPluginPools(pools, pluginData) {
         .sort((a, b) => String(b.time).localeCompare(String(a.time)))
       pool.fourNum = pool.fourLog.length
       result.fourAdded += addFour.length
+    }
+    const existThreeIds = new Set((pool.threeLog || []).map(r => String(r.id)))
+    const addThree = threeRecs.filter(r => r.id && !existThreeIds.has(r.id))
+    if (addThree.length) {
+      pool.threeLog = [ ...(pool.threeLog || []), ...addThree ]
+        .sort((a, b) => String(b.time).localeCompare(String(a.time)))
+      pool.threeNum = pool.threeLog.length
+      result.threeAdded = (result.threeAdded || 0) + addThree.length
     }
     if (fourPulls > 0) pool.fourPity = fourPulls
     // 五星仅补缺（工坊历史更长，正常情况下不会命中）
@@ -601,6 +662,8 @@ function convertWorkshopPools(analysis, nameHint) {
       name: def.name,
       records,
       fourLog: [],
+      threeLog: [],
+      threeNum: 0,
       fourNum: (Number(p.four_role_total || 0) || 0) + (Number(p.four_guang_total || 0) || 0),
       fourPity: 0,
       pity: Number(p?.dian_card_infos?.draw_total || 0) || 0,
@@ -621,7 +684,9 @@ function mergeWorkshopPools(oldPools, newPools) {
     const old = oldPools?.[key]
     if (!old) continue
     newPools[key] = recountPool(newPools[key], unionRecords(getPoolRecords(old), getPoolRecords(newPools[key])))
-    if (!newPools[key].fourLog?.length) newPools[key].fourLog = old.fourLog || []
+    newPools[key].fourLog = unionRecords(old.fourLog || [], newPools[key].fourLog || [])
+    newPools[key].threeLog = unionRecords(old.threeLog || [], newPools[key].threeLog || [])
+    newPools[key].threeNum = newPools[key].threeLog.length
     if (!newPools[key].fourNum) newPools[key].fourNum = old.fourNum || 0
     if (!newPools[key].fourPity) newPools[key].fourPity = old.fourPity || 0
   }
@@ -1099,33 +1164,67 @@ export class zzz_gacha extends plugin {
     if (auth.error) return e.reply(auth.error)
     const data = readData(getDataFile(auth.uid, auth.qq))
     if (!data?.pools) return e.reply('暂无绝区零抽卡记录，请先发送【#米哈游绝区零更新抽卡记录】')
+    // 工坊摘要历史可能没有三星；若本机已有 ZZZ-Plugin 逐抽文件，导出时直接补入，
+    // 不改动卡片统计，也不要求用户先执行「导入四星」。
+    const pluginRows = readZzzPluginRows(auth.uid) || {}
+    const pluginByPool = new Map(Object.entries(ZZZ_PLUGIN_POOL_MAP).map(([name, key]) => [key, Array.isArray(pluginRows[name]) ? pluginRows[name] : []]))
+    const pluginById = new Map(Object.values(pluginRows).flat().filter(row => row?.id).map(row => [String(row.id), row]))
     const list = []
+    const listIndexById = new Map()
+    const listPriorityById = new Map()
     for (const meta of ZZZ_POOLS) {
       const pool = data.pools[meta.key]
       if (!pool) continue
       const fiveIds = new Set((pool.records || []).map(r => String(r?.id || '')))
+      const fourIds = new Set((pool.fourLog || []).map(r => String(r?.id || '')))
       const seen = new Set()
-      for (const row of [...(pool.records || []), ...(pool.fourLog || [])]) {
+      const localRows = [...(pool.records || []), ...(pool.fourLog || []), ...(pool.threeLog || [])]
+      const known = new Set(localRows.map(r => String(r?.id || '')).filter(Boolean))
+      const pluginExtras = []
+      const pluginExtraIds = new Set()
+      for (const source of pluginByPool.get(meta.key) || []) {
+        const id = String(source?.id || '')
+        if (!id || known.has(id)) continue
+        const rawRank = Number(source?.rank_type)
+        const rank = rawRank >= 2 && rawRank <= 4 ? String(rawRank + 1) : ''
+        if (!rank) continue
+        pluginExtras.push({ ...source, rank_type: rank, item_id: zzzGachaItemId(source) })
+        pluginExtraIds.add(id)
+        known.add(id)
+      }
+      for (const row of [...localRows, ...pluginExtras]) {
         const id = String(row?.id || '')
         if (!id || seen.has(id)) continue
         seen.add(id)
         const isFive = fiveIds.has(id)
-        list.push({
+        const isFour = fourIds.has(id)
+        const exported = {
           uid: String(auth.uid),
           gacha_id: '2c1f5692fdfbb733a08733f9eb69d32aed1d37',
-          gacha_type: meta.type,
-          item_id: '',
+          // 使用 UIGF 4.2 的标准/复刻扩展类型，避免内部池编号被第三方 schema 拒收。
+          gacha_type: ZZZ_UIGF_POOL_TYPE[meta.type] || meta.type,
+          item_id: zzzGachaItemId(row, pluginById.get(id)),
           count: isFive ? String(Number(row.gacha_count) || 1) : '1',
           time: String(row.time || ''),
           name: String(row.name || '未知'),
           lang: 'zh-cn',
           item_type: String(row.item_type || meta.hint),
-          rank_type: isFive ? '5' : '4',
+          rank_type: pluginExtraIds.has(id) ? String(row.rank_type) : (isFive ? '5' : (isFour ? '4' : '3')),
           // UP 标记非 UIGF 标准字段：官方侧无此概念，但丢掉会导致导入后全部变歪，
           // 故原样带出并在导入时读回
           is_up: isFive ? !!row.is_up : false,
           id,
-        })
+        }
+        const priority = pluginExtraIds.has(id) ? 0 : 1
+        const existingIndex = listIndexById.get(id)
+        if (existingIndex === undefined) {
+          listIndexById.set(id, list.length)
+          listPriorityById.set(id, priority)
+          list.push(exported)
+        } else if (priority > listPriorityById.get(id)) {
+          list[existingIndex] = exported
+          listPriorityById.set(id, priority)
+        }
       }
     }
     if (!list.length) return e.reply('本地没有可导出的逐抽记录')
@@ -1137,6 +1236,7 @@ export class zzz_gacha extends plugin {
         uigf_version: 'v2.3',
         export_time: formatNow(),
         export_app: 'HoYoGet',
+        zzz_gacha_type_map: 'uigf-v4',
       },
       list,
     }
@@ -1223,8 +1323,13 @@ export class zzz_gacha extends plugin {
     if (!old?.pools) return e.reply('尚无本插件的绝区零抽卡数据，请先发送【#米哈游绝区零更新抽卡记录】')
     // 卡池归属按 UIGF 的 gacha_type；认不出的一律跳过，不硬塞进某个池
     const grouped = {}
+    const isCanonicalUigf = json?.info?.zzz_gacha_type_map === 'uigf-v4'
     for (const row of list) {
-      const meta = ZZZ_POOLS.find(p => p.type === String(row?.gacha_type))
+      const sourceType = String(row?.gacha_type || '')
+      const type = isCanonicalUigf
+        ? ({ '1': '5', '2': '1', '102': '2', '103': '4', '5': '6' }[sourceType] || sourceType)
+        : ({ '102': '2', '103': '4', '13001': '4', '13002': '4' }[sourceType] || sourceType)
+      const meta = ZZZ_POOLS.find(p => p.type === type)
       if (!meta) continue
       if (!grouped[meta.key]) grouped[meta.key] = []
       grouped[meta.key].push(row)
@@ -1236,9 +1341,11 @@ export class zzz_gacha extends plugin {
       if (!rows?.length) continue
       const pool = old.pools[meta.key]
       if (!pool) continue
-      // 四星条目一并并入 fourLog，否则导出的明细导回后会只剩五星
-      const four = rows.filter(r => String(r.rank_type) !== '5')
+      // 四星、三星都要保留逐抽明细；三星不参与卡片统计，但第三方保底计算需要它。
+      const four = rows.filter(r => String(r.rank_type) === '4')
+      const three = rows.filter(r => String(r.rank_type) === '3')
       if (four.length) {
+        const oldFourCount = (pool.fourLog || []).length
         const mergedFour = unionRecords(pool.fourLog || [], four.map(r => ({
           id: String(r.id || ''),
           name: r.name || '未知',
@@ -1249,10 +1356,26 @@ export class zzz_gacha extends plugin {
         })))
         pool.fourLog = mergedFour.sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0))
         pool.fourNum = mergedFour.length
+        added += Math.max(0, mergedFour.length - oldFourCount)
+      }
+      if (three.length) {
+        const mergedThree = unionRecords(pool.threeLog || [], three.map(r => ({
+          id: String(r.id || ''),
+          item_id: String(r.item_id || ''),
+          name: r.name || '未知',
+          item_type: r.item_type || meta.hint,
+          gacha_count: 0,
+          time: String(r.time || ''),
+          icon: '',
+        })))
+        const oldThreeCount = (pool.threeLog || []).length
+        pool.threeLog = mergedThree.sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0))
+        pool.threeNum = pool.threeLog.length
+        added += Math.max(0, pool.threeLog.length - oldThreeCount)
       }
       const five = rows.filter(r => String(r.rank_type) === '5')
       if (!five.length) {
-        detail.push(`【${meta.name}】四星+${four.length}`)
+        detail.push(`【${meta.name}】四星+${four.length}，三星+${three.length}`)
         continue
       }
       const merged = unionRecords(pool.records || [], five.map(r => ({
@@ -1270,7 +1393,7 @@ export class zzz_gacha extends plugin {
       // 用 recountPool 会拿 countTotal 反推总抽数，把本地已有的工坊口径直接冲掉
       pool.records = merged.sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0))
       pool.fiveNum = pool.records.length
-      detail.push(`【${meta.name}】五星+${grow}${four.length ? `，四星+${four.length}` : ''}`)
+      detail.push(`【${meta.name}】五星+${grow}${four.length ? `，四星+${four.length}` : ''}${three.length ? `，三星+${three.length}` : ''}`)
     }
     if (!added) return e.reply('没有新记录可导入（按 id 判重后已全部存在）')
     saveData(file, { ...old, pools: fillZzzIcons(old.pools), update_time: formatNow() })
@@ -1296,15 +1419,15 @@ export class zzz_gacha extends plugin {
     const old = readData(file)
     if (!old?.pools) return e.reply('尚无本插件的绝区零抽卡数据，请先发送【#米哈游绝区零更新工坊记录】')
     const result = mergeZzzPluginPools(old.pools, pluginData)
-    if (!result.fourAdded && !result.fiveAdded) {
-      await e.reply(`UID:${uid}\n没有新的四星明细可导入（四星明细 ${Object.values(old.pools).reduce((s, p) => s + (p.fourLog || []).length, 0)} 条）`)
+    if (!result.fourAdded && !result.threeAdded && !result.fiveAdded) {
+      await e.reply(`UID:${uid}\n没有新的逐抽明细可导入（四星 ${Object.values(old.pools).reduce((s, p) => s + (p.fourLog || []).length, 0)} 条，三星 ${Object.values(old.pools).reduce((s, p) => s + (p.threeLog || []).length, 0)} 条）`)
       return true
     }
     saveData(file, { ...old, pools: fillZzzIcons(old.pools), update_time: formatNow() })
     const detail = Object.values(old.pools)
       .map(p => `【${p.name}】${(p.fourLog || []).length}条`)
       .join('，')
-    await e.reply(`UID:${uid}\n导入完成：四星明细新增${result.fourAdded}条${result.fiveAdded ? `，五星补${result.fiveAdded}条` : ''}\n${detail}`)
+    await e.reply(`UID:${uid}\n导入完成：四星新增${result.fourAdded}条${result.threeAdded ? `，三星新增${result.threeAdded}条` : ''}${result.fiveAdded ? `，五星补${result.fiveAdded}条` : ''}\n${detail}`)
     await this.render(e, [], 'grid')
     return true
   }
