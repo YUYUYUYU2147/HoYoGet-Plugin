@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { pluginPriority } from '#HoYoGet'
+import { getEventNoteUser } from '../../system/genshin_loader.js'
 
 /**
  * HoYoGet 独立抽卡记录导出。
@@ -23,6 +24,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '../..')
 const SR_DIR = path.join(ROOT, 'data/sr_gacha')
 const ZZZ_DIR = path.join(ROOT, 'data/zzz_gacha')
+const MYS_ZZZ_DIR = path.resolve(ROOT, '../../data/Mys-plugin/gachaJson/zzz')
 const GS_DIR = path.join(ROOT, 'data/gs_gacha')
 const TMP_DIR = path.join(ROOT, 'temp/gacha-export')
 
@@ -186,6 +188,62 @@ function zzzFullToList (data, uid) {
   return out
 }
 
+/** HoYoGet 合并后的绝区零 summary（包含工坊统计和可补齐的逐抽明细）→ UIGF list */
+function zzzSummaryToList (data, uid) {
+  const out = []
+  for (const pool of Object.values(data?.pools || {})) {
+    const fiveIds = new Set((pool.records || []).map(r => String(r?.id || '')))
+    const fourIds = new Set((pool.fourLog || []).map(r => String(r?.id || '')))
+    for (const row of [...(pool.records || []), ...(pool.fourLog || []), ...(pool.threeLog || [])]) {
+      const id = String(row?.id || '')
+      if (!id) continue
+      const isFive = fiveIds.has(id)
+      const isFour = fourIds.has(id)
+      out.push({
+        uid: String(uid),
+        gacha_id: ZZZ_GACHA_ID,
+        gacha_type: zzzUigfType(pool.type),
+        item_id: zzzItemId(row),
+        count: isFive ? String(Number(row.gacha_count) || 1) : '1',
+        time: String(row.time || ''),
+        name: String(row.name || '未知'),
+        lang: 'zh-cn',
+        item_type: String(row.item_type || ''),
+        rank_type: isFive ? '5' : (isFour ? '4' : '3'),
+        is_up: isFive ? !!row.is_up : false,
+        id,
+      })
+    }
+  }
+  return out
+}
+
+/** Mys-plugin archive contains full ZZZ pulls; Moonward computes pity from the pull sequence. */
+function mysZzzFullToList (data, uid) {
+  const list = data?.nap?.find?.(account => String(account?.uid || '') === String(uid))?.list
+  if (!Array.isArray(list) || !list.length) return []
+  return list.filter(row => row?.id).map(row => {
+    const nativeRank = Number(row.rank_type)
+    return {
+      uid: String(uid),
+      gacha_id: String(row.gacha_id || ZZZ_GACHA_ID),
+      gacha_type: String(row.gacha_type || ''),
+      item_id: zzzItemId(row),
+      count: '1',
+      time: String(row.time || ''),
+      name: String(row.name || '未知'),
+      lang: row.lang || 'zh-cn',
+      item_type: String(row.item_type || ''),
+      rank_type: ({ 4: '5', 3: '4', 2: '3' })[nativeRank] || String(row.rank_type || ''),
+      id: String(row.id),
+    }
+  })
+}
+
+function readMysZzzFull (uid) {
+  return readJson(path.join(MYS_ZZZ_DIR, `${uid}.json`))
+}
+
 /** 原神 gs_gacha/<uid>.json（只有五星+垫抽）→ UIGF list */
 function gsToList (data, uid) {
   const out = []
@@ -257,31 +315,7 @@ function collect (game) {
         if (!isUid(uidDir)) continue
         const sum = readJson(path.join(ZZZ_DIR, qqDir, uidDir, 'summary.json'))
         if (!sum) continue
-        const list = []
-        for (const pool of Object.values(sum.pools || {})) {
-          const fiveIds = new Set((pool.records || []).map(r => String(r?.id || '')))
-          const fourIds = new Set((pool.fourLog || []).map(r => String(r?.id || '')))
-          for (const row of [...(pool.records || []), ...(pool.fourLog || []), ...(pool.threeLog || [])]) {
-            const id = String(row?.id || '')
-            if (!id) continue
-            const isFive = fiveIds.has(id)
-            const isFour = fourIds.has(id)
-            list.push({
-              uid: String(uidDir),
-              gacha_id: ZZZ_GACHA_ID,
-              gacha_type: zzzUigfType(pool.type),
-              item_id: zzzItemId(row),
-              count: isFive ? String(Number(row.gacha_count) || 1) : '1',
-              time: String(row.time || ''),
-              name: String(row.name || '未知'),
-              lang: 'zh-cn',
-              item_type: String(row.item_type || ''),
-              rank_type: isFive ? '5' : (isFour ? '4' : '3'),
-              is_up: isFive ? !!row.is_up : false,
-              id,
-            })
-          }
-        }
+        const list = zzzSummaryToList(sum, uidDir)
         if (list.length && !result.has(uidDir)) result.set(uidDir, { list, source: '在线统计' })
       }
     }
@@ -347,6 +381,10 @@ export class gacha_export extends plugin {
       priority: pluginPriority('gacha_export', -900),
       rule: [
         {
+          reg: '^(?:%|％|#?绝区零)?[ \\t]*Moonward导出抽卡记录(?:[ \\t]+(\\d{6,12}))?[ \\t]*$',
+          fnc: 'exportMoonwardLog'
+        },
+        {
           // 指令分发前框架会把星铁前缀 `*` 改写成 `#星铁`、绝区零 `%` 改写成 `#绝区零`，
           // 所以这里同时认原始前缀和改写后的形式。
           reg: '^(?:[#\\*%％]|#?(?:星铁|绝区零|绝区|原神))?[ \\t]*导出抽卡记录(?:[ \\t]+(\\d{6,12}))?[ \\t]*$',
@@ -354,6 +392,90 @@ export class gacha_export extends plugin {
         },
       ],
     })
+  }
+
+  async exportMoonwardLog (e) {
+    const msg = String(e.msg || '').trim()
+    const m = msg.match(/^(?:%|％|#?绝区零)?[ \t]*Moonward导出抽卡记录(?:[ \t]+(\d{6,12}))?[ \t]*$/i)
+    if (!m) return false
+    const wantUid = m[1] || ''
+    const found = collect('zzz')
+    if (!found.size) {
+      return e.reply('暂无绝区零抽卡记录，请先更新抽卡记录后再导出。')
+    }
+
+    let currentUid = ''
+    try {
+      const noteUser = await getEventNoteUser(e)
+      const selected = String(noteUser?.getUid?.('zzz') || '')
+      if (isUid(selected)) currentUid = selected
+    } catch {}
+    const uid = wantUid || currentUid
+    if (!uid) {
+      return e.reply(`未找到当前绑定的绝区零 UID。请指定 UID 导出。\n可选：${[...found.keys()].join(' / ')}\n用法：%Moonward导出抽卡记录 <UID>`)
+    }
+
+    const mysFullList = mysZzzFullToList(readMysZzzFull(uid), uid)
+    const fullList = found.get(uid)
+    const summary = readJson(path.join(ZZZ_DIR, String(e.user_id || ''), uid, 'summary.json'))
+    const userList = zzzSummaryToList(summary, uid)
+    const hit = mysFullList.length
+      ? { list: mysFullList, source: 'Mys-plugin 完整逐抽记录' }
+      : fullList?.source === 'ZZZ-Plugin 逐抽'
+        ? fullList
+        : userList.length
+          ? { list: userList, source: 'HoYoGet 合并记录（仅摘要）' }
+          : fullList
+    if (!hit) {
+      return e.reply(`没有 UID:${uid} 的绝区零记录。可选：${[...found.keys()].join(' / ')}\n用法：%Moonward导出抽卡记录 ${uid}`)
+    }
+
+    const seenIds = new Set()
+    const list = hit.list.filter(row => {
+      const id = String(row.id || '')
+      if (!id || seenIds.has(id)) return false
+      seenIds.add(id)
+      return true
+    }).sort((a, b) => {
+      const aid = String(a.id || '')
+      const bid = String(b.id || '')
+      if (/^\d+$/.test(aid) && /^\d+$/.test(bid)) {
+        const aa = BigInt(aid); const bb = BigInt(bid)
+        return aa < bb ? 1 : aa > bb ? -1 : 0
+      }
+      return String(b.time || '').localeCompare(String(a.time || ''))
+    }).map(row => ({
+      ...row,
+      // Moonward's ZZZ schema uses native ranks: S/A/B = 4/3/2.
+      rank_type: ({ '5': '4', '4': '3', '3': '2' })[String(row.rank_type)] || String(row.rank_type || ''),
+      // Moonward calculates pity from the complete per-pool pull sequence.
+      count: '1',
+    }))
+    const payload = {
+      info: {
+        version: 'v4.2',
+        export_timestamp: Math.floor(Date.now() / 1000),
+        export_app: 'HoYoGet',
+        export_app_version: 'HoYoGet',
+      },
+      nap: [{ uid: String(uid), timezone: 8, lang: 'zh-cn', list }],
+    }
+
+    fs.mkdirSync(TMP_DIR, { recursive: true })
+    const fileName = `HoYoGet_nap_Moonward_${uid}_${Date.now()}.json`
+    const file = path.join(TMP_DIR, fileName)
+    fs.writeFileSync(file, JSON.stringify(payload, null, '\t'), 'utf8')
+
+    const five = list.filter(row => row.rank_type === '4').length
+    const head = `绝区零 UID:${uid} Moonward 抽卡记录导出\n来源：${hit.source}\n共 ${list.length} 条（S级 ${five} 条）`
+    const sent = await sendFile(e, file, fileName)
+    if (sent) {
+      await e.reply(`✅ ${head}\n文件：${fileName}`)
+      fs.unlink(file, () => {})
+    } else {
+      await e.reply(`⚠️ ${head}\n文件发送失败（适配器不支持或网络问题）。已保存在机器人：\n${file}`)
+    }
+    return true
   }
 
   async exportLog (e) {
