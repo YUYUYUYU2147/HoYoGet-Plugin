@@ -166,6 +166,7 @@ export const supportGuoba = () => {
     ...Object.values(activityRemind.groups || {}).flatMap(v => parseGroupValue(v)),
     ...(Array.isArray(cfg.groups) ? cfg.groups : []),
     ...(Array.isArray(cfg.zzz_activity_push_groups) ? cfg.zzz_activity_push_groups : []),
+    ...parseGroupValue(cfg.zzz_remind_groups),
   ].map(v => String(v).trim()).filter(Boolean)
   /* 先把机器人内存里的群名落盘，再把仍缺名的群交给适配器补齐。
      锅巴每次读取插件列表都会重新执行这里，补到名字后下一次打开就显示真名。 */
@@ -1188,7 +1189,7 @@ export const supportGuoba = () => {
       {
         field: 'zzz_remind_enable',
         label: '绝区零挑战提醒',
-        helpMessage: '式舆防卫战 / 危局强袭战未达标时私聊提醒；个人还需发「%开启挑战提醒」开启',
+        helpMessage: '式舆防卫战 / 危局强袭战未达标时提醒；个人可发「%开启挑战提醒」开启，群聊在下面配置推送群',
         component: 'Switch',
       },
       {
@@ -1210,6 +1211,24 @@ export const supportGuoba = () => {
         helpMessage: '低于该星数视为未达标；默认 6',
         component: 'InputNumber',
         componentProps: { min: 0, max: 9, step: 1 },
+      },
+      {
+        field: 'zzz_remind_users',
+        label: '绝区零挑战提醒个人 QQ',
+        helpMessage: '每行或用逗号填写 QQ。填写后按全局阈值和提醒时间发送；也可继续用「%开启挑战提醒」管理个人设置',
+        component: 'InputTextArea',
+      },
+      {
+        field: 'zzz_remind_groups',
+        label: '绝区零挑战提醒群',
+        helpMessage: '选择接收挑战提醒的群，支持多选和手动添加「机器人QQ:群号」；清空则关闭群聊推送',
+        component: 'Select',
+        componentProps: {
+          mode: 'multiple',
+          allowAdd: true,
+          allowDel: true,
+          options: groupList,
+        },
       },
       {
         component: 'SOFT_GROUP_BEGIN',
@@ -1598,6 +1617,8 @@ export const supportGuoba = () => {
         zzz_remind_time: cfg.zzz_remind_time || '每日20时',
         zzz_remind_abyss_level: cfg.zzz_remind_abyss_level ?? 5,
         zzz_remind_deadly_stars: cfg.zzz_remind_deadly_stars ?? 6,
+        zzz_remind_users: parseMultiList(cfg.zzz_remind_users),
+        zzz_remind_groups: parseGroupValue(cfg.zzz_remind_groups),
         zzz_activity_push_start_lead: Number(cfg.zzz_activity_push_start_lead ?? 1440),
         zzz_activity_push_end_lead: Number(cfg.zzz_activity_push_end_lead ?? 2880),
         zzz_activity_push_groups: parseMultiList(cfg.zzz_activity_push_groups),
@@ -1926,6 +1947,8 @@ export const supportGuoba = () => {
       if (data.zzz_remind_time != null) yaml.set(_path + 'config.yaml', 'zzz_remind_time', String(data.zzz_remind_time || '每日20时').trim())
       if (data.zzz_remind_abyss_level != null) yaml.set(_path + 'config.yaml', 'zzz_remind_abyss_level', Number(data.zzz_remind_abyss_level) || 0)
       if (data.zzz_remind_deadly_stars != null) yaml.set(_path + 'config.yaml', 'zzz_remind_deadly_stars', Number(data.zzz_remind_deadly_stars) || 0)
+      if (has(data, 'zzz_remind_users')) yaml.set(_path + 'config.yaml', 'zzz_remind_users', parseMultiList(data.zzz_remind_users).filter(v => /^\d+$/.test(v)))
+      if (has(data, 'zzz_remind_groups')) yaml.set(_path + 'config.yaml', 'zzz_remind_groups', parseMultiList(data.zzz_remind_groups))
       if (data.zzz_activity_push_start_lead != null) yaml.set(_path + 'config.yaml', 'zzz_activity_push_start_lead', Math.min(Math.max(Number(data.zzz_activity_push_start_lead) || 1440, 5), 10080))
       if (data.zzz_activity_push_end_lead != null) yaml.set(_path + 'config.yaml', 'zzz_activity_push_end_lead', Math.min(Math.max(Number(data.zzz_activity_push_end_lead) || 2880, 5), 10080))
       if (has(data, 'zzz_activity_push_groups')) yaml.set(_path + 'config.yaml', 'zzz_activity_push_groups', parseMultiList(data.zzz_activity_push_groups))

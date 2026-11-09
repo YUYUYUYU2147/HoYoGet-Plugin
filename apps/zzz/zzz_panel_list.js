@@ -4491,6 +4491,44 @@ export class zzz_panel_list extends plugin {
     } catch { return null }
   }
 
+  /** 锅巴配置的挑战提醒个人 QQ 列表。列表为空时沿用用户自己发送「开启挑战提醒」的订阅。 */
+  zzzRemindConfiguredUsers() {
+    const value = config()?.zzz_remind_users
+    if (Array.isArray(value)) return [...new Set(value.map(v => String(v).trim()).filter(v => /^\d+$/.test(v)))]
+    return [...new Set(String(value || '').split(/[,，\s\n]+/).map(v => v.trim()).filter(v => /^\d+$/.test(v)))]
+  }
+
+  /** 锅巴配置的群推送目标，兼容「群号」与「机器人QQ:群号」。 */
+  zzzRemindConfiguredGroups() {
+    const value = config()?.zzz_remind_groups
+    const list = []
+    const add = item => {
+      const text = String(item || '').trim()
+      if (!text) return
+      const m = text.match(/^(\d+):(\d+)$/)
+      const botId = m ? m[1] : ''
+      const groupId = m ? m[2] : text
+      if (/^\d+$/.test(groupId)) list.push({ value: text, botId, groupId })
+    }
+    if (Array.isArray(value)) value.forEach(add)
+    else if (value && typeof value === 'object') {
+      for (const [botId, groups] of Object.entries(value)) {
+        const values = Array.isArray(groups) ? groups : [groups]
+        values.forEach(groupId => add(`${botId}:${groupId}`))
+      }
+    } else String(value || '').split(/[,，\s\n]+/).forEach(add)
+    return [...new Map(list.map(item => [item.value, item])).values()]
+  }
+
+  /** 根据「机器人QQ:群号」选择对应机器人；不带前缀时使用默认 Bot。 */
+  zzzRemindGroupTarget(target) {
+    const botId = String(target?.botId || '')
+    const groupId = Number(target?.groupId)
+    if (!Number.isSafeInteger(groupId) || groupId <= 0) return null
+    if (botId && globalThis.Bot?.[botId]?.pickGroup) return globalThis.Bot[botId].pickGroup(groupId, true) || globalThis.Bot[botId].pickGroup(groupId)
+    return globalThis.Bot?.pickGroup?.(groupId, true) || globalThis.Bot?.pickGroup?.(groupId)
+  }
+
   async zzzRemindSaveUserConfig(userId, value) {
     try { await redis.hSet('ZZZ:REMIND:USER_CONFIGS', String(userId), JSON.stringify(value)) } catch { /* Redis 不可用就只影响本次 */ }
   }
@@ -4553,70 +4591,79 @@ export class zzz_panel_list extends plugin {
     if (abyssCheckLevel === 0 && deadlyStars === 0 && !showAll) return []
     const e = contextE || this.e
     const uid = this.getZzzUid(e)
-    if (!uid) return ['未绑定绝区零账号']
+    if (!uid) return showAll ? ['未绑定绝区零账号'] : []
     const ck = await this.getCk(e, uid)
-    if (!ck || !Object.values(ck).some(item => item?.ck)) return ['尚未绑定 cookie']
+    if (!ck || !Object.values(ck).some(item => item?.ck)) return showAll ? ['尚未绑定 cookie'] : []
     const messages = []
     if (showAll || abyssCheckLevel > 0) {
       try {
         const raw = await this.zzzRemindFetch(e, uid, ck, 'challenge')
         const data = raw?.hadal_info_v2
         if (!data) {
-          messages.push('式舆防卫战S评级: 0/5')
+          if (showAll) messages.push('式舆防卫战：本期暂无可用挑战记录')
         } else {
           const fifth = data.brief?.rating || ''
           const floors = ['first', 'second', 'third', 'fourth']
-          let sCount = fifth.startsWith('S') ? 1 : 0
-          for (const floor of floors) if (data[`${floor}_layer_detail`]?.rating === 'S') sCount++
-          if (abyssCheckLevel === 0) {
-            if (showAll) {
-              messages.push(`式舆防卫战S评级: ${sCount}/5`)
-              messages.push(`第五层评价: ${fifth || '无'}`)
-            }
-          } else if (abyssCheckLevel < 6) {
-            const ok = sCount >= abyssCheckLevel ? ' ✓' : ''
-            if (showAll || sCount < abyssCheckLevel) {
-              messages.push(`式舆防卫战S评级: ${sCount}/5${ok}`)
-              if (fifth) messages.push(`第五层评价: ${fifth}`)
-            }
-          } else {
-            const ok = fifth === 'S+' ? ' ✓' : ''
-            if (showAll || sCount < 5 || fifth !== 'S+') {
-              messages.push(`式舆防卫战S评级: ${sCount}/5${ok}`)
-              messages.push(`第五层评价: ${fifth || '无'}${ok}`)
-            }
+          /* 快速通关层通常没有 rating 字段，但游戏内按 S 计入完成评级。
+             兼容不同接口版本的 is_fast / fast_clear / quick_clear 字段，避免
+             「前三层快速通关、后两层 S」被错误统计成 2/5。 */
+          const isFast = detail => !!(detail?.is_fast || detail?.fast_clear || detail?.quick_clear || detail?.is_quick)
+          const completedRaw = Number(data.brief?.cur_period_zone_layer_count ?? data.cur_period_zone_layer_count)
+          const completed = Math.max(0, Math.min(5, Number.isFinite(completedRaw) && completedRaw > 0 ? completedRaw : (data.pass_fifth_floor ? 5 : 0)))
+          let sCount = 0
+          for (let i = 0; i < floors.length; i++) {
+            const floor = floors[i]
+            const detail = data[`${floor}_layer_detail`] || {}
+            /* 服务端会省略前几层的快速通关详情；已完成层数范围内，缺失的
+               层就是快速通关，按 S 计入。 */
+            const rating = String(detail.rating || '')
+            if (rating.startsWith('S') || isFast(detail) || (!rating && i < completed)) sCount++
           }
-          if (data.hadal_begin_time && data.hadal_end_time) {
+          const fifthDetail = data.fitfh_layer_detail || data.fifth_layer_detail || {}
+          const fifthDetailRating = String(fifthDetail.rating || '')
+          if (String(fifth).startsWith('S') || isFast(data.brief) || fifthDetailRating.startsWith('S') || isFast(fifthDetail) || (completed >= 5 && !fifthDetailRating)) sCount++
+          const missed = abyssCheckLevel === 6
+            ? sCount < 5 || fifth !== 'S+'
+            : abyssCheckLevel > 0 && sCount < abyssCheckLevel
+          if (showAll) {
+            messages.push(`式舆防卫战S评级: ${sCount}/5`)
+            messages.push(`第五层评价: ${fifth || '无'}`)
+          } else if (missed) {
+            messages.push(abyssCheckLevel === 6
+              ? `式舆防卫战未达标：当前 S 评级 ${sCount}/5、第五层 ${fifth || '无'}；目标为 S 评级 5/5 且第五层 S+。`
+              : `式舆防卫战未达标：当前 S 评级 ${sCount}/5，目标至少 ${abyssCheckLevel}/5，还差 ${abyssCheckLevel - sCount} 层。`)
+          }
+          if ((showAll || missed) && data.hadal_begin_time && data.hadal_end_time) {
             const b = data.hadal_begin_time, en = data.hadal_end_time
             const left = this.zzzRemindRemaining(en)
-            messages.push(`统计周期：${b.year}/${b.month}/${b.day} - ${en.year}/${en.month}/${en.day}`)
-            messages.push(`刷新剩余: ${left.days}天${left.hours}小时`)
+            messages.push(`式舆周期：${b.year}/${b.month}/${b.day} - ${en.year}/${en.month}/${en.day}，剩余 ${left.days}天${left.hours}小时`)
           }
         }
       } catch (err) {
-        messages.push(`式舆防卫战查询失败: ${err?.message || err}`)
+        if (showAll) messages.push(`式舆防卫战查询失败: ${err?.message || err}`)
       }
     }
     if (showAll || deadlyStars > 0) {
       try {
         const raw = await this.zzzRemindFetch(e, uid, ck, 'deadly')
         if (!raw || !raw.has_data) {
-          messages.push('危局强袭战星数: 0/9')
+          if (showAll) messages.push('危局强袭战：本期暂无可用挑战记录')
         } else {
           const total = Number(raw.total_star || 0)
-          const ok = total >= deadlyStars ? ' ✓' : ''
-          if (showAll || (deadlyStars > 0 && total < deadlyStars)) {
-            messages.push(`危局强袭战星数: ${total}/9${deadlyStars > 0 ? ok : ''}`)
+          const missed = deadlyStars > 0 && total < deadlyStars
+          if (showAll) {
+            messages.push(`危局强袭战星数: ${total}/9（目标至少 ${deadlyStars} 星）`)
+          } else if (missed) {
+            messages.push(`危局强袭战未达标：当前 ${total}/9 星，目标至少 ${deadlyStars} 星，还差 ${deadlyStars - total} 星。`)
           }
-          if (raw.start_time && raw.end_time) {
+          if ((showAll || missed) && raw.start_time && raw.end_time) {
             const s = raw.start_time, en = raw.end_time
             const left = this.zzzRemindRemaining(en)
-            messages.push(`统计周期：${s.year}/${s.month}/${s.day} - ${en.year}/${en.month}/${en.day}`)
-            messages.push(`刷新剩余: ${left.days}天${left.hours}小时`)
+            messages.push(`危局周期：${s.year}/${s.month}/${s.day} - ${en.year}/${en.month}/${en.day}，剩余 ${left.days}天${left.hours}小时`)
           }
         }
       } catch (err) {
-        messages.push(`危局强袭战查询失败: ${err?.message || err}`)
+        if (showAll) messages.push(`危局强袭战查询失败: ${err?.message || err}`)
       }
     }
     return messages
@@ -4631,9 +4678,17 @@ export class zzz_panel_list extends plugin {
     if (enable && !uid) return e.reply('未绑定绝区零账号，请先绑定')
     let cfg = await this.zzzRemindUserConfig(e.user_id)
     if (!cfg) cfg = { enable: false, abyssCheckLevel: def.abyssCheckLevel, deadlyStars: def.deadlyStars }
-    if (cfg.enable === enable) return e.reply(enable ? '提醒已开启，请勿重复操作' : '提醒功能尚未开启')
+    const configuredUser = this.zzzRemindConfiguredUsers().includes(String(e.user_id))
+    if (cfg.enable === enable && !(configuredUser && !enable)) return e.reply(enable ? '提醒已开启，请勿重复操作' : '提醒功能尚未开启')
     cfg.enable = enable
     await this.zzzRemindSaveUserConfig(e.user_id, cfg)
+    /* 同步到配置文件，方便锅巴统一查看和编辑个人推送名单；Redis 仍保留
+       每个人独立的阈值与提醒时间。 */
+    try {
+      const users = this.zzzRemindConfiguredUsers().filter(id => id !== String(e.user_id))
+      if (enable) users.push(String(e.user_id))
+      yaml.setValue('./plugins/HoYoGet-Plugin/config/config.yaml', 'zzz_remind_users', [...new Set(users)])
+    } catch { /* 配置文件不可写时不影响 Redis 订阅 */ }
     const abyss = cfg.abyssCheckLevel === 0 ? '式舆不提醒' : `防卫战S层数<${Math.min(5, cfg.abyssCheckLevel)}${cfg.abyssCheckLevel === 6 ? '或第五层<S+' : ''}`
     const deadly = cfg.deadlyStars === 0 ? '危局不提醒' : `危局<${cfg.deadlyStars}星`
     return e.reply(`提醒功能已${enable ? '开启' : '关闭'}${enable ? `，将在${cfg.remindTime || def.globalRemindTime}提醒：${abyss}，${deadly}` : ''}`)
@@ -4731,22 +4786,46 @@ export class zzz_panel_list extends plugin {
     const def = this.zzzRemindDefaults()
     if (!def.enable) return
     let configs = {}
-    try { configs = await redis.hGetAll('ZZZ:REMIND:USER_CONFIGS') } catch { return }
-    if (!configs || !Object.keys(configs).length) return
+    try { configs = await redis.hGetAll('ZZZ:REMIND:USER_CONFIGS') } catch { configs = {} }
+    const configuredUsers = new Set(this.zzzRemindConfiguredUsers())
+    if (!Object.keys(configs || {}).length && !configuredUsers.size) return
     const now = new Date()
-    for (const [userId, raw] of Object.entries(configs)) {
+    /* 锅巴个人名单一旦填写就作为最终名单，便于直接删除某个 QQ 停止推送；
+       未填写时继续兼容 Redis 中由指令维护的旧订阅。 */
+    const userIds = configuredUsers.size ? [...configuredUsers] : Object.keys(configs || {})
+    const groupMessages = new Map()
+    for (const userId of userIds) {
       let cfg
-      try { cfg = JSON.parse(raw) } catch { continue }
-      if (!cfg?.enable) continue
-      if (typeof Bot === 'undefined' || !Bot.fl?.get(Number(userId))) continue
+      try { cfg = configs[userId] ? JSON.parse(configs[userId]) : null } catch { cfg = null }
+      /* 锅巴个人列表是显式订阅入口；没有 Redis 记录时使用全局阈值和时间。 */
+      if (!cfg) cfg = { enable: configuredUsers.has(String(userId)) }
+      if (!cfg?.enable && !configuredUsers.has(String(userId))) continue
+      if (typeof Bot === 'undefined') continue
       const remindTime = cfg.remindTime || def.globalRemindTime
       if (!this.zzzRemindTimeMatch(remindTime, now)) continue
       const mock = { user_id: Number(userId), game: 'zzz', reply: () => {} }
       const messages = await this.zzzRemindCheckUser(userId, cfg, false, mock)
       if (!messages.length) continue
-      await Bot.pickFriend(Number(userId)).sendMsg(`【式舆/危局挑战提醒】\n${messages.join('\n')}`).catch(err => {
-        logger.error?.(`[HoYoGet][zzz_remind] 推送失败：${err?.message || err}`)
-      })
+      const text = `【式舆/危局挑战提醒】\n${messages.join('\n')}`
+      if (Bot.fl?.get(Number(userId))) {
+        await Bot.pickFriend(Number(userId)).sendMsg(text).catch(err => {
+          logger.error?.(`[HoYoGet][zzz_remind] 私聊推送失败：${err?.message || err}`)
+        })
+      }
+      for (const target of this.zzzRemindConfiguredGroups()) {
+        const list = groupMessages.get(target.value) || []
+        list.push(`QQ ${userId}\n${messages.join('\n')}`)
+        groupMessages.set(target.value, { target, messages: list })
+      }
+    }
+    for (const { target, messages } of groupMessages.values()) {
+      try {
+        const group = this.zzzRemindGroupTarget(target)
+        if (!group?.sendMsg) continue
+        await group.sendMsg(`【式舆/危局挑战提醒】\n${messages.join('\n\n')}`)
+      } catch (err) {
+        logger.error?.(`[HoYoGet][zzz_remind] 群 ${target.value} 推送失败：${err?.message || err}`)
+      }
     }
   }
 
