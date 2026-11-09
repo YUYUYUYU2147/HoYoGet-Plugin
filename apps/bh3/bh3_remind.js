@@ -8,7 +8,7 @@ const cfgFile = _path + 'bh3_remind.yaml';
 async function loadBh3BossModule() {
   const modulePath = './plugins/HoYoGet-Plugin/system/bh3_abyss_boss.js';
   const version = fs.existsSync(modulePath) ? fs.statSync(modulePath).mtimeMs : Date.now();
-  return await import(`../system/bh3_abyss_boss.js?v=${version}`);
+  return await import(`../../system/bh3_abyss_boss.js?v=${version}`);
 }
 
 function getRemindConfig() {
@@ -90,9 +90,9 @@ export class bh3_remind extends plugin {
       event: 'message',
       priority: pluginPriority('bh3_remind', 100),
       rule: [
-        { reg: '^#*(?:米哈游)?(?=.*(崩三|崩坏3|崩坏三|BH3))(?=.*(提醒|定时提醒|开关提醒))(?=.*(开启|关闭|on|off)).*$', fnc: 'toggleRemind', priority: pluginPriority('bh3_remind', -1000001) },
-        { reg: '^#*(?:米哈游)?(崩三|崩坏3|崩坏三|BH3).*?提醒状态$', fnc: 'remindStatus', priority: pluginPriority('bh3_remind', -1000001) },
-        { reg: '^#*(?:米哈游)?(崩三|崩坏3|崩坏三|BH3)?提醒测试$', fnc: 'remindTest', priority: pluginPriority('bh3_remind', -1000001) },
+        { reg: '^[#!！]*(?:米哈游)?(?=.*(崩三|崩坏3|崩坏三|BH3))(?=.*(提醒|定时提醒|开关提醒))(?=.*(开启|关闭|on|off)).*$', fnc: 'toggleRemind', priority: pluginPriority('bh3_remind', -1000001) },
+        { reg: '^[#!！]*(?:米哈游)?(崩三|崩坏3|崩坏三|BH3).*?提醒状态$', fnc: 'remindStatus', priority: pluginPriority('bh3_remind', -1000001) },
+        { reg: '^[#!！]*(?:米哈游)?(崩三|崩坏3|崩坏三|BH3)?提醒测试$', fnc: 'remindTest', priority: pluginPriority('bh3_remind', -1000001) },
       ],
     });
 

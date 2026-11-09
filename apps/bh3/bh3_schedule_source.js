@@ -15,7 +15,7 @@ export class bh3_schedule_source extends plugin {
       dsc: '定时抓取国服崩三排期文字数据',
       event: 'message',
       priority: pluginPriority('bh3_schedule_source', -100),
-      rule: [{ reg: '^#*(崩三|崩坏3|崩坏三|BH3)排期源$', fnc: 'fetchSource' }],
+      rule: [{ reg: '^[#!！]*(崩三|崩坏3|崩坏三|BH3)排期源$', fnc: 'fetchSource' }],
     })
     this.task = {
       cron: String(config()?.bh3_schedule_source_cron || '0 0 */6 * * *'),

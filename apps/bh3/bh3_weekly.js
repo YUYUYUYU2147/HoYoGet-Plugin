@@ -3,12 +3,10 @@ import { bh3_abyss } from './bh3_abyss.js';
 import { bh3_battlefield } from './bh3_battlefield.js';
 import { bh3_godwar } from './bh3_godwar.js';
 import { mergeColumns, mergeSideBySide, detectPeriods } from '../../system/bh3_merge.js';
+import { sendBh3Image } from '../../system/bh3_image.js';
 
 function sendImage(e, image) {
-  const seg = globalThis.segment?.image?.(image) || { type: 'image', data: { file: image } };
-  if (e.group) return e.group.sendMsg([seg]);
-  if (e.friend) return e.friend.sendMsg([seg]);
-  return e.reply(seg, true);
+  return sendBh3Image(e, image);
 }
 
 export class bh3_weekly extends plugin {
@@ -19,7 +17,7 @@ export class bh3_weekly extends plugin {
       event: 'message',
       priority: pluginPriority('bh3_weekly', 100),
       rule: [
-        { reg: '^#*崩三周常(挑战)?$', fnc: 'weekly' },
+        { reg: '^[#!！]*崩三周常(挑战)?$', fnc: 'weekly' },
       ],
     });
   }

@@ -67,7 +67,7 @@ export class bh3_profile extends plugin {
       event: 'message',
       priority: pluginPriority('bh3_profile', 100),
       rule: [
-        { reg: '^#*(崩三|崩坏3|崩坏三|BH3)(主页|角色主页|查询|角色查询)$', fnc: 'profile' },
+        { reg: '^[#!！]*(崩三|崩坏3|崩坏三|BH3)(主页|角色主页|查询|角色查询)$', fnc: 'profile' },
       ],
     });
   }

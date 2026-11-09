@@ -3,6 +3,7 @@ import fs from 'fs';
 import puppeteer from '../../../../lib/puppeteer/puppeteer.js';
 import moment from 'moment';
 import { getCurrentAbyssInfoByEvent, formatCurrentAbyssInfo, getBh3BossCodex } from '../../system/bh3_abyss_boss.js';
+import { sendBh3Image } from '../../system/bh3_image.js';
 
 // genshin 的 NoteUser 必须动态加载：静态 import 在 genshin 缺失或版本变动时会让**整个插件**
 // 加载失败（ESM 解析阶段抛 ERR_MODULE_NOT_FOUND，没有 try/catch 兜底）。
@@ -65,8 +66,7 @@ function sendSegments(e, segs, opts = {}) {
 async function sendMsg(e, msg, opts = {}) {
   if (opts?.recallMsg !== undefined) return e.reply(msg, true, opts);
   if (typeof msg === 'object' && msg.constructor?.name === 'Buffer') {
-    const seg = await imageSegment(msg);
-    return sendSegments(e, [seg], opts);
+    return sendBh3Image(e, msg, opts);
   }
   // 已经是消息段（segment.image 的返回值，或兜底的 { type: 'image' }）：
   // 必须原样发出去，否则会被下面的文本分支包成 { type:'text', data:{ text: 对象 } } 发不出去。
@@ -149,9 +149,9 @@ export class bh3_abyss extends plugin {
       event: 'message',
       priority: pluginPriority('bh3_abyss', 100),
       rule: [
-        { reg: '^#*(崩三|崩坏3|崩坏三|BH3)?(当前深渊|深渊[Bb]oss|深渊信息|本期深渊)$', fnc: 'abyssBoss' },
-        { reg: '^#*(崩三|崩坏3|崩坏三|BH3)(深渊|战报|超弦)$', fnc: 'abyss' },
-        { reg: '^#*(崩三|崩坏3|崩坏三|BH3)(旧深渊|原深渊)$', fnc: 'oldAbyss' },
+        { reg: '^[#!！]*(崩三|崩坏3|崩坏三|BH3)?(当前深渊|深渊[Bb]oss|深渊信息|本期深渊)$', fnc: 'abyssBoss' },
+        { reg: '^[#!！]*(崩三|崩坏3|崩坏三|BH3)(深渊|战报|超弦)$', fnc: 'abyss' },
+        { reg: '^[#!！]*(崩三|崩坏3|崩坏三|BH3)(旧深渊|原深渊)$', fnc: 'oldAbyss' },
       ],
     });
   }
@@ -190,7 +190,25 @@ export class bh3_abyss extends plugin {
       const entry = stokenData[uid];
       if (entry) {
         region = entry.region || region;
-        if (entry.stuid) {
+        if (entry.ck_stoken) {
+          ck = entry.ck_stoken;
+          if (entry.stoken) {
+            try {
+              const { ensureCookieToken } = await import('../common/TL.js');
+              const full = await ensureCookieToken(e, ck, entry, { forceRefresh: true });
+              if (full && /cookie_token=/.test(full)) {
+                ck = full;
+                yaml.set(stokenPath, uid + '.ck_stoken', full);
+                yaml.set(stokenPath, uid + '.cookie_token', (full.match(/(?:^|;\s*)cookie_token=([^;]+)/) || [])[1] || '');
+                const ltoken = (full.match(/(?:^|;\s*)ltoken=([^;]+)/) || [])[1];
+                if (ltoken) yaml.set(stokenPath, uid + '.ltoken', ltoken);
+              }
+            } catch (err) {
+              logger.debug?.('[bh3_abyss] 刷新绑定 Cookie 失败：' + (err?.message || err));
+            }
+          }
+        }
+        if (!ck && entry.stuid) {
           try {
             const nu = await (await getNoteUser()).create(qq);
             for (const ltuid in nu.mysUsers || {}) {
@@ -204,11 +222,11 @@ export class bh3_abyss extends plugin {
         /* 扫码保存的凭证是 stoken 形式（stuid/stoken/mid），record 接口只认
            ltoken + cookie_token：缺 cookie_token 时会一直报「未登录」，扫码也救不回来。
            这里先用 stoken 换一次标准 cookie，换不到才退回原串。 */
-        if (entry.stoken) {
+        if (entry.stoken && !/cookie_token=/.test(String(ck || ''))) {
           try {
             const base = ck || `stuid=${entry.stuid || ''};stoken=${entry.stoken};mid=${entry.mid || ''};`;
             const { ensureCookieToken } = await import('../common/TL.js');
-            const full = await ensureCookieToken(e, base, entry);
+            const full = await ensureCookieToken(e, base, entry, { forceRefresh: true });
             if (full && /cookie_token=/.test(full)) ck = full;
           } catch (_) {}
         }

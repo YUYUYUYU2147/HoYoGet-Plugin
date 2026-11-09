@@ -2,6 +2,7 @@ import { yaml, mhy, api, pluginPriority, scaleStyle } from '#HoYoGet';
 import fs from 'fs';
 import puppeteer from '../../../../lib/puppeteer/puppeteer.js';
 import moment from 'moment';
+import { sendBh3Image } from '../../system/bh3_image.js';
 
 // genshin 的 NoteUser 必须动态加载：静态 import 在 genshin 缺失或版本变动时会让**整个插件**
 // 加载失败（ESM 解析阶段抛 ERR_MODULE_NOT_FOUND，没有 try/catch 兜底）。
@@ -11,10 +12,7 @@ const getNoteUser = makeGenshinLoader('model/mys/NoteUser.js', ['model/mys/NoteU
 function sendMsg(e, msg, opts = {}) {
   if (opts?.recallMsg !== undefined) return e.reply(msg, true, opts);
   if (typeof msg === 'object' && msg.constructor?.name === 'Buffer') {
-    const seg = segment.image(msg);
-    if (e.group) return e.group.sendMsg([seg]);
-    if (e.friend) return e.friend.sendMsg([seg]);
-    return e.reply(seg, true, opts);
+    return sendBh3Image(e, msg, opts);
   }
   if (e.group) return e.group.sendMsg([{ type: 'text', data: { text: msg } }]);
   if (e.friend) return e.friend.sendMsg([{ type: 'text', data: { text: msg } }]);
@@ -91,7 +89,7 @@ export class bh3_godwar extends plugin {
       event: 'message',
       priority: pluginPriority('bh3_godwar', 100),
       rule: [
-        { reg: '^#*(崩三|崩坏3|崩坏三|BH3)(乐土|往世乐土)\\s*(\\d{1,2})?$', fnc: 'godwar' },
+        { reg: '^[#!！]*(崩三|崩坏3|崩坏三|BH3)(乐土|往[世事]乐土)\\s*(\\d{1,2})?$', fnc: 'godwar' },
       ],
     });
   }
@@ -123,7 +121,25 @@ export class bh3_godwar extends plugin {
       const entry = stokenData[uid];
       if (entry) {
         region = entry.region || region;
-        if (entry.stuid) {
+        if (entry.ck_stoken) {
+          ck = entry.ck_stoken;
+          if (entry.stoken) {
+            try {
+              const { ensureCookieToken } = await import('../common/TL.js');
+              const full = await ensureCookieToken(e, ck, entry, { forceRefresh: true });
+              if (full && /cookie_token=/.test(full)) {
+                ck = full;
+                yaml.set(stokenPath, uid + '.ck_stoken', full);
+                yaml.set(stokenPath, uid + '.cookie_token', (full.match(/cookie_token=([^;]+)/) || [])[1] || '');
+                const ltoken = (full.match(/ltoken=([^;]+)/) || [])[1];
+                if (ltoken) yaml.set(stokenPath, uid + '.ltoken', ltoken);
+              }
+            } catch (err) {
+              logger.debug?.('[bh3_godwar] 刷新绑定 Cookie 失败：' + (err?.message || err));
+            }
+          }
+        }
+        if (!ck && entry.stuid) {
           try {
             const nu = await (await getNoteUser()).create(qq);
             for (const ltuid in nu.mysUsers || {}) {
@@ -156,10 +172,10 @@ export class bh3_godwar extends plugin {
 
     /* 扫码存下的是 stoken 形式凭证（stuid/stoken/mid），record 接口只认
        ltoken + cookie_token，缺了必然报「未登录」，这里统一补一次。 */
-    if (ck && !/cookie_token=/.test(String(ck))) {
+    if (!ck) {
       try {
         const { ensureCookieToken } = await import('../common/TL.js');
-        const full = await ensureCookieToken(e, ck);
+        const full = await ensureCookieToken(e, ck, null, { forceRefresh: true });
         if (full && /cookie_token=/.test(full)) ck = full;
       } catch (_) {}
     }

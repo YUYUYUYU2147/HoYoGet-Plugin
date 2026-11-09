@@ -71,23 +71,23 @@ export class bh3_ledger extends plugin {
             priority: pluginPriority('bh3_ledger', 100),
             rule: [
                 {
-                    reg: '^#*(?:(?:崩三|崩坏3|崩坏三))?水晶$',
+                    reg: '^[#!！]*(?:(?:崩三|崩坏3|崩坏三))?水晶$',
                     fnc: 'ledger',
                 },
                 {
-                    reg: '^#*(?:(?:崩三|崩坏3|崩坏三))?上月水晶$',
+                    reg: '^[#!！]*(?:(?:崩三|崩坏3|崩坏三))?上月水晶$',
                     fnc: 'ledgerLastMonth',
                 },
                 {
-                    reg: '^#*(?:(?:崩三|崩坏3|崩坏三))?水晶统计$',
+                    reg: '^[#!！]*(?:(?:崩三|崩坏3|崩坏三))?水晶统计$',
                     fnc: 'ledgerCount',
                 },
                 {
-                    reg: '^#*删除水晶uid.*',
+                    reg: '^[#!！]*删除水晶uid.*',
                     fnc: 'deleteBh3Uid',
                 },
                 {
-                    reg: '^#*切换水晶uid.*',
+                    reg: '^[#!！]*切换水晶uid.*',
                     fnc: 'switchBh3Uid',
                 },
             ],

@@ -7,7 +7,7 @@ import {
   selectRecommendation,
 } from '../../system/elysian.js';
 
-const RULE = /^#*崩三(?:往[世事]乐土|乐土)(?:(?:热门角色榜|热门榜|角色榜|热门)(?:详情|推荐)?|(?:角色)?(?:推荐)?详情)\s*(.*?)\s*$/;
+const RULE = /^[#!！]*崩三(?:往[世事]乐土|乐土)(?:(?:热门角色榜|热门榜|角色榜|热门)(?:详情|推荐)?|(?:角色)?(?:推荐)?详情)\s*(.*?)\s*$/;
 
 function sendImage(e, buf) {
   const seg = globalThis.segment?.image?.(buf) || { type: 'image', data: { file: buf } };
