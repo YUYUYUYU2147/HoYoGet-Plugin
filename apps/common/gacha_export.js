@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { createHash } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import { pluginPriority } from '#HoYoGet'
 import { getEventNoteUser } from '../../system/genshin_loader.js'
@@ -8,9 +9,9 @@ import { getEventNoteUser } from '../../system/genshin_loader.js'
  * HoYoGet 独立抽卡记录导出。
  *
  * 把本插件自己保存的抽卡数据导出成 UIGF v2.3 JSON（可直接再导入，也能给其它工具用）。
- * 按前缀区分游戏：`#`=原神、`*`=星铁、`%`=绝区零。
+ * 按前缀区分游戏：`#`=原神、`*`=星铁、`%`=绝区零；崩三另提供兼容 Mys/APK 的双格式文件。
  *
- * 数据来源（纯本地，不发任何请求）：
+ * 抽卡记录来自本地；崩三导出时会按需读取官方百科星级映射（失败时保留 0）。
  *   星铁  data/sr_gacha/sr_<uid>_full.json（小助手全量逐抽，含四星）
  *         data/sr_gacha/<uid>/<qq>/summary.json（工坊/在线统计，只有五星+四星）
  *   绝区零 data/zzz_gacha/zzz_plugin/<uid>.json（ZZZ-Plugin 全量逐抽）
@@ -24,9 +25,20 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '../..')
 const SR_DIR = path.join(ROOT, 'data/sr_gacha')
 const ZZZ_DIR = path.join(ROOT, 'data/zzz_gacha')
-const MYS_ZZZ_DIR = path.resolve(ROOT, '../../data/Mys-plugin/gachaJson/zzz')
+const EXTERNAL_ZZZ_DIR = (() => {
+  const dataRoot = path.resolve(ROOT, '../../data')
+  try {
+    const name = fs.readdirSync(dataRoot).find(item =>
+      fs.existsSync(path.join(dataRoot, item, 'gachaJson/zzz')))
+    if (name) return path.join(dataRoot, name, 'gachaJson/zzz')
+  } catch {}
+  return path.join(dataRoot, 'external/gachaJson/zzz')
+})()
 const GS_DIR = path.join(ROOT, 'data/gs_gacha')
+const BH3_DIR = path.join(ROOT, 'data/bh3_gacha')
 const TMP_DIR = path.join(ROOT, 'temp/gacha-export')
+const BH3_WIKI_URL = 'https://api-takumi-static.mihoyo.com/common/blackboard/bh3_wiki/v1/home/content/list?app_sn=bh3_wiki'
+let bh3RankMapCache = null
 
 const GAMES = {
   '#': { key: 'gs', name: '原神', prefix: 'gs' },
@@ -84,6 +96,7 @@ const listFiles = dir => {
   try { return fs.readdirSync(dir) } catch { return [] }
 }
 const isUid = v => /^\d{6,12}$/.test(String(v || ''))
+const isBh3Uid = v => /^\d{8,10}$/.test(String(v || ''))
 
 function now () {
   const d = new Date()
@@ -218,8 +231,8 @@ function zzzSummaryToList (data, uid) {
   return out
 }
 
-/** Mys-plugin archive contains full ZZZ pulls; Moonward computes pity from the pull sequence. */
-function mysZzzFullToList (data, uid) {
+/** External archive contains full ZZZ pulls; Moonward computes pity from the pull sequence. */
+function externalZzzFullToList (data, uid) {
   const list = data?.nap?.find?.(account => String(account?.uid || '') === String(uid))?.list
   if (!Array.isArray(list) || !list.length) return []
   return list.filter(row => row?.id).map(row => {
@@ -240,8 +253,8 @@ function mysZzzFullToList (data, uid) {
   })
 }
 
-function readMysZzzFull (uid) {
-  return readJson(path.join(MYS_ZZZ_DIR, `${uid}.json`))
+function readExternalZzzFull (uid) {
+  return readJson(path.join(EXTERNAL_ZZZ_DIR, `${uid}.json`))
 }
 
 /** 原神 gs_gacha/<uid>.json（只有五星+垫抽）→ UIGF list */
@@ -273,6 +286,234 @@ function gsToList (data, uid) {
     }
   }
   return out
+}
+
+function bh3ApkPoolType (name) {
+  const pool = String(name || '').trim()
+  const match = pool.match(/^(角色|装备)补给([A-Z])$/)
+  if (match) {
+    const base = match[1] === '角色' ? 1 : 3
+    return String(base + (match[2] === 'B' ? 1 : 0))
+  }
+  if (/^协同(?:者)?补给$/.test(pool)) return '5'
+  if (pool === '家园补给') return '6'
+  // APK also accepts unknown BH3 pool labels as raw pool keys.
+  return pool
+}
+
+function bh3ItemFields (content) {
+  const match = String(content).match(/^\[([^\]]+)\](.*)$/s)
+  if (!match) return { item_type: '', name: String(content) }
+  const item_type = match[1]
+  let name = match[2].trim() || String(content)
+  // WishArchive resolves official images by the item type and title.  The
+  // source API appends this UI-only suffix to character drops, while the
+  // wiki title (and APK lookup key) does not contain it.
+  if (/^角色$/.test(item_type)) name = name.replace(/角色卡$/, '').trim()
+  return { item_type, name }
+}
+
+function bh3RankValue (value, itemType = '') {
+  const text = String(value || '').trim().toUpperCase()
+  if (/角色|女武神/.test(itemType)) {
+    if (text === 'S' || text === '初始阶级/S') return '5'
+    if (text === 'A' || text === 'SP' || /^初始阶级\/(?:A|SP)$/.test(text)) return '4'
+    if (text === 'B' || text === '初始阶级/B') return '3'
+  }
+  const match = text.match(/(?:星级\/|武器星级\/)?([345])星?(?:武器)?$/)
+  if (match) return match[1]
+  if (/^[345]$/.test(text)) return text
+  if (/(?:^|\/)(?:五星)(?:武器)?$/.test(text)) return '5'
+  if (/(?:^|\/)(?:四星)(?:武器)?$/.test(text)) return '4'
+  if (/(?:^|\/)(?:三星)(?:武器)?$/.test(text)) return '3'
+  return ''
+}
+
+function bh3RankForItem (item, maps = {}) {
+  const type = String(item.item_type || '')
+  // APK treats companion drops as S-rarity.  Their wiki channel does not
+  // expose a star filter consistently, so use the stable game rule.
+  if (/协同者|协作者/.test(type)) return '5'
+  const table = /角色/.test(type) ? maps.char : /武器/.test(type) ? maps.weapon : /圣痕/.test(type) ? maps.stigmata : null
+  if (!table) return '0'
+  const key = String(item.name || '').trim()
+  const direct = table?.[key]
+  if (direct != null) {
+    const converted = bh3RankValue(direct, type)
+    if (converted) return converted
+  }
+  return '0'
+}
+
+function parseBh3WikiFilters (item, key) {
+  try {
+    const ext = typeof item?.ext === 'string' ? JSON.parse(item.ext) : (item?.ext || {})
+    const text = ext?.[`c_${key}`]?.filter?.text
+    const values = typeof text === 'string' ? JSON.parse(text) : (Array.isArray(text) ? text : [])
+    return values.map(value => String(value))
+  } catch { return [] }
+}
+
+/** Fetch the small official BH3 title -> rarity maps used by WishArchive. */
+async function getBh3RankMaps () {
+  if (bh3RankMapCache && bh3RankMapCache.expires > Date.now()) return bh3RankMapCache.value
+  const value = { char: Object.create(null), weapon: Object.create(null), stigmata: Object.create(null) }
+  const fetcher = globalThis.fetch
+  if (typeof fetcher !== 'function') return value
+  const fetchChannel = async channel => {
+    const url = `${BH3_WIKI_URL}&channel_id=${channel}`
+    const response = await fetcher(url, { signal: AbortSignal.timeout(15000) })
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    return response.json()
+  }
+  try {
+    const channels = await Promise.all([18, 19, 20].map(channel => fetchChannel(channel).catch(() => null)))
+    for (const item of channels[0]?.data?.list?.[0]?.list || []) {
+      const rank = parseBh3WikiFilters(item, 18).find(filter => /初始阶级\/(?:S|A|SP|B)/.test(filter))
+      if (item?.title && rank) value.char[String(item.title).trim()] = rank
+    }
+    for (const item of channels[1]?.data?.list?.[0]?.list || []) {
+      const rank = parseBh3WikiFilters(item, 19).find(filter => /圣痕星级\/(?:五星|四星|三星)/.test(filter))
+      if (item?.title && rank) value.stigmata[String(item.title).trim()] = rank
+    }
+    for (const item of channels[2]?.data?.list?.[0]?.list || []) {
+      const rank = parseBh3WikiFilters(item, 20).find(filter => /(?:星级\/|武器星级\/)?(?:[345]星|五星|四星|三星)(?:武器)?$/.test(filter))
+      if (item?.title && rank) value.weapon[String(item.title).trim()] = rank
+    }
+  } catch (error) {
+    globalThis.logger?.debug?.(`[HoYoGet][导出] 崩三百科星级映射不可用：${error?.message || error}`)
+  }
+  bh3RankMapCache = { value, expires: Date.now() + (Object.keys(value.char).length || Object.keys(value.weapon).length ? 86400000 : 60000) }
+  return value
+}
+
+function bh3SyntheticId (uid, pool, row, occurrence) {
+  const seed = JSON.stringify([String(uid), pool, row.time, row.content, occurrence])
+  return (BigInt(`0x${createHash('sha256').update(seed).digest('hex').slice(0, 15)}`) + 1n).toString()
+}
+
+function bh3RecordMultiset (records) {
+  return JSON.stringify(records.map(row => [String(row?.time || ''), String(row?.content || '')]).sort((a, b) =>
+    a[0].localeCompare(b[0]) || a[1].localeCompare(b[1])))
+}
+
+function bh3ExportPools (sourcePools) {
+  const entries = Object.entries(sourcePools).filter(([name, records]) =>
+    name !== '家园补给' && Array.isArray(records))
+  const aliases = new Set(['武器', '礼包币记录'])
+  const canonical = entries.filter(([name]) => !aliases.has(name))
+  const aliasIsContained = ([, records]) => {
+    const counts = new Map()
+    for (const row of records) {
+      const key = JSON.stringify([String(row?.time || ''), String(row?.content || '')])
+      counts.set(key, (counts.get(key) || 0) + 1)
+    }
+    return canonical.some(([, otherRecords]) => {
+      const otherCounts = new Map()
+      for (const row of otherRecords) {
+        const key = JSON.stringify([String(row?.time || ''), String(row?.content || '')])
+        otherCounts.set(key, (otherCounts.get(key) || 0) + 1)
+      }
+      return [...counts].every(([key, count]) => (otherCounts.get(key) || 0) >= count)
+    })
+  }
+  const filtered = entries.filter(([name]) => !aliases.has(name) || !aliasIsContained(entries.find(entry => entry[0] === name)))
+  const weapon = filtered.find(([name]) => name === '武器')
+  const currencyAlias = filtered.find(([name]) => name === '礼包币记录')
+  if (weapon && currencyAlias && bh3RecordMultiset(weapon[1]) === bh3RecordMultiset(currencyAlias[1])) {
+    return filtered.filter(([name]) => name !== '礼包币记录')
+  }
+  return filtered
+}
+
+/** Build one file understood by both supported import formats (pools and bh3). */
+export function buildBh3Export (uid, data, metadata = {}) {
+  const uidText = String(uid || '')
+  if (!isBh3Uid(uidText)) throw new Error('崩三 UID 格式不正确（应为 8-10 位数字）')
+  const sourcePools = data?.data
+  if (!sourcePools || typeof sourcePools !== 'object' || Array.isArray(sourcePools)) {
+    throw new Error('崩三抽卡记录文件格式不正确')
+  }
+
+  const pools = Object.create(null)
+  const apkRows = []
+  let total = 0
+  for (const [poolNameRaw, records] of bh3ExportPools(sourcePools)) {
+    const poolName = String(poolNameRaw).trim()
+    if (!poolName) continue
+    if (records.length > 200000) throw new Error(`${poolName} 记录超过兼容格式单池导入上限`)
+    if (!records.length) continue
+
+    const seen = new Map()
+    const mysRows = records.map((raw, index) => {
+      const time = String(raw?.time || '').replace('T', ' ')
+      const content = typeof raw?.content === 'string' ? raw.content : ''
+      if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(time)) {
+        throw new Error(`${poolName} 第 ${index + 1} 条记录时间格式不正确`)
+      }
+      const parsedTime = new Date(`${time.replace(' ', 'T')}Z`)
+      if (Number.isNaN(parsedTime.getTime()) || parsedTime.toISOString().slice(0, 19).replace('T', ' ') !== time) {
+        throw new Error(`${poolName} 第 ${index + 1} 条记录时间无效`)
+      }
+      if (!content.trim() || content.length > 500) {
+        throw new Error(`${poolName} 第 ${index + 1} 条记录内容为空或过长`)
+      }
+
+      const row = { time, content }
+      const key = JSON.stringify([time, content])
+      const occurrence = (seen.get(key) || 0) + 1
+      seen.set(key, occurrence)
+      const item = bh3ItemFields(content)
+      const apkType = bh3ApkPoolType(poolName)
+      apkRows.push({
+        uid: uidText,
+        id: bh3SyntheticId(uidText, poolName, row, occurrence),
+        gacha_type: apkType,
+        uigf_gacha_type: apkType,
+        item_id: '',
+        name: item.name,
+        item_type: item.item_type,
+        rank_type: bh3RankForItem(item, metadata),
+        time,
+        count: '1',
+        content,
+        pool_name: poolName,
+      })
+      return row
+    })
+    pools[poolName] = { name: poolName, records: mysRows }
+    total += mysRows.length
+  }
+
+  if (!total) throw new Error('没有可导出的崩三抽卡记录')
+  apkRows.sort((a, b) => a.time.localeCompare(b.time) || (BigInt(a.id) < BigInt(b.id) ? -1 : BigInt(a.id) > BigInt(b.id) ? 1 : 0))
+  const timestamp = Math.floor(Date.now() / 1000)
+  return {
+    uid: uidText,
+    game: 'bh3',
+    updatedAt: data.data_time || '',
+    pools,
+    info: {
+      uid: uidText,
+      version: 'v4.2',
+      export_timestamp: String(timestamp),
+      export_app: 'HoYoGet',
+      export_app_version: 'HoYoGet',
+    },
+    bh3: [{ uid: uidText, timezone: 8, lang: 'zh-cn', list: apkRows }],
+  }
+}
+
+function collectBh3 () {
+  const result = new Map()
+  for (const uid of listFiles(BH3_DIR)) {
+    if (!isBh3Uid(uid)) continue
+    const data = readJson(path.join(BH3_DIR, uid, 'gacha_logs.json'))
+    if (!data?.data || typeof data.data !== 'object') continue
+    const count = bh3ExportPools(data.data).reduce((sum, [, records]) => sum + records.length, 0)
+    if (count) result.set(uid, { data, count, source: 'HoYoGet 崩三逐抽记录' })
+  }
+  return result
 }
 
 /** 收集某个游戏本地有数据的 UID 及各自的 UIGF list */
@@ -376,10 +617,14 @@ export class gacha_export extends plugin {
   constructor () {
     super({
       name: '[米哈游]抽卡记录导出',
-      dsc: '导出 HoYoGet 独立保存的原神/星铁/绝区零抽卡记录（UIGF JSON）',
+      dsc: '导出 HoYoGet 独立保存的抽卡记录；崩三文件兼容两种导入格式',
       event: 'message',
       priority: pluginPriority('gacha_export', -900),
       rule: [
+        {
+          reg: '^[#!！]*(?:(?:崩三|崩坏3|崩坏三|BH3|bh3)[ \t]*(?:导出抽卡记录|抽卡记录导出)|导出(?:崩三|崩坏3|崩坏三|BH3|bh3)抽卡记录)(?:[ \t]+(\\d{8,10}))?[ \t]*$',
+          fnc: 'exportBh3Log'
+        },
         {
           reg: '^(?:%|％|#?绝区零)?[ \\t]*Moonward导出抽卡记录(?:[ \\t]+(\\d{6,12}))?[ \\t]*$',
           fnc: 'exportMoonwardLog'
@@ -415,12 +660,12 @@ export class gacha_export extends plugin {
       return e.reply(`未找到当前绑定的绝区零 UID。请指定 UID 导出。\n可选：${[...found.keys()].join(' / ')}\n用法：%Moonward导出抽卡记录 <UID>`)
     }
 
-    const mysFullList = mysZzzFullToList(readMysZzzFull(uid), uid)
+    const externalFullList = externalZzzFullToList(readExternalZzzFull(uid), uid)
     const fullList = found.get(uid)
     const summary = readJson(path.join(ZZZ_DIR, String(e.user_id || ''), uid, 'summary.json'))
     const userList = zzzSummaryToList(summary, uid)
     const hit = mysFullList.length
-      ? { list: mysFullList, source: 'Mys-plugin 完整逐抽记录' }
+      ? { list: externalFullList, source: '外部完整逐抽记录' }
       : fullList?.source === 'ZZZ-Plugin 逐抽'
         ? fullList
         : userList.length
@@ -478,6 +723,64 @@ export class gacha_export extends plugin {
     return true
   }
 
+  async exportBh3Log (e, forcedUid = '') {
+    const msg = String(e.msg || '').trim()
+    const m = msg.match(/^[#*!%％！]*[ \t]*(?:(?:崩三|崩坏3|崩坏三|BH3|bh3)[ \t]*(?:导出抽卡记录|抽卡记录导出)|导出(?:崩三|崩坏3|崩坏三|BH3|bh3)抽卡记录|导出抽卡记录)(?:[ \t]+(\d{8,10}))?[ \t]*$/)
+    if (!m && !forcedUid) return false
+    const wantUid = forcedUid || m?.[1] || ''
+    const found = collectBh3()
+    if (!found.size) {
+      return e.reply('暂无崩三抽卡记录，请先发送【#崩三更新抽卡记录】更新后再导出。')
+    }
+
+    let currentUid = ''
+    try {
+      const noteUser = await getEventNoteUser(e)
+      const selected = String(noteUser?.getUid?.('bh3') || '')
+      if (isBh3Uid(selected)) currentUid = selected
+    } catch {}
+
+    let uid = wantUid || (currentUid && found.has(currentUid) ? currentUid : '')
+    if (!uid) {
+      uid = [...found.entries()].sort((a, b) => b[1].count - a[1].count)[0][0]
+    }
+    const hit = found.get(uid)
+    if (!hit) {
+      const uids = [...found.keys()].join(' / ')
+      return e.reply(`没有 UID:${uid} 的崩三记录。可选：${uids}\n用法：#崩三导出抽卡记录 ${uid}`)
+    }
+
+    let payload
+    try {
+      const rankMaps = await getBh3RankMaps()
+      payload = buildBh3Export(uid, hit.data, rankMaps)
+    } catch (err) {
+      logger.warn?.(`[HoYoGet][导出] 崩三 UID:${uid} 记录校验失败：${err?.message || err}`)
+      return e.reply(`崩三记录导出失败：${err?.message || err}`)
+    }
+    const list = payload.bh3[0].list
+    logger.mark?.(`[HoYoGet][导出] 崩三 uid=${uid} pools=${Object.keys(payload.pools).length} rows=${list.length}`)
+    fs.mkdirSync(TMP_DIR, { recursive: true })
+    const fileName = `HoYoGet_bh3_${uid}_${Date.now()}.json`
+    const file = path.join(TMP_DIR, fileName)
+    fs.writeFileSync(file, JSON.stringify(payload, null, '\t'), 'utf8')
+
+    const rankFilled = list.filter(row => Number(row.rank_type) > 0).length
+    const head = `崩三 UID:${uid} 抽卡记录导出\n来源：HoYoGet 本地逐抽记录\n共 ${list.length} 抽，${Object.keys(payload.pools).length} 个卡池\n文件同时兼容两种导入格式。已按崩三百科补齐 ${rankFilled} 条星级；物品 ID 和 UP 标记未补造。`
+    if (found.size > 1 && !wantUid) {
+      const others = [...found.keys()].filter(key => key !== uid)
+      if (others.length) e.reply(`（该账号有多个崩三 UID，已导出记录最多的 ${uid}；其它：${others.join(' / ')}，可加 UID 单独导出）`)
+    }
+    const sent = await sendFile(e, file, fileName)
+    if (sent) {
+      await e.reply(`✅ ${head}\n文件：${fileName}`)
+      fs.unlink(file, () => {})
+    } else {
+      await e.reply(`⚠️ ${head}\n文件发送失败（适配器不支持或网络问题）。已保存在机器人：\n${file}`)
+    }
+    return true
+  }
+
   async exportLog (e) {
     const msg = String(e.msg || '').trim()
     const m = msg.match(/^(?:([#\\*%％])|#?(星铁|绝区零|绝区|原神))?[ \t]*导出抽卡记录(?:[ \t]+(\d{6,12}))?[ \t]*$/)
@@ -490,9 +793,11 @@ export class gacha_export extends plugin {
     if (m[2] === '星铁') prefix = '*'
     else if (m[2] === '绝区零' || m[2] === '绝区') prefix = '%'
     else if (m[2] === '原神') prefix = '#'
-    if (e?.game === 'sr') prefix = '*'
+    if (e?.game === 'bh3') prefix = 'bh3'
+    else if (e?.game === 'sr') prefix = '*'
     else if (e?.game === 'zzz') prefix = '%'
     else if (prefix === '％') prefix = '%'
+    if (prefix === 'bh3') return this.exportBh3Log(e, wantUid)
     if (!prefix) prefix = '#' // 无前缀 = 原神
     const game = GAMES[prefix] || GAMES['#']
     if (!game) return false
