@@ -1,9 +1,8 @@
 /**
- * #uid / !uid 面板接管：在 genshin 原面板后追加崩坏3分组
+ * 多游戏 UID 列表展示与序号切换。
  *
- * genshin 的 showUid 把游戏写死为 gs/sr/zzz，模板只遍历传入的 uids 数组。
- * 所以这里用更小的 priority 抢先处理 #uid，自行组装四组数据后复用 genshin 的
- * 样式与布局出图（模板副本在 resources/uid/uid-list.html，只是给崩三补了 ! 前缀）。
+ * #uid 展示四款游戏，星铁、绝区零和崩坏3命令只保留对应分组。
+ * 列表超过阈值时使用网格排版，所有序号沿用各游戏账号列表的顺序。
  *
  * 昵称、等级、头像统一在这里补全：原来的实现依赖 miao 的面板存档，没更新过面板的
  * 账号整行都会退化成「暂无uid信息」且头像退回占位图，绝区零更是从来没有资料。
@@ -20,6 +19,8 @@ import YAML from 'yaml';
 import { getBh3UidList } from '../../system/bh3_uid.js';
 import { makeGenshinLoader } from '../../system/genshin_loader.js';
 import { getRoleProfile } from '../../system/roleProfile.js';
+import { orderUidRowsByReference } from '../../system/uid_order.js';
+import { selectUidGames, shouldUseUidGrid, uidViewModeFromPrefix } from '../../system/uid_view.js';
 
 const getNoteUser = makeGenshinLoader('model/mys/NoteUser.js', ['model/mys/NoteUser.js']);
 
@@ -371,11 +372,13 @@ export class uidPanel extends plugin {
   constructor() {
     super({
       name: '[米哈游]UID面板(含崩坏3)',
-      dsc: '接管 #uid 并在面板追加崩坏3分组，!uid 查看崩坏3，未装 genshin 时补上 #uidN/*uidN/%uidN 切换',
+      dsc: '展示多游戏UID列表，未装 genshin 时补上UID切换',
       event: 'message',
       priority: pluginPriority('uid_panel', 100),
       rule: [
         { reg: /^#(我的)?uid$/i, fnc: 'showUid' },
+        { reg: /^\*uid$/i, fnc: 'showStarRailUid' },
+        { reg: /^%uid$/i, fnc: 'showZzzUid' },
         { reg: /uid$/i, fnc: 'showBh3Uid' },
         { reg: /uid[0-9]{1,2}$/i, fnc: 'switchBh3' },
       ],
@@ -386,7 +389,20 @@ export class uidPanel extends plugin {
   async readBh3(force) {
     const e = this.e;
     try {
-      return await loadBh3(e, e.at || e.user_id, force);
+      const result = await loadBh3(e, e.at || e.user_id, force);
+      if (!result?.list?.length) return result;
+      try {
+        const NoteUser = await getNoteUser();
+        if (!NoteUser) return result;
+        const user = await NoteUser.create(String(e.at || e.user_id || ''));
+        return {
+          ...result,
+          list: orderUidRowsByReference(result.list, user?.getUidList?.('bh3')),
+        };
+      } catch (err) {
+        logger.debug?.('[HoYoGet][uid] UID排序参考读取失败，沿用原列表顺序：' + (err?.message || err));
+        return result;
+      }
     } catch (err) {
       logger.warn('[HoYoGet][uid] 读取崩三账号失败：' + (err && err.message ? err.message : err));
       return null;
@@ -394,7 +410,7 @@ export class uidPanel extends plugin {
   }
 
   /** 组装四组数据并出图 */
-  async replyPanel(bh3) {
+  async replyPanel(bh3, mode = 'all') {
     const e = this.e;
     if (!e.runtime) return false;
     const NoteUser = await getNoteUser();
@@ -417,13 +433,14 @@ export class uidPanel extends plugin {
       }
     }
 
-    const games = GAME_LIST.map(ds => {
+    const allGames = GAME_LIST.map(ds => {
       const uidList = normalizeUidList(user.getUidList(ds.key));
       const rawUid = user.getUid(ds.key);
       const current = rawUid && typeof rawUid === 'object' ? rawUid.uid : rawUid;
       return { key: ds.key, name: ds.name, uid: String(current || uidList[0]?.uid || ''), uidList };
     });
-    if (bh3 && bh3.list && bh3.list.length) games.push(buildBh3Group(bh3.list, bh3.current));
+    allGames.push(buildBh3Group(Array.isArray(bh3?.list) ? bh3.list : [], bh3?.current));
+    const games = selectUidGames(allGames, mode);
 
     try {
       const stoken = await loadStoken(e);
@@ -436,7 +453,7 @@ export class uidPanel extends plugin {
     const img = await e.runtime.render(
       'genshin',
       'html/user/uid-list',
-      { uids: games },
+      { uids: games, bodyClass: shouldUseUidGrid(games, mode) ? 'uid-grid' : '' },
       {
         retType: 'base64',
         beforeRender({ data }) {
@@ -459,8 +476,27 @@ export class uidPanel extends plugin {
   /** #uid：四组数据统一由本面板出图，没有崩三账号也能补全其他游戏资料 */
   async showUid() {
     if (!this.e.runtime) return false;
+    const e = this.e;
+    const rawText = String(e.raw_message || '').replace(/\[CQ:[^\]]*\]/g, '').trim()
+      || (Array.isArray(e.message) ? e.message.filter(m => m.type === 'text').map(m => m.data?.text ?? m.text ?? '').join('') : '')
+      || String(e.msg || '');
+    const mode = uidViewModeFromPrefix(rawText[0]) || 'all';
+    if (mode === 'sr' || mode === 'zzz') return this.replyPanel(null, mode);
+    if (mode === 'bh3') return this.showBh3Uid();
     const bh3 = await this.readBh3(false);
     return this.replyPanel(bh3);
+  }
+
+  /** *uid：只展示星穹铁道 */
+  async showStarRailUid() {
+    if (!this.e.runtime) return false;
+    return this.replyPanel(null, uidViewModeFromPrefix('*'));
+  }
+
+  /** %uid：只展示绝区零 */
+  async showZzzUid() {
+    if (!this.e.runtime) return false;
+    return this.replyPanel(null, uidViewModeFromPrefix('%'));
   }
 
   /** !uid：崩三自己的入口 */
@@ -472,7 +508,7 @@ export class uidPanel extends plugin {
     if (!/^[!！]/.test(originText || String(e.msg || ''))) return false
     const bh3 = await this.readBh3(false);
     if (!bh3 || !bh3.list || !bh3.list.length) return this.e.reply(BH3_EMPTY_TIP);
-    return this.replyPanel(bh3);
+    return this.replyPanel(bh3, 'bh3');
   }
 
   /** 切换uid：!uidN 归崩坏3；未装 genshin 时 #uidN / *uidN / %uidN 由本插件接管。
@@ -497,7 +533,7 @@ export class uidPanel extends plugin {
       await this.syncGameUid(game, idx);
       return false;
     }
-    return this.switchGameUid(game, idx);
+    return this.switchGameUid(game, idx, uidViewModeFromPrefix(hit[1]));
   }
 
   /** !uidN：切换崩坏3当前查询uid，由 switchBh3 按前缀分派进来 */
@@ -512,7 +548,7 @@ export class uidPanel extends plugin {
     if (row.region) await redis.set('HoYoGet:bh3_region:' + qq, row.region);
     await redis.set('HoYoGet:bh3_manual:' + qq, '1');
     bh3Cache.delete(qq);
-    return this.replyPanel({ list: bh3.list, current: row.uid });
+    return this.replyPanel({ list: bh3.list, current: row.uid }, 'bh3');
   }
 
   /** 装了 genshin 时静默同步当前 UID（只写 redis，不回复），避免抢它的面板 */
@@ -532,7 +568,7 @@ export class uidPanel extends plugin {
   }
 
   /** #uidN / *uidN / %uidN：未装 genshin 时切换该游戏的当前 uid */
-  async switchGameUid(game, idx) {
+  async switchGameUid(game, idx, mode = game) {
     const e = this.e;
     const qq = String(e.at || e.user_id || '');
     if (typeof redis === 'undefined') return e.reply('未连接缓存，暂时无法切换uid');
@@ -551,7 +587,7 @@ export class uidPanel extends plugin {
     const row = list[idx - 1];
     if (!row) return e.reply(name + ' uid序号不存在，发送 #uid 查看可用序号');
     await redis.set('HoYoGet:cur_uid:' + game + ':' + qq, String(row.uid));
-    return this.replyPanel(await this.readBh3(false));
+    return this.replyPanel(mode === 'all' ? await this.readBh3(false) : null, mode);
   }
 }
 

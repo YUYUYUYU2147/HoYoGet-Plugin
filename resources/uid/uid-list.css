@@ -246,3 +246,52 @@ nobr {
   background-size: 150% auto;
   background-position: 50% 12%;
 }
+
+body.uid-grid .container {
+  width: 790px;
+  max-width: calc(100vw - 24px);
+  box-sizing: border-box;
+}
+
+body.uid-grid .uid-list .game-ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+
+body.uid-grid .uid-list .game-li {
+  min-width: 0;
+  margin: 0;
+}
+
+body.uid-grid .uid-list .game-bar {
+  width: calc(100% - 23px);
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+body.uid-grid .uid-list .game-inner .info {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+body.uid-grid .uid-list .game-inner .info .uid-info .uid {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+body.uid-grid .uid-list .game-inner .info .detail {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 620px) {
+  body.uid-grid .uid-list .game-ul {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
