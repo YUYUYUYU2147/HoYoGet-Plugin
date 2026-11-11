@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { createHash } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
+import YAML from 'yaml'
 import { pluginPriority } from '#HoYoGet'
 import { getEventNoteUser } from '../../system/genshin_loader.js'
 
@@ -36,9 +36,11 @@ const EXTERNAL_ZZZ_DIR = (() => {
 })()
 const GS_DIR = path.join(ROOT, 'data/gs_gacha')
 const BH3_DIR = path.join(ROOT, 'data/bh3_gacha')
+const BH3_POOL_HISTORY = path.join(ROOT, 'system/default/bh3_gacha_pool_history.yaml')
 const TMP_DIR = path.join(ROOT, 'temp/gacha-export')
 const BH3_WIKI_URL = 'https://api-takumi-static.mihoyo.com/common/blackboard/bh3_wiki/v1/home/content/list?app_sn=bh3_wiki'
 let bh3RankMapCache = null
+let bh3UpHistoryCache = null
 
 const GAMES = {
   '#': { key: 'gs', name: '原神', prefix: 'gs' },
@@ -293,10 +295,10 @@ function bh3ApkPoolType (name) {
   const match = pool.match(/^(角色|装备)补给([A-Z])$/)
   if (match) {
     const base = match[1] === '角色' ? 1 : 3
-    return String(base + (match[2] === 'B' ? 1 : 0))
+    return `${base + (match[2] === 'B' ? 1 : 0)}|${pool}`
   }
-  if (/^协同(?:者)?补给$/.test(pool)) return '5'
-  if (pool === '家园补给') return '6'
+  if (/^协同(?:者)?补给$/.test(pool)) return `5|${pool}`
+  if (pool === '家园补给') return `6|${pool}`
   // APK also accepts unknown BH3 pool labels as raw pool keys.
   return pool
 }
@@ -310,6 +312,8 @@ function bh3ItemFields (content) {
   // source API appends this UI-only suffix to character drops, while the
   // wiki title (and APK lookup key) does not contain it.
   if (/^角色$/.test(item_type)) name = name.replace(/角色卡$/, '').trim()
+  // The BH3 wiki's companion channel uses the full official title.
+  if (item_type === '协同者' && name === '游云') name = '白鹿游云'
   return { item_type, name }
 }
 
@@ -343,6 +347,50 @@ function bh3RankForItem (item, maps = {}) {
     if (converted) return converted
   }
   return '0'
+}
+
+function getBh3UpHistory () {
+  if (bh3UpHistoryCache) return bh3UpHistoryCache
+  try {
+    const history = YAML.parse(fs.readFileSync(BH3_POOL_HISTORY, 'utf8'))
+    bh3UpHistoryCache = (history?.pools || []).flatMap(version =>
+      (version.pools || []).map(pool => ({
+        ...pool,
+        start: pool.start || version.start,
+        end: pool.end || version.end,
+      })))
+  } catch {
+    bh3UpHistoryCache = []
+  }
+  return bh3UpHistoryCache
+}
+
+function bh3PoolCoversRecord (pool, time) {
+  if (!pool.start || !pool.end) return false
+  if (time >= pool.start && time <= pool.end) return true
+  const recordDay = String(time).slice(0, 10)
+  return recordDay === String(pool.start).slice(0, 10) || recordDay === String(pool.end).slice(0, 10)
+}
+
+function bh3IsUp (poolName, item, time, history = getBh3UpHistory()) {
+  if (poolName === '家园补给') return null
+  const type = /装备补给/.test(poolName) ? 'weapon' : /协同/.test(poolName) ? 'coop' : 'char'
+  const relevantType = type === 'weapon'
+    ? /^(?:武器|圣痕)$/.test(item.item_type)
+    : type === 'coop'
+      ? /协同/.test(item.item_type)
+      : item.item_type === '角色'
+  if (!relevantType) return null
+
+  const candidates = history.filter(pool => {
+    if (type === 'weapon') return pool.type === 'weapon'
+    if (type === 'coop') return /协同/.test(pool.name || '') || pool.s === '协同者轮替'
+    return pool.type === 'char' && !/协同/.test(pool.name || '') && pool.s !== '协同者轮替'
+  }).filter(pool => bh3PoolCoversRecord(pool, time))
+  if (!candidates.length || candidates.some(pool => !pool.s && !(pool.a || []).length)) return null
+
+  const name = String(item.name || '').trim()
+  return candidates.some(pool => [pool.s, ...(pool.a || [])].some(target => String(target || '').trim() === name))
 }
 
 function parseBh3WikiFilters (item, key) {
@@ -387,43 +435,11 @@ async function getBh3RankMaps () {
   return value
 }
 
-function bh3SyntheticId (uid, pool, row, occurrence) {
-  const seed = JSON.stringify([String(uid), pool, row.time, row.content, occurrence])
-  return (BigInt(`0x${createHash('sha256').update(seed).digest('hex').slice(0, 15)}`) + 1n).toString()
-}
-
-function bh3RecordMultiset (records) {
-  return JSON.stringify(records.map(row => [String(row?.time || ''), String(row?.content || '')]).sort((a, b) =>
-    a[0].localeCompare(b[0]) || a[1].localeCompare(b[1])))
-}
-
 function bh3ExportPools (sourcePools) {
-  const entries = Object.entries(sourcePools).filter(([name, records]) =>
-    name !== '家园补给' && Array.isArray(records))
-  const aliases = new Set(['武器', '礼包币记录'])
-  const canonical = entries.filter(([name]) => !aliases.has(name))
-  const aliasIsContained = ([, records]) => {
-    const counts = new Map()
-    for (const row of records) {
-      const key = JSON.stringify([String(row?.time || ''), String(row?.content || '')])
-      counts.set(key, (counts.get(key) || 0) + 1)
-    }
-    return canonical.some(([, otherRecords]) => {
-      const otherCounts = new Map()
-      for (const row of otherRecords) {
-        const key = JSON.stringify([String(row?.time || ''), String(row?.content || '')])
-        otherCounts.set(key, (otherCounts.get(key) || 0) + 1)
-      }
-      return [...counts].every(([key, count]) => (otherCounts.get(key) || 0) >= count)
-    })
-  }
-  const filtered = entries.filter(([name]) => !aliases.has(name) || !aliasIsContained(entries.find(entry => entry[0] === name)))
-  const weapon = filtered.find(([name]) => name === '武器')
-  const currencyAlias = filtered.find(([name]) => name === '礼包币记录')
-  if (weapon && currencyAlias && bh3RecordMultiset(weapon[1]) === bh3RecordMultiset(currencyAlias[1])) {
-    return filtered.filter(([name]) => name !== '礼包币记录')
-  }
-  return filtered
+  // "武器" and "礼包币记录" are duplicate legacy exports, not actual pools.
+  const actualPools = /^(?:角色|装备)补给[A-Z]$|^协同(?:者)?补给$|^家园补给$/
+  return Object.entries(sourcePools).filter(([name, records]) =>
+    actualPools.test(String(name).trim()) && Array.isArray(records))
 }
 
 /** Build one file understood by both supported import formats (pools and bh3). */
@@ -437,6 +453,7 @@ export function buildBh3Export (uid, data, metadata = {}) {
 
   const pools = Object.create(null)
   const apkRows = []
+  const secondSeq = new Map()
   let total = 0
   for (const [poolNameRaw, records] of bh3ExportPools(sourcePools)) {
     const poolName = String(poolNameRaw).trim()
@@ -444,7 +461,6 @@ export function buildBh3Export (uid, data, metadata = {}) {
     if (records.length > 200000) throw new Error(`${poolName} 记录超过兼容格式单池导入上限`)
     if (!records.length) continue
 
-    const seen = new Map()
     const mysRows = records.map((raw, index) => {
       const time = String(raw?.time || '').replace('T', ' ')
       const content = typeof raw?.content === 'string' ? raw.content : ''
@@ -460,20 +476,28 @@ export function buildBh3Export (uid, data, metadata = {}) {
       }
 
       const row = { time, content }
-      const key = JSON.stringify([time, content])
-      const occurrence = (seen.get(key) || 0) + 1
-      seen.set(key, occurrence)
+      const second = Math.floor(parsedTime.getTime() / 1000)
+      const seq = (secondSeq.get(second) || 0) + 1
+      secondSeq.set(second, seq)
       const item = bh3ItemFields(content)
       const apkType = bh3ApkPoolType(poolName)
+      let rank = bh3RankForItem(item, metadata)
+      let isUp = bh3IsUp(poolName, item, time, metadata.upHistory)
+      if (/装备补给/.test(poolName)) {
+        if (item.item_type === '圣痕') rank = '4'
+        if (item.item_type === '武器') rank = isUp === true ? '5' : '4'
+      }
+      if (rank === '5' && item.item_type === '角色' && poolName !== '家园补给') isUp = true
       apkRows.push({
         uid: uidText,
-        id: bh3SyntheticId(uidText, poolName, row, occurrence),
+        id: (BigInt(second) * 1000000n + BigInt(seq)).toString(),
         gacha_type: apkType,
         uigf_gacha_type: apkType,
         item_id: '',
         name: item.name,
         item_type: item.item_type,
-        rank_type: bh3RankForItem(item, metadata),
+        rank_type: rank,
+        is_up: isUp,
         time,
         count: '1',
         content,
