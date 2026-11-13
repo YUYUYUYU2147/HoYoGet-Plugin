@@ -1,10 +1,10 @@
 import { usefulAttr } from "../../artifact/artis-mark.js"
 
-export default function({ attr, def }) {
+export default function ({ attr, def }) {
   let title = []
-  let particularAttr = { ...usefulAttr["罗莎莉亚"] }
+  let particularAttr = { ...usefulAttr['罗莎莉亚'] }
   if (attr.cpct * 2 + attr.cdmg >= 255) {
-    title.push("输出")
+    title.push('输出')
     particularAttr.atk = 75
     particularAttr.cdmg = 100
     particularAttr.dmg = 100
@@ -14,5 +14,5 @@ export default function({ attr, def }) {
   if (title.length > 0) {
     return def(particularAttr, title)
   }
-  return def(usefulAttr["罗莎莉亚"])
+  return def(usefulAttr['罗莎莉亚'])
 }

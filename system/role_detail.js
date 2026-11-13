@@ -18,7 +18,9 @@
 
 /** 去掉 nanoka/米游社的富文本标签 */
 function stripTags(s) {
-    return String(s ?? '')
+    let text = String(s ?? '')
+        // 上游页面偶发把整页 <style> CSS 塞进正文字段：先整块删除。
+        .replace(/<(style|script|head)[^>]*>[\s\S]*?<\/\1>/gi, ' ')
         // 字面两字符 "\n"：nanoka 的 JSON 里描述字段存的是转义换行，
         // parse 后仍残留 \n 两个字符（不是真换行），必须显式还原。
         // 实测 152 个原神角色里 150 个、99 个星铁角色全部存在。
@@ -47,8 +49,15 @@ function stripTags(s) {
         .replace(/<br\s*\/?>/g, '\n')
         .replace(/<\/?(b|i|u|size)[^>]*>/g, '')
         .replace(/<[^>]+>/g, '')
-        .replace(/&nbsp;/g, ' ')
-        .trim();
+        .replace(/&nbsp;/g, ' ');
+    /* 标签被剥掉后，<style> 里的 CSS 正文仍会留在字符串里；只按 CSS 特征清理，
+       正常游戏文案不会命中 :root/@media/--var 这些标记。 */
+    if (/(?::root|@media|box-sizing\s*:|--[\w-]+\s*:)/i.test(text)) {
+        text = text
+            .replace(/(?:^|[\n;}])\s*(?:\*|html|body|:root|@media[^{]*|[.#][\w-]+(?:[^{}]*)?)\s*\{[^{}]*\}/gi, ' ')
+            .replace(/[^{}\n]{0,120}\{[^{}]*\}/g, ' ');
+    }
+    return text.trim();
 }
 
 const num = v => {
@@ -124,6 +133,8 @@ const GS_REGION_CN = {
     ASSOC_TYPE_SAYU_UMI: '渊下城',
     ASSOC_TYPE_NOD_KRAI: '挪德卡莱',
     ASSOC_TYPE_FATUI: '法外狂徒',
+    ASSOC_TYPE_SNEZHNAYA: '至冬',
+    ASSOC_TYPE_SNEZHNAYA_STAR: '至冬',
 };
 const gsRegionCn = v => GS_REGION_CN[v] || String(v || '').replace(/^ASSOC_TYPE_/, '');
 

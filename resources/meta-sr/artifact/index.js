@@ -1,16 +1,16 @@
-import { Data, Meta } from "#miao"
-import lodash from "lodash"
-import artiBuffs from "./calc.js"
-import { mainAttr, subAttr, attrMap } from "./meta.js"
-import { artiSetAbbr, aliasCfg, artiAbbr } from "./alias.js"
+import { Data, Meta } from '#miao'
+import lodash from 'lodash'
+import artiBuffs from './calc.js'
+import { mainAttr, subAttr, attrMap } from './meta.js'
+import { artiSetAbbr, aliasCfg, artiAbbr } from './alias.js'
 
-import { usefulAttr } from "./artis-mark.js"
+import { usefulAttr } from './artis-mark.js'
 
-let data = Data.readJSON("/resources/meta-sr/artifact/data.json", "miao")
-let metaData = Data.readJSON("/resources/meta-sr/artifact/meta.json", "miao")
+let data = Data.readJSON('/resources/meta-sr/artifact/data.json', 'miao')
+let metaData = Data.readJSON('/resources/meta-sr/artifact/meta.json', 'miao')
 
-let setMeta = Meta.create("sr", "artiSet")
-let artiMeta = Meta.create("sr", "arti")
+let setMeta = Meta.create('sr', 'artiSet')
+let artiMeta = Meta.create('sr', 'arti')
 
 let idMap = {}
 lodash.forEach(data, (setData) => {
@@ -28,7 +28,7 @@ lodash.forEach(data, (setData) => {
       setId: setData.id,
       idx
     })
-    idMap[ds.name] = lodash.keys(ds.ids).join(",")
+    idMap[ds.name] = lodash.keys(ds.ids).join(',')
     artiSet.idxs[idx] = ds.name
   })
 })

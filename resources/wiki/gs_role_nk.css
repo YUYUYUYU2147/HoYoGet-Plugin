@@ -109,6 +109,19 @@ footer{text-align:center;margin-top:14px;font-size:18px;color:#ee8e8e;
 .mat-name{line-height:1.2}
 .mat i{font-style:normal;margin-left:2px;font-weight:800}
 
+.stat-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.stat-bars{display:flex;flex-direction:column;gap:7px}
+.stat-bar{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#5a6478}
+.stat-bar .sb-label{width:38px;flex:none;color:#8a94a6}
+.stat-bar .sb-track{flex:1;height:8px;border-radius:5px;background:#eef2fa;overflow:hidden}
+.stat-bar .sb-track i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,#d4a017,#c07a2c)}
+.stat-bar b{width:46px;text-align:right;color:#1f2937;font-variant-numeric:tabular-nums}
+.stat-items{display:flex;flex-direction:column;gap:7px}
+.stat-item{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#4a5468;background:#f7f9fc;border:1px solid #edf0f5;border-radius:8px;padding:5px 9px}
+.stat-item img{width:26px;height:26px;border-radius:6px;object-fit:cover;flex:none;background:#e9edf3}
+.stat-item .si-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stat-item b{color:#8a6a12;font-variant-numeric:tabular-nums}
+
 .stage{margin-bottom:12px}
 .stage:last-child{margin-bottom:0}
 .stage-head{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}

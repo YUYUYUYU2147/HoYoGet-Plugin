@@ -321,8 +321,8 @@ export const supportGuoba = () => {
       },
       {
         field: 'update',
-        label: '凌晨自动更新',
-        helpMessage: '凌晨3:30强制更新（会覆盖文件）',
+        label: '每日自动更新',
+        helpMessage: '每天6:00强制更新插件与 meta 资源（会覆盖文件）',
         component: 'Switch',
       },
       {

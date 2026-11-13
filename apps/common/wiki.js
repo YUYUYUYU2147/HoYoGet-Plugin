@@ -12,9 +12,13 @@ import { fetchZzzBwikiWeapon, fetchZzzBwikiDisc, fetchZzzBwikiChar, fetchZzzBwik
 import { fetchZzzRoleCard } from './wiki/zzz_role.js';
 import { fetchMihoyoBangboo, buildBangbooView } from './wiki/bangboo_view.js';
 import { fetchSrGuide } from './wiki/bwiki_sr_guide.js';
+import { readLocalCharacter, getWikiCharacter, missingLocalFields, meaningful } from '../../system/nanoka_wiki_characters.js';
+import { getGsWikiStatistics } from '../../system/wiki_statistics.js';
 import { readFileSync } from 'node:fs';
 import fs from 'fs';
 import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { createHash } from 'node:crypto';
 import { JSDOM } from 'jsdom';
 const { window } = new JSDOM();
 const DOMParser = window.DOMParser;
@@ -42,6 +46,59 @@ function findCustomRoleArt(game, name) {
     }
   }
   return '';
+}
+
+const WIKI_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const AVATAR_CACHE = path.join(WIKI_ROOT, 'data', 'panel', 'wiki-characters', 'zzz', 'avatars');
+
+/**
+ * Nanoka 的 IconRoleSelect 头图自带透明边、且不同角色尺寸不一。
+ * 先裁掉透明边，再按正方形 cover 缩放到 236×236 缓存到本地；
+ * 渲染时直接铺满 118×118 方框，不再依赖 object-fit 的留白。
+ * 非 IconRoleSelect 的头像（官方图标/立绘）保持原样。
+ */
+async function zzzAvatarPortrait(url = '', { fallback = true } = {}) {
+  const raw = String(url || '');
+  if (!/IconRole/i.test(raw)) return raw;
+  const isSelect = /IconRoleSelect/i.test(raw);
+  const mode = isSelect ? 'select' : 'full';
+  const key = createHash('sha1').update(`${raw}|${mode}`).digest('hex').slice(0, 24);
+  const file = path.join(AVATAR_CACHE, `${key}.webp`);
+  try {
+    if (fs.existsSync(file) && Date.now() - fs.statSync(file).mtimeMs < 7 * 24 * 3600 * 1000) {
+      return pathToFileURL(file).href;
+    }
+  } catch { /* 缓存不可用就重建 */ }
+  try {
+    const sharp = (await import('sharp')).default;
+    const res = await fetch(raw, { signal: AbortSignal.timeout(20000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const buf = Buffer.from(await res.arrayBuffer());
+    let pipeline = sharp(buf);
+    if (isSelect) {
+      // Select 头图：裁透明边后按方形 cover
+      pipeline = pipeline.trim({ threshold: 1 }).resize(236, 236, { fit: 'cover', position: 'centre' });
+    } else {
+      // 全身立绘：取顶部居中的正方形区域（头部和上胸/肩），再缩成头像
+      const meta = await sharp(buf).metadata();
+      const width = Number(meta.width) || 0;
+      const height = Number(meta.height) || 0;
+      if (!width || !height) throw new Error('头像尺寸无效');
+      const side = Math.max(1, Math.min(width, height, Math.round(width * 0.42)));
+      const left = Math.max(0, Math.round((width - side) / 2));
+      pipeline = sharp(buf)
+        .extract({ left, top: 0, width: side, height: side })
+        .trim({ threshold: 1 })
+        .resize(236, 236, { fit: 'cover', position: 'top' });
+    }
+    const out = await pipeline.webp({ quality: 92 }).toBuffer();
+    fs.mkdirSync(AVATAR_CACHE, { recursive: true });
+    fs.writeFileSync(file, out);
+    return pathToFileURL(file).href;
+  } catch (err) {
+    logger.debug?.(`[HoYoGet][图鉴] 绝区零头像裁切失败：${err?.message || err}`);
+    return fallback ? raw : '';
+  }
 }
 
 // 绝区零角色/音擎别名，分别配置在 system/default/zzz_js_names.yaml、zzz_wq_names.yaml（格式：正式名: [别名列表]）
@@ -370,6 +427,60 @@ const SR_PATH_CN = {
     Memory: '记忆', Elation: '欢愉'
 };
 
+/**
+ * 用本地 miao meta 补 Bwiki / Nanoka 视图里缺失的基础字段。
+ * 新角色常见：Bwiki 未建页、Nanoka 只有骨架，本地每日同步的 data.json
+ * 反而有称号/生日/命之座/CV。只在视图字段为空时补，不覆盖已有内容。
+ */
+function applyLocalGsView(view, fallbackName = '') {
+  if (!view) return view;
+  const local = readLocalCharacter('gs', { name: view.name || fallbackName });
+  const d = local?.data;
+  if (!d) return view;
+  const fill = (key, value) => { if (!meaningful(view[key]) && meaningful(value)) view[key] = value; };
+  const REGIONS = new Set(['蒙德', '璃月', '稻妻', '须弥', '枫丹', '纳塔', '至冬', '挪德卡莱', '渊下城']);
+  const ELEMS = { pyro: '火', hydro: '水', cryo: '冰', electro: '雷', anemo: '风', geo: '岩', dendro: '草' };
+  fill('title', d.title);
+  fill('constellation', d.astro);
+  fill('desc', d.desc);
+  fill('element', ELEMS[d.elem]);
+  if (!meaningful(view.region) && REGIONS.has(String(d.allegiance || ''))) view.region = d.allegiance;
+  if (!meaningful(view.birth) && meaningful(d.birth) && d.birth !== '0-0') {
+    const m = String(d.birth).match(/^(\d{1,2})[-/月](\d{1,2})/);
+    if (m) view.birth = `${Number(m[1])}月${Number(m[2])}日`;
+  }
+  /* CV 只在视图没有对应徽章时补，避免和 Bwiki 的 CV 徽章重复 */
+  const badges = Array.isArray(view.topBadges) ? view.topBadges.slice() : [];
+  const has = key => badges.some(b => String(b?.k || '').includes(key));
+  if (!has('CV') && meaningful(d.cncv)) badges.push({ k: '中文CV', v: d.cncv, icon: '', iconUrl: false });
+  if (!has('CV') && meaningful(d.jpcv)) badges.push({ k: '日文CV', v: d.jpcv, icon: '', iconUrl: false });
+  if (badges.length) view.topBadges = badges;
+  return view;
+}
+
+/**
+ * 图鉴里的养成素材统一用 Nanoka 的口径。
+ * Bwiki 的材料表虽然也全，但图鉴材料统一以 Nanoka 为准；这里只覆盖材料相关字段，
+ * 技能/命座/徽章/攻略仍保留 Bwiki 的（那部分 Bwiki 更完整）。Nanoka 抓不到时不改动。
+ */
+async function applyNanokaGsMaterials(view, name) {
+  if (!view || !name) return view;
+  try {
+    const wiki = await getWikiCharacter('gs', { name });
+    const materials = wiki?.detail?.materials;
+    if (!materials) return view;
+    const nk = gsRoleView(wiki.detail, wiki.id);
+    if (!nk.matSummary?.length) return view;
+    for (const key of [
+      'ascensionStages', 'talentStages', 'levelUpMats', 'expMats',
+      'matSummary', 'talentSkillCount', 'talentGroupsDiffer',
+    ]) view[key] = nk[key];
+  } catch (err) {
+    if (config().debug) logger.mark(`[HoYoGet][图鉴] ${name} Nanoka 材料补全失败：${err?.message || err}`);
+  }
+  return view;
+}
+
 export class Wiki extends plugin {
   constructor(e) {
     super({
@@ -501,7 +612,7 @@ export class Wiki extends plugin {
     let name = e.msg
       .replace(/^[#%*]*/, '')
       .replace(/^米哈游[#%*]*/i, '')
-      .replace(/星铁|绝区零|ZZZ|崩坏3|崩坏三|崩三|BH3/gi, '')
+      .replace(/原神|genshin|gs|星穹铁道|崩坏星穹铁道|星铁|崩铁|绝区零|绝区|ZZZ|崩坏3|崩坏三|崩三|BH3/gi, '')
       .replace(/(?:故事|剧情)/g, '')
       .trim();
     name = name.replace(/^[:：\s]+|[:：\s]+$/g, '').trim();
@@ -620,16 +731,29 @@ export class Wiki extends plugin {
 
   async illustrated_book(e) {
     if (!config().wiki) return false;
-    // 本项目约定：* 前缀代表星铁（同 sr_logs.js），# 前缀代表原神
+    // 本项目约定：* 前缀代表星铁（同 sr_logs.js），# 前缀代表原神，% 前缀代表绝区零。
+    // 显式前缀是唯一裁决者：确定游戏后不再跨游戏搜索，避免同名角色串游。
+    const raw = String(e.raw_msg || '').trim();
+    const rawGame = /(?:星穹铁道|崩坏星穹铁道|星铁|崩铁|starrail)/i.test(raw) ? 'sr'
+      : /(?:绝区零|绝区|zzz)/i.test(raw) ? 'zzz'
+        : /(?:崩坏3|崩坏三|崩三|bh3)/i.test(raw) ? 'bh3'
+          : /(?:原神|genshin|gs)/i.test(raw) ? 'gs' : '';
+    const symbolGame = /^[*＊]/.test(raw) ? 'sr'
+      : /^[%％]/.test(raw) ? 'zzz'
+        : /^[!！]/.test(raw) ? 'bh3'
+          : /^[#＃]/.test(raw) ? 'gs' : '';
+    const explicitGame = String(e.hoyoGetGame || rawGame || symbolGame || '');
+    e.__hoyoExplicitGame = explicitGame;
     const starPrefix = /^[＃#%]*\*/.test(e.msg);
-    const isSr = starPrefix || e.msg.includes('星铁');
-    const isZZZ = e.msg.includes('绝区零') || e.msg.includes('ZZZ');
-    let isBH3 = e.msg.includes('崩坏3') || e.msg.includes('崩坏三') || e.msg.includes('崩三') || e.msg.includes('BH3');
+    const isSr = explicitGame ? explicitGame === 'sr' : (starPrefix || e.msg.includes('星铁'));
+    const isZZZ = explicitGame ? explicitGame === 'zzz' : (e.msg.includes('绝区零') || e.msg.includes('ZZZ'));
+    let isBH3 = explicitGame ? explicitGame === 'bh3'
+      : (e.msg.includes('崩坏3') || e.msg.includes('崩坏三') || e.msg.includes('崩三') || e.msg.includes('BH3'));
     let name = e.msg
       .replace(/^[#%*]*/, '')
       // 插件前缀（xhh菲欧妮图鉴 / 小花火菲欧妮图鉴）不参与查询名
       .replace(/^米哈游[#%*]*/i, '')
-      .replace(/星铁|绝区零|ZZZ|崩坏3|崩坏三|崩三|BH3/gi, '')
+      .replace(/原神|genshin|gs|星穹铁道|崩坏星穹铁道|星铁|崩铁|绝区零|绝区|ZZZ|崩坏3|崩坏三|崩三|BH3/gi, '')
       .trim();
     name = name.startsWith('图鉴') ? name.replace(/^图鉴/, '') : name.replace(/图鉴$/, '');
     name = name.replace(/^[:：\s]+|[:：\s]+$/g, '').trim();
@@ -706,20 +830,22 @@ export class Wiki extends plugin {
     } else {
       for (const { method, args } of checkTypes) {
         if (await this[method](...args)) return true;
-        if (await this[method](...args, true)) return true;
+        if (!explicitGame && await this[method](...args, true)) return true;
       }
-      // 未写游戏前缀时，也兜底尝试绝区零，支持"安比图鉴 / 图鉴安比"这类写法。
-      for (const { method, args } of checkTypes) {
-        if (await this[method](...args, false, true)) return true;
+      if (!explicitGame) {
+        // 未写游戏前缀时，也兜底尝试绝区零，支持"安比图鉴 / 图鉴安比"这类写法。
+        for (const { method, args } of checkTypes) {
+          if (await this[method](...args, false, true)) return true;
+        }
+        if (await this.bangboo(e, name)) return true;
+        // 崩三的圣痕名常带套装名（如「琪亚娜·乐运天降」是「来日亦然」套装的一件），
+        // 和原神/星铁/绝区零的名字不重样，但不带前缀时前面三个游戏都试过了，
+        // 只有走到这里才拉崩三数据，不会拖慢正常查询。
+        for (const { method, args } of checkTypes) {
+          if (await this[method](...args, false, false, true)) return true;
+        }
+        if (await this.bh3_yq(e, name, true)) return true;
       }
-      if (await this.bangboo(e, name)) return true;
-      // 崩三的圣痕名常带套装名（如「琪亚娜·乐运天降」是「来日亦然」套装的一件），
-      // 和原神/星铁/绝区零的名字不重样，但不带前缀时前面三个游戏都试过了，
-      // 只有走到这里才拉崩三数据，不会拖慢正常查询。
-      for (const { method, args } of checkTypes) {
-        if (await this[method](...args, false, false, true)) return true;
-      }
-      if (await this.bh3_yq(e, name, true)) return true;
     }
     /* 最后查总列表。
        ⚠️ test 模式下**只在「纯列表关键词」时才允许走**。
@@ -1624,8 +1750,23 @@ export class Wiki extends plugin {
     return hit?.icon || '';
   }
 
+  zzzStripDocument(text = '') {
+    let s = String(text || '')
+    if (!s) return ''
+    // 测试服/上游偶发把整页 HTML（含 <style> CSS）塞进正文字段：先整块删除，
+    // 再按 CSS 特征清掉残留规则，不能只剥标签，否则 CSS 正文会当文本进卡面。
+    s = s.replace(/<(style|script|head)[^>]*>[\s\S]*?<\/\1>/gi, ' ')
+    s = s.replace(/<\/?(?:html|body|head|style|script)[^>]*>/gi, ' ')
+    s = s.replace(/\{LINK#[^}]*\}/gi, '').replace(/\{\/LINK\}/gi, '')
+    if (/(?::root|html|body|\*)\s*\{|@media|box-sizing\s*:|--[\w-]+\s*:/i.test(s)) {
+      s = s.replace(/(?:^|[\n;}])\s*(?:\*|html|body|:root|@media[^{]*|[.#][\w-]+(?:[^{}]*)?)\s*\{[^{}]*\}/gi, ' ')
+      s = s.replace(/[^{}\n]{0,120}\{[^{}]*\}/g, ' ')
+    }
+    return s
+  }
+
   zzzCleanText(text = '', len = 120) {
-    text = String(text || '')
+    text = this.zzzStripDocument(text)
       .replace(/<color=[^>]+>/g, '')
       .replace(/<\/color>/g, '')
       .replace(/<IconMap:[^>]+>/g, '')
@@ -1637,7 +1778,7 @@ export class Wiki extends plugin {
   }
 
   zzzRichText(text = '') {
-    return String(text || '')
+    return this.zzzStripDocument(text)
       // 白色是游戏内深色界面的强调色，放到本插件的浅色卡片上会看不清。
       .replace(/#FFFFFF/gi, '#6b5b45')
       .replace(/<color=([^>]+)>/gi, '<span style="color:$1">')
@@ -1851,7 +1992,13 @@ export class Wiki extends plugin {
         ? `https://static.nanoka.cc/assets/zzz/IconRoleSelect${m[1]}.webp`
         : `https://static.nanoka.cc/assets/zzz/IconInterKnotRole${m[1].padStart(4, '0')}.webp`;
     })();
-    const portrait = nkIcon || await this.getZzzObcIcon(c.name, 43);
+    /* 优先用完整立绘 IconRole{N}.webp，取顶部头肩区域做头像；
+       完整图取不到再回退 Nanoka 的 IconRoleSelect 头图。 */
+    const fullArt = /^IconRole\w+$/i.test(String(c.icon || ''))
+      ? `https://static.nanoka.cc/assets/zzz/${String(c.icon)}.webp`
+      : '';
+    let portrait = fullArt ? await zzzAvatarPortrait(fullArt, { fallback: false }) : '';
+    if (!portrait) portrait = await zzzAvatarPortrait(nkIcon || await this.getZzzObcIcon(c.name, 43));
     /* 基础属性：成长表取 nanoka 的最高档（level['6']，未实装的第 6 档）；
        固定值取暴击率 / 暴击伤害 / 穿透率 / 能量自动回复，与正式服那张卡同一口径。 */
     const num = v => (Number.isFinite(Number(v)) ? Number(v) : 0);
@@ -1938,7 +2085,7 @@ export class Wiki extends plugin {
     const guide = (guideDrive || guideStats) ? { drive: guideDrive, stats: guideStats, weapon: null } : null;
     const view = {
       name: c.name || '未知代理人',
-      unreleased: isTestDataMode(),
+      unreleased: data.unreleased ?? isTestDataMode(),
       // portrait 是方形卡面：未实装角色取 nanoka 的 IconRoleSelect，取不到回落米游社图标
       portrait,
       icon: portrait,
@@ -1959,7 +2106,7 @@ export class Wiki extends plugin {
         { k: '特性', v: type, icon: ICON[type] || '', iconUrl: false },
         { k: '伤害类型', v: hit, icon: '', iconUrl: false },
       ].filter(b => b.v),
-      desc: real(c.desc),
+      desc: this.zzzCleanText(real(c.desc), 9999),
       // 角色详情即 nanoka 的档案正文，保留全文不截断
       detailStory: this.zzzCleanText(real(partner.profile_desc), 9999),
       impression: '',
@@ -2328,6 +2475,21 @@ export class Wiki extends plugin {
   async role(e, name, isSr = false, isZZZ = false, isBH3 = false) {
     const dbg = (...args) => { if (config().debug) logger.mark('[HoYoGet][图鉴解析]', ...args); };
     if (isZZZ) {
+      /* 本地快照未收录/缺字段时，直接走 Nanoka latest（含测试服）。
+         有本地完整资料时才继续原来的 Bwiki → 官方 → nanoka 路径，避免降级正式服卡面。 */
+      const zzzName = zzzAliasMap(43)[this.normalizeZzzKey(name)] || name;
+      const localZzz = readLocalCharacter('zzz', { name: zzzName });
+      if (!localZzz || missingLocalFields('zzz', localZzz).length) {
+        const cached = await getWikiCharacter('zzz', { name: zzzName }).catch(err => {
+          dbg('ZZZ Nanoka latest 查询失败:', err?.message || err);
+          return null;
+        });
+        if (cached?.detail) {
+          dbg('ZZZ Nanoka latest 命中:', `id=${cached.id}`, `version=${cached.version || '-'}`, `source=${cached.source}`);
+          this.zzz_role_pictures(e, { content: { ...cached.detail, name: cached.name || cached.detail.name }, unreleased: cached.unreleased });
+          return true;
+        }
+      }
       name = await this.resolveZzzWikiName(name, 43);
       dbg('ZZZ 角色解析:', name);
       // 正式服模式：绝区零角色优先米游社百科 + Bwiki 徽章/属性/攻略，失败回退 nanoka。测试服只用 nanoka。
@@ -2336,11 +2498,37 @@ export class Wiki extends plugin {
         if (done !== false && done != null) return true;
       }
       const ret = await mys.data(name, 'js', false, true);
-      if (!ret?.id) { dbg('ZZZ wiki 无此角色:', name); return false; }
+      if (!ret?.id) {
+        /* 本地快照与官方/旧版 Nanoka 列表都没收录：直接查 Nanoka latest，
+           manifest 的 live 落后 latest 时（如 3.3 vs 3.4.3）优先 latest。 */
+        const cached = await getWikiCharacter('zzz', { name }).catch(err => {
+          dbg('ZZZ Nanoka latest 查询失败:', err?.message || err);
+          return null;
+        });
+        if (cached?.detail) {
+          dbg('ZZZ Nanoka latest 命中:', `id=${cached.id}`, `version=${cached.version || '-'}`, `source=${cached.source}`);
+          this.zzz_role_pictures(e, { content: { ...cached.detail, name: cached.name || cached.detail.name }, unreleased: cached.unreleased });
+          return true;
+        }
+        dbg('ZZZ wiki 无此角色:', name);
+        return false;
+      }
       dbg('ZZZ 命中条目:', `id=${ret.id}`, ret.official ? '来源=官方Wiki兜底(详情走官方)' : '来源=nanoka');
       // ret.official：id 来自官方 Wiki 兜底匹配，详情直接走官方源（nanoka 使用独立编号体系，拿官方 id 查必然 404）
       const data = await mys.detail(ret.id, false, true, false, !!ret.official);
-      if (!data) { dbg('ZZZ 角色详情获取失败:', name, 'id=' + ret.id); return false; }
+      if (!data) {
+        const cached = await getWikiCharacter('zzz', { name }).catch(err => {
+          dbg('ZZZ Nanoka latest 查询失败:', err?.message || err);
+          return null;
+        });
+        if (cached?.detail) {
+          dbg('ZZZ Nanoka latest 命中:', `id=${cached.id}`, `version=${cached.version || '-'}`, `source=${cached.source}`);
+          this.zzz_role_pictures(e, { content: { ...cached.detail, name: cached.name || cached.detail.name }, unreleased: cached.unreleased });
+          return true;
+        }
+        dbg('ZZZ 角色详情获取失败:', name, 'id=' + ret.id);
+        return false;
+      }
       this.zzz_role_pictures(e, data);
       return true;
     }
@@ -2375,7 +2563,7 @@ export class Wiki extends plugin {
     if (rname) {
       let hitSr = isSr;
       let { id } = await mys.data(rname, 'js', hitSr, isZZZ, isBH3);
-      if (!id && !isZZZ && !isBH3) {
+      if (!id && !isZZZ && !isBH3 && !e.__hoyoExplicitGame) {
         // 命令没带游戏前缀时只查命令暗示的那一个游戏，于是「#阿哈图鉴」会去
         // 原神列表里找，而阿哈是星铁角色。实测阿哈不在原神列表、芙宁娜不在
         // 星铁列表，两边都查一遍才能让「#角色名图鉴」不必显式写「星铁」。
@@ -2383,6 +2571,16 @@ export class Wiki extends plugin {
         hitSr = !isSr;
         ({ id } = await mys.data(rname, 'js', hitSr, isZZZ, isBH3));
         if (id) dbg('跨游戏回退命中:', rname, '→', hitSr ? '星铁' : '原神');
+      }
+      /* 官方/Nanoka 列表都没收录时，用本地 miao meta 的 id 再试一次。
+         新角色在 Bwiki 未建页、nanoka 列表也还没刷新时，本地 meta 往往已经有
+         data.json（每日 git 同步），这里直接把 id 交给后面的 nanoka 详情缓存。 */
+      if (!id && !isZZZ && !isBH3) {
+        const local = readLocalCharacter(hitSr ? 'sr' : 'gs', { name: rname })
+        if (local?.id) {
+          id = local.id;
+          dbg('本地 meta 命中角色 id:', rname, 'id=' + id);
+        }
       }
       isSr = hitSr;
       // 原神：优先 Bwiki。Bwiki 收录更全（有角色档案、徽章图标、逐级数值），
@@ -2461,6 +2659,9 @@ export class Wiki extends plugin {
     view.source = extra.source;
     view.topBadges = extra.topBadges;
     view.gacha = extra.gacha;
+    applyLocalGsView(view, detail.name);
+    await applyNanokaGsMaterials(view, detail.name);
+    view.statistics = await getGsWikiStatistics(detail.name).catch(() => null);
     // 角色详细：图鉴顶部第一块；#角色故事 指令也用 extra.detailStory，同一份数据
     view.detailStory = extra.detailStory;
     // 背景图：纯装饰，失败返回空串，不影响图鉴本身
@@ -2490,9 +2691,11 @@ export class Wiki extends plugin {
         const c = data?.content || {};
         const tpl = isSr ? 'wiki/sr_role_nk' : 'wiki/gs_role_nk';
         const view = isSr ? srRoleView(c, c.id || '') : gsRoleView(c, c.id || '');
+        if (!isSr) applyLocalGsView(view, c.name);
         const name = c.name;
         if (!name) return false;
         if (!isSr) {
+          view.statistics = await getGsWikiStatistics(name).catch(() => null);
           // 背景图：纯装饰，与星铁角色卡共用同一张随机图 API。测试服模式跳过 Bwiki 分支、
           // 只走这条 nanoka 渲染路，必须在这里设 bgFile，否则原神角色图鉴在测试模式下无背景。
           view.bgFile = await this.fetchGsBgFile();
@@ -2529,7 +2732,17 @@ export class Wiki extends plugin {
               return view;
             }
             const merged = { ...view };
-            const take = k => { if (bw[k] !== undefined && bw[k] !== null && bw[k] !== '') merged[k] = bw[k]; };
+            const take = k => {
+                const value = bw[k];
+                if (value === undefined || value === null || value === '') return;
+                if (k === 'traceBonus') {
+                    const text = stripTags(value);
+                    // 行迹加成只显示短摘要；Bwiki 解析异常时会把整页正文塞进来，直接丢弃
+                    if (text && text.length <= 120) merged[k] = text;
+                    return;
+                }
+                merged[k] = value;
+            };
             ['icon', 'rarity', 'rarityIcon', 'rarityIconUrl', 'path', 'pathIcon', 'pathIconUrl',
               'damage', 'damageIcon', 'damageIconUrl', 'camp',
               'hp', 'atk', 'def', 'speed', 'crit', 'critDmg', 'spNeed', 'traceBonus', 'desc', 'growth'].forEach(take);
@@ -2541,9 +2754,8 @@ export class Wiki extends plugin {
             if (Array.isArray(bw.stories) && bw.stories.length) merged.stories = bw.stories;
             // 卡面只留角色详情，完整故事走「#角色名故事」
             if (bw.detailStory) merged.detailStory = bw.detailStory;
-            // 培养材料：Bwiki 带图标且口径明确（角色晋阶总计 + 技能/行迹晋阶），
-            // 比 nanoka 的合计更好用
-            if (Array.isArray(bw.materials) && bw.materials.length) merged.materials = bw.materials;
+            // 培养材料统一用 Nanoka：Bwiki 的材料不再覆盖，
+            // 否则同一角色会因为走 Bwiki/走 nanoka 显示两套不同的材料表。
             // 卡池信息 + 顶部徽章（稀有度/命途/属性/称号/身份/CV…），和原神卡对齐
             if (bw.gacha) merged.gacha = bw.gacha;
             if (Array.isArray(bw.badges) && bw.badges.length) merged.badges = bw.badges;
@@ -2762,6 +2974,9 @@ export class Wiki extends plugin {
       guide: null, gacha: null,
       bgFile: await this.fetchGsBgFile()
     };
+    applyLocalGsView(view, view.name);
+    await applyNanokaGsMaterials(view, view.name);
+    view.statistics = await getGsWikiStatistics(view.name).catch(() => null);
     const customArt = findCustomRoleArt('gs', view.name);
     if (customArt) view.bgFile = customArt;
     return render('wiki/gs_role_nk', view, { e, ret: true });

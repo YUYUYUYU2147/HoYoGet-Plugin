@@ -38,7 +38,7 @@ export class update extends plugin {
     });
     this.typeName = 'HoYoGet-Plugin';
     this.task = {
-      cron: '0 30 3 * * *', //凌晨3.30自动更新
+      cron: '0 0 6 * * *', //每天早上6点自动更新插件与 meta 资源
       name: '[米哈游]检查是否需要自动更新',
       fnc: () => runCronTask('自动更新检查', () => this.zd()),
       log: true,
@@ -59,6 +59,18 @@ export class update extends plugin {
       if (ret.error) {
         logger.mark('HoYoGet-Plugin 更新失败');
         return;
+      }
+      /* meta-gs / meta-sr 也走 git pull（官方 miao-plugin）。
+         必须放在插件更新之后：上面的 reset --hard 会覆盖已同步的 meta 数据，
+         而重启又在下面触发，放前面等于白同步。 */
+      try {
+        const { syncAllMeta } = await import('../../system/meta_sync.js')
+        const metas = await syncAllMeta({ log: msg => logger.mark?.(`[HoYoGet][meta] ${msg}`) })
+        for (const r of metas) {
+          if (r.error) logger.warn?.(`[HoYoGet][meta] ${r.game} 同步失败：${r.error}`)
+        }
+      } catch (err) {
+        logger.warn?.(`[HoYoGet][meta] 自动同步失败：${err?.message || err}`)
       }
       if (/Already up|已经是最新/g.test(ret.stdout)) {
         logger.info('HoYoGet-Plugin 已经是最新');
@@ -104,7 +116,7 @@ export class update extends plugin {
     }
     const lines = res.map(r => r.error
       ? `  ${r.game}：失败 ${r.error}`
-      : `  ${r.game}：${r.skipped ? '已是最新' : `更新 ${r.updated} 个提交`}（${String(r.latest || '').slice(0, 8)}）`)
+      : `  ${r.game}：${r.skipped ? '已是最新' : `更新 ${r.files ?? r.updated} 个文件`}（${String(r.latest || '').slice(0, 8)}）`)
     return this.reply(['资源包同步完成：', ...lines].join('\n'))
   }
 

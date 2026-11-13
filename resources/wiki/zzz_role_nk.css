@@ -25,6 +25,10 @@
    不能像原神/星铁那样 object-fit:cover —— 透明底裁切后会切掉人物。 */
 .avatar{width:118px;height:118px;border-radius:18px;object-fit:contain;flex:none;
   background:linear-gradient(180deg,#ffe9a8 0%,#ffd166 45%,#e0a83a 100%)}
+/* Nanoka 的 IconRoleSelect 是方形头肩卡面，按 contain 会把透明边留成底框，
+   不同角色的 256×250 / 256×256 比例还会导致人物大小不一致。只对这类头像
+   改用 cover 铺满；官方/白色立绘仍用 contain，避免裁掉人物。 */
+.avatar[src*="IconRoleSelect"]{object-fit:cover;object-position:center}
 .hero-txt{flex:1;min-width:0}
 .hero-txt h1{margin:0;font-size:28px;font-weight:900;color:#1f2937;letter-spacing:.5px}
 .rarity{font-size:15px;font-weight:800;color:#d4a017;margin-left:8px}

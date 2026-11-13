@@ -1,74 +1,90 @@
-export const details = [
-  {
-    title: "普攻伤害",
-    dmg: ({ talent }, dmg) => dmg(talent.a["技能伤害"], "a")
-  }, {
-    title: "终结技伤害",
-    dmg: ({ talent }, dmg) => dmg(talent.q["技能伤害"], "q")
-  }, {
-    title: "战技/终结技护盾量",
-    dmg: ({ talent, attr, calc }, { shield }) => shield(talent.q["攻击百分比"] * calc(attr.atk) + talent.q["固定值"])
-  }, {
-    title: "龙灵追击伤害",
-    dmg: ({ talent }, dmg) => dmg(talent.q["龙灵追击伤害"], "q")
-  }, {
-    title: "附加伤害(腾荒为同袍)",
-    dmg: ({ talent, cons }, dmg) => dmg(talent.q["附加伤害"] * (cons > 1 ? 2 : 1), "q")
-  }, {
-    title: "天赋龙灵行动护盾量",
-    dmg: ({ talent, attr, calc }, { shield }) => shield(talent.t["攻击百分比"] * calc(attr.atk) + talent.t["固定值"])
-  }, {
-    tree: 3,
-    title: "龙灵行动额外护盾量",
-    dmg: ({ attr, calc }, { shield }) => shield(calc(attr.atk) * 0.05 + 100)
-  }, {
-    tree: 3,
-    title: "龙灵行动额外附加伤害",
-    dmg: ({ cons }, dmg) => dmg(0.4 * (cons > 1 ? 2 : 1), "q")
-  }, {
-    title: "护盾量上限",
-    dmg: ({ talent, attr, calc }, { shield }) => {
-      let { avg } = shield(talent.e["攻击百分比"] * calc(attr.atk) + talent.e["固定值"])
-      return { avg: avg * 3 }
-    }
-  }, {
-    cons: 6,
-    title: "6命终结技附加伤害",
-    // eslint-disable-next-line no-empty-pattern
-    dmg: ({}, dmg) => dmg(3.3, "q")
-  }
-]
-
-export const mainAttr = "atk,cpct,cdmg"
-export const defDmgIdx = 2
+export const mainAttr = 'atk,cpct,cdmg'
+export const defParams = { comradeAtk: 3000 }
 
 export const buffs = [
   {
-    title: "Tip：以下均为丹恒•腾荒成为【同袍】时触发的效果"
-  }, {
-    title: "行迹-神秀：成为【同袍】的目标攻击力提高[atkPct]%",
-    tree: 2,
-    sort: 9,
-    data: {
-      atkPct: 15
-    }
-  }, {
-    title: "丹恒•腾荒1命：使【同袍】全属性抗性穿透提高[kx]%",
     cons: 1,
+    check: ({ params }) => params.isQ_Enhanced && params.isComradeDmg,
+    title: '1魂-蜕却旧鳞的荒龙：【同袍】全属性抗性穿透提高[kx]%',
     data: {
       kx: 18
     }
-  }, {
-    title: "丹恒•腾荒2命：【同袍】造成的附加伤害为原伤害的200%",
-    cons: 2
-  }, {
-    title: "丹恒•腾荒6命：存在【同袍】时，使敌方全体受到的伤害提高[enemydmg]%，【同袍】造成伤害时，无视敌方目标[ignore]%的防御力",
+  },
+  {
     cons: 6,
+    title: '6魂-草木微尘皆入梦中：场上存在【同袍】时，敌方全体受到的伤害提高[enemydmg]%',
     data: {
-      enemydmg: 20,
+      enemydmg: 20
+    }
+  },
+  {
+    cons: 6,
+    check: ({ params }) => params.isComradeDmg,
+    title: '6魂-草木微尘皆入梦中：【同袍】造成伤害时，无视敌方目标[ignore]%的防御力',
+    data: {
       ignore: 12
     }
   }
 ]
 
-export const createdBy = "其实雨很好"
+export const details = [
+  {
+    title: '普攻伤害',
+    dmg: ({ talent }, dmg) => dmg(talent.a['技能伤害'], 'a')
+  },
+  {
+    title: '战技护盾量',
+    dmg: ({ calc, attr, talent }, dmg) => dmg.shield(calc(attr.atk) * talent.e['护盾•百分比攻击'] + talent.e['护盾•固定值'])
+  },
+  {
+    title: '终结技伤害',
+    dmgKey: 'q',
+    dmg: ({ talent }, dmg) => dmg(talent.q['全体伤害'], 'q')
+  },
+  {
+    title: '终结技护盾量',
+    dmg: ({ calc, attr, talent }, dmg) => dmg.shield(calc(attr.atk) * talent.q['护盾•百分比攻击'] + talent.q['护盾•固定值'])
+  },
+  {
+    title: '天赋龙灵护盾量',
+    params: { isQ_Enhanced: true },
+    dmg: ({ calc, attr, talent, cons, params }, dmg) => {
+      let shieldVal = calc(attr.atk) * talent.t['护盾•百分比攻击'] + talent.t['护盾•固定值']
+      if (cons >= 2 && params.isQ_Enhanced) {
+        shieldVal *= 2
+      }
+      return dmg.shield(shieldVal)
+    }
+  },
+  {
+    title: ({ cons, trees, params }) => `终结技强化龙灵追击(同袍攻击:${params.comradeAtk})${cons >= 2 ? '(2魂+)' : ''}${trees['103'] ? '(峥嵘)' : ''}`,
+    params: { isQ_Enhanced: true, isComradeDmg: true },
+    dmg: (ds, dmg) => {
+      const { talent, calc, attr, params, cons, trees } = ds
+      const comradeAtk = params.comradeAtk || 0
+      const selfDmgValue = calc(attr.atk) * talent.q['追加攻击伤害']
+      let comradePct = talent.q['附加伤害']
+      if (cons >= 2) comradePct *= 2
+      const comradeDmgValue = comradeAtk * comradePct
+      const zhengrongDmgValue = trees['103'] ? comradeAtk * 0.40 : 0
+      const finalSelfDmg = dmg.basic(selfDmgValue, 't')
+      const finalComradeDmg = dmg.basic(comradeDmgValue + zhengrongDmgValue, 't') 
+      return {
+        dmg: finalSelfDmg.dmg + finalComradeDmg.dmg,
+        avg: finalSelfDmg.avg + finalComradeDmg.avg,
+      }
+    }
+  },
+  {
+    title: ({ params }) => `6命终结技【同袍】附加伤害(同袍攻击:${params.comradeAtk})`,
+    cons: 6,
+    params: { isQ_Enhanced: true, isComradeDmg: true },
+    dmg: (ds, dmg) => {
+      const comradeAtk = ds.params.comradeAtk || 0
+      const totalValue = comradeAtk * 3.30
+      return dmg.basic(totalValue, 't')
+    }
+  }
+]
+
+export const defDmgKey = 'q'

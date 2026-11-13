@@ -1,105 +1,134 @@
-import { Format } from "#miao"
-
-export const details = [
-  {
-    title: "普攻伤害",
-    dmg: ({ talent, attr, calc }, { basic }) => basic(calc(attr.hp) * talent.a["技能伤害"], "a")
-  }, {
-    title: "战技忆灵爆伤提高",
-    dmg: ({ talent, attr, calc }) => {
-      return {
-        avg: Format.percent(calc(attr.cdmg) * talent.e["爆伤提高"] / 100),
-        type: "text"
-      }
-    }
-  }, {
-    title: "终结技长夜伤害",
-    dmg: ({ talent, attr, calc }, { basic }) => basic(calc(attr.hp) * talent.q["长夜伤害"], "q")
-  }, {
-    title: "忆灵技伤害(16忆质)",
-    dmg: ({ talent, attr, calc }, { basic }) => basic(calc(attr.hp) * (talent.me["技能伤害"] + talent.me["额外伤害"] * 4), "me")
-  }, {
-    title: "忆灵技伤害(28忆质)",
-    dmg: ({ talent, attr, calc }, { basic }) => basic(calc(attr.hp) * (talent.me["技能伤害"] + talent.me["额外伤害"] * 7), "me")
-  }, {
-    title: "长夜自爆伤害(16忆质 主目标)",
-    dmg: ({ talent, attr, calc }, { basic }) => basic(calc(attr.hp) * talent.me2["目标伤害"] * 16, "me")
-  }, {
-    title: "长夜自爆伤害(16忆质 3目标完整)",
-    dmg: ({ talent, attr, calc }, { basic }) => basic(calc(attr.hp) * (talent.me2["目标伤害"] + talent.me2["相邻目标伤害"] * 2) * 16, "me")
-  }, {
-    title: "长夜自爆伤害(28忆质 主目标)",
-    dmg: ({ talent, attr, calc }, { basic }) => basic(calc(attr.hp) * talent.me2["目标伤害"] * 28, "me")
-  }, {
-    title: "长夜自爆伤害(28忆质 3目标完整)",
-    dmg: ({ talent, attr, calc }, { basic }) => basic(calc(attr.hp) * (talent.me2["目标伤害"] + talent.me2["相邻目标伤害"] * 2) * 28, "me")
-  }
-]
-
-export const defDmgIdx = 8
-export const defParams = { Memosprite: true }
-export const mainAttr = "hp,cpct,cdmg"
+export const mainAttr = 'hp,cpct,cdmg,dmg'
+export const defParams = {
+  Memosprite: true,
+  enemyCount: 1,
+  memoryCount: 1
+}
 
 export const buffs = [
   {
-    title: "长夜状态：基础生命值: [_hpBase]，基础速度: 160",
+    title: '天赋-今夜与我同行：生命降低时，暴击伤害提高[cdmg]%',
     data: {
-      _hpBase: ({ attr, calc }) => calc(attr.staticAttr.hp) * 0.5
+      cdmg: ({ talent }) => talent.t['暴伤提高'] * 100
     }
-  }, {
-    title: "战技-白昼悄然离去：使忆灵的暴击伤害提高[meCdmg]%",
-    sort: 9,
+  },
+  {
+    title: '忆灵天赋-孤独，浮游，漆黑：在场时，长夜月与忆灵造成的伤害提高[dmg]%',
     data: {
-      meCdmg: ({ talent, attr, calc }) => calc(attr.cdmg) * talent.e["爆伤提高"]
+      dmg: ({ talent }) => talent.mt['造成的伤害提高'] * 100
     }
-  }, {
-    title: "终结技-晚安，全世界无眠：进入【至暗之谜】状态，期间敌方全体受到的伤害提高[enemydmg]%，长夜月和忆灵「长夜」造成的伤害提高[dmg]%",
+  },
+  {
+    check: ({ params }) => params.isZhiAn,
+    title: '终结技-【至暗之谜】：敌方受到伤害提高[enemydmg]%，自身与忆灵伤害提高[dmg]%',
     data: {
-      enemydmg: ({ talent }) => talent.q["受到的伤害提高"] * 100,
-      dmg: ({ talent }) => talent.q["伤害提高"] * 100
+      enemydmg: ({ talent }) => talent.q['受到的伤害提高'] * 100,
+      dmg: ({ talent }) => talent.q['造成的伤害提高'] * 100
     }
-  }, {
-    title: "天赋-今夜与我同行：长夜月或忆灵长夜1次生命降低，使自身和忆灵长夜的暴击伤害提高[cdmg]%",
+  },
+  {
+    check: ({ params }) => params.skillActive,
+    title: '战技-白昼悄然离去：我方忆灵暴击伤害提高[meCdmg]%',
     data: {
-      cdmg: ({ talent }) => talent.t["爆伤提高"] * 100
+      meCdmg: ({ calc, attr, talent }) => calc(attr.cdmg) * talent.e['忆灵暴伤提高']
     }
-  }, {
-    title: "忆灵天赋-孤独，浮游，漆黑：长夜在场时，长夜月和长夜造成的伤害提高[dmg]%",
-    data: {
-      dmg: ({ talent }) => talent.mt["伤害提高"] * 100
-    }
-  }, {
-    title: "行迹-天黑黑，月寂寂：暴击率提高[cpct]%，施放技能时，消耗生命值的5%，使暴击伤害提高[cdmg]%",
+  },
+  {
     tree: 1,
+    title: '行迹-天黑黑，月寂寂：暴击率提高[cpct]%，施放技能时暴击伤害提高[cdmg]%',
     data: {
       cpct: 35,
       cdmg: 15
     }
-  }, {
-    title: "行迹-天亮了，雨落了：4名记忆角色，额外使我方全体忆灵暴击伤害提高[cdmg]%",
+  },
+  {
     tree: 3,
+    check: ({ params }) => params.skillActive,
+    title: '行迹-天亮了，雨落了([_memoryCount]记忆)：战技额外使忆灵暴击伤害提高[meCdmg]%',
     data: {
-      cdmg: 65
+      _memoryCount: ({ params }) => params.memoryCount || 1,
+      meCdmg: ({ params }) => {
+        const count = Math.min(params.memoryCount || 1, 4);
+        if (count >= 4) return 65; if (count === 3) return 50; if (count === 2) return 15; return 5
+      }
     }
-  }, {
-    title: "长夜月1魂：4名敌方目标，我方忆灵造成的伤害为原伤害的120%",
+  },
+  {
     cons: 1,
+    title: '1魂-睡吧，长夜有所梦([_enemyCount]敌人)：我方忆灵造成的伤害提高[meDmg]%',
     data: {
-      meMulti: 20
+      _enemyCount: ({ params }) => params.enemyCount || 1,
+      meDmg: ({ params }) => {
+        const count = Math.max(params.enemyCount || 1, 1);
+        if (count === 1) return 50; if (count === 2) return 30; if (count === 3) return 25; return 20
+      }
     }
-  }, {
-    title: "长夜月2魂：暴击伤害提高[cdmg]%",
+  },
+  {
     cons: 2,
+    title: '2魂-听，沉眠中的呓语：暴击伤害提高[cdmg]%',
     data: {
       cdmg: 40
     }
-  }, {
-    title: "长夜月6魂：长夜月在场时，我方全体目标的全属性抗性穿透提高[kx]%",
+  },
+  {
     cons: 6,
+    title: '6魂-就这样，一直：我方全体全属性抗性穿透提高[kx]%',
     data: {
       kx: 20
     }
   }
 ]
 
-export const createdBy = "其实雨很好"
+export const details = [
+  {
+    title: '普攻伤害',
+    dmg: ({ calc, attr, talent }, dmg) => {
+      const basicDmg = calc(attr.hp) * talent.a['技能伤害']
+      return dmg.basic(basicDmg, 'a')
+    }
+  },
+  {
+    title: ({ params }) => `忆灵技-追忆蹁跹如雨(${params.yizhi}层忆质)`,
+    params: { yizhi: 16 },
+    dmg: ({ calc, attr, talent, params }, dmg) => {
+      const yilingHP = calc(attr.hp) * 0.5
+      const yizhiCount = Math.floor(params.yizhi / 4)
+      const pct = talent.me['长夜伤害'] + talent.me['长夜额外伤害'] * yizhiCount
+      const basicDmg = yilingHP * pct
+      return dmg.basic(basicDmg, 'me')
+    }
+  },
+  {
+    title: '终结技-忆灵伤害',
+    params: { isZhiAn: true, skillActive: true },
+    dmg: ({ calc, attr, talent }, dmg) => {
+      const yilingHP = calc(attr.hp) * 0.5
+      const basicDmg = yilingHP * talent.q['长夜伤害']
+      return dmg.basic(basicDmg, 'me')
+    }
+  },
+  {
+    title: ({ params }) => `忆灵技-迷梦流失如露(${params.yizhi}层忆质)-主目标`,
+    dmgKey: 'me',
+    params: { yizhi: 16, isZhiAn: true, skillActive: true },
+    dmg: ({ calc, attr, talent, params }, dmg) => {
+      const yilingHP = calc(attr.hp) * 0.5
+      const pct = talent.me2['主目标伤害'] * params.yizhi
+      const basicDmg = yilingHP * pct
+      return dmg.basic(basicDmg, 'me')
+    }
+  },
+  {
+    title: ({ params }) => `忆灵技-迷梦流失如露(${params.yizhi}层忆质)-其他目标`,
+    params: { yizhi: 16, isZhiAn: true, skillActive: true },
+    dmg: ({ calc, attr, talent, params }, dmg) => {
+      const yilingHP = calc(attr.hp) * 0.5
+      const pct = talent.me2['其他目标伤害'] * params.yizhi
+      const basicDmg = yilingHP * pct
+      return dmg.basic(basicDmg, 'me')
+    }
+  }
+]
+
+export const defDmgKey = 'me'

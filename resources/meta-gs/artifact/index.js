@@ -1,20 +1,14 @@
-import lodash from "lodash"
-import calc from "./calc.js"
-import { mainAttr, subAttr, attrMap, attrNameMap, mainIdMap, attrIdMap } from "./extra.js"
-import { setAlias, setAbbr } from "./alias.js"
-import { usefulAttr } from "./artis-mark.js"
-import { Data, Meta } from "#miao"
+import { Data, Meta } from '#miao'
+import lodash from 'lodash'
+import calc from './calc.js'
+import { mainAttr, subAttr, attrMap, attrNameMap, mainIdMap, attrIdMap } from './extra.js'
+import { setAlias, setAbbr } from './alias.js'
+import { usefulAttr } from './artis-mark.js'
 
-// let path = "resources/meta-gs/artifact"
-// let calc = await Data.importModule(`${path}/calc.js`, "miao")
-// let { mainAttr, subAttr, attrMap, attrNameMap, mainIdMap, attrIdMap } = await Data.importModule(`${path}/extra.js`, "miao")
-// let { setAlias, setAbbr } = await Data.importModule(`${path}/alias.js`, "miao")
-// let { usefulAttr } = await Data.importModule(`${path}/artis-mark.js`, "miao")
+let setMeta = Meta.create('gs', 'artiSet')
+let artiMeta = Meta.create('gs', 'arti')
 
-let setMeta = Meta.create("gs", "artiSet")
-let artiMeta = Meta.create("gs", "arti")
-
-let artis = Data.readJSON("resources/meta-gs/artifact/data.json", "miao")
+let artis = Data.readJSON('resources/meta-gs/artifact/data.json', 'miao')
 let setIds = {}
 
 lodash.forEach(artis, (ds) => {
@@ -44,12 +38,7 @@ setMeta.addAbbr(setAbbr)
 setMeta.addAlias(setAlias)
 setMeta.addAlias(setIds)
 artiMeta.addMeta({
-  mainAttr,
-  subAttr,
-  attrMap,
-  attrNameMap,
-  mainIdMap,
-  attrIdMap,
+  mainAttr, subAttr, attrMap, attrNameMap, mainIdMap, attrIdMap,
   artiBuffs: calc,
   usefulAttr
 })
@@ -57,3 +46,4 @@ artiMeta.addMeta({
 setMeta.addMeta({
   artiBuffs: calc
 })
+

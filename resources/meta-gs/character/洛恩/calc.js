@@ -66,14 +66,14 @@ export const details = [
       }
     }
   }, {
-    title: "2命额外伤害",
+    title: '2命额外伤害',
     cons: 2,
     dmg: ({}, dmg) => dmg(500)
   }
 ]
 
-export const defParams = { "奇谋": true, "Hexenzirkel": true }
-export const mainAttr = "atk,cpct,cdmg"
+export const defParams = { "奇谋": true, Hexenzirkel: true }
+export const mainAttr = 'atk,cpct,cdmg'
 export const defDmgIdx = 6
 
 export const buffs = [

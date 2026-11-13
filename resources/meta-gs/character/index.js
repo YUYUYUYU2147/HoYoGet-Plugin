@@ -1,24 +1,20 @@
-import lodash from "lodash"
-import { alias } from "./alias.js"
-import { extraChars, wifeCfg } from "./extra.js"
-import { Data, Meta } from "#miao"
+import lodash from 'lodash'
+import { Data, Meta } from '#miao'
+import { alias } from './alias.js'
+import { extraChars, wifeCfg } from './extra.js'
 
-// let path = "resources/meta-gs/character"
-// let { alias } = await Data.importModule(`${path}/alias.js`, "miao")
-// let { extraChars, wifeCfg } = await Data.importModule(`${path}/extra.js`, "miao")
-
-let data = Data.readJSON("resources/meta-gs/character/data.json", "miao")
-let meta = Meta.create("gs", "char")
+let data = Data.readJSON('resources/meta-gs/character/data.json', 'miao')
+let meta = Meta.create('gs', 'char')
 
 meta.addData(data)
 meta.addAlias(alias)
 
 // 导入主角天赋对应元素，以据此判断主角元素
-let travelers = [ "荧", "空", "旅行者" ]
+let travelers = ["荧", "空", "旅行者"]
 travelers.forEach(name => {
   meta.addDataItem(
     meta.getId(name),
-    Data.readJSON(`resources/meta-gs/character/${name}/data.json`, "miao")
+    Data.readJSON(`resources/meta-gs/character/${name}/data.json`, 'miao')
   )
 })
 
@@ -34,21 +30,24 @@ meta.addAlias(extraChars)
 
 // 添加老婆设置
 let wifeData = {}
-let { diyCfg } = await Data.importCfg("character")
+let { diyCfg } = await Data.importCfg('character')
 let diyWifeData = diyCfg.wifeData || {}
 lodash.forEach(wifeCfg, (txt, type) => {
   wifeData[type] = wifeData[type] || {}
   Data.eachStr(txt, (name) => {
     let id = meta.getId(name)
-    if (id) wifeData[type][id] = true
+    if (id) {
+      wifeData[type][id] = true
+    }
   })
 })
 lodash.forEach(diyWifeData, (txt, type) => {
   wifeData[type] = wifeData[type] || {}
   Data.eachStr(txt, (name) => {
     let id = meta.getId(name)
-    if (id) wifeData[type][id] = true
+    if (id) {
+      wifeData[type][id] = true
+    }
   })
 })
-
 meta.addMeta({ wifeData })

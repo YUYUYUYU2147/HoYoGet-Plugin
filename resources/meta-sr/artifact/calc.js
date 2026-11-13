@@ -7,636 +7,567 @@ let attr = (key, val) => {
   }
 }
 export default {
-  "云无留迹的过客": {
-    2: attr("heal", 10)
+  云无留迹的过客: {
+    2: attr('heal', 10)
   },
-  "野穗伴行的快枪手": {
-    2: attr("atkPct", 12),
-    4: [
-      attr("speedPct", 6), {
-        title: "普攻伤害提高10%",
-        data: {
-          aDmg: 10
-        }
+  野穗伴行的快枪手: {
+    2: attr('atkPct', 12),
+    4: [attr('speedPct', 6), {
+      title: '普攻伤害提高10%',
+      data: {
+        aDmg: 10
       }
-    ]
+    }]
   },
-  "净庭教宗的圣骑士": {
-    2: attr("defPct", 15),
+  净庭教宗的圣骑士: {
+    2: attr('defPct', 15),
     4: {
-      title: "护盾强效提高20%",
+      title: '护盾强效提高20%',
       data: {
         shield: 20
       }
     }
   },
-  "密林卧雪的猎人": {
-    2: attr("ice", 10),
+  密林卧雪的猎人: {
+    2: attr('ice', 10),
     4: {
-      title: "释放终结技后2回合，爆伤提高25%",
+      title: '释放终结技后2回合，爆伤提高25%',
       data: {
         cdmg: 25
       }
     }
   },
-  "街头出身的拳王": {
-    2: attr("phy", 10),
+  街头出身的拳王: {
+    2: attr('phy', 10),
     4: {
-      title: "攻击或被攻击5层Buff提高攻击力25%",
+      title: '攻击或被攻击5层Buff提高攻击力25%',
       data: {
         atkPct: 25
       }
     }
   },
-  "熔岩锻铸的火匠": {
-    2: attr("fire", 10),
+  熔岩锻铸的火匠: {
+    2: attr('fire', 10),
     4: {
-      title: "战技造成的伤害提高12%，释放终结技下一次的火属性伤害提高12%",
+      title: '战技造成的伤害提高12%，释放终结技下一次的火属性伤害提高12%',
       data: {
         eDmg: 12,
         dmg: 12 // todo: 检查属性
       }
     }
   },
-  "繁星璀璨的天才": {
-    2: attr("quantum", 10),
+  繁星璀璨的天才: {
+    2: attr('quantum', 10),
     4: {
-      title: "对有量子弱点的目标造成伤害时，无视其20%的防御力",
+      title: '对有量子弱点的目标造成伤害时，无视其20%的防御力',
       data: {
         ignore: 20
       }
     }
   },
-  "激奏雷电的乐队": {
-    2: attr("elec", 10),
+  激奏雷电的乐队: {
+    2: attr('elec', 10),
     4: {
-      title: "释放战技时，攻击力提高20%",
+      title: '释放战技时，攻击力提高20%',
       data: {
         atkPct: 20
       }
     }
   },
-  "晨昏交界的翔鹰": {
-    2: attr("wind", 10)
+  晨昏交界的翔鹰: {
+    2: attr('wind', 10)
   },
-  "流星追迹的怪盗": {
-    2: attr("stance", 16),
-    4: attr("stance", 16)
+  流星追迹的怪盗: {
+    2: attr('stance', 16),
+    4: attr('stance', 16)
   },
-  "盗匪荒漠的废土客": {
-    2: attr("imaginary", 10),
+  盗匪荒漠的废土客: {
+    2: attr('imaginary', 10),
     4: {
-      title: "对陷入负面效果的目标的暴击率提高10%，对禁锢状态的目标暴击率提高20%",
+      title: '对陷入负面效果的目标的暴击率提高10%，对禁锢状态的目标暴击率提高20%',
       data: {
         cpct: 10
       }
     }
   },
-  "宝命长存的莳者": {
-    2: attr("hpPct", 12),
+  宝命长存的莳者: {
+    2: attr('hpPct', 12),
     4: {
-      title: "消耗生命2层提高暴击率16%",
+      title: '消耗生命2层提高暴击率16%',
       data: {
         cpct: 16
       }
     }
   },
-  "骇域漫游的信使": {
-    2: attr("speedPct", 6),
+  骇域漫游的信使: {
+    2: attr('speedPct', 6),
     4: {
-      title: "对我方释放终结技时速度提高12%",
+      title: '对我方释放终结技时速度提高12%',
       data: {
         speedPct: 12
       }
     }
   },
-  "太空封印站": {
-    2: [
-      attr("atkPct", 12), {
-        title: "速度大于等于120提高攻击力12%",
-        check: ({ calc, attr }) => calc(attr.speed) > 120,
-        data: {
-          atkPct: 12
-        }
+  太空封印站: {
+    2: [attr('atkPct', 12), {
+      title: '速度大于等于120提高攻击力12%',
+      check: ({ calc, attr }) => calc(attr.speed) > 120,
+      data: {
+        atkPct: 12
       }
-    ]
+    }]
   },
-  "不老者的仙舟": {
-    2: [
-      attr("hpPct", 12), {
-        title: "速度大于等于120提高攻击力8%",
-        check: ({ calc, attr }) => calc(attr.speed) > 120,
-        data: {
-          atkPct: 8
-        }
+  不老者的仙舟: {
+    2: [attr('hpPct', 12), {
+      title: '速度大于等于120提高攻击力8%',
+      check: ({ calc, attr }) => calc(attr.speed) > 120,
+      data: {
+        atkPct: 8
       }
-    ]
+    }]
   },
-  "泛银河商业公司": {
-    2: [
-      attr("effPct", 10), {
-        title: "基于效果命中提高攻击力[atkPct]%",
-        data: {
-          atkPct: ({ calc, attr }) => Math.min(25, calc(attr.effPct) / 4 || 0)
-        }
+  泛银河商业公司: {
+    2: [attr('effPct', 10), {
+      title: '基于效果命中提高攻击力[atkPct]%',
+      data: {
+        atkPct: ({ calc, attr }) => Math.min(25, calc(attr.effPct) / 4 || 0)
       }
-    ]
+    }]
   },
-  "筑城者的贝洛伯格": {
-    2: [
-      attr("defPct", 15), {
-        title: "效果命中大于50%时，提高防御力15%",
-        check: ({ calc, attr }) => calc(attr.effPct) > 50,
-        data: {
-          defPct: 15
-        }
+  筑城者的贝洛伯格: {
+    2: [attr('defPct', 15), {
+      title: '效果命中大于50%时，提高防御力15%',
+      check: ({ calc, attr }) => calc(attr.effPct) > 50,
+      data: {
+        defPct: 15
       }
-    ]
+    }]
   },
-  "星体差分机": {
-    2: attr("cdmg", 16)
+  星体差分机: {
+    2: attr('cdmg', 16)
   },
-  "停转的萨尔索图": {
-    2: [
-      attr("cpct", 8), {
-        title: "终结技与追加攻击造成的伤害提高15%",
-        check: ({ attr, calc }) => {
-          return calc(attr.cpct) > 50
-        },
-        data: {
-          qDmg: 15,
-          tDmg: 15
-        }
+  停转的萨尔索图: {
+    2: [attr('cpct', 8), {
+      title: '终结技与追加攻击造成的伤害提高15%',
+      check: ({ attr, calc }) => {
+        return calc(attr.cpct) > 50
+      },
+      data: {
+        qDmg: 15,
+        tDmg: 15
       }
-    ]
+    }]
   },
-  "盗贼公国塔利亚": {
-    2: [
-      attr("stance", 16), {
-        title: "速度大于145时，击破特攻提高20%",
-        check: ({ calc, attr }) => calc(attr.speed) > 145,
-        data: {
-          stance: 20
-        }
+  盗贼公国塔利亚: {
+    2: [attr('stance', 16), {
+      title: '速度大于145时，击破特攻提高20%',
+      check: ({ calc, attr }) => calc(attr.speed) > 145,
+      data: {
+        stance: 20
       }
-    ]
+    }]
   },
-  "生命的翁瓦克": {
-    2: attr("recharge", 5)
+  生命的翁瓦克: {
+    2: attr('recharge', 5)
   },
-  "繁星竞技场": {
-    2: [
-      attr("cpct", 8), {
-        title: "暴击率大于等于70%时，普攻和战技造成的伤害提高20%",
-        check: ({ calc, attr }) => calc(attr.cpct) >= 70,
-        data: {
-          aDmg: 20,
-          eDmg: 20
-        }
+  繁星竞技场: {
+    2: [attr('cpct', 8), {
+      title: '暴击率大于等于70%时，普攻和战技造成的伤害提高20%',
+      check: ({ calc, attr }) => calc(attr.cpct) >= 70,
+      data: {
+        aDmg: 20,
+        eDmg: 20
       }
-    ]
+    }]
   },
-  "折断的龙骨": {
-    2: [
-      attr("effDef", 10), {
-        title: "效果抵抗大于等于30%时，暴击伤害提高10%",
-        check: ({ calc, attr }) => calc(attr.effDef) >= 30,
-        data: {
-          cdmg: 10
-        }
+  折断的龙骨: {
+    2: [attr('effDef', 10), {
+      title: '效果抵抗大于等于30%时，暴击伤害提高10%',
+      check: ({ calc, attr }) => calc(attr.effDef) >= 30,
+      data: {
+        cdmg: 10
       }
-    ]
+    }]
   },
-  "毁烬焚骨的大公": {
+  毁烬焚骨的大公: {
     2: {
-      title: "追加攻击造成的伤害提高[tDmg]%",
+      title: '追加攻击造成的伤害提高[tDmg]%',
       data: {
         tDmg: 20
       }
     },
     4: {
-      title: "计算[_buffCount]层，提高攻击力[atkPct]%",
+      title: '计算[_buffCount]层，提高攻击力[atkPct]%',
       data: {
         _buffCount: ({ params }) => params.tArtisBuffCount || 3,
         atkPct: ({ params }) => (params.tArtisBuffCount || 3) * 6
       }
     }
   },
-  "幽锁深牢的系囚": {
-    2: attr("atkPct", 12),
+  幽锁深牢的系囚: {
+    2: attr('atkPct', 12),
     4: {
-      title: "3层持续伤害下无视18%防御力",
+      title: '3层持续伤害下无视18%防御力',
       data: {
         ignore: 18
       }
     }
   },
-  "苍穹战线格拉默": {
-    2: [
-      attr("atkPct", 12), {
-        title: "装备者速度大于[_speed]时，伤害提高[dmg]%",
-        check: ({ attr }) => attr.speed >= 135,
-        data: {
-          _speed: ({ attr }) => attr.speed < 160 ? 135 : 160,
-          dmg: ({ attr }) => attr.speed < 160 ? 12 : 18
-        }
+  苍穹战线格拉默: {
+    2: [attr('atkPct', 12), {
+      title: '装备者速度大于[_speed]时，伤害提高[dmg]%',
+      check: ({ attr }) => attr.speed >= 135,
+      data: {
+        _speed: ({ attr }) => attr.speed < 160 ? 135 : 160,
+        dmg: ({ attr }) => attr.speed < 160 ? 12 : 18
       }
-    ]
+    }]
   },
-  "梦想之地匹诺康尼": {
-    2: [
-      attr("recharge", 5), {
-        title: "同属性角色伤害提高10%",
-        data: {
-          dmg: 10
-        }
+  梦想之地匹诺康尼: {
+    2: [attr('recharge', 5), {
+      title: '同属性角色伤害提高10%',
+      data: {
+        dmg: 10
       }
-    ]
+    }]
   },
-  "死水深潜的先驱": {
+  死水深潜的先驱: {
     2: {
-      title: "对受负面状态影响的敌人造成伤害提高[dmg]%",
+      title: '对受负面状态影响的敌人造成伤害提高[dmg]%',
       data: {
         dmg: 12
       }
     },
-    4: [
-      attr("cpct", 4), {
-        title: "对陷入不少于3个负面效果的敌方目标造成的暴击率额外提高[cpct]%，暴击伤害提高[cdmg]%",
-        data: {
-          cpct: 4,
-          cdmg: 24
-        }
+    4: [attr('cpct', 4), {
+      title: '对陷入不少于3个负面效果的敌方目标造成的暴击率额外提高[cpct]%，暴击伤害提高[cdmg]%',
+      data: {
+        cpct: 4,
+        cdmg: 24
       }
-    ]
+    }]
   },
-  "机心戏梦的钟表匠": {
-    2: attr("stance", 16),
+  机心戏梦的钟表匠: {
+    2: attr('stance', 16),
     4: {
-      title: "装备者对我方释放终结技时，我方全体击破特攻提高[stance]%",
+      title: '装备者对我方释放终结技时，我方全体击破特攻提高[stance]%',
       data: {
         stance: 30
       }
     }
   },
-  "无主荒星茨冈尼亚": {
-    2: [
-      attr("cpct", 4), {
-        title: "敌方目标被消灭提高暴击伤害，至多提高[cdmg]%",
-        data: {
-          cdmg: 40
-        }
+  无主荒星茨冈尼亚: {
+    2: [attr('cpct', 4), {
+      title: '敌方目标被消灭提高暴击伤害，至多提高[cdmg]%',
+      data: {
+        cdmg: 40
       }
-    ]
+    }]
   },
-  "出云显世与高天神国": {
-    2: [
-      attr("atkPct", 12), {
-        title: "存在一名与装备者命途相同的队友时，暴击率提高[cpct]%",
-        data: {
-          cpct: 12
-        }
+  出云显世与高天神国: {
+    2: [attr('atkPct', 12), {
+      title: '存在一名与装备者命途相同的队友时，暴击率提高[cpct]%',
+      data: {
+        cpct: 12
       }
-    ]
+    }]
   },
-  "荡除蠹灾的铁骑": {
-    2: attr("stance", 16),
-    4: [
-      {
-        title: "基于击破特攻，造成的击破伤害无视敌方[breakIgnore]%防御",
-        sort: 9,
-        data: {
-          breakIgnore: ({ attr, calc }) => calc(attr.stance) >= 150 ? 10 : 0
-        }
-      }, {
-        title: "基于击破特攻，造成的超击破伤害无视敌方[superBreakIgnore]%防御",
-        sort: 9,
-        data: {
-          superBreakIgnore: ({ attr, calc }) => calc(attr.stance) >= 250 ? 15 : 0
-        }
+  荡除蠹灾的铁骑: {
+    2: attr('stance', 16),
+    4: [{
+      title: '基于击破特攻，造成的击破伤害无视敌方[breakIgnore]%防御',
+      sort: 9,
+      data: {
+        breakIgnore: ({ attr }) => attr.stance >= 150 ? 10 : 0
       }
-    ]
-  },
-  "风举云飞的勇烈": {
-    2: attr("atkPct", 12),
-    4: [
-      attr("cpct", 6), {
-        title: "施放追加攻击使终结技伤害提高[qDmg]%",
-        data: {
-          qDmg: 36
-        }
+    }, {
+      title: '基于击破特攻，造成的超击破伤害无视敌方[superBreakIgnore]%防御',
+      sort: 9,
+      data: {
+        superBreakIgnore: ({ attr }) => attr.stance >= 250 ? 15 : 0
       }
-    ]
+    }]
   },
-  "奔狼的都蓝王朝": {
+  风举云飞的勇烈: {
+    2: attr('atkPct', 12),
+    4: [attr('cpct', 6), {
+      title: '施放追加攻击使终结技伤害提高[qDmg]%',
+      data: {
+        qDmg: 36
+      }
+    }]
+  },
+  奔狼的都蓝王朝: {
     2: {
-      title: "5层Buff使得装备者造成的追击伤害提高[tDmg]%，装备者的暴击伤害提高[cdmg]%",
+      title: '5层Buff使得装备者造成的追击伤害提高[tDmg]%，装备者的暴击伤害提高[cdmg]%',
       data: {
         tDmg: 25,
         cdmg: 25
       }
     }
   },
-  "劫火莲灯铸炼宫": {
-    2: [
-      attr("speedPct", 6), {
-        title: "击中火弱点的敌方时，击破特攻提高[stance]%",
-        data: {
-          stance: 40
-        }
+  劫火莲灯铸炼宫: {
+    2: [attr('speedPct', 6), {
+      title: '击中火弱点的敌方时，击破特攻提高[stance]%',
+      data: {
+        stance: 40
       }
-    ]
+    }]
   },
-  "奇想蕉乐园": {
-    2: [
-      attr("cdmg", 16), {
-        title: "存在装备者召唤的目标时，暴击伤害额外提高[cdmg]%",
-        data: {
-          cdmg: 32
-        }
+  奇想蕉乐园: {
+    2: [attr('cdmg', 16), {
+      title: '存在装备者召唤的目标时，暴击伤害额外提高[cdmg]%',
+      data: {
+        cdmg: 32
       }
-    ]
+    }]
   },
-  "沉陆海域露莎卡": {
-    2: attr("recharge", 5)
+  沉陆海域露莎卡: {
+    2: attr('recharge', 5)
   },
-  "重循苦旅的司铎": {
-    2: attr("speedPct", 6)
+  重循苦旅的司铎: {
+    2: attr('speedPct', 6)
   },
-  "识海迷坠的学者": {
-    2: attr("cpct", 8),
+  识海迷坠的学者: {
+    2: attr('cpct', 8),
     4: {
-      title: "终结技造成的伤害提高[qDmg]%，施放终结技后战技伤害提高[eDmg]%",
+      title: '终结技造成的伤害提高[qDmg]%，施放终结技后战技伤害提高[eDmg]%',
       data: {
         eDmg: 45,
         qDmg: 20
       }
     }
   },
-  "凯歌祝捷的英豪": {
-    2: attr("atkPct", 12),
-    4: [
-      {
-        check: ({ params }) => params.Memosprite,
-        title: "装备者的忆灵在场时，装备者的速度提高[speedPct]%",
-        data: {
-          speedPct: 6
-        }
-      }, {
-        check: ({ params }) => params.Memosprite,
-        title: "装备者的忆灵攻击时，装备者和忆灵的暴击伤害提高[cdmg]%",
-        data: {
-          cdmg: 30
-        }
-      }
-    ]
-  },
-  "哀歌覆国的诗人": {
-    2: attr("quantum", 10),
-    4: [
-      attr("speedPct", -8), {
-        check: ({ attr, calc }) => calc(attr.staticAttr.speed) < 110,
-        title: "进入战斗时，若装备者的速度小于[_speed]，使装备者的暴击率提高[cpct]%",
-        data: {
-          _speed: ({ attr, calc }) => calc(attr.staticAttr.speed) < 95 ? 95 : 110,
-          cpct: ({ attr, calc }) => calc(attr.staticAttr.speed) < 95 ? 32 : 20
-        }
-      }
-    ]
-  },
-  "谧宁拾骨地": {
-    2: [
-      attr("hpPct", 12), {
-        check: ({ calc, attr }) => calc(attr.hp) >= 5000,
-        title: "装备者的生命上限大于等于5000点时，使装备者及其忆灵的暴击伤害提高[cdmg]%",
-        data: {
-          cdmg: 28
-        }
-      }
-    ]
-  },
-  "渊思寂虑的巨树": {
-    2: [
-      attr("speedPct", 6), {
-        check: ({ attr, calc }) => calc(attr.speed) >= 135,
-        title: "当装备者的速度大于等于[_speed]时，使装备者及其忆灵的治疗量提高[heal]%",
-        data: {
-          _speed: ({ attr, calc }) => calc(attr.speed) >= 180 ? 180 : 135,
-          heal: ({ attr, calc }) => calc(attr.speed) >= 180 ? 20 : 12
-        }
-      }
-    ]
-  },
-  "烈阳惊雷的女武神": {
-    2: attr("speedPct", 6),
+  凯歌祝捷的英豪: {
+    2: attr('atkPct', 12),
     4: {
-      title: "装备者持有【甘霖】时，速度提高[speedPct]%，暴击伤害提高[cdmg]%",
+      title: '装备者的忆灵在场时，装备者的速度提高[speedPct]%。装备者的忆灵攻击时，装备者和忆灵的暴击伤害提高[cdmg]%',
+      data: {
+        speedPct: 6,
+        cdmg: 30
+      }
+    }
+  },
+  哀歌覆国的诗人: {
+    2: attr('quantum', 10),
+    4: [attr('speedPct', -8), {
+      check: ({ attr, calc }) => calc(attr.staticAttr.speed) < 110,
+      title: '进入战斗时，若装备者的速度小于[_speed]，使装备者的暴击率提高[cpct]%',
+      data: {
+        _speed: ({ attr, calc }) => calc(attr.staticAttr.speed) < 95 ? 95 : 110,
+        cpct: ({ attr, calc }) => calc(attr.staticAttr.speed) < 95 ? 32 : 20
+      }
+    }]
+  },
+  谧宁拾骨地: {
+    2: [attr('hpPct', 12), {
+      title: '生命值大于等于5000时暴击伤害提升28%',
+      check: ({ calc, attr }) => calc(attr.hp) >= 5000,
+      data: {
+        cdmg: 28
+      }
+    }]
+  },
+  渊思寂虑的巨树: {
+    2: [attr('speedPct', 6), {
+      title: '速度大于等于[_speed]时，治疗量提高[heal]%',
+      check: ({ attr }) => attr.speed >= 135,
+      data: {
+        _speed: ({ attr }) => attr.speed >= 180 ? 180 : 135,
+        heal: ({ attr }) => attr.speed >= 180 ? 20 : 12
+      }
+    }]
+  },
+  烈阳惊雷的女武神: {
+    2: attr('speedPct', 6),
+    4: {
+      title: '当装备者及其忆灵为装备者及其忆灵以外的我方目标提供治疗后，速度提高[speedPct]%，我方全体暴击伤害提高[cdmg]%',
       data: {
         speedPct: 6,
         cdmg: 15
       }
     }
   },
-  "恶海逐波的船长": {
-    2: attr("cdmg", 16),
+  恶海逐波的船长: {
+    2: attr('cdmg', 16),
     4: {
-      title: "消耗两层【助力】，使攻击力提高[atkPct]%",
+      title: '消耗2层【助力】，使装备者攻击力提高[atkPct]%',
       data: {
         atkPct: 48
       }
     }
   },
-  "妖精织梦的乐园": {
+  妖精织梦的乐园: {
     2: {
-      title: "单目标使装备者及其忆灵造成的伤害提高[dmg]%",
+      title: '造成的伤害提高[dmg]%',
       data: {
-        dmg: 12 * 3
+        dmg: 36
       }
     }
   },
-  "沉欢醉饮的海隅": {
-    2: [
-      attr("atkPct", 12), {
-        check: ({ attr, calc }) => calc(attr.atk) >= 2400,
-        title: "当装备者的攻击力大于等于[_atk]时，使造成的持续伤害额外提高[dotDmg]%",
-        data: {
-          _atk: ({ attr, calc }) => calc(attr.atk) >= 3600 ? 3600 : 2400,
-          dotDmg: ({ attr, calc }) => calc(attr.atk) >= 3600 ? 24 : 12
-        }
+  沉欢醉饮的海隅: {
+    2: [attr('atkPct', 12), {
+      check: ({ calc, attr }) => calc(attr.atk) >= 2400,
+      title: '装备者攻击力大于等于[_atk]时，持续伤害额外提高[dotDmg]%',
+      data: {
+        _atk: ({ attr }) => attr.atk < 3600 ? 2400 : 3600,
+        dotDmg: ({ attr }) => attr.atk < 3600 ? 12 : 24
       }
-    ]
+    }]
   },
-  "再创天地的救世主": {
-    2: attr("cpct", 8),
+  自匿星芒的隐士: {
+    2: attr('shield', 10),
+    4: {
+      title: '护盾量提高[shield]%',
+      data: {
+        shield: 12
+      }
+    }
+  },
+  再创天地的救世主: {
+    2: attr('cpct', 8),
     4: {
       check: ({ params }) => params.Memosprite,
-      title: "施放普攻或战技后，若忆灵在场，使装备者及其忆灵生命上限提高[hpPct]%，造成的伤害提高[dmg]%",
+      title: '若装备者的忆灵在场，使装备者及其忆灵生命上限提高[hpPct]% ，我方全体造成的伤害提高[dmg]]%',
       data: {
         hpPct: 24,
         dmg: 15
       }
     }
   },
-  "自匿星芒的隐士": {
-    2: attr("shield", 10),
-    4: [
-      attr("shield", 12), {
-        title: "持有装备者提供的护盾时，暴击伤害提高[cdmg]%",
-        data: {
-          cdmg: 15
-        }
-      }
-    ]
-  },
-  "永恒之地翁法罗斯": {
+  永恒之地翁法罗斯: {
     2: [
-      attr("cpct", 8), {
+      attr('cpct', 8), {
         check: ({ params }) => params.Memosprite,
-        title: "忆灵在场时，我方全体速度提高[speedPct]%",
+        title: '装备者的忆灵在场时，我方全体速度提高[speedPct]%',
         data: {
           speedPct: 8
         }
-      }
-    ]
+      }]
   },
-  "天国@直播间": {
-    2: [
-      attr("cdmg", 16), {
-        title: "同一回合内消耗大于等于3点战技点，额外使装备者暴击伤害提高[cdmg]%",
-        data: {
-          cdmg: 32
-        }
+  '天国@直播间': {
+    2: [attr('cdmg', 16), {
+      title: '暴击伤害额外提高[cdmg]%',
+      data: {
+        cdmg: 32
       }
-    ]
+    }]
   },
-  "闪耀功勋的魔法少女": {
-    2: attr("cdmg", 16),
-    4: [
-      attr("elationIgnore", 10), {
-        title: "累计获得50笑点，造成的欢愉伤害额外无视目标[elationIgnore]%的防御力",
-        data: {
-          elationIgnore: 10
-        }
+  闪耀功勋的魔法少女: {
+    2: attr('cdmg', 16),
+    4: [attr('ignore', 10), {
+      title: '计算[_buffCount]层，造成的欢愉伤害额外无视目标[xeIgnore]%的防御力',
+      data: {
+        _buffCount: ({ params }) => params.tArtisBuffCount || 10,
+        xeIgnore: ({ params }) => (params.tArtisBuffCount || 10) * 1
       }
-    ]
+    }]
   },
-  "应天涉远的卜者": {
-    2: attr("speedPct", 6),
-    4: [
-      {
-        check: ({ attr, calc }) => calc(attr.speed) >= 120,
-        title: "当装备者的速度大于等于[_speed]时，使装备者的暴击率提高[cpct]%",
-        data: {
-          _speed: ({ attr, calc }) => calc(attr.speed) >= 160 ? 160 : 120,
-          cpct: ({ attr, calc }) => calc(attr.speed) >= 160 ? 18 : 10
-        }
-      }, {
-        title: "首次施放欢愉技时，使我方全体欢愉度提高[elation]%",
-        data: {
-          elation: 10
-        }
+  应天涉远的卜者: {
+    2: attr('speedPct', 6),
+    4: {
+      title: '进入战斗前，若装备者的速度大于等于[_speed]，使装备者的暴击率提高[cpct]%。装备者施放欢愉技时，使我方全体欢愉度提高[joy]%',
+      data: {
+        _speed: ({ attr, calc }) => calc(attr.staticAttr.speed) < 160 ? calc(attr.staticAttr.speed) < 120 ? 0 : 120 : 160,
+        cpct: ({ attr, calc }) => calc(attr.staticAttr.speed) < 160 ? calc(attr.staticAttr.speed) < 120 ? 0 : 10 : 18,
+        joy: 10
       }
-    ]
+    }
   },
-  "零号关卡朋克洛德": {
-    2: [
-      attr("elation", 8), {
-        check: ({ attr, calc }) => calc(attr.elation) >= 40,
-        title: "战斗中欢愉度首次达到[_elation]%时, 暴击伤害提高[cdmg]%",
-        data: {
-          _elation: ({ attr, calc }) => calc(attr.elation) >= 80 ? 80 : 40,
-          cdmg: ({ attr, calc }) => calc(attr.elation) >= 80 ? 32 : 20
+  零号关卡朋克洛德: {
+    2: [attr('joy', 8), {
+      check: ({ attr }) => attr.joy.base >= 40,
+      title: '战斗中欢愉度首次达到[joy]%时，使装备者暴击伤害提高[cdmg]%',
+      data: {
+        joy: ({ attr, calc }) => {
+          let _joy = calc(attr.joy)
+          return _joy < 80 ? 40 : 80
+        },
+        cdmg: ({ attr, calc }) => {
+          let joy = calc(attr.joy)
+          return joy < 80 ? 20 : 32
         }
       }
-    ]
+    }]
   },
-  "千星荟萃之城": {
-    2: [
-      {
-        title: "装备者施放追加攻击时，攻击力提高[atkPct]%",
-        data: {
-          atkPct: 24
-        }
-      }, {
-        title: "敌方目标被消灭时, 使得我方全体在本场战斗中暴击伤害提高[cdmg]%",
-        data: {
-          cdmg: 12
-        }
+  千星荟萃之城: {
+    2: [{
+      title: '装备者施放追加攻击时，攻击力提高[atkPct]%。当敌方目标被消灭时，我方全体在本场战斗中暴击伤害提高[cdmg]%',
+      data: {
+        atkPct: 24,
+        cdmg: 12
       }
-    ]
+    }]
   },
-  "星如我见的领航员": {
-    2: attr("atkPct", 12),
-    4: [
-      {
-        title: "3层Buff使得装备者战技与终结技伤害提高54%",
-        data: {
-          eDmg: 54,
-          qDmg: 54
-        }
+  星如我见的领航员: {
+    2: attr('atkPct', 12),
+    4: {
+      title: '3层Buff使战技造成的伤害提高[eDmg]%，终结技造成的伤害提高[qDmg]%',
+      data: {
+        eDmg: 54,
+        qDmg: 54
       }
-    ]
+    }
   },
-  "叩问天工的名冶": {
-    2: attr("hpPct", 12),
-    4: [
-      {
-        title: "防御力降低的敌人造成的暴击伤害提高[cdmg]%",
-        data: {
-          cdmg: 28
-        }
-      }, {
-        title: "装备者对敌方目标施加防御力降低状态后，造成的伤害提高[dmg]%",
-        data: {
-          dmg: 15
-        }
+  叩问天工的名冶: {
+    2: attr('hpPct', 12),
+    4: {
+      title: '装备者对防御力降低状态的敌方目标造成的暴击伤害提高[cdmg]% ，持有【助燃】的我方目标造成的伤害提高[dmg]%',
+      data: {
+        cdmg: 28,
+        dmg: 15
       }
-    ]
+    }
   },
-  "坠星启航地": {
-    2: [
-      attr("cpct", 8), {
-        title: "队友为开拓同行角色，使装备者的暴击伤害提高[cdmg]%。",
-        data: {
-          cdmg: 32
-        }
+  寰宇生研院: {
+    2: [{
+      check: ({ attr }) => attr.sp >= 200,
+      title: '装备者能量上限大于等于200点，使装备者造成的伤害提高[dmg]%。',
+      data: {
+        dmg: ({attr}) => {return (attr.sp - 200) * 0.2 > 32 ? 32 : (attr.sp - 200) * 0.2}
       }
-    ]
+    }]
   },
-  "寰宇生研院": {
-    2: [
-      {
-        check: ({ attr, calc }) => calc(attr.sp) >= 200,
-        title: "装备者造成的伤害提高[dmg]%",
-        data: {
-          dmg: ({ attr, calc }) => {
-            return Math.min((calc(attr.sp) - 200) * 0.2, 32)
-          }
-        }
+  坠星启航地: {
+    2: [attr('cpct', 8), {
+      title: '使装备者的暴击伤害提高[cdmg]%',
+      data: {
+        cdmg: 32
       }
-    ]
+    }]
   },
-  "戏梦点星的伶人": {
-    2: attr("speedPct", 6),
-    4: [
-      {
-        title: "施放战技或终结技时，使技能目标的欢愉度提高[elation]%, 并使装备者的暴击伤害提高[cdmg]%",
-        data: {
-          elation: 16,
-          cdmg: 12
-        }
+  戏梦点星的伶人: {
+    2: attr('speedPct', 6),
+    4: {
+      check: ({ params }) => params.certifiedBanger >= 10, 
+      title: '若装备者持有的好活当赏大于等于10点，则使我方全体目标的暴击伤害提高[cpct]%',
+      data: {
+        cpct: 12
       }
-    ]
+    }
   },
-  "贪噬禁果的异端": {
-    2: attr("cdmg", 16),
-    4: [
-      attr("aDmg", 36), {
-        title: "装备者施放普攻时，使装备者的攻击力提高[atkPct]%。",
-        data: {
-          atkPct: 20
-        }
+  贪噬禁果的异端: {
+    2: attr('cpct', 16),
+    4: {
+      title: '使装备者普攻造成的伤害提高[aDmg]%。当装备者施放普攻时，使装备者的攻击力提高[atkPct]%',
+      data: {
+        aDmg: 36,
+        atkPct: 15
       }
-    ]
+    }
+  },
+  神的瞬息欢愉: {
+    2: [attr('speedPct', 6), {
+      title: '进场欢愉度达到40%，行动提前40%（不计入单次伤害倍率）',
+      sort: 10,
+      check: ({ attr, calc, params }) => (params.entryJoy ?? calc(attr.joy)) >= 40
+    }]
+  },
+  亚空异容所: {
+    2: [attr('speedPct', 6), {
+      title: '进场速度达到145，全队击破特攻提高[stance]%（同套效果不叠加）',
+      sort: 9,
+      check: ({ attr, calc, params }) => (params.entrySpeed ?? calc(attr.speed)) >= 145 && params.subspaceBuffAlreadyApplied !== true,
+      data: { stance: 18 }
+    }]
   }
 }

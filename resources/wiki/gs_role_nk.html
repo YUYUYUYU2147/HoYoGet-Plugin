@@ -130,6 +130,43 @@
   </div>
   {{/if}}
 
+  {{if statistics}}
+  <div class="panel">
+    <div class="ptitle">持有率与配装</div>
+    <div class="stat-cards">
+      {{if statistics.ownership}}<div class="c"><span>样本持有率</span><b>{{statistics.ownership}}</b></div>{{/if}}
+      {{if statistics.avgCons}}<div class="c"><span>平均命座</span><b>{{statistics.avgCons}}</b></div>{{/if}}
+      {{if statistics.avgLevel}}<div class="c"><span>平均等级</span><b>{{statistics.avgLevel}}</b></div>{{/if}}
+    </div>
+    {{if statistics.distribution.length}}
+    <div class="mat-label">命座分布</div>
+    <div class="stat-bars">
+      {{each statistics.distribution d}}
+      <div class="stat-bar"><span class="sb-label">{{d.label}}</span><div class="sb-track"><i style="width:{{d.pct}}%"></i></div><b>{{d.rate}}</b></div>
+      {{/each}}
+    </div>
+    {{/if}}
+    {{if statistics.weapons.length}}
+    <div class="mat-label">武器使用率</div>
+    <div class="stat-items">
+      {{each statistics.weapons w}}
+      <div class="stat-item">{{if w.icon}}<img src="{{w.icon}}" alt="" />{{/if}}<span class="si-name">{{w.name}}</span><b>{{w.rate}}</b></div>
+      {{/each}}
+    </div>
+    {{/if}}
+    {{if statistics.artifacts.length}}
+    <div class="mat-label">圣遗物使用率</div>
+    <div class="stat-items">
+      {{each statistics.artifacts a}}
+      <div class="stat-item">{{if a.icon}}<img src="{{a.icon}}" alt="" />{{/if}}<span class="si-name">{{a.name}}</span><b>{{a.rate}}</b></div>
+      {{/each}}
+    </div>
+    {{/if}}
+    {{if statistics.ownershipNote}}<div class="mat-note">{{statistics.ownershipNote}}</div>{{/if}}
+    {{if statistics.buildNote}}<div class="mat-note">{{statistics.buildNote}}</div>{{/if}}
+  </div>
+  {{/if}}
+
   {{if guide}}
   <div class="panel">
     <div class="ptitle">攻略</div>

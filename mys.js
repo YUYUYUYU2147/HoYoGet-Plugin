@@ -6,6 +6,8 @@ import {
 import YAML from 'yaml';
 // Bwiki 绝区零角色页（列表页头像最高优先级来源）。该文件零 import，不构成循环依赖。
 import { fetchZzzBwikiChar, zzzKey } from './apps/common/wiki/bwiki_zzz.js';
+// Nanoka 角色详情磁盘缓存 + 本地 miao meta 补空
+import { getNanokaCharacter, enrichNanokaCharacter } from './system/nanoka_wiki_characters.js';
 
 // 绝区零 nanoka 目录只保留当前版本，旧版本号过一段时间就会整目录 404
 // （3.3.3+19110104 已下架，四个数据文件全部 404，表现为新出的驱动盘套装查不到，
@@ -2709,21 +2711,40 @@ js,wq,syw,yq 角色,武器,圣痕,人偶
             ? { js: 'character', gz: 'lightcone', yq: 'relicset' }
             : { js: 'character', wq: 'weapon', syw: 'artifact' };
         const dir = DIR[type] || 'character';
-        const data = await this.fetchJson(`${base}/zh/${dir}/${id}.json`, `${game} nanoka详情 ${id}`).catch(err => {
-            // 列表回退到米游社官方 Wiki 时，拿到的 id 是 content_id（505971 这种 6 位），
-            // 而 nanoka 的角色 id 全是 10000xxx 形态，压根不存在这个文件 → 404。
-            // 这是「id 体系不匹配」的预期结果，不是接口故障，静默返回让调用方走米游社即可，
-            // 不该按 ERROR 打一条误导性的「详情访问失败」。
-            if (/HTTP\s*404/.test(String(err?.message || ''))) {
-                logger.debug?.(`[HoYoGet][图鉴] nanoka 无此 id（${id}，应为米游社体系 id），跳过`);
-                return null;
-            }
-            throw err;
-        });
+        let data;
+        let stale = false;
+        if (type === 'js') {
+            /* 角色详情走磁盘缓存（data/panel/wiki-characters），离线时回退旧缓存；
+               本地 miao meta 有值的字段再覆盖上来，补新角色缺的 CV/称号/命座等。 */
+            const version = String(base).split('/').filter(Boolean).pop() || '';
+            const wikiGame = isSr ? 'sr' : 'gs';
+            const hit = await getNanokaCharacter(wikiGame, { id, version }).catch(err => {
+                if (/HTTP\s*404/.test(String(err?.message || ''))) {
+                    logger.debug?.(`[HoYoGet][图鉴] nanoka 无此 id（${id}，应为米游社体系 id），跳过`);
+                    return null;
+                }
+                throw err;
+            });
+            if (!hit) return null;
+            data = enrichNanokaCharacter(wikiGame, hit.id, hit.data);
+            stale = hit.stale;
+        } else {
+            data = await this.fetchJson(`${base}/zh/${dir}/${id}.json`, `${game} nanoka详情 ${id}`).catch(err => {
+                // 列表回退到米游社官方 Wiki 时，拿到的 id 是 content_id（505971 这种 6 位），
+                // 而 nanoka 的角色 id 全是 10000xxx 形态，压根不存在这个文件 → 404。
+                // 这是「id 体系不匹配」的预期结果，不是接口故障，静默返回并交由米游社兜底即可，
+                // 不该按 ERROR 打一条误导性的「详情访问失败」。
+                if (/HTTP\s*404/.test(String(err?.message || ''))) {
+                    logger.debug?.(`[HoYoGet][图鉴] nanoka 无此 id（${id}，应为米游社体系 id），跳过`);
+                    return null;
+                }
+                throw err;
+            });
+        }
         if (!data || !data.name) return false;
         // 详情 JSON 里没有 id 字段，但立绘/技能图标全靠它拼，缺了会拼成
         // avatardrawcard/.webp 这种空地址
-        return { content: { ...data, id: String(id), ...(isSr ? await this.hsr_detail_maps(base) : {}) }, nanoka: true };
+        return { content: { ...data, id: String(id), ...(isSr ? await this.hsr_detail_maps(base) : {}) }, nanoka: true, ...(stale ? { _stale: true } : {}) };
     }
 
     /**

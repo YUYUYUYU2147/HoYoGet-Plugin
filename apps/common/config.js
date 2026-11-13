@@ -170,7 +170,7 @@ export class Config extends plugin {
         '--------米哈游设置状态--------',
         `b站相关功能：${data.bilibili ? '已开启' : '已关闭'}`,
         `b站视频小于多少MB自动下载：${data.dow_size}MB`,
-        `凌晨3:30自动更新米哈游：${data.update ? '已开启' : '已关闭'}`,
+        `每天早上6:00自动更新米哈游（含 meta 资源）：${data.update ? '已开启' : '已关闭'}`,
         `图片渲染精度：${data.img_quality}%`,
         '米哈游视频播报群号：\n',
       ].join('\n')

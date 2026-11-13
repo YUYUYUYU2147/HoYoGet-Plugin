@@ -1,5 +1,6 @@
 import { render, config, pluginPriority } from '#HoYoGet';
 import monsterWiki from '../../system/monster.js';
+import { readLocalCharacter } from '../../system/nanoka_wiki_characters.js';
 
 // 怪物 / BOSS 图鉴
 // 列表用 #原神怪物图鉴，单查用 #原神怪物 名称；不写游戏名时默认原神，查询会自动跨四游戏找
@@ -76,6 +77,28 @@ export class monster extends plugin {
         if (!isList) rest = rest.replace(/(图鉴|列表|大全)$/, '').trim();
 
         this.dbg('指令解析:', `game=${game || '(未指定)'}`, `mode=${isList ? '列表' : '详情'}`, `explicit=${explicit}`, `参数=${rest || '(空)'}`);
+
+        /* 只带「图鉴」后缀、没写「怪物」时，角色名优先交给通用图鉴。
+           例：卡芙卡同时是星铁角色和绝区零怪物「多佩冈亚·卡芙卡」，
+           %卡芙卡图鉴 应出星铁角色，而不是怪物卡；要查怪物请写「绝区零怪物 卡芙卡」。 */
+        const bareSymbol = /^[%％](?!\s*(?:绝区零|绝区|zzz))/i.test(String(e.raw_msg || '').trim());
+        if (!isList && !explicit && rest) {
+            // 同游戏角色优先：*知更鸟 / #钟离 这类写成图鉴的角色名，不先跑怪物搜索。
+            const sameGameChar = readLocalCharacter(game, { name: rest });
+            if (sameGameChar) {
+                this.dbg('同游戏角色优先，让给通用图鉴:', `game=${game}`, `name=${rest}`);
+                return false;
+            }
+            // 裸 % 前缀下，其他游戏同名角色也先让路；%卡芙卡/ %知更鸟 由绝区零图鉴裁决。
+            if (bareSymbol) {
+                for (const g of ['gs', 'sr', 'zzz']) {
+                    if (readLocalCharacter(g, { name: rest })) {
+                        this.dbg('同名角色优先，让给通用图鉴:', `game=${g}`, `name=${rest}`);
+                        return false;
+                    }
+                }
+            }
+        }
 
         if (isList) return await this.renderList(e, game || 'gs', rest);
         return await this.renderDetail(e, game, rest, explicit);

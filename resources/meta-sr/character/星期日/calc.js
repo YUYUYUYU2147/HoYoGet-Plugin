@@ -1,45 +1,40 @@
-import { Format } from "#miao"
+import { Format } from '#miao'
 
-export const details = [
-  {
-    title: "普攻伤害",
-    dmg: ({ talent }, dmg) => dmg(talent.a["技能伤害"], "a")
-  }, {
-    title: "战技伤害提高",
-    dmg: ({ talent }) => {
-      return {
-        avg: Format.percent(talent.e["造成的伤害提高"]),
-        type: "text"
-      }
-    }
-  }, {
-    title: "终结技暴伤提高",
-    dmg: ({ attr, calc, talent }) => {
-      return {
-        avg: Format.percent(calc(attr.cdmg) * talent.q["暴伤提高·百分比"] / 100 + talent.q["暴伤提高·固定值"]),
-        type: "text"
-      }
-    }
-  }, {
-    title: "天赋暴率提高",
-    dmg: ({ talent, cons }) => {
-      let cost = cons < 6 ? 1 : 3
-      return {
-        avg: Format.percent(talent.t["暴击率提高"] * cost),
-        type: "text"
-      }
+export const details = [{
+  title: '战技提高目标伤害（无召唤物）',
+  dmg: ({ talent, attr, cons }) => {
+    return {
+      avg: Format.percent(talent.e['造成的伤害提高']),
+      type: 'text'
     }
   }
-]
-
-export const defDmgIdx = 2
-export const mainAttr = "atk,cdmg"
-
-export const buffs = [
-  {
-    title: "星期日6命：天赋的暴击率提高效果可以叠加，最多叠加3层",
-    cons: 6
+}, {
+  title: '战技提高目标伤害（有召唤物）',
+  dmg: ({ talent, attr, cons }) => {
+    return {
+      avg: Format.percent(talent.e['造成的伤害提高'] * (1 + talent.e['增伤额外提高'])),
+      type: 'text'
+    }
   }
-]
+}, {
+  title: '战技提高目标暴击率',
+  dmg: ({ talent, attr, cons }) => {
+    return {
+      avg: Format.percent(talent.t['暴击率提高'] * (cons >= 6 ? 3 : 1)),
+      type: 'text'
+    }
+  }
+}, {
+  title: '终结技提高暴击伤害',
+  dmg: ({ talent, attr, cons }) => {
+    return {
+      avg: Format.percent(talent.q['爆伤提高·百分比'] * attr.cdmg / 100 + talent.q['爆伤提高·固定值']),
+      type: 'text'
+    }
+  }
+}]
 
-export const createdBy = "其实雨很好"
+export const defDmgIdx = 3
+export const mainAttr = 'atk,cpct,cdmg'
+
+export const createdBy = '五里徘徊'

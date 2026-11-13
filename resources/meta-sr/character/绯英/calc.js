@@ -1,123 +1,107 @@
-export const details = [
-  {
-    title: "普攻伤害",
-    dmg: ({ talent }, dmg) => dmg(talent.a["技能伤害"], "a")
-  }, {
-    title: "千活战技伤害(单目标)",
-    params: { punchlineNum: 11 },
-    dmg: ({ talent, params }, dmg) => {
-      let normal = dmg(talent.e["目标伤害"] + talent.e["相邻目标伤害"], "e")
-      let elation = dmg.elation(talent.t["欢愉伤害·战技"], params.punchlineNum)
-      return {
-        dmg: normal.dmg + elation.dmg,
-        avg: normal.avg + elation.avg
-      }
-    }
-  }, {
-    title: "千活战技伤害(三目标)",
-    params: { punchlineNum: 11 },
-    dmg: ({ talent, params }, dmg) => {
-      let normal = dmg(talent.e["目标伤害"] + talent.e["相邻目标伤害"] * 2, "e")
-      let elation = dmg.elation(talent.t["欢愉伤害·战技"] * 3, params.punchlineNum)
-      return {
-        dmg: normal.dmg + elation.dmg,
-        avg: normal.avg + elation.avg
-      }
-    }
-  }, {
-    title: "千活终结技伤害(单目标)",
-    params: { punchlineNum: 11 },
-    dmg: ({ talent, params }, dmg) => {
-      let normal = dmg(talent.q["全体伤害"] + 9 * talent.q["随机伤害"], "q")
-      let elation = dmg.elation(talent.t["欢愉伤害·终结技全体"] + 9 * talent.t["欢愉伤害·终结技随机"], params.punchlineNum)
-      return {
-        dmg: normal.dmg + elation.dmg,
-        avg: normal.avg + elation.avg
-      }
-    }
-  }, {
-    title: "千活终结技伤害(三目标)",
-    params: { punchlineNum: 11 },
-    dmg: ({ talent, params }, dmg) => {
-      let normal = dmg(talent.q["全体伤害"] * 3 + 6 * talent.q["随机伤害"], "q")
-      let elation = dmg.elation(talent.t["欢愉伤害·终结技全体"] * 3 + 6 * talent.t["欢愉伤害·终结技随机"], params.punchlineNum)
-      return {
-        dmg: normal.dmg + elation.dmg,
-        avg: normal.avg + elation.avg
-      }
-    }
-  }, {
-    title: "欢愉技伤害",
-    params: { punchlineNum: 11 },
-    dmg: ({ talent, params }, { elation }) => elation(talent.j["欢愉伤害"], params.punchlineNum)
-  }, {
-    title: "【狐狸老师】追加伤害",
-    params: { punchlineNum: 11 },
-    dmg: ({ talent, cons, params }, dmg) => {
-      let normal = dmg(talent.t["追加攻击伤害"], "t")
-      let hyls = cons >= 1 ? talent.t["欢愉伤害·狐狸老师"] + talent.j["欢愉伤害"] : talent.t["欢愉伤害·狐狸老师"]
-      let elation = dmg.elation(hyls, params.punchlineNum)
-      return {
-        dmg: normal.dmg + elation.dmg,
-        avg: normal.avg + elation.avg
-      }
+export const details = [{
+  title: '战技千活伤害对三',
+  params: { punchline: 1000 },
+  dmg: ({ talent }, dmg) => {
+    return {
+      dmg: dmg(talent.e['目标技能伤害'] * 2, 'e').dmg + dmg(talent.t['战技欢愉伤害'] * 3, 't', 'elation').dmg,
+      avg: dmg(talent.e['目标技能伤害'] * 2, 'e').avg + dmg(talent.t['战技欢愉伤害'] * 3, 't', 'elation').avg
     }
   }
-]
-
-export const defParams = { punchlineNum: 1 }
-export const defDmgIdx = 4
-export const mainAttr = "atk,cpct,cdmg,speed"
-
-export const buffs = [
-  {
-    title: "当前笑点：[_punchlineNum]",
-    data: {
-      _punchlineNum: ({ params }) => params.punchlineNum
-    }
-  }, {
-    title: "天赋-青春•韶华无限：绯英获得[elation]%欢愉度",
-    data: {
-      elation: ({ attr }) => attr.cdmg * 0.2
-    }
-  }, {
-    title: "行迹-瞰众乐：暴击率提高[cpct]%。",
-    tree: 1,
-    data: {
-      cpct: 30
-    }
-  }, {
-    title: "行迹-行裁断：【狐狸老师】额外施加易伤，使其受到的伤害提高[enemydmg]%",
-    tree: 2,
-    data: {
-      enemydmg: 12
-    }
-  }, {
-    title: "绯英1命：全属性抗性穿透提高[kx]%，【狐狸老师】施放攻击后会额外触发一次欢愉技。",
-    cons: 1,
-    data: {
-      kx: 20
-    }
-  }, {
-    title: "绯英2命：暴击伤害提高[cdmg]%。",
-    cons: 2,
-    data: {
-      cdmg: 36
-    }
-  }, {
-    title: "绯英4命：绯英造成的伤害无视敌方目标[ignore]%的防御力。",
-    cons: 4,
-    data: {
-      ignore: 15
-    }
-  }, {
-    title: "绯英6命：绯英造成的欢愉伤害增笑15%，1000点【好活当赏】额外增笑20%",
-    cons: 6,
-    data: {
-      elationMerrymake: 35
-
+}, {
+  title: '终结技千活伤害对单',
+  params: { punchline: 1000 },
+  dmg: ({ talent }, dmg) => {
+    return {
+      dmg: dmg(talent.q['技能伤害'] + talent.q['技能弹射伤害'] * 9, 'q').dmg +
+        dmg(talent.t['大招欢愉伤害'] + talent.t['大招欢愉弹射伤害'] * 9, 't', 'elation').dmg,
+      avg: dmg(talent.q['技能伤害'] + talent.q['技能弹射伤害'] * 9, 'q').avg +
+        dmg(talent.t['大招欢愉伤害'] + talent.t['大招欢愉弹射伤害'] * 9, 't', 'elation').avg
     }
   }
-]
+}, {
+  title: '终结技千活伤害对三',
+  params: { punchline: 1000 },
+  dmg: ({ talent }, dmg) => {
+    return {
+      dmg: dmg(talent.q['技能伤害'] * 3 + talent.q['技能弹射伤害'] * 6, 'q').dmg +
+        dmg(talent.t['大招欢愉伤害'] * 3 + talent.t['大招欢愉弹射伤害'] * 6, 't', 'elation').dmg,
+      avg: dmg(talent.q['技能伤害'] * 3 + talent.q['技能弹射伤害'] * 6, 'q').avg +
+        dmg(talent.t['大招欢愉伤害'] * 3 + talent.t['大招欢愉弹射伤害'] * 6, 't', 'elation').avg
+    }
+  }
+}, {
+  title: '狐狸老师50笑点对单',
+  params: { punchline: 50 },
+  dmg: ({ talent }, dmg) => {
+    return {
+      dmg: dmg(talent.t['追加攻击伤害'], 't').dmg + dmg(talent.t['追加攻击欢愉伤害'], 't', 'elation').dmg,
+      avg: dmg(talent.t['追加攻击伤害'], 't').avg + dmg(talent.t['追加攻击欢愉伤害'], 't', 'elation').avg
+    }
+  }
+}, {
+  title: '狐狸老师50笑点对三',
+  params: { punchline: 50 },
+  dmg: ({ talent }, dmg) => {
+    return {
+      dmg: dmg(talent.t['追加攻击伤害'] * 3, 't').dmg + dmg(talent.t['追加攻击欢愉伤害'] * 3, 't', 'elation').dmg,
+      avg: dmg(talent.t['追加攻击伤害'] * 3, 't').avg + dmg(talent.t['追加攻击欢愉伤害'] * 3, 't', 'elation').avg
+    }
+  }
+}, {
+  title: '80笑点欢愉技伤害',
+  params: { punchline: 80 },
+  dmg: ({ talent }, dmg) => dmg(talent.xe['技能伤害'], 'xe', 'elation')
+}]
 
-export const createdBy = "rainbowwarmth"
+export const defDmgIdx = 2
+export const mainAttr = 'atk,cpct,cdmg,recharge'
+
+export const buffs = [{
+  title: '天赋：绯英获得等同于暴击伤害20%的欢愉度',
+  data: {
+    joy: ({ attr }) => attr.cdmg * 0.2
+  }
+}, {
+  title: '行迹-瞰众乐：绯英的暴击率提高30%',
+  tree: 1,
+  data: {
+    cpct: 30
+  }
+}, {
+  title: '行迹-行裁断：狐狸老师】施放攻击时会额外对目标施加易伤，使其受到的伤害提高12%',
+  tree: 1,
+  data: {
+    enemydmg: 12
+  }
+}, {
+  title: '笑点计算：计算笑点用',
+  data: {
+    punchline: ({ params }) => params.punchline
+  }
+}, {
+  title: '绯英1魂：全属性抗性穿透提高[kx]%',
+  cons: 1,
+  data: {
+    kx: 20
+  }
+}, {
+  title: '绯英2魂：暴击伤害提高36%',
+  cons: 2,
+  data: {
+    cdmg: 36
+  }
+}, {
+  title: '绯英4魂：绯英造成的伤害无视敌方目标[ignore]%的防御力',
+  cons: 4,
+  data: {
+    ignore: 15
+  }
+}, {
+  title: '绯英6魂：绯英造成的欢愉伤害增笑15%，每持有100点【好活当赏】额外增笑2%，最高计入1000点',
+  cons: 6,
+  data: {
+    merrymakes: 35
+  }
+}]
+
+export const createdBy = '欧阳青瓜'
