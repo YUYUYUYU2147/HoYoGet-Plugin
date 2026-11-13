@@ -49,6 +49,22 @@
     <div class="layer-card layer-{{layer.name}}">
       <div class="layer-head">
         <span class="layer-title">剧变节点第{{layer.zh}}防线</span>
+        {{if layer.boss_hp_text || layer.boss_hp_delta_text}}
+        <div class="boss-hp-row">
+          {{if layer.boss_hp_text}}
+          <div class="boss-hp-tag">
+            <span class="bht-icon">HP</span>
+            <span class="bht-label">BOSS 总生命</span>
+            <b class="bht-value">{{layer.boss_hp_text}}</b>
+          </div>
+          {{/if}}
+          {{if layer.boss_hp_delta_text}}
+          <div class="boss-hp-delta delta-{{layer.boss_hp_delta_dir}}" title="较上期血量变化">
+            <i class="bhd-arrow"></i><b>{{layer.boss_hp_delta_text}}</b>
+          </div>
+          {{/if}}
+        </div>
+        {{/if}}
         <div class="grade-badge grade-{{layer.data.rating}}">{{layer.data.rating}}</div>
         {{if layer.data.challenge_time}}
         <span class="layer-time">

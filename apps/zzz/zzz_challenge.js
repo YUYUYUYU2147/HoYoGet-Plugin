@@ -11,7 +11,7 @@
  */
 import { pluginPriority, render } from '#HoYoGet'
 import { COPYRIGHT_TEXT } from '../../system/copyright.js'
-import { normalizeShiyu, normalizeDeadly, bossCodexLookup, toElementTags, formatMonsterStats } from '../../system/zzz_challenge.js'
+import { normalizeShiyu, normalizeDeadly, bossCodexLookup, toElementTags, formatMonsterStats, monsterHpValue, formatHpValue, nanokaDeadlyTotalHp } from '../../system/zzz_challenge.js'
 import { saveChallengeRecord, listChallengeRecords, readChallengeRecord } from '../../system/zzz_challenge_history.js'
 import { zzz_panel_list } from './zzz_panel_list.js'
 import { segment } from 'oicq'
@@ -26,23 +26,124 @@ const withDeadlyEntries = data => {
     const base = { boss: {}, buffer: {}, avatars: [], buddy: {}, cardClass: '', ...e }
     /* 存档里的弱点/属性可能是空的（当时 nanoka 取不到），用本地 BOSS 资料库补一次 */
     const meta = bossCodexLookup(base.boss?.name)
-    if (!meta) return base
+    const stats = base.monster_stats || formatMonsterStats(meta?.stats)
+    const out = {
+      ...base,
+      monster_stats: stats,
+      boss_hp_text: base.boss_hp_text || formatHpValue(monsterHpValue(stats)),
+    }
+    if (!meta) return out
     const weak = base.boss?.monster_weakness_tags || []
     const resist = base.boss?.monster_resistance_tags || []
     return {
-      ...base,
+      ...out,
       boss: {
         ...base.boss,
         monster_weakness_tags: weak.length ? weak : toElementTags(meta.weakness, 'weak'),
         monster_resistance_tags: resist.length ? resist : toElementTags(meta.resistance, 'resist'),
       },
-      monster_stats: base.monster_stats || formatMonsterStats(meta.stats),
     }
   }
   const base = (Array.isArray(d.list) ? d.list : []).map(fill)
   const hard = (Array.isArray(d.hard_list) ? d.hard_list : []).map(e => ({ ...fill(e), hard: true, cardClass: 'hard-card' }))
   const entries = (Array.isArray(d.entries) ? d.entries : [...base, ...hard]).map(fill)
-  return { ...d, hard_list: hard, entries }
+  const totalHp = entries.reduce((sum, entry) => sum + monsterHpValue(entry.monster_stats), 0)
+  return {
+    ...d,
+    hard_list: hard,
+    entries,
+    boss_hp_total_text: d.boss_hp_total_text || formatHpValue(totalHp),
+  }
+}
+
+/** 旧存档的防线没有总生命字段，按每层 BOSS 面板补算一次 */
+const withShiyuLayerHp = data => {
+  const d = data || {}
+  const layers = (Array.isArray(d.layers) ? d.layers : []).map(layer => {
+    const items = layer?.data?.layer_challenge_info_list || []
+    const hp = items.reduce((sum, item) => sum + monsterHpValue(item.monster_stats), 0)
+    return { ...layer, boss_hp_text: layer.boss_hp_text || formatHpValue(hp) }
+  })
+  return { ...d, layers }
+}
+
+/** 当前/上期血量变化：返回 { text, dir }，无上期或数据不足时返回 null */
+const hpDelta = (cur, prev) => {
+  const a = Number(cur) || 0
+  const b = Number(prev) || 0
+  if (!a || !b) return null
+  const pct = ((a - b) / b) * 100
+  if (!Number.isFinite(pct)) return null
+  const dir = pct > 0.05 ? 'up' : pct < -0.05 ? 'down' : 'flat'
+  return { text: `${pct > 0 ? '+' : ''}${pct.toFixed(1)}%`, dir }
+}
+
+/** 防卫战：按层比较本期与上期 BOSS 总生命 */
+const attachShiyuHpDelta = (data, prevData) => {
+  const prevLayers = new Map((prevData?.layers || []).map(layer => [layer.name, layer]))
+  for (const layer of (data?.layers || [])) {
+    const items = layer?.data?.layer_challenge_info_list || []
+    const prevItems = prevLayers.get(layer.name)?.data?.layer_challenge_info_list || []
+    const cur = items.reduce((sum, item) => sum + monsterHpValue(item.monster_stats), 0)
+    const prev = prevItems.reduce((sum, item) => sum + monsterHpValue(item.monster_stats), 0)
+    const d = hpDelta(cur, prev)
+    if (d) {
+      layer.boss_hp_delta_text = d.text
+      layer.boss_hp_delta_dir = d.dir
+    }
+  }
+  return data
+}
+
+/** 强袭战：按 BOSS 名称比较本期与上期生命 */
+const attachDeadlyHpDelta = (data, prevData) => {
+  /* 优先用已归一化的 entries；旧存档才回退 list + hard_list，避免同一 BOSS 被重复累加 */
+  const prevEntries = Array.isArray(prevData?.entries) && prevData.entries.length
+    ? prevData.entries
+    : [...(prevData?.list || []), ...(prevData?.hard_list || [])]
+  const prevByName = new Map(prevEntries.map(e => [e?.boss?.name, e]).filter(([name]) => name))
+  let curTotal = 0
+  for (const entry of (data?.entries || [])) {
+    const prev = prevByName.get(entry?.boss?.name)
+    const curHp = monsterHpValue(entry.monster_stats)
+    const prevHp = monsterHpValue(prev?.monster_stats)
+    curTotal += curHp
+    const d = hpDelta(curHp, prevHp)
+    if (d) {
+      entry.boss_hp_delta_text = d.text
+      entry.boss_hp_delta_dir = d.dir
+    }
+  }
+  /* 总血量按两期各自全部 BOSS 求和，不要求 BOSS 同名；否则换 BOSS 时会算成无对比 */
+  const prevTotal = prevEntries.reduce((sum, entry) => sum + monsterHpValue(entry.monster_stats), 0)
+  if (curTotal) data.boss_hp_total_text = formatHpValue(curTotal)
+  const totalDelta = hpDelta(curTotal, prevTotal)
+  if (totalDelta) {
+    data.boss_hp_total_delta_text = totalDelta.text
+    data.boss_hp_total_delta_dir = totalDelta.dir
+  }
+  return data
+}
+
+
+/** 用 nanoka 的期次总生命补一个环比基准（没有本地存档时用） */
+const attachDeadlyTotalDelta = (data, prevTotal) => {
+  const curTotal = (data?.entries || []).reduce((sum, entry) => sum + monsterHpValue(entry.monster_stats), 0)
+  const d = hpDelta(curTotal, prevTotal)
+  if (d) {
+    data.boss_hp_total_delta_text = d.text
+    data.boss_hp_total_delta_dir = d.dir
+  }
+  return data
+}
+
+/** 读取当前期之前的最近一期存档 */
+const previousRecord = (uid, type, period) => {
+  if (!period) return null
+  const list = listChallengeRecords(uid, type)
+  const older = list.filter(r => String(r.period) < String(period))
+    .sort((a, b) => String(b.period).localeCompare(String(a.period)))[0]
+  return older ? readChallengeRecord(uid, type, list.indexOf(older)) : null
 }
 
 export class zzz_challenge extends zzz_panel_list {
@@ -133,6 +234,9 @@ export class zzz_challenge extends zzz_panel_list {
     })
     if (data.empty) return e.reply('没有查到式舆防卫战数据，可能是本期还没打，或面板未公开。')
 
+    // 与上期存档对比后再落盘，避免同一期覆盖掉对比基准
+    const shiyuPrev = previousRecord(uid, 'shiyu', data.period)
+    if (shiyuPrev?.data) attachShiyuHpDelta(data, shiyuPrev.data)
     // 落盘历史（往期查询时也能看到当期/上期）
     if (data.period) saveChallengeRecord(uid, 'shiyu', data.period, data)
 
@@ -164,9 +268,18 @@ export class zzz_challenge extends zzz_panel_list {
     const data = await normalizeDeadly(raw, { uid, nickname: player?.nickname, avatar: player?.avatar, level: player?.level, periodOffset: prev ? -1 : 0 })
     if (data.empty) return e.reply('没有查到危局强袭战数据。')
 
-    if (data.period) saveChallengeRecord(uid, 'deadly', data.period, data)
+    const decorated = withDeadlyEntries(data)
+    const deadlyPrev = previousRecord(uid, 'deadly', data.period)
+    if (deadlyPrev?.data) {
+      attachDeadlyHpDelta(decorated, deadlyPrev.data)
+    } else if (prev) {
+      // 上期查询若还没有更早的本地存档，用 nanoka 上上期的普通三关总生命补基准
+      const prevTotal = await nanokaDeadlyTotalHp(-2).catch(() => 0)
+      if (prevTotal) attachDeadlyTotalDelta(decorated, prevTotal)
+    }
+    if (data.period) saveChallengeRecord(uid, 'deadly', data.period, decorated)
 
-    return render('zzz_challenge/deadly', { ...withDeadlyEntries(data), footer: COPYRIGHT_TEXT }, { e, ret: true, dsf: 2.4 })
+    return render('zzz_challenge/deadly', { ...decorated, footer: COPYRIGHT_TEXT }, { e, ret: true, dsf: 2.4 })
   }
 
   /** 式舆防卫战 + 危局强袭战：左右拼成一张图 */
@@ -187,6 +300,8 @@ export class zzz_challenge extends zzz_panel_list {
           : await this.zzzRemindFetch(e, uid, ck, 'challenge')
         const d = await normalizeShiyu(raw, { ...meta, periodOffset: prev ? -1 : 0 })
         if (!d || d.empty) return null
+        const prevRec = previousRecord(uid, 'shiyu', d.period)
+        if (prevRec?.data) attachShiyuHpDelta(d, prevRec.data)
         if (d.period) saveChallengeRecord(uid, 'shiyu', d.period, d)
         return d
       } catch { return null }
@@ -199,8 +314,16 @@ export class zzz_challenge extends zzz_panel_list {
         if (!raw?.has_data) return null
         const d = await normalizeDeadly(raw, { ...meta, periodOffset: prev ? -1 : 0 })
         if (!d || d.empty) return null
-        if (d.period) saveChallengeRecord(uid, 'deadly', d.period, d)
-        return d
+        const decorated = withDeadlyEntries(d)
+        const prevRec = previousRecord(uid, 'deadly', d.period)
+        if (prevRec?.data) {
+          attachDeadlyHpDelta(decorated, prevRec.data)
+        } else if (prev) {
+          const prevTotal = await nanokaDeadlyTotalHp(-2).catch(() => 0)
+          if (prevTotal) attachDeadlyTotalDelta(decorated, prevTotal)
+        }
+        if (d.period) saveChallengeRecord(uid, 'deadly', d.period, decorated)
+        return decorated
       } catch { return null }
     }
 
@@ -209,7 +332,7 @@ export class zzz_challenge extends zzz_panel_list {
 
     const jobs = []
     if (shiyuData) jobs.push(['zzz_challenge/challenge', shiyuData])
-    if (deadlyData) jobs.push(['zzz_challenge/deadly', withDeadlyEntries(deadlyData)])
+    if (deadlyData) jobs.push(['zzz_challenge/deadly', deadlyData])
 
     const bufs = []
     for (const [tpl, data] of jobs) {
@@ -619,7 +742,12 @@ export class zzz_challenge extends zzz_panel_list {
     }
     const rec = readChallengeRecord(uid, type, index - 1)
     if (!rec) return e.reply(`没有第 ${index} 期记录（共 ${list.length} 期）。`)
-    const data = type === 'deadly' ? withDeadlyEntries(rec.data || {}) : rec.data || {}
+    const data = type === 'deadly' ? withDeadlyEntries(rec.data || {}) : withShiyuLayerHp(rec.data || {})
+    const prev = list[index] ? readChallengeRecord(uid, type, index) : null
+    if (prev?.data) {
+      if (type === 'deadly') attachDeadlyHpDelta(data, prev.data)
+      else attachShiyuHpDelta(data, prev.data)
+    }
     const tpl = type === 'shiyu' ? 'zzz_challenge/challenge' : 'zzz_challenge/deadly'
     return render(tpl, { ...data, footer: `${COPYRIGHT_TEXT} · 历史记录` }, { e, ret: true, dsf: 2.4 })
   }
@@ -628,12 +756,15 @@ export class zzz_challenge extends zzz_panel_list {
   async challengeQuery(e, uid, ck) {
     const server = await this.pickServer(uid, ck)
     if (!server) throw new Error('未能判断服务器分区')
-    return `lang=zh-cn&role_id=${uid}&server=${server}&schedule_type=1`
+    // schedule_type：1=本期，2=上期/往期
+    const scheduleType = /上期|往期/.test(String(e?.msg || '')) ? '2' : '1'
+    return `lang=zh-cn&role_id=${uid}&server=${server}&schedule_type=${scheduleType}`
   }
 
   async deadlyQuery(e, uid, ck) {
     const server = await this.pickServer(uid, ck)
     if (!server) throw new Error('未能判断服务器分区')
-    return `lang=zh-cn&uid=${uid}&region=${server}&schedule_type=1`
+    const scheduleType = /上期|往期/.test(String(e?.msg || '')) ? '2' : '1'
+    return `lang=zh-cn&uid=${uid}&region=${server}&schedule_type=${scheduleType}`
   }
 }

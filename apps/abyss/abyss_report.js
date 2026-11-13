@@ -32,6 +32,13 @@ const ALIASES = {
   },
 };
 
+/* 绝区零速报专属别名：只收「速报」类写法，不含式舆防卫战 / 危局强袭战本体，
+   避免 %防卫战 / %强袭战 这类深渊记录指令被速报插件截走。 */
+const ZZZ_SPEED_ALIASES = [
+  ...ALIASES.zzz['式舆防卫战'],
+  ...ALIASES.zzz['危局强袭战'],
+]
+
 const SR_VERSION_MAP = {
   '混沌回忆': { '1.3': ['1001', '1002', '1003'], '1.4': ['1004', '1005', '1006'], '1.5': ['1007', '1008'], '1.6': ['1009', '1010'], '2.0': ['1011'], '2.1': ['1013'], '2.7': ['1020'], '3.0': ['1021'], '3.8': ['1029'], '4.0': ['1030'] },
   '虚构叙事': { '1.6': ['2003'], '2.0': ['2004'], '2.7': ['2011'], '3.0': ['2012'], '3.8': ['2020'], '4.0': ['2021'] },
@@ -143,6 +150,10 @@ function formalType(input, game) {
 function allAliasReg() {
   const list = Object.values(ALIASES).flatMap(obj => Object.entries(obj).flatMap(([k, v]) => [k, ...v]));
   return Array.from(new Set(list)).map(_.escapeRegExp).join('|');
+}
+
+function zzzSpeedAliasReg() {
+  return Array.from(new Set(ZZZ_SPEED_ALIASES)).map(_.escapeRegExp).join('|');
 }
 
 function parseMsg(msg = '') {
@@ -1094,8 +1105,9 @@ async function loadZzzNanoka(reqType, opts = {}) {
       }
     }
   }
-  // 版本索引仅在显式请求版本号 / 上一期时使用；默认当期沿用列表 live 状态判定，避免误选未发布占位数据
-  if (!id && map && (opts.version || opts.prev)) {
+  // 版本索引只在显式请求版本号时使用；上一期/下一期按 shiyu.json 的实际期次时间推进，
+  // version.json 的版本键可能落后（实测 live=3.3 时仍只到 3.1/3.0），不能拿来算上一期。
+  if (!id && map && opts.version) {
     const pick = resolveMapId(map, live, reqType, opts);
     id = pick.id ?? null;
     label = pick.label || '';
@@ -1106,9 +1118,13 @@ async function loadZzzNanoka(reqType, opts = {}) {
     const items = Object.entries(list || {}).map(([k, v]) => ({ id: Number(k), ...v })).filter(v => v.live_begin && v.live_end);
     const active = items.find(v => now.isBetween(moment(v.live_begin), moment(v.live_end), undefined, '[]')) || items.sort((a, b) => b.id - a.id)[0];
     const sorted = items.length ? items.sort((a, b) => b.id - a.id) : Object.keys(list || {}).map(v => ({ id: Number(v) })).sort((a, b) => b.id - a.id);
-    id = opts.prev ? (sorted[1]?.id || sorted[0]?.id || null) : (active?.id || sorted[0]?.id || null);
+    /* 上一期必须从当前期往后找：列表里可能有下一期占位（如 62062 已写 live_begin），
+       直接取 sorted[1] 会把当前期当成上一期。 */
+    const activeIdx = active ? sorted.findIndex(v => v.id === active.id) : -1;
+    const prevId = activeIdx >= 0 ? sorted[activeIdx + 1]?.id : sorted[1]?.id;
+    id = opts.prev ? (prevId || active?.id || sorted[0]?.id || null) : (active?.id || sorted[0]?.id || null);
     label = opts.prev ? '上一期' : '';
-    if (opts.prev && !tip) tip = `${reqType} 暂无版本索引，可回复「${reqType}上一期」往前翻`;
+    if (opts.prev && !prevId && !tip) tip = `${reqType} 已是最早收录的一期，没有更早数据`;
     if (opts.version && !tip) tip = `${reqType} ${opts.version} 暂无版本索引，已显示当期`;
   }
   if (!id) return null;
@@ -1496,6 +1512,12 @@ export class abyss_report extends plugin {
         { reg: `^#*米哈游(原神|星铁|星穹|崩铁|绝区零|ZZZ)?(${allAliasReg()})$`, fnc: 'report' },
         // %强袭战速报 等绝区零速报不写「米哈游」也能查（原来 ^#*米哈游 强制要求米哈游）
         { reg: `^[%％][ \\t]*(${allAliasReg()})(速报|攻略|查询|信息|图)?$`, fnc: 'report' },
+        /* 前缀规范化后 %防卫战速报 会变成 #绝区零防卫战速报；只匹配速报类别名，
+           不接收式舆防卫战/危局强袭战本体，深渊记录指令仍由 zzz_challenge 处理。 */
+        { reg: `^[#%％]*(?:米哈游)?(?:绝区零|绝区|ZZZ|zzz)?[ \\t]*(${zzzSpeedAliasReg()})(速报|攻略|查询|信息|图)?$`, fnc: 'report' },
+        /* %上期防卫战速报 / %上期强袭战速报，以及后缀写法 %防卫战速报 上期 */
+        { reg: `^[#%％]*(?:米哈游)?(?:绝区零|绝区|ZZZ|zzz)?[ \\t]*(上一期|上期|上一)[ \\t]*(${zzzSpeedAliasReg()})(速报|攻略|查询|信息|图)?$`, fnc: 'report' },
+        { reg: `^[#%％]*(?:米哈游)?(?:绝区零|绝区|ZZZ|zzz)?[ \\t]*(${zzzSpeedAliasReg()})[ \\t]*(上一期|上期|上一)$`, fnc: 'report' },
       ],
     });
   }
@@ -1527,9 +1549,12 @@ export class abyss_report extends plugin {
         const loadOpts = { version: req.version, prev: req.prev, next: req.next };
         const isZzzShiyu = req.game === 'zzz' && req.type === '式舆防卫战';
         const isZzzDeadly = req.game === 'zzz' && req.type === '危局强袭战';
+        /* 上期/下期/指定版本是明确的单期请求，不能被「全部期」配置覆盖；
+           否则 %上期防卫战速报 会先走全期列表，看起来像回到了 3.0。 */
+        const singlePeriod = !!(req.prev || req.next || req.version);
         const multiPeriods = !!req.all
-          || (isZzzShiyu && String(config().abyss_report_zzz_shiyu_periods || 'last') === 'all')
-          || (isZzzDeadly && String(config().abyss_report_zzz_deadly_periods || 'last') === 'all');
+          || (!singlePeriod && isZzzShiyu && String(config().abyss_report_zzz_shiyu_periods || 'last') === 'all')
+          || (!singlePeriod && isZzzDeadly && String(config().abyss_report_zzz_deadly_periods || 'last') === 'all');
         const nanokas = [];
         if (multiPeriods) {
           const ids = await zzzAllPeriodIds(req.type, req.version);

@@ -24,6 +24,22 @@
         </div>
       </div>
       <div class="summary-coin"><img src="{{ppath}}zzz_challenge/deadly_img/star-icon-light.png" />x{{total_star}}</div>
+      {{if boss_hp_total_text || boss_hp_total_delta_text}}
+      <div class="summary-hp">
+        {{if boss_hp_total_text}}
+        <div class="boss-hp-tag">
+          <span class="bht-icon">HP</span>
+          <span class="bht-label">BOSS 总生命</span>
+          <b class="bht-value">{{boss_hp_total_text}}</b>
+        </div>
+        {{/if}}
+        {{if boss_hp_total_delta_text}}
+        <div class="boss-hp-delta delta-{{boss_hp_total_delta_dir}}" title="较上期血量变化">
+          <i class="bhd-arrow"></i><b>{{boss_hp_total_delta_text}}</b>
+        </div>
+        {{/if}}
+      </div>
+      {{/if}}
     </div>
     {{each entries item}}
     <div class="card card-bg {{item.cardClass}}">

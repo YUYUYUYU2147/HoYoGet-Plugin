@@ -202,7 +202,7 @@ export function scaleStyle() {
    只改 Renderer 的内存缓存，不动磁盘上的模板文件 —— 避免首次渲染把源文件改掉。
    样式内联，不依赖各模板自己的 CSS。 */
 const COPYRIGHT_FOOTER_HTML = [
-  '<div style="text-align:center;padding:10px 0 6px;font-size:12px;letter-spacing:.04em;opacity:.75">',
+  '<div class="hoyoget-copyright" style="text-align:center;padding:10px 0 6px;font-size:12px;letter-spacing:.04em;opacity:.75">',
   '<span style="color:#ff4d4f;font-weight:600">from 米哈游</span>',
   '</div>',
 ].join('')
@@ -226,13 +226,21 @@ async function ensureCopyright(tplFile) {
     // 先确保缓存已按磁盘内容刷新，再判断/注入
     bustTplCache(tplFile)
     let html = Renderer.html[tplFile]
+    const diskHtml = fs.readFileSync(tplFile, 'utf8')
     if (html === undefined) {
-      html = fs.readFileSync(tplFile, 'utf8')
+      html = diskHtml
       Renderer.html[tplFile] = html
     }
     if (!html) return
-    // 模板自己已经写了版权就不再重复注入
-    if (/copy\(\)|copyright-from|class="copyright"|class='copyright'/i.test(html)) return
+    /* 旧版自动注入没有标记，且会被判断成「模板缺少版权」逐次叠加。
+       发现旧注入块时先回退到磁盘原文，再按新规则判断一次。 */
+    const legacyFooter = /<div style="text-align:center;padding:10px 0 6px;font-size:12px;letter-spacing:\.04em;opacity:\.75">\s*<span style="color:#ff4d4f;font-weight:600">from 米哈游<\/span>\s*<\/div>/i
+    if (legacyFooter.test(html)) {
+      html = diskHtml
+      Renderer.html[tplFile] = html
+    }
+    // 模板已有版权/页脚（copy、copyright、footer、from 米哈游）就不再注入
+    if (/copy\(\)|copyright-from|class=["'][^"']*copyright|class=["'][^"']*hoyoget-copyright|from\s*米哈游|\{\{\s*footer\s*\}\}/i.test(html)) return
     if (!/<\/body>/i.test(html)) return
     Renderer.html[tplFile] = html.replace(/<\/body>/i, `${COPYRIGHT_FOOTER_HTML}\n</body>`)
     globalThis.logger?.debug?.(`[HoYoGet][render] 已为 ${String(tplFile).split('/resources/')[1] || tplFile} 补上版权注释`)

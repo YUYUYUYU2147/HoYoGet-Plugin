@@ -128,6 +128,20 @@ export function toElementTags(list = [], kind = 'weak') {
  * 怪物面板数值 → 模板用的中文条目。
  * nanoka 字段：hp / attack / defence / stun（失衡值） / attribute_infliction（异常掌控）
  */
+export function monsterHpValue(stats = {}) {
+  const row = (stats?.top || []).find(r => r.label === '生命')
+    || (stats?.bottom || []).find(r => r.label === '生命')
+  const n = Number(String(row?.value || '').replace(/[^\d.-]/g, ''))
+  return Number.isFinite(n) && n > 0 ? n : 0
+}
+
+export function formatHpValue(value) {
+  const n = Number(value) || 0
+  if (!n) return ''
+  if (n >= 1e8) return `${(n / 1e8).toFixed(2).replace(/\.?0+$/, '')}亿`
+  return Math.round(n).toLocaleString('en-US')
+}
+
 export function formatMonsterStats(stats = {}) {
   const s = stats || {}
   const fmt = n => {
@@ -243,9 +257,11 @@ export async function normalizeShiyu(raw = {}, meta = {}) {
             : (item?.monster_resistance || nb?.resistance || bm.resistance), 'resist'),
       }
     })
+    const bossHp = items.reduce((sum, item) => sum + monsterHpValue(item.monster_stats), 0)
     layers.push({
       name: key,
       zh,
+      boss_hp_text: formatHpValue(bossHp),
       data: {
         ...d,
         layer_challenge_info_list: items,
@@ -561,6 +577,7 @@ async function nanokaDeadlyBosses(periodOffset = 0) {
           weakness: elemNamesOf(room?.monster_weakness).join(' / ') || pickBySign(mon.element, 1).join(' / '),
           resistance: elemNamesOf(room?.monster_resistance).join(' / ') || pickBySign(mon.element, -1).join(' / '),
           stats: mon.stats || {},
+          zoneType: Number(mode?.zone_type) || 0,
         })
       }
     }
@@ -569,6 +586,15 @@ async function nanokaDeadlyBosses(periodOffset = 0) {
   if (ret) bossCodexMerge(ret)
   if (ret && !periodOffset) _nanokaBossCache = { at: Date.now(), bosses: ret }
   return ret
+}
+
+/** 某一期 nanoka 危局 BOSS 的总生命（用于缺失上一期存档时补环比基准） */
+export async function nanokaDeadlyTotalHp(periodOffset = 0) {
+  const bosses = await nanokaDeadlyBosses(periodOffset).catch(() => null)
+  /* zone_type 1002 是绝境单关，不计入普通三关的总生命 */
+  return (bosses || [])
+    .filter(boss => Number(boss?.zoneType) !== 1002)
+    .reduce((sum, boss) => sum + (Number(boss?.stats?.hp) || 0), 0)
 }
 
 /* ───── nanoka 式舆 BOSS（名称/弱点/抗性） ─────
@@ -696,6 +722,7 @@ export async function normalizeDeadly(raw = {}, meta = {}) {
     const bossName = boss?.name || boss?.monster_name || ''
     /* 实时数据没有就查本地资料库：往期与异名 BOSS 都靠它兜底 */
     const nb = (bossName ? (nanokaBosses || []).find(b => b.name === bossName) : null) || bossCodexLookup(bossName)
+    const monsterStats = formatMonsterStats(nb?.stats)
     return {
       score: v?.score ?? '',
       star: Number(v?.star) || 0,
@@ -714,7 +741,8 @@ export async function normalizeDeadly(raw = {}, meta = {}) {
         monster_weakness_tags: toElementTags(boss?.weakness || boss?.monster_weakness || nb?.weakness || bm.weakness, 'weak'),
         monster_resistance_tags: toElementTags(boss?.resistance || boss?.monster_resistance || nb?.resistance || bm.resistance, 'resist'),
       },
-      monster_stats: formatMonsterStats(nb?.stats),
+      monster_stats: monsterStats,
+      boss_hp_text: formatHpValue(monsterHpValue(monsterStats)),
       buffer: {
         icon: buff?.icon || '',
         name: buff?.name || '',
