@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { selectUidGames, shouldUseUidGrid, uidViewModeFromPrefix } from '../system/uid_view.js'
+import { selectUidGames, shouldUseUidGrid, uidRenderViewportWidth, uidViewModeFromPrefix } from '../system/uid_view.js'
 
 const games = [
   { key: 'gs', uidList: [{ uid: 'uid-a' }] },
@@ -26,10 +26,12 @@ test('keeps full game order and filters single-game views', () => {
   assert.deepEqual(selectUidGames(games, 'sr')[0].uidList.map(row => row.uid), ['uid-b', 'uid-c'])
 })
 
-test('uses a grid only for all-game views with more than ten UIDs', () => {
+test('uses a two-column grid and a wider viewport above ten UIDs', () => {
   const ten = [{ key: 'sr', uidList: Array.from({ length: 10 }, (_, i) => ({ uid: `uid-${i}` })) }]
   const eleven = [{ key: 'sr', uidList: Array.from({ length: 11 }, (_, i) => ({ uid: `uid-${i}` })) }]
   assert.equal(shouldUseUidGrid(ten), false)
   assert.equal(shouldUseUidGrid(eleven), true)
-  assert.equal(shouldUseUidGrid(eleven, 'sr'), false)
+  assert.equal(shouldUseUidGrid(eleven), true)
+  assert.equal(uidRenderViewportWidth(ten), 630)
+  assert.equal(uidRenderViewportWidth(eleven), 1106)
 })

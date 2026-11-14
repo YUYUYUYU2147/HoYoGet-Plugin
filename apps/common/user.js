@@ -30,6 +30,19 @@ const GAME_BIZ = { hk4e_cn: 'gs', hkrpg_cn: 'sr', nap_cn: 'zzz', bh3_cn: 'bh3' }
 const REGION_NAME = { 天空岛: 'gs', 世界树: 'gs', 星穹列车: 'sr', 新艾利都: 'zzz' };
 const GAME_NAME = { gs: '原神', sr: '崩坏：星穹铁道', zzz: '绝区零', bh3: '崩坏3' };
 
+function cacheUidProfile(game, uid, profile) {
+    const cache = globalThis.__hoyoGetUidProfileCache || (globalThis.__hoyoGetUidProfileCache = new Map());
+    const key = `${game}:${uid}`;
+    const old = cache.get(key) || {};
+    cache.set(key, {
+        avatar: profile.avatar || old.avatar || '',
+        nickname: profile.nickname || old.nickname || '',
+        level: Number(profile.level || old.level) || 0,
+        at: Date.now(),
+    });
+    if (cache.size > 2000) cache.clear();
+}
+
 /**
  * 把新的令牌值合并进完整 cookie 字符串。
  * ck_stoken 是取数时实际提交的整串 cookie，只更新字段不会传导进去，
@@ -93,6 +106,20 @@ async function collectBindAccounts(e, stokenData) {
             profile = await getRoleProfile(e, uid, game, game === 'bh3' ? { headers, server: entry.region } : {});
         } catch { /* 忽略，回退 */ }
         const fallback = stokenRoles.get(String(uid)) || {};
+        const name = profile.nickname || fallback.nickname || '';
+        const level = Number(profile.userLevel || fallback.level) || 0;
+        if (profile.avatar || name || level) {
+            cacheUidProfile(game, uid, { avatar: profile.avatar, nickname: name, level });
+            try {
+                const cacheWrites = [];
+                if (profile.avatar) cacheWrites.push(redis.set(`Yz:genshin:uidFaceUrl:${game}:${uid}`, profile.avatar, 'EX', 12 * 60 * 60));
+                if (name) cacheWrites.push(redis.set(`Yz:genshin:uidNickname:${game}:${uid}`, name, 'EX', 12 * 60 * 60));
+                if (level) cacheWrites.push(redis.set(`Yz:genshin:uidLevel:${game}:${uid}`, String(level), 'EX', 12 * 60 * 60));
+                await Promise.all(cacheWrites);
+            } catch (err) {
+                logger.debug?.(`[HoYoGet][user] 写入 UID 资料缓存失败：${err?.message || err}`);
+            }
+        }
         /* 服务器类型：优先取存档里的 region_name（天空岛 / 星穹列车 / 新艾利都 / 各平台服），
            缺失时按 region 代码回退，再缺则按 uid 推断 */
         const server = entry.region_name || mhy.getServerName(entry.region) || mhy.getServerName(mhy.getServer(uid, game));
@@ -100,9 +127,9 @@ async function collectBindAccounts(e, stokenData) {
             uid: String(uid),
             game,
             gameName: GAME_NAME[game] || '未知',
-            name: profile.nickname || fallback.nickname || '',
+            name,
             avatar: profile.avatar,
-            level: profile.userLevel || fallback.level || 0,
+            level,
             server,
             ok: true,
         });
@@ -524,6 +551,7 @@ export class user extends plugin {
                 // 新版 passport 接口要通行证 uid，不是 game_uid(k)
                 stuid: data?.[k]?.stuid || data?.[k]?.ltuid
             });
+            let refreshOk = false;
             if (data) {
                 /* 按 game_uid 精确写回。同一 stuid 下可能有多个游戏，
                    用 stoken 匹配会把这一轮刷出来的 ltoken 写到所有游戏上。 */
@@ -546,8 +574,14 @@ export class user extends plugin {
                             data[k].ck_stoken = mergeCookieToken(data[k].ck_stoken, 'account_id', ltuid);
                         }
                     }
-                    if (ltoken || nextCookieToken) kg = 1;
+                    refreshOk = Boolean(ltoken || nextCookieToken);
+                    if (refreshOk) kg = 1;
                 }
+            }
+            try {
+                await redis.set(`HoYoGet:uid:ck-refresh:${e.user_id}:${k}`, refreshOk ? 'ok' : 'fail', 'EX', 30 * 86400);
+            } catch (err) {
+                logger.debug?.(`[HoYoGet][user] 写入 CK 刷新状态失败：${err?.message || err}`);
             }
             msgs.push(...sendMsg);
         }

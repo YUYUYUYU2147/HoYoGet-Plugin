@@ -3,13 +3,12 @@
  *
  * 数据来源与 #切换水晶uid 完全一致：
  *   HoYoGet 的 Stoken 文件 data/Stoken/<QQ>.yaml（game_biz=bh3_cn）
- *   + 一次 getUserGameRolesByStoken 补昵称/等级
+ *   昵称与等级由 UID 面板从本地角色缓存补全
  *   + redis HoYoGet:bh3_uid:<QQ> 记录当前用于查水晶的 UID
- * 任何一步取不到都只返回空列表，调用方保持原样，不影响原有面板。
+ * 缓存缺失时保留账号 UID，由面板显示暂无数据状态。
  */
 import fs from 'node:fs';
 import YAML from 'yaml';
-import { api, mhy } from '#HoYoGet';
 
 const BH3_REGIONS = ['android01', 'ios01', 'pc01', 'bb01', 'yyb01', 'hun01', 'hun02'];
 const REGION_LABEL = {
@@ -45,27 +44,12 @@ export async function getBh3UidList(e, qq) {
         list.push({
             uid: String(uid),
             region: entry.region || '',
-            serverName: entry.region_name || REGION_LABEL[entry.region] || entry.region || '',
+            serverName: REGION_LABEL[entry.region] || entry.region_name || entry.region || '',
             nickname: '',
             level: 0,
-            ck: entry.ck_stoken || '',
         });
     }
     if (!list.length) return { list: [], current: '' };
-    try {
-        const ck = list.find(v => v.ck)?.ck || '';
-        if (ck) {
-            const headers = mhy.getHeaders(e, ck);
-            const res = await api(e, { type: 'GameRoles', headers, silent: true });
-            const rows = res?.data?.list || [];
-            for (const item of list) {
-                const hit = rows.find(row => String(row.game_uid) === item.uid);
-                if (!hit) continue;
-                item.nickname = hit.nickname || '';
-                item.level = Number(hit.level || 0) || 0;
-            }
-        }
-    } catch (err) { /* 昵称取不到不影响列表显示 */ }
     let current = '';
     try {
         if (typeof redis !== 'undefined') current = String(await redis.get('HoYoGet:bh3_uid:' + user) || '');

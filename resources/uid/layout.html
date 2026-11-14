@@ -9,7 +9,7 @@
   {{/block}}
 </head>
 {{set elemCls = element || elem || 'hydro' }}
-<body class="elem-{{elemCls}} {{displayMode || mode || 'default'}}-mode {{bodyClass}}">
+<body {{sys.scale}} class="elem-{{elemCls}} {{displayMode || mode || 'default'}}-mode {{bodyClass}}">
 <div class="container elem-bg" id="container">
   {{block 'main'}}
   {{/block}}

@@ -4,23 +4,22 @@
  * #uid 展示四款游戏，星铁、绝区零和崩坏3命令只保留对应分组。
  * 列表超过阈值时使用网格排版，所有序号沿用各游戏账号列表的顺序。
  *
- * 昵称、等级、头像统一在这里补全：原来的实现依赖 miao 的面板存档，没更新过面板的
- * 账号整行都会退化成「暂无uid信息」且头像退回占位图，绝区零更是从来没有资料。
+ * 昵称、等级和头像只从本地角色缓存补全，不在显示 UID 时发起资料请求。
+ * 角色缓存缺失时保留 UID 并显示暂无数据状态，同时附上本插件的面板更新命令。
  * !uid 走崩三自己的入口，!uid1 这类序号切换写 redis 的 HoYoGet:bh3_uid / HoYoGet:bh3_region。
  * 未安装 genshin 插件时，另外三游戏的 #uidN / *uidN / %uidN 也由本面板接管，
  * 切换结果写 redis 的 HoYoGet:cur_uid:<game>:<qq>，内置 NoteUser 读取该键决定当前 uid；
  * 装了 genshin 时这三个前缀仍交还 genshin，行为与之前一致。
  */
-import { pluginPriority, api, mhy } from '#HoYoGet';
+import { pluginPriority, mhy } from '#HoYoGet';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import YAML from 'yaml';
 import { getBh3UidList } from '../../system/bh3_uid.js';
 import { makeGenshinLoader } from '../../system/genshin_loader.js';
-import { getRoleProfile } from '../../system/roleProfile.js';
 import { orderUidRowsByReference } from '../../system/uid_order.js';
-import { selectUidGames, shouldUseUidGrid, uidViewModeFromPrefix } from '../../system/uid_view.js';
+import { selectUidGames, shouldUseUidGrid, UID_RENDER_SCALE, uidRenderViewportWidth, uidViewModeFromPrefix } from '../../system/uid_view.js';
 
 const getNoteUser = makeGenshinLoader('model/mys/NoteUser.js', ['model/mys/NoteUser.js']);
 
@@ -30,10 +29,16 @@ const LAYOUT_FILE = process.cwd() + '/plugins/HoYoGet-Plugin/resources/uid/layou
 const STOKEN_DIR = process.cwd() + '/plugins/HoYoGet-Plugin/data/Stoken/';
 
 const GAME_LIST = [
-  { key: 'gs', name: '原神' },
-  { key: 'sr', name: '星穹铁道' },
-  { key: 'zzz', name: '绝区零' },
+  { key: 'gs', name: '原神', refreshCommand: '#更新面板' },
+  { key: 'sr', name: '星穹铁道', refreshCommand: '*更新面板' },
+  { key: 'zzz', name: '绝区零', refreshCommand: '%更新面板' },
 ];
+const REGION_NAME_TO_SERVER = {
+  天空岛: '国服',
+  世界树: 'B服',
+  星穹列车: '国服',
+  新艾利都: '国服',
+};
 /** 切换uid的前缀：# 原神、* 星铁、% 绝区零、! 崩三，与模板 tips 一致 */
 const UID_MARK_GAME = { '#': 'gs', '*': 'sr', '%': 'zzz', '!': 'bh3', '！': 'bh3' };
 
@@ -76,7 +81,7 @@ async function getPlayer() {
   return playerApi;
 }
 
-/** 崩三列表缓存：GameRoles 要联网，短时间内重复查询没有必要 */
+/** 崩三绑定列表缓存：重复读本地 Stoken 与 Redis 没有必要 */
 const bh3Cache = new Map();
 const BH3_CACHE_TTL = 60 * 1000;
 async function loadBh3(e, qq, force) {
@@ -89,13 +94,13 @@ async function loadBh3(e, qq, force) {
   return data;
 }
 
-/** 头像缓存：record index 有限流，头像又不常变，同一个 uid 半小时内只查一次 */
+/** 头像缓存：先复用本进程命中，再读已有的 Redis 头像/昵称缓存 */
 const profileCache = new Map();
 const PROFILE_TTL = 30 * 60 * 1000;
 const PROFILE_BAD_TTL = 3 * 60 * 1000;
 
 function readProfile(game, uid) {
-  const key = game + ':' + uid;
+  const key = `${game}:${uid}`;
   const hit = profileCache.get(key);
   if (!hit) return null;
   if (Date.now() - hit.ts >= hit.ttl) {
@@ -106,7 +111,7 @@ function readProfile(game, uid) {
 }
 
 function saveProfile(game, uid, url) {
-  profileCache.set(game + ':' + uid, {
+  profileCache.set(`${game}:${uid}`, {
     ts: Date.now(),
     url: url || '',
     ttl: url ? PROFILE_TTL : PROFILE_BAD_TTL,
@@ -116,6 +121,7 @@ function saveProfile(game, uid, url) {
 
 /** Stoken 角色缓存：合并各 CK 的 GameRoles，供 UID 面板与体力卡片复用 */
 const stokenCache = new Map();
+const roleDataCache = new Map();
 const STOKEN_TTL = 60 * 1000;
 
 function readStokenFile(qq) {
@@ -134,27 +140,14 @@ function readStokenFile(qq) {
   return out;
 }
 
-async function loadStoken(e) {
+function loadStoken(e) {
   const qq = String(e.user_id || '');
   const hit = stokenCache.get(qq);
   if (hit && Date.now() - hit.ts < STOKEN_TTL) return hit.data;
   const data = readStokenFile(qq);
-  const seenCks = new Set();
-  for (const ck of Object.values(data.entries).map(v => v?.ck_stoken).filter(Boolean)) {
-    if (seenCks.has(ck)) continue;
-    seenCks.add(ck);
-    try {
-      const res = await api(e, { type: 'GameRoles', headers: mhy.getHeaders(e, ck), silent: true });
-      for (const row of res?.data?.list || []) {
-        if (!row?.game_uid) continue;
-        data.roles.set(String(row.game_uid), {
-          nickname: row.nickname || '',
-          level: Number(row.level || 0) || 0,
-        });
-      }
-    } catch (err) {
-      logger.debug?.('[HoYoGet][uid] 角色列表取昵称失败：' + (err?.message || err));
-    }
+  for (const [key, role] of roleDataCache) {
+    if (!key.startsWith(`${qq}:`)) continue;
+    data.roles.set(key.slice(qq.length + 1), role);
   }
   stokenCache.set(qq, { ts: Date.now(), data });
   if (stokenCache.size > 500) stokenCache.clear();
@@ -172,132 +165,161 @@ export function saveCachedStokenRole(qq, uid, role) {
   const key = String(qq);
   const hit = stokenCache.get(key);
   const data = hit && Date.now() - hit.ts < STOKEN_TTL ? hit.data : readStokenFile(key);
-  data.roles.set(String(uid), {
+  const normalized = {
     nickname: role.nickname || '',
     level: Number(role.level || 0) || 0,
-  });
+  };
+  data.roles.set(String(uid), normalized);
+  roleDataCache.set(`${key}:${uid}`, normalized);
+  if (roleDataCache.size > 2000) roleDataCache.clear();
   stokenCache.set(key, { ts: Date.now(), data });
 }
 
-/**
- * 补全面板资料
- *
- * 昵称与等级取 GameRoles（一次请求覆盖四个游戏），头像取 record index。
- * 头像按 uid + 游戏缓存，只有第一次 #uid 会联网。
- * 崩三的 record 域名在本机容易直连超时，多个账号必须并发；
- * 其余三游戏的 getRoleProfile 会临时改写 e.uid / e.game，只能串行。
- */
-async function fillProfiles(games, e, stoken, noteUser) {
-  const Player = await getPlayer();
-  const ckByStuid = {};
-  for (const ltuid of Object.keys(noteUser?.mysUsers || {})) {
-    const ck = noteUser.mysUsers[ltuid]?.ck;
-    if (ck) ckByStuid[String(ltuid)] = ck;
+function localImageUrl(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (/^(?:data:|https?:\/\/)/i.test(raw)) return raw;
+  if (!/\.(?:png|jpe?g|webp|gif)$/i.test(raw)) return '';
+  const file = path.isAbsolute(raw)
+    ? raw
+    : path.resolve(process.cwd(), raw.replace(/^\.\//, ''));
+  try {
+    if (!fs.existsSync(file)) return '';
+    const ext = path.extname(file).toLowerCase();
+    const mime = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif' }[ext];
+    return mime ? `data:${mime};base64,${fs.readFileSync(file).toString('base64')}` : '';
+  } catch {
+    return '';
+  }
+}
+
+function profileFromCache(data, readGameAvatar = false) {
+  for (const row of [data?.role_info, data?.player_info, data?.player, data?.user, data]) {
+    if (!row || typeof row !== 'object') continue;
+    const nickname = String(row.nickname || row.name || row.nick_name || '').trim();
+    const level = Number(row.level ?? row.userLevel ?? row.user_level) || 0;
+    const avatar = readGameAvatar ? localImageUrl(row.gameAvatar || row.avatar || row.faceUrl) : '';
+    if (nickname || level || avatar) return { nickname, level, avatar };
+  }
+  return { nickname: '', level: 0, avatar: '' };
+}
+
+function readLocalRoleCache(game, uid) {
+  const files = [path.join(process.cwd(), 'data', 'PlayerData', game, `${uid}.json`)];
+  if (game === 'zzz') {
+    files.push(
+      path.join(process.cwd(), 'data', 'ZZZ-Plugin', 'player', `${uid}.json`),
+      path.join(process.cwd(), 'plugins', 'ZZZ-Plugin', 'data', 'player', `${uid}.json`),
+      path.join(process.cwd(), 'plugins', 'HoYoGet-Plugin', 'data', 'zzz_gacha', 'zzz_plugin', 'player', `${uid}.json`),
+    );
   }
 
+  for (const file of files) {
+    try {
+      if (!fs.existsSync(file)) continue;
+      const profile = profileFromCache(JSON.parse(fs.readFileSync(file, 'utf8')), game === 'zzz');
+      if (profile.nickname || profile.level || profile.avatar) return profile;
+    } catch { /* 跳过损坏或不可读的本地缓存 */ }
+  }
+
+  if (game === 'zzz') {
+    const file = path.join(process.cwd(), 'data', 'NoteData', 'zzz', `${uid}.json`);
+    try {
+      const note = JSON.parse(fs.readFileSync(file, 'utf8'));
+      for (const year of Object.values(note || {}).reverse()) {
+        for (const month of Object.values(year || {}).reverse()) {
+          const profile = profileFromCache(month?.role_info, true);
+          if (profile.nickname || profile.level || profile.avatar) return profile;
+        }
+      }
+    } catch { /* 没有 NoteData 缓存时继续使用占位头像 */ }
+  }
+  return { nickname: '', level: 0, avatar: '' };
+}
+
+/** 从绑定记录和本地角色缓存补齐显示信息，不在 #uid 时发起资料请求 */
+async function fillProfiles(games, stoken, qq) {
+  const Player = await getPlayer();
   const tasks = [];
   for (const game of games) {
     for (const item of game.uidList || []) tasks.push({ game, item });
   }
 
-  /* ① 先用本地数据把昵称、等级、横幅补到最好，这一步不联网 */
   for (const row of tasks) {
     const game = row.game;
     const item = row.item;
     const uid = String(item.uid || '');
     const role = stoken.roles.get(uid) || {};
-    /* 服务器类型：优先取存档里的 region_name，缺失时按 uid 推断 */
+    const cached = readLocalRoleCache(game.key, uid);
+    const memoryAvatar = readProfile(game.key, uid);
     const entry = stoken.entries[uid] || {};
-    const server = entry.region_name || mhy.getServerName(mhy.getServer(uid, game.key));
+    const cookie = String(entry.ck_stoken || '');
+    const hasCk = Boolean((entry.ltoken || /(?:^|;\s*)ltoken=/.test(cookie))
+      && (entry.cookie_token || /(?:^|;\s*)cookie_token=/.test(cookie)));
+    const hasSk = Boolean(entry.stoken || /(?:^|;\s*)stoken=/.test(cookie));
+    let lastRefresh = '';
+    try { lastRefresh = await redis.get(`HoYoGet:uid:ck-refresh:${qq}:${uid}`) || ''; } catch { /* 无刷新状态缓存 */ }
+    item.ckLabel = lastRefresh === 'fail'
+      ? 'CK失败'
+      : lastRefresh === 'ok' || (hasCk && hasSk)
+        ? 'CK'
+        : hasCk
+          ? 'CK未验'
+          : '无CK';
+    item.ckStatus = lastRefresh === 'fail'
+      ? 'fail'
+      : lastRefresh === 'ok' || (hasCk && hasSk)
+        ? 'ok'
+        : hasCk
+          ? 'unknown'
+          : 'missing';
+    item.skLabel = hasSk ? 'SK' : '无SK';
+    item.skStatus = hasSk ? 'ok' : 'missing';
+    const regionCode = entry.region || '';
+    const regionName = entry.region_name || '';
+    const server = item.server || (regionCode
+      ? mhy.getServerName(regionCode)
+      : (REGION_NAME_TO_SERVER[regionName] || (regionName ? mhy.getServerName(regionName) : '')));
     if (server) item.server = server;
-    if (role.nickname) item.name = role.nickname;
-    if (role.level) item.level = role.level;
+    if (!item.name) item.name = role.nickname || cached.nickname || '';
+    if (!item.level) item.level = Number(role.level) || cached.level || 0;
+    if (!item.faceUrl) item.faceUrl = memoryAvatar || cached.avatar || '';
+
+    try {
+      const [avatar, nickname, level] = await Promise.all([
+        redis.get(`Yz:genshin:uidFaceUrl:${game.key}:${uid}`),
+        item.name ? null : redis.get(`Yz:genshin:uidNickname:${game.key}:${uid}`),
+        item.level ? null : redis.get(`Yz:genshin:uidLevel:${game.key}:${uid}`),
+      ]);
+      if (avatar) item.faceUrl = String(avatar);
+      if (!item.name && nickname) item.name = String(nickname);
+      if (!item.level && Number(level) > 0) item.level = Number(level);
+    } catch { /* Redis 缓存不可用时继续读本地角色缓存 */ }
+
+    const refreshed = globalThis.__hoyoGetUidProfileCache?.get(`${game.key}:${uid}`);
+    if (refreshed && Date.now() - refreshed.at < 12 * 60 * 60 * 1000) {
+      if (refreshed.avatar) item.faceUrl = refreshed.avatar;
+      if (refreshed.nickname) item.name = refreshed.nickname;
+      if (Number(refreshed.level) > 0) item.level = Number(refreshed.level);
+    }
+
     if (game.key === 'zzz') {
-      /* 这两个标记只决定缺图时的兜底样式；绝区零同样要补昵称与头像，不能提前退出 */
       item.zzz_banner = true;
       item.zzz_face = true;
     }
-    if (!Player) continue;
-    try {
-      const player = Player.create(uid, game.key);
-      const imgs = player?.faceImgs || {};
-      if (!item.name && player?.name) item.name = player.name;
-      if (!item.level && player?.level) item.level = player.level;
-      if (imgs.banner) item.banner = imgs.banner;
-      if (imgs.face) {
-        item.face = imgs.face;
-        /* 模板用 background-image 加载，本地路径在渲染时无法解析，这里统一转成 data URI */
-        const rawFace = String(imgs.face);
-        try {
-          if (/^data:/i.test(rawFace) || /^https?:/i.test(rawFace)) item.faceUrl = rawFace;
-          else {
-            const abs = /^(\/|[A-Za-z]:)/.test(rawFace) ? rawFace : process.cwd() + '/' + rawFace.replace(/^\.?\//, '');
-            if (fs.existsSync(abs)) item.faceUrl = 'data:image/png;base64,' + fs.readFileSync(abs).toString('base64');
-          }
-        } catch (_) {}
-      }
-    } catch (err) {
-      continue;
-    }
-  }
 
-  /* ③ 崩三头像：并发；headers 必须用真 ck，stoken 拼出来的 ck 会被判登录失效 */
-  const bh3Rows = tasks.filter(row => row.game.key === 'bh3');
-  await Promise.all(bh3Rows.map(async row => {
-    const item = row.item;
-    const uid = String(item.uid || '');
-    const cached = readProfile('bh3', uid);
-    if (cached !== null) {
-      if (cached) item.faceUrl = cached;
-      return;
-    }
-    const entry = stoken.entries[uid] || {};
-    const ck = ckByStuid[String(entry.stuid || '')] || '';
-    if (!ck) return;
-    let avatar = '';
-    try {
-      const headers = mhy.getHeaders(e, ck);
-      const server = entry.region || mhy.getServer(uid, 'bh3');
-      const info = await getRoleProfile(e, uid, 'bh3', { headers, server });
-      avatar = info?.avatar || '';
-      if (!item.name && info?.nickname) item.name = info.nickname;
-      if (!item.level && info?.userLevel) item.level = info.userLevel;
-    } catch (err) {
-      logger.debug?.('[HoYoGet][uid] 取崩三头像失败：' + (err?.message || err));
-    }
-    if (avatar) item.faceUrl = avatar;
-    saveProfile('bh3', uid, avatar);
-  }));
-
-  /* ④ 原神/星铁/绝区零：串行，避免 e.uid / e.game 互相覆盖 */
-  for (const row of tasks) {
-    if (row.game.key === 'bh3') continue;
-    const item = row.item;
-    const uid = String(item.uid || '');
-    /* 只认非空缓存：之前接口失败留下的空记录不该把后续重查挡掉 */
-    const cached = readProfile(row.game.key, uid);
-    if (cached) {
-      item.faceUrl = cached;
-      continue;
-    }
-    let avatar = '';
-    try {
-      const info = await getRoleProfile(e, uid, row.game.key);
-      avatar = info?.avatar || '';
-      if (!item.name && info?.nickname) item.name = info.nickname;
-      if (!item.level && info?.userLevel) item.level = info.userLevel;
-    } catch (err) {
-      logger.debug?.('[HoYoGet][uid] 取资料失败：' + (err?.message || err));
-    }
-    if (avatar) item.faceUrl = avatar;
-    /* 联网拿不到头像时，复用 genshin 面板已缓存到 redis 的头像 URL */
-    if (!avatar) {
+    const playerFile = path.join(process.cwd(), 'data', 'PlayerData', game.key, `${uid}.json`);
+    if (Player && fs.existsSync(playerFile)) {
       try {
-        const cached = await redis.get('Yz:genshin:uidFaceUrl:' + row.game.key + ':' + uid);
-        if (cached) avatar = cached;
-      } catch (_) {}
+        const player = Player.create(uid, game.key);
+        if (!item.name && player?.name) item.name = player.name;
+        if (!item.level && player?.level) item.level = player.level;
+      } catch (err) {
+        logger.debug?.(`[HoYoGet][uid] 读取 ${game.key} 本地角色缓存失败：${err?.message || err}`);
+      }
     }
-    saveProfile(row.game.key, uid, avatar);
+    if (item.faceUrl) saveProfile(game.key, uid, item.faceUrl);
+    item.hasRoleData = Boolean(String(item.name || '').trim() || Number(item.level) > 0);
   }
 }
 
@@ -349,7 +371,7 @@ function buildButtons() {
     ],
     [
       { text: '角色', callback: '#角色' },
-      { text: '探索', callback: '#探索' },
+      { text: '更新面板', callback: '#更新面板' },
       { text: '武器', callback: '#武器' },
       { text: '深渊', callback: '#深渊' },
     ],
@@ -415,8 +437,7 @@ export class uidPanel extends plugin {
     if (!e.runtime) return false;
     const NoteUser = await getNoteUser();
     if (!NoteUser) return false;
-    /* NoteUser.create(e) 会把 e.user 换成 NoteUser，先留一份原对象，
-       补资料时还原，保证 getRoleProfile 里按 uid 取 ck 的链路与账本一致 */
+    /* NoteUser.create(e) 会把 e.user 换成 NoteUser，先留一份原对象供当前事件继续使用 */
     const originUser = e.user;
     let user = null;
     try {
@@ -437,26 +458,43 @@ export class uidPanel extends plugin {
       const uidList = normalizeUidList(user.getUidList(ds.key));
       const rawUid = user.getUid(ds.key);
       const current = rawUid && typeof rawUid === 'object' ? rawUid.uid : rawUid;
-      return { key: ds.key, name: ds.name, uid: String(current || uidList[0]?.uid || ''), uidList };
+      return {
+        key: ds.key,
+        name: ds.name,
+        refreshCommand: ds.refreshCommand,
+        uid: String(current || uidList[0]?.uid || ''),
+        uidList,
+      };
     });
     allGames.push(buildBh3Group(Array.isArray(bh3?.list) ? bh3.list : [], bh3?.current));
     const games = selectUidGames(allGames, mode);
 
     try {
       const stoken = await loadStoken(e);
-      await withQuietReply(e, () => fillProfiles(games, e, stoken, user));
+      await fillProfiles(games, stoken, e.user_id);
     } catch (err) {
       logger.warn('[HoYoGet][uid] 补全玩家资料失败：' + (err?.message || err));
     }
 
-    /* 框架在 ...data 之后才写 tplFile，直接放进 data 会被覆盖，必须在 beforeRender 里改 */
+    const qq = String(e.user_id || '');
+    const senderAvatar = String(e.sender?.avatar || '');
+    const qqAvatar = /^https?:\/\//i.test(senderAvatar)
+      ? senderAvatar
+      : /^\d{5,12}$/.test(qq) ? `https://q1.qlogo.cn/g?b=qq&nk=${qq}&s=640` : '';
+    for (const game of games) {
+      for (const item of game.uidList || []) item.qqAvatar = qqAvatar;
+    }
+
+    const useGrid = shouldUseUidGrid(games);
+    const viewportWidth = uidRenderViewportWidth(games);
     const img = await e.runtime.render(
       'genshin',
       'html/user/uid-list',
-      { uids: games, bodyClass: shouldUseUidGrid(games, mode) ? 'uid-grid' : '' },
+      { uids: games, bodyClass: useGrid ? 'uid-panel uid-grid' : 'uid-panel' },
       {
         retType: 'base64',
         beforeRender({ data }) {
+          /* 框架在 ...data 之后才写 tplFile，模板资源与截图参数要在此处设置 */
           data.tplFile = TPL_FILE;
           data.uidRes = uidResPath(data);
           /* 绝对 file:// 前缀：相对路径依赖截图输出目录的深度，换个宿主/目录层级就容易 404
@@ -466,6 +504,9 @@ export class uidPanel extends plugin {
           data.elemLayout = LAYOUT_FILE;
           /* 布局里的公共样式（背景、字体）取本插件 resources/common，不依赖 miao */
           data.commonRes = String(data.uidRes || '').replace('/resources/uid/', '/resources/common/');
+          data.sys = { ...data.sys, scale: `style=zoom:${UID_RENDER_SCALE}` };
+          data.quality = 100;
+          data.viewport = { ...data.viewport, width: viewportWidth, height: data.viewport?.height || 900 };
           return data;
         },
       },
@@ -588,28 +629,6 @@ export class uidPanel extends plugin {
     if (!row) return e.reply(name + ' uid序号不存在，发送 #uid 查看可用序号');
     await redis.set('HoYoGet:cur_uid:' + game + ':' + qq, String(row.uid));
     return this.replyPanel(mode === 'all' ? await this.readBh3(false) : null, mode);
-  }
-}
-
-/** 补资料期间静音：米游社接口失败时 checkCode 会直接 e.reply 提示，面板不需要这些提示 */
-async function withQuietReply(e, fn) {
-  const rawReply = e.reply;
-  const rawTips = e.noTips;
-  try {
-    e.reply = () => {};
-    e.noTips = true;
-  } catch (err) {
-    return await fn();
-  }
-  try {
-    return await fn();
-  } finally {
-    try {
-      e.reply = rawReply;
-      e.noTips = rawTips;
-    } catch (err) {
-      /* 还原失败不影响出图 */
-    }
   }
 }
 

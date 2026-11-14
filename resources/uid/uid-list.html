@@ -17,7 +17,7 @@ bh3:{mark:'!',cls:'Bh3'}
   {{each uids game}}
   {{set mark = gameMap[game.key]?.mark}}
   {{set cls = gameMap[game.key]?.cls}}
-  <div class="game-cont">
+  <div class="game-cont game-cont{{cls}}">
     <div class="game-title">
       <strong>{{mark}}{{game.name}}</strong>
       <span>使用<nobr>{{mark}}uid1</nobr>切换uid</span>
@@ -32,25 +32,32 @@ bh3:{mark:'!',cls:'Bh3'}
         {{set bg = (uidResAbs || uidRes) + 'banner/' + game.key + '.png'}}
         <div class="game-bar game-bar{{cls}}" style="background-image:url({{bg}})">
           <div class="game-inner">
-            {{if uid.faceUrl}}
-            <div class="face" style="background-image:url({{uid.faceUrl}})"></div>
+            {{if uid.faceUrl || uid.qqAvatar}}
+            <div class="face">
+              <img src="{{uid.faceUrl || uid.qqAvatar}}" data-fallback="{{uid.qqAvatar}}" onerror="if(this.dataset.fallback&&!this.dataset.usedFallback){this.dataset.usedFallback='1';this.src=this.dataset.fallback}else{this.style.display='none'}"/>
+            </div>
             {{else}}
-            {{set av = (uidResAbs || uidRes) + 'avatar/' + game.key + '.png'}}
-            <div class="face" style="background-image:url({{av}})"></div>
+            <div class="face face-empty"></div>
             {{/if}}
             <div class="info">
               <div class="uid-info">
                 <div class="uid shadow">{{uid.uid}}<span>{{uid.uid}}</span></div>
-                <div class="type {{uid.type}}">{{uid.type==='ck'?'CK':'绑定'}}</div>
+                <div class="credential-tags">
+                  <span class="credential ck {{uid.ckStatus}}">{{uid.ckLabel}}</span>
+                  <span class="credential sk {{uid.skStatus}}">{{uid.skLabel}}</span>
+                </div>
               </div>
               <div class="detail">
-                {{if uid.name && uid.level}}
-                <div class="name">{{uid.name}} Lv.{{uid.level}}{{if uid.server}} · {{uid.server}}{{/if}}</div>
+                {{if uid.hasRoleData}}
+                <div class="name">
+                  {{if uid.name}}<span class="nickname">{{uid.name}}</span>{{/if}}
+                  {{if uid.level}}<span class="level">Lv.{{uid.level}}</span>{{/if}}
+                  {{if uid.server}}<span class="server">{{uid.server}}</span>{{/if}}
+                </div>
                 {{else}}
-                {{if game.key!=='zzz'}}
-                <div class="no-info">暂无uid信息，可通过更新面板获取信息</div>
-                {{else}}
-                <div class="no-info">暂无uid信息</div>
+                <div class="no-info">暂无UID数据</div>
+                {{if game.refreshCommand}}
+                <div class="refresh-hint">发送<nobr>{{game.refreshCommand}}</nobr>刷新角色信息</div>
                 {{/if}}
                 {{/if}}
               </div>
