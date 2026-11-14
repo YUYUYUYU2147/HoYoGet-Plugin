@@ -5139,7 +5139,7 @@ export class zzz_panel_list extends plugin {
 
   /** 同一个活动的同一时机只推一次，redis 记 7 天；scope 为 QQ 或 G+群号 */
   async zzzActivityPushOnce(scope, kind, name, ts) {
-    const key = `ZZZ:ACT:SEEN:${uid}:${kind}:${name}:${ts}`
+    const key = `ZZZ:ACT:SEEN:${scope}:${kind}:${name}:${ts}`
     try {
       const seen = await redis.get(key)
       if (seen) return false
