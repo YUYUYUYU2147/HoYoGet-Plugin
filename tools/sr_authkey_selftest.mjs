@@ -49,9 +49,10 @@ assert.ok(fields.length > 5, '登录包字段过少')
 assert.deepEqual(reserialize(fields), loginBody, 'protobuf 往返必须逐字节一致')
 ok(`protobuf 往返一致（${loginBody.length} 字节 / ${fields.length} 字段）`)
 
-assert.equal(string(fields, 7), config.device, '字段 7 应为设备号')
-assert.ok(string(fields, 15).includes('operatingSystem'), '字段 15 应为设备信息 JSON')
-ok('关键字段语义正确（7=device / 15=设备 JSON）')
+assert.equal(string(fields, 12), config.device, '字段 12 应为设备号')
+assert.ok(string(fields, 2).includes('operatingSystem'), '字段 2 应为设备信息 JSON')
+assert.equal(string(fields, 11), config.version, '字段 11 应为客户端版本')
+ok('关键字段语义正确（12=device / 2=设备 JSON / 11=版本）')
 
 const round2 = reserialize(parse(encode(3, 'abc', 6, '123', 7, 1, 10, 3, 15, 1)))
 assert.equal(round2.length, 16, 'KCP 登录包长度')
@@ -122,8 +123,9 @@ cfg2.device = 'a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e'
 cfg2.verifyHeaders = { ...cfg2.verifyHeaders, 'x-rpc-device_fp': '0f1e2d3c4b5a6' }
 const rewritten = __internals.buildLoginBody(cfg2)
 const rFields = parse(rewritten)
-assert.equal(string(rFields, 7), cfg2.device, '包内设备号应被替换为随机值')
-assert.ok(JSON.parse(string(rFields, 15)).serial_number.startsWith(cfg2.device), 'serial_number 应带随机设备号前缀')
+assert.equal(string(rFields, 12), cfg2.device, '包内设备号应被替换为随机值')
+assert.ok(JSON.parse(string(rFields, 2)).serial_number.startsWith(cfg2.device), 'serial_number 应带随机设备号前缀')
+assert.equal(string(rFields, 1097), cfg2.verifyHeaders['x-rpc-device_fp'], '设备指纹应被替换')
 ok('登录包设备号 / 指纹 / serial_number 重写正确')
 
 console.log(`\n全部通过：${pass} 项\n`)

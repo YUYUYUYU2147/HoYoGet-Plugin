@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { createHash } from 'node:crypto'
+import YAML from 'yaml'
 import { render, mhy, pluginPriority, makeForwardMsg } from '#HoYoGet'
 import { sendRenderResult } from '../../system/render.js'
 import { appendTaskRecords } from '../../system/task_history.js'
@@ -1786,6 +1787,125 @@ async function getUserAuth(e) {
   return { qq, uid, cookies, cookieFile }
 }
 
+/* ===== 星铁原生免链接 / 常规 AuthKey ===== */
+
+const SR_AUTHKEY_CACHE = new Map()
+const SR_AUTHKEY_TTL = 5 * 60 * 1000
+const SR_REGULAR_AUTH_COOLDOWN = 5 * 60 * 1000
+let srRegularAuthUnavailableUntil = 0
+
+const redactGachaSecrets = text => String(text || '')
+  .replace(/(authkey|stoken|ltoken|cookie_token|login_ticket|mid)=([^&;\s]+)/gi, '$1=[REDACTED]')
+
+function readSrStokenEntry(qq, uid) {
+  try {
+    const file = `${PLUGIN_ROOT}/data/Stoken/${qq}.yaml`
+    if (!fs.existsSync(file)) return null
+    const parsed = YAML.parse(fs.readFileSync(file, 'utf8'))
+    const entries = Array.isArray(parsed) ? parsed : Object.values(parsed || {})
+    const list = entries.filter(entry => entry && typeof entry === 'object' && entry.stoken)
+    const entry = list.find(item => String(item.uid) === String(uid))
+      || list.find(item => /hkrpg/.test(String(item.game_biz)) || /星穹列车/.test(String(item.region_name)))
+    if (!entry) return null
+    const stuid = String(entry.stuid || entry.ltuid || '')
+    const mid = String(entry.mid || '')
+    const stoken = String(entry.stoken || '')
+    return stuid && mid && stoken ? { stoken, stuid, mid } : null
+  } catch (err) {
+    logger.debug?.(`[HoYoGet][sr_gacha] 读取星铁登录凭据失败：${err?.message || err}`)
+    return null
+  }
+}
+
+function buildNativeGachaUrl(region, authkey) {
+  const host = 'https://public-operation-hkrpg.mihoyo.com'
+  const query = new URLSearchParams({
+    authkey_ver: '1',
+    sign_type: '2',
+    auth_appid: 'webview_gacha',
+    game_biz: 'hkrpg_cn',
+    region,
+    authkey,
+    gacha_type: '11',
+    page: '1',
+    size: '20',
+    end_id: '0',
+  })
+  return `${host}/common/hkrpg_gacha_record/api/getGachaLog?${query}`
+}
+
+async function requestRegularSrAuthkey(entry, uid, region) {
+  const bodyStr = JSON.stringify({
+    auth_appid: 'webview_gacha',
+    game_biz: 'hkrpg_cn',
+    game_uid: String(uid),
+    region,
+  })
+  const cookie = `stuid=${entry.stuid};stoken=${entry.stoken};mid=${entry.mid};`
+  const { data } = await requestJson('https://api-takumi.mihoyo.com/binding/api/genAuthKey', {
+    method: 'POST',
+    headers: {
+      Cookie: cookie,
+      DS: mhy.getDs2('', bodyStr, 4),
+      'Content-Type': 'application/json',
+      'User-Agent': 'okhttp/4.8.0',
+      'x-rpc-app_version': '2.73.1',
+      'x-rpc-sys_version': '12',
+      'x-rpc-client_type': '5',
+      'x-rpc-channel': 'mihoyo',
+      'x-rpc-device_id': mhy.getDeviceGuid().replace(/-/g, ''),
+      'x-rpc-device_name': 'Mi 10',
+      'x-rpc-device_model': 'Mi 10',
+      Referer: 'https://app.mihoyo.com',
+      Host: 'api-takumi.mihoyo.com',
+    },
+    body: bodyStr,
+  })
+  if (Number(data?.retcode) !== 0 || !data?.data?.authkey) {
+    throw new Error(`常规授权失败：${data?.message || data?.retcode || '没有返回 authkey'}`)
+  }
+  return String(data.data.authkey)
+}
+
+async function getSrAuthkeyForGacha(e, auth, entry, { allowNative = true, onNative = null } = {}) {
+  const key = `${entry?.stuid || auth.uid}:${auth.uid}`
+  const cached = SR_AUTHKEY_CACHE.get(key)
+  if (cached && Date.now() - cached.at < SR_AUTHKEY_TTL) return { authkey: cached.authkey, cached: true }
+  const region = getSrRegion(auth.uid)
+  if (entry && Date.now() >= srRegularAuthUnavailableUntil) {
+    try {
+      const authkey = await requestRegularSrAuthkey(entry, auth.uid, region)
+      logger.mark?.('[HoYoGet][sr_gacha] 常规授权已返回，校验抽卡接口是否接受')
+      try {
+        await fetchGachaLogPage({ authkey, region, game_biz: 'hkrpg_cn', authkey_ver: '1', sign_type: '2', auth_appid: 'webview_gacha' }, '11', 1, '0')
+      } catch (err) {
+        throw new Error(`常规授权不可用：${err?.message || err}`)
+      }
+      SR_AUTHKEY_CACHE.set(key, { authkey, at: Date.now() })
+      logger.mark?.('[HoYoGet][sr_gacha] 常规授权可用')
+      return { authkey, cached: false, source: 'regular' }
+    } catch (err) {
+      srRegularAuthUnavailableUntil = Date.now() + SR_REGULAR_AUTH_COOLDOWN
+      logger.mark?.(`[HoYoGet][sr_gacha] ${err?.message || err}，5 分钟内优先原生免链接`)
+    }
+  }
+  if (!allowNative) throw new Error('没有可用的常规抽卡授权')
+  if (!entry) throw new Error('缺少 stoken / stuid / mid，无法使用原生免链接')
+  if (region !== 'prod_gf_cn') throw new Error('原生免链接目前仅支持星铁国服官服（prod_gf_cn）')
+  await onNative?.()
+  const { getSrAuthkey } = await import('../../system/sr_authkey.js')
+  const out = await getSrAuthkey({
+    ...entry,
+    uid: auth.uid,
+    region,
+    logger,
+    onStep: text => logger.info?.(`[HoYoGet][sr_gacha] ${text}`),
+  })
+  if (!out?.authkey) throw new Error('原生免链接没有返回抽卡授权')
+  SR_AUTHKEY_CACHE.set(key, { authkey: out.authkey, at: Date.now() })
+  return { authkey: out.authkey, cached: !!out.cached, source: 'native' }
+}
+
 /**
  * 用 stoken 换一次 fresh cookie_token，再拼出徽章接口认的 ck。
  *
@@ -2091,17 +2211,25 @@ async function fetchGachaLogPage(query, gachaType, size, endId, page = 1) {
     size: String(size),
     end_id: String(endId || '0'),
   })
-  // 新接口路径 gacha_record（authkey_ver=4 新版链接仅兼容此接口）；裸请求，不设置任何特殊头
-  const { res, data } = await requestJson(`${host}/common/gacha_record/api/${ep}?${params}`)
-  if (!res.ok) throw new Error(`接口 HTTP ${res.status}`)
-  if (data?.retcode !== 0) {
+  // 新接口路径优先；旧链接仍可能只有旧路由可用，鉴权失败时再试旧路由。
+  // 两条路由都是裸请求，不设置特殊头。
+  let lastError = null
+  for (const api of ['hkrpg_gacha_record', 'gacha_record']) {
+    const { res, data } = await requestJson(`${host}/common/${api}/api/${ep}?${params}`)
+    if (!res.ok) {
+      lastError = new Error(`接口 HTTP ${res.status}`)
+      continue
+    }
+    if (data?.retcode === 0) return data?.data || { list: [] }
     const msg = String(data?.message || '')
     if ([-100, -101, -111].includes(Number(data.retcode)) || /timeout|expire|login/.test(msg)) {
-      throw new Error('authkey 已过期或无效，请从游戏内重新打开【跃迁记录】并复制最新链接')
+      lastError = new Error('authkey 已过期或无效，请从游戏内重新打开【跃迁记录】并复制最新链接')
+      continue
     }
-    throw new Error(msg || '获取抽卡记录失败')
+    lastError = new Error(msg || '获取抽卡记录失败')
+    break
   }
-  return data?.data || { list: [] }
+  throw lastError || new Error('获取抽卡记录失败')
 }
 
 async function resolveAuthkeyRegion(query) {
@@ -2586,7 +2714,17 @@ export function unionRecords(oldRecords, newRecords) {
     }
     const merged = { ...exist }
     for (const [ key, value ] of Object.entries(row)) {
-      if (value !== '' && value !== null && value !== undefined) merged[key] = value
+      if (value === '' || value === null || value === undefined) continue
+      if ((key === 'gacha_count' || key === 'num')) {
+        const before = Number(exist[key])
+        const after = Number(value)
+        // 官方接口偶尔少数几抽，旧小助手记录更准；同一条记录抽数接近时保留较大值
+        if (Number.isFinite(before) && Number.isFinite(after) && Math.abs(before - after) <= 5) {
+          merged[key] = Math.max(before, after)
+          continue
+        }
+      }
+      merged[key] = value
     }
     byId.set(id, merged)
   }
@@ -2649,22 +2787,61 @@ export function dedupePoolRecords(records) {
     if (String(r?.time || "").length >= 10) timed.push(r)
     else untimed.push(r)
   }
+  // 无时间的旧记录若与带时间的同名记录抽数接近，先合并到带时间记录上。
+  // 官方接口偶尔少算几抽（实测 55 被算成 53），旧小助手记录反而更准，取较大抽数并保留官方时间。
+  const timedByName = new Map()
+  for (const row of timed) {
+    const nm = String(row?.name || '')
+    if (!nm) continue
+    const list = timedByName.get(nm) || []
+    list.push(row)
+    timedByName.set(nm, list)
+  }
+  const absorbed = new Set()
+  const absorbedTargets = new Set()
+  for (const row of untimed) {
+    const nm = String(row?.name || '')
+    const cnt = Number(row?.gacha_count ?? row?.num ?? 0)
+    let best = null
+    let bestDiff = Infinity
+    for (const target of timedByName.get(nm) || []) {
+      if (absorbedTargets.has(target)) continue
+      const diff = Math.abs(Number(target?.gacha_count ?? target?.num ?? 0) - cnt)
+      if (diff <= 5 && diff < bestDiff) {
+        best = target
+        bestDiff = diff
+      }
+    }
+    if (!best) continue
+    best.gacha_count = Math.max(Number(best.gacha_count ?? best.num ?? 0), cnt)
+    if (row.is_up === true) best.is_up = true
+    absorbed.add(row)
+    absorbedTargets.add(best)
+  }
   const seenId = new Set()
   const seenNameTime = new Set()
-  const timedNameCount = new Set()
+  const timedCountsByName = new Map()
   const out = []
   const accept = r => {
+    if (absorbed.has(r)) return
     const id = String(r?.id || "")
     const t = String(r?.time || "").slice(0, 19)
     const nm = String(r?.name || "")
-    const cnt = String(Number(r?.gacha_count ?? r?.num ?? 0))
+    const cnt = Number(r?.gacha_count ?? r?.num ?? 0)
     if (id && seenId.has(id)) return
     if (t && seenNameTime.has(nm + "|" + t)) return
-    if (!t && timedNameCount.has(nm + "|" + cnt)) return
+    if (!t) {
+      // 旧第三方记录常缺 time，且抽数会与官方差几抽；同名且抽数接近时视为同一条。
+      // 仅对无时间记录做容差匹配，避免误删官方或带时间的历史记录。
+      const counts = timedCountsByName.get(nm) || []
+      if (counts.some(value => Math.abs(value - cnt) <= 5)) return
+    }
     if (id) seenId.add(id)
     if (t) {
       seenNameTime.add(nm + "|" + t)
-      timedNameCount.add(nm + "|" + cnt)
+      const counts = timedCountsByName.get(nm) || []
+      counts.push(cnt)
+      timedCountsByName.set(nm, counts)
     }
     out.push(r)
   }
@@ -2687,13 +2864,20 @@ export function recountPool(pool, records) {
   }
 }
 
-// 发链接（authkey）后调用：五星历史取更全一份，四星/垫抽用本次 authkey 数据
-function mergePoolsForAuthkey(oldPools, newPools) {
+// 发链接（authkey）后调用：与本地已有记录按 id / 名称+时间合并去重。
+// 官方网页只保留近半年，旧数据里的更早五星与四星必须保留，不能用本次结果整份覆盖。
+export function mergePoolsForAuthkey(oldPools, newPools) {
   for (const key of Object.keys(newPools || {})) {
     const oldPool = oldPools?.[key]
     const newPool = newPools[key]
     if (!oldPool) continue
-    newPools[key] = recountPool(newPool, pickFullerRecords(getPoolRecords(oldPool), getPoolRecords(newPool)))
+    const records = dedupePoolRecords(unionRecords(getPoolRecords(oldPool), getPoolRecords(newPool)))
+    const fourLog = dedupePoolRecords(unionRecords(oldPool.fourLog || [], newPool.fourLog || [])).slice(0, 10)
+    newPools[key] = recountPool(newPool, records)
+    if (fourLog.length) newPools[key].fourLog = fourLog
+    newPools[key].fourNum = Math.max(Number(oldPool.fourNum) || 0, Number(newPool.fourNum) || 0)
+    if (!newPools[key].fourPity) newPools[key].fourPity = Number(oldPool.fourPity) || 0
+    newPools[key].upNum = newPools[key].records.filter(row => row.is_up).length
   }
   // authkey 接口不返回常驻池，保留旧数据里的常驻记录
   if (oldPools?.common && !newPools?.common) newPools.common = oldPools.common
@@ -2790,6 +2974,9 @@ export function readData(file) {
 
 export function saveData(file, data) {
   fs.mkdirSync(path.dirname(file), { recursive: true })
+  try {
+    if (fs.existsSync(file)) fs.copyFileSync(file, `${file}.bak`)
+  } catch { /* 备份失败不影响本次写入 */ }
   fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8')
 }
 
@@ -3133,6 +3320,11 @@ export class sr_gacha extends plugin {
         // 不带「米哈游」前缀：#星铁抽卡帮助 / 星铁抽卡帮助 / %星铁抽卡帮助
         // 必须带游戏名，否则会吃掉「抽卡帮助」这类无归属写法与绝区零的规则。
         { reg: '^[#*%％]?[ \t]*(?:星铁|崩铁|星穹铁道|sr|SR)[ \t]*抽卡帮助$', fnc: 'help' },
+        // 原生免链接：显式命令才允许临时登录游戏（群聊也会提示顶号）
+        { reg: '^[#*][ \t]*(?:米哈游)?[ \t]*(?:星铁|崩铁|星穹铁道)?[ \t]*(?:免链接|无需链接)(?:更新|刷新|获取)?抽卡(?:记录)?$', fnc: 'nativeUpdate' },
+        // 抽卡链接：仅私聊；*抽卡记录链接 / *抽卡链接 / *获取抽卡链接 / #星铁抽卡记录链接
+        { reg: '^\\*[ \t]*(?:米哈游)?[ \t]*(?:星铁|崩铁|星穹铁道)?[ \t]*(?:获取|导出)?抽卡(?:记录)?链接$', fnc: 'nativeLink' },
+        { reg: '^#?[ \t]*(?:星铁|崩铁|星穹铁道)[ \t]*(?:获取|导出)?抽卡(?:记录)?链接$', fnc: 'nativeLink' },
         { reg: '^#*米哈游(星铁|崩铁)?抽卡链接', fnc: 'gachaLink' },
         { reg: '^#*米哈游(星铁|崩铁)?(刷新|更新)抽卡记录$', fnc: 'refresh' },
         // 不带「米哈游」前缀：星铁更新抽卡记录 / #星铁更新抽卡记录 / *更新抽卡记录
@@ -3411,7 +3603,7 @@ export class sr_gacha extends plugin {
     try {
       const url = findSrAuthkeyUrl(e)
       if (!url) return false
-      logger.mark(`[HoYoGet][sr_gacha] 兜底识别到星铁链接: ${url.slice(0, 150)}...`)
+      logger.mark(`[HoYoGet][sr_gacha] 兜底识别到星铁链接: ${redactGachaSecrets(url).slice(0, 150)}...`)
       return this.gachaLink(e, url)
     } catch (err) {
       logger.error(`[HoYoGet][sr_gacha] autoGachaLink 异常: ${err}`)
@@ -3419,7 +3611,64 @@ export class sr_gacha extends plugin {
     }
   }
 
-  async gachaLink(e, preUrl = '') {
+  /** 原生免链接更新：已绑定的 stoken/stuid/mid 临时登录游戏换 AuthKey，再拉全量记录 */
+  async nativeUpdate(e) {
+    const msg = String(e.msg || '')
+    if (e.isGroup && !e.isMaster && !/免链接|无需链接/.test(msg)) {
+      return e.reply('群聊默认不自动顶号；请主人执行，或明确发送「免链接更新抽卡记录」')
+    }
+    const auth = await getUserAuth(e)
+    if (auth.error) return e.reply(auth.error)
+    const entry = readSrStokenEntry(auth.qq, auth.uid)
+    if (!entry) return e.reply('缺少已绑定的星铁登录凭据（stoken / stuid / mid），请重新扫码登录')
+    try {
+      const { authkey, source } = await getSrAuthkeyForGacha(e, auth, entry, {
+        onNative: async () => {
+          await e.reply('常规授权不可用，正在用账号临时登录星铁换取授权（期间同账号游戏会掉线），请稍候……')
+        },
+      })
+      logger.mark?.(`[HoYoGet][sr_gacha] 使用${source === 'native' ? '原生' : '常规'}授权更新抽卡记录`)
+      const url = buildNativeGachaUrl(getSrRegion(auth.uid), authkey)
+      const oldMsg = e.msg
+      e.msg = `#米哈游星铁抽卡链接 ${url}`
+      try {
+        return await this.gachaLink(e, url, { fromNative: true })
+      } finally {
+        e.msg = oldMsg
+      }
+    } catch (err) {
+      const reason = String(err?.message || err)
+        .replace(/(authkey|stoken|ltoken|cookie_token|login_ticket|mid)=([^&;\s]+)/gi, '$1=[REDACTED]')
+      logger.error(`[HoYoGet][sr_gacha] 原生免链接失败：${reason}`)
+      return e.reply(`原生免链接获取失败：${reason}`)
+    }
+  }
+
+  /** 抽卡记录链接：仅私聊；优先缓存/常规 AuthKey，失败后原生登录 */
+  async nativeLink(e) {
+    if (e.isGroup) {
+      await e.reply('抽卡链接包含授权信息，请私聊获取', true, { at: true })
+      return true
+    }
+    const auth = await getUserAuth(e)
+    if (auth.error) return e.reply(auth.error)
+    const entry = readSrStokenEntry(auth.qq, auth.uid)
+    try {
+      const { authkey } = await getSrAuthkeyForGacha(e, auth, entry, {
+        onNative: async () => {
+          await e.reply('常规授权不可用，正在用账号临时登录星铁换取链接（期间同账号游戏会掉线），请稍候……')
+        },
+      })
+      return e.reply(`${buildNativeGachaUrl(getSrRegion(auth.uid), authkey)}\n\n该链接含临时 authkey，有效期很短，请立即发送给机器人使用；过期后请重新获取。`)
+    } catch (err) {
+      const reason = String(err?.message || err)
+        .replace(/(authkey|stoken|ltoken|cookie_token|login_ticket|mid)=([^&;\s]+)/gi, '$1=[REDACTED]')
+      logger.error(`[HoYoGet][sr_gacha] 原生抽卡链接失败：${reason}`)
+      return e.reply(`抽卡链接获取失败：${reason}`)
+    }
+  }
+
+  async gachaLink(e, preUrl = '', opts = {}) {
     // 强制前缀模式：消息必须带 #米哈游星铁抽卡链接 前缀才处理。
     // 不带前缀的链接（原神/星铁/绝区零等）一律 return false 放行，交给 genshin 插件正常处理
     const isCmd = /^#*米哈游(星铁|崩铁)?抽卡链接/.test(String(e.msg || ''))
@@ -3427,12 +3676,12 @@ export class sr_gacha extends plugin {
     // 从原始消息段提取链接：兼容纯文本、QQ 分享卡片（share/data.url）、json/xml 卡片、断行等情况
     const fullMsg = [e.msg, ...(Array.isArray(e.message) ? e.message.map(s => (s?.type === 'text' ? s.text : (s?.data?.url || ''))) : [])].filter(Boolean).join('\n')
     const url = preUrl || findSrAuthkeyUrl(e) || (fullMsg.match(/https?:\/\/[^\s,，。、；;）)】\]》"']+/)?.[0] || '')
-    logger.mark(`[HoYoGet][sr_gacha] 收到链接消息: ${String(e.msg || '').slice(0, 200)}`)
+    logger.mark(`[HoYoGet][sr_gacha] 收到链接消息: ${redactGachaSecrets(e.msg).slice(0, 200)}`)
     if (!url) {
       // 命令带链接：无链接时提示用法
       return e.reply(
         '请把崩铁官方【跃迁记录】页面的链接发给我，例如：\n' +
-        '#米哈游星铁抽卡链接 https://public-operation-hkrpg.mihoyo.com/common/gacha_record/api/getGachaLog?authkey=xxx&game_biz=hkrpg_cn\n\n' +
+        '#米哈游星铁抽卡链接 https://public-operation-hkrpg.mihoyo.com/common/hkrpg_gacha_record/api/getGachaLog?authkey=xxx&game_biz=hkrpg_cn\n\n' +
         '获取方法：游戏内打开【跃迁记录】→ 右上角【分享/网页】用浏览器打开 → 复制地址栏完整网址（必须带 authkey=）'
       )
     }
@@ -3445,6 +3694,9 @@ export class sr_gacha extends plugin {
     await e.reply('正在通过官方抽卡链接获取完整记录（含四星/常驻/新手池），可能需要一两分钟，请稍候……')
     try {
       const result = await fetchAllByAuthkey(query)
+      // 官方接口只给最近半年，先与本地历史合并去重，避免旧记录被整份覆盖
+      const old = readData(getDataFile(auth.qq, auth.uid))
+      if (old?.pools) result.pools = mergePoolsForAuthkey(old.pools, result.pools)
       // authkey 接口不返回 is_up，用 ck（five_star_list 接口）校准新五星 UP 标记，
       // 否则刚发链接拉取的新五星会被全部当成非UP，导致角色池统计不准确
       for (const cookie of auth.cookies) {
@@ -3452,6 +3704,9 @@ export class sr_gacha extends plugin {
           const sr = await fetchSrCkPools(auth.uid, getSrRegion(auth.uid), cookie)
           if (sr?.pools) {
             result.pools = mergeIsUp(sr.pools, result.pools)
+            for (const pool of Object.values(result.pools)) {
+              pool.upNum = (pool.records || []).filter(row => row.is_up).length
+            }
             break
           }
         } catch (err) {
@@ -3468,6 +3723,7 @@ export class sr_gacha extends plugin {
       await e.reply(`抽卡链接解析成功！\n${stats}`)
       // 自动输出抽卡记录总览图
       await this.renderSummary(e, [], 'grid')
+      if (opts.fromNative) return true
       return e.reply('下一步必须发送#米哈游星铁更新抽卡记录来保证五星数据的准确性；发送【#米哈游星铁抽卡帮助】查看全部抽卡指令')
     } catch (err) {
       logger.error('[HoYoGet][sr_gacha] gachaLink failed:', err)
@@ -3670,8 +3926,10 @@ export class sr_gacha extends plugin {
         '【#米哈游星铁抽卡帮助】',
         '',
         '更新数据',
-        '#米哈游星铁更新抽卡记录 —— 用 ck 刷新抽卡数据',
-        '#米哈游星铁抽卡链接 <链接> —— 官方链接拉最近几天的逐抽记录',
+        '#米哈游星铁更新抽卡记录 —— 用 ck 刷新五星快照',
+        '#米哈游星铁免链接更新抽卡记录 —— 临时登录游戏换授权，拉全量逐抽（会顶号）',
+        '#星铁抽卡记录链接 / *抽卡链接 —— 仅私聊获取授权链接（缓存→常规→原生）',
+        '#米哈游星铁抽卡链接 <链接> —— 手动粘贴官方链接拉逐抽记录',
         '#米哈游更新小助手抽卡记录 —— 小助手（lelaer）云端全量：直连其 gachabackup 库（含四星逐抽；需装 mysql2 且服务器 IP 在 RDS 白名单）',
         '#米哈游星铁导入小助手记录 <UID> —— 小助手全量离线导入：读本机 data/sr_gacha/sr_<UID>_full.json',
         '#米哈游更新工坊抽卡记录 / #米哈游星铁更新星穹工坊记录 —— 星穹工坊（lingyuan）云端，补历史五星与 is_up（与小助手非同一后端）',

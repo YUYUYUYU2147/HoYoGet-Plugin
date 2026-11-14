@@ -38,27 +38,29 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
  * 允许用 data/sr_authkey/native.json 覆盖（整份替换）。
  */
 const NATIVE = {
-  version: 'CNPRODWin4.6.0',
-  gameVersion: '4.6.0',
-  device: '88beeb9ddc28034cda09df55ee8735cee5752b531785737269323',
-  verifyHeaders: {
-    'Content-Type': 'application/json',
-    'x-rpc-app_id': 'c90mr1bwo2rk',
-    'x-rpc-client_type': '3',
-    'x-rpc-device_fp': '38d81b09a1b21',
-    'x-rpc-device_id': '88beeb9ddc28034cda09df55ee8735cee5752b531785737269323',
-    'x-rpc-game_biz': 'hkrpg_cn',
-    'x-rpc-language': 'zh-cn',
-    'x-rpc-sdk_version': '2.53.0.196',
+  "version": "CNPRODWin4.7.0",
+  "gameVersion": "4.7.0",
+  "device": "88beeb9ddc28034cda09df55ee8735cee5752b531785737269323",
+  "verifyHeaders": {
+    "Content-Type": "application/json",
+    "x-rpc-app_id": "c90mr1bwo2rk",
+    "x-rpc-client_type": "3",
+    "x-rpc-device_fp": "38d81b09a1b21",
+    "x-rpc-device_id": "88beeb9ddc28034cda09df55ee8735cee5752b531785737269323",
+    "x-rpc-game_biz": "hkrpg_cn",
+    "x-rpc-language": "zh-cn",
+    "x-rpc-sdk_version": "2.53.0.196"
   },
-  appId: 8,
-  channelId: 1,
-  sdkPublicAppKey: '4650f3a396d34d576c3d65df26415394',
-  loginBodyBase64:
-    'CgVnd19QQxgDIg5DTlBST0RXaW40LjYuMCjk24QIOjU4OGJlZWI5ZGRjMjgwMzRjZGEwOWRmNTVlZTg3MzVjZWU1NzUyYjUzMTc4NTczNzI2OTMyM0IRQ2hpbmVzZVNpbXBsaWZpZWRQAVoJMjU2MCoxNjAwah5XaW5kb3dzIDExICAoMTAuMC4yNjIwMCkgNjRiaXR6kQV7Im9wZXJhdGluZ1N5c3RlbSI6IldpbmRvd3MgMTEgICgxMC4wLjI2MjAwKSA2NGJpdCIsImRldmljZU1vZGVsIjoiSklBT0xPTkcgU2VyaWVzIChNRUNIUkVWTykiLCJncmFwaGljc0RldmljZU5hbWUiOiJOVklESUEgR2VGb3JjZSBSVFggNTA2MCBMYXB0b3AgR1BVIiwiZ3JhcGhpY3NEZXZpY2VUeXBlIjoiRGlyZWN0M0QxMSIsImdyYXBoaWNzRGV2aWNlVmVuZG9yIjoiTlZJRElBIiwiZ3JhcGhpY3NEZXZpY2VWZXJzaW9uIjoiRGlyZWN0M0QgMTEuMCBbbGV2ZWwgMTEuMV0iLCJncmFwaGljc01lbW9yeVNpemUiOjc4OTksInByb2Nlc3NvckNvdW50IjoyNCwicHJvY2Vzc29yRnJlcXVlbmN5IjoyODk0LCJwcm9jZXNzb3JUeXBlIjoiQU1EIFJ5emVuIDcgODg0MEhYIHdpdGggUmFkZW9uIEdyYXBoaWNzICIsInN5c3RlbU1lbW9yeVNpemUiOjIzNzc2LCJEZXZpY2VTb0MiOiIiLCJzZXJpYWxfbnVtYmVyIjoiODhiZWViOWRkYzI4MDM0Y2RhMDlkZjU1ZWU4NzM1Y2VlNTc1MmI1M19lNTM0MmI0ZC1mN2U1LTQ1NTUtOTY0MC0xNmFjYmUxOTg5ZTBfMTc5MzczMjMyMyIsImdyYXBoaWNzRGV2aWNlSUQiOiIxMTU0NSIsImdyYXBoaWNfc2hhZGVyX2xldmVsIjo1MCwiZGlza190eXBlIjoiU1NEIiwiSW5pdGlhbEdyYXBoaWNzUXVhbGl0eSI6IlZlcnlIaWdoIn2KCwEwwk4IMDg6MDA6MDCYaQGibQ0zOGQ4MWIwOWExYjIxwm0qeyJoa3JwZ19jbiI6eyJ1YXBjIjoiIn0sImh5cCI6eyJ1YXBjIjoiIn190m8A0HK93IQIsHMB',
-  gatewayFields: { host: 14, port: 13, ec2b: 1569 },
-  supportedVersion: '4.6.0',
-  dispatchSeed: 'fb7d74e443',
+  "appId": 8,
+  "channelId": 1,
+  "sdkPublicAppKey": "4650f3a396d34d576c3d65df26415394",
+  "loginBodyBase64": "CgVnd19QQ3gDWg5DTlBST0RXaW40LjcuMCDk24QIYjU4OGJlZWI5ZGRjMjgwMzRjZGEwOWRmNTVlZTg3MzVjZWU1NzUyYjUzMTc4NTczNzI2OTMyM3IRQ2hpbmVzZVNpbXBsaWZpZWRIAVIJMjU2MCoxNjAwGh5XaW5kb3dzIDExICAoMTAuMC4yNjIwMCkgNjRiaXQSkQV7Im9wZXJhdGluZ1N5c3RlbSI6IldpbmRvd3MgMTEgICgxMC4wLjI2MjAwKSA2NGJpdCIsImRldmljZU1vZGVsIjoiSklBT0xPTkcgU2VyaWVzIChNRUNIUkVWTykiLCJncmFwaGljc0RldmljZU5hbWUiOiJOVklESUEgR2VGb3JjZSBSVFggNTA2MCBMYXB0b3AgR1BVIiwiZ3JhcGhpY3NEZXZpY2VUeXBlIjoiRGlyZWN0M0QxMSIsImdyYXBoaWNzRGV2aWNlVmVuZG9yIjoiTlZJRElBIiwiZ3JhcGhpY3NEZXZpY2VWZXJzaW9uIjoiRGlyZWN0M0QgMTEuMCBbbGV2ZWwgMTEuMV0iLCJncmFwaGljc01lbW9yeVNpemUiOjc4OTksInByb2Nlc3NvckNvdW50IjoyNCwicHJvY2Vzc29yRnJlcXVlbmN5IjoyODk0LCJwcm9jZXNzb3JUeXBlIjoiQU1EIFJ5emVuIDcgODg0MEhYIHdpdGggUmFkZW9uIEdyYXBoaWNzICIsInN5c3RlbU1lbW9yeVNpemUiOjIzNzc2LCJEZXZpY2VTb0MiOiIiLCJzZXJpYWxfbnVtYmVyIjoiODhiZWViOWRkYzI4MDM0Y2RhMDlkZjU1ZWU4NzM1Y2VlNTc1MmI1M19lNTM0MmI0ZC1mN2U1LTQ1NTUtOTY0MC0xNmFjYmUxOTg5ZTBfMTc5MzczMjMyMyIsImdyYXBoaWNzRGV2aWNlSUQiOiIxMTU0NSIsImdyYXBoaWNfc2hhZGVyX2xldmVsIjo1MCwiZGlza190eXBlIjoiU1NEIiwiSW5pdGlhbEdyYXBoaWNzUXVhbGl0eSI6IlZlcnlIaWdoIn26dgEwqksIMDg6MDA6MDDIEAHKRA0zOGQ4MWIwOWExYjIx0gIqeyJoa3JwZ19jbiI6eyJ1YXBjIjoiIn0sImh5cCI6eyJ1YXBjIjoiIn198k8A8FS93IQIqBUB",
+  "gatewayFields": {
+    "host": 3,
+    "port": 9,
+    "ec2b": 403
+  },
+  "dispatchSeed": "1404d25f6b"
 }
 
 function loadNative() {
@@ -71,6 +73,17 @@ function loadNative() {
     }
   }
   return { ...NATIVE }
+}
+
+/** 网关版本探测成功后，只持久化版本号，保留配置文件其他字段 */
+function persistNativeVersion(gameVersion, clientVersion) {
+  try {
+    const file = path.join(ROOT, 'data', 'sr_authkey', 'native.json')
+    let saved = {}
+    try { saved = JSON.parse(fs.readFileSync(file, 'utf8')) || {} } catch { /* 首次写入 */ }
+    fs.mkdirSync(path.dirname(file), { recursive: true })
+    fs.writeFileSync(file, JSON.stringify({ ...saved, version: clientVersion, gameVersion }, null, 2))
+  } catch { /* 写盘失败不影响本次登录 */ }
 }
 
 /* ============================ protobuf / 密钥 ============================ */
@@ -485,25 +498,33 @@ class SrConnection {
       const pkt = await this.read(30)
       if (pkt) this.receive(pkt)
     }
-    throw new Error('星铁服务器响应超时，请稍后重试')
+    throw new Error('星铁服务器响应超时（proto='+protoId+'）')
   }
 
-  /** PlayerGetToken + PlayerLogin，返回登录后的 UID 字符串 */
+  /** PlayerGetToken + PlayerLogin + PlayerLoginFinish，返回登录后的 UID 字符串 */
   async login(aid, comboToken, loginBody) {
     await this.connect()
-    const resp = await this.request(60, encode(3, comboToken, 6, aid, 7, 1, 10, 3, 15, 1), 16)
-    const secret = number(resp, 12)
-    const uid = number(resp, 15)
+    const resp = await this.request(5, encode(1, String(aid), 5, String(comboToken), 7, 1, 10, 3, 15, 1), 71)
+    const secret = number(resp, 9)
+    const uid = number(resp, 10)
+    if (!secret || !uid) throw new Error('星铁登录响应缺少 secret_key_seed / uid，协议配置需更新')
     this.pad = pad(secret, false) // BIG_ENDIAN：之后全部用服务端下发密钥
-    await this.request(34, loginBody, 25)
-    await this.request(80, Buffer.alloc(0), 67)
+    const login = await this.request(74, loginBody, 19)
+    // proto3 成功值 0 会被省略 field 4，省略按成功处理
+    const retcode = login.some(field => field.id === 4) ? number(login, 4) : 0n
+    if (retcode !== 0n) {
+      const detail = login.find(field => field.id === 1 && field.wire === 2)?.bytes.toString('utf8').trim()
+      const safeDetail = String(detail || '').replace(/[\r\n\t]/g, ' ').slice(0, 120)
+      throw new Error(`星铁游戏登录被拒绝（retcode=${retcode}${safeDetail ? `：${safeDetail}` : ''}）`)
+    }
+    await this.request(46, Buffer.alloc(0), 20)
     return uid.toString()
   }
 
   async authkey() {
-    const resp = await this.request(64, encode(2, 'webview_gacha', 5, 1, 9, 2), 21)
-    const key = string(resp, 6)
-    if (key.length === 684 && number(resp, 10) === 1n && number(resp, 13) === 2n && string(resp, 15) === 'webview_gacha') {
+    const resp = await this.request(48, encode(9, 'webview_gacha', 14, 1, 13, 2), 75, 10000)
+    const key = string(resp, 10)
+    if (key.length >= 100 && number(resp, 4) === 2n && number(resp, 5) === 1n && string(resp, 12) === 'webview_gacha') {
       return key
     }
     throw new Error('星铁抽卡授权格式变化，请更新协议配置')
@@ -687,7 +708,7 @@ function* versionCandidates(from) {
   const m = /(\d+)\.(\d+)/.exec(String(from || '4.6.0'))
   let major = m ? Number(m[1]) : 4
   let minor = m ? Number(m[2]) : 6
-  for (let i = 0; i < 24; i++) {
+  for (let i = 0; i < 12; i++) {
     yield `${major}.${minor}.0`
     minor++
     if (minor > 9) {
@@ -978,8 +999,11 @@ export async function getSrAuthkey(opt = {}) {
           const candidate = resolveGatewayFields(await getProtoFields(req), {})
           if (candidate) {
             resolved = candidate
+            const prefix = String(config.version || '').replace(/[0-9.]+$/, '') || 'CNPRODWin'
             config.gameVersion = ver
-            log('info', `网关接受 game_version=${ver}（内置 ${NATIVE.gameVersion} 已过期，可写入 data/sr_authkey/native.json 固定）`, logger)
+            config.version = `${prefix}${ver}`
+            persistNativeVersion(ver, config.version)
+            log('info', `网关接受 game_version=${ver}（已写回 data/sr_authkey/native.json）`, logger)
             break
           }
         } catch {
@@ -1024,14 +1048,19 @@ export async function getSrAuthkey(opt = {}) {
  */
 function buildLoginBody(config) {
   const fields = parse(Buffer.from(config.loginBodyBase64, 'base64'))
-  const deviceField = fields.find(f => f.id === 7)
+  const loginFields = config.loginFields || (fields.some(f => f.id === 12)
+    ? { version: 11, device: 12, info: 2, fingerprint: 1097 }
+    : { version: 4, device: 7, info: 15, fingerprint: 1748 })
+  const deviceField = fields.find(f => f.id === loginFields.device)
   if (!deviceField?.bytes?.length) throw new Error('星铁登录包缺少设备号字段（协议配置需更新）')
-  if (!fields.some(f => f.id === 15 && f.bytes?.length)) throw new Error('星铁登录包缺少设备信息字段（协议配置需更新）')
-  const info = JSON.parse(fields.find(f => f.id === 15).bytes.toString('utf8'))
+  if (!fields.some(f => f.id === loginFields.info && f.bytes?.length)) throw new Error('星铁登录包缺少设备信息字段（协议配置需更新）')
+  if (!fields.some(f => f.id === loginFields.fingerprint && f.bytes?.length)) throw new Error('星铁登录包缺少设备指纹字段（协议配置需更新）')
+  const info = JSON.parse(fields.find(f => f.id === loginFields.info).bytes.toString('utf8'))
   info.serial_number = `${config.device}_${cryptoRandomUUID()}_${Math.floor(Date.now() / 1000)}`
   const deviceBytes = Buffer.from(config.device, 'utf8')
   const infoBytes = Buffer.from(JSON.stringify(info), 'utf8')
   const fpBytes = Buffer.from(config.verifyHeaders['x-rpc-device_fp'], 'utf8')
+  const versionBytes = Buffer.from(String(config.version || ''), 'utf8')
   const chunks = []
   for (const f of fields) {
     writeVarint(chunks, (f.id << 3) | f.wire)
@@ -1039,7 +1068,11 @@ function buildLoginBody(config) {
       writeVarint(chunks, f.number)
       continue
     }
-    const data = f.id === 7 ? deviceBytes : f.id === 15 ? infoBytes : f.id === 1748 ? fpBytes : f.bytes
+    const data = f.id === loginFields.version ? versionBytes
+      : f.id === loginFields.device ? deviceBytes
+        : f.id === loginFields.info ? infoBytes
+          : f.id === loginFields.fingerprint ? fpBytes
+            : f.bytes
     writeVarint(chunks, data.length)
     chunks.push(data)
   }
