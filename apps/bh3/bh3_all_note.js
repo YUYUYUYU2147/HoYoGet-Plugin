@@ -88,7 +88,8 @@ export class bh3_all_note extends plugin {
       if (msg.type === 'at') { qq = msg.qq; break; }
     }
 
-    let uid = await redis.get(`HoYoGet:${game}_uid:${qq}`);
+    let uid = await redis.get(`HoYoGet:cur_uid:${game}:${qq}`);
+    if (!uid && game === 'bh3') uid = await redis.get(`HoYoGet:bh3_uid:${qq}`);
     let region = uid ? await redis.get(`HoYoGet:${game}_region:${qq}`) : null;
     let ck = null;
 

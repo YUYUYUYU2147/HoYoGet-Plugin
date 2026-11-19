@@ -398,8 +398,8 @@ export class TL extends plugin {
     return this.note(e, game, true, uid);
   }
 
-  getStokenEntry(e, uid) {
-    const stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${e.user_id}.yaml`;
+  getStokenEntry(e, uid, qq = e.user_id) {
+    const stokenPath = `./plugins/HoYoGet-Plugin/data/Stoken/${qq}.yaml`;
     if (!uid || !fs.existsSync(stokenPath)) return null;
     try {
       const data = yaml.get(stokenPath) || {};
@@ -407,6 +407,44 @@ export class TL extends plugin {
     } catch (_) {
       return null;
     }
+  }
+
+  /**
+   * 取当前该游戏应查询的 UID。
+   *
+   * 不能只看 e.user：JiuLi 没装 genshin/Mys-plugin（或那边记录与插件不同步）时
+   * e.user 可能不存在，旧逻辑会退回 Stoken 文件里的第一条，结果查到另一个账号。
+   * HoYoGet 自己的切换结果写在 HoYoGet:cur_uid:<game>:<qq>（崩三兼容 bh3_uid），
+   * 这里优先用插件自己的键，其次才用 e.user 和文件里的第一条。
+   */
+  async getCurrentGameUid(e, game = 'gs', uidOverride = '', qq = e.user_id) {
+    if (uidOverride) return String(uidOverride);
+    const self = String(qq || '');
+    const keys = game === 'bh3'
+      ? [`HoYoGet:cur_uid:bh3:${self}`, `HoYoGet:bh3_uid:${self}`]
+      : [`HoYoGet:cur_uid:${game}:${self}`];
+    if (typeof redis !== 'undefined') {
+      for (const key of keys) {
+        try {
+          const saved = String(await redis.get(key) || '');
+          if (!saved) continue;
+          const entry = this.getStokenEntry(e, saved, self);
+          if (!entry || this.isGameEntry(entry, game)) return saved;
+        } catch (_) {}
+      }
+    }
+
+    let fromUser = '';
+    try {
+      const value = e.user?.getUid?.(game);
+      fromUser = String(value && typeof value === 'object' ? value.uid : value || '');
+    } catch (_) {}
+    if (fromUser) {
+      const entry = this.getStokenEntry(e, fromUser, self);
+      /* 没有本插件条目时也接受：mhy.getstoken 还会去读逍遥插件的旧数据。 */
+      if (!entry || this.isGameEntry(entry, game)) return fromUser;
+    }
+    return '';
   }
 
   toMultiCard(game = 'gs', data = {}) {
@@ -503,7 +541,7 @@ export class TL extends plugin {
       if (msg.type === 'at' && String(msg.qq) !== String(e.self_id)) { qq = msg.qq; break; }
     }
 
-    let uid = uidOverride || await redis.get(`HoYoGet:bh3_uid:${qq}`);
+    let uid = uidOverride || await this.getCurrentGameUid(e, 'bh3', '', qq);
     let region = uid ? await redis.get(`HoYoGet:bh3_region:${qq}`) : null;
     let ck = null;
     let signEntry = null;
@@ -635,7 +673,7 @@ export class TL extends plugin {
 
   //体力
   async note(e, game = 'gs', san = true, uidOverride = '') {
-    let uid = uidOverride || e.user?.getUid(game);
+    let uid = await this.getCurrentGameUid(e, game, uidOverride);
 
     if (!uid) {
       const biz = { gs: 'hk4e_cn', sr: 'hkrpg_cn', zzz: 'nap_cn', bh3: 'bh3_cn' }[game];

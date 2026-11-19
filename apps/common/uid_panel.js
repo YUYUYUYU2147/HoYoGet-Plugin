@@ -586,6 +586,7 @@ export class uidPanel extends plugin {
     if (typeof redis === 'undefined') return this.e.reply('未连接缓存，暂时无法切换崩坏3 uid');
     const qq = String(this.e.at || this.e.user_id || '');
     await redis.set('HoYoGet:bh3_uid:' + qq, row.uid);
+    await redis.set('HoYoGet:cur_uid:bh3:' + qq, row.uid);
     if (row.region) await redis.set('HoYoGet:bh3_region:' + qq, row.region);
     await redis.set('HoYoGet:bh3_manual:' + qq, '1');
     bh3Cache.delete(qq);
