@@ -182,7 +182,8 @@ export class bh3_gacha extends plugin {
       name: '[米哈游]崩三抽卡记录',
       dsc: '崩坏3抽卡记录查询与刷新',
       event: 'message',
-      priority: pluginPriority('bh3_gacha', 100),
+      // 与其它游戏抽卡指令一致，优先处理崩三抽卡查询。
+      priority: pluginPriority('bh3_gacha', Number.MIN_SAFE_INTEGER),
       rule: [
         { reg: '^[#!！]*(?:崩三|崩坏3|崩坏三|BH3)(抽卡记录|抽卡统计)$', fnc: 'gachaSummary' },
         { reg: '^[#!！]*(?:崩三|崩坏3|崩坏三|BH3)(刷新|更新)抽卡记录$', fnc: 'refreshGacha' },

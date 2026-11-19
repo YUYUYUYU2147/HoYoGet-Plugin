@@ -420,6 +420,9 @@ async function find(keyword, game = 'all', limit = 12) {
             const aq = cleanName(aliasKey);
             const bh3Items2 = await list('bh3');
             for (const it of bh3Items2) {
+                // 崩三装备补给会把「装备对应角色」挂到 target；角色别名查询只认角色池，
+                // 否则后期装备补给会盖掉角色本身的复刻日期。
+                if (it.group !== '角色') continue;
                 const n = cleanName(it.name);
                 if (!n) continue;
                 if (n === aq || n.includes(aq) || (aq.length >= 3 && aq.includes(n))) {
