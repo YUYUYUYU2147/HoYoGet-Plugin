@@ -17,7 +17,7 @@ import {
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { mhy, render, pluginPriority, makeForwardMsg } from '#HoYoGet'
+import { mhy, render, pluginPriority, makeForwardMsg, yaml } from '#HoYoGet'
 import { sendRenderResult } from '../../system/render.js'
 import { appendTaskRecords } from '../../system/task_history.js'
 import { guardModuleByFile } from '../../system/modules.js'
@@ -31,14 +31,15 @@ const PLUGIN_ROOT = path.resolve(__dirname, '../..')
 /**
  * 绝区零抽卡记录。
  *
- * 数据源两条：
- *   1. 官方跃迁记录链接（authkey）：全量逐抽含四星，但官方只保留近半年；
- *   2. 绝区零工坊云端（api.zzzmap.com）：保留长期历史，只有五星与统计，
+ * 数据源三条：
+ *   1. 官方调频记录接口（Cookie / authkey）：全量逐抽含四星，但只保留近半年；
+ *   2. 米游社小程序调频统计（act-api-takumi nap_gacha_record）：官方全版本统计 +
+ *      S 级记录，自带准确 is_up / 抽数 / 图标，但只有 S 级；
+ *   3. 绝区零工坊云端（api.zzzmap.com）：保留长期历史，只有五星与统计，
  *      接口只校验 union_id 非空、不校验内容，未绑定时用占位值即可。
  *
- * 图标：官方物品配置接口（rpgsimulator/config?game=nap）会忽略 game 参数只返回星铁数据，
- * miao-plugin 无绝区零资源，图源站点（api.hakush.in / api.ambr.top）在本机 DNS 不可达，
- * 因此当前一律不拼图标，卡片走文字占位。后续拿到可用图源只需在 makeIcon 分支补一处。
+ * 图标：官方逐抽接口不返回图标，小程序接口会带官方 CDN 图标；没有时回落到 Bwiki
+ * 索引（resources 无关），仍然取不到则走文字占位。
  */
 
 // 绝区零频段池编号（官方 getGachaLog 的 gacha_type）
@@ -131,7 +132,12 @@ async function getUserAuth(e) {
   const user = await getEventNoteUser(e)
   const uid = user?.getUid?.('zzz') || ''
   if (!uid) return { error: '未找到绑定的绝区零账号，请先 #米哈游扫码绑定' }
-  const cookies = [...new Set([e.cookie, user?.getMysUser?.('zzz')?.ck].map(v => String(v || '').trim()).filter(Boolean))]
+  let entry = null
+  try {
+    const stokenPath = `${PLUGIN_ROOT}/data/Stoken/${qq}.yaml`
+    if (fs.existsSync(stokenPath)) entry = (yaml.get(stokenPath) || {})[uid] || null
+  } catch {}
+  const cookies = [...new Set([e.cookie, user?.getMysUser?.('zzz')?.ck, entry?.ck_stoken].map(v => String(v || '').trim()).filter(Boolean))]
   try {
     // 动态 import：genshin 版本较旧时可能没有 model/mys/mysInfo.js，
     // 静态 import 会让整个插件 ERR_MODULE_NOT_FOUND 而加载失败（见 sr_gacha.js 顶部说明）
@@ -145,7 +151,7 @@ async function getUserAuth(e) {
   } catch {}
   const list = [...new Set(cookies.filter(Boolean))]
   if (!list.length) return { error: '未找到绑定的绝区零账号，请先 #米哈游扫码绑定' }
-  return { qq, uid, cookies: list }
+  return { qq, uid, cookies: list, entry, region: entry?.region || zzzServerOf(uid) }
 }
 
 /** 绝区零跃迁记录分页；官方接口与星铁参数不同：需init_log_gacha_* 与 real_gacha_type */
@@ -436,14 +442,305 @@ async function fetchAllByCookieZzz(e, cookies, uid) {
   throw lastErr || new Error('没有可用的 Cookie')
 }
 
+// ===== 米游社小程序「调频统计」接口 =====
+// 官方抽卡分析页 https://act.mihoyo.com/zzz/event/gacha-record/index.html
+// 先用 Cookie POST badge/v1/login/account 换 e_nap_token，再读 index/cur_pool_stat/hist_pool_stat。
+// 这个源给的是官方全版本统计 + 每次 S 级记录（带准确 is_up、抽数与图标），
+// 但只有 S 级，四星/三星仍沿用本地已有数据。
+const ZZZ_MINI_LOGIN_URL = 'https://api-takumi.mihoyo.com/common/badge/v1/login/account'
+const ZZZ_MINI_API_BASE = 'https://act-api-takumi.mihoyo.com/event/nap_gacha_record/api/zzz/'
+const ZZZ_MINI_PAGE_HEADERS = {
+  origin: 'https://act.mihoyo.com',
+  referer: 'https://act.mihoyo.com/zzz/event/gacha-record/index.html',
+}
+const ZZZ_MINI_BANDS = [
+  { id: '2', key: 'GachaType_CharacterUp', type: '1', name: '独家频段' },
+  { id: '3', key: 'GachaType_WeaponUp', type: '3', name: '音擎频段' },
+  { id: '102', key: 'GachaType_RerunCharacter', type: '2', name: '独家重映' },
+  { id: '103', key: 'GachaType_RerunWeapon', type: '4', name: '音擎回响' },
+  { id: '1', key: 'GachaType_Permanent', type: '5', name: '常驻频段' },
+  { id: '5', key: 'GachaType_Bangboo', type: '6', name: '邦布频段' },
+]
+const ZZZ_MINI_GACHA_TYPE = {
+  GACHA_TYPE_CHARACTER_UP: '2',
+  GACHA_TYPE_CHARACTER_RETURN: '102',
+  GACHA_TYPE_WEAPON_UP: '3',
+  GACHA_TYPE_WEAPON_RETURN: '103',
+  GACHA_TYPE_PERMANENT: '1',
+  GACHA_TYPE_BANGBOO: '5',
+}
+const ZZZ_MINI_ITEM_TYPE = { ItemType_Avatar: '角色', ItemType_Weapon: '音擎', ItemType_Bangboo: '邦布' }
+
+function zzzMiniBandOf(value) {
+  const text = String(value || '')
+  const id = ZZZ_MINI_GACHA_TYPE[text] || ZZZ_MINI_BANDS.find(b => text === b.id || text.includes(`(${b.id})`))?.id
+  return ZZZ_MINI_BANDS.find(b => b.id === id) || null
+}
+
+function zzzMiniNumber(value) {
+  if ((typeof value !== 'number' && typeof value !== 'string') || value === '') return null
+  const num = Number(value)
+  return Number.isFinite(num) && num >= 0 ? num : null
+}
+
+/** record_time 是秒级时间戳，统一按国服 UTC+8 转成与官方记录一致的字符串 */
+function zzzMiniTime(seconds) {
+  const num = Number(seconds)
+  if (!Number.isFinite(num) || num <= 0) return ''
+  return new Date((num + 8 * 3600) * 1000).toISOString().slice(0, 19).replace('T', ' ')
+}
+
+/**
+ * 小程序记录没有游戏内逐抽 id，只给 sort（可能超过 Number 安全范围）。
+ * 生成与官方 id 同为 19 位的数字 id：前 13 位是毫秒时间戳，后 6 位是
+ * sort/item/count/is_up 的稳定哈希。这样与官方 id 混排时也能按时间正确排序。
+ * 若本地已有同名同时间的记录，会优先复用它的 id，方便 unionRecords 合并。
+ */
+function zzzMiniSyntheticId(item) {
+  const ms = String(Math.max(0, Math.floor((Number(item?.record_time) || 0) * 1000))).padStart(13, '0')
+  const text = `${item?.sort ?? ''}|${item?.item_id ?? ''}|${item?.count ?? ''}|${item?.is_up ?? ''}`
+  let hash = 2166136261
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i)
+    hash = Math.imul(hash, 16777619)
+  }
+  return `${ms}${String((hash >>> 0) % 1000000).padStart(6, '0')}`
+}
+
+async function zzzMiniLogin(cookie, uid, region) {
+  const res = await fetch(ZZZ_MINI_LOGIN_URL, {
+    method: 'POST',
+    headers: { ...ZZZ_MINI_PAGE_HEADERS, Cookie: cookie, 'content-type': 'application/json' },
+    body: JSON.stringify({ game_biz: 'nap_cn', lang: 'zh-cn', region, uid }),
+    redirect: 'error',
+    signal: AbortSignal.timeout(15000),
+  })
+  const data = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(`小程序登录失败（HTTP ${res.status}）`)
+  if (Number(data?.retcode) !== 0) {
+    const err = new Error(data?.message || `小程序登录失败（${data?.retcode ?? '无返回'}）`)
+    err.retcode = data?.retcode
+    throw err
+  }
+  const gameUid = String(data?.data?.game_uid || uid)
+  const gameRegion = String(data?.data?.region || region)
+  if (gameUid !== String(uid)) throw new Error('小程序登录返回的角色与绑定 UID 不一致')
+  const setCookies = res.headers.getSetCookie?.() || []
+  const token = setCookies.map(value => value.split(';')[0].trim()).find(value => /^e_nap_token=.+$/.test(value))
+    || String(res.headers.get('set-cookie') || '').match(/(?:^|[,\s])(e_nap_token=[^;,\s]+)/)?.[1]
+  if (!token) throw new Error('小程序登录未返回调频凭证，请重新扫码绑定')
+  return {
+    uid: gameUid,
+    region: gameRegion,
+    headers: { ...ZZZ_MINI_PAGE_HEADERS, Cookie: `${cookie.replace(/;+$/, '')}; ${token}` },
+  }
+}
+
+async function zzzMiniSession(e, auth) {
+  const region = String(auth.region || '')
+  if (!['prod_gf_cn', 'prod_qd_cn'].includes(region)) {
+    throw new Error('米游社小程序调频记录仅支持绝区零国服')
+  }
+  let lastErr = null
+  for (const cookie of auth.cookies || []) {
+    try {
+      return await zzzMiniLogin(cookie, auth.uid, region)
+    } catch (err) {
+      lastErr = err
+    }
+  }
+  if (auth.entry?.stoken) {
+    try {
+      const { ensureCookieToken } = await import('../common/TL.js')
+      const baseCk = auth.entry.ck_stoken || auth.cookies?.[0] || ''
+      const fresh = await ensureCookieToken(e, baseCk, auth.entry, { forceRefresh: true })
+      if (fresh && fresh !== baseCk) return await zzzMiniLogin(fresh, auth.uid, region)
+    } catch (err) {
+      lastErr = err
+    }
+  }
+  throw lastErr || new Error('没有可用于小程序调频记录的有效 Cookie')
+}
+
+async function zzzMiniRequest(session, endpoint, params = {}) {
+  const url = new URL(endpoint, ZZZ_MINI_API_BASE)
+  url.search = new URLSearchParams({ uid: session.uid, region: session.region, ...params }).toString()
+  let lastErr = null
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(url, {
+        headers: session.headers,
+        redirect: 'error',
+        signal: AbortSignal.timeout(20000),
+      })
+      if (!res.ok) throw new Error(`小程序调频统计请求失败（HTTP ${res.status}）`)
+      const text = await res.text()
+      let payload
+      try {
+        payload = JSON.parse(text, (key, value, context) => {
+          if (key === 'sort' && typeof value === 'number') return context?.source ?? String(value)
+          return value
+        })
+      } catch {
+        throw new Error('小程序调频统计未返回有效 JSON')
+      }
+      if (Number(payload?.retcode) !== 0) {
+        const err = new Error(payload?.retcode === -100
+          ? '小程序调频凭证已失效，请重新扫码绑定'
+          : payload?.message || `小程序调频统计请求失败（${payload?.retcode ?? '无返回'}）`)
+        err.retcode = payload?.retcode
+        throw err
+      }
+      return payload?.data && typeof payload.data === 'object' ? payload.data : {}
+    } catch (err) {
+      lastErr = err
+      if (attempt < 2) await sleep(600 * (attempt + 1))
+    }
+  }
+  throw lastErr
+}
+
+function zzzMiniAddBanners(records, data, band) {
+  if (!Array.isArray(data?.list)) throw new Error('小程序调频统计缺少卡池列表')
+  for (const banner of data.list) {
+    if (zzzMiniBandOf(banner?.gacha_type)?.id !== band.id) continue
+    const version = banner?.version || ''
+    /* 并行卡池可能返回同一批出货：按记录内容计数，保留出现次数更多的那个卡池，
+       同批双金也不会被去重掉。 */
+    const occurrences = new Map()
+    for (const item of banner?.cur_records || []) {
+      const itemId = String(item?.item_id || '')
+      if (!itemId || itemId === '0') continue
+      const time = zzzMiniTime(item?.record_time)
+      const sort = item?.sort == null ? null : String(item.sort)
+      const count = zzzMiniNumber(item?.count)
+      const isUp = item?.is_up == null ? null : [true, 1, '1', 'true'].includes(item.is_up)
+      const period = !time && sort == null ? banner?.end_ts : null
+      const key = JSON.stringify([version, period, itemId, time, sort, count, isUp, item?.up_tag])
+      const seen = (occurrences.get(key) || 0) + 1
+      occurrences.set(key, seen)
+      if (seen <= (records.get(key)?.count || 0)) continue
+      records.set(key, {
+        count: seen,
+        row: {
+          itemId,
+          name: item?.name || '',
+          itemType: ZZZ_MINI_ITEM_TYPE[item?.item_type] || '',
+          icon: item?.icon || '',
+          time,
+          seconds: Number(item?.record_time) || 0,
+          sort,
+          count,
+          isUp,
+          version,
+          syntheticId: zzzMiniSyntheticId(item),
+        },
+      })
+    }
+  }
+}
+
+function zzzMiniNewestFirst(a, b) {
+  const byTime = (b.seconds || 0) - (a.seconds || 0)
+  if (byTime || a.sort === b.sort) return byTime
+  const x = /^-?\d+$/.test(String(a.sort || '')) ? BigInt(String(a.sort)) : 0n
+  const y = /^-?\d+$/.test(String(b.sort || '')) ? BigInt(String(b.sort)) : 0n
+  return x === y ? 0 : x < y ? 1 : -1
+}
+
+function buildZzzMiniPool(band, stat, rows, oldPool) {
+  const oldByTime = new Map()
+  for (const row of getPoolRecords(oldPool)) {
+    const name = String(row?.name || '')
+    const time = String(row?.time || '').slice(0, 19)
+    if (name && time) oldByTime.set(`${name}|${time}`, row)
+  }
+  const records = rows.map(row => {
+    const old = oldByTime.get(`${row.name}|${row.time}`)
+    const itemId = String(row.itemId || old?.item_id || '')
+    return {
+      id: old?.id ? String(old.id) : row.syntheticId,
+      item_id: itemId,
+      name: row.name || old?.name || '未知',
+      item_type: row.itemType || old?.item_type || zzzItemType({ item_id: itemId }),
+      is_up: row.isUp == null ? old?.is_up === true : row.isUp,
+      gacha_count: row.count == null ? Number(old?.gacha_count) || 0 : row.count,
+      time: row.time || old?.time || '',
+      icon: row.icon || old?.icon || '',
+    }
+  })
+  records.sort((a, b) => String(b.time || '').localeCompare(String(a.time || '')) || String(b.id).localeCompare(String(a.id)))
+  const normal = band.id === '1' || band.id === '5'
+  const totalPulls = zzzMiniNumber(stat?.total_count) ?? 0
+  const pity = zzzMiniNumber(stat?.next_s_cur_times) ?? 0
+  return {
+    key: band.key,
+    type: band.type,
+    name: band.name,
+    records,
+    fourLog: oldPool?.fourLog || [],
+    threeLog: oldPool?.threeLog || [],
+    threeNum: oldPool?.threeNum || 0,
+    fourNum: oldPool?.fourNum || 0,
+    fourPity: oldPool?.fourPity || 0,
+    pity,
+    totalPulls: totalPulls || records.reduce((sum, row) => sum + Number(row.gacha_count || 0), 0) + pity,
+    fiveNum: records.length,
+    upNum: normal ? 0 : (zzzMiniNumber(stat?.up_count) ?? records.filter(row => row.is_up).length),
+    avgPity: records.length ? (totalPulls / records.length).toFixed(1) : '0.0',
+    latest: records[0]?.time || '',
+    nickname: '',
+  }
+}
+
+/**
+ * 拉取小程序调频统计并转成与本地 pools 同构的数据。
+ * 只有 S 级记录，四星/三星由调用方与旧数据合并时继承。
+ */
+async function fetchZzzMiniPools(e, auth, oldPools = {}) {
+  const session = await zzzMiniSession(e, auth)
+  const index = await zzzMiniRequest(session, 'index')
+  const typeStats = Array.isArray(index?.type_stats) ? index.type_stats : null
+  if (!typeStats) throw new Error('小程序调频统计首页数据不完整')
+  const currentVersions = new Set([String(index?.cur_ver || '')])
+  const pools = {}
+  for (const band of ZZZ_MINI_BANDS) {
+    const stats = typeStats.filter(stat => zzzMiniBandOf(stat?.gacha_type)?.id === band.id)
+    if (!stats.length) continue
+    const stat = stats.find(item => Number(item?.total_count) > 0) || stats[0]
+    const versions = [...new Set(stats.flatMap(item => Array.isArray(item?.has_data_vers) ? item.has_data_vers : []))]
+      .filter(version => version && !currentVersions.has(String(version)))
+    const records = new Map()
+    zzzMiniAddBanners(records, await zzzMiniRequest(session, 'cur_pool_stat', { gacha_type: band.id }), band)
+    // 历史接口按有数据的版本分批，和官方页面一样每批最多 8 个版本
+    for (let i = 0; i < versions.length; i += 8) {
+      const vers = versions.slice(i, i + 8).join(',')
+      zzzMiniAddBanners(records, await zzzMiniRequest(session, 'hist_pool_stat', { gacha_type: band.id, vers }), band)
+    }
+    const rows = [...records.values()].flatMap(({ row, count }) => Array(count).fill(row)).sort(zzzMiniNewestFirst)
+    const expected = zzzMiniNumber(stat?.s_count)
+    if ((band.id === '1' || band.id === '5') && expected != null && rows.length !== expected) {
+      throw new Error(`小程序${band.name}返回 ${rows.length} 条 S 级记录，统计为 ${expected} 条，请稍后重试`)
+    }
+    pools[band.key] = buildZzzMiniPool(band, stat, rows, oldPools?.[band.key])
+  }
+  if (!Object.keys(pools).length) throw new Error('小程序调频统计未返回任何卡池数据')
+  return {
+    uid: session.uid,
+    region: session.region,
+    nickname: index?.nickname || '',
+    total: zzzMiniNumber(index?.total_gacha_count) ?? 0,
+    sCount: zzzMiniNumber(index?.total_s_count) ?? 0,
+    pools,
+  }
+}
+
 /**
  * 绝区零图标索引（名称 -> Bwiki 图片 URL）。
  *
  * 来源：bilibili wiki 的「角色图鉴 / 音擎图鉴 / 邦布图鉴」三页，各页按 `role-box`
  * 分块、块内 `alt="角色头像-xxx.png"` 一类 img 即条目图标，一次性抓取成本196 条后落盘。
- * 抽卡接口响应与官方物品配置都拿不到图标（`rpgsimulator/config?game=nap` 的 game 参数
- * 被忽略、恒返回星铁数据），图源站点 api.hakush.in / api.ambr.top 在本机DNS 不可达，
- * 故走 Bwiki 这条可达的路径。
+ * 小程序接口会直接带官方图标；Bwiki 主要给 authkey/CK/工坊来源的记录兜底。
  *
  * 注意：Bwiki 限流很凶（567EdgeOne），故只在重建索引时请求，运行期只读本地文件。
  */
@@ -694,6 +991,28 @@ function mergeWorkshopPools(oldPools, newPools) {
     if (!newPools[key]) newPools[key] = oldPools[key]
   }
   return newPools
+}
+
+/**
+ * 小程序统计合并：官方 total_count 是准的，但可能包含逐条列表里暂未返回的
+ * 当前版本记录。合并后若按记录重算的总抽数反而更小，保留官方统计值。
+ */
+function mergeZzzMiniPools(oldPools, miniPools) {
+  const officialTotals = new Map()
+  for (const [key, pool] of Object.entries(miniPools || {})) {
+    const total = Number(pool?.totalPulls) || 0
+    if (total > 0) officialTotals.set(key, total)
+  }
+  const merged = mergeWorkshopPools(oldPools, miniPools)
+  for (const [key, pool] of Object.entries(merged)) {
+    const official = officialTotals.get(key) || 0
+    const current = Number(pool?.totalPulls) || 0
+    if (official > current) {
+      pool.totalPulls = official
+      if (Number(pool.fiveNum) > 0) pool.avgPity = (official / Number(pool.fiveNum)).toFixed(1)
+    }
+  }
+  return merged
 }
 
 function buildNameHint(pools) {
@@ -963,7 +1282,7 @@ export class zzz_gacha extends plugin {
         '【#米哈游绝区零抽卡帮助】',
         '',
         '更新数据（建议按顺序跑前两条）',
-        '#米哈游绝区零更新抽卡记录 —— 直连官方接口拉逐抽明细（含四星/常驻/邦布），无需链接',
+        '#米哈游绝区零更新抽卡记录 —— 官方逐抽接口 + 米游社小程序调频统计，自动补全历史与 UP 标记，无需链接',
         '#米哈游绝区零更新工坊记录 —— 从工坊云端补更早的历史（五星与统计）',
         '#米哈游绝区零导入四星 —— 从 ZZZ-Plugin 已存数据补四星明细（不发请求，可选）',
         '#米哈游绝区零导出记录 —— 导出 UIGF v2 JSON（可备份、可再导入）',
@@ -981,7 +1300,7 @@ export class zzz_gacha extends plugin {
       [
         '提示',
         '米哈游即可（不再用旧前缀），绝区零可写作 zzz，音擎可写作 武器。',
-        '更新前需先在 genshin 侧绑定绝区零账号（官方接口用的是该账号的 Cookie）。',
+        '更新前需先扫码绑定绝区零账号（官方接口用的是该账号的 Cookie）。',
       ].join('\n'),
     ]
     return e.reply(await makeForwardMsg(e, nodes, '绝区零抽卡帮助'))
@@ -1026,7 +1345,9 @@ export class zzz_gacha extends plugin {
   async refresh(e) {
     const auth = await getUserAuth(e)
     if (auth.error) return e.reply(auth.error)
-    const link = readData(getDataFile(auth.uid, auth.qq) + '.link.json')
+    const file = getDataFile(auth.uid, auth.qq)
+    const old = readData(file)
+    const link = readData(file + '.link.json')
     await e.reply('正在通过官方调频记录接口获取，请稍候……')
     let result = null
     let officialErr = ''
@@ -1036,26 +1357,50 @@ export class zzz_gacha extends plugin {
       officialErr = err?.message || String(err)
       logger.warn(`[HoYoGet][zzz_gacha] 官方 Cookie 接口拉取失败: ${officialErr}`)
     }
+    if (result && !result.source) result.source = 'official'
+
+    /* 小程序调频统计是另一条官方源：全版本 S 级记录带准确 UP 标记和官方统计。
+       即使上面的逐抽接口成功，也合并一份补全历史与 is_up；四星/三星仍沿用本地。 */
+    let mini = null
+    let miniErr = ''
+    try {
+      /* 用本地旧数据优先复用历史记录的官方 id；小程序能覆盖的正好是逐抽接口
+         半年窗口之外的历史，旧数据里的同名同时间记录就是它。 */
+      mini = await fetchZzzMiniPools(e, auth, old?.pools || result?.pools || {})
+    } catch (err) {
+      miniErr = err?.message || String(err)
+      logger.warn(`[HoYoGet][zzz_gacha] 小程序调频统计拉取失败: ${miniErr}`)
+    }
+    if (mini) {
+      const basePools = result?.pools || old?.pools || {}
+      result = {
+        pools: mergeZzzMiniPools(basePools, mini.pools),
+        region: result?.region || mini.region,
+        source: result ? 'official+mini' : 'mini',
+      }
+    }
+
     if (!result) {
       if (!link?.authkey) {
         return e.reply([
           `官方接口未取到记录：${officialErr || '无返回'}`,
+          miniErr ? `小程序调频统计也未取到：${miniErr}` : '',
           '也可以先发送【#米哈游绝区零抽卡链接 + 链接】手动缓存一份；',
           '若只需更新五星与统计数据，直接发送【#米哈游绝区零更新工坊记录】即可，无需链接。',
-        ].join('\n'))
+        ].filter(Boolean).join('\n'))
       }
       await e.reply(`官方接口未取到记录（${officialErr}），改用已缓存链接刷新……`)
       try {
         result = await fetchAllByAuthkeyZzz({ ...link, region: link.region })
+        result.source = 'authkey'
       } catch (err) {
         logger.error('[HoYoGet][zzz_gacha] refresh failed:', err)
         return e.reply(`刷新失败：${err?.message || err}`)
       }
     }
     try {
-      const old = readData(getDataFile(auth.uid, auth.qq))
-      const pools = old?.pools ? mergeWorkshopPools(old.pools, result.pools) : result.pools
-      saveData(getDataFile(auth.uid, auth.qq), { ...(old || {}), uid: String(auth.uid), pools: fillZzzIcons(pools), update_time: formatNow(), source: 'authkey' })
+      const pools = old?.pools ? mergeZzzMiniPools(old.pools, result.pools) : result.pools
+      saveData(file, { ...(old || {}), uid: String(auth.uid), pools: fillZzzIcons(pools), update_time: formatNow(), source: result.source || 'authkey' })
       const stats = Object.values(pools).filter(p => p.fiveNum || p.totalPulls).map(p => `【${p.name}】共${p.totalPulls}抽｜五星${p.fiveNum}`).join('\n')
       await e.reply(`刷新完成\n${stats}`)
       await this.render(e, [], 'grid')
