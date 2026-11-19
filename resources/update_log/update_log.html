@@ -31,7 +31,7 @@
         <div class="entry-content">
           <div class="entry-meta"><span class="tag">{{log.type}}</span><code>{{log.hash}}</code><time>{{log.date}}</time></div>
           <h3>{{log.subject}}</h3>
-          <div class="entry-author"><span class="author-mark">{{log.author.slice(0, 1)}}</span><span>{{log.author}}</span><span class="commit-label">COMMIT</span></div>
+          <div class="entry-author"><img class="author-avatar" src="{{log.avatar}}" alt="{{log.author}}"><span>{{log.author}}</span><span class="commit-label">COMMIT</span></div>
         </div>
       </article>
       {{/each}}

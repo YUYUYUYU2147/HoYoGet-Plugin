@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import { yaml, config, pluginPriority, scaleStyle } from '#HoYoGet';
 import { runCronTask } from '../../system/task_history.js';
 import { promisify } from 'node:util';
+import { createHash } from 'node:crypto';
 import puppeteer from '../../../../lib/puppeteer/puppeteer.js';
 
 const require = createRequire(import.meta.url);
@@ -12,6 +13,93 @@ const { exec, execSync } = require('child_process');
 const execFile = promisify(require('child_process').execFile);
 
 let uping = false;
+const updateLogAvatarCache = new Map();
+
+async function fetchInlineAvatar(url, timeout = 10000) {
+  try {
+    const response = await fetch(url, {
+      headers: { 'User-Agent': 'HoYoGet-Plugin' },
+      signal: AbortSignal.timeout(timeout),
+    });
+    if (!response.ok) return '';
+    const contentType = (response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+    if (!/^image\/(png|jpe?g|webp|gif)$/.test(contentType)) return '';
+    const image = Buffer.from(await response.arrayBuffer());
+    if (!image.length || image.length > 512 * 1024) return '';
+    return `data:${contentType};base64,${image.toString('base64')}`;
+  } catch {
+    return '';
+  }
+}
+
+export function githubNoreplyLogin(email) {
+  const match = /^(?:\d+\+)?([a-z0-9](?:[a-z0-9-]*[a-z0-9])?)@users\.noreply\.github\.com$/i.exec(String(email || '').trim());
+  return match?.[1] || '';
+}
+
+async function fetchGitHubSampleAvatar(repo, log) {
+  const login = githubNoreplyLogin(log.authorEmail);
+  if (login) {
+    const avatar = await fetchInlineAvatar(`https://github.com/${encodeURIComponent(login)}.png?size=96`);
+    if (avatar) return avatar;
+  }
+
+  if (!repo || !log.fullHash) return '';
+  try {
+    const response = await fetch(`https://api.github.com/repos/${repo}/commits/${log.fullHash}`, {
+      headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'HoYoGet-Plugin' },
+      signal: AbortSignal.timeout(12000),
+    });
+    if (!response.ok) return '';
+    const commit = await response.json();
+    const avatarUrl = String(commit?.author?.avatar_url || '');
+    return avatarUrl ? await fetchInlineAvatar(avatarUrl) : '';
+  } catch {
+    return '';
+  }
+}
+
+async function fetchGravatar(email) {
+  const emailHash = createHash('md5').update(String(email).trim().toLowerCase()).digest('hex');
+  // cravatar 是 Gravatar 的国内镜像；d=404 保证没注册头像时返回 404 而不是随机图。
+  return fetchInlineAvatar(`https://cravatar.cn/avatar/${emailHash}?d=404&s=96`, 8000);
+}
+
+function authorIdenticon(identity) {
+  const hash = createHash('sha256').update(String(identity || 'HoYoGet')).digest();
+  const hue = hash[0] % 360;
+  const cells = [];
+  for (let y = 0; y < 5; y++) {
+    for (let x = 0; x < 3; x++) {
+      if (hash[1 + y * 3 + x] % 2) {
+        cells.push(`<rect x="${x}" y="${y}" width="1" height="1"/>`);
+        if (x !== 2) cells.push(`<rect x="${4 - x}" y="${y}" width="1" height="1"/>`);
+      }
+    }
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 5"><rect width="5" height="5" rx="1" fill="hsl(${hue} 36% 24%)"/><g fill="hsl(${(hue + 42) % 360} 72% 72%)">${cells.join('')}</g></svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
+}
+
+export async function getUpdateLogAvatar(repo, log) {
+  const identity = String(log.authorEmail || log.author || 'HoYoGet').trim().toLowerCase();
+  const cacheKey = `${repo || 'local'}:${identity}`;
+  const cached = updateLogAvatarCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.avatar;
+
+  const [githubAvatar, gravatarAvatar] = await Promise.all([
+    fetchGitHubSampleAvatar(repo, log),
+    log.authorEmail ? fetchGravatar(log.authorEmail) : Promise.resolve(''),
+  ]);
+
+  const generated = !githubAvatar && !gravatarAvatar;
+  const avatar = githubAvatar || gravatarAvatar || authorIdenticon(identity);
+  updateLogAvatarCache.set(cacheKey, {
+    avatar,
+    expiresAt: Date.now() + (generated ? 60 : 360) * 60 * 1000,
+  });
+  return avatar;
+}
 
 export class update extends plugin {
   constructor() {
@@ -287,10 +375,10 @@ export class update extends plugin {
       const currentPage = Math.min(totalPages, Math.max(1, Math.trunc(Number(page)) || 1));
       const { stdout } = await execFile('git', [
         'log', '--no-merges', '--max-count=12', `--skip=${(currentPage - 1) * 12}`,
-        '--format=%x1e%h%x1f%cI%x1f%s%x1f%an',
+        '--format=%x1e%H%x1f%h%x1f%cI%x1f%s%x1f%an%x1f%ae',
       ], { cwd, encoding: 'utf8', timeout: 15000, maxBuffer: 4 * 1024 * 1024 });
       const logs = stdout.split('\x1e').filter(Boolean).map((row, index) => {
-        const [hash, date, subject, author] = row.trim().split('\x1f');
+        const [fullHash, hash, date, subject, author, authorEmail] = row.trim().split('\x1f');
         const match = /^(feat|fix|perf|refactor|docs|style|test|chore|build|ci|revert)(?:\([^)]*\))?!?:\s*(.+)$/i.exec(subject || '');
         const typeNames = { feat: '新增', fix: '修复', perf: '性能', refactor: '重构', docs: '文档', style: '样式', test: '测试', chore: '维护', build: '构建', ci: '构建', revert: '回退' };
         const kinds = { feat: 'feat', fix: 'fix', perf: 'perf', docs: 'docs' };
@@ -301,10 +389,12 @@ export class update extends plugin {
         }).format(new Date(date));
         return {
           hash,
+          fullHash,
           subject: match ? match[2] : (subject || '更新'),
           type: typeNames[type] || '更新',
           kind: kinds[type] || 'update',
           author: author || 'HoYoGet contributors',
+          authorEmail,
           date: displayDate,
           number: String((currentPage - 1) * 12 + index + 1).padStart(2, '0'),
         };
@@ -326,6 +416,20 @@ export class update extends plugin {
     const remote = await execFile('git', ['remote', 'get-url', 'origin'], {
       cwd: `${process.cwd()}/plugins/HoYoGet-Plugin`, encoding: 'utf8', timeout: 10000,
     }).then(result => result.stdout.trim().replace(/\.git$/, '')).catch(() => 'HoYoGet-Plugin');
+    const githubRepo = remote.match(/github\.com[:/]([^/]+\/[^/]+)$/i)?.[1] || '';
+    const avatarPromises = new Map();
+    for (const log of data.logs) {
+      const identity = String(log.authorEmail || log.author || 'HoYoGet').trim().toLowerCase();
+      const key = `${githubRepo || 'local'}:${identity}`;
+      if (!avatarPromises.has(key)) avatarPromises.set(key, getUpdateLogAvatar(githubRepo, log));
+    }
+    await Promise.all(avatarPromises.values());
+    for (const log of data.logs) {
+      const identity = String(log.authorEmail || log.author || 'HoYoGet').trim().toLowerCase();
+      log.avatar = await avatarPromises.get(`${githubRepo || 'local'}:${identity}`);
+      delete log.authorEmail;
+      delete log.fullHash;
+    }
     const logo = fs.readFileSync(new URL('../../resources/help/games/bh3-logo.png', import.meta.url));
     const icon = fs.readFileSync(new URL('../../resources/game_icons/bh3.webp', import.meta.url));
     const buffer = await puppeteer.render('米哈游/update_log/update_log', {

@@ -88,7 +88,7 @@ code { color: #a4bdcc; font: 9px monospace; }
 time { margin-left: auto; color: #a3b5c1; font-size: 9px; white-space: nowrap; }
 h3 { margin: 5px 0 6px; color: #f2f6f9; font-size: 12px; line-height: 1.45; font-weight: 600; overflow-wrap: anywhere; }
 .entry-author { justify-content: flex-start; gap: 6px; color: #9fb2bf; font-size: 9px; }
-.author-mark { display: flex; align-items: center; justify-content: center; width: 17px; height: 17px; color: #f0d46e; font-size: 9px; background: #244458; border: 1px solid #46677a; }
+.author-avatar { display: block; flex: 0 0 20px; width: 20px; height: 20px; object-fit: cover; border-radius: 50%; border: 1px solid #46677a; background: #244458; }
 .commit-label { margin-left: auto; color: #6f8fa3; font: 8px sans-serif; }
 
 footer { margin-top: 11px; padding: 8px 3px 0; color: #9bb1bf; border-top: 1px solid #315066; font-size: 9px; }
