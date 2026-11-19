@@ -905,8 +905,22 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
     const fiveAsc = [...recent].sort((a, b) => cmpRecordId(a, b))
     const earliestFiveId = fiveAsc.length ? String(fiveAsc[0]?.id || '') : ''
 
-    // 五星历史：按时间倒序，供卡片网格使用
-    const fiveLog = recent.map(item => {
+    /* 五星历史：按时间倒序，供卡片网格使用。
+       不能只按 id 排序：绝区零小程序补的历史记录使用合成 id，与官方逐抽 id
+       位数/编码不同，混在一起按数字大小排会把 2024 排到 2026 前面。
+       time 字段统一为 YYYY-MM-DD HH:mm:ss，先按它排，同秒才用 id 兜底。 */
+    const fiveLog = [...recent].sort((a, b) => {
+      const at = String(a?.time || timeFromId(a?.id) || '')
+      const bt = String(b?.time || timeFromId(b?.id) || '')
+      if (at !== bt) {
+        if (!at) return 1
+        if (!bt) return -1
+        return bt.localeCompare(at)
+      }
+      const ai = BigInt(String(a?.id || '0'))
+      const bi = BigInt(String(b?.id || '0'))
+      return ai === bi ? 0 : ai > bi ? -1 : 1
+    }).map(item => {
       const pulls = Number(item.gacha_count || 0)
       const time = item.time || timeFromId(item.id)
       const full = String(time || '').slice(0, 10)
@@ -931,11 +945,6 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
         fullDate: full || '--',
         monthDay: full.slice(5) || '--',
       }
-    }).sort((a, b) => {
-      const ai = BigInt(String(a.id || '0'))
-      const bi = BigInt(String(b.id || '0'))
-      if (ai === bi) return String(b.fullDate).localeCompare(String(a.fullDate))
-      return ai > bi ? -1 : 1
     })
     // 连 UP / 连歪（仅可歪池有意义）：按时间正序扫描 isUp 的连续段，取最长值
     let maxUpStreak = 0
@@ -966,6 +975,8 @@ export function buildSummaryView(data, uid, e, layout = 'grid', game = 'sr', mia
       }
       group.list.push(item)
     }
+    // 年份分组固定新的在上（2026 → 2025 → 2024），不依赖数据源 id 编码。
+    yearGroups.sort((a, b) => String(b.year).localeCompare(String(a.year)))
     // 数据总览：可歪池两行 x 四列；常驻/新手池没有 50/50 与 UP 概念，UP 三项不展示
     const fourPity = Number(pool.fourPity || 0) || 0
     // tone 决定统计格语气色：gold = 星级/欧皇，purple = UP 相关，red = 非/歪
@@ -3330,7 +3341,9 @@ export class sr_gacha extends plugin {
         // 不带「米哈游」前缀：星铁更新抽卡记录 / #星铁更新抽卡记录 / *更新抽卡记录
         // 不接管的话会落到 genshin 的 sr_update，它出图依赖已被卸载的 miao。
         { reg: '^[#*%％]?[ \t]*(?:星铁|崩铁|星穹铁道|sr|SR)[ \t]*(刷新|更新)抽卡记录$', fnc: 'refresh' },
-        { reg: '^[#*%％][ \t]*(刷新|更新)抽卡记录$', fnc: 'refresh' },
+        // % / ％ 是绝区零的符号，不能在这里兜底，否则 %更新抽卡记录 会被星铁抢走；
+        // 绝区零自己的 refresh 规则会接住。
+        { reg: '^[#*][ \t]*(刷新|更新)抽卡记录$', fnc: 'refresh' },
         { reg: '^#*米哈游(星铁|崩铁)?(抽卡记录|抽卡统计)$', fnc: 'summary' },
         // 与 *更新抽卡记录 对称：星号裸命令默认查星铁，不交给喵喵的通用抽卡指令。
         { reg: '^[*][ \t]*(?:星铁|崩铁)?(抽卡记录|抽卡统计)$', fnc: 'summary' },
